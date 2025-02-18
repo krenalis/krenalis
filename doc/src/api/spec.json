@@ -10547,14 +10547,15 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": ""
+                                            "updateRequired": true,
+                                            "description": "Either `anonymousId` or `userId` must be provided and cannot be left empty."
                                         },
                                         {
                                             "name": "category",
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": ""
+                                            "description": "It is allowed only for page events."
                                         },
                                         {
                                             "name": "context",
@@ -11066,14 +11067,16 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": ""
+                                            "updateRequired": true,
+                                            "description": "It is required only for track events. For all other types of events, it is not permitted."
                                         },
                                         {
                                             "name": "groupId",
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": ""
+                                            "updateRequired": true,
+                                            "description": "It is required only for group events. For all other types of events, it is not permitted."
                                         },
                                         {
                                             "name": "messageId",
@@ -11087,14 +11090,14 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": ""
+                                            "description": "It is allowed only for page and screen events."
                                         },
                                         {
                                             "name": "properties",
                                             "type": {
                                                 "kind": "json"
                                             },
-                                            "description": ""
+                                            "description": "It is allowed only for page, screen, and track events."
                                         },
                                         {
                                             "name": "receivedAt",
@@ -11129,7 +11132,7 @@
                                             "type": {
                                                 "kind": "json"
                                             },
-                                            "description": ""
+                                            "description": "It is allowed only for identify and group events. You can use `context.traits` for other types of events."
                                         },
                                         {
                                             "name": "type",
@@ -11144,6 +11147,7 @@
                                                     "track"
                                                 ]
                                             },
+                                            "createRequired": true,
                                             "description": ""
                                         },
                                         {
@@ -11151,14 +11155,16 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": ""
+                                            "updateRequired": true,
+                                            "description": "It is required only for alias events. For all other types of events, it is not permitted."
                                         },
                                         {
                                             "name": "userId",
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": ""
+                                            "updateRequired": true,
+                                            "description": "Either `anonymousId` or `userId` must be provided and cannot be left empty."
                                         },
                                         {
                                             "name": "integrations",
@@ -11738,14 +11744,15 @@
                             "type": {
                                 "kind": "text"
                             },
-                            "description": ""
+                            "updateRequired": true,
+                            "description": "Either `anonymousId` or `userId` must be provided and cannot be left empty."
                         },
                         {
                             "name": "category",
                             "type": {
                                 "kind": "text"
                             },
-                            "description": ""
+                            "description": "It is allowed only for page events."
                         },
                         {
                             "name": "context",
@@ -12257,14 +12264,16 @@
                             "type": {
                                 "kind": "text"
                             },
-                            "description": ""
+                            "updateRequired": true,
+                            "description": "It is required only for track events. For all other types of events, it is not permitted."
                         },
                         {
                             "name": "groupId",
                             "type": {
                                 "kind": "text"
                             },
-                            "description": ""
+                            "updateRequired": true,
+                            "description": "It is required only for group events. For all other types of events, it is not permitted."
                         },
                         {
                             "name": "messageId",
@@ -12278,14 +12287,14 @@
                             "type": {
                                 "kind": "text"
                             },
-                            "description": ""
+                            "description": "It is allowed only for page and screen events."
                         },
                         {
                             "name": "properties",
                             "type": {
                                 "kind": "json"
                             },
-                            "description": ""
+                            "description": "It is allowed only for page, screen, and track events."
                         },
                         {
                             "name": "receivedAt",
@@ -12320,36 +12329,23 @@
                             "type": {
                                 "kind": "json"
                             },
-                            "description": ""
-                        },
-                        {
-                            "name": "type",
-                            "type": {
-                                "kind": "text",
-                                "values": [
-                                    "alias",
-                                    "identify",
-                                    "group",
-                                    "page",
-                                    "screen",
-                                    "track"
-                                ]
-                            },
-                            "description": ""
+                            "description": "It is allowed only for identify and group events. You can use `context.traits` for other types of events."
                         },
                         {
                             "name": "previousId",
                             "type": {
                                 "kind": "text"
                             },
-                            "description": ""
+                            "updateRequired": true,
+                            "description": "It is required only for alias events. For all other types of events, it is not permitted."
                         },
                         {
                             "name": "userId",
                             "type": {
                                 "kind": "text"
                             },
-                            "description": ""
+                            "updateRequired": true,
+                            "description": "Either `anonymousId` or `userId` must be provided and cannot be left empty."
                         },
                         {
                             "name": "integrations",
