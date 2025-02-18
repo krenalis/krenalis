@@ -8,10 +8,8 @@
 package datastore
 
 import (
-	"cmp"
 	"context"
 	"errors"
-	"slices"
 	"sync"
 	"time"
 
@@ -32,7 +30,7 @@ type EventIdentityWriter struct {
 	connection int
 	ack        EventIdentityWriterAckFunc
 	closed     bool
-	columns    sync.Map
+	columns    []meergo.Column
 
 	mu      sync.Mutex
 	actions map[int]struct{} // actions of the action's connection. Access using 'mu'. If nil, it means that the action does not exist anymore.
@@ -98,6 +96,16 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 	if err != nil {
 		return nil, err
 	}
+
+	iw.columns = make([]meergo.Column, 7)
+	iw.columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
+	iw.columns[1] = meergo.Column{Name: "__is_anonymous__", Type: types.Boolean()}
+	iw.columns[2] = meergo.Column{Name: "__identity_id__", Type: types.Text()}
+	iw.columns[3] = meergo.Column{Name: "__connection__", Type: types.Int(32)}
+	iw.columns[4] = meergo.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	iw.columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	iw.columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.userColumnByProperty())
 
 	return iw, nil
 }
@@ -215,7 +223,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 		row = map[string]any{}
 	} else {
 		row = identity.Properties
-		flatter.flatSync(row, &iw.columns)
+		flatter.flat(row)
 	}
 	row["__action__"] = key.action
 	row["__is_anonymous__"] = key.isAnonymous
@@ -265,8 +273,6 @@ func (iw *EventIdentityWriter) flush() {
 	if iw.rows == nil {
 		return
 	}
-	columns := identitiesMergeColumnsSync(&iw.columns)
-	iw.columns.Clear()
 	rows := iw.rows
 	iw.rows = nil
 	ackIDs := iw.ackIDs
@@ -274,7 +280,7 @@ func (iw *EventIdentityWriter) flush() {
 	clear(iw.index)
 	iw.timer = nil
 	go func() {
-		err := iw.store.warehouse().MergeIdentities(context.Background(), columns, rows)
+		err := iw.store.warehouse().MergeIdentities(context.Background(), iw.columns, rows)
 		iw.ack(iw.action, ackIDs, err)
 	}()
 }
@@ -369,25 +375,4 @@ func (iw *EventIdentityWriter) onUpdateUserSchema(_ state.UpdateUserSchema) {
 	iw.aligned = aligned
 	iw.flatter = flatter
 	iw.mu.Unlock()
-}
-
-// identitiesMergeColumnsSync returns the columns to be used during the
-// identities merge operation when importing from events.
-func identitiesMergeColumnsSync(iwColumns *sync.Map) []meergo.Column {
-	columns := make([]meergo.Column, 7)
-	columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
-	columns[1] = meergo.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	columns[2] = meergo.Column{Name: "__identity_id__", Type: types.Text()}
-	columns[3] = meergo.Column{Name: "__connection__", Type: types.Int(32)}
-	columns[4] = meergo.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
-	columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
-	iwColumns.Range(func(_, column any) bool {
-		columns = append(columns, column.(meergo.Column))
-		return true
-	})
-	slices.SortFunc(columns[7:], func(a, b meergo.Column) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
-	return columns
 }

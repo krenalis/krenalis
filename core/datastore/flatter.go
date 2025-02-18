@@ -9,7 +9,6 @@ package datastore
 
 import (
 	"strings"
-	"sync"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
@@ -65,32 +64,6 @@ func (f *flatter) flatRec(isRoot bool, root, properties map[string]any) {
 			}
 		} else {
 			ff.flatRec(false, root, v.(map[string]any))
-			if isRoot {
-				delete(properties, ff.name)
-			}
-		}
-	}
-}
-
-// flat flats proprieties and updates the columns argument with the columns in
-// properties.
-func (f *flatter) flatSync(properties map[string]any, columns *sync.Map) {
-	f.flatSyncRec(true, properties, properties, columns)
-}
-
-func (f *flatter) flatSyncRec(isRoot bool, root, properties map[string]any, columns *sync.Map) {
-	for _, ff := range f.properties {
-		v, ok := properties[ff.name]
-		if !ok {
-			continue
-		}
-		if ff.properties == nil {
-			if !isRoot {
-				root[ff.column.Name] = v
-			}
-			columns.LoadOrStore(ff.column.Name, ff.column)
-		} else {
-			ff.flatSyncRec(false, root, v.(map[string]any), columns)
 			if isRoot {
 				delete(properties, ff.name)
 			}
