@@ -86,7 +86,11 @@ func (processor *processor) worker() {
 			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
 				transformer, _ := transformers.New(action, processor.transformerProvider, nil)
 				records := []transformers.Record{{Properties: event.properties}}
-				_ = transformer.Transform(ctx, records)
+				err := transformer.Transform(ctx, records)
+				if err != nil {
+					processor.metrics.TransformationFailed(action.ID, len(records), err.Error())
+					continue
+				}
 				if err := records[0].Err; err != nil {
 					if _, ok := err.(ValidationError); ok {
 						processor.metrics.TransformationPassed(action.ID, 1)

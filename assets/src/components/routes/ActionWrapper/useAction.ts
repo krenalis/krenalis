@@ -301,6 +301,9 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 				return connection.isApp || connection.isDatabase;
 			}
 		}
+		if (actionType.target == 'Events' && connection.isApp && connection.isDestination) {
+			return true;
+		}
 		return false;
 	}, [isLoading, actionType, connection]);
 
