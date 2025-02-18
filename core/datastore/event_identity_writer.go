@@ -10,6 +10,7 @@ package datastore
 import (
 	"cmp"
 	"context"
+	"errors"
 	"slices"
 	"sync"
 	"time"
@@ -41,6 +42,64 @@ type EventIdentityWriter struct {
 	rows    []map[string]any
 	ackIDs  []string
 	timer   *time.Timer
+}
+
+// newEventIdentityWriter returns an identity writer for writing user
+// identities, relative to the action, on the data warehouse, in case of
+// importing identities from events.
+//
+// It returns an error if an open event identity writer for the provided action
+// already exists.
+func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterAckFunc) (*EventIdentityWriter, error) {
+
+	// Initialize the EventIdentityWriter.
+	iw := &EventIdentityWriter{
+		store:   store,
+		action:  actionID,
+		index:   map[identityKey]int{},
+		ack:     ack,
+		actions: map[int]struct{}{},
+	}
+
+	// Finalize the initialization of the EventIdentityWriter in a frozen state.
+	store.ds.state.Freeze()
+	action, ok := store.ds.state.Action(actionID)
+	if !ok {
+		store.ds.state.Unfreeze()
+		return nil, errors.New("action does not exist")
+	}
+	connection := action.Connection()
+	iw.connection = connection.ID
+	if action.OutSchema.Valid() {
+		workspace := connection.Workspace()
+		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+		if err == nil {
+			iw.aligned = true
+			iw.flatter = newFlatter(action.OutSchema, store.identityColumnByProperty())
+		}
+	} else {
+		// The action's out schema is invalid when importing identities from
+		// events without any transformation in the action.
+		iw.aligned = true
+	}
+	for _, a := range connection.Actions() {
+		iw.actions[a.ID] = struct{}{}
+	}
+	var err error
+	store.mu.Lock()
+	if _, ok := store.eventIdentityWriters[action.ID]; ok {
+		err = errors.New("event identity writer for action already exists")
+	} else {
+		store.eventIdentityWriters[action.ID] = iw
+	}
+	store.mu.Unlock()
+	store.ds.state.Unfreeze()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return iw, nil
 }
 
 // Close closes the Writer, ensuring the completion of all pending or ongoing

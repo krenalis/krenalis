@@ -362,45 +362,7 @@ func (store *Store) Mode() state.WarehouseMode {
 // It panics if the ack function is nil.
 func (store *Store) NewBatchIdentityWriter(action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
 	store.mustBeOpen()
-
-	if ack == nil {
-		panic("nil ack function")
-	}
-
-	connection := action.Connection()
-	execution, ok := action.Execution()
-	if !ok {
-		return nil, fmt.Errorf("action is not in execution")
-	}
-
-	// Check that action's output schema is aligned with the user schema.
-	workspace := connection.Workspace()
-	err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
-	if err != nil {
-		return nil, err
-	}
-	iw := BatchIdentityWriter{
-		store:      store,
-		action:     action.ID,
-		connection: connection.ID,
-		execution:  execution.ID,
-		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
-		index:      map[identityKey]int{},
-		ack:        ack,
-		purge:      purge,
-	}
-
-	iw.columns = make([]meergo.Column, 7, 7+len(action.Transformation.OutPaths))
-	iw.columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
-	iw.columns[1] = meergo.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	iw.columns[2] = meergo.Column{Name: "__identity_id__", Type: types.Text()}
-	iw.columns[3] = meergo.Column{Name: "__connection__", Type: types.Int(32)}
-	iw.columns[4] = meergo.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
-	iw.columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	iw.columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
-	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.userColumnByProperty())
-
-	return &iw, nil
+	return newBatchIdentityWriter(store, action, purge, ack)
 }
 
 // NewEventIdentityWriter returns an identity writer for writing user
@@ -411,55 +373,7 @@ func (store *Store) NewBatchIdentityWriter(action *state.Action, purge bool, ack
 // already exists.
 func (store *Store) NewEventIdentityWriter(actionID int, ack EventIdentityWriterAckFunc) (*EventIdentityWriter, error) {
 	store.mustBeOpen()
-
-	// Initialize the EventIdentityWriter.
-	iw := &EventIdentityWriter{
-		store:   store,
-		action:  actionID,
-		index:   map[identityKey]int{},
-		ack:     ack,
-		actions: map[int]struct{}{},
-	}
-
-	// Finalize the initialization of the EventIdentityWriter in a frozen state.
-	store.ds.state.Freeze()
-	action, ok := store.ds.state.Action(actionID)
-	if !ok {
-		store.ds.state.Unfreeze()
-		return nil, errors.New("action does not exist")
-	}
-	connection := action.Connection()
-	iw.connection = connection.ID
-	if action.OutSchema.Valid() {
-		workspace := connection.Workspace()
-		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
-		if err == nil {
-			iw.aligned = true
-			iw.flatter = newFlatter(action.OutSchema, store.identityColumnByProperty())
-		}
-	} else {
-		// The action's out schema is invalid when importing identities from
-		// events without any transformation in the action.
-		iw.aligned = true
-	}
-	for _, a := range connection.Actions() {
-		iw.actions[a.ID] = struct{}{}
-	}
-	var err error
-	store.mu.Lock()
-	if _, ok := store.eventIdentityWriters[action.ID]; ok {
-		err = errors.New("event identity writer for action already exists")
-	} else {
-		store.eventIdentityWriters[action.ID] = iw
-	}
-	store.mu.Unlock()
-	store.ds.state.Unfreeze()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return iw, nil
+	return newEventIdentityWriter(store, actionID, ack)
 }
 
 // NewEventWriter returns a new writer to write events.

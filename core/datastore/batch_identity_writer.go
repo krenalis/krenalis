@@ -11,10 +11,13 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/schemas"
+	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/types"
 )
 
@@ -53,6 +56,58 @@ type BatchIdentityWriter struct {
 	ackIDs     []string
 	purge      bool
 	closed     bool
+}
+
+// newBatchIdentityWriter returns an identity writer for writing user identities
+// in batch, relative to the given action (which must be in execution) on the
+// data warehouse. purge reports whether identities should be purged from the
+// data warehouse after all identities have been written. The ack parameter is
+// the acknowledgment function.
+//
+// If the action's output schema does not align with the user schema, it returns
+// a *schemas.Error error.
+//
+// It panics if the ack function is nil.
+func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
+
+	if ack == nil {
+		panic("nil ack function")
+	}
+
+	connection := action.Connection()
+	execution, ok := action.Execution()
+	if !ok {
+		return nil, fmt.Errorf("action is not in execution")
+	}
+
+	// Check that action's output schema is aligned with the user schema.
+	workspace := connection.Workspace()
+	err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+	if err != nil {
+		return nil, err
+	}
+	iw := BatchIdentityWriter{
+		store:      store,
+		action:     action.ID,
+		connection: connection.ID,
+		execution:  execution.ID,
+		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
+		index:      map[identityKey]int{},
+		ack:        ack,
+		purge:      purge,
+	}
+
+	iw.columns = make([]meergo.Column, 7, 7+len(action.Transformation.OutPaths))
+	iw.columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
+	iw.columns[1] = meergo.Column{Name: "__is_anonymous__", Type: types.Boolean()}
+	iw.columns[2] = meergo.Column{Name: "__identity_id__", Type: types.Text()}
+	iw.columns[3] = meergo.Column{Name: "__connection__", Type: types.Int(32)}
+	iw.columns[4] = meergo.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	iw.columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	iw.columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.userColumnByProperty())
+
+	return &iw, nil
 }
 
 // Close closes the Writer, ensuring the completion of all pending or ongoing
