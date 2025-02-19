@@ -179,6 +179,7 @@ func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTim
 }
 
 func init() {
+
 	var rawUsers []struct {
 		ID         string
 		Properties map[string]any
@@ -187,19 +188,29 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
 	// Only the first 10 users are taken. The others, with the current
 	// implementation of Dummy, remain defined in the JSON file but are not
 	// used.
 	rawUsers = rawUsers[:10]
+
+	now := time.Now().UTC()
+
 	usersLock.Lock()
 	allUsers = make(map[string]map[string]any, len(rawUsers))
 	usersLastChangeTimes = make(map[string]time.Time, len(rawUsers))
 	for _, u := range rawUsers {
 		u.Properties["dummyId"] = u.ID
 		allUsers[u.ID] = u.Properties
-		usersLastChangeTimes[u.ID] = time.Now().UTC().Truncate(time.Microsecond)
+		// Go back in time by a maximum of 100 milliseconds. This allows
+		// timestamps to be spread over a time frame large enough to maintain
+		// some randomness, but not so large that a timestamp is in the past
+		// since the last import.
+		nanosecDelta := rand.IntN(100e6)
+		usersLastChangeTimes[u.ID] = now.Add(-time.Duration(nanosecDelta)).Truncate(time.Microsecond)
 	}
 	usersLock.Unlock()
+
 }
 
 type innerSettings struct {
