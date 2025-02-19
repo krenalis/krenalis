@@ -231,6 +231,11 @@ func (state *State) Freeze() {
 	state.changing.RLock()
 }
 
+// ID returns the node identifier.
+func (state *State) ID() uuid.UUID {
+	return state.id
+}
+
 // IsLeader reports whether this node is the leader.
 func (state *State) IsLeader() bool {
 	state.mu.Lock()
@@ -1164,6 +1169,7 @@ const (
 type ActionExecution struct {
 	mu          *sync.Mutex
 	ID          int
+	node        *uuid.UUID
 	action      *Action
 	Incremental bool
 	Cursor      time.Time
@@ -1176,6 +1182,19 @@ func (ex *ActionExecution) Action() *Action {
 	a := ex.action
 	ex.mu.Unlock()
 	return a
+}
+
+// Node returns the node on which the execution is currently running.
+// The boolean return value indicates whether the execution is taking place on a
+// node.
+func (ex *ActionExecution) Node() (uuid.UUID, bool) {
+	ex.mu.Lock()
+	node := ex.node
+	ex.mu.Unlock()
+	if node == nil {
+		return uuid.UUID{}, false
+	}
+	return *node, true
 }
 
 // Connection returns the connection of the action.

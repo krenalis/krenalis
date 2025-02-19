@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/errors"
@@ -219,6 +220,15 @@ func New(conf *Config) (*Core, error) {
 	core.state.AddListener(core.onDeleteAction)
 	core.state.AddListener(core.onExecuteAction)
 	core.state.Unfreeze()
+
+	// Try to start pending action executions.
+	for _, action := range core.state.Actions() {
+		if exe, ok := action.Execution(); ok {
+			if _, ok := exe.Node(); !ok {
+				core.tryStartActionExecution(action.ID)
+			}
+		}
+	}
 
 	return core, nil
 }
@@ -777,17 +787,55 @@ func (core *Core) onDeleteAction(n state.DeleteAction) {
 
 // onExecuteAction is called when an action is executed.
 func (core *Core) onExecuteAction(n state.ExecuteAction) {
-	if !core.state.IsLeader() {
-		return
-	}
-	action, _ := core.state.Action(n.Action)
-	c := action.Connection()
-	store := core.datastore.Store(c.Workspace().ID)
-	connection := &Connection{core: core, store: store, connection: c}
-	a := &Action{core: core, action: action, connection: connection}
+	core.tryStartActionExecution(n.Action)
+}
+
+// tryStartActionExecution attempts to start an action execution.
+// It returns immediately and spawns a new goroutine to handle the execution.
+func (core *Core) tryStartActionExecution(actionID int) {
 	core.close.Add(1)
 	go func() {
 		defer core.close.Done()
+		var action *state.Action
+		// Implement exponential backoff in case of a database error.
+		bo := backoff.New(200)
+		bo.SetCap(5 * time.Second)
+		for bo.Next(core.close.ctx) {
+			var ok bool
+			action, ok = core.state.Action(actionID)
+			if !ok {
+				return
+			}
+			execution, ok := action.Execution()
+			if !ok {
+				return
+			}
+			if _, ok := execution.Node(); ok {
+				return
+			}
+			res, err := core.db.Exec(core.close.ctx,
+				"UPDATE actions_executions\nSET node = $1\nWHERE id = $2 AND node IS NULL",
+				core.state.ID(), execution.ID)
+			if err != nil {
+				if err := core.close.ctx.Err(); err != nil {
+					return
+				}
+				slog.Error(fmt.Sprintf("core: failed to start action execution, retrying after %s", bo.WaitTime()), "error", err)
+				continue
+			}
+			if res.RowsAffected() == 0 {
+				return
+			}
+			break
+		}
+		if err := core.close.ctx.Err(); err != nil {
+			return
+		}
+		// Start the action execution.
+		c := action.Connection()
+		store := core.datastore.Store(c.Workspace().ID)
+		connection := &Connection{core: core, store: store, connection: c}
+		a := &Action{core: core, action: action, connection: connection}
 		a.exec(core.close.ctx)
 	}()
 }
