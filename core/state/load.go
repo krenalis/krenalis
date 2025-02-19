@@ -441,7 +441,9 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			"FROM actions_executions\nWHERE end_time IS NULL",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
-					exe := ActionExecution{}
+					exe := ActionExecution{
+						mu: &sync.Mutex{},
+					}
 					var actionID int
 					err := rows.Scan(&exe.ID, &actionID, &exe.Cursor, &exe.Incremental, &exe.StartTime)
 					if err != nil {
