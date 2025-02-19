@@ -171,7 +171,7 @@ func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) erro
 	defer done()
 	where := meergo.NewBaseExpr(
 		meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, action)
-	return store.warehouse().Delete(ctx, "_user_identities", where)
+	return store.warehouse().Delete(ctx, "_destinations_users", where)
 }
 
 // Events returns the events according to the provided query. The returned
