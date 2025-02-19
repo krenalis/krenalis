@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -59,7 +60,12 @@ type BatchIdentityWriter struct {
 	ackIDs []string            // Access using 'mu'.
 	timer  *time.Timer         // Access using 'mu'.
 
-	closed bool
+	close struct {
+		ctx    context.Context
+		cancel context.CancelFunc
+		atomic.Bool
+		sync.WaitGroup
+	}
 }
 
 // newBatchIdentityWriter returns an identity writer for writing user identities
@@ -100,6 +106,7 @@ func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack 
 		ack:        ack,
 		purge:      purge,
 	}
+	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
 	iw.columns = make([]meergo.Column, 7, 7+len(action.Transformation.OutPaths))
 	iw.columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
@@ -136,7 +143,7 @@ func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack 
 // https://github.com/meergo/meergo/issues/1224 and understand precisely what
 // model we want to implement for the operations and compatible methods.
 func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
-	if iw.closed {
+	if iw.close.Load() {
 		return nil
 	}
 	ctx, done, err := iw.store.mc.StartOperation(ctx, normalMode)
@@ -144,11 +151,22 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 		return err
 	}
 	defer done()
-	iw.closed = true
+	// Mark as closed and return if it was already closed in the meantime.
+	if iw.close.Swap(true) {
+		return nil
+	}
+	// Cancel the flushes if the context is cancelled.
+	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
+	defer stop()
+	// Wait for the flushes to terminate.
+	iw.close.Wait()
+	// Perform a final flush.
 	iw.mu.Lock()
 	iw.flush()
 	iw.mu.Unlock()
-	if iw.purge {
+	iw.close.Wait()
+	// Purge identities unless the context has been canceled.
+	if iw.purge && ctx.Err() == nil {
 		where := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 			meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, iw.action),
 			meergo.NewBaseExpr(meergo.Column{Name: "__execution__", Type: types.Int(32)}, meergo.OpIsNot, iw.execution),
@@ -165,7 +183,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 // when there is no need to modify the identity, but to ensure it is not purged
 // in case of reload.
 func (iw *BatchIdentityWriter) Keep(id string) {
-	if iw.closed {
+	if iw.close.Load() {
 		panic("call Keep on a closed identity writer")
 	}
 	if !iw.purge {
@@ -195,7 +213,7 @@ func (iw *BatchIdentityWriter) Keep(id string) {
 //
 // It panics if called on a closed writer.
 func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
-	if iw.closed {
+	if iw.close.Load() {
 		panic("call Write on a closed identity writer")
 	}
 	key := identityKey{action: iw.action, identityID: identity.ID}
@@ -251,8 +269,10 @@ func (iw *BatchIdentityWriter) flush() {
 	iw.ackIDs = nil
 	clear(iw.index)
 	iw.timer = nil
+	iw.close.Add(1)
 	go func() {
-		err := iw.store.warehouse().MergeIdentities(context.Background(), iw.columns, rows)
+		defer iw.close.Done()
+		err := iw.store.warehouse().MergeIdentities(iw.close.ctx, iw.columns, rows)
 		iw.ack(ackIDs, err)
 	}()
 }

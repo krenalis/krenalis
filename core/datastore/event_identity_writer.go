@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -29,7 +30,6 @@ type EventIdentityWriter struct {
 	action     int
 	connection int
 	ack        EventIdentityWriterAckFunc
-	closed     bool
 	columns    []meergo.Column
 
 	mu      sync.Mutex
@@ -40,6 +40,13 @@ type EventIdentityWriter struct {
 	rows    []map[string]any
 	ackIDs  []string
 	timer   *time.Timer
+
+	close struct {
+		ctx    context.Context
+		cancel context.CancelFunc
+		atomic.Bool
+		sync.WaitGroup
+	}
 }
 
 // newEventIdentityWriter returns an identity writer for writing user
@@ -58,6 +65,7 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 		ack:     ack,
 		actions: map[int]struct{}{},
 	}
+	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
 	// Finalize the initialization of the EventIdentityWriter in a frozen state.
 	store.ds.state.Freeze()
@@ -129,7 +137,7 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 // https://github.com/meergo/meergo/issues/1224 and understand precisely what
 // model we want to implement for the operations and compatible methods.
 func (iw *EventIdentityWriter) Close(ctx context.Context) error {
-	if iw.closed {
+	if iw.close.Load() {
 		return nil
 	}
 	ctx, done, err := iw.store.mc.StartOperation(ctx, normalMode)
@@ -137,11 +145,21 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 		return err
 	}
 	defer done()
-	iw.closed = true
+	// Mark as closed and return if it was already closed in the meantime.
+	if iw.close.Swap(true) {
+		return nil
+	}
+	// Cancel the flushes if the context is cancelled.
+	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
+	defer stop()
+	// Wait for the flushes and method calls to terminate.
+	iw.close.Wait()
+	// Perform a final flush.
 	iw.mu.Lock()
 	iw.flush()
 	iw.mu.Unlock()
-	return err
+	iw.close.Wait()
+	return nil
 }
 
 // Write writes a user identity. If a valid user schema has been provided, the
@@ -159,7 +177,7 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 //
 // It panics if called on a closed writer.
 func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
-	if iw.closed {
+	if iw.close.Load() {
 		panic("call Write on a closed identity writer")
 	}
 
@@ -279,8 +297,10 @@ func (iw *EventIdentityWriter) flush() {
 	iw.ackIDs = nil
 	clear(iw.index)
 	iw.timer = nil
+	iw.close.Add(1)
 	go func() {
-		err := iw.store.warehouse().MergeIdentities(context.Background(), iw.columns, rows)
+		defer iw.close.Done()
+		err := iw.store.warehouse().MergeIdentities(iw.close.ctx, iw.columns, rows)
 		iw.ack(iw.action, ackIDs, err)
 	}()
 }
