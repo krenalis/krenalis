@@ -11,11 +11,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 )
 
@@ -49,11 +51,15 @@ type BatchIdentityWriter struct {
 	ack        IdentityWriterAckFunc
 	flatter    *flatter
 	columns    []meergo.Column
-	rows       []map[string]any
-	index      map[identityKey]int
-	ackIDs     []string
 	purge      bool
-	closed     bool
+
+	mu     sync.Mutex
+	index  map[identityKey]int // Access using 'mu'.
+	rows   []map[string]any    // Access using 'mu'.
+	ackIDs []string            // Access using 'mu'.
+	timer  *time.Timer         // Access using 'mu'.
+
+	closed bool
 }
 
 // newBatchIdentityWriter returns an identity writer for writing user identities
@@ -139,13 +145,9 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 	}
 	defer done()
 	iw.closed = true
-	if iw.rows != nil {
-		err := iw.store.warehouse().MergeIdentities(ctx, iw.columns, iw.rows)
-		if err != nil {
-			return err
-		}
-		iw.ack(iw.ackIDs, nil)
-	}
+	iw.mu.Lock()
+	iw.flush()
+	iw.mu.Unlock()
 	if iw.purge {
 		where := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 			meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, iw.action),
@@ -178,7 +180,7 @@ func (iw *BatchIdentityWriter) Keep(id string) {
 		"__connection__":   iw.connection,
 		"__execution__":    iw.execution,
 	}
-	iw.addRow(key, row)
+	iw.appendRow(key, row, "")
 }
 
 // Write writes a user identity. If a valid user schema has been provided, the
@@ -205,17 +207,52 @@ func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 	row["__connection__"] = iw.connection
 	row["__last_change_time__"] = identity.LastChangeTime
 	row["__execution__"] = iw.execution
-	iw.addRow(key, row)
-	iw.ackIDs = append(iw.ackIDs, ackID)
+	iw.appendRow(key, row, ackID)
 	return nil
 }
 
-// addRow adds a row to the rows, replacing an existing row with the same key.
-func (iw *BatchIdentityWriter) addRow(key identityKey, row map[string]any) {
+// appendRow appends a row to the rows or replaces an existing row with the same key.
+func (iw *BatchIdentityWriter) appendRow(key identityKey, row map[string]any, ackID string) {
+	iw.mu.Lock()
+	if _, ok := row["$purge"]; !ok {
+		iw.ackIDs = append(iw.ackIDs, ackID)
+	}
+	// If a row with the same key already exists, update that row rather than adding a duplicate.
 	if i, ok := iw.index[key]; ok {
 		iw.rows[i] = row
+		iw.mu.Unlock()
 		return
+	}
+	if len(iw.rows) == 0 {
+		iw.timer = time.AfterFunc(maxQueuedIdentityTime, func() {
+			iw.mu.Lock()
+			iw.flush()
+			iw.mu.Unlock()
+		})
 	}
 	iw.index[key] = len(iw.rows)
 	iw.rows = append(iw.rows, row)
+	if len(iw.rows) == maxQueuedIdentityRows {
+		iw.flush()
+	}
+	iw.mu.Unlock()
+}
+
+// flush flushes the rows, if any, into the data warehouse.
+// It must be called while holding the iw.mu mutex.
+func (iw *BatchIdentityWriter) flush() {
+	metrics.Increment("BatchIdentityWriter.flush.calls", 1)
+	if iw.rows == nil {
+		return
+	}
+	rows := iw.rows
+	iw.rows = nil
+	ackIDs := iw.ackIDs
+	iw.ackIDs = nil
+	clear(iw.index)
+	iw.timer = nil
+	go func() {
+		err := iw.store.warehouse().MergeIdentities(context.Background(), iw.columns, rows)
+		iw.ack(ackIDs, err)
+	}()
 }
