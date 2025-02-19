@@ -26,6 +26,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		sendingMode: connection.sendingMode,
 	});
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
+	const [isDeleting, setIsDeleting] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
 	const { api, handleError, redirect, setIsLoadingConnections } = useContext(AppContext);
@@ -59,9 +60,11 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	};
 
 	const onDeletionConfirmation = async () => {
+		setIsDeleting(true);
 		try {
 			await api.workspaces.connections.delete(connection.id);
 		} catch (err) {
+			setIsDeleting(false);
 			if (err instanceof NotFoundError) {
 				redirect('connections');
 				handleError('The connection does not exist anymore');
@@ -70,9 +73,12 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 			handleError(err);
 			return;
 		}
-		setAskDeletionConfirmation(false);
-		setIsLoadingConnections(true);
-		onDelete();
+		setTimeout(() => {
+			setAskDeletionConfirmation(false);
+			setIsDeleting(false);
+			setIsLoadingConnections(true);
+			onDelete();
+		}, 300);
 	};
 
 	const onSave = async () => {
@@ -196,7 +202,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				actions={
 					<>
 						<SlButton onClick={() => setAskDeletionConfirmation(false)}>Cancel</SlButton>
-						<SlButton variant='danger' onClick={onDeletionConfirmation}>
+						<SlButton variant='danger' onClick={onDeletionConfirmation} loading={isDeleting}>
 							Delete
 						</SlButton>
 					</>
