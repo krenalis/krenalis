@@ -6,6 +6,7 @@ import AppContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/responses';
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
@@ -19,6 +20,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
 	const [settings, setSettings] = useState<ConnectorSettings>({});
+	const [isLoading, setIsLoading] = useState<boolean>(false);
 
 	const { api, handleError, showStatus, redirect } = useContext(AppContext);
 
@@ -26,10 +28,12 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 
 	useEffect(() => {
 		const fetchUI = async () => {
+			setIsLoading(true);
 			let ui: ConnectorUIResponse;
 			try {
 				ui = await api.workspaces.connections.ui(c.id);
 			} catch (err) {
+				setIsLoading(false);
 				if (err instanceof NotFoundError) {
 					redirect('connections');
 					handleError('The connection does not exist anymore');
@@ -52,6 +56,9 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 			setFields(ui.fields);
 			setButtons(ui.buttons);
 			setSettings(ui.settings);
+			setTimeout(() => {
+				setIsLoading(false);
+			}, 300);
 		};
 		fetchUI();
 	}, []);
@@ -168,6 +175,19 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 			Save
 		</SlButton>,
 	);
+
+	if (isLoading) {
+		return (
+			<SlSpinner
+				style={
+					{
+						fontSize: '2.5rem',
+						'--track-width': '5px',
+					} as React.CSSProperties
+				}
+			/>
+		);
+	}
 
 	return (
 		<ConnectorUI fields={fieldsToRender} buttons={buttonsToRender} settings={settings} onChange={onFieldChange} />
