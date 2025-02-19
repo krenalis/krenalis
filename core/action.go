@@ -354,6 +354,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					Path:                 *this.Path,
 					Sheet:                this.Sheet,
 					Compression:          this.Compression,
+					Filter:               this.Filter,
 					IdentityColumn:       *this.IdentityColumn,
 					LastChangeTimeColumn: this.LastChangeTimeColumn,
 					LastChangeTimeFormat: this.LastChangeTimeFormat,
