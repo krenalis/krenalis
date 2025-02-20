@@ -326,7 +326,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		name = tok.String()
 		kind = d.dec.PeekKind()
 		switch name {
-		case "groupId", "userId":
+		case "anonymousId", "groupId", "messageId", "timestamp", "userId":
 			if kind == 'n' {
 				if _, ok := event[name]; ok {
 					return nil, errors.BadRequest("property '%s' is specified multiple times", name)
@@ -335,7 +335,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 				continue
 			}
 			fallthrough
-		case "anonymousId", "category", "event", "messageId", "name", "sentAt", "timestamp", "type", "previousId":
+		case "category", "event", "name", "sentAt", "type", "previousId":
 			if _, ok := event[name]; ok {
 				return nil, errors.BadRequest("property '%s' is specified multiple times", name)
 			}
