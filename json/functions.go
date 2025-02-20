@@ -79,7 +79,7 @@ func Decode(r io.Reader, out any) error {
 
 // Encode writes to out the JSON encoding of v.
 func Encode(out io.Writer, v any) error {
-	err := json.MarshalWrite(out, v)
+	err := json.MarshalWrite(out, v, json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
 	if _, ok := err.(*jsontext.SyntacticError); ok {
 		return &SyntaxError{err: err}
 	}
@@ -103,7 +103,7 @@ func Indent(data []byte, prefix, indent string) ([]byte, error) {
 		return nil, ErrInvalidJSON
 	}
 	v := jsontext.Value(slices.Clone(data))
-	_ = v.Indent(prefix, indent)
+	_ = v.Indent(prefix, indent) // TODO(marco): pass json.FormatNilMapAsNull(true) and json.FormatNilSliceAsNull(true).
 	return v, nil
 }
 

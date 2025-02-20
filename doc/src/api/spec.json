@@ -41,7 +41,7 @@
                             "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -130,7 +130,7 @@
                             "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -219,7 +219,7 @@
                             "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -308,7 +308,7 @@
                             "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -435,7 +435,7 @@
                             "description": "The maximum number of errors to return. It must be between 0 and 100, with a default value of 100."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -804,7 +804,7 @@
                             "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -1121,7 +1121,7 @@
                             "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -1158,7 +1158,7 @@
                             "description": "The ID of the destination app action that exports users."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -1716,7 +1716,7 @@
                             "description": "The schema for the table key property and the output properties within the transformation.\n\nIn addition to the table key property, it must contain at least one other output property.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -1916,7 +1916,7 @@
                             "description": "The schema for the table key property and the output properties within the transformation.\n\nIn addition to the table key property, it must contain at least one other output property.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -1953,7 +1953,7 @@
                             "description": "The ID of the destination database action that exports users."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -2526,7 +2526,7 @@
                             "description": "The schema of the properties in the filter, along with the other properties from the user schema, to be exported into the file."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -2747,7 +2747,7 @@
                             "description": "The schema of the properties in the filter, along with the other properties from the user schema, to be exported into the file."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -2794,7 +2794,7 @@
                             "description": "The ID of the destination file action."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -3237,7 +3237,7 @@
                             "description": "The filter applied to the events. If it's not null, only the events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -3396,7 +3396,7 @@
                             "description": "The filter applied to the events. If it's not null, only the events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -3428,7 +3428,7 @@
                             "description": "The ID of the source action on event."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -3891,7 +3891,7 @@
                             "description": "The schema for the output properties of the transformation.\n\nWhen importing users from apps, this should be a subset of the user schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -4171,7 +4171,7 @@
                             "description": "The schema for the output properties of the transformation.\n\nWhen importing users from apps, this should be a subset of the user schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -4208,7 +4208,7 @@
                             "description": "The ID of the source app action that imports users."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -4757,7 +4757,7 @@
                             "description": "The schema for the output properties of the transformation.\n\nWhen importing users from databases, this should be a subset of the user schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -4985,7 +4985,7 @@
                             "description": "The schema for the output properties of the transformation.\n\nWhen importing users from databases, this should be a subset of the user schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -5022,7 +5022,7 @@
                             "description": "The ID of the source database action."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -5551,7 +5551,7 @@
                             "description": "The schema for the output properties of the transformation. It is required if a transformation is present.\n\nWhen importing users from events, this should be a subset of the user schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -5810,7 +5810,7 @@
                             "description": "The schema for the output properties of the transformation. It is required if a transformation is present.\n\nWhen importing users from events, this should be a subset of the user schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -5842,7 +5842,7 @@
                             "description": "The ID of the source website, mobile, or server action."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -6484,7 +6484,7 @@
                             "description": "The schema for the output properties of the transformation.\n\nWhen importing users from files, this should be a subset of the user schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -6831,7 +6831,7 @@
                             "description": "The schema for the output properties of the transformation.\n\nWhen importing users from files, this should be a subset of the user schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -6878,7 +6878,7 @@
                             "description": "The ID of the source file action."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -7456,7 +7456,7 @@
                             "description": "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\nIt should be a subset of the schema of the passed event type."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -7725,7 +7725,7 @@
                             "description": "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\nIt should be a subset of the schema of the passed event type."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -7762,7 +7762,7 @@
                             "description": "The ID of the destination app action on event."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -8100,7 +8100,7 @@
                             "description": "Indicates if the action is enabled."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -8154,7 +8154,7 @@
                             "description": "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic execution will be executed."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -8195,7 +8195,7 @@
                             "description": "Determines whether users should be imported from scratch (`false`) or incrementally from the previous import (`true`).  If omitted or nil, the action's default setting will be used.\n\nFor source database and file actions, the action must include a \"last change time\" property.\n\nFor destination actions, this parameter must be omitted or set to nil."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -8253,8 +8253,8 @@
                     "description": "Returns all action executions.\n\nActions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
                     "method": "GET",
                     "url": "/v1/actions/executions",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -8352,8 +8352,8 @@
                     "description": "Returns an action execution.\n\nActions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
                     "method": "GET",
                     "url": "/v1/actions/executions/:id",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -8451,7 +8451,7 @@
                             "description": "The ID of the action to delete."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -8507,7 +8507,7 @@
                             "description": "The cursor used to fetch the next set of users. If empty, it returns the first set of users."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -8604,7 +8604,7 @@
                             "description": "The output schema."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -8656,7 +8656,7 @@
                             "description": "The ID of the app connection. It must support users."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -8727,7 +8727,7 @@
                             "description": "The ID of the event type."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -8877,7 +8877,7 @@
                             "description": "The authorization token. Is required if the connector requires authorization."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -8953,7 +8953,7 @@
                             "description": "The URL to which redirect after granting permissions."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -9006,7 +9006,7 @@
                             "description": "The authorization code to complete the authorization process."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -9101,7 +9101,7 @@
                             "description": "The host of the website. It is used for documentation purposes only, with no functional impact.\n\nIt is required and can only be provided with website connections."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -9121,8 +9121,8 @@
                     "description": "Returns the workspace's connections, sorted by name.",
                     "method": "GET",
                     "url": "/v1/connections",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -9284,7 +9284,7 @@
                             "description": "The ID of the connection."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -9504,7 +9504,7 @@
                             "description": "The maximum number of user identities to return. The value must be within the range [1, 1000]."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -9568,7 +9568,7 @@
                             "description": "The ID of the connection."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -9595,8 +9595,8 @@
                     "description": "Returns the connectors, sorted by name.",
                     "method": "GET",
                     "url": "/v1/connectors",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -9819,7 +9819,7 @@
                             }
                         ]
                     },
-                    "errors": []
+                    "errors": null
                 },
                 {
                     "name": "Get connector",
@@ -9837,7 +9837,7 @@
                             "description": "The connector's name."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -10067,8 +10067,8 @@
                     "description": "Returns the user schema of the workspace.",
                     "method": "GET",
                     "url": "/v1/users/schema",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -10128,7 +10128,7 @@
                             "description": "Specifies renamed properties and additional information that cannot be expressed through the `schema` parameter alone.\n\nIn particular:\n\n- If a property in `schema` has been renamed, the new path must be added as a key in `rePaths` and the old path as the associated value. Otherwise, instead of performing a rename operation, a new property with the new path would be created, and the property with the old path would be deleted.\n- If a property in `schema` has been added with the same path of an already existent one which should be removed, then the path of the new property must be added as a key in `rePaths` and `null` as the associated value. Otherwise, instead of creating a new property and deleting the old one, it would be interpreted as a rename operation."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -10189,7 +10189,7 @@
                             "description": "Specifies renamed properties and additional information that cannot be expressed through the `schema` parameter alone.\n\nIn particular:\n\n- If a property in `schema` has been renamed, the new path must be added as a key in `rePaths` and the old path as the associated value. Otherwise, instead of performing a rename operation, a new property with the new path would be created, and the property with the old path would be deleted.\n- If a property in `schema` has been added with the same path of an already existent one which should be removed, then the path of the new property must be added as a key in `rePaths` and `null` as the associated value. Otherwise, instead of creating a new property and deleting the old one, it would be interpreted as a rename operation."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -10263,7 +10263,7 @@
                             "description": "The maximum number of rows to return along with the schema. The maximum is 100; the default is 0, meaning no rows are returned."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -10330,7 +10330,7 @@
                             "description": "The name of the table."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -10381,7 +10381,7 @@
                             "description": "The ID of the connection for which to create the key. It must be a website, mobile, or server."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -10430,7 +10430,7 @@
                             "description": "The ID of the connection for which to return the keys. It must be a website, mobile, or server."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -10486,7 +10486,7 @@
                             "description": "The key to delete."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -11700,7 +11700,7 @@
                             "description": "The event write key of the connection."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -12356,9 +12356,9 @@
                             "description": ""
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
-                    "errors": []
+                    "errors": null
                 },
                 {
                     "name": "Retrieve all events",
@@ -12522,7 +12522,7 @@
                             "description": "The maximum number of events to return. The value must be within the range [1, 1000]."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -13204,8 +13204,8 @@
                     "description": "Return the event schema. The event schema is the same for all workspaces.",
                     "method": "GET",
                     "url": "/v1/events/schema",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -13334,7 +13334,7 @@
                             "description": "The filter applied to the events. If not null, only events that match the filter will be included."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -13380,7 +13380,7 @@
                             "description": "The ID of the event listener."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -14054,7 +14054,7 @@
                             "description": "The ID of the event listener."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -14155,7 +14155,7 @@
                             "description": "The maximum number of rows to return along with the schema. The maximum is 100; the default is 0, meaning no rows are returned."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -14265,7 +14265,7 @@
                             "description": "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\nIf the file format does not require any settings, the `formatSettings` field must be either omitted or set to null."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -14336,7 +14336,7 @@
                             "description": "The file path relative to the root of the file storage. For details on the required format, refer to the file storage connector documentation.\n\nThe path must not be empty and cannot exceed 1,024 characters in length.\n\nNote that the path must be URL-encoded. For example, if the path is `docs/users/subscribers.csv`, you need to pass it as `docs%2Fusers%2Fsubscribers.csv`."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -14385,8 +14385,8 @@
                     "description": "Starts identity resolution that resolves the identities of the workspace.",
                     "method": "POST",
                     "url": "/v1/identity-resolution/start",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -14411,8 +14411,8 @@
                     "description": "Returns the start and end times of the latest identity resolution.",
                     "method": "GET",
                     "url": "/v1/identity-resolution/latest",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -14476,7 +14476,7 @@
                             "description": "The identifiers of the identity resolution, ordered from the highest precedence to the lowest precedence.\n\nAn identifier must be a property path that refers to a property of the user schema of the workspace. The referred property must have type `int`, `uint`, `uuid`, `inet`, `text`, or `decimal` with zero scale. Identifiers cannot be repeated.\n\nNot specifying any identifier means performing identity resolution without comparing any identifiers."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -14501,8 +14501,8 @@
                     "description": "",
                     "method": "GET",
                     "url": "/v1/identity-resolution/settings",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -14569,7 +14569,7 @@
                             "description": "The ID of a destination connection. It must be an app that supports events."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -14616,7 +14616,7 @@
                             "description": "The ID of a destination connection. It must be an app that supports events."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -14648,8 +14648,8 @@
                     "description": "Returns a list of supported languages that can be used for transformation functions.",
                     "method": "GET",
                     "url": "/v1/system/languages",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -14681,7 +14681,7 @@
                             }
                         ]
                     },
-                    "errors": []
+                    "errors": null
                 }
             ]
         },
@@ -14835,7 +14835,7 @@
                             "description": "The maximum number of users to return. It can be any value between 1 and 1,000. If not provided, the default value is 100."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -14939,7 +14939,7 @@
                             "description": "The ID of the user."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -15008,7 +15008,7 @@
                             "description": "The maximum number of events to return. It can be any value between 1 and 1,000. If not provided, the default value is 100."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -15719,7 +15719,7 @@
                             "description": "The maximum number of identities to return. It can be any value between 1 and 1,000. If not provided, the default value is 100."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -15818,8 +15818,8 @@
                     "description": "Returns the name and the settings of the current workspace's warehouse.",
                     "method": "GET",
                     "url": "/v1/warehouse",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -15891,7 +15891,7 @@
                             "description": "Indicates whether operations currently running on the warehouse that are incompatible with the passed `mode` must be canceled."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -15927,7 +15927,7 @@
                             "description": "The settings of the data warehouse."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -15975,7 +15975,7 @@
                             "description": "Indicates whether operations currently running on the warehouse that are incompatible with the passed `mode` must be canceled."
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -15990,8 +15990,8 @@
                     "description": "Repairs the current workspace's warehouse.\n\nThis endpoint can be called when no identity resolution and alter schema operations are running on the data warehouse.",
                     "method": "POST",
                     "url": "/v1/warehouse/repair",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -16006,8 +16006,8 @@
                     "description": "Returns a list of warehouse types than can be used for a workspace warehouse.",
                     "method": "GET",
                     "url": "/v1/warehouse/types",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -16042,7 +16042,7 @@
                             }
                         ]
                     },
-                    "errors": []
+                    "errors": null
                 }
             ]
         },
@@ -16173,7 +16173,7 @@
                             "description": ""
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -16329,7 +16329,7 @@
                             "description": ""
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -16420,7 +16420,7 @@
                             "description": ""
                         }
                     ],
-                    "moreParameters": [],
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {
@@ -16435,8 +16435,8 @@
                     "description": "Lists all the workspaces of the organization.",
                     "method": "GET",
                     "url": "/v1/workspaces",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -16581,15 +16581,15 @@
                             }
                         ]
                     },
-                    "errors": []
+                    "errors": null
                 },
                 {
                     "name": "Get workspace",
                     "description": "Returns the current workspace.",
                     "method": "GET",
                     "url": "/v1/workspaces/current",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": {
                         "description": "",
                         "parameters": [
@@ -16734,8 +16734,8 @@
                     "description": "Deletes the current workspace.",
                     "method": "DELETE",
                     "url": "/v1/workspaces/current",
-                    "parameters": [],
-                    "moreParameters": [],
+                    "parameters": null,
+                    "moreParameters": null,
                     "response": null,
                     "errors": [
                         {

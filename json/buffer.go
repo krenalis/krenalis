@@ -44,7 +44,7 @@ func (b *Buffer) Encode(value any) error {
 		b.initialized = true
 		b.indent = false
 	}
-	err := json.MarshalEncode(&b.enc, value)
+	err := json.MarshalEncode(&b.enc, value, json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (b *Buffer) EncodeIndent(value any, prefix, indent string) error {
 		b.initialized = true
 		b.indent = true
 	}
-	err := json.MarshalEncode(&b.enc, value, json.Deterministic(true))
+	err := json.MarshalEncode(&b.enc, value, json.Deterministic(true), json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (b *Buffer) EncodeKeyValue(key string, value any) error {
 	if value == nil {
 		b.WriteString("null")
 	} else {
-		err = json.MarshalEncode(&b.enc, value)
+		err = json.MarshalEncode(&b.enc, value, json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func (b *Buffer) EncodeQuoted(value any) error {
 		b.indent = false
 	}
 	n1 := b.Len()
-	err := json.MarshalEncode(&b.enc, value)
+	err := json.MarshalEncode(&b.enc, value, json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (b *Buffer) EncodeSorted(v any) error {
 		b.initialized = true
 		b.indent = false
 	}
-	err := json.MarshalEncode(&b.enc, v, json.Deterministic(true))
+	err := json.MarshalEncode(&b.enc, v, json.Deterministic(true), json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
 	if err != nil {
 		return err
 	}

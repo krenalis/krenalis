@@ -21,7 +21,7 @@
       return nil
     }
     url := endpoint.url.(string)
-    parameters := endpoint.parameters.([]any)
+    parameters, _ := endpoint.parameters.([]any)
     var params []map[string]any
     for parameter in parameters {
       p := parameter.(map[string]any)
@@ -117,7 +117,7 @@
     }
   }
 
-  endpoints := resource.endpoints.([]any)
+  endpoints, _ := resource.endpoints.([]any)
 %%}
 
 <h1>{{ resource.name }}</h1>
@@ -155,7 +155,7 @@
       <p class="description">{{ unsafeconv.ToMarkdown(endpoint.description.(string)) }}</p>
       {% end if %}
       <h3>Parameters</h3>
-      {% parameters := endpoint.parameters.([]any) %}
+      {% parameters, _ := endpoint.parameters.([]any) %}
       {% if len(parameters) > 0 %}
       {{ Properties(endpoint.url.(string), "", parameters, false) }}
       {% else %}
@@ -185,14 +185,14 @@
         </code>
       </div>
       {% if response, ok := endpoint.response.(map[string]any); ok %}
-      {% if parameters := response.parameters.([]any); len(parameters) > 0 %}
+      {% if parameters, _ := response.parameters.([]any); len(parameters) > 0 %}
       <div class="api-response-box">
         <div>Response</div>
         <div><pre><code class="language-json hljs">{{ responseToJSON(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</code></pre></div>
       </div>
       {% end if %}
       {% end if %}
-      {% if errors := endpoint.errors.([]any); len(errors) > 0 %}
+      {% if errors, _ := endpoint.errors.([]any); len(errors) > 0 %}
       <div class="api-errors-box">
         <div>Errors</div>
         <div>
