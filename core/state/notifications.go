@@ -12,7 +12,6 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/json"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -53,15 +53,12 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 		t = t.Elem()
 	}
 	name := t.Name()
-	var b bytes.Buffer
+	var b json.Buffer
 	b.WriteString(name)
-	enc := json.NewEncoder(&b)
-	enc.SetEscapeHTML(false)
-	err := enc.Encode(n)
+	err := b.Encode(n)
 	if err != nil {
 		return err
 	}
-	b.Truncate(b.Len() - 1) // remove new line added by Encode.
 	s := b.String()
 	if len(s) > 8000-maxIDLen-2 {
 		var z strings.Builder
