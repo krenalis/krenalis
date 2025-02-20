@@ -1556,12 +1556,12 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
+			exists, err := tx.QueryExists(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
 				return err
+			}
+			if !exists {
+				err = errors.NotFound("workspace %d does not exist", n.Workspace)
 			}
 		}
 		return tx.Notify(ctx, n)

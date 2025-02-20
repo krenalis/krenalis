@@ -346,7 +346,7 @@ func (c *actionCleaner) unsetIdentityProperties(id int, bo *backoff.Backoff) {
 		b.WriteString("properties_to_unset")
 		for _, path := range paths {
 			b.WriteByte(',')
-			b.WriteString(db.QuoteValue(path))
+			b.WriteString(db.Quote(path))
 			b.WriteByte(')')
 		}
 		b.WriteString("\nWHERE id = $1\nRETURNING properties_to_unset")

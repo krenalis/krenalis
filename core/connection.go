@@ -850,13 +850,13 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		case state.Events:
 			switch connector.Type {
 			case state.Mobile, state.Server, state.Website:
-				err = tx.QueryVoid(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
-				if err != sql.ErrNoRows {
-					if err == nil {
-						err = errors.Unprocessable(TargetExist,
-							"action with target %s already exists for %s connection %d", n.Target, connector.Type, n.Connection)
-					}
+				exists, err := tx.QueryExists(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
+				if err != nil {
 					return err
+				}
+				if exists {
+					return errors.Unprocessable(TargetExist,
+						"action with target %s already exists for %s connection %d", n.Target, connector.Type, n.Connection)
 				}
 			}
 		case state.Users, state.Groups:

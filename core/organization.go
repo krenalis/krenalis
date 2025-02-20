@@ -368,11 +368,11 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	}
 	now := time.Now().UTC()
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		err := this.core.db.QueryVoid(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
-		if err != nil && err != sql.ErrNoRows {
+		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+		if err != nil {
 			return err
 		}
-		if err == nil {
+		if exists {
 			return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		_, err = this.core.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
@@ -527,18 +527,18 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 		}
 	}
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		err := this.core.db.QueryVoid(ctx, "SELECT FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
+		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return errors.NotFound("member %d does not exist", id)
-			}
 			return err
 		}
-		err = this.core.db.QueryVoid(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
-		if err != nil && err != sql.ErrNoRows {
+		if !exists {
+			return errors.NotFound("member %d does not exist", id)
+		}
+		exists, err = this.core.db.QueryExists(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
+		if err != nil {
 			return err
 		}
-		if err != sql.ErrNoRows {
+		if exists {
 			return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		_, err = this.core.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE id = $3 AND organization = $4",

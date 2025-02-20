@@ -27,8 +27,6 @@ import (
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/json"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const maxIDLen = len("@9223372036854775807")
@@ -196,8 +194,7 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 				sleep = 0
 			}
 			b.Reset()
-			var conn *pgxpool.Conn
-			conn, err = state.db.Acquire(ctx)
+			conn, err := state.db.Conn(ctx)
 			if err != nil {
 				continue
 			}
@@ -210,7 +207,7 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 			}
 			err = func() error {
 				for {
-					n, err := conn.Conn().WaitForNotification(ctx)
+					n, err := conn.Underlying().WaitForNotification(ctx)
 					if err != nil {
 						return err
 					}
@@ -264,7 +261,7 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 				_, _ = conn.Exec(ctx, "UNLISTEN meergo")
 				continue
 			}
-			conn.Release()
+			conn.Close()
 		}
 	}()
 	<-started

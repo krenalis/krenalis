@@ -497,7 +497,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 			c.buf.WriteByte(',')
 			c.buf.WriteString(strconv.Itoa(err.count))
 			c.buf.WriteByte(',')
-			c.buf.WriteString(db.QuoteValue(err.message))
+			c.buf.WriteString(db.Quote(err.message))
 			c.buf.WriteByte(')')
 			i++
 		}
