@@ -7,9 +7,6 @@
 
 package state
 
-// logNotifications controls the logging of notifications on the log.
-const logNotifications = false
-
 // AddListener adds a notification listener.
 // It must be called on a frozen state.
 func (state *State) AddListener(listener any) {

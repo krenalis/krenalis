@@ -20,6 +20,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const logNotifications = false // Set to true to enable logging of received notifications.
+
 // keep keeps the state updated and in sync with the database.
 // It is called in its own goroutine.
 func (state *State) keep() {
