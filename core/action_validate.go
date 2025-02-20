@@ -704,18 +704,18 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		// error about unused properties in input schema because just a minor
 		// part of them is generally used.
 		if usedOutPaths != nil {
-			if props := unusedProperties(outSchema, usedOutPaths); props != nil {
+			if props := unusedPropertyPaths(outSchema, usedOutPaths); props != nil {
 				return errors.BadRequest("output schema contains unused properties: %s", strings.Join(props, ", "))
 			}
 		}
 	} else {
 		if usedInPaths != nil {
-			if props := unusedProperties(inSchema, usedInPaths); props != nil {
+			if props := unusedPropertyPaths(inSchema, usedInPaths); props != nil {
 				return errors.BadRequest("input schema contains unused properties: %s", strings.Join(props, ", "))
 			}
 		}
 		if usedOutPaths != nil {
-			if props := unusedProperties(outSchema, usedOutPaths); props != nil {
+			if props := unusedPropertyPaths(outSchema, usedOutPaths); props != nil {
 				return errors.BadRequest("output schema contains unused properties: %s", strings.Join(props, ", "))
 			}
 		}
@@ -738,27 +738,37 @@ func canBeUsedAsTableKey(k types.Kind) bool {
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
-// unusedProperties returns the names of the unused properties in schema, if
+// unusedPropertyPaths returns the paths of the unused properties in schema, if
 // there is at least one, otherwise returns nil. schema must be valid.
-func unusedProperties(schema types.Type, used []string) []string {
-	isUsed := make(map[string]bool, len(used))
-	for _, p := range used {
-		name, _, _ := strings.Cut(p, ".")
-		isUsed[name] = true
-	}
-	var unused []string
-	for _, p := range schema.Properties() {
-		if isUsed[p.Name] {
+func unusedPropertyPaths(schema types.Type, usedPaths []string) []string {
+	var unusedPaths []string
+walk:
+	for schemaPath, property := range types.WalkObjects(schema) {
+		if property.Type.Kind() == types.ObjectKind {
+			// Do not report unused errors for Object properties, only for their
+			// sub-properties.
 			continue
 		}
-		if unused == nil {
-			unused = []string{p.Name}
+		if slices.Contains(usedPaths, schemaPath) {
+			// The schema property is used directly.
+			continue
+		}
+		for _, usedPath := range usedPaths {
+			if strings.HasPrefix(schemaPath, usedPath+".") {
+				// The schema property is not used directly, but a higher level
+				// property is used, which therefore implies that all
+				// sub-properties are also indirectly used.
+				continue walk
+			}
+		}
+		if unusedPaths == nil {
+			unusedPaths = []string{schemaPath}
 		} else {
-			unused = append(unused, p.Name)
+			unusedPaths = append(unusedPaths, schemaPath)
 		}
 	}
-	slices.Sort(unused)
-	return unused
+	slices.Sort(unusedPaths)
+	return unusedPaths
 }
 
 // validateActionSchema validates an action schema, returning an error if it is

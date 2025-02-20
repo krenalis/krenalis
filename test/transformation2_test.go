@@ -38,8 +38,6 @@ func TestTransformation2(t *testing.T) {
 			{Name: "email", Type: types.Text(), Nullable: true},
 			{Name: "address", Type: types.Object([]types.Property{
 				{Name: "street", Type: types.Text(), Nullable: true},
-				{Name: "postal_code", Type: types.Text(), Nullable: true}, // not used, but check is done only at first level.
-				{Name: "city", Type: types.Text(), Nullable: true},        // not used, but check is done only at first level.
 			}), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{

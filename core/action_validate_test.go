@@ -2825,6 +2825,30 @@ func Test_validateAction(t *testing.T) {
 			provider:                testProvider{},
 			err:                     "the out properties of the transformation function must contain at least one other property in addition to the table key",
 		},
+		{
+			name: "BAD: Source/App/Users - unused property in output schema",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "x", Type: types.Object([]types.Property{
+						{Name: "y", Type: types.Text(), ReadOptional: true},
+						{Name: "z", Type: types.Text(), ReadOptional: true},
+					}), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"x.y": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			err:                     "output schema contains unused properties: x.z",
+		},
 	}
 
 	for _, test := range tests {
@@ -2964,9 +2988,155 @@ func Test_unusedProperties(t *testing.T) {
 			}),
 			expected: []string{"email", "first_name"},
 		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.Text()},
+				{Name: "email", Type: types.Text()},
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+					{Name: "zip_code", Type: types.Text()},
+				})},
+			}),
+			expected: []string{"address.street", "address.zip_code", "email", "first_name"},
+		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.Text()},
+				{Name: "email", Type: types.Text()},
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+					{Name: "zip_code", Type: types.Text()},
+				})},
+			}),
+			paths:    []string{"email"},
+			expected: []string{"address.street", "address.zip_code", "first_name"},
+		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.Text()},
+				{Name: "email", Type: types.Text()},
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+					{Name: "zip_code", Type: types.Text()},
+				})},
+			}),
+			paths:    []string{"address.street"},
+			expected: []string{"address.zip_code", "email", "first_name"},
+		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.Text()},
+				{Name: "email", Type: types.Text()},
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+					{Name: "zip_code", Type: types.Text()},
+				})},
+			}),
+			paths:    []string{"address", "first_name", "email"},
+			expected: nil,
+		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.Text()},
+				{Name: "email", Type: types.Text()},
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street", Type: types.Text()},
+					{Name: "zip_code", Type: types.Text()},
+				})},
+			}),
+			paths:    []string{"address.zip_code", "email", "first_name"},
+			expected: []string{"address.street"},
+		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "x1", Type: types.Object([]types.Property{
+					{Name: "y", Type: types.Text()},
+					{Name: "z", Type: types.Text()},
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				})},
+				{Name: "x2", Type: types.Object([]types.Property{
+					{Name: "y", Type: types.Text()},
+					{Name: "z", Type: types.Text()},
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				})},
+			}),
+			expected: []string{"x1.a.b", "x1.a.c", "x1.y", "x1.z", "x2.a.b", "x2.a.c", "x2.y", "x2.z"},
+		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "x1", Type: types.Object([]types.Property{
+					{Name: "y", Type: types.Text()},
+					{Name: "z", Type: types.Text()},
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				})},
+				{Name: "x2", Type: types.Object([]types.Property{
+					{Name: "y", Type: types.Text()},
+					{Name: "z", Type: types.Text()},
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				})},
+			}),
+			paths:    []string{"x1", "x2"},
+			expected: nil,
+		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "x1", Type: types.Object([]types.Property{
+					{Name: "y", Type: types.Text()},
+					{Name: "z", Type: types.Text()},
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				})},
+				{Name: "x2", Type: types.Object([]types.Property{
+					{Name: "y", Type: types.Text()},
+					{Name: "z", Type: types.Text()},
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				})},
+			}),
+			paths:    []string{"x1"},
+			expected: []string{"x2.a.b", "x2.a.c", "x2.y", "x2.z"},
+		},
+		{
+			schema: types.Object([]types.Property{
+				{Name: "x1", Type: types.Object([]types.Property{
+					{Name: "y", Type: types.Text()},
+					{Name: "z", Type: types.Text()},
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				})},
+				{Name: "x2", Type: types.Object([]types.Property{
+					{Name: "y", Type: types.Text()},
+					{Name: "z", Type: types.Text()},
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				})},
+			}),
+			paths:    []string{"x2.a", "x1"},
+			expected: []string{"x2.y", "x2.z"},
+		},
 	}
 	for _, cas := range cases {
-		got := unusedProperties(cas.schema, cas.paths)
+		got := unusedPropertyPaths(cas.schema, cas.paths)
 		if !reflect.DeepEqual(cas.expected, got) {
 			t.Fatalf("expected %#v, got %#v", cas.expected, got)
 		}
