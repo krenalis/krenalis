@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package postgres
+package db
 
 import (
 	"context"

@@ -14,9 +14,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 )
 
@@ -77,8 +77,8 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, cursor, incremental, start_time)\n"+
 			"VALUES ($1, $2, $3, $4)\nRETURNING id", n.Action, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "actions_executions_action_fkey" {
+			if db.IsForeignKeyViolation(err) {
+				if db.ErrConstraintName(err) == "actions_executions_action_fkey" {
 					err = errors.NotFound("action %d does not exit", n.Action)
 				}
 			}

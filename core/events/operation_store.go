@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 
@@ -47,11 +47,11 @@ type OperationStore interface {
 // PostgreStore implements the OperationStore interface storing the operations
 // on the Meergo PostgreSQL server.
 type PostgreStore struct {
-	db *postgres.DB
+	db *db.DB
 }
 
 // NewPostgreStore return a new PostgreStore.
-func NewPostgreStore(db *postgres.DB) *PostgreStore {
+func NewPostgreStore(db *db.DB) *PostgreStore {
 	return &PostgreStore{db}
 }
 

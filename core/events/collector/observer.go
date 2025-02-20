@@ -15,10 +15,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/filters"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -35,7 +35,7 @@ var (
 
 // Observer represents an event observer.
 type Observer struct {
-	db *postgres.DB
+	db *db.DB
 	sync.RWMutex
 	listeners []*listener
 }
@@ -51,7 +51,7 @@ type listener struct {
 }
 
 // newObserver returns a new observer.
-func newObserver(db *postgres.DB) *Observer {
+func newObserver(db *db.DB) *Observer {
 	return &Observer{db: db}
 }
 

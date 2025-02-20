@@ -13,7 +13,7 @@ import (
 	"sync"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 )
 
 // load loads the state.
@@ -179,7 +179,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all organizations.
 		state.organizations = map[int]*Organization{}
-		err = state.db.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *postgres.Rows) error {
+		err = state.db.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
 			var id int
 			var name string
 			for rows.Next() {
@@ -207,7 +207,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			" identifiers, ui_user_profile_image, ui_user_profile_first_name,"+
 			" ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
 			"FROM workspaces",
-			func(rows *postgres.Rows) error {
+			func(rows *db.Rows) error {
 				var organizationID int
 				var warehouseType string
 				var warehouseMode WarehouseMode
@@ -252,7 +252,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		// Read all API keys.
 		state.apiKeyByToken = map[string]*APIKey{}
 		err = state.db.QueryScan(ctx, "SELECT id, organization, workspace, token FROM api_keys",
-			func(rows *postgres.Rows) error {
+			func(rows *db.Rows) error {
 				for rows.Next() {
 					k := APIKey{}
 					var token string
@@ -274,7 +274,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		// Read all accounts.
 		state.accounts = map[int]*Account{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM accounts",
-			func(rows *postgres.Rows) error {
+			func(rows *db.Rows) error {
 				for rows.Next() {
 					a := Account{}
 					var workspaceID int
@@ -298,7 +298,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		state.connections = map[int]*Connection{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, connector, role,"+
 			" account, strategy, sending_mode, website_host, linked_connections,"+
-			" settings, health FROM connections", func(rows *postgres.Rows) error {
+			" settings, health FROM connections", func(rows *db.Rows) error {
 			for rows.Next() {
 				var workspaceID, account int
 				var connector string
@@ -348,7 +348,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all event write keys.
 		err = state.db.QueryScan(ctx, `SELECT connection, key FROM event_write_keys ORDER BY connection, creation_time`,
-			func(rows *postgres.Rows) error {
+			func(rows *db.Rows) error {
 				for rows.Next() {
 					var connectionID int
 					var key string
@@ -373,7 +373,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			"matching_in, matching_out, update_on_duplicates, table_name, table_key, identity_column,\n"+
 			"last_change_time_column, last_change_time_format, health, properties_to_unset\n"+
 			"FROM actions",
-			func(rows *postgres.Rows) error {
+			func(rows *db.Rows) error {
 				for rows.Next() {
 					var connectionID int
 					var eventType string
@@ -439,7 +439,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		// Read running action executions.
 		err = state.db.QueryScan(ctx, "SELECT id, action, cursor, incremental, start_time\n"+
 			"FROM actions_executions\nWHERE end_time IS NULL",
-			func(rows *postgres.Rows) error {
+			func(rows *db.Rows) error {
 				for rows.Next() {
 					exe := ActionExecution{
 						mu: &sync.Mutex{},
@@ -463,7 +463,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all primary sources.
 		err = state.db.QueryScan(ctx, "SELECT source, path FROM user_schema_primary_sources",
-			func(rows *postgres.Rows) error {
+			func(rows *db.Rows) error {
 				var source int
 				var path string
 				for rows.Next() {

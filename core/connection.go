@@ -26,9 +26,9 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
@@ -882,7 +882,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 			n.Compression, n.OrderBy, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
 			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
+			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
 			}
 			return err
@@ -935,8 +935,8 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 		_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, creation_time) VALUES ($1, $2, $3)",
 			n.Connection, n.Key, n.CreationTime)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "event_write_keys_connection_fkey" {
+			if db.IsForeignKeyViolation(err) {
+				if db.ErrConstraintName(err) == "event_write_keys_connection_fkey" {
 					err = errors.NotFound("connection %d does not exist", n.Connection)
 				}
 			}

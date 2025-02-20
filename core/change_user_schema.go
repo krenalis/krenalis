@@ -17,8 +17,8 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/datastore/diffschemas"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -242,7 +242,7 @@ Identifiers:
 		if insertPrimarySources != "" {
 			_, err = tx.Exec(ctx, insertPrimarySources, paths...)
 			if err != nil {
-				if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "user_schema_primary_sources_source_fkey" {
+				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "user_schema_primary_sources_source_fkey" {
 					err = errors.Unprocessable(ConnectionNotExist, "a primary source does not exist")
 				}
 				return err

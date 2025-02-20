@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/backoff"
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/state"
 )
 
@@ -67,7 +67,7 @@ func (s Step) String() string {
 
 // Collector is a metrics collector.
 type Collector struct {
-	db      *postgres.DB
+	db      *db.DB
 	state   *state.State
 	mu      sync.RWMutex
 	metrics map[int]*metrics
@@ -87,7 +87,7 @@ type Collector struct {
 // New returns a new metrics collector. This collector collects metrics with a
 // resolution of one minute and saves the collected metrics to the database
 // every minute.
-func New(db *postgres.DB, state *state.State) *Collector {
+func New(db *db.DB, state *state.State) *Collector {
 	c := &Collector{
 		db:      db,
 		state:   state,
@@ -497,7 +497,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 			c.buf.WriteByte(',')
 			c.buf.WriteString(strconv.Itoa(err.count))
 			c.buf.WriteByte(',')
-			c.buf.WriteString(postgres.QuoteValue(err.message))
+			c.buf.WriteString(db.QuoteValue(err.message))
 			c.buf.WriteByte(')')
 			i++
 		}

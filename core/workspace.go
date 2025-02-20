@@ -22,11 +22,11 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/events/collector"
 	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
@@ -735,7 +735,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 					n.Account.AccessToken, n.Account.RefreshToken, n.Account.ExpiresIn, n.Account.ID)
 			}
 			if err != nil {
-				if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "accounts_workspace_fkey" {
+				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "accounts_workspace_fkey" {
 					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				}
 				return err
@@ -749,7 +749,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			n.ID, n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
 			n.SendingMode, n.WebsiteHost, n.LinkedConnections, string(n.Settings))
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_workspace_fkey" {
+			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_fkey" {
 				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 			}
 			return err
@@ -997,7 +997,7 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 			"INNER JOIN actions a ON a.id = e.action\n"+
 			"INNER JOIN connections c ON c.id = a.connection\n"+
 			"WHERE c.workspace = $1\n"+
-			"ORDER BY id DESC", this.workspace.ID, func(rows *postgres.Rows) error {
+			"ORDER BY id DESC", this.workspace.ID, func(rows *db.Rows) error {
 			var err error
 			for rows.Next() {
 				var exe Execution

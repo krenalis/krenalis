@@ -24,12 +24,12 @@ import (
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/events/collector"
 	"github.com/meergo/meergo/core/events/dispatcher"
 	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/lambda"
@@ -50,7 +50,7 @@ type validationError interface {
 }
 
 type Core struct {
-	db         *postgres.DB
+	db         *db.DB
 	state      *state.State
 	datastore  *datastore.Datastore
 	connectors *connectors.Connectors
@@ -134,7 +134,7 @@ func New(conf *Config) (*Core, error) {
 
 	// Open connection to PostgreSQL.
 	ps := conf.PostgreSQL
-	db, err := postgres.Open(&postgres.Options{
+	db, err := db.Open(&db.Options{
 		Host:     ps.Host,
 		Port:     ps.Port,
 		Username: ps.Username,

@@ -17,7 +17,7 @@ import (
 
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/datastore"
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/state"
 )
 
@@ -346,7 +346,7 @@ func (c *actionCleaner) unsetIdentityProperties(id int, bo *backoff.Backoff) {
 		b.WriteString("properties_to_unset")
 		for _, path := range paths {
 			b.WriteByte(',')
-			b.WriteString(postgres.QuoteValue(path))
+			b.WriteString(db.QuoteValue(path))
 			b.WriteByte(')')
 		}
 		b.WriteString("\nWHERE id = $1\nRETURNING properties_to_unset")

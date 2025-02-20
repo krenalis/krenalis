@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/cmd"
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/testimages"
 	"github.com/meergo/meergo/types"
 
@@ -430,7 +430,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 // CountEventsInWarehouse returns the counts of events stored in the "events"
 // table of the testing data warehouse.
 func (c *Meergo) CountEventsInWarehouse(ctx context.Context) int {
-	db, err := postgres.Open(&postgres.Options{
+	db, err := db.Open(&db.Options{
 		Host:     testsSettings.Warehouse.Host,
 		Port:     testsSettings.Warehouse.Port,
 		Username: testsSettings.Warehouse.Username,
@@ -535,7 +535,7 @@ func initializePostgreSQLDatabase(ctx context.Context, dbSetts *DBSettings) erro
 	if err != nil {
 		return err
 	}
-	db, err := postgres.Open(&postgres.Options{
+	db, err := db.Open(&db.Options{
 		Host:     dbSetts.Host,
 		Port:     dbSetts.Port,
 		Username: dbSetts.Username,
@@ -553,7 +553,7 @@ func initializePostgreSQLDatabase(ctx context.Context, dbSetts *DBSettings) erro
 
 // ExecQueryTestDatabase executes a query on the test database.
 func (c *Meergo) ExecQueryTestDatabase(ctx context.Context, query string, args ...any) {
-	db, err := postgres.Open(&postgres.Options{
+	db, err := db.Open(&db.Options{
 		Host:     testsSettings.Database.Host,
 		Port:     testsSettings.Database.Port,
 		Username: testsSettings.Database.Username,
@@ -577,7 +577,7 @@ func (c *Meergo) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 	if reflect.TypeOf(dest).Kind() != reflect.Pointer {
 		panic("dest must be a pointer")
 	}
-	db, err := postgres.Open(&postgres.Options{
+	db, err := db.Open(&db.Options{
 		Host:     testsSettings.Database.Host,
 		Port:     testsSettings.Database.Port,
 		Username: testsSettings.Database.Username,
@@ -603,7 +603,7 @@ func (c *Meergo) WorkspaceID() int {
 
 // execQueries executes on db the queries read from queriesFile, separated by a
 // ";" character and a newline.
-func execQueries(ctx context.Context, db *postgres.DB, queriesFile string) error {
+func execQueries(ctx context.Context, db *db.DB, queriesFile string) error {
 
 	content, err := os.ReadFile(queriesFile)
 	if err != nil {

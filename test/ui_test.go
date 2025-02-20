@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/testimages"
 
@@ -104,7 +104,7 @@ func TestUI(t *testing.T) {
 
 	// Initialize the PostgreSQL database referenced in actions.
 	{
-		db, err := postgres.Open(&postgres.Options{
+		db, err := db.Open(&db.Options{
 			Host:     dbHost,
 			Port:     dbPort,
 			Username: dbUsername,

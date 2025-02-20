@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 )
@@ -28,7 +28,7 @@ import (
 // HTTP allows creating HTTP clients for connections and enables granting,
 // retrieving, and refreshing OAuth access tokens.
 type HTTP struct {
-	db        *postgres.DB
+	db        *db.DB
 	state     *state.State
 	transport http.RoundTripper
 	trace     io.Writer
@@ -36,7 +36,7 @@ type HTTP struct {
 
 // New returns an HTTP instance given the db, the state and the transport to use
 // for HTTP connections.
-func New(db *postgres.DB, state *state.State, transport http.RoundTripper) *HTTP {
+func New(db *db.DB, state *state.State, transport http.RoundTripper) *HTTP {
 	return &HTTP{
 		db:        db,
 		state:     state,

@@ -11,9 +11,9 @@ import (
 	"context"
 
 	"github.com/meergo/meergo/core/connectors"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	meergoMetrics "github.com/meergo/meergo/metrics"
@@ -30,7 +30,7 @@ type ValidationError interface {
 // processor processes events received from source streams and sent them to
 // their data warehouses.
 type processor struct {
-	db     *postgres.DB
+	db     *db.DB
 	state  *state.State
 	events struct {
 		in  chan *dispatchingEvent
@@ -47,7 +47,7 @@ type processor struct {
 }
 
 // newProcessor returns a new processor.
-func newProcessor(db *postgres.DB, st *state.State, opStore events.OperationStore, connectors *connectors.Connectors, provider transformers.Provider, metrics *metrics.Collector) (*processor, error) {
+func newProcessor(db *db.DB, st *state.State, opStore events.OperationStore, connectors *connectors.Connectors, provider transformers.Provider, metrics *metrics.Collector) (*processor, error) {
 
 	processor := processor{
 		db:                  db,

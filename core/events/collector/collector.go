@@ -22,12 +22,12 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/datastore"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/events/dispatcher"
 	"github.com/meergo/meergo/core/filters"
 	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/json"
@@ -89,7 +89,7 @@ func (sa *actionIdentityWriter) Close(ctx context.Context) error {
 // A Collector collects events, persists them in the database and sends them to
 // the dispatcher.
 type Collector struct {
-	db                  *postgres.DB
+	db                  *db.DB
 	state               *state.State
 	datastore           *datastore.Datastore
 	operationStore      events.OperationStore
@@ -106,7 +106,7 @@ type Collector struct {
 
 // New returns a new event collector. It receives HTTP requests from mobile,
 // server and website sources and sends them to the dispatcher.
-func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, opStore events.OperationStore, provider transformers.Provider, dispatcher *dispatcher.Dispatcher, metrics *metrics.Collector) (*Collector, error) {
+func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.OperationStore, provider transformers.Provider, dispatcher *dispatcher.Dispatcher, metrics *metrics.Collector) (*Collector, error) {
 	var c = &Collector{
 		db:                  db,
 		state:               st,

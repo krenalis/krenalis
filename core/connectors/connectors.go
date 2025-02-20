@@ -24,7 +24,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors/httpclient"
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -190,7 +190,7 @@ type Connectors struct {
 }
 
 // New returns a new *Connectors value.
-func New(db *postgres.DB, state *state.State) *Connectors {
+func New(db *db.DB, state *state.State) *Connectors {
 	h := httpclient.New(db, state, http.DefaultTransport)
 	return &Connectors{state: state, http: h}
 }

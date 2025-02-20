@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/backoff"
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/json"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,7 +41,7 @@ type notification struct {
 }
 
 type Tx struct {
-	*postgres.Tx
+	*db.Tx
 	acks *acks
 	ack  <-chan struct{}
 }

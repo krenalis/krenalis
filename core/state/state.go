@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -34,7 +34,7 @@ type election struct {
 // State represents the application state.
 type State struct {
 	id             uuid.UUID
-	db             *postgres.DB
+	db             *db.DB
 	syncing        bool // reports whether the keeper has started synchronizing the state.
 	changing       *sync.RWMutex
 	connectors     map[string]*Connector
@@ -71,7 +71,7 @@ type ConnectorOAuth struct {
 
 // New returns a state given the database and the OAuth client credentials for
 // connectors.
-func New(db *postgres.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, error) {
+func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, error) {
 
 	id, err := uuid.NewUUID()
 	if err != nil {

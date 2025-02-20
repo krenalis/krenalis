@@ -28,8 +28,8 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/datastore"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
@@ -102,7 +102,7 @@ func (this *Organization) APIKeys(ctx context.Context) ([]*APIKey, error) {
 	this.core.mustBeOpen()
 	keys := make([]*APIKey, 0)
 	query := "SELECT id, workspace, name, token, created_at FROM api_keys WHERE organization = $1 ORDER BY created_at"
-	err := this.core.db.QueryScan(ctx, query, this.organization.ID, func(rows *postgres.Rows) error {
+	err := this.core.db.QueryScan(ctx, query, this.organization.ID, func(rows *db.Rows) error {
 		var err error
 		for rows.Next() {
 			var key APIKey
@@ -206,8 +206,8 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 		_, err := tx.Exec(ctx, "INSERT INTO api_keys (id, organization, workspace, name, token, created_at) "+
 			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6)", n.ID, n.Organization, n.Workspace, name, n.Token, createdAt)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				switch postgres.ErrConstraintName(err) {
+			if db.IsForeignKeyViolation(err) {
+				switch db.ErrConstraintName(err) {
 				case "api_keys_organization_fkey":
 					err = errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
 				case "api_keys_workspace_fkey":
@@ -290,8 +290,8 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 			n.UIPreferences.UserProfile.LastName, n.UIPreferences.UserProfile.Extra,
 			n.Warehouse.Type, n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "workspaces_organization_fkey" {
+			if db.IsForeignKeyViolation(err) {
+				if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
 					return errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
 				}
 			}
@@ -432,7 +432,7 @@ func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	this.core.mustBeOpen()
 	members := []*Member{}
-	err := this.core.db.QueryScan(ctx, "SELECT id, name, email, (avatar).image, (avatar).mime_type, invitation_token, created_at FROM members WHERE organization = $1 ORDER BY name", this.organization.ID, func(rows *postgres.Rows) error {
+	err := this.core.db.QueryScan(ctx, "SELECT id, name, email, (avatar).image, (avatar).mime_type, invitation_token, created_at FROM members WHERE organization = $1 ORDER BY name", this.organization.ID, func(rows *db.Rows) error {
 		var err error
 		for rows.Next() {
 			var member Member

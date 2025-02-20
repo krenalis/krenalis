@@ -16,9 +16,9 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/connectors"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	meergoMetrics "github.com/meergo/meergo/metrics"
@@ -44,7 +44,7 @@ type Dispatcher struct {
 		out chan *dispatchingEvent
 	}
 	sent           chan *dispatchingEvent
-	db             *postgres.DB
+	db             *db.DB
 	state          *state.State
 	processor      *processor
 	operationStore events.OperationStore
@@ -53,7 +53,7 @@ type Dispatcher struct {
 }
 
 // New returns new dispatcher.
-func New(db *postgres.DB, st *state.State, opStore events.OperationStore, provider transformers.Provider, connectors *connectors.Connectors, metrics *metrics.Collector) (*Dispatcher, error) {
+func New(db *db.DB, st *state.State, opStore events.OperationStore, provider transformers.Provider, connectors *connectors.Connectors, metrics *metrics.Collector) (*Dispatcher, error) {
 
 	processor, err := newProcessor(db, st, opStore, connectors, provider, metrics)
 	if err != nil {
