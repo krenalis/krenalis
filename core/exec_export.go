@@ -283,28 +283,23 @@ func (this *Action) exportUsers(ctx context.Context) error {
 // syncDestinationUsers syncs the destination users of the action.
 func (this *Action) syncDestinationUsers(ctx context.Context) error {
 
-	execution, _ := this.action.Execution()
+	store := this.connection.store
 
 	// Delete the outdated destination users.
-	if !execution.Incremental {
-		store := this.connection.store
-		err := store.DeleteDestinationUsers(ctx, this.action.ID)
-		if err != nil {
-			return err
-		}
+	err := store.DeleteDestinationUsers(ctx, this.action.ID)
+	if err != nil {
+		return err
 	}
 
 	// Create a schema with only the out matching property.
 	matchingOut, _ := this.action.OutSchema.Property(this.action.Matching.Out)
 	schema := types.Object([]types.Property{matchingOut})
 
-	records, err := this.app().Users(ctx, schema, execution.Cursor)
+	records, err := this.app().Users(ctx, schema, time.Time{})
 	if err != nil {
 		return err
 	}
 	defer records.Close()
-
-	cursor := execution.Cursor
 
 	var users []datastore.DestinationUser
 
@@ -324,10 +319,6 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 			})
 		}
 
-		if user.LastChangeTime.After(cursor) {
-			cursor = user.LastChangeTime
-		}
-
 		if len(users) > 0 && (len(users) == 10000 || records.Last()) {
 			// Merge destination users.
 			err = this.connection.store.MergeDestinationUsers(ctx, this.action.ID, users, nil)
@@ -340,14 +331,6 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 	}
 	if err = records.Err(); err != nil {
 		return err
-	}
-
-	// Set the user cursor.
-	if !cursor.Equal(execution.Cursor) {
-		err = this.setExecutionCursor(ctx, cursor)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
