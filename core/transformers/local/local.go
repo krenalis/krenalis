@@ -225,6 +225,10 @@ if __name__ == "__main__":
 	}
 	_, err = f.WriteString(fullSource)
 	if err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err = f.Close(); err != nil {
 		return err
 	}
 	success = true
