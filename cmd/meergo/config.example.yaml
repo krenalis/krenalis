@@ -2,8 +2,7 @@ main:
     host: 127.0.0.1:9090
     https: true
 
-ui:
-    sessionKey:
+encryptionKey:
 
 esbuild:
     printWarningsOnStderr: false

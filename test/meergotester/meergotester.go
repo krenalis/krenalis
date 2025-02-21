@@ -273,21 +273,21 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		Jar: jar,
 	}
 
-	// Create a UI session key.
-	var sessionKey string
+	// Create an encryption key.
+	var encryptionKey string
 	{
 		key := make([]byte, 64)
 		_, err = rand.Read(key)
 		if err != nil {
-			t.Fatalf("cannot generate a UI session key: %s", err)
+			t.Fatalf("cannot generate an encryption key: %s", err)
 		}
-		sessionKey = base64.StdEncoding.EncodeToString(key)
+		encryptionKey = base64.StdEncoding.EncodeToString(key)
 	}
 
 	setts := cmd.Settings{}
 	setts.Main.Host = testsSettings.MeergoHost
 	setts.Main.HTTPS = false
-	setts.UI.SessionKey = sessionKey
+	setts.EncryptionKey = encryptionKey
 	setts.PostgreSQL.Host = testsSettings.Database.Host
 	setts.PostgreSQL.Port = testsSettings.Database.Port
 	setts.PostgreSQL.Username = testsSettings.Database.Username

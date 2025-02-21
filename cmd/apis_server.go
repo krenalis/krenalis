@@ -56,18 +56,18 @@ type apisServer struct {
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
-// Core. sessionKey is the key used to encrypt the session cookie.
+// Core. encryptionKey is the key used to encrypt the session cookie.
 // runsOnHTTPs indicates if the server runs on HTTPS.
 // It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisServer {
+func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *apisServer {
 
-	if len(sessionKey) != 64 {
-		panic("sessionKey is not 64 bytes long")
+	if len(encryptionKey) != 64 {
+		panic("encryptionKey is not 64 bytes long")
 	}
 
 	s := &apisServer{core: core, runsOnHTTPS: runsOnHTTPS}
 
-	hashKey, blockKey := sessionKey[:32], sessionKey[32:]
+	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
 	s.secureCookie = securecookie.New(hashKey, blockKey)
 	s.secureCookie.MaxAge(sessionMaxAge)
 

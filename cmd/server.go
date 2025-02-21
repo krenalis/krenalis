@@ -34,10 +34,8 @@ type Settings struct {
 		Host  string
 		HTTPS bool
 	}
-	UI struct {
-		SessionKey string `yaml:"sessionKey"`
-	}
-	ESBuild struct {
+	EncryptionKey string `yaml:"encryptionKey"`
+	ESBuild       struct {
 		PrintWarningsOnStderr bool `yaml:"printWarningsOnStderr"`
 	}
 	PostgreSQL core.PostgreSQLConfig `yaml:"postgreSQL"`
@@ -120,19 +118,20 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		config.ConnectorsOAuth = maps.Clone(settings.ConnectorsOAuth)
 	}
 
-	// Decode the UI session key.
-	if settings.UI.SessionKey == "" {
-		return errors.New("ui session key is missing from the configuration file")
+	// Decode the encryption key.
+	if settings.EncryptionKey == "" {
+		return errors.New("encryption key is missing from the configuration file")
 	}
-	if padding := len(settings.UI.SessionKey) % 4; padding > 0 {
-		settings.UI.SessionKey += strings.Repeat("=", 4-padding)
+	if padding := len(settings.EncryptionKey) % 4; padding > 0 {
+		settings.EncryptionKey += strings.Repeat("=", 4-padding)
 	}
-	sessionKey, err := base64.StdEncoding.DecodeString(settings.UI.SessionKey)
+	var err error
+	config.EncryptionKey, err = base64.StdEncoding.DecodeString(settings.EncryptionKey)
 	if err != nil {
-		return errors.New("UI session key in the configuration file is not in Base64 format")
+		return errors.New("encryption key in the configuration file is not in Base64 format")
 	}
-	if len(sessionKey) != 64 {
-		return fmt.Errorf("UI session key in the configuration file is not 64 bytes long, but %d", len(sessionKey))
+	if len(config.EncryptionKey) != 64 {
+		return fmt.Errorf("encryption key in the configuration file is not 64 bytes long, but %d", len(config.EncryptionKey))
 	}
 
 	core, err := core.New(&config)
@@ -141,7 +140,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer core.Close()
 
-	apisServer := newAPIsServer(core, sessionKey, settings.Main.HTTPS)
+	apisServer := newAPIsServer(core, config.EncryptionKey, settings.Main.HTTPS)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {

@@ -11,13 +11,16 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"math"
-	"math/rand/v2"
+	mathrand "math/rand/v2"
 	"reflect"
 	"strconv"
 	"strings"
@@ -40,8 +43,9 @@ type notification struct {
 
 type Tx struct {
 	*db.Tx
-	acks *acks
-	ack  <-chan struct{}
+	notifyKey []byte
+	acks      *acks
+	ack       <-chan struct{}
 }
 
 // Notify sends a notification on the transaction.
@@ -50,54 +54,41 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
+	const start = "NOTIFY meergo, '"
 	name := t.Name()
-	var b json.Buffer
-	b.WriteString(name)
-	err := b.Encode(n)
+	b := []byte(start)
+	b, err := appendEncodeNotification(b, tx.notifyKey, name, n)
 	if err != nil {
 		return err
 	}
-	s := b.String()
-	if len(s) > 8000-maxIDLen-2 {
-		var z strings.Builder
-		bw := base64.NewEncoder(base64.RawStdEncoding, &z)
-		zw := gzip.NewWriter(bw)
-		if _, err = io.WriteString(zw, s); err != nil {
-			_ = zw.Close()
-			_ = bw.Close()
+	for len(b) > 8000-maxIDLen-2 {
+		const n = 8000 - 2
+		s := append([]byte(nil), b[:n]...)
+		s = append(s, '+', '\'')
+		_, err = tx.Exec(ctx, string(s))
+		if err != nil {
 			return err
 		}
-		if err = zw.Close(); err != nil {
-			_ = bw.Close()
-			return err
-		}
-		if err = bw.Close(); err != nil {
-			return err
-		}
-		s = z.String()
-		for len(s) > 8000-maxIDLen-2 {
-			const k = 8000 - maxIDLen - 3
-			_, err = tx.Exec(ctx, "NOTIFY meergo, '+"+s[:k]+"'")
-			if err != nil {
-				return err
-			}
-			s = s[k:]
-		}
-	} else {
-		s = escape(s)
+		copy(b[len(start):], b[n:])
+		b = b[:len(b)-(n-len(start))]
 	}
 	if name != "SeeLeader" && name != "LoadState" {
 		var id int
 		id, tx.ack = tx.acks.create()
-		s += "@" + strconv.Itoa(id)
+		b = append(b, '@')
+		b = strconv.AppendInt(b, int64(id), 10)
 	}
-	_, err = tx.Exec(ctx, "NOTIFY meergo, '"+s+"'")
+	b = append(b, '\'')
+	_, err = tx.Exec(ctx, string(b))
 	return err
 }
 
 // Transaction executes f in a transaction.
 func (state *State) Transaction(ctx context.Context, f func(tx *Tx) error) error {
-	tx := &Tx{acks: state.notifications.acks}
+	tx := &Tx{
+		notifyKey: state.encryptionKey[:32],
+		acks:      state.notifications.acks,
+	}
 	var err error
 	tx.Tx, err = state.db.Begin(ctx)
 	if err != nil {
@@ -217,20 +208,24 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 					if n.Channel != "meergo" {
 						continue
 					}
-					if len(n.Payload) > 0 && n.Payload[0] == '+' {
-						b.WriteString(n.Payload[1:])
+					if strings.HasSuffix(n.Payload, "+") {
+						b.WriteString(n.Payload[:len(n.Payload)-1])
 						continue
 					}
-					var identifier string
-					if !strings.Contains(n.Payload, "{") {
-						var p string
-						p, identifier, _ = strings.Cut(n.Payload, "@")
-						b.WriteString(p)
-					}
-					payload := n.Payload
+					p, identifier, _ := strings.Cut(n.Payload, "@")
+					b.WriteString(p)
+					var payload string
 					if b.Len() > 0 {
 						br := base64.NewDecoder(base64.RawStdEncoding, &b)
-						zr, err := gzip.NewReader(br)
+						ciphertext, err := io.ReadAll(br)
+						if err != nil {
+							return err
+						}
+						data, err := decryptAESGCM(ciphertext, state.encryptionKey[:32])
+						if err != nil {
+							return err
+						}
+						zr, err := gzip.NewReader(bytes.NewReader(data))
 						if err != nil {
 							return err
 						}
@@ -243,8 +238,11 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 						if err = zr.Close(); err != nil {
 							return err
 						}
-						payload = s.String() + "@" + identifier
+						payload = s.String()
 						b.Reset()
+					}
+					if identifier != "" {
+						payload += "@" + identifier
 					}
 					id, name, payload, err := parsePayload(payload)
 					if err != nil {
@@ -287,7 +285,7 @@ func (acks *acks) create() (int, <-chan struct{}) {
 	var id int
 	var ack chan struct{}
 	for ack == nil {
-		id = rand.IntN(math.MaxInt-1) + 1
+		id = mathrand.IntN(math.MaxInt-1) + 1
 		acks.Lock()
 		_, ok := acks.ids[id]
 		if !ok {
@@ -311,6 +309,74 @@ func (acks *acks) pop(id int) chan<- struct{} {
 	return ack
 }
 
-func escape(s string) string {
-	return strings.ReplaceAll(s, "'", "''")
+// appendEncodeNotification compresses, encrypts, and Base64-encodes a
+// notification.
+//
+// It first GZIP-compresses the notification name and JSON-encoded data, then
+// encrypts the compressed data using AES-GCM. Finally, it Base64-encodes the
+// encrypted data, appends it to the provided byte slice, and returns the
+// extended slice.
+func appendEncodeNotification(b, key []byte, name string, n any) ([]byte, error) {
+	var z bytes.Buffer
+	zw := gzip.NewWriter(&z)
+	defer zw.Close()
+	_, err := io.WriteString(zw, name)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Encode(zw, n)
+	if err != nil {
+		return nil, err
+	}
+	if err = zw.Close(); err != nil {
+		return nil, err
+	}
+	encryptedData, err := encryptAESGCM(z.Bytes(), key)
+	if err != nil {
+		return nil, err
+	}
+	return base64.RawStdEncoding.AppendEncode(b, encryptedData), nil
+}
+
+// encryptAESGCM encrypts the given data using AES-GCM with the provided key.
+func encryptAESGCM(data []byte, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	// Generates a random nonce and prepends it to the ciphertext for decryption.
+	nonce := make([]byte, aesGCM.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	ciphertext := aesGCM.Seal(nonce, nonce, data, nil)
+	return ciphertext, nil
+}
+
+// decryptAESGCM decrypts the given ciphertext using AES-GCM with the provided
+// key.
+func decryptAESGCM(ciphertext []byte, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	// Extracts the nonce from the beginning of the ciphertext before performing decryption.
+	nonceSize := aesGCM.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, errors.New("ciphertext is too short to contain the nonce")
+	}
+	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+	return plaintext, nil
 }

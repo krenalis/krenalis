@@ -35,6 +35,7 @@ type election struct {
 type State struct {
 	id             uuid.UUID
 	db             *db.DB
+	encryptionKey  []byte
 	syncing        bool // reports whether the keeper has started synchronizing the state.
 	changing       *sync.RWMutex
 	connectors     map[string]*Connector
@@ -69,9 +70,9 @@ type ConnectorOAuth struct {
 	ClientSecret string `yaml:"clientSecret"`
 }
 
-// New returns a state given the database and the OAuth client credentials for
-// connectors.
-func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, error) {
+// New returns a state given the database, the encryption key, and the OAuth
+// client credentials for connectors.
+func New(db *db.DB, encryptionKey []byte, connectorsOAuth map[string]*ConnectorOAuth) (*State, error) {
 
 	id, err := uuid.NewUUID()
 	if err != nil {
@@ -81,6 +82,7 @@ func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, error) 
 	state := &State{
 		id:               id,
 		db:               db,
+		encryptionKey:    encryptionKey,
 		mu:               new(sync.Mutex),
 		changing:         new(sync.RWMutex),
 		organizations:    map[int]*Organization{},

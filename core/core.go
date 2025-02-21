@@ -77,7 +77,8 @@ var hasBeenCalled bool
 
 type Config struct {
 	PostgreSQL      PostgreSQLConfig
-	Transformer     any // must be a LambdaConfig or LocalConfig value
+	EncryptionKey   []byte // encryption key shared by all nodes
+	Transformer     any    // must be a LambdaConfig or LocalConfig value
 	SMTP            SMTPConfig
 	ConnectorsOAuth map[string]*state.ConnectorOAuth
 }
@@ -173,7 +174,7 @@ func New(conf *Config) (*Core, error) {
 	}
 
 	// Instantiate the state.
-	core.state, err = state.New(db, conf.ConnectorsOAuth)
+	core.state, err = state.New(db, conf.EncryptionKey, conf.ConnectorsOAuth)
 	if err != nil {
 		return nil, err
 	}
