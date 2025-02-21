@@ -18,7 +18,7 @@ jobs:
         with:
           # Keep in sync with the version within "Dockerfile".
           # Keep in sync with the version within "go.mod".
-          go-version: "1.23"
+          go-version: "1.24"
 
       - uses: denoland/setup-deno@v2
         with:

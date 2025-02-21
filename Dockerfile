@@ -2,7 +2,7 @@
 
 # Keep in sync with the version within ".github/workflows/main.yml".
 # Keep in sync with the version within "go.mod".
-FROM golang:1.23
+FROM golang:1.24
 
 WORKDIR /meergo
 # Note that this command copies all files present in the local repository,
