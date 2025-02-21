@@ -58,6 +58,7 @@ const Combobox = ({
 	const [cursorPosition, setCursorPosition] = useState<number>();
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [listWidth, setListWidth] = useState<number>();
+	const [selectedTab, setSelectedTab] = useState<string>();
 
 	const inputRef = useRef<any>();
 	const listRef = useRef<any>();
@@ -146,29 +147,63 @@ const Combobox = ({
 	}, [value]);
 
 	useEffect(() => {
-		if (!isOpen || listRef.current == null || listWidth != null) {
+		if (!isOpen || listRef.current == null) {
 			return;
 		}
 		setTimeout(() => {
-			// See if the list is overflowing the width of the input and in that
-			// case expand the list to avoid horizontal scrollbar.
-			let maxItemWidth = 0;
+			// See if the menu is overflowing the width of the input and
+			// in that case expand it to avoid horizontal scrollbars.
+
 			const menu = listRef.current;
-			const menuItems = menu.querySelectorAll('sl-menu-item');
+			if (menu == null) {
+				return;
+			}
+
+			let menuItems: any[];
+			if (selectedTab == null) {
+				menuItems = menu.querySelectorAll('sl-menu-item');
+			} else {
+				const panel = menu.querySelector(`sl-tab-panel[name="${selectedTab}"]`);
+				menuItems = panel.querySelectorAll('sl-menu-item');
+			}
+
+			// Get the width of the wider menu item.
+			let maxWidth = 0;
 			for (const item of menuItems) {
-				const contentWidth = item.children[0].offsetWidth;
-				const w = 70 + contentWidth; // 70 is the width of suffix plus prefix elements.
-				if (w > maxItemWidth) {
-					maxItemWidth = w;
+				let w: number;
+				if (selectedTab == null || selectedTab == 'properties') {
+					const iconWidth = item.querySelector('.schema-combobox-item__type').offsetWidth;
+					const textWidth = item.querySelector('.schema-combobox-item__text').offsetWidth;
+					w = iconWidth + textWidth;
+				} else if (selectedTab === 'functions') {
+					const itemWidth = item.querySelector('.function-item').offsetWidth;
+					w = itemWidth;
+				}
+				if (w > maxWidth) {
+					maxWidth = w;
 				}
 			}
-			const inputWidth = inputRef.current.offsetWidth;
-			const isOverflowing = inputWidth < maxItemWidth;
-			if (isOverflowing) {
-				setListWidth(maxItemWidth + 30); // Insert additional spacing.
+
+			// Get the width of the tabs.
+			const tabs = menu.querySelectorAll('sl-tab');
+			let tabsWidth = 0;
+			for (const t of tabs) {
+				tabsWidth += t.offsetWidth;
+			}
+			if (tabsWidth > maxWidth) {
+				maxWidth = tabsWidth;
+			}
+
+			if (listWidth == null) {
+				const isOverflowing = inputRef.current.offsetWidth < maxWidth;
+				if (isOverflowing) {
+					setListWidth(maxWidth + 50);
+				}
+			} else {
+				setListWidth(maxWidth + 50);
 			}
 		});
-	}, [items, isOpen]);
+	}, [items, isOpen, selectedTab]);
 
 	useEffect(() => {
 		if (autoResize) {
@@ -300,6 +335,21 @@ const Combobox = ({
 		return null;
 	}, [fragment]);
 
+	const hasTabs = useMemo(() => {
+		return (
+			((filteredProperties != null && filteredProperties.length > 0) ||
+				(filteredFunctions != null && filteredFunctions.length > 0)) &&
+			isExpression
+		);
+	}, [filteredProperties, filteredFunctions]);
+
+	useEffect(() => {
+		if (hasTabs) {
+			// set the initial value of the selected tab.
+			setSelectedTab('properties');
+		}
+	}, []);
+
 	const onSelect = (e, term: string, type: 'property' | 'function') => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -365,8 +415,9 @@ const Combobox = ({
 		onSelectFunc(name, v);
 	};
 
-	const onTabClick = () => {
+	const onTabClick = (e: any) => {
 		inputRef.current.focus();
+		setSelectedTab(e.detail.name);
 	};
 
 	return (
@@ -438,9 +489,7 @@ const Combobox = ({
 							<div className='combobox-list__function-description'>{selectedFunction.description}</div>
 						</div>
 					)}
-					{((filteredProperties != null && filteredProperties.length > 0) ||
-						(filteredFunctions != null && filteredFunctions.length > 0)) &&
-					isExpression ? (
+					{hasTabs ? (
 						<SlTabGroup className='combobox-list__tabs' onSlTabShow={onTabClick} ref={tabGroupRef}>
 							<SlTab slot='nav' panel='properties'>
 								Properties ({filteredProperties.length})
