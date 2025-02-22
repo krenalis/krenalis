@@ -14,7 +14,6 @@ import (
 
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers/mappings"
-	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/types"
 
 	meergoMetrics "github.com/meergo/meergo/metrics"
@@ -135,8 +134,8 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 	}
 
 	// Transform using the function.
-	funcName := util.TransformationFunctionName(t.action, t.function.Language)
-	err := t.provider.Call(ctx, funcName, t.function.Version, t.inSchema, t.outSchema, t.function.PreserveJSON, records)
+	fn := t.function
+	err := t.provider.Call(ctx, fn.ID, fn.Version, t.inSchema, t.outSchema, fn.PreserveJSON, records)
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
 			return FunctionExecutionError(fmt.Sprintf("%s: %s ", t.function.Language.String(), err))

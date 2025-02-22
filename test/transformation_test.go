@@ -45,6 +45,7 @@ func TestImportWithTransformation(t *testing.T) {
 		}),
 		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
+				Language: "Python",
 				Source: `
 def transform(user: dict) -> dict:
 	if user["firstName"] == "Jerad":
@@ -56,7 +57,6 @@ def transform(user: dict) -> dict:
 		"first_name": user["firstName"],
 		"gender": gender,
 	}`,
-				Language: "Python",
 				InPaths:  []string{"firstName", "email"},
 				OutPaths: []string{"email", "first_name", "gender"},
 			},

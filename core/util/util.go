@@ -17,7 +17,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/types"
 )
 
@@ -95,17 +94,9 @@ func PropertiesToColumns(t types.Type) []meergo.Column {
 
 // TransformationFunctionName returns the name of the transformation function
 // for an action in the specified language.
-func TransformationFunctionName(action int, language state.Language) string {
-	var ext string
-	switch language {
-	case state.JavaScript:
-		ext = ".js"
-	case state.Python:
-		ext = ".py"
-	default:
-		panic("unexpected language")
-	}
-	return "action-" + strconv.Itoa(action) + ext
+func TransformationFunctionName(action int) string {
+	now := time.Now().UTC()
+	return fmt.Sprintf("meergo_action%d_%s-%09d", action, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
 }
 
 // ValidateStringField validates a string field identified by the provided name.

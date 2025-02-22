@@ -9,10 +9,10 @@ package local
 
 import "testing"
 
-func Test_filenameToVersion(t *testing.T) {
+func Test_versionFromFilename(t *testing.T) {
 	const (
-		js = ".js"
-		py = ".py"
+		js = "js"
+		py = "py"
 	)
 	tests := []struct {
 		ext      string
@@ -23,31 +23,31 @@ func Test_filenameToVersion(t *testing.T) {
 	}{
 		{py, "", "", 0, false},
 		{py, "12345", "", 0, false},
-		{py, "", "_v10.py", 10, true},
-		{js, "", "_v10.js", 10, true},
-		{js, "", "_v10.py", 0, false},
-		{py, "", "_v10.js", 0, false},
+		{py, "", ".v10.py", 10, true},
+		{js, "", ".v10.js", 10, true},
+		{js, "", ".v10.py", 0, false},
+		{py, "", ".v10.js", 0, false},
 		{py, "12345", ".py", 0, false},
-		{py, "789", "12345_v10.py", 0, false},
-		{py, "12345", "12345_v10.py", 10, true},
-		{py, "12345", "12345.v10.py", 0, false},
+		{py, "789", "12345.v10.py", 0, false},
+		{py, "12345", "12345.v10.py", 10, true},
+		{py, "12345", "12345_v10.py", 0, false},
 		{py, "12345", "12345_z10.py", 0, false},
-		{py, "action", "action-12345_v1.py", 0, false},
-		{py, "action", "action-12345_vA.py", 0, false},
-		{py, "action", "action-12345_v1.txt", 0, false},
-		{py, "action", "action-12345_v10.py", 0, false},
-		{py, "action", "action-12345_v1042.py", 0, false},
-		{py, "action-12345", "action-12345_v1.py", 1, true},
-		{py, "action-12345", "action-12345_vA.py", 0, false},
-		{py, "action-12345", "action-12345_v1.txt", 0, false},
-		{py, "action-12345", "action-12345_v10.py", 10, true},
-		{py, "action-12345", "action-12345_v1042.js", 0, false},
-		{py, "action-12345", "action-12345_v1042.py", 1042, true},
-		{js, "action-12345", "action-12345_v1042.js", 1042, true},
+		{py, "action", "action-12345.v1.py", 0, false},
+		{py, "action", "action-12345.vA.py", 0, false},
+		{py, "action", "action-12345.v1.txt", 0, false},
+		{py, "action", "action-12345.v10.py", 0, false},
+		{py, "action", "action-12345.v1042.py", 0, false},
+		{py, "action-12345", "action-12345.v1.py", 1, true},
+		{py, "action-12345", "action-12345.vA.py", 0, false},
+		{py, "action-12345", "action-12345.v1.txt", 0, false},
+		{py, "action-12345", "action-12345.v10.py", 10, true},
+		{py, "action-12345", "action-12345.v1042.js", 0, false},
+		{py, "action-12345", "action-12345.v1042.py", 1042, true},
+		{js, "action-12345", "action-12345.v1042.js", 1042, true},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			gotV, gotOk := filenameToVersion(test.name, test.filename, test.ext)
+			gotV, gotOk := versionFromFilename(test.filename, test.name, test.ext)
 			if test.ok != gotOk {
 				t.Fatalf("filenameToVersion(%q, %q, %q): expected ok = %t, got %t", test.name, test.filename, test.ext, test.ok, gotOk)
 			}

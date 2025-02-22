@@ -15,10 +15,7 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-var (
-	ErrFunctionExist    = errors.New("function already exists")
-	ErrFunctionNotExist = errors.New("function does not exist")
-)
+var ErrFunctionNotExist = errors.New("function does not exist")
 
 // FunctionExecutionError represents an error resulting from the execution of a
 // transformation function such as a syntax error in the function.
@@ -35,7 +32,7 @@ func (err FunctionExecutionError) Error() string { return string(err) }
 //     functions
 type Provider interface {
 
-	// Call calls the function with the given name and version for each record
+	// Call calls the function with the given identifier and version for each record
 	// updating its Properties field with the result of each invocation. Record
 	// properties are supposed to conform to inSchema. After the transformation,
 	// Record properties conform to outSchema unless a transformation error
@@ -43,39 +40,32 @@ type Provider interface {
 	//
 	// It returns the ErrFunctionNotExist error if the function does not exist, and
 	// a FunctionExecutionError if the execution fails.
-	Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
+	Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
 
 	// Close closes the function.
 	Close(ctx context.Context) error
 
-	// Create creates a new function with the given name and source, and returns its
-	// version, which has a length in the range [1, 128]. name should have an
-	// extension of either ".js" or ".py" depending on the source code's language.
-	// If a function with the same name already exists, it returns the
-	// ErrFunctionExist error.
-	Create(ctx context.Context, name, source string) (string, error)
+	// Create creates a new function with the given name, language, and source and
+	// returns its identifier and version.
+	Create(ctx context.Context, name string, language state.Language, source string) (string, string, error)
 
-	// Delete deletes the function with the given name.
-	// If a function with the given name does not exist, it does nothing.
-	Delete(ctx context.Context, name string) error
+	// Delete deletes the function with the given identifier.
+	// If a function with the given identifier does not exist, it does nothing.
+	Delete(ctx context.Context, id string) error
 
 	// SupportLanguage reports whether language is supported as a language.
 	// It panics if language is not valid.
 	SupportLanguage(language state.Language) bool
 
-	// Update updates the source of the function with the given name, and returns a
-	// new version, which has a length in the range [1, 128]. If the function does
-	// not exist, it returns the ErrFunctionNotExist error.
-	Update(ctx context.Context, name, source string) (string, error)
+	// Update updates the source of the function with the given identifier and
+	// returns a new version, which has a length in the range [1, 128].
+	// If the function does not exist, it returns the ErrFunctionNotExist error.
+	Update(ctx context.Context, id, source string) (string, error)
 }
 
 // ValidFunctionName reports whether name is a valid function name.
 func ValidFunctionName(name string) bool {
-	if len(name) < 4 {
-		return false
-	}
-	name, ext := name[:len(name)-3], name[len(name)-3:]
-	if ext != ".js" && ext != ".py" {
+	if name == "" || len(name) > 60 {
 		return false
 	}
 	n := len(name)

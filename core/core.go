@@ -673,7 +673,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
 		action.Transformation.InPaths = types.PropertyNames(action.InSchema)
 		action.Transformation.OutPaths = types.PropertyNames(action.OutSchema)
-		provider = newTempTransformerProvider(name, transformation.Function.Source, core.transformerProvider)
+		provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, core.transformerProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or transformation) is required")
 	}
@@ -771,19 +771,20 @@ func (core *Core) mustBeOpen() {
 
 // onDeleteAction is called when an action is deleted.
 func (core *Core) onDeleteAction(n state.DeleteAction) {
-	if core.state.IsLeader() && core.transformerProvider != nil {
-		go func() {
-			for _, language := range [...]state.Language{state.JavaScript, state.Python} {
-				if core.transformerProvider.SupportLanguage(language) {
-					name := util.TransformationFunctionName(n.ID, language)
-					err := core.transformerProvider.Delete(core.close.ctx, name)
-					if err != nil {
-						slog.Debug("cannot delete transformer function", "name", name, "err", err)
-					}
-				}
-			}
-		}()
+	if !core.state.IsLeader() || core.transformerProvider == nil {
+		return
 	}
+	action := n.Action()
+	fn := action.Transformation.Function
+	if fn == nil {
+		return
+	}
+	go func() {
+		err := core.transformerProvider.Delete(core.close.ctx, fn.ID)
+		if err != nil {
+			slog.Debug("cannot delete transformer function", "id", fn.ID, "err", err)
+		}
+	}()
 }
 
 // onExecuteAction is called when an action is executed.

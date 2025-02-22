@@ -40,6 +40,7 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 		}),
 		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
+				Language: "Python",
 				Source: `
 def transform(user: dict) -> dict:
 	email = user["email"]
@@ -50,7 +51,6 @@ def transform(user: dict) -> dict:
 			"idfa": email + "-idfa",
 		}
 	}`,
-				Language: "Python",
 				InPaths:  []string{"email"},
 				OutPaths: []string{"email", "ios"},
 			},

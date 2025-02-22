@@ -124,13 +124,13 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 		}),
 		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
+				Language: "Python",
 				Source: `import random
 
 def transform(event: dict) -> dict:
 	return {
 		"email": event["userId"],
 	}`,
-				Language: "Python",
 				InPaths:  []string{"userId"},
 				OutPaths: []string{"email"},
 			},

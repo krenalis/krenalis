@@ -122,11 +122,11 @@ func TestIdentityResolution2(t *testing.T) {
 				// This transformation functions returns the user without the
 				// properties that are "null".
 				Function: &meergotester.TransformationFunction{
+					Language: "Python",
 					Source: strings.Join([]string{
 						`def transform(user: dict) -> dict:`,
 						`    return {k: v for k, v in user.items() if v is not None}`,
 					}, "\n"),
-					Language: "Python",
 					InPaths:  []string{"email", "name", "phone_numbers", "total_orders"},
 					OutPaths: []string{"email", "name", "phone_numbers", "total_orders"},
 				},

@@ -1152,9 +1152,10 @@ type Transformation struct {
 
 // TransformationFunction represents a transformation function.
 type TransformationFunction struct {
-	Source       string
-	Language     Language
+	ID           string
 	Version      string
+	Language     Language
+	Source       string
 	PreserveJSON bool
 }
 

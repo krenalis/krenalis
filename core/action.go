@@ -22,7 +22,6 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
@@ -102,8 +101,8 @@ type Language string
 
 // TransformationFunction represents a transformation function.
 type TransformationFunction struct {
-	Source       string   `json:"source"` // Source cannot be longer than MaxFunctionSourceSize runes.
 	Language     Language `json:"language"`
+	Source       string   `json:"source"` // Source cannot be longer than MaxFunctionSourceSize runes.
 	PreserveJSON bool     `json:"preserveJSON"`
 	InPaths      []string `json:"inPaths"`
 	OutPaths     []string `json:"outPaths"`
@@ -720,63 +719,57 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 
 	// Transformation.
 	if fn := n.Transformation.Function; fn != nil {
-		if this.action.Transformation.Function == nil {
-			name := util.TransformationFunctionName(n.ID, fn.Language)
-			version, err := this.core.transformerProvider.Create(ctx, name, fn.Source)
-			if err == transformers.ErrFunctionExist {
-				version, err = this.core.transformerProvider.Update(ctx, name, fn.Source)
-			}
+		current := this.action.Transformation.Function
+		if current == nil || current.Language != fn.Language {
+			name := util.TransformationFunctionName(n.ID)
+			fn.ID, fn.Version, err = this.core.transformerProvider.Create(ctx, name, fn.Language, fn.Source)
 			if err != nil {
 				return err
 			}
-			n.Transformation.Function.Version = version
-		} else if this.action.Transformation.Function.Source != fn.Source || this.action.Transformation.Function.Language != fn.Language {
-			name := util.TransformationFunctionName(n.ID, fn.Language)
-			version, err := this.core.transformerProvider.Update(ctx, name, fn.Source)
-			if err == transformers.ErrFunctionNotExist {
-				version, err = this.core.transformerProvider.Create(ctx, name, fn.Source)
-			}
+		} else if this.action.Transformation.Function.Source != fn.Source {
+			fn.ID = current.ID
+			fn.Version, err = this.core.transformerProvider.Update(ctx, current.ID, fn.Source)
 			if err != nil {
 				return err
 			}
-			n.Transformation.Function.Version = version
 		} else {
-			// The function's source code and language should not be changed.
+			// The function's language and source code should not be changed.
 			// It will be verified during the transaction and assigned the current version.
 		}
 	}
 
 	update := "UPDATE actions SET\n" +
 		"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, " +
-		"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, " +
-		"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, " +
-		"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, " +
-		"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, " +
-		"matching_out = $22, update_on_duplicates = $23, table_name = $24, table_key = $25, " +
-		"identity_column = $26, last_change_time_column = $27, last_change_time_format = $28, incremental = $29, " +
-		"properties_to_unset = $30"
+		"transformation_mapping = $6, transformation_id = $7, transformation_version = $8, transformation_language = $9, " +
+		"transformation_source = $10, transformation_preserve_json = $11, transformation_in_paths = $12, " +
+		"transformation_out_paths = $13, query = $14, format = $15, path = $16, sheet = $17, " +
+		"compression = $18, order_by = $19, format_settings = $20, export_mode = $21, matching_in = $22, " +
+		"matching_out = $23, update_on_duplicates = $24, table_name = $25, table_key = $26, " +
+		"identity_column = $27, last_change_time_column = $28, last_change_time_format = $29, incremental = $30, " +
+		"properties_to_unset = $31"
 	if (c.Role == state.Source && !action.Incremental) || shouldReload(this.action, &n) {
 		update += ", cursor = '0001-01-01 00:00:00+00'"
 	}
-	update += "\nWHERE id = $31"
+	update += "\nWHERE id = $32"
 
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		var function state.TransformationFunction
-		if n.Transformation.Function != nil {
+		if fn := n.Transformation.Function; fn != nil {
 			var current state.TransformationFunction
-			if n.Transformation.Function.Version == "" {
-				err := tx.QueryRow(ctx, "SELECT transformation_source, transformation_language, transformation_version "+
-					"FROM actions WHERE id = $1", n.ID).Scan(&current.Source, &current.Language, &current.Version)
+			if fn.ID == "" {
+				err := tx.QueryRow(ctx, "SELECT transformation_id, transformation_version, transformation_language, transformation_source "+
+					"FROM actions WHERE id = $1", n.ID).Scan(&current.ID, &current.Version, &current.Language, current.Source)
 				if err != nil {
 					return err
 				}
-				if current.Source != n.Transformation.Function.Source || current.Language != n.Transformation.Function.Language {
+				if current.Language != fn.Language || current.Source != fn.Source {
 					return fmt.Errorf("abort update action %d: it was optimistically assumed that the transformation"+
 						" had not changed, but it has indeed changed", n.ID)
 				}
-				n.Transformation.Function.Version = current.Version
+				fn.ID = current.ID
+				fn.Version = current.Version
 			}
-			function = *n.Transformation.Function
+			function = *fn
 		}
 		if c.Role == state.Source && this.action.Target == state.Users {
 			var prevOutPaths []string
@@ -797,7 +790,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		}
 		result, err := tx.Exec(ctx, update,
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
-			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
+			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
 			n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental, n.PropertiesToUnset,
@@ -874,8 +867,8 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	if function := action.Transformation.Function; function != nil {
 		this.Transformation = &Transformation{
 			Function: &TransformationFunction{
-				Source:       function.Source,
 				Language:     Language(function.Language.String()),
+				Source:       function.Source,
 				PreserveJSON: function.PreserveJSON,
 				InPaths:      slices.Clone(action.Transformation.InPaths),
 				OutPaths:     slices.Clone(action.Transformation.OutPaths),
@@ -1318,8 +1311,8 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 	}
 	return state.Transformation{
 		Function: &state.TransformationFunction{
-			Source:       fn.Source,
 			Language:     language,
+			Source:       fn.Source,
 			PreserveJSON: fn.PreserveJSON,
 		},
 		InPaths:  fn.InPaths,

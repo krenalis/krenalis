@@ -40,7 +40,7 @@ func New(settings Settings) transformers.Provider {
 	return &function{settings: settings}
 }
 
-// Call calls the function with the given name and version for each record
+// Call calls the function with the given identifier and version for each record
 // updating its Properties field with the result of each invocation. Record
 // properties are supposed to conform to inSchema. After the transformation,
 // Record properties conform to outSchema unless a transformation error
@@ -48,32 +48,27 @@ func New(settings Settings) transformers.Provider {
 //
 // It returns the ErrFunctionNotExist error if the function does not exist, and
 // a FunctionExecutionError if the execution fails.
-func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
-	name, ext, err := splitName(name)
+func (fn *function) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+
+	name, language, err := parseID(id)
 	if err != nil {
 		return err
 	}
-	var language state.Language
+
 	var executable string
-	switch ext {
-	case ".js":
-		language = state.JavaScript
+	switch language {
+	case state.JavaScript:
 		executable = fn.settings.NodeExecutable
-	case ".py":
-		language = state.Python
+	case state.Python:
 		executable = fn.settings.PythonExecutable
 	default:
 		return errors.New("language is not supported")
 	}
-	if !fn.supportLanguage(ext) {
-		return errors.New("language is not supported")
-	}
 
-	versionInt, err := strconv.Atoi(version)
-	if err != nil {
+	if v, _ := strconv.Atoi(version); v <= 0 || version[0] == '+' {
 		return fmt.Errorf("invalid version %q", version)
 	}
-	filename := fn.absFilename(name, versionInt, ext)
+	filename := fn.filename(name, version, language)
 	if _, err := os.Stat(filename); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return transformers.ErrFunctionNotExist
@@ -95,6 +90,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	if err != nil {
 		return err
 	}
+
 	return transformers.Unmarshal(&stdout, records, outSchema, language, preserveJSON)
 }
 
@@ -103,35 +99,31 @@ func (fn *function) Close(ctx context.Context) error {
 	return nil
 }
 
-// Create creates a new function with the given name and source, and returns its
-// version, which has a length in the range [1, 128]. name should have an
-// extension of either ".js" or ".py" depending on the source code's language.
-// If a function with the same name already exists, it returns the
-// ErrFunctionExist error.
-func (fn *function) Create(ctx context.Context, name, source string) (string, error) {
+// Create creates a new function with the given name, language, and source and
+// returns its identifier and version.
+func (fn *function) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
+	if !transformers.ValidFunctionName(name) {
+		return "", "", errors.New("function name is not valid")
+	}
+	if !fn.SupportLanguage(language) {
+		return "", "", errors.New("language is not supported")
+	}
 	// TODO(Gianluca): on Windows, escape reserved filenames.
 	// See https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file?redirectedfrom=MSDN.
-	err := fn.create(name, 1, source)
+	id, err := fn.create(name, "1", language, source)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return "1", nil
+	return id, "1", nil
 }
 
-// create creates a function with the given name and version.
-// If the function already exists, it returns the transformers.ErrFunctionExist
-// error.
-func (fn *function) create(name string, version int, source string) error {
-	name, ext, err := splitName(name)
-	if err != nil {
-		return err
-	}
-	if !fn.supportLanguage(ext) {
-		return errors.New("language is not supported")
-	}
+// create creates a function with the given name, version, language, and source.
+func (fn *function) create(name, version string, language state.Language, source string) (string, error) {
+	var ext string
 	var fullSource string
-	switch ext {
-	case ".js":
+	switch language {
+	case state.JavaScript:
+		ext = "js"
 		escapedSource := escapeJavaScriptSourceCode(source)
 		fullSource = `
 try {
@@ -159,7 +151,8 @@ for ( let i = 0; i < event.length; i++ ) {
 	}
 }
 process.stdout.write(JSON.stringify({ records: records }));`
-	case ".py":
+	case state.Python:
+		ext = "py"
 		fullSource = embed.PythonNormalizeFunc + "\n\n"
 		fullSource += "_SOURCE = '''" + escapePythonSourceCode(source) + "'''\n\n"
 		fullSource += `
@@ -198,7 +191,7 @@ if __name__ == "__main__":
 	main()
 `
 	}
-	filename := fn.absFilename(name, version, ext)
+	filename := fn.filename(name, version, language)
 	var success bool
 	defer func() {
 		if !success {
@@ -208,42 +201,47 @@ if __name__ == "__main__":
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
-			return transformers.ErrFunctionExist
+			return "", fmt.Errorf("function name %q already exist", name)
 		}
 		dir := filepath.Dir(filename)
 		st, err2 := os.Stat(dir)
 		if err2 != nil {
 			if errors.Is(err2, os.ErrNotExist) {
-				return fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
+				return "", fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
 			}
 		} else {
 			if !st.IsDir() {
-				return fmt.Errorf("path %q for storing local transformation functions is not a directory", dir)
+				return "", fmt.Errorf("path %q for storing local transformation functions is not a directory", dir)
 			}
 		}
-		return fmt.Errorf("cannot create local transformation function: %v", err)
+		return "", fmt.Errorf("cannot create local transformation function: %v", err)
 	}
 	_, err = f.WriteString(fullSource)
 	if err != nil {
 		_ = f.Close()
-		return err
+		return "", err
 	}
 	if err = f.Close(); err != nil {
-		return err
+		return "", err
 	}
 	success = true
-	return nil
+	id := fmt.Sprintf("%s.%s", name, ext)
+	return id, nil
 }
 
-// Delete deletes the function with the given name.
-// If a function with the given name does not exist, it does nothing.
-func (fn *function) Delete(ctx context.Context, name string) error {
-	name, ext, err := splitName(name)
+// Delete deletes the function with the given identifier.
+// If a function with the given identifier does not exist, it does nothing.
+func (fn *function) Delete(ctx context.Context, id string) error {
+	name, language, err := parseID(id)
 	if err != nil {
 		return err
 	}
-	if !fn.supportLanguage(ext) {
-		return errors.New("language is not supported")
+	var ext string
+	switch language {
+	case state.JavaScript:
+		ext = "js"
+	case state.Python:
+		ext = "py"
 	}
 	dir := fn.settings.FunctionsDir
 	entries, err := os.ReadDir(dir)
@@ -257,9 +255,9 @@ func (fn *function) Delete(ctx context.Context, name string) error {
 		if entry.IsDir() {
 			continue
 		}
-		v, ok := filenameToVersion(name, entry.Name(), ext)
+		version, ok := versionFromFilename(entry.Name(), name, ext)
 		if ok {
-			filename := fn.absFilename(name, v, ext)
+			filename := fn.filename(name, strconv.Itoa(version), language)
 			err := os.Remove(filename)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("cannot remove file %q of local transformation function: %v", filename, err)
@@ -281,74 +279,68 @@ func (fn *function) SupportLanguage(language state.Language) bool {
 	panic("invalid language")
 }
 
-// Update updates the source of the function with the given name, and returns a
-// new version, which has a length in the range [1, 128]. If the function does
-// not exist, it returns the ErrFunctionNotExist error.
-func (fn *function) Update(ctx context.Context, name, source string) (string, error) {
-	name, ext, err := splitName(name)
+// Update updates the source of the function with the given identifier and
+// returns a new version, which has a length in the range [1, 128].
+// If the function does not exist, it returns the ErrFunctionNotExist error.
+func (fn *function) Update(ctx context.Context, id, source string) (string, error) {
+	name, language, err := parseID(id)
 	if err != nil {
 		return "", err
 	}
-	if !fn.supportLanguage(ext) {
-		return "", errors.New("language is not supported")
+	var ext string
+	switch language {
+	case state.JavaScript:
+		ext = "js"
+	case state.Python:
+		ext = "py"
 	}
-	attempts := 0
-fileCreation:
-	for {
-		dir := fn.settings.FunctionsDir
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				return "", fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
-			}
-			return "", fmt.Errorf("cannot read files in directory %q storing local transformation functions", dir)
+	dir := fn.settings.FunctionsDir
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
 		}
-		// Filenames for functions should be like: "<name>_v<version>.<ext>"
-		var maxVersion int
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
-			}
-			v, ok := filenameToVersion(name, entry.Name(), ext)
-			if ok && v > maxVersion {
-				maxVersion = v
-			}
-		}
-		if maxVersion == 0 {
-			return "", transformers.ErrFunctionNotExist
-		}
-		if maxVersion == math.MaxInt64 {
-			return "", errors.New("too many versions")
-		}
-		err = fn.create(name+ext, maxVersion+1, source)
-		if err != nil {
-			if err == transformers.ErrFunctionExist {
-				attempts++
-				if attempts >= 10 {
-					return "", fmt.Errorf("unable to create file after %d attempts in which the file already existed", attempts)
-				}
-				continue fileCreation
-			}
-			return "", err
-		}
-		return strconv.Itoa(maxVersion + 1), nil
+		return "", fmt.Errorf("cannot read files in directory %q storing local transformation functions", dir)
 	}
+	// Filenames for functions should be like: "<name>_v<version>.<ext>"
+	var maxVersion int
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		v, ok := versionFromFilename(entry.Name(), name, ext)
+		if ok && v > maxVersion {
+			maxVersion = v
+		}
+	}
+	if maxVersion == 0 {
+		return "", transformers.ErrFunctionNotExist
+	}
+	if maxVersion == math.MaxInt64 {
+		return "", errors.New("too many versions")
+	}
+	version := strconv.Itoa(maxVersion + 1)
+	_, err = fn.create(name, version, language, source)
+	if err != nil {
+		return "", err
+	}
+	return version, nil
 }
 
-// filenameToVersion extracts the version from the filename relative to a
+// versionFromFilename returns the version from the filename relative to a
 // function with the given name.
 //
-// For example, if a function is named "action-12345.py" and the filename is
-// "action-12345_v10.py", then "10" and "true" are returned.
+// For example, if a function is named "meergo-action12345" and the filename is
+// "meergo-action12345.v10.py", then 10 and true are returned.
 //
 // The boolean value reports whether the filename (and thus the returned
 // version) is valid for the given name or not.
-func filenameToVersion(name, filename, ext string) (int, bool) {
-	s, ok := strings.CutPrefix(filename, name+"_v")
+func versionFromFilename(filename, name, ext string) (int, bool) {
+	s, ok := strings.CutPrefix(filename, name+".v")
 	if !ok {
 		return 0, false
 	}
-	s, ok = strings.CutSuffix(s, ext)
+	s, ok = strings.CutSuffix(s, "."+ext)
 	if !ok {
 		return 0, false
 	}
@@ -359,30 +351,6 @@ func filenameToVersion(name, filename, ext string) (int, bool) {
 	}
 	v, err := strconv.Atoi(s)
 	return v, err == nil
-}
-
-func (fn *function) absFilename(name string, version int, ext string) string {
-	return filepath.Join(fn.settings.FunctionsDir, fmt.Sprintf("%s_v%d%s", name, version, ext))
-}
-
-// splitName splits a function returning the name without the extension and the
-// extension. It returns an error if the name is not valid.
-func splitName(name string) (string, string, error) {
-	if !transformers.ValidFunctionName(name) {
-		return "", "", errors.New("function name is not valid")
-	}
-	return name[:len(name)-3], name[len(name)-3:], nil
-}
-
-// supportLanguage is like SupportLanguage but gets an extension as argument.
-func (fn *function) supportLanguage(ext string) bool {
-	switch ext {
-	case ".js":
-		return fn.settings.NodeExecutable != ""
-	case ".py":
-		return fn.settings.PythonExecutable != ""
-	}
-	panic("invalid extension")
 }
 
 // pythonEscaper is used by escapePythonSourceCode.
@@ -411,4 +379,32 @@ var javaScriptEscaper = strings.NewReplacer(`\`, `\\`, "`", "\\`", `$`, `\$`)
 // Keep this in sync with the code within the Lambda transformer.
 func escapeJavaScriptSourceCode(src string) string {
 	return javaScriptEscaper.Replace(src)
+}
+
+// filename returns the absolute filename corresponding to the provided function's name, version, and language.
+func (fn *function) filename(name, version string, language state.Language) string {
+	var ext string
+	switch language {
+	case state.JavaScript:
+		ext = "js"
+	case state.Python:
+		ext = "py"
+	}
+	return filepath.Join(fn.settings.FunctionsDir, fmt.Sprintf("%s.v%s.%s", name, version, ext))
+}
+
+// parseID parses the provided function identifier and returns the function name
+// and its associated language.
+func parseID(id string) (name string, language state.Language, err error) {
+	var ext string
+	name, ext, _ = strings.Cut(id, ".")
+	switch ext {
+	case "js":
+		language = state.JavaScript
+	case "py":
+		language = state.Python
+	default:
+		return "", 0, fmt.Errorf("transformers/local: invalid function identifier %q", id)
+	}
+	return
 }

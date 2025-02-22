@@ -817,13 +817,14 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	}
 
 	var function state.TransformationFunction
-	if n.Transformation.Function != nil {
-		name := util.TransformationFunctionName(n.ID, n.Transformation.Function.Language)
-		version, err := this.core.transformerProvider.Create(ctx, name, n.Transformation.Function.Source)
+	if fn := n.Transformation.Function; fn != nil {
+		name := util.TransformationFunctionName(n.ID)
+		id, version, err := this.core.transformerProvider.Create(ctx, name, fn.Language, fn.Source)
 		if err != nil {
 			return 0, err
 		}
-		n.Transformation.Function.Version = version
+		fn.ID = id
+		fn.Version = version
 		function = *n.Transformation.Function
 	}
 
@@ -869,15 +870,16 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
-			"transformation_source, transformation_language, transformation_version, transformation_preserve_json,\n" +
-			"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression, order_by,\n" +
-			"format_settings, export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key,\n" +
-			"identity_column, last_change_time_column, last_change_time_format, incremental)\n" +
+			"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
+			"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
+			"sheet, compression, order_by, format_settings, export_mode, matching_in, matching_out,\n" +
+			"update_on_duplicates, table_name, table_key, identity_column, last_change_time_column,\n" +
+			"last_change_time_format, incremental)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
-			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)"
+			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-			string(n.Filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
+			string(n.Filter), mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet,
 			n.Compression, n.OrderBy, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
 			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental)
@@ -1493,7 +1495,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
 			action.Transformation.InPaths = types.PropertyNames(action.InSchema)
 			action.Transformation.OutPaths = types.PropertyNames(action.OutSchema)
-			provider = newTempTransformerProvider(name, transformation.Function.Source, this.core.transformerProvider)
+			provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, this.core.transformerProvider)
 		default:
 			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
@@ -2291,24 +2293,25 @@ type ConnectionToSet struct {
 // method that is not CallFunction panics.
 type tempTransformerProvider struct {
 	name     string                // function name.
+	language state.Language        // language.
 	source   string                // source code.
 	provider transformers.Provider // underlying transformer provider.
 }
 
-func newTempTransformerProvider(name, source string, provider transformers.Provider) *tempTransformerProvider {
-	return &tempTransformerProvider{name, source, provider}
+func newTempTransformerProvider(name string, language state.Language, source string, provider transformers.Provider) *tempTransformerProvider {
+	return &tempTransformerProvider{name, language, source, provider}
 }
 
 func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
-	version, err := tp.provider.Create(ctx, tp.name, tp.source)
+	id, version, err := tp.provider.Create(ctx, tp.name, tp.language, tp.source)
 	if err != nil {
 		return nil
 	}
 	defer func() {
 		go func() {
-			err := tp.provider.Delete(context.Background(), tp.name)
+			err := tp.provider.Delete(context.Background(), id)
 			if err != nil {
-				slog.Warn("cannot delete transformation function", "name", tp.name, "err", err)
+				slog.Warn("cannot delete transformation function", "id", id, "err", err)
 			}
 		}()
 	}()
@@ -2316,7 +2319,7 @@ func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSche
 }
 
 func (tp *tempTransformerProvider) Close(_ context.Context) error { panic("not supported") }
-func (tp *tempTransformerProvider) Create(_ context.Context, _, _ string) (string, error) {
+func (tp *tempTransformerProvider) Create(_ context.Context, _ string, _ state.Language, _ string) (string, string, error) {
 	panic("not supported")
 }
 func (tp *tempTransformerProvider) Delete(_ context.Context, _ string) error {

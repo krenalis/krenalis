@@ -45,6 +45,7 @@ func TestTransformation2(t *testing.T) {
 		}),
 		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
+				Language: "Python",
 				Source: `
 def transform(user: dict) -> dict:
 	assert "@" in user["email"]
@@ -55,7 +56,6 @@ def transform(user: dict) -> dict:
 	return {
 		"email": user["email"],
 	}`,
-				Language: "Python",
 				InPaths:  []string{"email", "address.street"},
 				OutPaths: []string{"email"},
 			},

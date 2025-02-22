@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path"
 	"strings"
 	"time"
 
@@ -60,7 +59,7 @@ func New(settings Settings) transformers.Provider {
 	return &function{settings: settings}
 }
 
-// Call calls the function with the given name and version for each record
+// Call calls the function with the given identifier and version for each record
 // updating its Properties field with the result of each invocation. Record
 // properties are supposed to conform to inSchema. After the transformation,
 // Record properties conform to outSchema unless a transformation error
@@ -68,20 +67,11 @@ func New(settings Settings) transformers.Provider {
 //
 // It returns the ErrFunctionNotExist error if the function does not exist, and
 // a FunctionExecutionError if the execution fails.
-func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (fn *function) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 
-	if !transformers.ValidFunctionName(name) {
-		return errors.New("function name is not valid")
-	}
-	ext := path.Ext(name)
-	var language state.Language
-	switch ext {
-	case ".js":
-		language = state.JavaScript
-	case ".py":
-		language = state.Python
-	default:
-		return errors.New("language is not supported")
+	arn, language, err := parseID(id)
+	if err != nil {
+		return err
 	}
 
 	client, err := fn.connect(ctx)
@@ -100,12 +90,11 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 
 	// Invoke the function.
 	var out *lambda.InvokeOutput
-	name = lambdaFunctionName(name)
 	bo := backoff.New(100)
 	bo.SetCap(3 * time.Second)
 	for bo.Next(ctx) {
 		out, err = client.Invoke(ctx, &lambda.InvokeInput{
-			FunctionName: &name,
+			FunctionName: &arn,
 			Payload:      payload,
 			Qualifier:    &version,
 		})
@@ -142,22 +131,23 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		}{}
 		err := json.Unmarshal(out.Payload, &payload)
 		if err != nil {
-			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
+			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", id, err)
 		}
 		return errors.New(payload.ErrorMessage)
 	}
 	var r io.Reader
-	switch ext {
-	case ".js":
+	switch language {
+	case state.JavaScript:
 		r = bytes.NewReader(out.Payload)
-	case ".py":
+	case state.Python:
 		var s string
 		err = json.Unmarshal(out.Payload, &s)
 		if err != nil {
-			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
+			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", id, err)
 		}
 		r = strings.NewReader(s)
 	}
+
 	return transformers.Unmarshal(r, records, outSchema, language, preserveJSON)
 }
 
@@ -167,43 +157,39 @@ func (fn *function) Close(ctx context.Context) error {
 	return nil
 }
 
-// Create creates a new function with the given name and source, and returns its
-// version, which has a length in the range [1, 128]. name should have an
-// extension of either ".js" or ".py" depending on the source code's language.
-// If a function with the same name already exists, it returns the
-// ErrFunctionExist error.
-func (fn *function) Create(ctx context.Context, name, source string) (string, error) {
+// Create creates a new function with the given name, language, and source and
+// returns its identifier and version.
+func (fn *function) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
 	if !transformers.ValidFunctionName(name) {
-		return "", errors.New("function name is not valid")
+		return "", "", errors.New("function name is not valid")
 	}
-	ext := path.Ext(name)
-	if !fn.supportLanguage(ext) {
-		return "", errors.New("language is not supported")
+	if !fn.SupportLanguage(language) {
+		return "", "", errors.New("language is not supported")
 	}
-	code, err := fn.code(source, ext)
+	code, err := fn.code(source, language)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	client, err := fn.connect(ctx)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	var runtime string
 	var layers []string
-	switch ext {
-	case ".js":
+	switch language {
+	case state.JavaScript:
 		runtime = fn.settings.Node.Runtime
 		if layer := fn.settings.Node.Layer; layer != "" {
 			layers = []string{layer}
 		}
-	case ".py":
+	case state.Python:
 		runtime = fn.settings.Python.Runtime
 		if layer := fn.settings.Python.Layer; layer != "" {
 			layers = []string{layer}
 		}
 	}
 	out, err := client.CreateFunction(ctx, &lambda.CreateFunctionInput{
-		FunctionName: aws.String(lambdaFunctionName(name)),
+		FunctionName: aws.String(name),
 		Handler:      aws.String("index._handler"),
 		Publish:      true,
 		Role:         aws.String(fn.settings.Role),
@@ -213,32 +199,41 @@ func (fn *function) Create(ctx context.Context, name, source string) (string, er
 	})
 	if err != nil {
 		if status, ok := httpStatusCode(err); ok && status == 409 {
-			return "", transformers.ErrFunctionExist
+			return "", "", fmt.Errorf("transformers/lambda: function name %q already exists", name)
 		}
-		return "", err
+		return "", "", err
+	}
+	if len(*out.FunctionArn) > 1000 {
+		return "", "", fmt.Errorf("transformers/lambda: function ARN %q is too long", *out.FunctionArn)
 	}
 	if len(*out.Version) > 128 {
-		return "", fmt.Errorf("transformers/lambda: version %q is too long", *out.Version)
+		return "", "", fmt.Errorf("transformers/lambda: version %q is too long", *out.Version)
 	}
-	return *out.Version, nil
+	var ext string
+	switch language {
+	case state.JavaScript:
+		ext = "js"
+	case state.Python:
+		ext = "py"
+	}
+	id := *out.FunctionArn + "." + ext
+	version := *out.Version
+	return id, version, nil
 }
 
-// Delete deletes the function with the given name.
-// If a function with the given name does not exist, it does nothing.
-func (fn *function) Delete(ctx context.Context, name string) error {
-	if !transformers.ValidFunctionName(name) {
-		return errors.New("function name is not valid")
-	}
-	if !fn.supportLanguage(path.Ext(name)) {
-		return errors.New("language is not supported")
+// Delete deletes the function with the given identifier.
+// If a function with the given identifier does not exist, it does nothing.
+func (fn *function) Delete(ctx context.Context, id string) error {
+	arn, _, err := parseID(id)
+	if err != nil {
+		return err
 	}
 	client, err := fn.connect(ctx)
 	if err != nil {
 		return err
 	}
-	name = lambdaFunctionName(name)
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
-		FunctionName: &name,
+		FunctionName: &arn,
 	})
 	if status, ok := httpStatusCode(err); ok && status == 404 {
 		err = nil
@@ -258,18 +253,15 @@ func (fn *function) SupportLanguage(language state.Language) bool {
 	panic("invalid language")
 }
 
-// Update updates the source of the function with the given name, and returns a
-// new version, which has a length in the range [1, 128]. If the function does
-// not exist, it returns the ErrFunctionNotExist error.
-func (fn *function) Update(ctx context.Context, name, source string) (string, error) {
-	if !transformers.ValidFunctionName(name) {
-		return "", errors.New("function name is not valid")
+// Update updates the source of the function with the given identifier and
+// returns a new version, which has a length in the range [1, 128].
+// If the function does not exist, it returns the ErrFunctionNotExist error.
+func (fn *function) Update(ctx context.Context, id, source string) (string, error) {
+	arn, language, err := parseID(id)
+	if err != nil {
+		return "", err
 	}
-	ext := path.Ext(name)
-	if !fn.supportLanguage(ext) {
-		return "", errors.New("language is not supported")
-	}
-	code, err := fn.code(source, ext)
+	code, err := fn.code(source, language)
 	if err != nil {
 		return "", err
 	}
@@ -277,9 +269,8 @@ func (fn *function) Update(ctx context.Context, name, source string) (string, er
 	if err != nil {
 		return "", err
 	}
-	name = lambdaFunctionName(name)
 	out, err := client.UpdateFunctionCode(ctx, &lambda.UpdateFunctionCodeInput{
-		FunctionName: &name,
+		FunctionName: &arn,
 		Publish:      true,
 		ZipFile:      code,
 	})
@@ -295,12 +286,12 @@ func (fn *function) Update(ctx context.Context, name, source string) (string, er
 	return *out.Version, nil
 }
 
-// code returns the code of the function with the given source.
-func (fn *function) code(source string, ext string) ([]byte, error) {
+// code returns the code of the function with the given source and language.
+func (fn *function) code(source string, language state.Language) ([]byte, error) {
 	var filename string
 	var fullSource string
-	switch ext {
-	case ".js":
+	switch language {
+	case state.JavaScript:
 		filename = "index.mjs"
 		escapedSource := escapeJavaScriptSourceCode(source)
 		fullSource = `
@@ -334,7 +325,7 @@ export const _handler = async (event) => {
 	return { records };
 };
 `
-	case ".py":
+	case state.Python:
 		filename = "index.py"
 		fullSource = embed.PythonNormalizeFunc + "\n\n"
 		fullSource += "_SOURCE = '''" + escapePythonSourceCode(source) + "'''\n\n"
@@ -401,33 +392,6 @@ func (fn *function) connect(ctx context.Context) (*lambda.Client, error) {
 	return fn.client, nil
 }
 
-// supportLanguage is like SupportLanguage but gets an extension as argument.
-func (fn *function) supportLanguage(ext string) bool {
-	switch ext {
-	case ".js":
-		return fn.settings.Node.Runtime != ""
-	case ".py":
-		return fn.settings.Python.Runtime != ""
-	}
-	panic("invalid extension")
-}
-
-// httpStatusCode returns the status code returned by a Lambda HTTP response.
-// The boolean return value reports whether a status code exists.
-func httpStatusCode(err error) (int, bool) {
-	if err, ok := err.(*smithy.OperationError); ok {
-		if err, ok := err.Err.(*http.ResponseError); ok {
-			return err.Response.StatusCode, true
-		}
-	}
-	return 0, false
-}
-
-// lambdaFunctionName returns a function name in the format accepted by Lambda.
-func lambdaFunctionName(name string) string {
-	return name[:len(name)-3] + "_" + name[len(name)-2:]
-}
-
 // pythonEscaper is used by escapePythonSourceCode.
 //
 // Keep this in sync with the code within the local transformer.
@@ -454,4 +418,30 @@ var javaScriptEscaper = strings.NewReplacer(`\`, `\\`, "`", "\\`", `$`, `\$`)
 // Keep this in sync with the code within the local transformer.
 func escapeJavaScriptSourceCode(src string) string {
 	return javaScriptEscaper.Replace(src)
+}
+
+// httpStatusCode returns the status code returned by a Lambda HTTP response.
+// The boolean return value reports whether a status code exists.
+func httpStatusCode(err error) (int, bool) {
+	if err, ok := err.(*smithy.OperationError); ok {
+		if err, ok := err.Err.(*http.ResponseError); ok {
+			return err.Response.StatusCode, true
+		}
+	}
+	return 0, false
+}
+
+// parseID parses a function identifier and returns its ARN and language.
+func parseID(id string) (arn string, language state.Language, err error) {
+	var ext string
+	arn, ext, _ = strings.Cut(id, ".")
+	switch ext {
+	case "js":
+		language = state.JavaScript
+	case "py":
+		language = state.Python
+	default:
+		return "", 0, fmt.Errorf("transformers/lambda: invalid function identifier %q", id)
+	}
+	return
 }

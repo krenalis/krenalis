@@ -364,8 +364,8 @@ type Transformation struct {
 }
 
 type TransformationFunction struct {
-	Source       string   `json:"source"`
 	Language     Language `json:"language"`
+	Source       string   `json:"source"`
 	PreserveJSON bool     `json:"preserveJSON"`
 	InPaths      []string `json:"inPaths"`
 	OutPaths     []string `json:"outPaths"`

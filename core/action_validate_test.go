@@ -119,12 +119,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -360,12 +360,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"user"},
 						OutPaths: []string{"email_out"},
 					},
@@ -386,12 +386,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": "a@",`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{},
 						OutPaths: []string{"email_out"},
 					},
@@ -472,12 +472,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -578,12 +578,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(event: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": event["traits"]["email"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"traits"},
 						OutPaths: []string{"email_out"},
 					},
@@ -604,12 +604,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(event: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": "a@b",`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{},
 						OutPaths: []string{"email_out"},
 					},
@@ -659,13 +659,13 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`        "first_name": user["first_name"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in", "first_name"},
 						OutPaths: []string{"email_out", "first_name"},
 					},
@@ -788,12 +788,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths: []string{
 							"email_in",
 							"additional_properties.a",
@@ -940,12 +940,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -966,12 +966,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -1047,12 +1047,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "SomeWeirdLanguage",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "SomeWeirdLanguage",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -1309,12 +1309,12 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -2085,12 +2085,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -2139,12 +2139,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -2169,12 +2169,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -2440,13 +2440,13 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`        "in": user["in"]`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in", "id"},
 						OutPaths: []string{"email_out", "id"},
 					},
@@ -2586,12 +2586,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths: []string{
 							"email_in",
 							"additional_properties.a",
@@ -2649,12 +2649,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email"},
 					},
@@ -2806,12 +2806,12 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
+						Language: "Python",
 						Source: strings.Join([]string{
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language: "Python",
 						InPaths:  []string{"email_in"},
 						OutPaths: []string{"email_out"},
 					},
@@ -2939,20 +2939,20 @@ type testProvider struct{}
 
 var _ transformers.Provider = testProvider{}
 
-func (testProvider) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (testProvider) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	panic("not implemented")
 }
 func (testProvider) Close(ctx context.Context) error { panic("not implemented") }
-func (testProvider) Create(ctx context.Context, name, source string) (string, error) {
+func (testProvider) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
 	panic("not implemented")
 }
-func (testProvider) Delete(ctx context.Context, name string) error {
+func (testProvider) Delete(ctx context.Context, id string) error {
 	panic("not implemented")
 }
 func (testProvider) SupportLanguage(language state.Language) bool {
 	return language == state.JavaScript || language == state.Python
 }
-func (testProvider) Update(ctx context.Context, name, source string) (string, error) {
+func (testProvider) Update(ctx context.Context, id, source string) (string, error) {
 	panic("not implemented")
 }
 
