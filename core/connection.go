@@ -921,9 +921,9 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 		return "", err
 	}
 	n := state.CreateEventWriteKey{
-		Connection:   c.ID,
-		Key:          key,
-		CreationTime: time.Now().UTC(),
+		Connection: c.ID,
+		Key:        key,
+		CreatedAt:  time.Now().UTC(),
 	}
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		var count int
@@ -934,8 +934,8 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 		if count == maxKeysPerConnection {
 			return errors.Unprocessable(TooManyEventWriteKeys, "connection %d has already %d event write keys", n.Connection, maxKeysPerConnection)
 		}
-		_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, creation_time) VALUES ($1, $2, $3)",
-			n.Connection, n.Key, n.CreationTime)
+		_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, created_at) VALUES ($1, $2, $3)",
+			n.Connection, n.Key, n.CreatedAt)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "event_write_keys_connection_fkey" {

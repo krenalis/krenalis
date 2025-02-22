@@ -503,9 +503,9 @@ func (state *State) createWorkspace(n notification) {
 
 // CreateEventWriteKey is the event sent when an event write key is created.
 type CreateEventWriteKey struct {
-	Connection   int
-	Key          string
-	CreationTime time.Time
+	Connection int
+	Key        string
+	CreatedAt  time.Time
 }
 
 // createEventWriteKey creates an event write key.

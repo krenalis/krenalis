@@ -110,7 +110,7 @@ CREATE TABLE actions (
     last_change_time_column varchar(1024) NOT NULL DEFAULT '',
     last_change_time_format varchar(64) NOT NULL DEFAULT '',
     incremental boolean NOT NULL DEFAULT FALSE,
-    cursor timestamp(6) NOT NULL DEFAULT '0001-01-01 00:00:00+00',
+    cursor timestamp NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     health health NOT NULL DEFAULT 'Healthy',
     properties_to_unset varchar[],
     PRIMARY KEY (id)
@@ -121,7 +121,7 @@ CREATE TABLE actions_executions (
     action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
     node uuid,
     incremental boolean NOT NULL DEFAULT FALSE,
-    cursor timestamp(6) NOT NULL DEFAULT '0001-01-01 00:00:00+00',
+    cursor timestamp NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     start_time timestamp NOT NULL,
     end_time timestamp,
     passed_0 integer NOT NULL DEFAULT 0,
@@ -195,7 +195,7 @@ CREATE TABLE event_payloads (
 CREATE TABLE event_write_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
     key char(32) NOT NULL,
-    creation_time timestamp NOT NULL,
+    created_at timestamp NOT NULL,
     PRIMARY KEY (connection, key)
 );
 

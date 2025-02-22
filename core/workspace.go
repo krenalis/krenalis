@@ -766,7 +766,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		}
 		if n.EventWriteKey != "" {
 			// Insert the event write key.
-			_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, creation_time) VALUES ($1, $2, $3)",
+			_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, created_at) VALUES ($1, $2, $3)",
 				n.ID, n.EventWriteKey, time.Now().UTC())
 			if err != nil {
 				return err

@@ -347,7 +347,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		}
 
 		// Read all event write keys.
-		err = state.db.QueryScan(ctx, `SELECT connection, key FROM event_write_keys ORDER BY connection, creation_time`,
+		err = state.db.QueryScan(ctx, `SELECT connection, key FROM event_write_keys ORDER BY connection, created_at`,
 			func(rows *db.Rows) error {
 				for rows.Next() {
 					var connectionID int
