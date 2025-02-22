@@ -504,8 +504,8 @@ func TestAlloc(t *testing.T) {
 		value := Value(`{"id":5,"name":"Alice","email":"alice@example.com","age":30,"address":{"street":"123 Main St","city":"Wonderland","zip":"12345"}}`)
 		path := []string{"address", "city"}
 		a := testing.AllocsPerRun(1000, func() { _, _ = value.Lookup(path) })
-		if a != 0 {
-			t.Fatalf("expected 0 allocations, got %.0f", a)
+		if a != 1 {
+			t.Fatalf("expected 1 allocations, got %.0f", a)
 		}
 	})
 
@@ -515,8 +515,8 @@ func TestAlloc(t *testing.T) {
 			for _, _ = range value.Elements() {
 			}
 		})
-		if a != 7 {
-			t.Fatalf("expected 7 allocations, got %.0f", a)
+		if a != 8 {
+			t.Fatalf("expected 8 allocations, got %.0f", a)
 		}
 	})
 
@@ -526,8 +526,8 @@ func TestAlloc(t *testing.T) {
 			for _, _ = range value.Properties() {
 			}
 		})
-		if a != 13 {
-			t.Fatalf("expected 13 allocations, got %.0f", a)
+		if a != 14 {
+			t.Fatalf("expected 14 allocations, got %.0f", a)
 		}
 	})
 

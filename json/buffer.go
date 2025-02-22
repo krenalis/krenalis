@@ -70,7 +70,10 @@ func (b *Buffer) EncodeIndent(value any, prefix, indent string) error {
 		b.initialized = true
 		b.indent = true
 	}
-	err := json.MarshalEncode(&b.enc, value, json.Deterministic(true), json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
+	err := json.MarshalEncode(&b.enc, value,
+		json.FormatNilMapAsNull(true),
+		json.FormatNilSliceAsNull(true),
+		json.Deterministic(true))
 	if err != nil {
 		return err
 	}

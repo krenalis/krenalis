@@ -103,7 +103,7 @@ func Indent(data []byte, prefix, indent string) ([]byte, error) {
 		return nil, ErrInvalidJSON
 	}
 	v := jsontext.Value(slices.Clone(data))
-	_ = v.Indent(prefix, indent) // TODO(marco): pass json.FormatNilMapAsNull(true) and json.FormatNilSliceAsNull(true).
+	_ = v.Indent(jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent))
 	return v, nil
 }
 

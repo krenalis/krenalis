@@ -214,15 +214,15 @@ func Test_Decode(t *testing.T) {
 		},
 		{
 			data: data + ",",
-			err:  json.NewSyntaxError(errors.New("invalid character ',' before next token"), 0),
+			err:  json.NewSyntaxError(errors.New("invalid character ',' at start of value"), 0),
 		},
 		{
 			data: data + "," + data,
-			err:  json.NewSyntaxError(errors.New("invalid character ',' before next token"), 0),
+			err:  json.NewSyntaxError(errors.New("invalid character ',' at start of value"), 0),
 		},
 		{
 			data: `{"Boolean":[],}`,
-			err:  json.NewSyntaxError(errors.New("invalid character ',' before next token"), 0),
+			err:  json.NewSyntaxError(errors.New("invalid character ',' at start of value"), 0),
 		},
 		{
 			data: `5`,

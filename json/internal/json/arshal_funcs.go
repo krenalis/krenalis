@@ -35,7 +35,7 @@ var errNonSingularValue = errors.New("must read or write exactly one value")
 // There are no exported fields or methods on Marshalers.
 type Marshalers = typedMarshalers
 
-// NewMarshalers constructs a flattened list of marshal functions.
+// JoinMarshalers constructs a flattened list of marshal functions.
 // If multiple functions in the list are applicable for a value of a given type,
 // then those earlier in the list take precedence over those that come later.
 // If a function returns [SkipFunc], then the next applicable function is called,
@@ -43,10 +43,10 @@ type Marshalers = typedMarshalers
 //
 // For example:
 //
-//	m1 := NewMarshalers(f1, f2)
-//	m2 := NewMarshalers(f0, m1, f3)     // equivalent to m3
-//	m3 := NewMarshalers(f0, f1, f2, f3) // equivalent to m2
-func NewMarshalers(ms ...*Marshalers) *Marshalers {
+//	m1 := JoinMarshalers(f1, f2)
+//	m2 := JoinMarshalers(f0, m1, f3)     // equivalent to m3
+//	m3 := JoinMarshalers(f0, f1, f2, f3) // equivalent to m2
+func JoinMarshalers(ms ...*Marshalers) *Marshalers {
 	return newMarshalers(ms...)
 }
 
@@ -57,7 +57,7 @@ func NewMarshalers(ms ...*Marshalers) *Marshalers {
 // There are no exported fields or methods on Unmarshalers.
 type Unmarshalers = typedUnmarshalers
 
-// NewUnmarshalers constructs a flattened list of unmarshal functions.
+// JoinUnmarshalers constructs a flattened list of unmarshal functions.
 // If multiple functions in the list are applicable for a value of a given type,
 // then those earlier in the list take precedence over those that come later.
 // If a function returns [SkipFunc], then the next applicable function is called,
@@ -65,10 +65,10 @@ type Unmarshalers = typedUnmarshalers
 //
 // For example:
 //
-//	u1 := NewUnmarshalers(f1, f2)
-//	u2 := NewUnmarshalers(f0, u1, f3)     // equivalent to u3
-//	u3 := NewUnmarshalers(f0, f1, f2, f3) // equivalent to u2
-func NewUnmarshalers(us ...*Unmarshalers) *Unmarshalers {
+//	u1 := JoinUnmarshalers(f1, f2)
+//	u2 := JoinUnmarshalers(f0, u1, f3)     // equivalent to u3
+//	u3 := JoinUnmarshalers(f0, f1, f2, f3) // equivalent to u2
+func JoinUnmarshalers(us ...*Unmarshalers) *Unmarshalers {
 	return newUnmarshalers(us...)
 }
 
@@ -209,9 +209,9 @@ func MarshalFunc[T any](fn func(T) ([]byte, error)) *Marshalers {
 // on the provided encoder. It may return [SkipFunc] such that marshaling can
 // move on to the next marshal function. However, no mutable method calls may
 // be called on the encoder if [SkipFunc] is returned.
-// The pointer to [jsontext.Encoder], the value of T, and the [Options] value
+// The pointer to [jsontext.Encoder] and the value of T
 // must not be retained outside the function call.
-func MarshalToFunc[T any](fn func(*jsontext.Encoder, T, Options) error) *Marshalers {
+func MarshalToFunc[T any](fn func(*jsontext.Encoder, T) error) *Marshalers {
 	t := reflect.TypeFor[T]()
 	assertCastableTo(t, true)
 	typFnc := typedMarshaler{
@@ -220,7 +220,7 @@ func MarshalToFunc[T any](fn func(*jsontext.Encoder, T, Options) error) *Marshal
 			xe := export.Encoder(enc)
 			prevDepth, prevLength := xe.Tokens.DepthLength()
 			xe.Flags.Set(jsonflags.WithinArshalCall | 1)
-			err := fn(enc, va.castTo(t).Interface().(T), mo)
+			err := fn(enc, va.castTo(t).Interface().(T))
 			xe.Flags.Set(jsonflags.WithinArshalCall | 0)
 			currDepth, currLength := xe.Tokens.DepthLength()
 			if err == nil && (prevDepth != currDepth || prevLength+1 != currLength) {
@@ -291,9 +291,9 @@ func UnmarshalFunc[T any](fn func([]byte, T) error) *Unmarshalers {
 // on the provided decoder. It may return [SkipFunc] such that unmarshaling can
 // move on to the next unmarshal function. However, no mutable method calls may
 // be called on the decoder if [SkipFunc] is returned.
-// The pointer to [jsontext.Decoder], the value of T, and [Options] value
+// The pointer to [jsontext.Decoder] and the value of T
 // must not be retained outside the function call.
-func UnmarshalFromFunc[T any](fn func(*jsontext.Decoder, T, Options) error) *Unmarshalers {
+func UnmarshalFromFunc[T any](fn func(*jsontext.Decoder, T) error) *Unmarshalers {
 	t := reflect.TypeFor[T]()
 	assertCastableTo(t, false)
 	typFnc := typedUnmarshaler{
@@ -302,7 +302,7 @@ func UnmarshalFromFunc[T any](fn func(*jsontext.Decoder, T, Options) error) *Unm
 			xd := export.Decoder(dec)
 			prevDepth, prevLength := xd.Tokens.DepthLength()
 			xd.Flags.Set(jsonflags.WithinArshalCall | 1)
-			err := fn(dec, va.castTo(t).Interface().(T), uo)
+			err := fn(dec, va.castTo(t).Interface().(T))
 			xd.Flags.Set(jsonflags.WithinArshalCall | 0)
 			currDepth, currLength := xd.Tokens.DepthLength()
 			if err == nil && (prevDepth != currDepth || prevLength+1 != currLength) {

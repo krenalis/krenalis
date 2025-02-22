@@ -201,20 +201,22 @@ func makeStringArshaler(t reflect.Type) *arshaler {
 			return newInvalidFormatError(enc, t, mo)
 		}
 
-		// Optimize for marshaling without preceding whitespace or string escaping.
+		// Optimize for marshaling without preceding whitespace.
 		s := va.String()
-		if optimizeCommon && !mo.Flags.Get(jsonflags.AnyWhitespace|jsonflags.StringifyBoolsAndStrings) && !xe.Tokens.Last.NeedObjectName() && !jsonwire.NeedEscape(s) {
+		if optimizeCommon && !mo.Flags.Get(jsonflags.AnyWhitespace|jsonflags.StringifyBoolsAndStrings) && !xe.Tokens.Last.NeedObjectName() {
 			b := xe.Buf
 			b = xe.Tokens.MayAppendDelim(b, '"')
-			b = append(b, '"')
-			b = append(b, s...)
-			b = append(b, '"')
-			xe.Buf = b
-			xe.Tokens.Last.Increment()
-			if xe.NeedFlush() {
-				return xe.Flush()
+			b, err := jsonwire.AppendQuote(b, s, &mo.Flags)
+			if err == nil {
+				xe.Buf = b
+				xe.Tokens.Last.Increment()
+				if xe.NeedFlush() {
+					return xe.Flush()
+				}
+				return nil
 			}
-			return nil
+			// Otherwise, the string contains invalid UTF-8,
+			// so let the logic below construct the proper error.
 		}
 
 		if mo.Flags.Get(jsonflags.StringifyBoolsAndStrings) {
@@ -753,7 +755,7 @@ func makeMapArshaler(t reflect.Type) *arshaler {
 		}
 
 		once.Do(init)
-		if err := enc.WriteToken(jsontext.ObjectStart); err != nil {
+		if err := enc.WriteToken(jsontext.BeginObject); err != nil {
 			return err
 		}
 		if n > 0 {
@@ -864,7 +866,7 @@ func makeMapArshaler(t reflect.Type) *arshaler {
 				}
 			}
 		}
-		if err := enc.WriteToken(jsontext.ObjectEnd); err != nil {
+		if err := enc.WriteToken(jsontext.EndObject); err != nil {
 			return err
 		}
 		return nil
@@ -1037,7 +1039,7 @@ func makeStructArshaler(t reflect.Type) *arshaler {
 		if errInit != nil && !mo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
 			return newMarshalErrorBefore(enc, errInit.GoType, errInit.Err)
 		}
-		if err := enc.WriteToken(jsontext.ObjectStart); err != nil {
+		if err := enc.WriteToken(jsontext.BeginObject); err != nil {
 			return err
 		}
 		var seenIdxs uintSet
@@ -1045,9 +1047,9 @@ func makeStructArshaler(t reflect.Type) *arshaler {
 		xe.Tokens.Last.DisableNamespace() // we manually ensure unique names below
 		for i := range fields.flattened {
 			f := &fields.flattened[i]
-			v := addressableValue{va.Field(f.index[0]), va.forcedAddr} // addressable if struct value is addressable
-			if len(f.index) > 1 {
-				v = v.fieldByIndex(f.index[1:], false)
+			v := addressableValue{va.Field(f.index0), va.forcedAddr} // addressable if struct value is addressable
+			if len(f.index) > 0 {
+				v = v.fieldByIndex(f.index, false)
 				if !v.IsValid() {
 					continue // implies a nil inlined field
 				}
@@ -1106,7 +1108,7 @@ func makeStructArshaler(t reflect.Type) *arshaler {
 
 				// Append the token to the output and to the state machine.
 				n0 := len(b) // offset before calling AppendQuote
-				if !mo.Flags.Get(jsonflags.AnyEscape) {
+				if !f.nameNeedEscape {
 					b = append(b, f.quotedName...)
 				} else {
 					b, _ = jsonwire.AppendQuote(b, f.name, &mo.Flags)
@@ -1185,7 +1187,7 @@ func makeStructArshaler(t reflect.Type) *arshaler {
 				return err
 			}
 		}
-		if err := enc.WriteToken(jsontext.ObjectEnd); err != nil {
+		if err := enc.WriteToken(jsontext.EndObject); err != nil {
 			return err
 		}
 		return nil
@@ -1282,9 +1284,9 @@ func makeStructArshaler(t reflect.Type) *arshaler {
 					uo.FormatDepth = xd.Tokens.Depth()
 					uo.Format = f.format
 				}
-				v := addressableValue{va.Field(f.index[0]), va.forcedAddr} // addressable if struct value is addressable
-				if len(f.index) > 1 {
-					v = v.fieldByIndex(f.index[1:], true)
+				v := addressableValue{va.Field(f.index0), va.forcedAddr} // addressable if struct value is addressable
+				if len(f.index) > 0 {
+					v = v.fieldByIndex(f.index, true)
 					if !v.IsValid() {
 						err := newUnmarshalErrorBefore(dec, t, errNilField)
 						if !uo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
@@ -1430,7 +1432,7 @@ func makeSliceArshaler(t reflect.Type) *arshaler {
 		}
 
 		once.Do(init)
-		if err := enc.WriteToken(jsontext.ArrayStart); err != nil {
+		if err := enc.WriteToken(jsontext.BeginArray); err != nil {
 			return err
 		}
 		marshal := valFncs.marshal
@@ -1443,7 +1445,7 @@ func makeSliceArshaler(t reflect.Type) *arshaler {
 				return err
 			}
 		}
-		if err := enc.WriteToken(jsontext.ArrayEnd); err != nil {
+		if err := enc.WriteToken(jsontext.EndArray); err != nil {
 			return err
 		}
 		return nil
@@ -1536,7 +1538,7 @@ func makeArrayArshaler(t reflect.Type) *arshaler {
 			return newInvalidFormatError(enc, t, mo)
 		}
 		once.Do(init)
-		if err := enc.WriteToken(jsontext.ArrayStart); err != nil {
+		if err := enc.WriteToken(jsontext.BeginArray); err != nil {
 			return err
 		}
 		marshal := valFncs.marshal
@@ -1549,7 +1551,7 @@ func makeArrayArshaler(t reflect.Type) *arshaler {
 				return err
 			}
 		}
-		if err := enc.WriteToken(jsontext.ArrayEnd); err != nil {
+		if err := enc.WriteToken(jsontext.EndArray); err != nil {
 			return err
 		}
 		return nil
@@ -1718,7 +1720,7 @@ func makeInterfaceArshaler(t reflect.Type) *arshaler {
 				case jsonMarshalerType:
 					v2.Set(reflect.ValueOf(struct{ Marshaler }{va.Elem().Interface().(Marshaler)}))
 				case textAppenderType:
-					v2.Set(reflect.ValueOf(struct{ encodingTextAppender }{va.Elem().Interface().(encodingTextAppender)}))
+					v2.Set(reflect.ValueOf(struct{ encoding.TextAppender }{va.Elem().Interface().(encoding.TextAppender)}))
 				case textMarshalerType:
 					v2.Set(reflect.ValueOf(struct{ encoding.TextMarshaler }{va.Elem().Interface().(encoding.TextMarshaler)}))
 				}

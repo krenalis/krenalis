@@ -22,7 +22,7 @@ const (
 	maxUint64 = math.MaxUint64
 	minUint64 = 0 // for consistency and readability purposes
 
-	invalidTokenPanic = "invalid json.Token; it has been voided by a subsequent json.Decoder call"
+	invalidTokenPanic = "invalid jsontext.Token; it has been voided by a subsequent json.Decoder call"
 )
 
 var errInvalidToken = errors.New("invalid jsontext.Token")
@@ -94,10 +94,10 @@ var (
 	False Token = rawToken("false")
 	True  Token = rawToken("true")
 
-	ObjectStart Token = rawToken("{")
-	ObjectEnd   Token = rawToken("}")
-	ArrayStart  Token = rawToken("[")
-	ArrayEnd    Token = rawToken("]")
+	BeginObject Token = rawToken("{")
+	EndObject   Token = rawToken("}")
+	BeginArray  Token = rawToken("[")
+	EndArray    Token = rawToken("]")
 
 	zeroString Token = rawToken(`""`)
 	zeroNumber Token = rawToken(`0`)
@@ -176,14 +176,14 @@ func (t Token) Clone() Token {
 				return False
 			case True.raw:
 				return True
-			case ObjectStart.raw:
-				return ObjectStart
-			case ObjectEnd.raw:
-				return ObjectEnd
-			case ArrayStart.raw:
-				return ArrayStart
-			case ArrayEnd.raw:
-				return ArrayEnd
+			case BeginObject.raw:
+				return BeginObject
+			case EndObject.raw:
+				return EndObject
+			case BeginArray.raw:
+				return BeginArray
+			case EndArray.raw:
+				return EndArray
 			}
 		}
 
@@ -271,20 +271,17 @@ func (t Token) string() (string, []byte) {
 			return strconv.FormatUint(uint64(t.num), 10), nil
 		}
 	}
-	return "<invalid json.Token>", nil
+	return "<invalid jsontext.Token>", nil
 }
 
 // appendNumber appends a JSON number to dst and returns it.
 // It panics if t is not a JSON number.
-func (t Token) appendNumber(dst []byte, canonicalize bool) ([]byte, error) {
+func (t Token) appendNumber(dst []byte, flags *jsonflags.Flags) ([]byte, error) {
 	if raw := t.raw; raw != nil {
 		// Handle raw number value.
 		buf := raw.previousBuffer()
 		if Kind(buf[0]).normalize() == '0' {
-			if !canonicalize {
-				return append(dst, buf...), nil
-			}
-			dst, _, err := jsonwire.ReformatNumber(dst, buf, canonicalize)
+			dst, _, err := jsonwire.ReformatNumber(dst, buf, flags)
 			return dst, err
 		}
 	} else if t.num != 0 {
@@ -515,7 +512,7 @@ func (k Kind) String() string {
 	case ']':
 		return "]"
 	default:
-		return "<invalid json.Kind: " + jsonwire.QuoteRune(string(k)) + ">"
+		return "<invalid jsontext.Kind: " + jsonwire.QuoteRune(string(k)) + ">"
 	}
 }
 

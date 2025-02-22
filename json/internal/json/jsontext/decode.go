@@ -142,8 +142,21 @@ func (d *Decoder) Reset(r io.Reader, opts ...Options) {
 func (d *decoderState) reset(b []byte, r io.Reader, opts ...Options) {
 	d.state.reset()
 	d.decodeBuffer = decodeBuffer{buf: b, rd: r}
-	d.Struct = jsonopts.Struct{}
-	d.Struct.Join(opts...)
+	opts2 := jsonopts.Struct{} // avoid mutating d.Struct in case it is part of opts
+	opts2.Join(opts...)
+	d.Struct = opts2
+}
+
+// Options returns the options used to construct the encoder and
+// may additionally contain semantic options passed to a
+// [encoding/json/v2.UnmarshalDecode] call.
+//
+// If operating within
+// a [encoding/json/v2.UnmarshalerFrom.UnmarshalJSONFrom] method call or
+// a [encoding/json/v2.UnmarshalFromFunc] function call,
+// then the returned options are only valid within the call.
+func (d *Decoder) Options() Options {
+	return &d.s.Struct
 }
 
 var errBufferWriteAfterNext = errors.New("invalid bytes.Buffer.Write call after calling bytes.Buffer.Next")
@@ -285,7 +298,10 @@ func (d *decodeBuffer) PreviousTokenOrValue() []byte {
 }
 
 // PeekKind retrieves the next token kind, but does not advance the read offset.
-// It returns 0 if there are no more tokens.
+//
+// It returns 0 if an error occurs. Any such error is cached until
+// the next read call and it is the caller's responsibility to eventually
+// follow up a PeekKind call with a read call.
 func (d *Decoder) PeekKind() Kind {
 	return d.s.PeekKind()
 }
@@ -364,9 +380,22 @@ func (d *decoderState) CountNextDelimWhitespace() int {
 
 // checkDelim checks whether delim is valid for the given next kind.
 func (d *decoderState) checkDelim(delim byte, next Kind) error {
+	where := "at start of value"
+	switch d.Tokens.needDelim(next) {
+	case delim:
+		return nil
+	case ':':
+		where = "after object name (expecting ':')"
+	case ',':
+		if d.Tokens.Last.isObject() {
+			where = "after object value (expecting ',' or '}')"
+		} else {
+			where = "after array element (expecting ',' or ']')"
+		}
+	}
 	pos := d.prevEnd // restore position to right after leading whitespace
 	pos += jsonwire.ConsumeWhitespace(d.buf[pos:])
-	err := d.Tokens.checkDelim(delim, next)
+	err := jsonwire.NewInvalidCharacterError(d.buf[pos:], where)
 	return wrapSyntacticError(d, err, pos, 0)
 }
 
@@ -587,7 +616,7 @@ func (d *decoderState) ReadToken() (Token, error) {
 		}
 		pos += 1
 		d.prevStart, d.prevEnd = pos, pos
-		return ObjectStart, nil
+		return BeginObject, nil
 
 	case '}':
 		if err = d.Tokens.popObject(); err != nil {
@@ -599,7 +628,7 @@ func (d *decoderState) ReadToken() (Token, error) {
 		}
 		pos += 1
 		d.prevStart, d.prevEnd = pos, pos
-		return ObjectEnd, nil
+		return EndObject, nil
 
 	case '[':
 		if err = d.Tokens.pushArray(); err != nil {
@@ -607,7 +636,7 @@ func (d *decoderState) ReadToken() (Token, error) {
 		}
 		pos += 1
 		d.prevStart, d.prevEnd = pos, pos
-		return ArrayStart, nil
+		return BeginArray, nil
 
 	case ']':
 		if err = d.Tokens.popArray(); err != nil {
@@ -615,10 +644,10 @@ func (d *decoderState) ReadToken() (Token, error) {
 		}
 		pos += 1
 		d.prevStart, d.prevEnd = pos, pos
-		return ArrayEnd, nil
+		return EndArray, nil
 
 	default:
-		err = jsonwire.NewInvalidCharacterError(d.buf[pos:], "at start of token")
+		err = jsonwire.NewInvalidCharacterError(d.buf[pos:], "at start of value")
 		return Token{}, wrapSyntacticError(d, err, pos, +1)
 	}
 }
@@ -833,6 +862,9 @@ func (d *decoderState) consumeValue(flags *jsonwire.ValueFlags, pos, depth int) 
 		case '[':
 			return d.consumeArray(flags, pos, depth)
 		default:
+			if (d.Tokens.Last.isObject() && next == ']') || (d.Tokens.Last.isArray() && next == '}') {
+				return pos, errMismatchDelim
+			}
 			return pos, jsonwire.NewInvalidCharacterError(d.buf[pos:], "at start of value")
 		}
 		if err == io.ErrUnexpectedEOF {
@@ -1068,7 +1100,7 @@ func (d *decoderState) consumeArray(flags *jsonwire.ValueFlags, pos, depth int) 
 			pos++
 			return pos, nil
 		default:
-			return pos, jsonwire.NewInvalidCharacterError(d.buf[pos:], "after array value (expecting ',' or ']')")
+			return pos, jsonwire.NewInvalidCharacterError(d.buf[pos:], "after array element (expecting ',' or ']')")
 		}
 	}
 }
@@ -1091,8 +1123,8 @@ func (d *Decoder) UnreadBuffer() []byte {
 
 // StackDepth returns the depth of the state machine for read JSON data.
 // Each level on the stack represents a nested JSON object or array.
-// It is incremented whenever an [ObjectStart] or [ArrayStart] token is encountered
-// and decremented whenever an [ObjectEnd] or [ArrayEnd] token is encountered.
+// It is incremented whenever an [BeginObject] or [BeginArray] token is encountered
+// and decremented whenever an [EndObject] or [EndArray] token is encountered.
 // The depth is zero-indexed, where zero represents the top-level JSON value.
 func (d *Decoder) StackDepth() int {
 	// NOTE: Keep in sync with Encoder.StackDepth.
@@ -1124,8 +1156,6 @@ func (d *Decoder) StackIndex(i int) (Kind, int64) {
 }
 
 // StackPointer returns a JSON Pointer (RFC 6901) to the most recently read value.
-// Object names are only present if [AllowDuplicateNames] is false, otherwise
-// object members are represented using their index within the object.
 func (d *Decoder) StackPointer() Pointer {
 	return Pointer(d.s.AppendStackPointer(nil, -1))
 }

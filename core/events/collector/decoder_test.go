@@ -78,7 +78,7 @@ func Test_Decoder(t *testing.T) {
 		{body: `{}`, err: errors.BadRequest("property 'batch' is missing")},
 		{body: `{"batch":null}`, err: errors.BadRequest("property 'batch' is not a valid array")},
 		{body: `{"batch":{}}`, err: errors.BadRequest("property 'batch' is not a valid array")},
-		{body: `{"batch":[]"}`, err: errors.BadRequest("error parsing the request body as JSON: missing character ',' after object or array value")},
+		{body: `{"batch":[]"}`, err: errors.BadRequest("error parsing the request body as JSON: invalid character '\"' after object value (expecting ',' or '}')")},
 		{body: `{"batch":[],"writeKey":true}`, err: errors.BadRequest("property 'writeKey' is not a valid string")},
 		{body: `{"batch":[],"writeKey":""}`, err: errors.BadRequest("property 'writeKey' cannot be empty")},
 		{body: `{"batch":[],"writeKey":"vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"}`, writeKey: writeKey},
