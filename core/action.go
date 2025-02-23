@@ -758,7 +758,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			var current state.TransformationFunction
 			if fn.ID == "" {
 				err := tx.QueryRow(ctx, "SELECT transformation_id, transformation_version, transformation_language, transformation_source "+
-					"FROM actions WHERE id = $1", n.ID).Scan(&current.ID, &current.Version, &current.Language, current.Source)
+					"FROM actions WHERE id = $1", n.ID).Scan(&current.ID, &current.Version, &current.Language, &current.Source)
 				if err != nil {
 					return err
 				}
