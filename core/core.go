@@ -61,11 +61,11 @@ type Core struct {
 		dispatcher     *dispatcher.Dispatcher
 		operationStore events.OperationStore
 	}
-	transformerProvider transformers.Provider
-	actionCleaner       *actionCleaner
-	actionScheduler     *actionScheduler
-	smtp                *SMTPConfig
-	close               struct {
+	functionProvider transformers.FunctionProvider
+	actionCleaner    *actionCleaner
+	actionScheduler  *actionScheduler
+	smtp             *SMTPConfig
+	close            struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 		sync.WaitGroup
@@ -76,11 +76,11 @@ type Core struct {
 var hasBeenCalled bool
 
 type Config struct {
-	PostgreSQL      PostgreSQLConfig
-	EncryptionKey   []byte // encryption key shared by all nodes
-	Transformer     any    // must be a LambdaConfig or LocalConfig value
-	SMTP            SMTPConfig
-	ConnectorsOAuth map[string]*state.ConnectorOAuth
+	PostgreSQL       PostgreSQLConfig
+	EncryptionKey    []byte // encryption key shared by all nodes
+	FunctionProvider any    // must be a LambdaConfig or LocalConfig value
+	SMTP             SMTPConfig
+	ConnectorsOAuth  map[string]*state.ConnectorOAuth
 }
 
 type PostgreSQLConfig struct {
@@ -162,15 +162,15 @@ func New(conf *Config) (*Core, error) {
 
 	core := &Core{db: db, smtp: smtp}
 
-	// Create a transformer.
-	switch c := conf.Transformer.(type) {
+	// Create a function provider.
+	switch p := conf.FunctionProvider.(type) {
 	case LambdaConfig:
-		core.transformerProvider = lambda.New(lambda.Settings(c))
+		core.functionProvider = lambda.New(lambda.Settings(p))
 	case LocalConfig:
-		core.transformerProvider = local.New(local.Settings(c))
+		core.functionProvider = local.New(local.Settings(p))
 	case nil:
 	default:
-		return nil, errors.New("invalid transformer")
+		return nil, errors.New("invalid function provider")
 	}
 
 	// Instantiate the state.
@@ -192,14 +192,14 @@ func New(conf *Config) (*Core, error) {
 	core.connectors = connectors.New(db, core.state)
 
 	// Init the events.
-	core.events.dispatcher, err = dispatcher.New(db, core.state, core.events.operationStore, core.transformerProvider, core.connectors, core.metrics)
+	core.events.dispatcher, err = dispatcher.New(db, core.state, core.events.operationStore, core.functionProvider, core.connectors, core.metrics)
 	if err != nil {
 		core.datastore.Close()
 		core.state.Close()
 		return nil, err
 	}
 	core.events.collector, err = collector.New(db, core.state, core.datastore, core.events.operationStore,
-		core.transformerProvider, core.events.dispatcher, core.metrics)
+		core.functionProvider, core.events.dispatcher, core.metrics)
 	if err != nil {
 		core.events.dispatcher.Close()
 		core.datastore.Close()
@@ -209,7 +209,7 @@ func New(conf *Config) (*Core, error) {
 	core.events.observer = core.events.collector.Observer()
 
 	// Create the action cleaner.
-	core.actionCleaner = newActionCleaner(core.state, core.datastore)
+	core.actionCleaner = newActionCleaner(core.db, core.state, core.datastore, core.functionProvider)
 
 	// Create the action scheduler.
 	core.actionScheduler = newActionScheduler(core)
@@ -218,7 +218,6 @@ func New(conf *Config) (*Core, error) {
 
 	// Listen to state changes.
 	core.state.Freeze()
-	core.state.AddListener(core.onDeleteAction)
 	core.state.AddListener(core.onExecuteAction)
 	core.state.Unfreeze()
 
@@ -627,8 +626,8 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		},
 	}
 
-	// provider is a temporary function transformer provider.
-	var provider transformers.Provider
+	// provider is a temporary function provider.
+	var provider transformers.FunctionProvider
 
 	// Validate the mapping and the transformation.
 	switch {
@@ -641,25 +640,25 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		action.Transformation.OutPaths = mapping.OutPaths()
 	case transformation.Function != nil:
 		if transformation.Function.Source == "" {
-			return nil, errors.BadRequest("transformation source is empty")
+			return nil, errors.BadRequest("function source is empty")
 		}
 		switch transformation.Function.Language {
 		case "JavaScript":
-			if core.transformerProvider == nil || !core.transformerProvider.SupportLanguage(state.JavaScript) {
-				return nil, errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language  is not supported")
+			if core.functionProvider == nil || !core.functionProvider.SupportLanguage(state.JavaScript) {
+				return nil, errors.Unprocessable(UnsupportedLanguage, "JavaScript language is not supported")
 			}
 		case "Python":
-			if core.transformerProvider == nil || !core.transformerProvider.SupportLanguage(state.Python) {
-				return nil, errors.Unprocessable(UnsupportedLanguage, "Python transformation language is not supported")
+			if core.functionProvider == nil || !core.functionProvider.SupportLanguage(state.Python) {
+				return nil, errors.Unprocessable(UnsupportedLanguage, "Python language is not supported")
 			}
 		case "":
-			return nil, errors.BadRequest("transformation language is empty")
+			return nil, errors.BadRequest("function language is empty")
 		default:
-			return nil, errors.BadRequest("transformation language %q is not valid", transformation.Function.Language)
+			return nil, errors.BadRequest("function language %q is not valid", transformation.Function.Language)
 		}
 		action.Transformation.Function = &state.TransformationFunction{
 			Source:  transformation.Function.Source,
-			Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
+			Version: "1", // no matter the version, it will be overwritten by the temporary function.
 		}
 		name := "temp-" + uuid.NewString()
 		switch transformation.Function.Language {
@@ -673,9 +672,9 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
 		action.Transformation.InPaths = types.PropertyNames(action.InSchema)
 		action.Transformation.OutPaths = types.PropertyNames(action.OutSchema)
-		provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, core.transformerProvider)
+		provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, core.functionProvider)
 	default:
-		return nil, errors.BadRequest("mapping (or transformation) is required")
+		return nil, errors.BadRequest("mapping (or function) is required")
 	}
 
 	properties, err := types.Decode[map[string]any](bytes.NewReader(data), inSchema)
@@ -711,14 +710,14 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 // TransformationLanguages returns the supported transformation languages.
 // Possible returned languages are "JavaScript" and "Python".
 func (core *Core) TransformationLanguages() []string {
-	if core.transformerProvider == nil {
+	if core.functionProvider == nil {
 		return []string{}
 	}
 	languages := make([]string, 0, 2)
-	if core.transformerProvider.SupportLanguage(state.JavaScript) {
+	if core.functionProvider.SupportLanguage(state.JavaScript) {
 		languages = append(languages, "JavaScript")
 	}
-	if core.transformerProvider.SupportLanguage(state.Python) {
+	if core.functionProvider.SupportLanguage(state.Python) {
 		languages = append(languages, "Python")
 	}
 	return languages
@@ -767,24 +766,6 @@ func (core *Core) mustBeOpen() {
 	if core.closed.Load() {
 		panic("core is closed")
 	}
-}
-
-// onDeleteAction is called when an action is deleted.
-func (core *Core) onDeleteAction(n state.DeleteAction) {
-	if !core.state.IsLeader() || core.transformerProvider == nil {
-		return
-	}
-	action := n.Action()
-	fn := action.Transformation.Function
-	if fn == nil {
-		return
-	}
-	go func() {
-		err := core.transformerProvider.Delete(core.close.ctx, fn.ID)
-		if err != nil {
-			slog.Debug("cannot delete transformer function", "id", fn.ID, "err", err)
-		}
-	}()
 }
 
 // onExecuteAction is called when an action is executed.

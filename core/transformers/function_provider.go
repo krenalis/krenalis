@@ -23,14 +23,14 @@ type FunctionExecutionError string
 
 func (err FunctionExecutionError) Error() string { return string(err) }
 
-// A Provider represents a function transformer provider.
+// A FunctionProvider represents a function provider.
 //
 // A function name must:
 //   - start with [A-Za-z_]
 //   - subsequently contain only [A-Za-z0-9_-]
 //   - terminate with ".js", for JavaScript functions, or with ".py" for Python
 //     functions
-type Provider interface {
+type FunctionProvider interface {
 
 	// Call calls the function with the given identifier and version for each record
 	// updating its Properties field with the result of each invocation. Record

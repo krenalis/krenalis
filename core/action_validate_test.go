@@ -50,7 +50,7 @@ func Test_validateAction(t *testing.T) {
 		formatHasSettings bool
 		formatHasSheets   bool
 
-		provider transformers.Provider
+		provider transformers.FunctionProvider
 
 		err string // empty string if no validation error is expected
 	}{
@@ -2933,11 +2933,11 @@ func validateTestOnAction(name string, connectionRole state.Role, connectorType 
 	return nil
 }
 
-// testProvider is a transformers.Provider which implements the minimum set of
-// functionalities to be used in the validateActionToSet tests.
+// testProvider is a transformers.FunctionProvider which implements the minimum
+// set of functionalities to be used in the validateActionToSet tests.
 type testProvider struct{}
 
-var _ transformers.Provider = testProvider{}
+var _ transformers.FunctionProvider = testProvider{}
 
 func (testProvider) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	panic("not implemented")

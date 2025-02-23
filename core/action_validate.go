@@ -63,8 +63,8 @@ type validationState struct {
 		hasSheets   bool
 	}
 
-	// provider is the transformers.Provider instantiated on the Core.
-	provider transformers.Provider
+	// provider is the transformers.FunctionProvider instantiated on the Core.
+	provider transformers.FunctionProvider
 }
 
 // validateActionToSet validates the given ActionToSet, in the context of the
@@ -201,7 +201,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			switch tr.Function.Language {
 			case "JavaScript":
 				if v.provider == nil || !v.provider.SupportLanguage(state.JavaScript) {
-					return errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language is not supported")
+					return errors.Unprocessable(UnsupportedLanguage, "JavaScript function language is not supported")
 				}
 			case "Python":
 				if v.provider == nil || !v.provider.SupportLanguage(state.Python) {

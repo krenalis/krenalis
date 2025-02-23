@@ -732,7 +732,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		v.format.hasSheets = format.HasSheets
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
-	v.provider = this.core.transformerProvider
+	v.provider = this.core.functionProvider
 	err := validateActionToSet(action, v)
 	if err != nil {
 		return 0, err
@@ -819,12 +819,10 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	var function state.TransformationFunction
 	if fn := n.Transformation.Function; fn != nil {
 		name := util.TransformationFunctionName(n.ID)
-		id, version, err := this.core.transformerProvider.Create(ctx, name, fn.Language, fn.Source)
+		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
 		if err != nil {
 			return 0, err
 		}
-		fn.ID = id
-		fn.Version = version
 		function = *n.Transformation.Function
 	}
 
@@ -965,8 +963,18 @@ func (this *Connection) Delete(ctx context.Context) error {
 	connector := c.Connector()
 	workspace := c.Workspace()
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		// Mark the connection's functions as discontinued.
+		now := time.Now().UTC()
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
+			"SELECT a.transformation_id, $1\n"+
+			"FROM actions AS a\n"+
+			"WHERE a.transformation_id != '' AND a.connection = $2\n"+
+			"ON CONFLICT (id) DO NOTHING", now, n.ID)
+		if err != nil {
+			return err
+		}
+		// Mark the connection's actions on Users as deleted.
 		if c.Role == state.Source {
-			// Mark the connection's actions on Users as deleted.
 			_, err := tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_cat(actions_to_purge, (\n"+
 				"\tSELECT array_agg(a.id) FROM actions a WHERE a.connection = $1 AND a.target = 'Users'\n"+
 				"))\nWHERE id = $2 AND actions_to_purge IS NOT NULL", n.ID, workspace.ID)
@@ -974,6 +982,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 				return err
 			}
 		}
+		// Delete the connection.
 		result, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -1449,8 +1458,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			},
 		}
 
-		// provider is a temporary function transformer provider.
-		var provider transformers.Provider
+		// provider is a temporary function provider.
+		var provider transformers.FunctionProvider
 
 		// Validate the mapping and the transformation.
 		switch {
@@ -1463,25 +1472,25 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			action.Transformation.OutPaths = mapping.OutPaths()
 		case transformation.Function != nil:
 			if transformation.Function.Source == "" {
-				return nil, errors.BadRequest("transformation source is empty")
+				return nil, errors.BadRequest("function source is empty")
 			}
 			switch transformation.Function.Language {
 			case "JavaScript":
-				if this.core.transformerProvider == nil || !this.core.transformerProvider.SupportLanguage(state.JavaScript) {
-					return nil, errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language is not supported")
+				if this.core.functionProvider == nil || !this.core.functionProvider.SupportLanguage(state.JavaScript) {
+					return nil, errors.Unprocessable(UnsupportedLanguage, "JavaScript function language is not supported")
 				}
 			case "Python":
-				if this.core.transformerProvider == nil || !this.core.transformerProvider.SupportLanguage(state.Python) {
-					return nil, errors.Unprocessable(UnsupportedLanguage, "Python transformation language is not supported")
+				if this.core.functionProvider == nil || !this.core.functionProvider.SupportLanguage(state.Python) {
+					return nil, errors.Unprocessable(UnsupportedLanguage, "Python function language is not supported")
 				}
 			case "":
-				return nil, errors.BadRequest("transformation language is empty")
+				return nil, errors.BadRequest("function language is empty")
 			default:
-				return nil, errors.BadRequest("transformation language %q is not valid", transformation.Function.Language)
+				return nil, errors.BadRequest("function language %q is not valid", transformation.Function.Language)
 			}
 			action.Transformation.Function = &state.TransformationFunction{
 				Source:  transformation.Function.Source,
-				Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
+				Version: "1", // no matter the version, it will be overwritten by the temporary function.
 			}
 			name := "temp-" + uuid.NewString()
 			switch transformation.Function.Language {
@@ -1495,7 +1504,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
 			action.Transformation.InPaths = types.PropertyNames(action.InSchema)
 			action.Transformation.OutPaths = types.PropertyNames(action.OutSchema)
-			provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, this.core.transformerProvider)
+			provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, this.core.functionProvider)
 		default:
 			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
@@ -2288,21 +2297,21 @@ type ConnectionToSet struct {
 	WebsiteHost string `json:"websiteHost"`
 }
 
-// tempTransformerProvider is a function transformer provider that creates a
-// function at each call and deletes it after the call returns. Any call to a
-// method that is not CallFunction panics.
-type tempTransformerProvider struct {
-	name     string                // function name.
-	language state.Language        // language.
-	source   string                // source code.
-	provider transformers.Provider // underlying transformer provider.
+// tempFunctionProvider is a function provider that creates a function at each
+// call and deletes it after the call returns. Any call to a method that is not
+// CallFunction panics.
+type tempFunctionProvider struct {
+	name     string                        // function name.
+	language state.Language                // language.
+	source   string                        // source code.
+	provider transformers.FunctionProvider // underlying function provider.
 }
 
-func newTempTransformerProvider(name string, language state.Language, source string, provider transformers.Provider) *tempTransformerProvider {
-	return &tempTransformerProvider{name, language, source, provider}
+func newTempTransformerProvider(name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {
+	return &tempFunctionProvider{name, language, source, provider}
 }
 
-func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (tp *tempFunctionProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	id, version, err := tp.provider.Create(ctx, tp.name, tp.language, tp.source)
 	if err != nil {
 		return nil
@@ -2318,16 +2327,16 @@ func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSche
 	return tp.provider.Call(ctx, tp.name, version, inSchema, outSchema, preserveJSON, records)
 }
 
-func (tp *tempTransformerProvider) Close(_ context.Context) error { panic("not supported") }
-func (tp *tempTransformerProvider) Create(_ context.Context, _ string, _ state.Language, _ string) (string, string, error) {
+func (tp *tempFunctionProvider) Close(_ context.Context) error { panic("not supported") }
+func (tp *tempFunctionProvider) Create(_ context.Context, _ string, _ state.Language, _ string) (string, string, error) {
 	panic("not supported")
 }
-func (tp *tempTransformerProvider) Delete(_ context.Context, _ string) error {
+func (tp *tempFunctionProvider) Delete(_ context.Context, _ string) error {
 	panic("not supported")
 }
-func (tp *tempTransformerProvider) SupportLanguage(_ state.Language) bool {
+func (tp *tempFunctionProvider) SupportLanguage(_ state.Language) bool {
 	panic("not supported")
 }
-func (tp *tempTransformerProvider) Update(_ context.Context, _, _ string) (string, error) {
+func (tp *tempFunctionProvider) Update(_ context.Context, _, _ string) (string, error) {
 	panic("not supported")
 }

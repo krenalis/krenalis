@@ -66,7 +66,7 @@ type actionIdentityWriter struct {
 }
 
 // newActionIdentityWriter returns a new actionIdentityWriter.
-func newActionIdentityWriter(ds *datastore.Datastore, action *state.Action, provider transformers.Provider, ack datastore.EventIdentityWriterAckFunc) *actionIdentityWriter {
+func newActionIdentityWriter(ds *datastore.Datastore, action *state.Action, provider transformers.FunctionProvider, ack datastore.EventIdentityWriterAckFunc) *actionIdentityWriter {
 	sa := &actionIdentityWriter{id: action.ID}
 	ws := action.Connection().Workspace()
 	store := ds.Store(ws.ID)
@@ -89,33 +89,33 @@ func (sa *actionIdentityWriter) Close(ctx context.Context) error {
 // A Collector collects events, persists them in the database and sends them to
 // the dispatcher.
 type Collector struct {
-	db                  *db.DB
-	state               *state.State
-	datastore           *datastore.Datastore
-	operationStore      events.OperationStore
-	metrics             *metrics.Collector
-	observer            *Observer
-	duplicated          sync.Map
-	transformerProvider transformers.Provider
-	dispatcher          *dispatcher.Dispatcher
-	maxmindDB           *maxminddb.Reader
-	eventWriters        sync.Map // a map from workspace identifier to a *datastore.EventWriter value
-	actions             sync.Map // a map from action identifier to a *actionIdentityWriter value
-	closed              atomic.Bool
+	db               *db.DB
+	state            *state.State
+	datastore        *datastore.Datastore
+	operationStore   events.OperationStore
+	metrics          *metrics.Collector
+	observer         *Observer
+	duplicated       sync.Map
+	functionProvider transformers.FunctionProvider
+	dispatcher       *dispatcher.Dispatcher
+	maxmindDB        *maxminddb.Reader
+	eventWriters     sync.Map // a map from workspace identifier to a *datastore.EventWriter value
+	actions          sync.Map // a map from action identifier to a *actionIdentityWriter value
+	closed           atomic.Bool
 }
 
 // New returns a new event collector. It receives HTTP requests from mobile,
 // server and website sources and sends them to the dispatcher.
-func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.OperationStore, provider transformers.Provider, dispatcher *dispatcher.Dispatcher, metrics *metrics.Collector) (*Collector, error) {
+func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.OperationStore, provider transformers.FunctionProvider, dispatcher *dispatcher.Dispatcher, metrics *metrics.Collector) (*Collector, error) {
 	var c = &Collector{
-		db:                  db,
-		state:               st,
-		datastore:           ds,
-		operationStore:      opStore,
-		metrics:             metrics,
-		observer:            newObserver(db),
-		transformerProvider: provider,
-		dispatcher:          dispatcher,
+		db:               db,
+		state:            st,
+		datastore:        ds,
+		operationStore:   opStore,
+		metrics:          metrics,
+		observer:         newObserver(db),
+		functionProvider: provider,
+		dispatcher:       dispatcher,
 	}
 	st.Freeze()
 	st.AddListener(c.onCreateAction)
@@ -629,7 +629,7 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 		return
 	}
 	go func() {
-		sa := newActionIdentityWriter(c.datastore, action, c.transformerProvider, c.identityAck)
+		sa := newActionIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
 		c.actions.Store(action.ID, sa)
 	}()
 }
@@ -685,7 +685,7 @@ func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 	}
 	if action.Enabled {
 		go func() {
-			sa := newActionIdentityWriter(c.datastore, action, c.transformerProvider, c.identityAck)
+			sa := newActionIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
 			c.actions.Store(action.ID, sa)
 		}()
 		return
@@ -714,7 +714,7 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	a, ok := c.actions.Load(action.ID)
 	if !ok {
 		go func() {
-			sa := newActionIdentityWriter(c.datastore, action, c.transformerProvider, c.identityAck)
+			sa := newActionIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
 			c.actions.Store(action.ID, sa)
 		}()
 		return
@@ -725,7 +725,7 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	if action.Transformation.Mapping == nil && action.Transformation.Function == nil {
 		sa.transformer = nil
 	} else {
-		sa.transformer, _ = transformers.New(action, c.transformerProvider, nil)
+		sa.transformer, _ = transformers.New(action, c.functionProvider, nil)
 	}
 	sa.mu.Unlock()
 	// TODO(marco): il cambio del warehouse mode come influisce sulla source action?

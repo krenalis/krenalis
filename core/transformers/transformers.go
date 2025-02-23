@@ -38,7 +38,7 @@ type Record struct {
 // Transformer represents a transformer.
 type Transformer struct {
 	action    int
-	provider  Provider
+	provider  FunctionProvider
 	inSchema  types.Type
 	outSchema types.Type
 	mapping   *mappings.Mapping
@@ -55,7 +55,7 @@ type Transformer struct {
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
-func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*Transformer, error) {
+func New(action *state.Action, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if m := action.Transformation.Mapping; m != nil {
 		inPlace := action.Target != state.Events

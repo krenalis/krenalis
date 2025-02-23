@@ -49,14 +49,15 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 	}
 
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		var function string
 		var inc, executing bool
 		var cursor time.Time
-		err := tx.QueryRow(ctx, "SELECT a.incremental, a.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+		err := tx.QueryRow(ctx, "SELECT a.transformation_id, a.incremental, a.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
 			"FROM actions AS a\n"+
 			"LEFT JOIN actions_executions AS e ON a.id = e.action\n"+
 			"WHERE a.id = $1\n"+
 			"ORDER BY e.id DESC\n"+
-			"LIMIT 1", n.Action).Scan(&inc, &cursor, &executing)
+			"LIMIT 1", n.Action).Scan(&function, &inc, &cursor, &executing)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errors.NotFound("action %d does not exist", n.Action)
@@ -74,8 +75,8 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 		if n.Incremental {
 			n.Cursor = cursor
 		}
-		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, cursor, incremental, start_time)\n"+
-			"VALUES ($1, $2, $3, $4)\nRETURNING id", n.Action, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
+		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, function, cursor, incremental, start_time)\n"+
+			"VALUES ($1, $2, $3, $4, $5)\nRETURNING id", n.Action, function, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "actions_executions_action_fkey" {
@@ -147,7 +148,8 @@ func (this *Action) exec(ctx context.Context) {
 					"\tWHERE action = $2 AND timeslot >= $3\n"+
 					")\n"+
 					"UPDATE actions_executions AS e\n"+
-					"SET end_time = $4, passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
+					"SET function = '', end_time = $4,"+
+					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
 					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
 					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
 					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+

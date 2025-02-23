@@ -36,7 +36,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	// data warehouse after all identities have been written.
 	purge := true
 
-	transformer, err := transformers.New(action, this.core.transformerProvider, nil)
+	transformer, err := transformers.New(action, this.core.functionProvider, nil)
 	if err != nil {
 		return err
 	}

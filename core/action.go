@@ -184,6 +184,17 @@ func (this *Action) Delete(ctx context.Context) error {
 		ID: this.action.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		// Mark the action's function as discontinued.
+		now := time.Now().UTC()
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
+			"SELECT a.transformation_id, $1\n"+
+			"FROM actions AS a\n"+
+			"WHERE a.transformation_id != '' AND a.id = $2\n"+
+			"ON CONFLICT (id) DO NOTHING", now, n.ID)
+		if err != nil {
+			return err
+		}
+		// Delete the action.
 		result, err := tx.Exec(ctx, "DELETE FROM actions WHERE id = $1", n.ID)
 		if err != nil {
 			return err
@@ -191,6 +202,7 @@ func (this *Action) Delete(ctx context.Context) error {
 		if result.RowsAffected() == 0 {
 			return errors.NotFound("action %d does not exist", n.ID)
 		}
+		// Mark the action as deleted.
 		if c.Role == state.Source && this.action.Target == state.Users {
 			_, err = tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_append(actions_to_purge, $1)"+
 				" WHERE actions_to_purge IS NOT NULL", n.ID)
@@ -630,7 +642,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		v.format.hasSheets = format.HasSheets
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
-	v.provider = this.core.transformerProvider
+	v.provider = this.core.functionProvider
 	err := validateActionToSet(action, v)
 	if err != nil {
 		return err
@@ -720,15 +732,15 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	// Transformation.
 	if fn := n.Transformation.Function; fn != nil {
 		current := this.action.Transformation.Function
-		if current == nil || current.Language != fn.Language {
+		if current == nil || fn.Language != current.Language {
 			name := util.TransformationFunctionName(n.ID)
-			fn.ID, fn.Version, err = this.core.transformerProvider.Create(ctx, name, fn.Language, fn.Source)
+			fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
 			if err != nil {
 				return err
 			}
-		} else if this.action.Transformation.Function.Source != fn.Source {
+		} else if fn.Source != current.Source {
 			fn.ID = current.ID
-			fn.Version, err = this.core.transformerProvider.Update(ctx, current.ID, fn.Source)
+			fn.Version, err = this.core.functionProvider.Update(ctx, fn.ID, fn.Source)
 			if err != nil {
 				return err
 			}
@@ -771,6 +783,17 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			}
 			function = *fn
 		}
+		// Mark the action’s function as discontinued if its identifier changes.
+		now := time.Now().UTC()
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
+			"SELECT a.transformation_id, $1\n"+
+			"FROM actions AS a\n"+
+			"WHERE a.transformation_id != '' AND a.transformation_id != $2 AND a.id = $3\n"+
+			"ON CONFLICT (id) DO NOTHING", now, function.ID, n.ID)
+		if err != nil {
+			return err
+		}
+		// Determine properties that are no longer transformed.
 		if c.Role == state.Source && this.action.Target == state.Users {
 			var prevOutPaths []string
 			err := tx.QueryRow(ctx, "SELECT transformation_out_paths, properties_to_unset "+
@@ -788,6 +811,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 				}
 			}
 		}
+		// Update the action.
 		result, err := tx.Exec(ctx, update,
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
@@ -933,7 +957,7 @@ func (this *Action) isLanguageSupported() bool {
 	if transformation == nil {
 		return true
 	}
-	if this.core.transformerProvider != nil && this.core.transformerProvider.SupportLanguage(transformation.Language) {
+	if this.core.functionProvider != nil && this.core.functionProvider.SupportLanguage(transformation.Language) {
 		return true
 	}
 	return false

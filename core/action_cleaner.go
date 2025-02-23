@@ -10,31 +10,43 @@ package core
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/transformers"
 )
 
 // backoffBase is the base used for the backoff.
 const backoffBase = 1000
 
-// actionCleaner represents an action cleaner. It performs the following tasks
-// in the data warehouse:
+// functionDeletionInterval defines how often discontinued functions are
+// deleted.
+const functionDeletionInterval = 10 * time.Minute
+
+// actionCleaner represents an action cleaner. It performs the following tasks:
 //
-// - Purges user identities associated with deleted actions.
-// - Unsets identity properties that are no longer transformed.
+//   - Purges user identities in the data warehouse that are associated with
+//     deleted actions.
+//   - Unsets identity properties in the data warehouse that are no longer
+//     transformed.
+//   - Deletes discontinued functions from its function provider.
 //
 // Action cleaning occurs only when the data warehouse is in Normal mode.
 type actionCleaner struct {
-	state     *state.State
-	datastore *datastore.Datastore
-	close     struct {
+	db               *db.DB
+	state            *state.State
+	datastore        *datastore.Datastore
+	functionProvider transformers.FunctionProvider
+	close            struct {
 		ctx    context.Context
 		cancel context.CancelFunc
 		closed atomic.Bool
@@ -51,11 +63,13 @@ type actionCleaner struct {
 // newActionCleaner returns a new instance of the action cleaner. There is only
 // one active action cleaner at a time, and it exclusively runs on the leader
 // node.
-func newActionCleaner(state *state.State, datastore *datastore.Datastore) *actionCleaner {
+func newActionCleaner(db *db.DB, state *state.State, datastore *datastore.Datastore, provider transformers.FunctionProvider) *actionCleaner {
 
 	p := &actionCleaner{
-		state:     state,
-		datastore: datastore,
+		db:               db,
+		state:            state,
+		datastore:        datastore,
+		functionProvider: provider,
 	}
 	p.backoff.workspace = map[int]*backoff.Backoff{}
 	p.backoff.action = map[int]*backoff.Backoff{}
@@ -89,6 +103,12 @@ func newActionCleaner(state *state.State, datastore *datastore.Datastore) *actio
 		go p.unsetIdentityProperties(action, nil)
 	}
 
+	// Start a goroutine to delete functions that have been discontinued.
+	if provider != nil {
+		p.close.Add(1)
+		go p.deleteDiscontinuedFunctions()
+	}
+
 	return p
 }
 
@@ -119,6 +139,82 @@ func (c *actionCleaner) Close(ctx context.Context) {
 	defer stop()
 	// Waits for the ongoing operations to finish.
 	c.close.Wait()
+}
+
+// deleteDiscontinuedFunctions starts the deletion task for function that have
+// been discontinued and are no longer in use by any executing actions.
+// It must be called in its own goroutine.
+//
+// A function is considered discontinued if:
+//
+//   - The associated action has been deleted.
+//   - The transformation type has changed from function-based to mapping-based.
+//   - The function has switched between JavaScript and Python.
+func (c *actionCleaner) deleteDiscontinuedFunctions() {
+	var ids, deleted []string
+	var d = 2 * time.Second // initial waiting time.
+	for {
+		tick := time.NewTicker(d)
+		select {
+		case <-c.close.ctx.Done():
+			c.close.Done()
+			return
+		case <-tick.C:
+		}
+		d = functionDeletionInterval
+		// Read the functions. These are the discontinued ones from over ten
+		// minutes ago, with no actions still using them.
+		rows, err := c.db.Query(c.close.ctx, "SELECT f.id\n"+
+			"FROM discontinued_functions AS f\n"+
+			"LEFT JOIN actions_executions AS e ON f.id = e.function AND e.end_time IS NULL\n"+
+			"WHERE f.discontinued_at < $1 AND e.id IS NULL",
+			time.Now().Add(-10*time.Minute))
+		if err != nil {
+			slog.Error("cannot retrive discontinued functions", "err", err)
+			continue
+		}
+		ids = ids[:0]
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				break
+			}
+			ids = append(ids, id)
+		}
+		if err = rows.Err(); err != nil {
+			slog.Error("error occurred scanning discontinued functions", "err", err)
+			continue
+		}
+		if len(ids) == 0 {
+			continue
+		}
+		// Delete the functions.
+		deleted = deleted[:0]
+		for _, id := range ids {
+			err = c.functionProvider.Delete(c.close.ctx, id)
+			if err != nil {
+				slog.Error("cannot delete discontinued function", "function", id, "err", err)
+				continue
+			}
+			deleted = append(deleted, id)
+		}
+		if len(deleted) == 0 {
+			continue
+		}
+		// Delete the functions from the database.
+		bo := backoff.New(1000)
+		bo.SetCap(functionDeletionInterval)
+		for bo.Next(c.close.ctx) {
+			_, err = c.db.Exec(c.close.ctx,
+				fmt.Sprintf("DELETE FROM discontinued_functions WHERE id IN %s", db.Quote(deleted)))
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			slog.Error("cannot delete discontinued functions", "err", err)
+		}
+	}
 }
 
 // onDeleteAction is called when an action is deleted.

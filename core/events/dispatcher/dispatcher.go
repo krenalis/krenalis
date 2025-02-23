@@ -53,7 +53,7 @@ type Dispatcher struct {
 }
 
 // New returns new dispatcher.
-func New(db *db.DB, st *state.State, opStore events.OperationStore, provider transformers.Provider, connectors *connectors.Connectors, metrics *metrics.Collector) (*Dispatcher, error) {
+func New(db *db.DB, st *state.State, opStore events.OperationStore, provider transformers.FunctionProvider, connectors *connectors.Connectors, metrics *metrics.Collector) (*Dispatcher, error) {
 
 	processor, err := newProcessor(db, st, opStore, connectors, provider, metrics)
 	if err != nil {

@@ -36,26 +36,26 @@ type processor struct {
 		in  chan *dispatchingEvent
 		out chan *dispatchingEvent
 	}
-	connectors          *connectors.Connectors
-	transformerProvider transformers.Provider
-	operationStore      events.OperationStore
-	metrics             *metrics.Collector
-	close               struct {
+	connectors       *connectors.Connectors
+	functionProvider transformers.FunctionProvider
+	operationStore   events.OperationStore
+	metrics          *metrics.Collector
+	close            struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 	}
 }
 
 // newProcessor returns a new processor.
-func newProcessor(db *db.DB, st *state.State, opStore events.OperationStore, connectors *connectors.Connectors, provider transformers.Provider, metrics *metrics.Collector) (*processor, error) {
+func newProcessor(db *db.DB, st *state.State, opStore events.OperationStore, connectors *connectors.Connectors, provider transformers.FunctionProvider, metrics *metrics.Collector) (*processor, error) {
 
 	processor := processor{
-		db:                  db,
-		state:               st,
-		connectors:          connectors,
-		transformerProvider: provider,
-		operationStore:      opStore,
-		metrics:             metrics,
+		db:               db,
+		state:            st,
+		connectors:       connectors,
+		functionProvider: provider,
+		operationStore:   opStore,
+		metrics:          metrics,
 	}
 	processor.events.in = make(chan *dispatchingEvent, pipeSize)
 	processor.events.out = make(chan *dispatchingEvent, pipeSize)
@@ -84,7 +84,7 @@ func (processor *processor) worker() {
 			action := event.action
 			var properties map[string]any
 			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
-				transformer, _ := transformers.New(action, processor.transformerProvider, nil)
+				transformer, _ := transformers.New(action, processor.functionProvider, nil)
 				records := []transformers.Record{{Properties: event.properties}}
 				err := transformer.Transform(ctx, records)
 				if err != nil {

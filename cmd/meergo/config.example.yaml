@@ -21,7 +21,7 @@ smtp:
     user:
     pass:
 
-transformer:
+functionProvider:
 
     # Configure just one between "lambda" and "local".
 

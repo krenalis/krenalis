@@ -149,10 +149,10 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 
 	c := Meergo{t: t}
 
-	// Create a temporary directory that will hold the transformation files.
-	transformationsTempDir, err := os.MkdirTemp("", "meergo-tests-python-transformation-*")
+	// Create a temporary directory that will hold the function files.
+	transformationsTempDir, err := os.MkdirTemp("", "meergo-tests-python-function-*")
 	if err != nil {
-		t.Fatalf("cannot create temporary directory for Python transformation files: %s", err)
+		t.Fatalf("cannot create temporary directory for Python function files: %s", err)
 	}
 	c.transformationsTempDir = transformationsTempDir
 
@@ -294,8 +294,8 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	setts.PostgreSQL.Password = testsSettings.Database.Password
 	setts.PostgreSQL.Database = testsSettings.Database.Database
 	setts.PostgreSQL.Schema = testsSettings.Database.Schema
-	setts.Transformer.Local.PythonExecutable = testsSettings.PythonExecutable
-	setts.Transformer.Local.FunctionsDir = transformationsTempDir
+	setts.FunctionProvider.Local.PythonExecutable = testsSettings.PythonExecutable
+	setts.FunctionProvider.Local.FunctionsDir = transformationsTempDir
 
 	// Wait for the assets to be generated.
 	<-assetsGenerated

@@ -45,10 +45,10 @@ type Settings struct {
 		User string
 		Pass string
 	}
-	Transformer struct {
+	FunctionProvider struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
-	}
+	} `yaml:"functionProvider"`
 	ConnectorsOAuth map[string]*state.ConnectorOAuth `yaml:"connectorsOAuth"`
 	Telemetry       struct {
 		Enable bool
@@ -93,15 +93,15 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		SMTP:       settings.SMTP,
 	}
 
-	// Choose the transformer setting.
-	if settings.Transformer.Lambda.Node.Runtime != "" || settings.Transformer.Lambda.Python.Runtime != "" {
-		config.Transformer = core.LambdaConfig(settings.Transformer.Lambda)
+	// Choose the function provider setting.
+	if settings.FunctionProvider.Lambda.Node.Runtime != "" || settings.FunctionProvider.Lambda.Python.Runtime != "" {
+		config.FunctionProvider = core.LambdaConfig(settings.FunctionProvider.Lambda)
 	}
-	if settings.Transformer.Local.NodeExecutable != "" || settings.Transformer.Local.PythonExecutable != "" {
-		if config.Transformer != nil {
-			return errors.New("cannot specify both the Lambda and the local transformer in the configuration (hint: check your 'config.yaml' file)")
+	if settings.FunctionProvider.Local.NodeExecutable != "" || settings.FunctionProvider.Local.PythonExecutable != "" {
+		if config.FunctionProvider != nil {
+			return errors.New("cannot specify both the Lambda and the local function provider in the configuration (hint: check your 'config.yaml' file)")
 		}
-		config.Transformer = core.LocalConfig(settings.Transformer.Local)
+		config.FunctionProvider = core.LocalConfig(settings.FunctionProvider.Local)
 	}
 
 	// Validate the settings of the connectors.

@@ -824,6 +824,18 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		ID: this.workspace.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		// Mark the action functions as discontinued.
+		now := time.Now().UTC()
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
+			"SELECT a.transformation_id, $1\n"+
+			"FROM actions AS a\n"+
+			"INNER JOIN connections AS c ON a.connection = c.id\n"+
+			"WHERE a.transformation_id != '' AND c.workspace = $2\n"+
+			"ON CONFLICT (id) DO NOTHING", now, n.ID)
+		if err != nil {
+			return err
+		}
+		// Delete the workspace.
 		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
 		if err != nil {
 			return err
