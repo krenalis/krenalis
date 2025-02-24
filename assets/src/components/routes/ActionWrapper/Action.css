@@ -449,7 +449,7 @@ inherit the disabled style */
 }
 
 .transformation-box {
-	border-radius: 20px;
+	border-radius: 10px;
 	background-color: var(--bg-primary);
 	box-shadow: var(--sl-shadow-small);
 	border: 1px solid var(--sl-color-neutral-200);
@@ -462,7 +462,7 @@ inherit the disabled style */
 
 .transformation-box__header {
 	background-color: var(--bg-primary);
-	border-radius: 20px;
+	border-radius: 10px;
 	padding: 20px 30px;
 	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 0;
