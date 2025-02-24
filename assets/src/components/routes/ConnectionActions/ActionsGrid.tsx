@@ -26,22 +26,11 @@ interface ActionsGridProps {
 }
 
 const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps) => {
-	const [runningActions, setRunningActions] = useState<number[]>([]);
 	const [actionToDelete, setActionToDelete] = useState<number>();
 
 	const { api, handleError, setIsLoadingConnections, connectors, executeActionButtonRefs, executeAction } =
 		useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
-
-	useEffect(() => {
-		const running: number[] = [];
-		for (const a of actions) {
-			if (a.running) {
-				running.push(a.id);
-			}
-		}
-		setRunningActions(running);
-	}, [actions]);
 
 	useEffect(() => {
 		for (const a of actions) {
@@ -182,7 +171,6 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 							className='connection-actions__run-button'
 							size='small'
 							onClick={() => executeAction(connection, action.id)}
-							loading={runningActions.includes(action.id)}
 							disabled={!action.enabled}
 							hoist={true}
 						>

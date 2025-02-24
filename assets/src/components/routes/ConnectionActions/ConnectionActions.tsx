@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef, useLayoutEffect } from 'react';
+import React, { useState, useContext, useRef, useLayoutEffect } from 'react';
 import './ConnectionActions.css';
 import Flex from '../../base/Flex/Flex';
 import ActionsGrid from './ActionsGrid';
@@ -21,10 +21,9 @@ const ConnectionActions = () => {
 	const [isActionOpen, setIsActionOpen] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 
-	const { setIsLoadingConnections, redirect } = useContext(AppContext);
+	const { redirect } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
-	const refreshConnectionIntervalID = useRef<number>(0);
 	const newActionID = useRef<number>(0);
 
 	useLayoutEffect(() => {
@@ -36,20 +35,6 @@ const ConnectionActions = () => {
 			}, 300);
 		}
 	}, []);
-
-	useEffect(() => {
-		if (!isActionOpen) {
-			refreshConnectionIntervalID.current = window.setInterval(async () => {
-				setIsLoadingConnections(true);
-			}, 1000);
-
-			return () => {
-				clearInterval(refreshConnectionIntervalID.current);
-			};
-		} else {
-			clearInterval(refreshConnectionIntervalID.current);
-		}
-	}, [isActionOpen]);
 
 	useLayoutEffect(() => {
 		if (!isActionOpen) {
