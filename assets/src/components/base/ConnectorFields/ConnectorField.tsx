@@ -55,6 +55,7 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 						type={f.type === '' ? 'text' : f.type}
 						minlength={f.minLength}
 						maxlength={f.maxLength}
+						onlyIntegerPart={f.onlyIntegerPart}
 						error={f.error}
 						val={value}
 						onChange={onChange}
