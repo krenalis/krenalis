@@ -1926,7 +1926,7 @@ const FullscreenTransformation = ({
 							<div className='fullscreen-transformation__panel-title-wrapper'>
 								<div className='fullscreen-transformation__panel-title'>
 									<div className='fullscreen-transformation__panel-title-text'>Input</div>
-									<div className='fullscreen-transformation__panel-sub-title'>{`from ${connection.isSource ? connection.connector.name : 'warehouse'}`}</div>
+									<div className='fullscreen-transformation__panel-sub-title'>{`from ${connection.isSource ? connection.connector.name : actionType.target === 'Events' ? 'linked sources' : 'warehouse'}`}</div>
 								</div>
 								<SlButtonGroup>
 									<SlButton
