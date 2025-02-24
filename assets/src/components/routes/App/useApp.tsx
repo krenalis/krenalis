@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import API from '../../../lib/api/api';
 import TransformedConnector from '../../../lib/core/connector';
 import { Connector } from '../../../lib/api/types/connector';
@@ -14,9 +14,15 @@ import { Connection } from '../../../lib/api/types/connection';
 import Workspace from '../../../lib/api/types/workspace';
 import { Warehouse } from './App.types';
 import { WarehouseResponse } from '../../../lib/api/types/warehouse';
-import { Member } from '../../../lib/api/types/responses';
-import { NotFoundError } from '../../../lib/api/errors';
+import { Execution, Member } from '../../../lib/api/types/responses';
+import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { TransformedMember, transformMember } from '../../../lib/core/member';
+import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
+import { sleep } from '../../../utils/sleep';
+import { Link } from '../../base/Link/Link';
+import { hasFilters } from '../../../lib/core/action';
+
+const FILTER_STEP = 2;
 
 const useApp = (
 	handleError: (err: Error | string) => void,
@@ -38,6 +44,10 @@ const useApp = (
 	);
 
 	let api = new API(window.location.origin, selectedWorkspace);
+
+	const executeActionButtonRefs = useRef<{
+		[key: number]: React.RefObject<FeedbackButtonRef>;
+	}>({});
 
 	useEffect(() => {
 		const loadAppState = async () => {
@@ -294,6 +304,92 @@ const useApp = (
 		}
 	}, [selectedWorkspace]);
 
+	const executeAction = async (connection: TransformedConnection, actionID: number) => {
+		executeActionButtonRefs.current[actionID]?.current?.load();
+		let executionID: number;
+		try {
+			executionID = await api.workspaces.connections.executeAction(actionID);
+		} catch (err) {
+			if (err instanceof UnprocessableError) {
+				executeActionButtonRefs.current[actionID]?.current?.error(err.message);
+				return;
+			}
+			executeActionButtonRefs.current[actionID]?.current?.stop();
+			handleError(err);
+			return;
+		}
+
+		let execution: Execution | null = null;
+		while (execution == null) {
+			await sleep(500);
+			try {
+				execution = await api.workspaces.connections.execution(executionID);
+			} catch (err) {
+				handleError(err);
+				return;
+			}
+			if (execution.endTime == null) {
+				execution = null;
+			}
+		}
+
+		let link = `connections/${connection.id}/overview`;
+		if (execution.error) {
+			link += `?failed-execution-action=${actionID}`;
+		}
+		const overviewLink = (
+			<div className='connection-actions__link-to-overview'>
+				Go to{' '}
+				<Link path={link}>
+					<span className='connection-actions__link'>overview</span>
+				</Link>{' '}
+				for details
+			</div>
+		);
+
+		if (execution.error !== '') {
+			executeActionButtonRefs.current[actionID]?.current?.error(
+				<>
+					{execution.error}
+					{overviewLink}
+				</>,
+			);
+			return;
+		}
+
+		const passed = execution.passed[5];
+		const failed = execution.failed.filter((_, i) => i !== FILTER_STEP).reduce((sum, n) => sum + n, 0);
+
+		const action = connection.actions.find((a) => a.id === actionID);
+
+		let filteredItem: ReactNode;
+		if (hasFilters(connection, action.target)) {
+			const filtered = execution.failed[FILTER_STEP];
+			filteredItem = <li>{filtered} filtered out</li>;
+		}
+
+		const infoMessage = (
+			<div className='connection-actions__execution-info'>
+				<div className='connection-actions__execution-info-title'>
+					{connection.isSource ? 'Import' : 'Export'} completed
+				</div>
+				<ul>
+					<li>
+						{passed} {passed === 1 ? 'user' : 'users'} {connection.isSource ? 'imported' : 'exported'}
+					</li>
+					{filteredItem}
+					<li>
+						{failed === 0
+							? 'No errors occurred'
+							: `${failed} not ${connection.isSource ? 'imported' : 'exported'} due to errors`}
+					</li>
+				</ul>
+				{overviewLink}
+			</div>
+		);
+		executeActionButtonRefs.current[actionID]?.current?.info(infoMessage);
+	};
+
 	return {
 		isLoadingState,
 		setIsLoadingState,
@@ -308,6 +404,8 @@ const useApp = (
 		selectedWorkspace,
 		setSelectedWorkspace,
 		api,
+		executeAction,
+		executeActionButtonRefs,
 	};
 };
 

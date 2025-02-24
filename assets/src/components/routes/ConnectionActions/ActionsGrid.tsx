@@ -1,9 +1,8 @@
-import React, { useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { useContext, useState, useEffect, ReactNode } from 'react';
 import Grid from '../../base/Grid/Grid';
-import { hasFilters, SCHEDULE_PERIODS } from '../../../lib/core/action';
+import { SCHEDULE_PERIODS } from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
-import { UnprocessableError } from '../../../lib/api/errors';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
@@ -13,17 +12,12 @@ import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import { Action } from '../../../lib/api/types/action';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
-import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
-import { Execution } from '../../../lib/api/types/responses';
-import { sleep } from '../../../utils/sleep';
-import { Link } from '../../base/Link/Link';
+import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Variant } from '../App/App.types';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
-
-const FILTER_STEP = 2;
 
 interface ActionsGridProps {
 	newActionID: React.MutableRefObject<number>;
@@ -35,12 +29,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const [runningActions, setRunningActions] = useState<number[]>([]);
 	const [actionToDelete, setActionToDelete] = useState<number>();
 
-	const { api, handleError, setIsLoadingConnections, connectors } = useContext(AppContext);
+	const { api, handleError, setIsLoadingConnections, connectors, executeActionButtonRefs, executeAction } =
+		useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
-
-	const runButtonRefs = useRef<{
-		[key: number]: React.RefObject<FeedbackButtonRef>;
-	}>({});
 
 	useEffect(() => {
 		const running: number[] = [];
@@ -54,7 +45,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 	useEffect(() => {
 		for (const a of actions) {
-			runButtonRefs.current[a.id] = React.createRef();
+			executeActionButtonRefs.current[a.id] = React.createRef();
 		}
 	}, [actions]);
 
@@ -87,92 +78,6 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		setIsLoadingConnections(true);
 	};
 
-	const executeAction = async (actionID: number) => {
-		runButtonRefs.current[actionID].current!.load();
-		let executionID: number;
-		try {
-			executionID = await api.workspaces.connections.executeAction(actionID);
-		} catch (err) {
-			if (err instanceof UnprocessableError) {
-				runButtonRefs.current[actionID].current!.error(err.message);
-				return;
-			}
-			runButtonRefs.current[actionID].current!.stop();
-			handleError(err);
-			return;
-		}
-
-		let execution: Execution | null = null;
-		while (execution == null) {
-			await sleep(500);
-			try {
-				execution = await api.workspaces.connections.execution(executionID);
-			} catch (err) {
-				handleError(err);
-				return;
-			}
-			if (execution.endTime == null) {
-				execution = null;
-			}
-		}
-
-		let link = `connections/${connection.id}/overview`;
-		if (execution.error) {
-			link += `?failed-execution-action=${actionID}`;
-		}
-		const overviewLink = (
-			<div className='connection-actions__link-to-overview'>
-				Go to{' '}
-				<Link path={link}>
-					<span className='connection-actions__link'>overview</span>
-				</Link>{' '}
-				for details
-			</div>
-		);
-
-		if (execution.error !== '') {
-			runButtonRefs.current[actionID].current!.error(
-				<>
-					{execution.error}
-					{overviewLink}
-				</>,
-			);
-			return;
-		}
-
-		const passed = execution.passed[5];
-		const failed = execution.failed.filter((_, i) => i !== FILTER_STEP).reduce((sum, n) => sum + n, 0);
-
-		const action = connection.actions.find((a) => a.id === actionID);
-
-		let filteredItem: ReactNode;
-		if (hasFilters(connection, action.target)) {
-			const filtered = execution.failed[FILTER_STEP];
-			filteredItem = <li>{filtered} filtered out</li>;
-		}
-
-		const infoMessage = (
-			<div className='connection-actions__execution-info'>
-				<div className='connection-actions__execution-info-title'>
-					{connection.isSource ? 'Import' : 'Export'} completed
-				</div>
-				<ul>
-					<li>
-						{passed} {passed === 1 ? 'user' : 'users'} {connection.isSource ? 'imported' : 'exported'}
-					</li>
-					{filteredItem}
-					<li>
-						{failed === 0
-							? 'No errors occurred'
-							: `${failed} not ${connection.isSource ? 'imported' : 'exported'} due to errors`}
-					</li>
-				</ul>
-				{overviewLink}
-			</div>
-		);
-		runButtonRefs.current[actionID].current!.info(infoMessage);
-	};
-
 	const onSchedulerPeriodChange = async (e: any, actionID: number) => {
 		const period = e.currentTarget.value === 'Off' ? null : e.currentTarget.value;
 		try {
@@ -185,8 +90,8 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	};
 
 	const onManageClick = (action: Action) => {
-		for (const key in runButtonRefs.current) {
-			const button = runButtonRefs.current[key].current;
+		for (const key in executeActionButtonRefs.current) {
+			const button = executeActionButtonRefs.current[key].current;
 			if (button != null) {
 				button.hideTooltip();
 			}
@@ -273,10 +178,10 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				{(action.target === 'Users' || action.target === 'Groups') && isActionExecutionSupported && (
 					<>
 						<FeedbackButton
-							ref={runButtonRefs.current[action.id]}
+							ref={executeActionButtonRefs.current[action.id]}
 							className='connection-actions__run-button'
 							size='small'
-							onClick={() => executeAction(action.id)}
+							onClick={() => executeAction(connection, action.id)}
 							loading={runningActions.includes(action.id)}
 							disabled={!action.enabled}
 							hoist={true}

@@ -88,6 +88,8 @@ const App = () => {
 		selectedWorkspace,
 		setSelectedWorkspace,
 		api,
+		executeAction,
+		executeActionButtonRefs,
 	} = useApp(handleError, redirect, logout, location);
 
 	useEffect(() => {
@@ -156,6 +158,8 @@ const App = () => {
 					logout,
 					setIsLoggedIn,
 					toastRef,
+					executeAction,
+					executeActionButtonRefs,
 				}}
 			>
 				<Outlet />

@@ -7,6 +7,7 @@ import { Warehouse } from '../components/routes/App/App.types';
 import Workspace from '../lib/api/types/workspace';
 import { TransformedMember } from '../lib/core/member';
 import { SlAlert } from '@shoelace-style/shoelace';
+import { FeedbackButtonRef } from '../components/base/FeedbackButton/FeedbackButton';
 
 interface AppContext {
 	api: API;
@@ -31,6 +32,10 @@ interface AppContext {
 	logout: () => void;
 	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 	toastRef: React.MutableRefObject<SlAlert>;
+	executeAction: (connection: TransformedConnection, actionID: number) => Promise<void>;
+	executeActionButtonRefs: React.MutableRefObject<{
+		[key: number]: React.RefObject<FeedbackButtonRef>;
+	}>;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);
