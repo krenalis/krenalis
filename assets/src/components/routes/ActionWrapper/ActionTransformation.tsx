@@ -676,9 +676,6 @@ const TransformationBox = ({
 				sharedMapping.current = { ...a.transformation.mapping };
 				a.transformation.function = null;
 				setSelectedLanguage('');
-				setSelectedInPaths([]);
-				setSelectedOutPaths([]);
-				setAction(a);
 				setTransformationType('mappings');
 			} else {
 				a.transformation.mapping = null;
@@ -694,9 +691,11 @@ const TransformationBox = ({
 					outPaths: [],
 				};
 				setSelectedLanguage(pendingTransformationType.current);
-				setAction(a);
 				setTransformationType('function');
 			}
+			setAction(a);
+			setSelectedInPaths([]);
+			setSelectedOutPaths([]);
 		}, delay);
 	};
 
