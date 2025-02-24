@@ -64,7 +64,7 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 	for len(b) > 8000-maxIDLen-2 {
 		const n = 8000 - 2
 		s := append([]byte(nil), b[:n]...)
-		s = append(s, '+', '\'')
+		s = append(s, '*', '\'')
 		_, err = tx.Exec(ctx, string(s))
 		if err != nil {
 			return err
@@ -208,7 +208,7 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 					if n.Channel != "meergo" {
 						continue
 					}
-					if strings.HasSuffix(n.Payload, "+") {
+					if strings.HasSuffix(n.Payload, "*") {
 						b.WriteString(n.Payload[:len(n.Payload)-1])
 						continue
 					}
