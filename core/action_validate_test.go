@@ -3193,8 +3193,12 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Text()},
+				{Name: "xy", Type: types.Text()},
+				{Name: "x_y", Type: types.Text()},
+				{Name: "x_z", Type: types.Text()},
+				{Name: "z", Type: types.Text()},
 			}),
-			paths: []string{"x"},
+			paths: []string{"x_y", "x", "xy", "x_z", "z"},
 		},
 		{
 			name: "Paths cannot be nil",

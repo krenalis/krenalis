@@ -12,7 +12,6 @@ package core
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -921,33 +920,32 @@ func validateTransformationFunctionPaths(io string, schema types.Type, paths []s
 		}
 		return fmt.Errorf("there are no %s properties in transformation function", io)
 	}
-	has := make(map[string]struct{}, len(paths))
-	for _, path := range paths {
-		if !types.IsValidPropertyPath(path) {
-			return fmt.Errorf("transformation function %s property path %q is not valid", io, path)
+	for _, p := range paths {
+		if !types.IsValidPropertyPath(p) {
+			return fmt.Errorf("transformation function %s property path %q is not valid", io, p)
 		}
-		if _, ok := has[path]; ok {
-			return fmt.Errorf("transformation function %s property path %q is repeated", io, path)
-		}
-		for _, path2 := range slices.Sorted(maps.Keys(has)) {
-			if strings.HasPrefix(path, path2) || strings.HasPrefix(path2, path) {
-				if len(path2) < len(path) {
-					path, path2 = path2, path
+	}
+	for i, p := range paths {
+		for j, p2 := range paths {
+			if i == j || len(p2) < len(p) {
+				continue
+			}
+			if len(p2) == len(p) {
+				if p == p2 {
+					return fmt.Errorf("transformation function %s property path %q is repeated", io, p)
 				}
-				return fmt.Errorf("transformation function %s paths cannot contain both %q and its sub-property path %q", io, path, path2)
+				continue
+			}
+			// Check that p is not sub-paths of p2.
+			if p2[len(p)] == '.' && p2[:len(p)] == p {
+				return fmt.Errorf("transformation function %s paths cannot contain both %q and its sub-property path %q", io, p, p2)
 			}
 		}
-		has[path] = struct{}{}
 	}
 	if schema.Valid() {
-		for path := range types.WalkObjects(schema) {
-			delete(has, path)
-		}
-	}
-	if len(has) > 0 {
-		for _, path := range paths {
-			if _, ok := has[path]; ok {
-				return fmt.Errorf("%s property %q of transformation function does not exist in schema", io, path)
+		for _, p := range paths {
+			if _, err := types.PropertyByPath(schema, p); err != nil {
+				return fmt.Errorf("%s property %q of transformation function does not exist in schema", io, p)
 			}
 		}
 	}
