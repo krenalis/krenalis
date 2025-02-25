@@ -21,6 +21,7 @@ import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
 import { hasFilters } from '../../../lib/core/action';
+import { formatNumber } from '../../../utils/formatNumber';
 
 const FILTER_STEP = 2;
 
@@ -365,7 +366,7 @@ const useApp = (
 		let filteredItem: ReactNode;
 		if (hasFilters(connection, action.target)) {
 			const filtered = execution.failed[FILTER_STEP];
-			filteredItem = <li>{filtered} filtered out</li>;
+			filteredItem = <li>{formatNumber(filtered)} filtered out</li>;
 		}
 
 		const infoMessage = (
@@ -375,13 +376,14 @@ const useApp = (
 				</div>
 				<ul>
 					<li>
-						{passed} {passed === 1 ? 'user' : 'users'} {connection.isSource ? 'imported' : 'exported'}
+						{formatNumber(passed)} {passed === 1 ? 'user' : 'users'}{' '}
+						{connection.isSource ? 'imported' : 'exported'}
 					</li>
 					{filteredItem}
 					<li>
 						{failed === 0
 							? 'No errors occurred'
-							: `${failed} not ${connection.isSource ? 'imported' : 'exported'} due to errors`}
+							: `${formatNumber(failed)} not ${connection.isSource ? 'imported' : 'exported'} due to errors`}
 					</li>
 				</ul>
 				{overviewLink}

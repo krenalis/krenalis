@@ -18,6 +18,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
 import considerAsUTC from '../../../utils/considerUTC';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
+import { formatNumber } from '../../../utils/formatNumber';
 
 interface ActionMetricsPoint {
 	time: string;
@@ -183,7 +184,7 @@ const ConnectionOverview = () => {
 					label={
 						i === 5 ? null : (
 							<div className='connection-overview__funnel-label connection-overview__funnel-label--passed'>
-								{String(passedData)}
+								{formatNumber(passedData)}
 							</div>
 						)
 					}
@@ -202,7 +203,7 @@ const ConnectionOverview = () => {
 						<div
 							className={`connection-overview__funnel-label connection-overview__funnel-label--failed${isFilterStep ? ' connection-overview__funnel-label--discarded' : ''}`}
 						>
-							{String(failedData)}
+							{formatNumber(failedData)}
 						</div>
 					}
 				></Arrow>
@@ -500,8 +501,22 @@ const ConnectionOverview = () => {
 							>
 								<CartesianGrid strokeDasharray='3 3' />
 								<XAxis dataKey='time' />
-								<YAxis />
-								<Tooltip />
+								<YAxis
+									tickFormatter={(value) => {
+										// abbreviate with letters (ex.
+										// "K", "M") instead of showing
+										// big numbers.
+										return new Intl.NumberFormat('en-US', {
+											notation: 'compact',
+											compactDisplay: 'short',
+										}).format(value);
+									}}
+								/>
+								<Tooltip
+									formatter={(value) => {
+										return formatNumber(Number(value));
+									}}
+								/>
 								<Legend />
 								<Bar dataKey='passed' fill='#4f46e5' />
 								<Bar dataKey='failed' fill='#cf3a3a' />
@@ -520,8 +535,8 @@ const ConnectionOverview = () => {
 						<div className='connection-overview__funnel-passed'>
 							<div className='connection-overview__funnel-initial' id={`funnel-circle-initial`}>
 								{isUsersSelected
-									? userFunnelData[0].passed + userFunnelData[0].failed
-									: eventFunnelData[0].passed + eventFunnelData[0].failed}
+									? formatNumber(userFunnelData[0].passed + userFunnelData[0].failed)
+									: formatNumber(eventFunnelData[0].passed + eventFunnelData[0].failed)}
 							</div>
 							{Array.from(steps.entries()).map(([i, s]) => {
 								return (
@@ -534,23 +549,25 @@ const ConnectionOverview = () => {
 										<div
 											className='connection-overview__funnel-circle'
 											id={`funnel-circle-passed-${i}`}
-										></div>
+										/>
 									</div>
 								);
 							})}
 							<div className='connection-overview__funnel-final' id={`funnel-circle-final`}>
-								{isUsersSelected ? userFunnelData[5].passed : eventFunnelData[5].passed}
+								{isUsersSelected
+									? formatNumber(userFunnelData[5].passed)
+									: formatNumber(eventFunnelData[5].passed)}
 							</div>
 						</div>
 						<div className='connection-overview__funnel-failed'>
-							<div key='funnel-initial-empty'></div>
+							<div key='funnel-initial-empty' />
 							{Array.from(steps.entries()).map(([i, _]) => {
 								return (
 									<div
 										key={`funnel-failed-${i}`}
 										className='connection-overview__funnel-circle'
 										id={`funnel-circle-failed-${i}`}
-									></div>
+									/>
 								);
 							})}
 						</div>
