@@ -511,6 +511,7 @@ const ConnectionOverview = () => {
 											compactDisplay: 'short',
 										}).format(value);
 									}}
+									allowDecimals={false}
 								/>
 								<Tooltip
 									formatter={(value) => {
