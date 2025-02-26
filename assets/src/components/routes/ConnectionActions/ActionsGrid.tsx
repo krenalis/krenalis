@@ -34,7 +34,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 	useEffect(() => {
 		for (const a of actions) {
-			executeActionButtonRefs.current[a.id] = React.createRef();
+			if (executeActionButtonRefs?.current[a.id]?.current == null) {
+				executeActionButtonRefs.current[a.id] = React.createRef();
+			}
 		}
 	}, [actions]);
 
@@ -237,7 +239,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				rows={rows}
 				columns={GRID_COLUMNS}
 				noRowsMessage='No actions to show'
-			></Grid>
+			/>
 			<AlertDialog
 				variant='danger'
 				isOpen={actionToDelete != null}
