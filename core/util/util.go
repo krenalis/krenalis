@@ -99,6 +99,18 @@ func TransformationFunctionName(action int) string {
 	return fmt.Sprintf("meergo_action%d_%s-%09d", action, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
 }
 
+// UUIDFromBytes returns the UUID corresponding to the given byte slice
+// (representing the 128 bit of the UUID, so it must have lenght 16) it in the
+// canonical string form without uppercase letters. The boolean return value
+// reports whether s represent an UUID or not.
+func UUIDFromBytes(s []byte) (string, bool) {
+	id, err := uuid.FromBytes(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
+}
+
 // ValidateStringField validates a string field identified by the provided name.
 // It returns an error if any of the following conditions are met:
 //   - The string s is empty.
