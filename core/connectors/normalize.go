@@ -406,11 +406,17 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		value = int(v)
 		valid = valid && types.MinYear <= v && v <= types.MaxYear
 	case types.UUIDKind:
-		if s, ok := src.(string); ok {
-			if s == "" && nullable {
+		switch src := src.(type) {
+		case string:
+			if src == "" && nullable {
 				return nil, nil
 			}
-			value, valid = util.ParseUUID(s)
+			value, valid = util.ParseUUID(src)
+		case []byte:
+			if src == nil && nullable {
+				return nil, nil
+			}
+			value, valid = util.UUIDFromBytes(src)
 		}
 	case types.JSONKind:
 		var data []byte

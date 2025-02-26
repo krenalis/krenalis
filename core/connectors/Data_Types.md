@@ -21,7 +21,7 @@
 | date      | time.Time       | string                       | time.Time [^2]       | time.Time   | time.Time | time.Time   |              | -               | -      | -      |
 | time      | time.Time       | string                       | -                    | string      | []byte    | time.Time   |              | -               | -      | -      |
 | year      | int             | float64, json.Number         | -                    | -           | int64     | -           | -            | -               | -      | -      |
-| uuid      | string          | string                       | string               | string      | -         | -           |              | -               | -      | -      |
+| uuid      | string          | string                       | string               | string      | -         | -           | []byte       | -               | -      | -      |
 | json      | json.Value      | JSON types [^4]              | - [^3]               | string      | []byte    | string [^6] |              | JSON types [^4] | -      | -      |
 | inet      | string          | string                       | net.IP               | string [^8] | -         | -           | -            | -               | -      | -      |
 | text      | string          | string                       | string               | string      | []byte    | string      | []byte       | -               | string | string |
