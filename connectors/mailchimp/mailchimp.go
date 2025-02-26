@@ -422,7 +422,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		body.WriteString(`","params":{"skip_merge_validation":true},"body":`)
 		_ = body.EncodeQuoted(record.Properties)
 		body.WriteByte('}')
-		if n > maxBodyRecordsBytes {
+		if body.Len()+len(`]}`) > maxBodyRecordsBytes {
 			body.Truncate(n)
 			records.Skip()
 			break
