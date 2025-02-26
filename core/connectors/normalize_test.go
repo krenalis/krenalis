@@ -96,6 +96,9 @@ func Test_normalize(t *testing.T) {
 		// uuid.
 		{types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", false, nil},
 		{types.UUID(), "", nil, true, nil},
+		{types.UUID(), []byte{211, 124, 89, 213, 136, 127, 68, 248, 143, 250, 126, 36, 49, 79, 71, 62}, "d37c59d5-887f-44f8-8ffa-7e24314f473e", false, nil},
+		{types.UUID(), []byte{211, 124, 89, 213, 136, 127, 68, 248, 143, 250, 126, 36, 49, 79, 71, 62}, "d37c59d5-887f-44f8-8ffa-7e24314f473e", true, nil},
+		{types.UUID(), []byte(nil), nil, true, nil},
 		// json.
 		{types.JSON(), json.Value(`{"a": 5}`), json.Value(`{"a": 5}`), false, nil},
 		{types.JSON(), []byte(`{"a": 5}`), json.Value(`{"a": 5}`), false, nil},
