@@ -615,7 +615,7 @@ func setActionSettings(ctx context.Context, st *state.State, action int, setting
 		Settings: settings,
 	}
 	err := st.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE actions SET settings = $1 WHERE id = $2", n.Settings, n.Action)
+		_, err := tx.Exec(ctx, "UPDATE actions SET format_settings = $1 WHERE id = $2", n.Settings, n.Action)
 		if err != nil {
 			return err
 		}
