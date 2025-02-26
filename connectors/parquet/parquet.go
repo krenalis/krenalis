@@ -80,6 +80,16 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 	parquetColumns := fr.Columns()
 	columns := make([]types.Property, 0, len(parquetColumns))
 	for _, c := range parquetColumns {
+		if len(c.Path()) > 1 {
+			// Skip columns referring to groups and arrays (and possibly also to
+			// other composite types in Parquet), which are not currently
+			// imported correctly.
+			//
+			// TODO: see the issues:
+			//  - https://github.com/meergo/meergo/issues/1369 (groups)
+			//  - https://github.com/meergo/meergo/issues/1325 (arrays)
+			continue
+		}
 		element := c.Element()
 		typ, err := propertyType(element)
 		if err != nil {
