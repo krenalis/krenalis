@@ -223,7 +223,11 @@ type RecordReader interface {
 
 The `Write` method first needs to call the `Columns` method to determine the columns of the records to be written. Then it calls the `Record` method to read each individual record. It can then either immediately write the read record to the `io.Writer` or continue reading to do so later.
 
-The `Ack` method is called to confirm the writing of a record. If a decision is made not to write a record, `Ack` still needs to be called, but this time passing a non-nil error as the second argument.
+#### Acknowledge
+
+The `Ack` method is called to confirm the writing of a record passing its ID.
+
+If an error occurs while writing a record, a connector can call the `Ack` method (indicating the error encountered) and proceed with the next record, but only if the connector is certain that no data for the failing record has been written to the writer and thus that the export can proceed without causing file corruption. In any other case, the `Write` method must return with the error to abort the export.
 
 ### Sheets method
 
