@@ -198,7 +198,8 @@ func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records
 		}
 		data, err := convertToParquetData(schema, record)
 		if err != nil {
-			return err
+			records.Ack(id, err)
+			continue
 		}
 		err = fw.AddData(data)
 		if err != nil {
