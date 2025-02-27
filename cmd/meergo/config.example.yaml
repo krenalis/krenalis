@@ -56,10 +56,10 @@ telemetry:
     # details.
     enable: false
 
-connectors:
+connectorsOAuth:
     HubSpot:
-        oauthClientID:
-        oauthClientSecret:
+        clientID:
+        clientSecret:
     Mailchimp:
-        oauthClientID:
-        oauthClientSecret:
+        clientID:
+        clientSecret:
