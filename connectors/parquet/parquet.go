@@ -22,11 +22,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
+	"github.com/fraugster/parquet-go/parquetschema"
 )
 
 // Connector icon.
@@ -34,10 +37,11 @@ var icon = "<svg></svg>"
 
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
-		Name:      "Parquet",
-		Icon:      icon,
-		Extension: "parquet",
-		AsSource:  &meergo.AsSourceFile{},
+		Name:          "Parquet",
+		Icon:          icon,
+		Extension:     "parquet",
+		AsSource:      &meergo.AsSourceFile{},
+		AsDestination: &meergo.AsDestinationFile{},
 	}, New)
 }
 
@@ -47,6 +51,11 @@ func New(conf *meergo.FileConfig) (*Parquet, error) {
 }
 
 type Parquet struct{}
+
+// ContentType returns the content type of the file.
+func (pq *Parquet) ContentType(ctx context.Context) string {
+	return "application/vnd.apache.parquet"
+}
 
 // Read reads the records from r and writes them to records.
 func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
@@ -76,6 +85,11 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 	}
 
 	// Read the columns.
+	type timestampColumnInfo struct {
+		name string
+		unit *parquet.TimeUnit
+	}
+	var int64TimestampColumns []timestampColumnInfo
 	var int96Columns []string
 	parquetColumns := fr.Columns()
 	columns := make([]types.Property, 0, len(parquetColumns))
@@ -102,6 +116,13 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 		if *element.Type == parquet.Type_INT96 {
 			int96Columns = append(int96Columns, name)
 		}
+		if *element.Type == parquet.Type_INT64 && element.LogicalType != nil &&
+			element.LogicalType.TIMESTAMP != nil {
+			int64TimestampColumns = append(int64TimestampColumns, timestampColumnInfo{
+				name: name,
+				unit: element.LogicalType.TIMESTAMP.Unit,
+			})
+		}
 		columns = append(columns, types.Property{
 			Name:     name,
 			Type:     typ,
@@ -122,6 +143,13 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 				break
 			}
 			return err
+		}
+		// Convert int64 type values representing timestamps from int64 to
+		// time.Time.
+		for _, columnInfo := range int64TimestampColumns {
+			if v, ok := record[columnInfo.name].(int64); ok {
+				record[columnInfo.name] = int64ToTimeTime(v, columnInfo.unit)
+			}
 		}
 		// Convert int96 type values from []byte to time.Time.
 		for _, name := range int96Columns {
@@ -146,6 +174,340 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 	}
 
 	return nil
+}
+
+// Write writes to w the records read from records.
+func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
+	columns := records.Columns()
+	schema := types.Object(columns)
+	schemaDef, err := schemaToParquetSchema(schema)
+	if err != nil {
+		return err
+	}
+	fw := goparquet.NewFileWriter(w,
+		goparquet.WithCreator("Meergo"),
+		goparquet.WithSchemaDefinition(schemaDef),
+	)
+	for {
+		id, record, err := records.Record(ctx)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		data, err := convertToParquetData(schema, record)
+		if err != nil {
+			return err
+		}
+		err = fw.AddData(data)
+		if err != nil {
+			return err
+		}
+		records.Ack(id, nil)
+	}
+	err = fw.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+// Convert an int96 type value to a time.Time value.
+// v must be a byte array with length in range [8,96].
+// See https://stackoverflow.com/questions/53103762.
+func convertInt96(v any) (time.Time, error) {
+	r := reflect.ValueOf(v)
+	t := r.Type()
+	// Validate the argument.
+	if t.Kind() != reflect.Array || t.Elem().Kind() != reflect.Uint8 {
+		return time.Time{}, fmt.Errorf("expected byte array, got value type %q", r)
+	}
+	if l := t.Len(); l < 8 || l > 96 {
+		return time.Time{}, fmt.Errorf("unexpected byte array length %d", l)
+	}
+	// Convert the array to a slice value.
+	ra := reflect.New(t).Elem()
+	ra.Set(r)
+	p := ra.Slice(0, t.Len()).Interface().([]byte)
+	// Convert the byte slice to a time.Time value.
+	// The following code was taken from https://stackoverflow.com/a/53133964
+	// and was written by https://stackoverflow.com/users/1912391/zaky.
+	nano, dt := binary.LittleEndian.Uint64(p[:8]), binary.LittleEndian.Uint32(p[8:])
+	l := dt + 68569
+	n := 4 * l / 146097
+	l = l - (146097*n+3)/4
+	i := 4000 * (l + 1) / 1461001
+	l = l - 1461*i/4 + 31
+	j := 80 * l / 2447
+	k := l - 2447*j/80
+	l = j / 11
+	j = j + 2 - 12*l
+	i = 100*(n-49) + i + l
+	tm := time.Date(int(i), time.Month(j), int(k), 0, 0, 0, 0, time.UTC)
+	return tm.Add(time.Duration(nano)), nil
+}
+
+// convertToParquetData converts the records passed by Meergo into the format
+// required by the Parquet library for export to file.
+func convertToParquetData(schema types.Type, record map[string]any) (map[string]any, error) {
+	converted := make(map[string]any, len(record))
+	for _, p := range schema.Properties() {
+		switch p.Type.Kind() {
+		case types.IntKind:
+			if p.Type.BitSize() <= 32 {
+				if i64, ok := record[p.Name].(int); ok {
+					converted[p.Name] = int32(i64)
+					continue
+				}
+			} else {
+				if i64, ok := record[p.Name].(int); ok {
+					converted[p.Name] = int64(i64)
+					continue
+				}
+			}
+		case types.UintKind:
+			if p.Type.BitSize() < 32 {
+				if u64, ok := record[p.Name].(uint); ok {
+					converted[p.Name] = int32(u64)
+					continue
+				}
+			} else {
+				if u64, ok := record[p.Name].(uint); ok {
+					converted[p.Name] = int64(u64)
+					continue
+				}
+			}
+		case types.FloatKind:
+			if p.Type.BitSize() == 32 {
+				if f64, ok := record[p.Name].(float64); ok {
+					converted[p.Name] = float32(f64)
+					continue
+				}
+			}
+		case types.DecimalKind:
+			return nil, errors.New("decimal properties are not supported") // TODO: see the issue https://github.com/meergo/meergo/issues/1370.
+		case types.DateTimeKind:
+			if ts, ok := record[p.Name].(time.Time); ok {
+				ts, err := timeTimeToInt64(ts)
+				if err != nil {
+					return nil, errors.New("timestamp out of range")
+				}
+				converted[p.Name] = ts
+				continue
+			}
+		case types.DateKind:
+			if ts, ok := record[p.Name].(time.Time); ok {
+				converted[p.Name] = int32(ts.UnixMilli() / 1_000 / 3_600 / 24)
+				continue
+			}
+		case types.YearKind:
+			if y, ok := record[p.Name].(int); ok {
+				converted[p.Name] = int32(y)
+				continue
+			}
+		case types.UUIDKind:
+			if u, ok := record[p.Name].(string); ok {
+				array := [16]byte(uuid.MustParse(u))
+				converted[p.Name] = array[:]
+				continue
+			}
+		case types.JSONKind:
+			if jsonValue, ok := record[p.Name].(json.Value); ok {
+				converted[p.Name] = []byte(jsonValue)
+				continue
+			}
+		case types.ObjectKind:
+			obj, ok := record[p.Name].(map[string]any)
+			if !ok {
+				continue
+			}
+			var err error
+			converted[p.Name], err = convertToParquetData(p.Type, obj)
+			if err != nil {
+				return nil, err
+			}
+			continue
+		}
+		converted[p.Name] = record[p.Name]
+	}
+	return converted, nil
+}
+
+// int64ToTimeTime converts an int64 timestamp, read from Parquet, to a
+// time.Time. unit is the timestamp unit; if nil, it is considered nanoseconds.
+func int64ToTimeTime(v int64, unit *parquet.TimeUnit) time.Time {
+	if unit != nil && unit.IsSetMILLIS() {
+		return time.UnixMilli(v).UTC()
+	}
+	if unit != nil && unit.IsSetMICROS() {
+		return time.UnixMicro(v).UTC()
+	}
+	return time.Unix(0, v).UTC()
+}
+
+// schemaToParquetSchema returns the Parquet schema definition corresponding to
+// the given Meergo schema.
+//
+// This method panics if schema is not an Object.
+func schemaToParquetSchema(schema types.Type) (*parquetschema.SchemaDefinition, error) {
+	columns, err := objectToColumns(schema)
+	if err != nil {
+		return nil, err
+	}
+	return &parquetschema.SchemaDefinition{
+		RootColumn: &parquetschema.ColumnDefinition{
+			Children: columns,
+			// According to the documentation this is not necessary, but the
+			// module panics if it is not set this way:
+			SchemaElement: parquet.NewSchemaElement(),
+		},
+	}, nil
+}
+
+// objectToColumns returns the Parquet column definitions corresponding to the
+// given Meergo object.
+//
+// This method panics if obj is not an Object.
+func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) {
+	columns := []*parquetschema.ColumnDefinition{}
+	for _, property := range obj.Properties() {
+
+		// Create the column corresponding to the property.
+		col := &parquetschema.ColumnDefinition{}
+		col.SchemaElement = parquet.NewSchemaElement()
+		col.SchemaElement.Name = property.Name
+
+		// Set the column as optional.
+		col.SchemaElement.RepetitionType = parquet.FieldRepetitionTypePtr(
+			parquet.FieldRepetitionType_OPTIONAL)
+
+		// Handle objects.
+		columns = append(columns, col)
+		if property.Type.Kind() == types.ObjectKind {
+			var err error
+			col.Children, err = objectToColumns(property.Type)
+			if err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		// Set the column type.
+		switch property.Type.Kind() {
+		case types.BooleanKind:
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BOOLEAN)
+		case types.IntKind:
+			switch property.Type.BitSize() {
+			case 8:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+				col.SchemaElement.LogicalType = parquet.NewLogicalType()
+				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+				col.SchemaElement.LogicalType.INTEGER.BitWidth = 8
+				col.SchemaElement.LogicalType.INTEGER.IsSigned = true
+			case 16:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+				col.SchemaElement.LogicalType = parquet.NewLogicalType()
+				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+				col.SchemaElement.LogicalType.INTEGER.BitWidth = 16
+				col.SchemaElement.LogicalType.INTEGER.IsSigned = true
+			case 24:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+			case 32:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+			case 64:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+			}
+		case types.UintKind:
+			switch property.Type.BitSize() {
+			case 8:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+				col.SchemaElement.LogicalType = parquet.NewLogicalType()
+				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+				col.SchemaElement.LogicalType.INTEGER.BitWidth = 8
+				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+			case 16:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+				col.SchemaElement.LogicalType = parquet.NewLogicalType()
+				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+				col.SchemaElement.LogicalType.INTEGER.BitWidth = 16
+				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+			case 24:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+				col.SchemaElement.LogicalType = parquet.NewLogicalType()
+				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+				col.SchemaElement.LogicalType.INTEGER.BitWidth = 32
+				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+			case 32:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+				col.SchemaElement.LogicalType = parquet.NewLogicalType()
+				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+				col.SchemaElement.LogicalType.INTEGER.BitWidth = 32
+				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+			case 64:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+				col.SchemaElement.LogicalType = parquet.NewLogicalType()
+				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
+				col.SchemaElement.LogicalType.INTEGER.BitWidth = 64
+				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
+			}
+		case types.FloatKind:
+			switch property.Type.BitSize() {
+			case 32:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_FLOAT)
+			case 64:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_DOUBLE)
+			}
+		case types.DecimalKind:
+			return nil, errors.New("decimal properties are not supported") // TODO: see the issue https://github.com/meergo/meergo/issues/1370.
+		case types.DateTimeKind:
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.TIMESTAMP = parquet.NewTimestampType()
+			col.SchemaElement.LogicalType.TIMESTAMP.IsAdjustedToUTC = true
+			col.SchemaElement.LogicalType.TIMESTAMP.Unit = parquet.NewTimeUnit()
+			col.SchemaElement.LogicalType.TIMESTAMP.Unit.NANOS = parquet.NewNanoSeconds()
+		case types.DateKind:
+			return nil, errors.New("date properties are not supported") // TODO: https://github.com/meergo/meergo/issues/1376
+			// col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+			// col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			// col.SchemaElement.LogicalType.DATE = parquet.NewDateType()
+		case types.TimeKind:
+			// col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+			// col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			// col.SchemaElement.LogicalType.TIME = parquet.NewTimeType()
+			// col.SchemaElement.LogicalType.TIME.IsAdjustedToUTC = true
+			// col.SchemaElement.LogicalType.TIME.Unit = parquet.NewTimeUnit()
+			// col.SchemaElement.LogicalType.TIME.Unit.NANOS = parquet.NewNanoSeconds()
+			return nil, errors.New("time properties are not supported") // TODO: https://github.com/meergo/meergo/issues/1376
+		case types.YearKind:
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+		case types.UUIDKind:
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_FIXED_LEN_BYTE_ARRAY)
+			typeLength := int32(16)
+			col.SchemaElement.TypeLength = &typeLength
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.UUID = parquet.NewUUIDType()
+		case types.JSONKind:
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.JSON = parquet.NewJsonType()
+		case types.InetKind:
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.STRING = parquet.NewStringType()
+		case types.TextKind:
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.STRING = parquet.NewStringType()
+		case types.ArrayKind:
+			return nil, errors.New("array properties are not supported") // TODO: see the issue https://github.com/meergo/meergo/issues/1325.
+		case types.MapKind:
+			return nil, errors.New("map properties are not supported") // TODO: see the issue https://github.com/meergo/meergo/issues/1371.
+		}
+	}
+	return columns, nil
 }
 
 // propertyType returns the type of the Parquet column specified by the given
@@ -177,11 +539,15 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			return types.Text(), nil
 		}
 		if d := lt.DECIMAL; d != nil {
-			if 0 < d.Precision && d.Precision <= types.MaxDecimalPrecision &&
-				d.Scale <= types.MaxDecimalScale && d.Scale <= d.Precision {
-				return types.Decimal(int(d.Precision), int(d.Scale)), nil
-			}
-			return types.Decimal(0, 0), nil
+			return types.Type{}, nil
+			// TODO: decimal are currenty not supported.
+			// See the issue https://github.com/meergo/meergo/issues/1370.
+			//
+			// if 0 < d.Precision && d.Precision <= types.MaxDecimalPrecision &&
+			// 	d.Scale <= types.MaxDecimalScale && d.Scale <= d.Precision {
+			// 	return types.Decimal(int(d.Precision), int(d.Scale)), nil
+			// }
+			// return types.Decimal(0, 0), nil
 		}
 		if lt.DATE != nil {
 			return types.Date(), nil
@@ -273,7 +639,8 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 	case parquet.Type_INT64:
 		return types.Int(64), nil
 	case parquet.Type_INT96:
-		return types.DateTime(), nil
+		// TODO: correctly support INT96 types, see: https://github.com/meergo/meergo/issues/1375.
+		return types.Type{}, nil
 	case parquet.Type_BYTE_ARRAY, parquet.Type_FIXED_LEN_BYTE_ARRAY:
 		return types.Text(), nil
 	}
@@ -281,37 +648,13 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 	return types.Type{}, nil
 }
 
-// Convert an int96 type value to a time.Time value.
-// v must be a byte array with length in range [8,96].
-// See https://stackoverflow.com/questions/53103762.
-func convertInt96(v any) (time.Time, error) {
-	r := reflect.ValueOf(v)
-	t := r.Type()
-	// Validate the argument.
-	if t.Kind() != reflect.Array || t.Elem().Kind() != reflect.Uint8 {
-		return time.Time{}, fmt.Errorf("expected byte array, got value type %q", r)
+// timeTimeToInt64 returns the int64 representation of the given time.Time
+// value, that can be written to Parquet. The int64 has unit nanoseconds. If the
+// year of ts is less than 1678, or it is greater than 2262, this function
+// returns error.
+func timeTimeToInt64(ts time.Time) (int64, error) {
+	if y := ts.Year(); y < 1678 || y > 2262 {
+		return 0, fmt.Errorf("timestamp year is out of range")
 	}
-	if l := t.Len(); l < 8 || l > 96 {
-		return time.Time{}, fmt.Errorf("unexpected byte array length %d", l)
-	}
-	// Convert the array to a slice value.
-	ra := reflect.New(t).Elem()
-	ra.Set(r)
-	p := ra.Slice(0, t.Len()).Interface().([]byte)
-	// Convert the byte slice to a time.Time value.
-	// The following code was taken from https://stackoverflow.com/a/53133964
-	// and was written by https://stackoverflow.com/users/1912391/zaky.
-	nano, dt := binary.LittleEndian.Uint64(p[:8]), binary.LittleEndian.Uint32(p[8:])
-	l := dt + 68569
-	n := 4 * l / 146097
-	l = l - (146097*n+3)/4
-	i := 4000 * (l + 1) / 1461001
-	l = l - 1461*i/4 + 31
-	j := 80 * l / 2447
-	k := l - 2447*j/80
-	l = j / 11
-	j = j + 2 - 12*l
-	i = 100*(n-49) + i + l
-	tm := time.Date(int(i), time.Month(j), int(k), 0, 0, 0, 0, time.UTC)
-	return tm.Add(time.Duration(nano)), nil
+	return ts.UnixNano(), nil
 }

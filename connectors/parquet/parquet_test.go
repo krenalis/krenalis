@@ -1,0 +1,540 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2025 Open2b
+//
+
+package parquet
+
+import (
+	"bytes"
+	"context"
+	"io"
+	"math"
+	"os"
+	"reflect"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/fraugster/parquet-go/parquet"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/util"
+	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/types"
+)
+
+func TestExportAndImportParquet(t *testing.T) {
+
+	ctx := context.Background()
+
+	// Instantiate the Parquet connector.
+	config := meergo.FileConfig{}
+	connector, err := New(&config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Defines the content that will be exported to the Parquet file, as if they
+	// were users reading from the data warehouse.
+	exportedColumns := []types.Property{
+		{Name: "subscribed", Type: types.Boolean(), ReadOptional: true},
+		{Name: "rank_int8", Type: types.Int(8), ReadOptional: true},
+		{Name: "rank_int16", Type: types.Int(16), ReadOptional: true},
+		// This cannot be tested as Parquet does not support 24-bit integers,
+		// which are therefore exported as 32-bit ints.
+		// {Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
+		{Name: "rank_int32", Type: types.Int(32), ReadOptional: true},
+		{Name: "rank_int64", Type: types.Int(64), ReadOptional: true},
+		{Name: "first_name", Type: types.Text(), ReadOptional: true},
+		{Name: "rank_uint8", Type: types.Uint(8), ReadOptional: true},
+		{Name: "rank_uint16", Type: types.Uint(16), ReadOptional: true},
+		// This cannot be tested as Parquet does not support 24-bit integers,
+		// which are therefore exported as 32-bit ints.
+		// {Name: "rank_uint24", Type: types.Uint(24), ReadOptional: true},
+		{Name: "rank_uint32", Type: types.Uint(32), ReadOptional: true},
+		{Name: "rank_uint64", Type: types.Uint(64), ReadOptional: true},
+		{Name: "last_name", Type: types.Text(), ReadOptional: true},
+		{Name: "score32", Type: types.Float(32), ReadOptional: true},
+		{Name: "score64", Type: types.Float(64), ReadOptional: true},
+		{Name: "my_datetime", Type: types.DateTime(), ReadOptional: true},
+		// {Name: "my_date", Type: types.Date(), ReadOptional: true}, // TODO: see https://github.com/meergo/meergo/issues/1376.
+		// {Name: "my_time", Type: types.Time(), ReadOptional: true}, // TODO: see https://github.com/meergo/meergo/issues/1376.
+		// This cannot be tested as Parquet does not support years.
+		// {Name: "my_year", Type: types.Year(), ReadOptional: true},
+		{Name: "my_uuid", Type: types.UUID(), ReadOptional: true},
+		{Name: "my_json", Type: types.JSON(), ReadOptional: true},
+	}
+	// Values here must have the format documented in the Meergo doc about
+	// export values and types (/developers/extend/connectors/data-values).
+	exportedRecords := []map[string]any{
+		{
+			"subscribed": true,
+			"first_name": "John",
+			"last_name":  "Lemon",
+		},
+		{
+			"first_name": "Ringo",
+			"last_name":  "Planett",
+		},
+		{
+			"first_name": "Ringo",
+			"last_name":  "Planett",
+			"score32":    float64(1234),
+			"score64":    float64(5678),
+		},
+		{
+			"rank_int8":   int(-80),
+			"rank_int16":  int(-160),
+			"rank_int32":  int(-320),
+			"rank_int64":  int(-640),
+			"rank_uint8":  uint(80),
+			"rank_uint16": uint(160),
+			"rank_uint32": uint(320),
+			"rank_uint64": uint(640),
+		},
+		{
+			"my_datetime": time.Date(2012, 12, 21, 15, 30, 2, 123456789, time.UTC),
+			// TODO: properly support import and export of DATE and TIME Parquet columns.
+			// See the issue https://github.com/meergo/meergo/issues/1376.
+			// "my_date":     time.Date(2012, 12, 21, 0, 0, 0, 0, time.UTC),
+			// "my_time":     time.Date(0, 0, 0, 15, 30, 2, 123456789, time.UTC),
+		},
+		{
+			"my_uuid": "6cc9d700-57dc-48f7-81ab-2f3a13df8ea5",
+		},
+		{
+			"my_json": json.Value(`{"a":10}`),
+		},
+	}
+
+	// Create a temporary Parquet file to export to.
+	//
+	// It's useful that this is a physical file on disk (rather than a file in
+	// memory) because this allows you to read the file with external tools to
+	// debug it.
+	parquetFile, err := os.CreateTemp("", "meergo-parquet-test-*.parquet")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err = parquetFile.Close()
+		if err != nil {
+			t.Logf("cannot close temporary Parquet file: %s", err)
+		}
+	}()
+	parquetFileName := parquetFile.Name
+	t.Logf("create temporary Parquet file with name: %s", parquetFileName())
+
+	// Export the Parquet file.
+	recordReader := &testRecordReader{
+		columns: exportedColumns,
+		records: exportedRecords,
+	}
+	err = connector.Write(ctx, parquetFile, "", recordReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = parquetFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("export completed (%d record(s) should have been written)", len(exportedRecords))
+
+	// Check that all acks have been received.
+	if recordReader.acksReceived != len(exportedRecords) {
+		t.Fatalf("expected to receive %d ack(s), got %v", len(exportedRecords), recordReader.acksReceived)
+	}
+	t.Logf("correctly received %d ack(s)", recordReader.acksReceived)
+
+	// Import the Parquet file.
+	recordWriter := &testRecordWriter{
+		t:           t,
+		readRecords: []map[string]any{},
+	}
+	parquetFile, err = os.Open(parquetFileName())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = connector.Read(ctx, parquetFile, "", recordWriter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("import from Parquet file completed")
+
+	// Check if the read columns match with the exported columns.
+	if len(exportedColumns) != len(recordWriter.readColumns) {
+		t.Fatalf("%d column(s) expected, but %d have been read",
+			len(exportedColumns), len(recordWriter.readColumns))
+	}
+	t.Logf("%d column(s) read from the Parquet file", len(recordWriter.readColumns))
+	fail := false
+	for i := range exportedColumns {
+		expected := exportedColumns[i]
+		got := recordWriter.readColumns[i]
+		if expected.Name != got.Name {
+			t.Logf("column [%d]: expected name %q, got %q", i, expected.Name, got.Name)
+			fail = true
+			continue
+		}
+		if !types.Equal(expected.Type, got.Type) {
+			t.Logf("column %q: expected type %v, got %v", expected.Name, expected.Type, got.Type)
+			fail = true
+			continue
+		}
+		t.Logf("name and type of column %q match with the exported one", expected.Name)
+	}
+	if fail {
+		t.Fatal("read columns do not match with exported columns")
+	}
+
+	// Check if the read records match with the exported columns.
+	if len(exportedRecords) != len(recordWriter.readRecords) {
+		t.Fatalf("%d record(s) expected, but only %d have been read",
+			len(exportedRecords), len(recordWriter.readRecords))
+	}
+	t.Logf("%d record(s) read from the Parquet file", len(recordWriter.readRecords))
+	fail = false
+	for i := range exportedRecords {
+		expected := exportedRecords[i]
+		got := recordWriter.readRecords[i]
+		if !reflect.DeepEqual(expected, got) {
+			for _, c := range exportedColumns {
+				if !reflect.DeepEqual(expected[c.Name], got[c.Name]) {
+					t.Logf("record [%d], column %q: expected %#v (type %T), got %#v (type %T)",
+						i, c.Name, expected[c.Name], expected[c.Name], got[c.Name], got[c.Name])
+				}
+			}
+			fail = true
+			continue
+		}
+		t.Logf("imported record [%d] matches with exported record", i)
+	}
+	if fail {
+		t.Fatal("read records do not match with exported records")
+	}
+	t.Logf("record value(s) match with expected values")
+
+}
+
+// TestExport tests all those cases that cannot be tested in
+// TestExportAndImportParquet, perhaps because they involve values ​​that cannot
+// be read back from Parquet without losing information.
+func TestExport(t *testing.T) {
+
+	ctx := context.Background()
+
+	// Instantiate the Parquet connector.
+	config := meergo.FileConfig{}
+	connector, err := New(&config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exportedColumns := []types.Property{
+		{Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
+		{Name: "rank_uint24", Type: types.Uint(24), ReadOptional: true},
+		{Name: "p_year", Type: types.Year(), ReadOptional: true},
+		{Name: "p_inet", Type: types.Inet(), ReadOptional: true},
+		{Name: "address", Type: types.Object([]types.Property{
+			{Name: "street", Type: types.Text(), ReadOptional: true},
+			{Name: "zip_code", Type: types.Int(32), ReadOptional: true},
+		})},
+	}
+	exportedRecords := []map[string]any{
+		{
+			"rank_int24":  int(1234),
+			"rank_uint24": uint(1234),
+			"p_year":      2001,
+			"p_inet":      "192.128.0.1",
+			"address": map[string]any{
+				"street":   "123 Strett",
+				"zip_code": 12345,
+			},
+		},
+	}
+
+	var parquetFile bytes.Buffer
+	recordReader := &testRecordReader{
+		columns: exportedColumns,
+		records: exportedRecords,
+	}
+	err = connector.Write(ctx, &parquetFile, "", recordReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("ok, Write returned without any error")
+
+}
+
+// Test RecordReader (used when exporting).
+
+var _ meergo.RecordReader = &testRecordReader{}
+
+type testRecordReader struct {
+	columns      []types.Property
+	records      []map[string]any
+	index        int
+	acksReceived int
+}
+
+func (records *testRecordReader) Ack(id string, err error) {
+	records.acksReceived++
+}
+
+func (records *testRecordReader) Columns() []types.Property {
+	return records.columns
+}
+
+func (records *testRecordReader) Record(ctx context.Context) (ackID string, record map[string]any, err error) {
+	if records.index == len(records.records) {
+		return "", nil, io.EOF
+	}
+	ackID = strconv.Itoa(records.index)
+	record = records.records[records.index]
+	records.index++
+	return ackID, record, nil
+}
+
+// Test RecordWriter (used when importing).
+
+var _ meergo.RecordWriter = &testRecordWriter{}
+
+type testRecordWriter struct {
+	t           *testing.T
+	readColumns []types.Property
+	readRecords []map[string]any
+}
+
+func (writer *testRecordWriter) Columns(columns []types.Property) error {
+	if writer.readColumns != nil {
+		writer.t.Fatal("Columns method already called")
+	}
+	writer.readColumns = columns
+	return nil
+}
+
+func (writer *testRecordWriter) columnByName(name string) types.Property {
+	for _, p := range writer.readColumns {
+		if p.Name == name {
+			return p
+		}
+	}
+	writer.t.Fatalf("column %q not read from the Parquet file", name)
+	return types.Property{}
+}
+
+func (writer *testRecordWriter) Record(record map[string]any) error {
+	// Normalize record values.
+	toDelete := []string{}
+	for name, value := range record {
+		if value == nil {
+			toDelete = append(toDelete, name)
+			continue
+		}
+		column := writer.columnByName(name)
+		switch column.Type.Kind() {
+		case types.IntKind:
+			if column.Type.BitSize() <= 32 {
+				record[name] = int(value.(int32))
+			} else {
+				record[name] = int(value.(int64))
+			}
+		case types.UintKind:
+			if column.Type.BitSize() < 32 {
+				record[name] = uint(value.(int32))
+			} else {
+				record[name] = uint(value.(int64))
+			}
+		case types.FloatKind:
+			if column.Type.BitSize() == 32 {
+				record[name] = float64(value.(float32))
+			}
+		case types.UUIDKind:
+			record[name], _ = util.UUIDFromBytes(value.([]byte))
+		case types.JSONKind:
+			record[name] = json.Value(value.([]byte))
+		case types.TextKind:
+			record[name] = string(value.([]byte))
+		}
+	}
+	for _, name := range toDelete {
+		delete(record, name)
+	}
+	writer.readRecords = append(writer.readRecords, record)
+	return nil
+}
+
+func (writer *testRecordWriter) RecordSlice(record []any) error {
+	panic("method not implemented")
+}
+
+func (writer *testRecordWriter) RecordStrings(record []string) error {
+	panic("method not implemented")
+}
+
+func TestTimestampsBackAndForth(t *testing.T) {
+
+	tests := []time.Time{
+		time.Date(2200, 12, 21, 15, 34, 23, 12345, time.UTC),
+		time.Date(2200, 12, 21, 15, 34, 23, 12345, time.Local),
+		time.Date(2012, 12, 21, 15, 34, 23, 12345, time.UTC),
+		time.Date(2012, 12, 21, 15, 34, 23, 12345, time.Local),
+		time.Date(1970, 1, 1, 0, 0, 0, 0, time.Local),
+		time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1900, 1, 1, 0, 0, 0, 0, time.Local),
+		time.Date(1678, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	unit := parquet.NewTimeUnit()
+	unit.NANOS = parquet.NewNanoSeconds()
+
+	for _, test := range tests {
+
+		// First: convert the time.Time to int64.
+		i64, err := timeTimeToInt64(test)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Second: convert back the int64 to time.Time.
+		back := int64ToTimeTime(i64, unit)
+
+		// Check if they are equal.
+		if test.Equal(back) {
+			t.Logf("ok: %v", test)
+		} else {
+			t.Errorf("expected %v, got %v", test, back)
+		}
+	}
+
+}
+
+func Test_int64ToTimeTime(t *testing.T) {
+
+	nanoUnit := parquet.NewTimeUnit()
+	nanoUnit.NANOS = parquet.NewNanoSeconds()
+
+	microUnit := parquet.NewTimeUnit()
+	microUnit.MICROS = parquet.NewMicroSeconds()
+
+	milliUnit := parquet.NewTimeUnit()
+	milliUnit.MILLIS = parquet.NewMilliSeconds()
+
+	tests := []struct {
+		v        int64
+		unit     *parquet.TimeUnit
+		expected time.Time
+	}{
+		{
+			v:        0,
+			unit:     nil,
+			expected: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        0,
+			unit:     nanoUnit,
+			expected: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        0,
+			unit:     microUnit,
+			expected: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        0,
+			unit:     milliUnit,
+			expected: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        int64(946684800 * 1_000_000_000),
+			unit:     nanoUnit,
+			expected: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        int64(946684800 * 1_000_000),
+			unit:     microUnit,
+			expected: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        int64(946684800 * 1_000),
+			unit:     milliUnit,
+			expected: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        int64(-2208988800 * 1_000_000_000),
+			unit:     nanoUnit,
+			expected: time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        int64(-2208988800 * 1_000_000),
+			unit:     microUnit,
+			expected: time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        int64(-2208988800 * 1_000),
+			unit:     milliUnit,
+			expected: time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			v:        int64(math.MaxInt64),
+			unit:     nanoUnit,
+			expected: time.Date(2262, 4, 11, 23, 47, 16, 854775807, time.UTC),
+		},
+		{
+			v:        int64(math.MinInt64),
+			unit:     nanoUnit,
+			expected: time.Date(1677, 9, 21, 0, 12, 43, 145224192, time.UTC),
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			got := int64ToTimeTime(test.v, test.unit)
+			if !got.Equal(test.expected) {
+				t.Fatalf("expected %v, got %v", test.expected, got)
+			}
+		})
+	}
+}
+
+func Test_timeTimeToInt64(t *testing.T) {
+
+	tests := []struct {
+		ts        time.Time
+		expected  int64
+		expectErr bool
+	}{
+		{
+			ts:        time.Date(1677, 9, 21, 0, 12, 43, 145224192, time.UTC),
+			expectErr: true,
+		},
+		{
+			ts:       time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC),
+			expected: int64(-2208988800 * 1_000_000_000),
+		},
+		{
+			ts:       time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+			expected: int64(946684800 * 1_000_000_000),
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			got, gotErr := timeTimeToInt64(test.ts)
+			if gotErr != nil && !test.expectErr {
+				t.Fatalf("not expected error: %v", gotErr)
+			}
+			if gotErr == nil && test.expectErr {
+				t.Fatal("expected error")
+			}
+			if gotErr != nil {
+				return
+			}
+			if got != test.expected {
+				t.Fatalf("expected %v, got %v", test.expected, got)
+			}
+		})
+	}
+
+}
