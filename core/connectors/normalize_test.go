@@ -8,6 +8,7 @@
 package connectors
 
 import (
+	"fmt"
 	"math"
 	"regexp"
 	"strconv"
@@ -132,18 +133,20 @@ func Test_normalize(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := normalize("k", test.t, test.v, test.n, test.l)
-		if err != nil {
-			t.Fatal(err)
-		}
-		expected := test.e
-		if !cmp.Equal(got, expected) {
-			if f, ok := expected.(float64); ok && math.IsNaN(f) {
-				if f, ok := got.(float64); ok && math.IsNaN(f) {
-					continue
-				}
+		t.Run(fmt.Sprint(test.t), func(t *testing.T) {
+			got, err := normalize("k", test.t, test.v, test.n, test.l)
+			if err != nil {
+				t.Fatal(err)
 			}
-			t.Fatalf("expected %#v, got %#v", expected, got)
-		}
+			expected := test.e
+			if !cmp.Equal(got, expected) {
+				if f, ok := expected.(float64); ok && math.IsNaN(f) {
+					if f, ok := got.(float64); ok && math.IsNaN(f) {
+						return
+					}
+				}
+				t.Fatalf("expected %#v, got %#v", expected, got)
+			}
+		})
 	}
 }
