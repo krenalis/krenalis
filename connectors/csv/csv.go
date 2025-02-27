@@ -215,7 +215,7 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.R
 		if err != nil {
 			return err
 		}
-		records.Ack(id, err)
+		records.Ack(id, nil)
 	}
 
 	v.Flush()
