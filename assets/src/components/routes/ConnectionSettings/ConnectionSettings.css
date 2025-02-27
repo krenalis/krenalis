@@ -140,29 +140,8 @@
 	margin-bottom: 8px;
 }
 
-.connection-settings__snippet-copy .editor-wrapper {
-	border-radius: 5px;
-}
-
-.connection-settings__snippet-copy .editor-wrapper * {
-	font-size: 14px !important;
-}
-
-.connection-settings__snippet-copy sl-copy-button {
-	margin-top: 20px;
-	width: 100%;
-}
-
-.connection-settings__snippet-copy sl-copy-button::part(button) {
-	gap: 8px;
-	background-color: var(--color-primary-600);
-	color: var(--text-onaccent);
-	padding: 12px 20px;
-	margin-left: auto;
-}
-
-.connection-settings__snippet-copy sl-copy-button::part(button)::after {
-	content: 'Copy';
+.connection-settings__snippet-copy .snippet {
+	max-width: 800px;
 }
 
 .connection-settings__danger-zone-label {

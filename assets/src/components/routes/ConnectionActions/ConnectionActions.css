@@ -4,6 +4,19 @@
 
 .connection-actions__no-action {
 	box-shadow: var(--sl-shadow-small);
+	border-radius: 5px;
+}
+
+.connection-actions__instructions {
+	margin-bottom: 50px;
+}
+
+.connection-actions__instructions-text a {
+	color: var(--sl-color-primary-600);
+	display: block;
+	font-weight: 600;
+	margin-top: 10px;
+	width: max-content;
 }
 
 .connection-actions__action-type {

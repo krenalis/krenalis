@@ -15,6 +15,7 @@ import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { LinkedConnections } from '../ConnectionSettings/LinkedConnections';
 import { isEventConnection } from '../../../lib/core/connection';
 import Section from '../../base/Section/Section';
+import { Snippet } from '../../base/Snippet/Snippet';
 
 const ConnectionActions = () => {
 	const [isActionTypesDialogOpen, setIsActionTypesDialogOpen] = useState<boolean>(false);
@@ -88,6 +89,23 @@ const ConnectionActions = () => {
 		<div
 			className={`connection-actions${connection.actions!.length === 0 ? ' connection-actions--no-action' : ''}`}
 		>
+			{connection.isWebsite && (
+				<Section
+					title='Add Meergo to your website'
+					className='connection-actions__instructions'
+					description={
+						<div className='connection-actions__instructions-text'>
+							Copy this snippet and paste it into your website to receive events
+							<a target='_blank' href='http://localhost:8080/developers/javascript-sdk'>
+								See documentation
+							</a>
+						</div>
+					}
+					annotated={true}
+				>
+					<Snippet connectionID={connection.id} />
+				</Section>
+			)}
 			<Section
 				className='connection-actions__list'
 				title='Actions'
@@ -158,8 +176,8 @@ const ConnectionActions = () => {
 								: 'Select which sources should send events to this destination.'}
 							<br />
 							{connection.isSource
-								? 'When you link a destination connection here, events from this source will automatically be forwarded to that destination and processed by its actions.'
-								: 'When you link a source connection here, events from that source will automatically be forwarded to this destination and processed by its actions.'}
+								? 'When you link a destination connection here, events from this source will automatically be forwarded to that destination and processed by its actions'
+								: 'When you link a source connection here, events from that source will automatically be forwarded to this destination and processed by its actions'}
 						</>
 					}
 					annotated={true}
