@@ -240,6 +240,9 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.URL.Path = r.URL.Path[len("/api/v1"):]
+	if r.URL.RawPath != "" {
+		r.URL.RawPath = r.URL.RawPath[len("/api/v1"):]
+	}
 
 	s.mux.ServeHTTP(w, r)
 }
