@@ -560,22 +560,21 @@ type mantissa struct {
 // add adds a digit to the mantissa.
 func (m *mantissa) add(c uint8) {
 	m.d++
+	d := uint64(c - '0')
 	if m.B.Sign() == 0 {
-		p := m.I
-		m.I *= 10
-		m.I += uint64(c - '0')
-		if p < m.I {
+		if m.I <= (math.MaxUint64-d)/10 {
+			m.I = m.I*10 + d
 			return
 		}
-		m.I = 0
-		m.B.SetUint64(p)
+		m.B.SetUint64(m.I)
 		m.f.SetInt64(10)
+		m.I = 0
 	}
 	m.B.Mul(&m.B, &m.f)
-	if c == '0' {
+	if d == 0 {
 		return
 	}
-	m.v.SetUint64(uint64(c - '0'))
+	m.v.SetUint64(d)
 	m.B.Add(&m.B, &m.v)
 }
 
