@@ -141,6 +141,11 @@ func (x Decimal) LessEqual(y Decimal) bool {
 	return x.b.Cmp(&y.b) <= 0
 }
 
+// MarshalJSON returns x as the JSON encoding of x.
+func (x Decimal) MarshalJSON() ([]byte, error) {
+	return x.b.MarshalText()
+}
+
 // Neg returns the negation of x.
 func (x Decimal) Neg() Decimal {
 	sign := x.b.Sign()
@@ -264,11 +269,6 @@ func Int(i, precision, scale int) (Decimal, error) {
 		return Decimal{}, ErrOutOfRange
 	}
 	return n, nil
-}
-
-// MarshalJSON returns x as the JSON encoding of x.
-func (x Decimal) MarshalJSON() ([]byte, error) {
-	return x.b.MarshalText()
 }
 
 // MustInt returns the decimal represented by i.
