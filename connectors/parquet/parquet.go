@@ -282,7 +282,7 @@ func convertInt96(v any) (time.Time, error) {
 	t := r.Type()
 	// Validate the argument.
 	if t.Kind() != reflect.Array || t.Elem().Kind() != reflect.Uint8 {
-		return time.Time{}, fmt.Errorf("expected byte array, got value type %q", r)
+		return time.Time{}, fmt.Errorf("expected byte array, got value type %q", t)
 	}
 	if l := t.Len(); l < 8 || l > 96 {
 		return time.Time{}, fmt.Errorf("unexpected byte array length %d", l)
