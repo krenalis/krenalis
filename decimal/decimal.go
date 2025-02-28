@@ -396,7 +396,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 			if zeros > 0 {
 				if mantissa.digits() > 0 {
 					for range zeros {
-						mantissa.add('0')
+						mantissa.add(0)
 					}
 				}
 				zeros = 0
@@ -404,7 +404,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 			if c == '.' {
 				dot = i
 			} else {
-				mantissa.add(c)
+				mantissa.add(uint64(c - '0'))
 			}
 			continue
 		}
@@ -558,9 +558,8 @@ type mantissa struct {
 }
 
 // add adds a digit to the mantissa.
-func (m *mantissa) add(c uint8) {
+func (m *mantissa) add(d uint64) {
 	m.d++
-	d := uint64(c - '0')
 	if m.B.Sign() == 0 {
 		if m.I <= (math.MaxUint64-d)/10 {
 			m.I = m.I*10 + d
