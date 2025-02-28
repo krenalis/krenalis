@@ -492,7 +492,7 @@ const ConnectionOverview = () => {
 					</div>
 					<div className='connection-overview__chart'>
 						<div className='connection-overview__chart-heading'>
-							{isUsersSelected ? 'Users' : 'Events'} {c.isSource ? 'ingestion' : 'exports'} {titleRange}
+							{isUsersSelected ? 'Users' : 'Events'} {c.isSource ? 'ingestion' : 'exported'} {titleRange}
 						</div>
 						<ResponsiveContainer width='100%' height='100%'>
 							<ComposedChart
