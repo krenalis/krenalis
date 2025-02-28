@@ -73,7 +73,7 @@ This section summarizes how Parquet column types are imported into Meergo.
 | `TIME`             | Undefined behavior [^time_support] |
 | `TIME_MILLIS`      | Undefined behavior [^time_support] |
 | `TIME_MICROS`      | Undefined behavior [^time_support] |
-| `TIMESTAMP`        | Undefined behavior [^time_support] |
+| `TIMESTAMP`        | `datetime`                         |
 | `TIMESTAMP_MILLIS` | Undefined behavior [^time_support] |
 | `TIMESTAMP_MICROS` | Undefined behavior [^time_support] |
 | `INTERVAL`         | Not supported                      |
