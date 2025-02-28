@@ -5,7 +5,7 @@
 # Copyright (c) 2025 Open2b
 #
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 import pandas as pd
 
@@ -17,5 +17,9 @@ pd.DataFrame(
         {"parquet_id": 103, "address": {"street": "ABC1", "zip_code": 1234}},
         {"parquet_id": 104, "date_of_birth": date(1980, 1, 2)},  # after 1970-01-01
         {"parquet_id": 105, "date_of_birth": date(1935, 1, 2)},  # before 1970-01-01
+        {
+            "parquet_id": 106,
+            "updated_at": datetime(2012, 1, 20, 7, 20, 1, tzinfo=timezone.utc),
+        },
     ]
 ).to_parquet("test.parquet")
