@@ -365,6 +365,11 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 
 	useEffect(() => {
 		if (isEditing) {
+			if (action.path === '') {
+				// The user has changed the format of an already saved
+				// action, so the action path is now empty.
+				return;
+			}
 			fetchPath(action.path);
 		}
 	}, []);
