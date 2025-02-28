@@ -1378,16 +1378,22 @@ inherit the disabled style */
 .action__file-complete-path-error {
 	position: absolute;
 	left: 5px;
-	font-family: var(--monospace-fonts);
 	font-size: 13px;
 	margin-top: 1px;
 	opacity: 0;
 	transition: opacity 0.3s;
 }
 
-.action__file-complete-path--visible,
-.action__file-complete-path-error--visible {
+.action__file-complete-path {
+	font-family: var(--monospace-fonts);
+}
+
+.action__file-complete-path--visible {
 	opacity: 0.7;
+}
+
+.action__file-complete-path-error--visible {
+	opacity: 1;
 }
 
 .action__file-complete-path-error {
