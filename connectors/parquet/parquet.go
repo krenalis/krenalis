@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -30,6 +29,7 @@ import (
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
 	"github.com/fraugster/parquet-go/parquetschema"
+	"github.com/google/uuid"
 )
 
 // Connector icon.
