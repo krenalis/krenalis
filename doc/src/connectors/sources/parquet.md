@@ -33,6 +33,8 @@ This section summarizes how Parquet column types are imported into Meergo.
 
 #### Physical types
 
+This table describes how Parquet physical types (without any logical type annotations) are imported into Meergo.
+
 | Parquet Type           | Imported in Meergo as          |
 |------------------------|--------------------------------|
 | `BOOLEAN`              | `boolean`                      |
@@ -45,6 +47,8 @@ This section summarizes how Parquet column types are imported into Meergo.
 | `FIXED_LEN_BYTE_ARRAY` | `text`                         |
 
 #### Logical and Converted types
+
+This table describes how Parquet logical and converted types are imported into Meergo.
 
 | Parquet Type       | Imported in Meergo as                  |
 |--------------------|----------------------------------------|
