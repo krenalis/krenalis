@@ -13,7 +13,7 @@ The Parquet data source allows you to import user data from Parquet files, which
 - [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 - [How Parquet columns are imported](#how-parquet-columns-are-imported)
   - [Physical types](#physical-types)
-  - [Logical types](#logical-types)
+  - [Logical and Converted types](#logical-and-converted-types)
   - [Column groups](#column-groups)
 
 ### Import users into the workspace's data warehouse
@@ -44,7 +44,7 @@ This section summarizes how Parquet column types are imported into Meergo.
 | `BYTE_ARRAY`           | `text`                         |
 | `FIXED_LEN_BYTE_ARRAY` | `text`                         |
 
-#### Logical types
+#### Logical and Converted types
 
 | Parquet Type       | Imported in Meergo as              |
 |--------------------|------------------------------------|
