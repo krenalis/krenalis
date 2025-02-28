@@ -5,7 +5,7 @@
 # Copyright (c) 2025 Open2b
 #
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 
 import pandas as pd
 
@@ -21,5 +21,6 @@ pd.DataFrame(
             "parquet_id": 106,
             "updated_at": datetime(2012, 1, 20, 7, 20, 1, tzinfo=timezone.utc),
         },
+        {"parquet_id": 107, "lunch_time": time(13, 30, 0)},
     ]
 ).to_parquet("test.parquet")

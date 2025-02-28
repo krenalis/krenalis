@@ -47,7 +47,7 @@ The following table shows how the user property types in Meergo are mapped to th
 | `decimal(p, s)`                 | Not supported [^decimal_support]         | -                                             |
 | `datetime`                      | `INT64`                                  | `TIMESTAMP(isAdjustedToUTC=true, unit=NANOS)` |
 | `date`                          | `INT32`                                  | `DATE`                                        |
-| `time`                          | Not supported [^time_date_support]       | -                                             |
+| `time`                          | `INT64`                                  | `TIME(isAdjustedToUTC=true, unit=NANOS)`      |
 | `year`                          | `INT32`                                  | *(none)*                                      |
 | `uuid`                          | `FIXED_LEN_BYTE_ARRAY` with length 16    | `UUID`                                        |
 | `json`                          | `BYTE_ARRAY`                             | `JSON`                                        |
@@ -58,6 +58,5 @@ The following table shows how the user property types in Meergo are mapped to th
 | `map`                           | Not supported [^map_support]             | -                                             |
 
 [^decimal_support]: Support for decimal properties is discussed here: https://github.com/meergo/meergo/issues/1370
-[^time_date_support]: Support for time properties is discussed here: https://github.com/meergo/meergo/issues/1376
 [^array_support]: Support for array properties is discussed here: https://github.com/meergo/meergo/issues/1325
 [^map_support]: Support map properties is discussed here: https://github.com/meergo/meergo/issues/1371

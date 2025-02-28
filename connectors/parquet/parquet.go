@@ -85,12 +85,13 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 	}
 
 	// Read the columns.
-	type timestampColumnInfo struct {
+	type unitColumn struct {
 		name string
 		unit *parquet.TimeUnit
 	}
 	var dateColumns []string
-	var int64TimestampColumns []timestampColumnInfo
+	var timeColumns []unitColumn
+	var int64TimestampColumns []unitColumn
 	var int96Columns []string
 	parquetColumns := fr.Columns()
 	columns := make([]types.Property, 0, len(parquetColumns))
@@ -119,13 +120,36 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 		}
 		if *element.Type == parquet.Type_INT64 && element.LogicalType != nil &&
 			element.LogicalType.TIMESTAMP != nil {
-			int64TimestampColumns = append(int64TimestampColumns, timestampColumnInfo{
+			int64TimestampColumns = append(int64TimestampColumns, unitColumn{
 				name: name,
 				unit: element.LogicalType.TIMESTAMP.Unit,
 			})
 		}
 		if *element.Type == parquet.Type_INT32 && element.LogicalType != nil && element.LogicalType.DATE != nil {
 			dateColumns = append(dateColumns, name)
+		}
+		if element.LogicalType != nil && element.LogicalType.TIME != nil {
+			timeColumns = append(timeColumns, unitColumn{
+				name: name,
+				unit: element.LogicalType.TIME.Unit,
+			})
+		}
+		if ct := element.ConvertedType; ct != nil {
+			unit := parquet.NewTimeUnit()
+			switch *ct {
+			case parquet.ConvertedType_TIME_MILLIS:
+				unit.MILLIS = parquet.NewMilliSeconds()
+				timeColumns = append(timeColumns, unitColumn{
+					name: name,
+					unit: unit,
+				})
+			case parquet.ConvertedType_TIME_MICROS:
+				unit.MICROS = parquet.NewMicroSeconds()
+				timeColumns = append(timeColumns, unitColumn{
+					name: name,
+					unit: unit,
+				})
+			}
 		}
 		columns = append(columns, types.Property{
 			Name:     name,
@@ -150,9 +174,9 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 		}
 		// Convert int64 type values representing timestamps from int64 to
 		// time.Time.
-		for _, columnInfo := range int64TimestampColumns {
-			if v, ok := record[columnInfo.name].(int64); ok {
-				record[columnInfo.name] = int64ToTimeTime(v, columnInfo.unit)
+		for _, column := range int64TimestampColumns {
+			if v, ok := record[column.name].(int64); ok {
+				record[column.name] = int64ToTimeTime(v, column.unit)
 			}
 		}
 		// Convert int96 type values from []byte to time.Time.
@@ -169,6 +193,30 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 		for _, name := range dateColumns {
 			if v, ok := record[name].(int32); ok {
 				record[name] = time.Unix(int64(v)*3600*24, 0).UTC()
+			}
+		}
+		// Convert TIME, TIME_MILLIS and TIME_MICROS values to time.Time values.
+		for _, column := range timeColumns {
+			if column.unit == nil {
+				continue
+			}
+			if column.unit.MILLIS != nil {
+				if milli, ok := record[column.name].(int32); ok {
+					record[column.name] = time.UnixMilli(int64(milli)).UTC()
+					continue
+				}
+			}
+			if column.unit.MICROS != nil {
+				if micro, ok := record[column.name].(int64); ok {
+					record[column.name] = time.UnixMicro(micro).UTC()
+					continue
+				}
+			}
+			if column.unit.NANOS != nil {
+				if nano, ok := record[column.name].(int64); ok {
+					record[column.name] = time.Unix(0, nano).UTC()
+					continue
+				}
 			}
 		}
 		// Add fields with a nil value.
@@ -312,6 +360,11 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 		case types.DateKind:
 			if ts, ok := record[p.Name].(time.Time); ok {
 				converted[p.Name] = int32(ts.Unix() / 3_600 / 24)
+				continue
+			}
+		case types.TimeKind:
+			if ts, ok := record[p.Name].(time.Time); ok {
+				converted[p.Name] = ts.UnixNano()
 				continue
 			}
 		case types.YearKind:
@@ -485,13 +538,12 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.DATE = parquet.NewDateType()
 		case types.TimeKind:
-			// col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
-			// col.SchemaElement.LogicalType = parquet.NewLogicalType()
-			// col.SchemaElement.LogicalType.TIME = parquet.NewTimeType()
-			// col.SchemaElement.LogicalType.TIME.IsAdjustedToUTC = true
-			// col.SchemaElement.LogicalType.TIME.Unit = parquet.NewTimeUnit()
-			// col.SchemaElement.LogicalType.TIME.Unit.NANOS = parquet.NewNanoSeconds()
-			return nil, errors.New("time properties are not supported") // TODO: https://github.com/meergo/meergo/issues/1376
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.TIME = parquet.NewTimeType()
+			col.SchemaElement.LogicalType.TIME.IsAdjustedToUTC = true
+			col.SchemaElement.LogicalType.TIME.Unit = parquet.NewTimeUnit()
+			col.SchemaElement.LogicalType.TIME.Unit.NANOS = parquet.NewNanoSeconds()
 		case types.YearKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
 		case types.UUIDKind:

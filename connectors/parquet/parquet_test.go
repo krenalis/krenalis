@@ -60,7 +60,7 @@ func TestExportAndImportParquet(t *testing.T) {
 		{Name: "score64", Type: types.Float(64), ReadOptional: true},
 		{Name: "my_datetime", Type: types.DateTime(), ReadOptional: true},
 		{Name: "my_date", Type: types.Date(), ReadOptional: true},
-		// {Name: "my_time", Type: types.Time(), ReadOptional: true}, // TODO: see https://github.com/meergo/meergo/issues/1376.
+		{Name: "my_time", Type: types.Time(), ReadOptional: true},
 		// This cannot be tested as Parquet does not support years.
 		// {Name: "my_year", Type: types.Year(), ReadOptional: true},
 		{Name: "my_uuid", Type: types.UUID(), ReadOptional: true},
@@ -97,9 +97,7 @@ func TestExportAndImportParquet(t *testing.T) {
 		{
 			"my_datetime": time.Date(2012, 12, 21, 15, 30, 2, 123456789, time.UTC),
 			"my_date":     time.Date(2012, 12, 21, 0, 0, 0, 0, time.UTC),
-			// TODO: properly support import of TIME Parquet columns.
-			// See the issue https://github.com/meergo/meergo/issues/1376.
-			// "my_time":     time.Date(0, 0, 0, 15, 30, 2, 123456789, time.UTC),
+			"my_time":     time.Date(1970, 1, 1, 15, 30, 2, 123456789, time.UTC),
 		},
 		{
 			"my_date": time.Date(1900, 12, 21, 0, 0, 0, 0, time.UTC), // before epoch.

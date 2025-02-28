@@ -64,7 +64,7 @@ func TestParquetImport(t *testing.T) {
 	c.WaitForExecutionsCompletionAllowFailed(fs, exec1)
 
 	_, _, count := c.Users([]string{"first_name"}, "dummy_id", false, 0, 1000)
-	const expectedCount = 7
+	const expectedCount = 8
 	if count != expectedCount {
 		t.Fatalf("expected %d user(s), got %d", expectedCount, count)
 	}
