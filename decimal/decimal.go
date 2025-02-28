@@ -368,7 +368,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 	switch n[0] {
 	case '0':
 		if len(n) == 1 {
-			return Decimal{}, nil
+			return Decimal{s: "0"}, nil
 		}
 		switch n[1] {
 		case '.':
@@ -476,7 +476,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		}
 	}
 	if mantissa.isZero() {
-		return Decimal{}, nil
+		return Decimal{s: "0"}, nil
 	}
 	if precision > 0 {
 		p := max(0, mantissa.digits()-s) + scale
@@ -490,15 +490,16 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		x.b.SetSignbit(true)
 	}
 	if reflect.TypeFor[T]().Kind() == reflect.String {
-		s := string(str)
-		if s[len(s)-zeros-1] == '0' {
-			zeros--
+		x.s = string(str)
+		if dot != 0 {
+			if x.s[len(x.s)-zeros-1] == '0' {
+				zeros--
+			}
+			if zeros > 0 {
+				x.s = x.s[:len(x.s)-zeros]
+			}
+			x.s = strings.TrimSuffix(x.s, ".")
 		}
-		if zeros > 0 {
-			s = s[:len(s)-zeros]
-		}
-		x.s = strings.TrimSuffix(s, ".")
-
 	}
 	return x, nil
 }
