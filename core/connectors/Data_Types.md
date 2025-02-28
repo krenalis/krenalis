@@ -18,8 +18,8 @@
 | float(64) | float64         | float64, json.Number         | float64              | float64     | float64   | float64     | float64      | -               | -      | -      |
 | decimal   | decimal.Decimal | string, float64, json.Number | decimal.Decimal [^1] | string      | []byte    | string      | int32, int64 | -               | -      | -      |
 | datetime  | time.Time       | string, float64, json.Number | time.Time            | time.Time   | time.Time | time.Time   | time.Time    | -               | -      | -      |
-| date      | time.Time       | string                       | time.Time [^2]       | time.Time   | time.Time | time.Time   |              | -               | -      | -      |
-| time      | time.Time       | string                       | -                    | string      | []byte    | time.Time   |              | -               | -      | -      |
+| date      | time.Time       | string                       | time.Time [^2]       | time.Time   | time.Time | time.Time   | time.Time    | -               | -      | -      |
+| time      | time.Time       | string                       | -                    | string      | []byte    | time.Time   | time.Time    | -               | -      | -      |
 | year      | int             | float64, json.Number         | -                    | -           | int64     | -           | -            | -               | -      | -      |
 | uuid      | string          | string                       | string               | string      | -         | -           | []byte       | -               | -      | -      |
 | json      | json.Value      | JSON types [^4]              | - [^3]               | string      | []byte    | string [^6] |              | JSON types [^4] | -      | -      |

@@ -89,6 +89,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 		name string
 		unit *parquet.TimeUnit
 	}
+	var dateColumns []string
 	var int64TimestampColumns []timestampColumnInfo
 	var int96Columns []string
 	parquetColumns := fr.Columns()
@@ -122,6 +123,9 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 				name: name,
 				unit: element.LogicalType.TIMESTAMP.Unit,
 			})
+		}
+		if *element.Type == parquet.Type_INT32 && element.LogicalType != nil && element.LogicalType.DATE != nil {
+			dateColumns = append(dateColumns, name)
 		}
 		columns = append(columns, types.Property{
 			Name:     name,
@@ -158,6 +162,13 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 				if err != nil {
 					return fmt.Errorf("cannot convert value of column %q: %s", name, err)
 				}
+			}
+		}
+		// Convert DATE values (int32, representing the number of days since
+		// 1970-01-01) to time.Time values.
+		for _, name := range dateColumns {
+			if v, ok := record[name].(int32); ok {
+				record[name] = time.Unix(int64(v)*3600*24, 0).UTC()
 			}
 		}
 		// Add fields with a nil value.
@@ -300,7 +311,7 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 			}
 		case types.DateKind:
 			if ts, ok := record[p.Name].(time.Time); ok {
-				converted[p.Name] = int32(ts.UnixMilli() / 1_000 / 3_600 / 24)
+				converted[p.Name] = int32(ts.Unix() / 3_600 / 24)
 				continue
 			}
 		case types.YearKind:
@@ -470,10 +481,9 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 			col.SchemaElement.LogicalType.TIMESTAMP.Unit = parquet.NewTimeUnit()
 			col.SchemaElement.LogicalType.TIMESTAMP.Unit.NANOS = parquet.NewNanoSeconds()
 		case types.DateKind:
-			return nil, errors.New("date properties are not supported") // TODO: https://github.com/meergo/meergo/issues/1376
-			// col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
-			// col.SchemaElement.LogicalType = parquet.NewLogicalType()
-			// col.SchemaElement.LogicalType.DATE = parquet.NewDateType()
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.DATE = parquet.NewDateType()
 		case types.TimeKind:
 			// col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
 			// col.SchemaElement.LogicalType = parquet.NewLogicalType()

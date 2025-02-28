@@ -69,7 +69,7 @@ This section summarizes how Parquet column types are imported into Meergo.
 | `UINT_64`          | `uint(64)`                         |
 | `DECIMAL`          | Not supported [^decimal_support]   |
 | `FLOAT16`          | Not supported                      |
-| `DATE`             | Undefined behavior [^time_support] |
+| `DATE`             | `date`                             |
 | `TIME`             | Undefined behavior [^time_support] |
 | `TIME_MILLIS`      | Undefined behavior [^time_support] |
 | `TIME_MICROS`      | Undefined behavior [^time_support] |
@@ -94,4 +94,4 @@ Import of columns groups is currently not supported.
 [^decimal_support]: Support for importing `DECIMAL` columns is discussed here: https://github.com/meergo/meergo/issues/1370
 [^list_support]: Support for importing `LIST` columns is discussed here: https://github.com/meergo/meergo/issues/1325
 [^map_support]: Support for importing `MAP` columns is discussed here: https://github.com/meergo/meergo/issues/1371
-[^time_support]: Support for time and datetime columns is discussed here: https://github.com/meergo/meergo/issues/1376
+[^time_support]: Support for time columns is discussed here: https://github.com/meergo/meergo/issues/1376
