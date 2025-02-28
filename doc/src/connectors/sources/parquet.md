@@ -46,45 +46,45 @@ This section summarizes how Parquet column types are imported into Meergo.
 
 #### Logical and Converted types
 
-| Parquet Type       | Imported in Meergo as              |
-|--------------------|------------------------------------|
-| `STRING`           | `text`                             |
-| `ENUM`             | `text`                             |
-| `UUID`             | `uuid`                             |
-| `INT(8, true)`     | `int(8)`                           |
-| `INT(16, true)`    | `int(16)`                          |
-| `INT(32, true)`    | `int(32)`                          |
-| `INT(64, true)`    | `int(64)`                          |
-| `INT(8, false)`    | `uint(8)`                          |
-| `INT(16, false)`   | `uint(16)`                         |
-| `INT(32, false)`   | `uint(32)`                         |
-| `INT(64, false)`   | `uint(64)`                         |
-| `INT_8`            | `int(8)`                           |
-| `INT_16`           | `int(16)`                          |
-| `INT_32`           | `int(32)`                          |
-| `INT_64`           | `int(64)`                          |
-| `UINT_8`           | `uint(8)`                          |
-| `UINT_16`          | `uint(16)`                         |
-| `UINT_32`          | `uint(32)`                         |
-| `UINT_64`          | `uint(64)`                         |
-| `DECIMAL`          | Not supported [^decimal_support]   |
-| `FLOAT16`          | Not supported                      |
-| `DATE`             | `date`                             |
-| `TIME`             | `time`                             |
-| `TIME_MILLIS`      | `time`                             |
-| `TIME_MICROS`      | `time`                             |
-| `TIMESTAMP`        | `datetime`                         |
-| `TIMESTAMP_MILLIS` | Undefined behavior [^time_support] |
-| `TIMESTAMP_MICROS` | Undefined behavior [^time_support] |
-| `INTERVAL`         | Not supported                      |
-| `JSON`             | `json`                             |
-| `BSON`             | `json`                             |
-| `VARIANT`          | Not supported                      |
-| `GEOMETRY`         | Not supported                      |
-| `GEOGRAPHY`        | Not supported                      |
-| `LIST`             | Not supported [^list_support]      |
-| `MAP`              | Not supported [^map_support]       |
-| `UNKNOWN`          | Not supported                      |
+| Parquet Type       | Imported in Meergo as                  |
+|--------------------|----------------------------------------|
+| `STRING`           | `text`                                 |
+| `ENUM`             | `text`                                 |
+| `UUID`             | `uuid`                                 |
+| `INT(8, true)`     | `int(8)`                               |
+| `INT(16, true)`    | `int(16)`                              |
+| `INT(32, true)`    | `int(32)`                              |
+| `INT(64, true)`    | `int(64)`                              |
+| `INT(8, false)`    | `uint(8)`                              |
+| `INT(16, false)`   | `uint(16)`                             |
+| `INT(32, false)`   | `uint(32)`                             |
+| `INT(64, false)`   | `uint(64)`                             |
+| `INT_8`            | `int(8)`                               |
+| `INT_16`           | `int(16)`                              |
+| `INT_32`           | `int(32)`                              |
+| `INT_64`           | `int(64)`                              |
+| `UINT_8`           | `uint(8)`                              |
+| `UINT_16`          | `uint(16)`                             |
+| `UINT_32`          | `uint(32)`                             |
+| `UINT_64`          | `uint(64)`                             |
+| `DECIMAL`          | Not supported [^decimal_support]       |
+| `FLOAT16`          | Not supported                          |
+| `DATE`             | `date`                                 |
+| `TIME`             | `time`                                 |
+| `TIME_MILLIS`      | `time`                                 |
+| `TIME_MICROS`      | `time`                                 |
+| `TIMESTAMP`        | `datetime`                             |
+| `TIMESTAMP_MILLIS` | Not supported [^timestamp_milli_micro] |
+| `TIMESTAMP_MICROS` | Not supported [^timestamp_milli_micro] |
+| `INTERVAL`         | Not supported                          |
+| `JSON`             | `json`                                 |
+| `BSON`             | `json`                                 |
+| `VARIANT`          | Not supported                          |
+| `GEOMETRY`         | Not supported                          |
+| `GEOGRAPHY`        | Not supported                          |
+| `LIST`             | Not supported [^list_support]          |
+| `MAP`              | Not supported [^map_support]           |
+| `UNKNOWN`          | Not supported                          |
 
 #### Column groups
 
@@ -94,3 +94,4 @@ Import of columns groups is currently not supported.
 [^decimal_support]: Support for importing `DECIMAL` columns is discussed here: https://github.com/meergo/meergo/issues/1370
 [^list_support]: Support for importing `LIST` columns is discussed here: https://github.com/meergo/meergo/issues/1325
 [^map_support]: Support for importing `MAP` columns is discussed here: https://github.com/meergo/meergo/issues/1371
+[^timestamp_milli_micro]: Support for importing `TIME_MILLIS` and `TIMESTAMP_MICROS` is discussed here: https://github.com/meergo/meergo/issues/1385
