@@ -376,7 +376,7 @@ const useApp = (
 				</div>
 				<ul>
 					<li>
-						{formatNumber(passed)} {passed === 1 ? 'user' : 'users'}{' '}
+						{formatNumber(passed)} {passed === 1 ? 'user identity' : 'user identities'}{' '}
 						{connection.isSource ? 'imported' : 'exported'}
 					</li>
 					{filteredItem}
