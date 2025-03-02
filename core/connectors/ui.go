@@ -148,7 +148,7 @@ type ConnectorConfig struct {
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) ([]byte, error) {
+func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) (json.Value, error) {
 	var inner any
 	var err error
 	switch c := connector; c.Type {

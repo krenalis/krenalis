@@ -271,13 +271,7 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 			return nil, errors.BadRequest("%s", err)
 		}
 	}
-	ui, err := c.ServeUI(r.Context(), body.Event, body.Settings)
-	if err != nil {
-		return nil, err
-	}
-	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(ui)
-	return nil, nil
+	return c.ServeUI(r.Context(), body.Event, body.Settings)
 }
 
 // Sheets returns the sheets of a file at the given path.

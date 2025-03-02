@@ -1186,7 +1186,7 @@ func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 //   - ConnectorNotExist, if the connector does not exist.
 //   - EventNotExist, if the event does not exist.
 //   - InvalidSettings, if the settings are not valid.
-func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.Value, connector string, role Role, authToken string) ([]byte, error) {
+func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.Value, connector string, role Role, authToken string) (json.Value, error) {
 
 	this.core.mustBeOpen()
 

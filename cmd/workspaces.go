@@ -634,13 +634,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", body.Role)
 	}
-	ui, err := ws.ServeUI(r.Context(), body.Event, body.Settings, body.Connector, role, body.AuthToken)
-	if err != nil {
-		return nil, err
-	}
-	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(ui)
-	return nil, nil
+	return ws.ServeUI(r.Context(), body.Event, body.Settings, body.Connector, role, body.AuthToken)
 }
 
 // StartIdentityResolution starts an Identity Resolution operation that resolves

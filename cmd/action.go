@@ -64,13 +64,7 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	ui, err := a.ServeUI(r.Context(), body.Event, body.FormatSettings)
-	if err != nil {
-		return nil, err
-	}
-	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(ui)
-	return nil, nil
+	return a.ServeUI(r.Context(), body.Event, body.FormatSettings)
 }
 
 // SetSchedulePeriod sets the schedule period of an action.
