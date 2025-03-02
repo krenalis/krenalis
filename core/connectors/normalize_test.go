@@ -35,11 +35,11 @@ func Test_normalize(t *testing.T) {
 	aDate := time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		t types.Type
-		v any
-		e any
-		n bool
-		l *state.TimeLayouts
+		typ      types.Type
+		value    any
+		expected any
+		null     bool
+		layout   *state.TimeLayouts
 	}{
 		// boolean.
 		{types.Boolean(), true, true, false, nil},
@@ -133,12 +133,12 @@ func Test_normalize(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(fmt.Sprint(test.t), func(t *testing.T) {
-			got, err := normalize("k", test.t, test.v, test.n, test.l)
+		t.Run(fmt.Sprint(test.typ), func(t *testing.T) {
+			got, err := normalize("k", test.typ, test.value, test.null, test.layout)
 			if err != nil {
 				t.Fatal(err)
 			}
-			expected := test.e
+			expected := test.expected
 			if !cmp.Equal(got, expected) {
 				if f, ok := expected.(float64); ok && math.IsNaN(f) {
 					if f, ok := got.(float64); ok && math.IsNaN(f) {
