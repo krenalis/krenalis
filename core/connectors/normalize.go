@@ -445,21 +445,27 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			valid = true
 		}
 	case types.InetKind:
-		switch src := src.(type) {
+		switch ip := src.(type) {
 		case string:
-			if src == "" && nullable {
+			if ip == "" && nullable {
 				return nil, nil
 			}
 			// Remove the number of bits in the netmask, if any.
-			if i := strings.IndexByte(src, '/'); i > 0 {
-				src = src[:i]
+			if i := strings.IndexByte(ip, '/'); i > 0 {
+				ip = ip[:i]
 			}
-			if v, err := netip.ParseAddr(src); err == nil {
-				value = v.String()
-				valid = true
-			}
+			src, _ = netip.ParseAddr(ip)
 		case net.IP:
-			value = src.String()
+			if addr, ok := netip.AddrFromSlice(ip); ok {
+				// Unmap an IPv6-mapped IPv4 address as the net.IP.String method does.
+				if addr.Is4In6() {
+					addr = addr.Unmap()
+				}
+				src = addr
+			}
+		}
+		if addr, ok := src.(netip.Addr); ok && addr.IsValid() {
+			value = addr.WithZone("").String()
 			valid = true
 		}
 	case types.TextKind:
