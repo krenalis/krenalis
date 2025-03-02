@@ -179,6 +179,9 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 	s.mux = http.NewServeMux()
 	for path, serve := range paths {
 		s.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "no-store, max-age=0")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
 			response, err := serve(w, r)
 			if err != nil {
 				select {

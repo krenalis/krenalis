@@ -193,6 +193,9 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = c.serveEvents(w, r)
 	}
 	if err != nil {
+		w.Header().Set("Cache-Control", "no-store, max-age=0")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
 		if err, ok := err.(errors.ResponseWriterTo); ok {
 			_ = err.WriteTo(w)
 			return
@@ -338,6 +341,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET")
 		w.Header().Set("Access-Control-Max-Age", "900")
+		w.Header().Set("Cache-Control", "public, max-age=900, immutable")
 		w.WriteHeader(204)
 		return nil
 	}
@@ -387,6 +391,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		w.Header().Set("Access-Control-Max-Age", "86400")
+		w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
 		w.WriteHeader(204)
 		return nil
 	}

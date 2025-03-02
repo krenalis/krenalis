@@ -63,6 +63,10 @@ func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) 
 
 // EventsSettings returns the events settings.
 func (api api) EventsSettings(w http.ResponseWriter, r *http.Request) (any, error) {
+	// Removes the headers that were set earlier, as ServeEvents handles the response fully.
+	w.Header().Del("Cache-Control")
+	w.Header().Del("Pragma")
+	w.Header().Del("Expires")
 	api.core.ServeEvents(w, r)
 	return nil, nil
 }

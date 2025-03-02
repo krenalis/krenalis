@@ -470,6 +470,10 @@ func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Requ
 
 // IngestEvents ingests a batch of events.
 func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) (any, error) {
+	// Removes the headers that were set earlier, as ServeEvents handles the response fully.
+	w.Header().Del("Cache-Control")
+	w.Header().Del("Pragma")
+	w.Header().Del("Expires")
 	workspace.core.ServeEvents(w, r)
 	return nil, nil
 }
