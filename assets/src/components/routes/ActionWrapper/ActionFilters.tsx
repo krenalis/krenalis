@@ -19,6 +19,7 @@ import {
 	splitPropertyAndPath,
 } from '../../../lib/core/action';
 import { FilterLogical, FilterOperator } from '../../../lib/api/types/action';
+import { checkIfPropertyExists } from './Action.helpers';
 
 const ActionFilters = forwardRef<any>((_, ref) => {
 	const { action, setAction, actionType, connection, isTransformationDisabled } = useContext(ActionContext);
@@ -303,6 +304,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					caret={true}
 					controlled={true}
 					autoResize={true}
+					error={condition.property !== '' && checkIfPropertyExists(condition.property, flatInputSchema)}
 				/>
 			);
 

@@ -154,9 +154,14 @@
 	display: flex;
 	flex-flow: row wrap;
 	gap: 10px;
-	margin-bottom: 15px;
+	margin-bottom: 20px;
 	align-items: baseline;
 	align-items: stretch;
+}
+
+.action__filters-condition .combobox-input__error {
+	width: max-content;
+	margin-top: 1px;
 }
 
 .action__filters-condition--is-one-of {

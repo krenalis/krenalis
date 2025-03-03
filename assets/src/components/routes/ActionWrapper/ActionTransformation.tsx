@@ -201,6 +201,44 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [selectedLanguage]);
 
+	const flatSchema = useMemo<TransformedMapping>(() => {
+		return flattenSchema(actionType.inputSchema);
+	}, [actionType.inputSchema]);
+
+	useEffect(() => {
+		// validate mapping expressions when the action is opened or
+		// when the schema changes.
+		const validateExpressions = async () => {
+			let a = action;
+			const keys = Object.keys(action.transformation.mapping);
+			for (const k of keys) {
+				const property = action.transformation.mapping[k];
+				const value = property.value;
+				if (value === '') {
+					continue;
+				}
+				let errorMessage = '';
+				try {
+					errorMessage = await api.validateExpression(
+						value,
+						actionType.inputSchema.properties,
+						property.full.type,
+					);
+				} catch (err) {
+					handleError(err);
+					return;
+				}
+				if (errorMessage !== '') {
+					a = updateMappingProperty(a, k, value, errorMessage);
+				}
+			}
+			setAction(a);
+		};
+		if (flatSchema != null && transformationType === 'mappings') {
+			validateExpressions();
+		}
+	}, [flatSchema, transformationType]);
+
 	useEffect(() => {
 		sharedMapping.current = { ...action.transformation.mapping };
 	}, [action.transformation.mapping]);
@@ -222,10 +260,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 		return null;
 	}, [action]);
-
-	const flatSchema = useMemo<TransformedMapping>(() => {
-		return flattenSchema(actionType.inputSchema);
-	}, [actionType]);
 
 	const identityColumnError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {

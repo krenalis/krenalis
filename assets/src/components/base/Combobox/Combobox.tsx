@@ -139,12 +139,15 @@ const Combobox = ({
 		}
 		if (autoResize) {
 			// Resize the combobox after a delay to allow the shadow DOM
-			// to fully load.
+			// to fully load. The combobox is resized when the value
+			// changes or when the error changes (to take into
+			// consideration the error icon shown in the suffix slot of
+			// the input).
 			setTimeout(() => {
 				resizeCombobox();
 			}, 50);
 		}
-	}, [value]);
+	}, [value, error]);
 
 	useEffect(() => {
 		if (!isOpen || listRef.current == null) {
