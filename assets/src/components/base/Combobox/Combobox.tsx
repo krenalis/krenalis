@@ -136,13 +136,13 @@ const Combobox = ({
 	useEffect(() => {
 		if (controlled) {
 			setVal(value);
-			if (autoResize) {
-				// Resize the combobox after a delay to allow the shadow DOM to
-				// fully load.
-				setTimeout(() => {
-					resizeCombobox();
-				}, 50);
-			}
+		}
+		if (autoResize) {
+			// Resize the combobox after a delay to allow the shadow DOM
+			// to fully load.
+			setTimeout(() => {
+				resizeCombobox();
+			}, 50);
 		}
 	}, [value]);
 
@@ -299,8 +299,14 @@ const Combobox = ({
 		if (textWidth === 0) {
 			textWidth = 100; // min width.
 		}
+
+		const prefix = inputRef.current.shadowRoot.querySelector('span[part="prefix"]');
+		const prefixWidth = prefix?.offsetWidth || 0;
+		const suffix = inputRef.current.shadowRoot.querySelector('span[part="suffix"]');
+		const suffixWidth = suffix?.offsetWidth || 0;
+
 		const wrapper = inputRef.current.closest('.combobox');
-		wrapper.style.width = `${textWidth + 50}px`;
+		wrapper.style.width = `${textWidth + prefixWidth + suffixWidth + 30}px`;
 	};
 
 	const onInputBlur = () => {
