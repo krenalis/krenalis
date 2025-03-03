@@ -28,6 +28,9 @@ import (
 type customJSONMarshaller []byte
 
 func (m customJSONMarshaller) MarshalJSON() ([]byte, error) {
+	if m == nil {
+		return []byte(`null`), nil
+	}
 	return m, nil
 }
 
@@ -111,6 +114,8 @@ func Test_normalize(t *testing.T) {
 		{types.JSON(), json.Value("302"), json.Value("302"), false, nil},
 		{types.JSON(), []byte(`{ "a": 5 }`), json.Value(`{ "a": 5 }`), false, nil},
 		{types.JSON(), "", nil, true, nil},
+		{types.JSON(), customJSONMarshaller(nil), json.Value(`null`), false, nil},
+		{types.JSON(), customJSONMarshaller(nil), json.Value(`null`), true, nil},
 		// inet.
 		{types.Inet(), "127.0.0.1", "127.0.0.1", false, nil},
 		{types.Inet(), "192.168.1.10/24", "192.168.1.10", false, nil},
