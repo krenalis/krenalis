@@ -100,6 +100,22 @@ func (d *decoder) Connection() (int, bool) {
 // the corresponding error.
 func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) iter.Seq2[events.Event, error] {
 	return func(yield func(events.Event, error) bool) {
+		if d.typ != "batch" {
+			// Decode a single event.
+			var event events.Event
+			var err error
+			if k := d.dec.PeekKind(); k == json.Object {
+				event, err = d.decodeEvent(connectionID, connectionType)
+				if err == errSkip {
+					return
+				}
+			} else {
+				err = errors.BadRequest("expected an object for the event, but found %s instead", k)
+			}
+			yield(event, err)
+			return
+		}
+		// Decode a batch of events.
 		_ = d.dec.SkipToken() // skip '['.
 		for {
 			k := d.dec.PeekKind()
@@ -176,7 +192,7 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 	case "":
 		d.typ = "batch"
 	case "/alias", "/group", "/identify", "/page", "/screen", "/track":
-		d.typ = d.typ[1:]
+		d.typ = path[1:]
 	default:
 		return errors.NotFound("")
 	}
@@ -321,7 +337,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 			break
 		}
 		if kind == json.Invalid {
-			return nil, errors.New("unexpected invalid token while decoding an event")
+			return nil, errors.BadRequest("unexpected invalid token while decoding an event")
 		}
 		name = tok.String()
 		kind = d.dec.PeekKind()

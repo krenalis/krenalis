@@ -65,6 +65,7 @@ func Test_Decoder(t *testing.T) {
 	}
 
 	tests := []struct {
+		typ            string
 		body           string
 		skip           skipFunc            // Set to nil if you don't want to skip events.
 		writeKey       string              // Leave empty if you don't want to test it.
@@ -73,32 +74,55 @@ func Test_Decoder(t *testing.T) {
 		expected       []expectedEvent     // Can be empty or nil, if no events are expected.
 		err            error               // Expected error from the newDecoder function.
 	}{
-		{body: ``, err: errors.BadRequest("request's body is empty")},
-		{body: `{`, err: errors.BadRequest("error parsing the request body as JSON: unexpected EOF")},
-		{body: `{}`, err: errors.BadRequest("property 'batch' is missing")},
-		{body: `{"batch":null}`, err: errors.BadRequest("property 'batch' is not a valid array")},
-		{body: `{"batch":{}}`, err: errors.BadRequest("property 'batch' is not a valid array")},
-		{body: `{"batch":[]"}`, err: errors.BadRequest("error parsing the request body as JSON: invalid character '\"' after object value (expecting ',' or '}')")},
-		{body: `{"batch":[],"writeKey":true}`, err: errors.BadRequest("property 'writeKey' is not a valid string")},
-		{body: `{"batch":[],"writeKey":""}`, err: errors.BadRequest("property 'writeKey' cannot be empty")},
-		{body: `{"batch":[],"writeKey":"vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"}`, writeKey: writeKey},
-		{body: `{"batch":[]}`},
-		{body: `{"b\u0061tch":[]}`},
-		{body: `{"batch":[],"sentAt":""}`, err: errors.BadRequest("property 'sentAt' is not a valid ISO 8601 timestamp")},
-		{body: `{"batch":[],"sentAt":"0000-01-01T12:56:23"}`, err: errors.BadRequest("property 'sentAt' has an invalid year value")},
-		{body: `{"batch":[],"sentAt":"10000-01-01T12:56:23"}`, err: errors.BadRequest("property 'sentAt' has an invalid year value")},
-		{body: `{"batch":[],"sentAt":"2024-10-23T14:08:07.288305712"}`},
-		{body: `{"batch":[],"sentAt":"2024-10-23T14:08:07.288305712"}`},
-		{body: `{"batch":[],"foo":"boo"}`},
-		{body: `{"batch":[],"context":null}`, err: errors.BadRequest("property 'context' is not a valid object")},
-		{body: `{"batch":[],"context":{}}`},
-		{body: `{"batch":[],"context":{"foo":"boo"}}`},
-		{body: `{"batch":[],"connection":-2}`, err: errors.BadRequest("property 'connection' is not a valid connection identifier")},
-		{body: `{"batch":[],"connection":264826420}`},
+		{typ: "batch", body: ``, err: errors.BadRequest("request's body is empty")},
+		{typ: "batch", body: `{`, err: errors.BadRequest("error parsing the request body as JSON: unexpected EOF")},
+		{typ: "batch", body: `{}`, err: errors.BadRequest("property 'batch' is missing")},
+		{typ: "batch", body: `{"batch":null}`, err: errors.BadRequest("property 'batch' is not a valid array")},
+		{typ: "batch", body: `{"batch":{}}`, err: errors.BadRequest("property 'batch' is not a valid array")},
+		{typ: "batch", body: `{"batch":[]"}`, err: errors.BadRequest("error parsing the request body as JSON: invalid character '\"' after object value (expecting ',' or '}')")},
+		{typ: "batch", body: `{"batch":[],"writeKey":true}`, err: errors.BadRequest("property 'writeKey' is not a valid string")},
+		{typ: "batch", body: `{"batch":[],"writeKey":""}`, err: errors.BadRequest("property 'writeKey' cannot be empty")},
+		{typ: "batch", body: `{"batch":[],"writeKey":"vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"}`, writeKey: writeKey},
+		{typ: "batch", body: `{"batch":[]}`},
+		{typ: "batch", body: `{"b\u0061tch":[]}`},
+		{typ: "batch", body: `{"batch":[],"sentAt":""}`, err: errors.BadRequest("property 'sentAt' is not a valid ISO 8601 timestamp")},
+		{typ: "batch", body: `{"batch":[],"sentAt":"0000-01-01T12:56:23"}`, err: errors.BadRequest("property 'sentAt' has an invalid year value")},
+		{typ: "batch", body: `{"batch":[],"sentAt":"10000-01-01T12:56:23"}`, err: errors.BadRequest("property 'sentAt' has an invalid year value")},
+		{typ: "batch", body: `{"batch":[],"sentAt":"2024-10-23T14:08:07.288305712"}`},
+		{typ: "batch", body: `{"batch":[],"sentAt":"2024-10-23T14:08:07.288305712"}`},
+		{typ: "batch", body: `{"batch":[],"foo":"boo"}`},
+		{typ: "batch", body: `{"batch":[],"context":null}`, err: errors.BadRequest("property 'context' is not a valid object")},
+		{typ: "batch", body: `{"batch":[],"context":{}}`},
+		{typ: "batch", body: `{"batch":[],"context":{"foo":"boo"}}`},
+		{typ: "batch", body: `{"batch":[],"connection":-2}`, err: errors.BadRequest("property 'connection' is not a valid connection identifier")},
+		{typ: "batch", body: `{"batch":[],"connection":264826420}`},
+
+		{typ: "track", body: ``, expected: []expectedEvent{{err: errors.BadRequest("expected an object for the event, but found invalid instead")}}},
+		{typ: "track", body: `{`, expected: []expectedEvent{{err: errors.BadRequest("unexpected invalid token while decoding an event")}}},
+		{typ: "track", body: `{}`, expected: []expectedEvent{{err: errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a track event")}}},
+		{typ: "page", body: `{}`, expected: []expectedEvent{{err: errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a page event")}}},
+		{typ: "identify", body: `{}`, expected: []expectedEvent{{err: errors.BadRequest("property 'userId' is required for an identify event")}}},
 
 		// meergo.track('click'); anonymous
 		{
+			typ:        "batch",
 			body:       `{"batch":[{"type":"track","event":"click","messageId":"90112b1f-1d2d-4566-a86f-27efae53530c","anonymousId":"d6e77158-a417-4571-9ec7-8ee0a7d169ad"}]}`,
+			connection: 830163006,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"anonymousId": "d6e77158-a417-4571-9ec7-8ee0a7d169ad",
+					"context":     context,
+					"messageId":   "90112b1f-1d2d-4566-a86f-27efae53530c",
+					"properties":  json.Value("{}"),
+					"type":        "track",
+					"event":       "click",
+					"userId":      nil,
+				},
+			}},
+		},
+		{
+			typ:        "track",
+			body:       `{"type":"track","event":"click","messageId":"90112b1f-1d2d-4566-a86f-27efae53530c","anonymousId":"d6e77158-a417-4571-9ec7-8ee0a7d169ad"}`,
 			connection: 830163006,
 			expected: []expectedEvent{{
 				event: events.Event{
@@ -115,7 +139,21 @@ func Test_Decoder(t *testing.T) {
 
 		// meergo.identify('bob', {name: 'bob', age: 19})
 		{
+			typ:  "batch",
 			body: `{"batch":[{"type":"identify","messageId":"9677e303-6a57-45e4-9c94-e47ec550a261","userId":"bob","groupId":null,"traits":{"name":"bob","age":19}}]}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context":   context,
+					"messageId": "9677e303-6a57-45e4-9c94-e47ec550a261",
+					"traits":    json.Value(`{"name":"bob","age":19}`),
+					"type":      "identify",
+					"userId":    "bob",
+				}},
+			},
+		},
+		{
+			typ:  "identify",
+			body: `{"messageId":"9677e303-6a57-45e4-9c94-e47ec550a261","userId":"bob","groupId":null,"traits":{"name":"bob","age":19}}`,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"context":   context,
@@ -129,6 +167,7 @@ func Test_Decoder(t *testing.T) {
 
 		// meergo.track('page')
 		{
+			typ:  "batch",
 			body: `{"batch":[{"type":"page","context":{"page":{"path":"/boo","referrer":"https://example.com/","search":"id=5","title":"boo","url":"https://example.com/boo?id=5"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a"}]}`,
 			expected: []expectedEvent{{
 				event: events.Event{
@@ -140,14 +179,43 @@ func Test_Decoder(t *testing.T) {
 				}},
 			},
 		},
-
-		// meergo.track('page', {}, {traits: {name: 'Bob'}})
 		{
-			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"traits":{"name":"Bob"}},"userId":"bob"}]}`,
+			typ:  "page",
+			body: `{"context":{"page":{"path":"/boo","referrer":"https://example.com/","search":"id=5","title":"boo","url":"https://example.com/boo?id=5"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a"}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"anonymousId": "82281550-c0fc-4d69-bcf9-db1e43f9a76a",
+					"properties":  json.Value(`{}`),
+					"type":        "page",
+					"userId":      nil,
+				}},
+			},
+		},
+
+		// meergo.screen('login', {}, {traits: {name: 'Bob'}})
+		{
+			typ:  "batch",
+			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"traits":{"name":"Bob"}},"name":"login","userId":"bob"}]}`,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"properties": json.Value(`{}`),
+					"name":       "login",
+					"traits":     json.Value(`{"name":"Bob"}`),
+					"type":       "screen",
+					"userId":     "bob",
+				}},
+			},
+		},
+		{
+			typ:  "screen",
+			body: `{"context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"traits":{"name":"Bob"}},"name":"login","userId":"bob"}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"properties": json.Value(`{}`),
+					"name":       "login",
 					"traits":     json.Value(`{"name":"Bob"}`),
 					"type":       "screen",
 					"userId":     "bob",
@@ -155,14 +223,29 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
-		// meergo.track('screen')
+		// meergo.screen('login')
 		{
-			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a"}]}`,
+			typ:  "batch",
+			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","name":"login"}]}`,
 			expected: []expectedEvent{{
 				event: events.Event{
 					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"properties": json.Value(`{}`),
 					"type":       "screen",
+					"name":       "login",
+					"userId":     nil,
+				}},
+			},
+		},
+		{
+			typ:  "screen",
+			body: `{"context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","name":"login"}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"properties": json.Value(`{}`),
+					"type":       "screen",
+					"name":       "login",
 					"userId":     nil,
 				}},
 			},
@@ -170,6 +253,7 @@ func Test_Decoder(t *testing.T) {
 
 		// meergo.track('click'); meergo.track('click');
 		{
+			typ: "batch",
 			body: `{"batch":[` +
 				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:06.050Z","properties":{},"userId":null,"messageId":"8071f50d-5a69-45f7-bb31-70e111aa8aed","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","search":"","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277},"integrations":{}},` +
 				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:12.319Z","properties":{},"userId":null,"messageId":"1935c955-45f8-44a3-b835-ced93138e8b3","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","search":"","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277},"integrations":{}}` +
@@ -252,6 +336,7 @@ func Test_Decoder(t *testing.T) {
 
 		// Duplicated messageId.
 		{
+			typ: "batch",
 			body: `{"batch":[` +
 				`{"type":"page","messageId":"4f75c7af-c68a-4737-90de-96fa3a779365","userId":"bob"},` +
 				`{"type":"page","messageId":"4f75c7af-c68a-4737-90de-96fa3a779365","userId":"bob"},` +
@@ -278,6 +363,7 @@ func Test_Decoder(t *testing.T) {
 
 		// Errors reading events.
 		{
+			typ: "batch",
 			body: `{"batch":[` +
 				`{"type":"page","event":null,"messageId":"f65c2f55-e30a-4458-83ca-0e5266e0f31d","userId":"bob"},` +
 				`12,` +
@@ -299,6 +385,7 @@ func Test_Decoder(t *testing.T) {
 			skip: skip(),
 		},
 		{
+			typ:  "batch",
 			body: `{"batch":[{}]}`,
 			expected: []expectedEvent{{
 				err: errors.BadRequest("property 'type' is required for a batch request"),
@@ -308,7 +395,12 @@ func Test_Decoder(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			requestURL, _ := url.Parse("/events")
+			var requestURL *url.URL
+			if test.typ == "batch" {
+				requestURL, _ = url.Parse("/events")
+			} else {
+				requestURL, _ = url.Parse("/events/" + test.typ)
+			}
 			r := &http.Request{
 				Method: "POST",
 				Header: http.Header{
