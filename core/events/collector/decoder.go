@@ -630,7 +630,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	}
 
 	// ReceivedAt.
-	event["receivedAt"] = d.receivedAt
+	event["receivedAt"] = d.receivedAt.Truncate(time.Millisecond)
 
 	// SentAt.
 	sentAt, ok := event["sentAt"].(time.Time)
@@ -645,13 +645,13 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		skew := d.receivedAt.Sub(sentAt)
 		timestamp = timestamp.Add(skew)
 		if y := timestamp.Year(); 1 <= y && y <= 9999 {
-			event["timestamp"] = timestamp
+			event["timestamp"] = timestamp.Truncate(time.Millisecond)
 		} else {
-			event["timestamp"] = d.receivedAt
+			event["timestamp"] = d.receivedAt.Truncate(time.Millisecond)
 		}
 	} else {
-		event["originalTimestamp"] = d.receivedAt
-		event["timestamp"] = d.receivedAt
+		event["timestamp"] = d.receivedAt.Truncate(time.Millisecond)
+		event["originalTimestamp"] = event["timestamp"]
 	}
 
 	// Traits.

@@ -411,7 +411,7 @@ func Test_Decoder(t *testing.T) {
 				URL:        requestURL,
 				Body:       io.NopCloser(strings.NewReader(test.body)),
 			}
-			maxReceivedAt := time.Now().UTC()
+			maxReceivedAt := time.Now().UTC().Truncate(time.Millisecond)
 			dec, err := newDecoder(r, test.skip)
 			if !reflect.DeepEqual(test.err, err) {
 				t.Fatalf("expected error %#v, got error %#v", test.err, err)
