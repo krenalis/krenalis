@@ -78,13 +78,17 @@ const STEP_NAME_BY_IDENTIFIER: Record<StepIdentifier, string> = {
 };
 
 const ConnectionOverview = () => {
+	const { connection: c } = useContext(ConnectionContext);
+
 	const [userActionsMetrics, setUserActionsMetrics] = useState<ActionMetrics>();
 	const [eventActionsMetrics, setEventActionsMetrics] = useState<ActionMetrics>();
 	const [userActionsErrors, setUserActionsErrors] = useState<ActionError[]>([]);
 	const [eventActionsErrors, setEventActionsErrors] = useState<ActionError[]>([]);
 	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [selectedTarget, setSelectedTarget] = useState<'Users' | 'Events'>('Users');
+	const [selectedTarget, setSelectedTarget] = useState<'Users' | 'Events'>(
+		c.actions.findIndex((a) => a.target === 'Events') !== -1 ? 'Events' : 'Users',
+	);
 	const [selectedMetricsRange, setSelectedMetricsRange] = useState<metricsRange>('last15Minutes');
 	const [isCustomMetricsRangePickerOpen, setIsCustomMetricsRangePickerOpen] = useState<boolean>(false);
 	const [customMetricsRange, setCustomMetricsRange] = useState([
@@ -96,7 +100,6 @@ const ConnectionOverview = () => {
 	]);
 
 	const { api, handleError } = useContext(AppContext);
-	const { connection: c } = useContext(ConnectionContext);
 
 	const supportedTargets = useRef([]);
 	const currentMetricsIntervalID = useRef<any>();
@@ -283,11 +286,6 @@ const ConnectionOverview = () => {
 			}
 
 			let target = selectedTarget;
-			if (userActionsIds.length === 0) {
-				target = 'Events';
-			}
-			setSelectedTarget(target);
-
 			let ids: number[] = [];
 			if (target === 'Users') {
 				ids = userActionsIds;
@@ -405,7 +403,6 @@ const ConnectionOverview = () => {
 		);
 	}
 
-	const hasBothTargets = supportedTargets.current.includes('Users') && supportedTargets.current.includes('Events');
 	const isUsersSelected = selectedTarget === 'Users';
 	let titleRange = '';
 	if (selectedMetricsRange === 'last15Minutes') {
@@ -471,24 +468,24 @@ const ConnectionOverview = () => {
 								</div>
 							</div>
 						</SlButtonGroup>
-						{hasBothTargets && (
-							<SlButtonGroup>
-								<SlButton
-									variant={isUsersSelected ? 'default' : 'primary'}
-									onClick={onSelectEvents}
-									size='small'
-								>
-									Events
-								</SlButton>
-								<SlButton
-									variant={isUsersSelected ? 'primary' : 'default'}
-									onClick={onSelectUsers}
-									size='small'
-								>
-									Users
-								</SlButton>
-							</SlButtonGroup>
-						)}
+						<SlButtonGroup>
+							<SlButton
+								variant={isUsersSelected ? 'default' : 'primary'}
+								onClick={supportedTargets.current.includes('Events') ? onSelectEvents : null}
+								size='small'
+								disabled={!supportedTargets.current.includes('Events')}
+							>
+								Events
+							</SlButton>
+							<SlButton
+								variant={isUsersSelected ? 'primary' : 'default'}
+								onClick={supportedTargets.current.includes('Users') ? onSelectUsers : null}
+								size='small'
+								disabled={!supportedTargets.current.includes('Users')}
+							>
+								Users
+							</SlButton>
+						</SlButtonGroup>
 					</div>
 					<div className='connection-overview__chart'>
 						<div className='connection-overview__chart-heading'>
