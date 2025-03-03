@@ -275,7 +275,7 @@ func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records
 }
 
 // Convert an int96 type value to a time.Time value.
-// v must be a byte array with length in range [8,96].
+// v must be a byte array with length 12.
 // See https://stackoverflow.com/questions/53103762.
 func convertInt96(v any) (time.Time, error) {
 	r := reflect.ValueOf(v)
@@ -284,7 +284,7 @@ func convertInt96(v any) (time.Time, error) {
 	if t.Kind() != reflect.Array || t.Elem().Kind() != reflect.Uint8 {
 		return time.Time{}, fmt.Errorf("expected byte array, got value type %q", t)
 	}
-	if l := t.Len(); l < 8 || l > 96 {
+	if l := t.Len(); l != 12 {
 		return time.Time{}, fmt.Errorf("unexpected byte array length %d", l)
 	}
 	// Convert the array to a slice value.
@@ -704,8 +704,13 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 	case parquet.Type_INT64:
 		return types.Int(64), nil
 	case parquet.Type_INT96:
-		// TODO: correctly support INT96 types, see: https://github.com/meergo/meergo/issues/1375.
-		return types.Type{}, nil
+		// Parquet columns with physical type INT96 are treated as 'datetime' in
+		// Meergo. This is because there does not seem to be any other practical
+		// use, in fact, for such columns. Also, consider that INT96 types are
+		// indeed deprecated, as timestamps are defined with other types, an
+		// they are kept here in the connector on import only, for compatibility
+		// with old Parquet files.
+		return types.DateTime(), nil
 	case parquet.Type_BYTE_ARRAY, parquet.Type_FIXED_LEN_BYTE_ARRAY:
 		return types.Text(), nil
 	}

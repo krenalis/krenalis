@@ -35,16 +35,16 @@ This section summarizes how Parquet column types are imported into Meergo.
 
 This table describes how Parquet physical types (without any logical type annotations) are imported into Meergo.
 
-| Parquet Type           | Imported in Meergo as          |
-|------------------------|--------------------------------|
-| `BOOLEAN`              | `boolean`                      |
-| `INT32`                | `int(32)`                      |
-| `INT64`                | `int(64)`                      |
-| `INT96`                | Not supported [^int96_support] |
-| `FLOAT`                | `float(32)`                    |
-| `DOUBLE`               | `float(64)`                    |
-| `BYTE_ARRAY`           | `text`                         |
-| `FIXED_LEN_BYTE_ARRAY` | `text`                         |
+| Parquet Type           | Imported in Meergo as |
+|------------------------|-----------------------|
+| `BOOLEAN`              | `boolean`             |
+| `INT32`                | `int(32)`             |
+| `INT64`                | `int(64)`             |
+| `INT96`                | `datetime` [^int96]   |
+| `FLOAT`                | `float(32)`           |
+| `DOUBLE`               | `float(64)`           |
+| `BYTE_ARRAY`           | `text`                |
+| `FIXED_LEN_BYTE_ARRAY` | `text`                |
 
 #### Logical and Converted types
 
@@ -94,7 +94,7 @@ This table describes how Parquet logical and converted types are imported into M
 
 Import of columns groups is currently not supported.
 
-[^int96_support]: Support for importing `INT96` columns is discussed here: https://github.com/meergo/meergo/issues/1375
+[^int96]: `INT96` types are always treated as `datetime` Meergo types, because that is in fact how they are used in the Parquet files. However, please note that this type of representation is deprecated, and is kept in the Parquet connector only for compatibility with older Parquet files.
 [^decimal_support]: Support for importing `DECIMAL` columns is discussed here: https://github.com/meergo/meergo/issues/1370
 [^list_support]: Support for importing `LIST` columns is discussed here: https://github.com/meergo/meergo/issues/1325
 [^map_support]: Support for importing `MAP` columns is discussed here: https://github.com/meergo/meergo/issues/1371
