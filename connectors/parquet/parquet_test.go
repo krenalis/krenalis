@@ -344,7 +344,7 @@ func (writer *testRecordWriter) Record(record map[string]any) error {
 				record[name] = int(value.(int64))
 			}
 		case types.UintKind:
-			if column.Type.BitSize() < 32 {
+			if column.Type.BitSize() <= 32 {
 				record[name] = uint(value.(int32))
 			} else {
 				record[name] = uint(value.(int64))

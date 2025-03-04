@@ -328,7 +328,7 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 				}
 			}
 		case types.UintKind:
-			if p.Type.BitSize() < 32 {
+			if p.Type.BitSize() <= 32 {
 				if u64, ok := record[p.Name].(uint); ok {
 					converted[p.Name] = int32(u64)
 					continue
@@ -505,7 +505,7 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 				col.SchemaElement.LogicalType.INTEGER.BitWidth = 32
 				col.SchemaElement.LogicalType.INTEGER.IsSigned = false
 			case 32:
-				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
 				col.SchemaElement.LogicalType = parquet.NewLogicalType()
 				col.SchemaElement.LogicalType.INTEGER = parquet.NewIntType()
 				col.SchemaElement.LogicalType.INTEGER.BitWidth = 32
