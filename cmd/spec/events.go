@@ -263,8 +263,10 @@ func init() {
 								Type: types.DateTime(),
 							},
 							{
-								Name: "timestamp",
-								Type: types.DateTime(),
+								Name:           "timestamp",
+								Type:           types.DateTime(),
+								UpdateRequired: true,
+								Description:    "It is required and cannot be null if `originalTimestamp` is present and not null.",
 							},
 							{
 								Name:        "traits",
@@ -387,8 +389,10 @@ func init() {
 						Type: types.DateTime(),
 					},
 					{
-						Name: "timestamp",
-						Type: types.DateTime(),
+						Name:           "timestamp",
+						Type:           types.DateTime(),
+						UpdateRequired: true,
+						Description:    "It is required and cannot be null if `originalTimestamp` is present and not null.",
 					},
 					{
 						Name:        "traits",

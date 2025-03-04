@@ -339,7 +339,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		name = tok.String()
 		kind = d.dec.PeekKind()
 		switch name {
-		case "anonymousId", "groupId", "messageId", "timestamp", "userId":
+		case "anonymousId", "groupId", "messageId", "originalTimestamp", "timestamp", "userId":
 			if kind == 'n' {
 				if _, ok := event[name]; ok {
 					return nil, errors.BadRequest("property '%s' is specified multiple times", name)
@@ -377,6 +377,16 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 					return nil, errors.BadRequest("property 'sentAt' has an invalid year value")
 				}
 				event["sentAt"] = sentAt
+			case "originalTimestamp":
+				timestamp, err := iso8601.ParseString(s)
+				if err != nil {
+					return nil, errors.BadRequest("property 'originalTimestamp' is not a valid ISO 8601 timestamp")
+				}
+				timestamp = timestamp.UTC()
+				if y := timestamp.Year(); y < 1 || y > 9999 {
+					return nil, errors.BadRequest("property 'originalTimestamp' has an invalid year value")
+				}
+				event["originalTimestamp"] = timestamp
 			case "timestamp":
 				timestamp, err := iso8601.ParseString(s)
 				if err != nil {
@@ -633,8 +643,12 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		sentAt = d.sentAt
 	}
 
-	// Timestamp and OriginalTimeStamp.
-	if timestamp, ok := event["timestamp"].(time.Time); ok {
+	// Timestamp and OriginalTimestamp.
+	if _, ok := event["originalTimestamp"].(time.Time); ok {
+		if _, ok := event["timestamp"].(time.Time); !ok {
+			return nil, errors.BadRequest("property 'timestamp' is required if the property 'originalTimestamp' is present")
+		}
+	} else if timestamp, ok := event["timestamp"].(time.Time); ok {
 		event["originalTimestamp"] = timestamp
 		skew := d.receivedAt.Sub(sentAt)
 		timestamp = timestamp.Add(skew)

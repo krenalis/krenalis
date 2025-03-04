@@ -11125,7 +11125,8 @@
                                             "type": {
                                                 "kind": "datetime"
                                             },
-                                            "description": ""
+                                            "updateRequired": true,
+                                            "description": "It is required and cannot be null if `originalTimestamp` is present and not null."
                                         },
                                         {
                                             "name": "traits",
@@ -12322,7 +12323,8 @@
                             "type": {
                                 "kind": "datetime"
                             },
-                            "description": ""
+                            "updateRequired": true,
+                            "description": "It is required and cannot be null if `originalTimestamp` is present and not null."
                         },
                         {
                             "name": "traits",
