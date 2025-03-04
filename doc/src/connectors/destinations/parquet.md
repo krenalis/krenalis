@@ -36,7 +36,7 @@ The following table shows how the user property types in Meergo are mapped to th
 | `int(16)`                       | `INT32`                                  | `INT(16, true)`                               |
 | `int(24)`                       | `INT32`                                  | *(none)*                                      |
 | `int(32)`                       | `INT32`                                  | *(none)*                                      |
-| `int(64)`                       | `INT36`                                  | *(none)*                                      |
+| `int(64)`                       | `INT64`                                  | *(none)*                                      |
 | `uint(8)`                       | `INT32`                                  | `INT(8, false)`                               |
 | `uint(16)`                      | `INT32`                                  | `INT(16, false)`                              |
 | `uint(24)`                      | `INT32`                                  | `INT(32, false)`                              |
