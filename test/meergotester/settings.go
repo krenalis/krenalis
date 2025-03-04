@@ -9,6 +9,7 @@ package meergotester
 
 import (
 	"os"
+	"runtime"
 	"sync"
 )
 
@@ -64,6 +65,9 @@ func init() {
 			Password: "test_warehouse",
 			Schema:   "public",
 		},
+	}
+	if runtime.GOOS == "windows" {
+		testsSettings.PythonExecutable = "python"
 	}
 	if host := os.Getenv("MEERGO_TESTS_HOST"); host != "" {
 		testsSettings.MeergoHost = host
