@@ -122,13 +122,13 @@ func TestExportAndImportParquet(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		err = parquetFile.Close()
+		err := parquetFile.Close()
 		if err != nil {
 			t.Logf("cannot close temporary Parquet file: %s", err)
 		}
 	}()
-	parquetFileName := parquetFile.Name
-	t.Logf("create temporary Parquet file with name: %s", parquetFileName())
+	parquetFileName := parquetFile.Name()
+	t.Logf("create temporary Parquet file with name: %s", parquetFileName)
 
 	// Export the Parquet file.
 	recordReader := &testRecordReader{
@@ -156,7 +156,7 @@ func TestExportAndImportParquet(t *testing.T) {
 		t:           t,
 		readRecords: []map[string]any{},
 	}
-	parquetFile, err = os.Open(parquetFileName())
+	parquetFile, err = os.Open(parquetFileName)
 	if err != nil {
 		t.Fatal(err)
 	}
