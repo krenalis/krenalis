@@ -581,6 +581,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					validatePrimarySources(t, test.primarySources)
 					for _, user := range test.identities {
 						validateIdentity(t, user)
+						// Sleep for 1 millisecond to ensure that
+						// timestamps are generated incrementally. This
+						// is not necessary on Linux, where timestamps
+						// have a nanosecond precision, but is required
+						// on Windows, where the timestamps precision is
+						// lower and may happen that two timestamps of
+						// two different identities have the same value,
+						// making the test fail.
+						time.Sleep(1 * time.Millisecond)
 						row := map[string]any{
 							"__action__":           user.action,
 							"__is_anonymous__":     user.isAnonymous,
