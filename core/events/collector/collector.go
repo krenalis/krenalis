@@ -33,7 +33,6 @@ import (
 	"github.com/meergo/meergo/json"
 	meergoMetrics "github.com/meergo/meergo/metrics"
 
-	"github.com/google/uuid"
 	"github.com/oschwald/maxminddb-golang"
 )
 
@@ -438,7 +437,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				key.Workspace = int(id)
 			}
 			// Decode the request.
-			dec, err = newDecoder(r, c.skip)
+			dec, err = newDecoder(r)
 			if err != nil {
 				return err
 			}
@@ -473,7 +472,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	// Decode the request if it hasn't been decoded already.
 	if dec == nil {
-		dec, err = newDecoder(r, c.skip)
+		dec, err = newDecoder(r)
 		if err != nil {
 			return err
 		}
@@ -508,16 +507,20 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connectionType) {
-		meergoMetrics.Increment("Collector.serveEvents.decoded_events", 1)
 
+		meergoMetrics.Increment("Collector.serveEvents.decoded_events", 1)
 		if err != nil {
 			if eventErr == nil {
 				eventErr = err
 			}
 			continue
 		}
-
 		c.observer.addEvent(event)
+
+		_, duplicated := c.duplicated.LoadOrStore(event["id"].(string), nil)
+		if duplicated {
+			continue
+		}
 
 		var actions []int
 
@@ -615,13 +618,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	writeOK(w, origin)
 
 	return nil
-}
-
-// skip reports if the event with the provided identifier should be skipped
-// because is duplicated.
-func (c *Collector) skip(id uuid.UUID) bool {
-	_, skip := c.duplicated.LoadOrStore(id, nil)
-	return skip
 }
 
 // onCreateAction is called when an action is created.

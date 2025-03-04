@@ -37,18 +37,14 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-var errSkip = errors.BadRequest("skipped event")
 var errPayloadTooLarge = errors.BadRequest("body too large")
 var errReadBody = errors.BadRequest("failed to read body")
-
-type skipFunc func(id uuid.UUID) bool
 
 type decoder struct {
 	payload bytes.Buffer
 	dec     json.Decoder
 	batch   json.Value
 	buf     []byte
-	skip    skipFunc
 	maxmind *maxminddb.Reader
 
 	receivedAt time.Time
@@ -73,9 +69,9 @@ type decoder struct {
 //   - errBadRequest: if the request is not valid,
 //   - errPayloadTooLarge: if the body exceeds maxRequestSize,
 //   - a badRequestError: if the request's body is not valid.
-func newDecoder(r *http.Request, skip skipFunc) (*decoder, error) {
+func newDecoder(r *http.Request) (*decoder, error) {
 	d := &decoder{}
-	err := d.Reset(r, skip)
+	err := d.Reset(r)
 	if err != nil {
 		return nil, err
 	}
@@ -95,9 +91,7 @@ func (d *decoder) Connection() (int, bool) {
 // connectionType represent the identifier and type, respectively, of the source
 // connection from which the events are received.
 //
-// An event is skipped if the skip function is not nil and returns true when
-// called with the event's identifier. For malformed errors, it returns nil and
-// the corresponding error.
+// For malformed errors, it returns nil and the corresponding error.
 func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) iter.Seq2[events.Event, error] {
 	return func(yield func(events.Event, error) bool) {
 		if d.typ != "batch" {
@@ -106,9 +100,6 @@ func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) i
 			var err error
 			if k := d.dec.PeekKind(); k == json.Object {
 				event, err = d.decodeEvent(connectionID, connectionType)
-				if err == errSkip {
-					return
-				}
 			} else {
 				err = errors.BadRequest("expected an object for the event, but found %s instead", k)
 			}
@@ -131,11 +122,6 @@ func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) i
 				continue
 			}
 			event, err := d.decodeEvent(connectionID, connectionType)
-			if err != nil {
-				if err == errSkip {
-					continue
-				}
-			}
 			if !yield(event, err) {
 				return
 			}
@@ -151,7 +137,7 @@ func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) i
 //   - errBadRequest: if the request is not valid,
 //   - errPayloadTooLarge: if the body exceeds maxRequestSize,
 //   - a badRequestError: if the request's body is not valid.
-func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
+func (d *decoder) Reset(r *http.Request) error {
 
 	if r.Method != "POST" {
 		return errMethodNotAllowed
@@ -177,7 +163,6 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 	d.payload.Reset()
 	d.batch = nil
 	d.buf = d.buf[:0]
-	d.skip = skip
 
 	d.receivedAt = time.Now().UTC()
 	d.remoteAddr.address = r.RemoteAddr
@@ -368,9 +353,6 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 				event["anonymousId"] = s
 			case "messageId":
 				id := makeEventID(connection, s)
-				if d.skip != nil && d.skip(id) {
-					return nil, errSkip
-				}
 				event["id"] = id.String()
 				event["messageId"] = s
 			case "sentAt":
@@ -593,9 +575,6 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	if _, ok := event["messageId"]; !ok {
 		messageId := uuid.NewString()
 		id := makeEventID(connection, messageId)
-		if d.skip != nil && d.skip(id) {
-			return nil, errSkip
-		}
 		event["id"] = id.String()
 		event["messageId"] = messageId
 	}

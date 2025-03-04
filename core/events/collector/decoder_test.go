@@ -23,7 +23,6 @@ import (
 	"github.com/meergo/meergo/json"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/uuid"
 )
 
 func Test_Decoder(t *testing.T) {
@@ -36,17 +35,6 @@ func Test_Decoder(t *testing.T) {
 	os := map[string]any{"name": "Windows", "version": "10.0"}
 	library := map[string]any{"name": "meergo.js", "version": "0.0.0"}
 	context := map[string]any{"browser": browser, "ip": ip, "os": os, "userAgent": userAgent}
-
-	skip := func() skipFunc {
-		duplicated := map[uuid.UUID]bool{}
-		return func(id uuid.UUID) bool {
-			if duplicated[id] {
-				return true
-			}
-			duplicated[id] = true
-			return false
-		}
-	}
 
 	// These non-read optional properties are not tested if they are not present as expected.
 	var nonReadOptionalProperties = []string{
@@ -67,7 +55,6 @@ func Test_Decoder(t *testing.T) {
 	tests := []struct {
 		typ            string
 		body           string
-		skip           skipFunc            // Set to nil if you don't want to skip events.
 		writeKey       string              // Leave empty if you don't want to test it.
 		connection     int                 // Can be any value.
 		connectionType state.ConnectorType // Defaults to "Website" if not set.
@@ -334,33 +321,6 @@ func Test_Decoder(t *testing.T) {
 			}},
 		},
 
-		// Duplicated messageId.
-		{
-			typ: "batch",
-			body: `{"batch":[` +
-				`{"type":"page","messageId":"4f75c7af-c68a-4737-90de-96fa3a779365","userId":"bob"},` +
-				`{"type":"page","messageId":"4f75c7af-c68a-4737-90de-96fa3a779365","userId":"bob"},` +
-				`{"type":"page","messageId":"65d8a0d4-5403-46a0-9eb1-289f4a0e9d0f","userId":"bob"}` +
-				`]}`,
-			expected: []expectedEvent{{
-				event: events.Event{
-					"messageId":  "4f75c7af-c68a-4737-90de-96fa3a779365",
-					"context":    context,
-					"type":       "page",
-					"properties": json.Value("{}"),
-					"userId":     "bob",
-				}}, {
-				event: events.Event{
-					"messageId":  "65d8a0d4-5403-46a0-9eb1-289f4a0e9d0f",
-					"context":    context,
-					"type":       "page",
-					"properties": json.Value("{}"),
-					"userId":     "bob",
-				},
-			}},
-			skip: skip(),
-		},
-
 		// Errors reading events.
 		{
 			typ: "batch",
@@ -382,7 +342,6 @@ func Test_Decoder(t *testing.T) {
 					"userId":     "bob",
 				},
 			}},
-			skip: skip(),
 		},
 		{
 			typ:  "batch",
@@ -412,7 +371,7 @@ func Test_Decoder(t *testing.T) {
 				Body:       io.NopCloser(strings.NewReader(test.body)),
 			}
 			maxReceivedAt := time.Now().UTC().Truncate(time.Millisecond)
-			dec, err := newDecoder(r, test.skip)
+			dec, err := newDecoder(r)
 			if !reflect.DeepEqual(test.err, err) {
 				t.Fatalf("expected error %#v, got error %#v", test.err, err)
 			}
