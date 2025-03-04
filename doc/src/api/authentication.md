@@ -60,7 +60,7 @@ Using an event write key allows authentication exclusively for the following end
   <div class="api-request-box">
   <div>Authenticated request with an event write key</div>
         <div>
-          <div>curl -X GET https://api.meergo.com/v0/api/events/batch \</div>
+          <div>curl -X GET https://api.meergo.com/v0/api/events \</div>
           <div>   -H "Authorization: Bearer &lt;YOUR_WRITE_KEY&gt;"</div>
         </div>
       </div>

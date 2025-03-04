@@ -184,9 +184,15 @@ func init() {
 		Endpoints: []*Endpoint{
 			{
 				Name: "Ingest events",
-				Description: "Ingests events in batch. This endpoint supports authentication with both an API key and an event write key:\n" +
+				Description: "This endpoint allows to ingest a batch of events.\n" +
+					"### Authentication\n" +
+					"It supports authentication with both an API key and an event write key:\n" +
 					"* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n" +
-					"* For a server application, using an event write key is recommended if you don’t need access to other endpoints.",
+					"* For a server application, using an event write key is recommended if you don’t need access to other endpoints.\n" +
+					"### Alternative payloads\n" +
+					"Alternatively, when using an event write key, you can also pass the array of events directly in the request body.\n\n" +
+					"If there is a single event to ingest, you can pass the event object directly, similar to the [Ingest event](/api/events#ingest-event) endpoint, " +
+					"but specifying the event type in the request body.",
 				Method: POST,
 				URL:    "/v1/events",
 				Parameters: []types.Property{

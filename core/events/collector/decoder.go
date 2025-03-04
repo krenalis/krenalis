@@ -41,10 +41,9 @@ var errPayloadTooLarge = errors.BadRequest("body too large")
 var errReadBody = errors.BadRequest("failed to read body")
 
 type decoder struct {
-	payload bytes.Buffer
+	payload *bytes.Buffer
 	dec     json.Decoder
 	batch   json.Value
-	buf     []byte
 	maxmind *maxminddb.Reader
 
 	receivedAt time.Time
@@ -160,10 +159,7 @@ func (d *decoder) Reset(r *http.Request) error {
 		}
 	}
 
-	d.payload.Reset()
 	d.batch = nil
-	d.buf = d.buf[:0]
-
 	d.receivedAt = time.Now().UTC()
 	d.remoteAddr.address = r.RemoteAddr
 	d.userAgent = r.Header.Get("User-Agent")
@@ -175,7 +171,6 @@ func (d *decoder) Reset(r *http.Request) error {
 	path, _ := strings.CutPrefix(r.URL.Path, "/events")
 	switch path {
 	case "":
-		d.typ = "batch"
 	case "/alias", "/group", "/identify", "/page", "/screen", "/track":
 		d.typ = path[1:]
 	default:
@@ -185,97 +180,114 @@ func (d *decoder) Reset(r *http.Request) error {
 	// Read the body and check that is not be longer than maxRequestSize bytes and,
 	// it is a streaming of JSON objects, otherwise return the errBadRequest error.
 	lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
-	payload := norm.NFC.Reader(lr)
-	_, err = d.payload.ReadFrom(payload)
+	body, err := io.ReadAll(norm.NFC.Reader(lr))
 	if err != nil {
 		return errReadBody
 	}
 	if lr.N == 0 {
 		return errPayloadTooLarge
 	}
+	if len(body) == 0 {
+		return errors.BadRequest("request's body is empty")
+	}
+	d.payload = bytes.NewBuffer(body)
+	d.dec.Reset(d.payload)
 
-	d.dec.Reset(&d.payload)
+	if d.typ != "" {
+		// It is a single-event request.
+		d.sentAt = d.receivedAt
+		return nil
+	}
+	kind := d.dec.PeekKind()
+	if kind == '[' {
+		// It is a batch-event request with a JSON array as body.
+		d.typ = "batch"
+		d.sentAt = d.receivedAt
+		return nil
+	}
+	if kind != '{' {
+		return errors.BadRequest("request's content is not a valid JSON object or array")
+	}
 
-	if d.typ == "batch" {
-		tok, err := d.dec.ReadToken()
+	// It is either a single-event or a batch-event request, depending on the "batch" property.
+	tok, err := d.dec.ReadToken()
+	if err != nil {
+		return errRead(err)
+	}
+	for {
+		tok, err = d.dec.ReadToken()
 		if err != nil {
 			return errRead(err)
 		}
-		if tok.Kind() != '{' {
-			return errors.BadRequest("request's content is not a valid JSON object")
+		if tok.Kind() == '}' {
+			break
 		}
-		for {
-			tok, err = d.dec.ReadToken()
+		key := tok.String()
+		switch key {
+		case "batch":
+			batch, err := d.dec.ReadValue()
 			if err != nil {
 				return errRead(err)
 			}
-			if tok.Kind() == '}' {
-				break
+			if !batch.IsArray() {
+				return errors.BadRequest("property 'batch' is not a valid array")
 			}
-			key := tok.String()
-			switch key {
-			case "batch":
-				batch, err := d.dec.ReadValue()
-				if err != nil {
-					return errRead(err)
-				}
-				if !batch.IsArray() {
-					return errors.BadRequest("property 'batch' is not a valid array")
-				}
-				d.batch = batch
-			case "context":
-				kind := d.dec.PeekKind()
-				if kind != '{' {
-					return errors.BadRequest("property 'context' is not a valid object")
-				}
-				d.context, err = d.decodeContext(true)
-				if err != nil {
-					return err
-				}
-			case "sentAt":
-				if !d.sentAt.IsZero() {
-					return errors.BadRequest("property 'sentAt' is specified multiple times")
-				}
-				if tok, _ = d.dec.ReadToken(); tok.Kind() != '"' {
-					return errors.BadRequest("property 'sentAt' is not a valid string")
-				}
-				d.sentAt, err = iso8601.ParseString(tok.String())
-				if err != nil {
-					return errors.BadRequest("property 'sentAt' is not a valid ISO 8601 timestamp")
-				}
-				d.sentAt = d.sentAt.UTC()
-				if y := d.sentAt.Year(); y < 1 || y > 9999 {
-					return errors.BadRequest("property 'sentAt' has an invalid year value")
-				}
-			case "writeKey":
-				if d.writeKey != "" {
-					return errors.BadRequest("property 'writeKey' is specified multiple times")
-				}
-				if tok, _ = d.dec.ReadToken(); tok.Kind() != '"' {
-					return errors.BadRequest("property 'writeKey' is not a valid string")
-				}
-				d.writeKey = tok.String()
-				if d.writeKey == "" {
-					return errors.BadRequest("property 'writeKey' cannot be empty")
-				}
-			case "connection":
-				if tok, _ = d.dec.ReadToken(); tok.Kind() != '0' {
-					return errors.BadRequest("property 'connection' is not a number")
-				}
-				connection, _ := tok.Int()
-				if connection < 1 || connection > math.MaxInt32 {
-					return errors.BadRequest("property 'connection' is not a valid connection identifier")
-				}
-				d.connection = connection
+			d.batch = batch
+		case "context":
+			kind := d.dec.PeekKind()
+			if kind != '{' {
+				return errors.BadRequest("property 'context' is not a valid object")
 			}
+			d.context, err = d.decodeContext(true)
+			if err != nil {
+				return err
+			}
+		case "sentAt":
+			if !d.sentAt.IsZero() {
+				return errors.BadRequest("property 'sentAt' is specified multiple times")
+			}
+			if tok, _ = d.dec.ReadToken(); tok.Kind() != '"' {
+				return errors.BadRequest("property 'sentAt' is not a valid string")
+			}
+			d.sentAt, err = iso8601.ParseString(tok.String())
+			if err != nil {
+				return errors.BadRequest("property 'sentAt' is not a valid ISO 8601 timestamp")
+			}
+			d.sentAt = d.sentAt.UTC()
+			if y := d.sentAt.Year(); y < 1 || y > 9999 {
+				return errors.BadRequest("property 'sentAt' has an invalid year value")
+			}
+		case "writeKey":
+			if d.writeKey != "" {
+				return errors.BadRequest("property 'writeKey' is specified multiple times")
+			}
+			if tok, _ = d.dec.ReadToken(); tok.Kind() != '"' {
+				return errors.BadRequest("property 'writeKey' is not a valid string")
+			}
+			d.writeKey = tok.String()
+			if d.writeKey == "" {
+				return errors.BadRequest("property 'writeKey' cannot be empty")
+			}
+		case "connection":
+			if tok, _ = d.dec.ReadToken(); tok.Kind() != '0' {
+				return errors.BadRequest("property 'connection' is not a number")
+			}
+			connection, _ := tok.Int()
+			if connection < 1 || connection > math.MaxInt32 {
+				return errors.BadRequest("property 'connection' is not a valid connection identifier")
+			}
+			d.connection = connection
 		}
-		if d.batch == nil {
-			return errors.BadRequest("property 'batch' is missing")
-		}
-		d.payload.Reset()
-		d.payload.Write(d.batch)
-		d.dec.Reset(&d.payload)
 	}
+	if d.batch == nil {
+		// It is a single-event request. Reparse the entire request body
+		d.payload = bytes.NewBuffer(body)
+	} else {
+		// It is a batch-event request. Parse only the slice of events.
+		d.typ = "batch"
+		d.payload = bytes.NewBuffer(d.batch)
+	}
+	d.dec.Reset(d.payload)
 
 	if d.sentAt.IsZero() {
 		d.sentAt = d.receivedAt
@@ -421,6 +433,9 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	// Type.
 	typ, ok := event["type"].(string)
 	if !ok {
+		if d.typ == "" {
+			return nil, errors.BadRequest("property 'type' is required for a single-event request")
+		}
 		if d.typ == "batch" {
 			return nil, errors.BadRequest("property 'type' is required for a batch request")
 		}
