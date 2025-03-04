@@ -97,7 +97,9 @@ func TestExportAndImportParquet(t *testing.T) {
 		{
 			"my_datetime": time.Date(2012, 12, 21, 15, 30, 2, 123456789, time.UTC),
 			"my_date":     time.Date(2012, 12, 21, 0, 0, 0, 0, time.UTC),
-			"my_time":     time.Date(1970, 1, 1, 15, 30, 2, 123456789, time.UTC),
+			// Note that the nanoseconds part is truncated to zero in this test;
+			// this is due to the issue: https://github.com/meergo/meergo/issues/1392.
+			"my_time": time.Date(1970, 1, 1, 15, 30, 2, 123456000, time.UTC),
 		},
 		{
 			"my_date": time.Date(1900, 12, 21, 0, 0, 0, 0, time.UTC), // before epoch.

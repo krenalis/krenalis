@@ -364,7 +364,10 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 			}
 		case types.TimeKind:
 			if ts, ok := record[p.Name].(time.Time); ok {
-				converted[p.Name] = ts.UnixNano()
+				// Time values are exported with microseconds precision instead
+				// of nanoseconds for this reason:
+				// https://github.com/meergo/meergo/issues/1392.
+				converted[p.Name] = ts.UnixMicro()
 				continue
 			}
 		case types.YearKind:
@@ -538,12 +541,15 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.DATE = parquet.NewDateType()
 		case types.TimeKind:
+			// Time values are exported with microseconds precision instead of
+			// nanoseconds for this reason:
+			// https://github.com/meergo/meergo/issues/1392.
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.TIME = parquet.NewTimeType()
 			col.SchemaElement.LogicalType.TIME.IsAdjustedToUTC = true
 			col.SchemaElement.LogicalType.TIME.Unit = parquet.NewTimeUnit()
-			col.SchemaElement.LogicalType.TIME.Unit.NANOS = parquet.NewNanoSeconds()
+			col.SchemaElement.LogicalType.TIME.Unit.MICROS = parquet.NewMicroSeconds()
 		case types.YearKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
 		case types.UUIDKind:
