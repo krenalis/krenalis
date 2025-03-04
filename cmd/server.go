@@ -186,7 +186,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		case strings.HasPrefix(r.URL.Path, "/webhook/"):
 			core.ServeWebhook(w, r)
 			return
-		case strings.HasPrefix(r.URL.Path, "/ui/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
+		case r.URL.Path == "/ui" || strings.HasPrefix(r.URL.Path, "/ui/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
 			assets.ServeHTTP(w, r)
 			return
 		case metrics.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
