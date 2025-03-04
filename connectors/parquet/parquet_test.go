@@ -13,6 +13,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"os/exec"
 	"reflect"
 	"strconv"
 	"testing"
@@ -150,6 +151,16 @@ func TestExportAndImportParquet(t *testing.T) {
 		t.Fatalf("expected to receive %d ack(s), got %v", len(exportedRecords), recordReader.acksReceived)
 	}
 	t.Logf("correctly received %d ack(s)", recordReader.acksReceived)
+
+	// Check the exported file with Pandas.
+	cmd := exec.Command("python", "test_parquet_file.py", parquetFileName)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		t.Fatalf("validation of Parquet file using Pandas failed: %s. The test's output may contain some additional information", err)
+	}
+	t.Logf("the exported Parquet file has been validated correctly by Pandas")
 
 	// Import the Parquet file.
 	recordWriter := &testRecordWriter{
