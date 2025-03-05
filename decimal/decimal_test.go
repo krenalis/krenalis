@@ -10,6 +10,7 @@ package decimal
 import (
 	"bytes"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -225,6 +226,168 @@ func Test_Decimal_Value(t *testing.T) {
 		}
 	}
 
+}
+
+func Test_Binary(t *testing.T) {
+
+	tests := []struct {
+		b         []byte
+		precision int
+		scale     int
+		expected  string
+		err       error
+	}{
+		{[]byte{0x00}, 2, 0, "0", nil},
+		{[]byte{0x00}, 2, -2, "0.00", nil},
+		{[]byte{0x00, 0x00, 0x00}, 2, 0, "0", nil},
+		{[]byte{0x00, 0x00, 0x00}, 10, -1, "0", nil},
+		{[]byte{0xff}, 2, 0, "-1", nil},
+		{[]byte{0xff}, 1, 1, "-0.1", nil},
+		{[]byte{0x01}, 2, 0, "1", nil},
+		{[]byte{0x0, 0x4a, 0x1}, 5, 4, "1.8945", nil},
+		{[]byte{0x13, 0x88}, 4, 0, "5000", nil},
+		{[]byte{0xff, 0xb1, 0xfb, 0x13}, 7, 3, "-5113.069", nil},
+		{[]uint8{0xfe, 0xd5, 0xfa, 0xd, 0xff}, 20, 6, "-5000.000001", nil},
+		{[]byte{0xff, 0xff, 0xff, 0xcf}, 2, 0, "-49", nil},
+		{[]byte{0x1, 0xa}, 3, 0, "266", nil},
+		{[]byte{0x00, 0x3A, 0x35, 0x88, 0x29, 0x51}, 100, 0, "250006219089", nil},
+		{
+			[]byte{0xcc, 0xfd, 0x15, 0xe6, 0x3, 0x8a, 0x20, 0x7c, 0xc8, 0x18, 0xba},
+			1000, 0, "-61668979943926223154440006", nil,
+		},
+		{
+			[]byte{0x0, 0x9b, 0x81, 0x66, 0xbf, 0x96, 0x4b, 0xe2, 0xd3, 0x7c, 0x19, 0x53, 0xc1, 0x89, 0xc5, 0xe0, 0x4e, 0x1a, 0xa, 0x98, 0x2, 0xcb, 0xb6, 0x81, 0x40},
+			200, 0, "3812983129381243243243293812938129839128391283912893432128", nil,
+		},
+		{[]byte{0xab, 0x54, 0xa9, 0x8e, 0xfc, 0x35, 0xe6, 0x55}, 20, 0, "-6101065163598338475", nil},
+		{[]byte{0x00, 0xab, 0x54, 0xa9, 0x8e, 0xfc, 0x35, 0xe6, 0x55}, 20, 0, "12345678910111213141", nil},
+		{[]byte{0xff, 0xff, 0x54, 0xab, 0x56, 0x71, 0x3, 0xca, 0x19, 0xab}, 20, 0, "-12345678910111213141", nil},
+		{[]byte{0x1, 0xa}, 2, 0, "0", ErrOutOfRange},               // 266
+		{[]byte{0xff, 0xb1, 0xfb, 0x13}, 6, 3, "0", ErrOutOfRange}, // -5113.069
+		{[]byte{0x01}, 2, 3, "0", ErrOutOfRange},                   // 1
+		{[]byte{}, 5, 3, "0", errors.New("invalid empty binary")},
+		{nil, 5, 3, "0", errors.New("invalid empty binary")},
+	}
+
+	for _, test := range tests {
+		got, err := Binary(test.b, test.precision, test.scale)
+		if !reflect.DeepEqual(test.err, err) {
+			t.Fatalf("Binary(%#v, %d, %d): expected error '%#v', got error '%#v'", test.b, test.precision, test.scale, test.err, err)
+		}
+		if !MustParse(test.expected).Equal(got) {
+			t.Fatalf("Binary(%#v, %d, %d): expected %q, got %q", test.b, test.precision, test.scale, test.expected, got)
+		}
+	}
+
+}
+
+func Test_Decimal_Binary(t *testing.T) {
+
+	tests := []struct {
+		x        string
+		scale    int
+		expected []byte
+		err      error
+	}{
+		{"0", 0, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, nil},
+		{"-1", 0, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, nil},
+		{"0.1", 1, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, nil},
+		{"1.62805", 5, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x7b, 0xf5}, nil},
+		{"1.62805", 10, []byte{0x0, 0x0, 0x0, 0x3, 0xca, 0x64, 0xb7, 0x20}, nil},
+		{"0.00123", 7, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0xc}, nil},
+		{"-0.00123", 7, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xcf, 0xf4}, nil},
+		{"0.00123", 4, nil, ErrOutOfRange},
+		{"803.691", 3, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0xc, 0x43, 0x6b}, nil},
+		{"803.691", 5, []byte{0x0, 0x0, 0x0, 0x0, 0x4, 0xca, 0x55, 0xcc}, nil},
+		{"10", 0, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa}, nil},
+		{"10", 1, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x64}, nil},
+		{"10", 5, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0xf, 0x42, 0x40}, nil},
+		{"10", 50, []byte{0x2, 0xac, 0x3a, 0x4e, 0xdb, 0xbf, 0xb8, 0x1, 0x4e, 0x3b, 0xa8, 0x34, 0x11, 0xe9, 0x15, 0xe8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, nil},
+		{"-10", 0, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf6}, nil},
+		{"-10", 1, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x9c}, nil},
+		{"-10", 5, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xbd, 0xc0}, nil},
+		{"-10", 50, []byte{0xfd, 0x53, 0xc5, 0xb1, 0x24, 0x40, 0x47, 0xfe, 0xb1, 0xc4, 0x57, 0xcb, 0xee, 0x16, 0xea, 0x18, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, nil},
+		{"92746538192057413698210", 0, []byte{0x13, 0xa3, 0xcc, 0xc6, 0xe5, 0x74, 0xed, 0xfc, 0x82, 0xa2}, nil},
+		{"-765375394218563396714.3382607", 7, []byte{0xe7, 0x44, 0xf6, 0x8f, 0x69, 0x1f, 0xd7, 0x0, 0x26, 0x94, 0x11, 0xb1}, nil},
+		{"15307613224406839111403498083672134790953339307983.90091", 10, []byte{0x18, 0x62, 0xed, 0x64, 0x38, 0x27, 0x74, 0xd0, 0xc1, 0x83, 0xe4, 0x48, 0x3f, 0x5f, 0x87, 0x53, 0xef, 0xc9, 0xbe, 0xb1, 0xae, 0x90, 0xd5, 0x50, 0xe0}, nil},
+		{"12345678910111213141", 0, []byte{0x00, 0xab, 0x54, 0xa9, 0x8e, 0xfc, 0x35, 0xe6, 0x55}, nil},
+		{"-12345678910111213141", 0, []byte{0xff, 0x54, 0xab, 0x56, 0x71, 0x3, 0xca, 0x19, 0xab}, nil},
+		{"6.890", 0, nil, ErrOutOfRange},
+		{"6.890", 1, nil, ErrOutOfRange},
+		{"-79.061", 2, nil, ErrOutOfRange},
+	}
+
+	for _, test := range tests {
+		got, err := MustParse(test.x).Binary(test.scale)
+		if !reflect.DeepEqual(test.err, err) {
+			t.Fatalf("%q.Binary(%d): expected error '%#v', got error '%#v'", test.x, test.scale, test.err, err)
+		}
+		if !bytes.Equal(test.expected, got) {
+			t.Fatalf("%q.Binary(%d): expected %#v, got %#v", test.x, test.scale, test.expected, got)
+		}
+
+		if test.err == nil {
+			d := MustParse(test.x)
+			b, err := d.Binary(test.scale)
+			if err != nil {
+				t.Fatal(err)
+			}
+			d2, err := Binary(b, MaxPrecision, test.scale)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !d.Equal(d2) {
+				t.Fatalf("Binary(Parse(%q).Binary(%d), %d, %d) != Parse(%q)", test.x, test.scale, MaxPrecision, test.scale, test.x)
+			}
+		}
+	}
+
+}
+
+// TestBinaryBackAndForth tests whether a Decimal, put in binary form by calling
+// the Binary method and again in Decimal form with the Binary function, becomes
+// the same number again.
+//
+// Unlike other tests, this one favors the simplicity of adding new tests since
+// it is sufficient to indicate only the decimal, and not its binary
+// representation (as Test_Decimal_Binary does).
+func TestBinaryBackAndForth(t *testing.T) {
+	tests := []struct {
+		d         Decimal
+		precision int
+		scale     int
+	}{
+		{d: MustParse("1"), precision: 1, scale: 0},
+		{d: MustParse("-1"), precision: 1, scale: 0},
+		{d: MustParse("3.2"), precision: 2, scale: 1},
+		{d: MustParse("100"), precision: 3, scale: 0},
+		{d: MustParse("-16777216"), precision: 8, scale: 0},
+		{d: MustParse("999999999"), precision: 9, scale: 0},
+		{d: MustParse("2130706432"), precision: 10, scale: 0},
+		{d: MustParse("-999999999"), precision: 9, scale: 0},
+		{d: MustParse("12345678910111213141"), precision: 20, scale: 0},
+		{d: MustParse("-6101065163598338475"), precision: 19, scale: 0},
+		{d: MustParse("-12345678910111213141"), precision: 20, scale: 0},
+		{d: MustParse("12345678901234567890.12345678901234567890"), precision: 40, scale: 20},
+		{d: MustParse("-12345678901234567890.12345678901234567890"), precision: 40, scale: 20},
+		{d: MustParse("-999999999999"), precision: 40, scale: 20},
+	}
+	for _, test := range tests {
+		t.Run(fmt.Sprint(test.d, test.scale), func(t *testing.T) {
+			bytes, err := test.d.Binary(test.scale)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := Binary(bytes, test.precision, test.scale)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !test.d.Equal(got) {
+				t.Fatalf("expected %v, got %v (from bytes %v)", test.d, got, bytes)
+			}
+			t.Logf("successfully got back %v from bytes %v", got, bytes)
+		})
+	}
 }
 
 func Test_Float64(t *testing.T) {

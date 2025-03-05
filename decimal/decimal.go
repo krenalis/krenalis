@@ -14,22 +14,23 @@
 //
 // [Decimal] values can be created using factory functions:
 //
-//	New(31, 5)                // creates the decimal 0.00031
-//	Int(-23, 2, 0)            // creates the decimal -23
-//	Uint(540, 3, 0)           // creates the decimal 540
-//	Float64(690.366, 5, 3)    // creates the decimal 690.366
-//	Parse("737.012e2", 10, 3) // creates the decimal 73701.2
+//	New(31, 5)                       // creates the decimal 0.00031
+//	Int(-23, 2, 0)                   // creates the decimal -23
+//	Uint(540, 3, 0)                  // creates the decimal 540
+//	Float64(690.366, 5, 3)           // creates the decimal 690.366
+//	Parse("737.012e2", 10, 3)        // creates the decimal 73701.2
+//	Binary([]byte{0x04, 0xe2}, 8, 3) // creates the decimal 1.25
 //
 // If the decimal’s mantissa fits into a uint64, no heap allocation occurs.
 // Precision defines the total number of significant digits, while scale
 // specifies the number of digits after the decimal point. Precision must be in
 // the range [1, MaxPrecision], and scale must be within [MinScale, MaxScale].
 //
-// The [Int], [Uint], and [Parse] functions ensure the decimal fits within the
-// specified precision and scale, returning an error otherwise. The [New] function
-// accepts a mantissa and scale to create the decimal. [Float64] rounds the given
-// float to the specified scale and returns an error if it exceeds the provided
-// precision.
+// The [Int], [Uint], [Parse], and [Binary] functions ensure the decimal fits
+// within the specified precision and scale, returning an error otherwise. The
+// [New] function accepts a mantissa and scale to create the decimal. [Float64]
+// rounds the given float to the specified scale and returns an error if it
+// exceeds the provided precision.
 //
 // Each factory function, except [New], has a corresponding Must variant. These
 // Must functions do not impose any additional precision and scale limits beyond
@@ -80,6 +81,77 @@ func (x Decimal) Append(buf []byte) []byte {
 		s = x.b.String() // TODO(marco): Optimize by avoiding string allocations.
 	}
 	return append(buf, s...)
+}
+
+// Binary returns the decimal value represented by x as an integer encoded in
+// big-endian two’s complement form. The integer itself is unscaled, while the
+// scale parameter (which must be >= 0) specifies the number of decimal places
+// to consider when interpreting the value.
+//
+// If x cannot be represented exactly with the provided scale, Binary returns
+// [ErrOutOfRange]. This occurs when the scale of x is greater than the
+// specified scale.
+//
+// The actual decimal value can be obtained by dividing the unscaled integer
+// by 10^scale. For example, the decimal value 1.25 is encoded, based on the
+// scale parameter, as:
+//
+//	{0x7d}             if scale == 2  // 125
+//	{0x04, 0xe2}       if scale == 3  // 1250
+//	{0x01, 0xe8, 0x48} if scale == 5  // 125000
+//
+// See the [Binary] function for the inverse operation.
+func (x Decimal) Binary(scale int) ([]byte, error) {
+	if scale < 0 || scale > MaxScale {
+		return nil, ErrOutOfRange
+	}
+	// TODO(marco): The copy is required due to the Reduce and Quantize operations.
+	// TODO(marco): For small mantissas, the returned slice length can be reduced.
+	d := new(decimal.Big).Copy(&x.b)
+	decimal.ContextUnlimited.Reduce(d)
+	_, neg, coefficient, exp := d.Decompose(nil)
+	e := scale + int(exp)
+	if e < 0 {
+		return nil, ErrOutOfRange
+	}
+	if e > 0 {
+		decimal.ContextUnlimited.Quantize(d, scale)
+		_, _, coefficient, _ = d.Decompose(nil)
+	}
+	if neg {
+		for i := range coefficient {
+			coefficient[i] = ^coefficient[i]
+		}
+		carry := byte(1)
+		for i := len(coefficient) - 1; i >= 0; i-- {
+			coefficient[i] += carry
+			if coefficient[i] != 0 {
+				break
+			}
+		}
+		// When the number is negative, if the msb bit is 0 then it is necessary
+		// to prepend a 0xff byte to it, because, since the number is
+		// represented in two's complement, the msb must be 1 when the number is
+		// negative.
+		//
+		// TODO: review and optimize this.
+		msbIsZero := (coefficient[0] & 0b1000_0000) == 0
+		if msbIsZero {
+			coefficient = append([]byte{0xff}, coefficient...)
+		}
+	} else {
+		// When the number is positive, if the msb bit is 1 then it is necessary
+		// to prepend a zero-byte to it, because, since the number is
+		// represented in two's complement, the msb must be 0 when the number is
+		// positive.
+		//
+		// TODO: review and optimize this.
+		msbIsOne := (coefficient[0] & 0b1000_0000) != 0
+		if msbIsOne {
+			coefficient = append([]byte{0x00}, coefficient...)
+		}
+	}
+	return coefficient, nil
 }
 
 // Cmp compares x and y and returns:
@@ -228,6 +300,45 @@ func (x Decimal) WriteTo(w io.Writer) (int64, error) {
 	state := fmtState{w: w}
 	x.b.Format(&state, 's') // TODO(marco): Optimize and test to ensure that WriteTo does not allocate.
 	return state.result()
+}
+
+// Binary returns the decimal represented by b, interpreted as a big-endian
+// two’s complement integer, with the specified scale. It requires precision in
+// the range [1, [MaxPrecision]] and scale in the range [0, precision]. If the
+// resulting decimal exceeds the given precision, it returns [ErrOutOfRange].
+// An error is also returned if b is empty.
+//
+// See the [Decimal.Binary] method for the inverse operation.
+func Binary(b []byte, precision, scale int) (Decimal, error) {
+	if len(b) == 0 {
+		return Decimal{}, errors.New("invalid empty binary")
+	}
+	if err := validPrecisionScale(precision, scale); err != nil {
+		return Decimal{}, err
+	}
+	neg := (b[0] & 0x80) != 0
+	// If negative, convert it to its absolute value.
+	if neg {
+		for i := range b {
+			b[i] = ^b[i]
+		}
+		for i := len(b) - 1; i >= 0; i-- {
+			b[i]++
+			if b[i] != 0 {
+				break
+			}
+		}
+	}
+	bi := new(big.Int).SetBytes(b)
+	if neg {
+		bi = bi.Neg(bi)
+	}
+	n := Decimal{}
+	n.b.SetBigMantScale(bi, scale)
+	if n.b.Precision() > precision {
+		return Decimal{}, ErrOutOfRange
+	}
+	return n, nil
 }
 
 // Float64 returns the decimal represented by f, rounded down scale; where
