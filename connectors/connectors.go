@@ -27,6 +27,7 @@ import (
 	_ "github.com/meergo/meergo/connectors/parquet"
 	_ "github.com/meergo/meergo/connectors/postgresql"
 	_ "github.com/meergo/meergo/connectors/rabbitmq"
+	_ "github.com/meergo/meergo/connectors/rudderstack"
 	_ "github.com/meergo/meergo/connectors/s3"
 	_ "github.com/meergo/meergo/connectors/segment"
 	_ "github.com/meergo/meergo/connectors/server"

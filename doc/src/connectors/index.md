@@ -10,6 +10,7 @@
   <li><a href="sources/klaviyo"> Klaviyo</a></li>
   <li><a href="sources/stripe"> Stripe</a></li>
   <li><a href="sources/segment"> Segment</a></li>
+  <li><a href="sources/rudderstack"> RudderStack</a></li>
   <li><a href="sources/excel"> Excel</a></li>
   <li><a href="sources/csv"> CSV</a></li>
   <li><a href="sources/json"> JSON</a></li>

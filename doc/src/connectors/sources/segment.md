@@ -55,12 +55,12 @@ Then proceed to create a Webhook destination in Segment:
    * **Batch Size**: 500
    * **Headers**:
      1. Click **Add Mapping Field**
-     2. Enter "**Bearer <EVENT_WRITE_KEY>**" on the left, where "<EVENT_WRITE_KEY>" is the write key you copied earlier.
-     3. Enter **Authorization** on the right.
+     2. Enter "**Bearer <EVENT_WRITE_KEY>**" on the left, where "<EVENT_WRITE_KEY>" is the write key you copied earlier
+     3. Enter **Authorization** on the right
    * **Enable Batching**: Yes
 13. Click **Save** to create the action.
 14. Click the switch corresponding to the action to enable it. 
 
 The following image shows an example of how to fill in the fields:
 
-![Testo alternativo](segment-webhook.png)
+![How to fill out the form](segment-webhook.png)
