@@ -22,7 +22,7 @@ import (
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
 
-	"github.com/golang/snappy"
+	"github.com/klauspost/compress/snappy"
 )
 
 func TestExportUsersToFile(t *testing.T) {

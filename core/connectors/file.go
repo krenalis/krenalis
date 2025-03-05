@@ -29,7 +29,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/types"
 
-	"github.com/golang/snappy"
+	"github.com/klauspost/compress/snappy"
 )
 
 type fileContentTypeConnector interface {
