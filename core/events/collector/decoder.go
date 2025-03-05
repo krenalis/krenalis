@@ -746,7 +746,7 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 			tok, _ = d.dec.ReadToken()
 			sessionId, err := tok.Int()
 			if err != nil {
-				return nil, errors.BadRequest("property 'sessionId' is not a 64-bit integer")
+				return nil, errors.BadRequest("property 'context.sessionId' is not a 64-bit integer")
 			}
 			if session, ok := context["session"].(map[string]any); ok {
 				session["id"] = sessionId
