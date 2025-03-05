@@ -709,11 +709,23 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 		}
 		kind = d.dec.PeekKind()
 		switch name {
-		case "direct", "sessionStart":
+		case "direct":
 			if kind != 't' && kind != 'f' {
-				return nil, errors.BadRequest("property 'context.%s' is not a valid boolean", name)
+				return nil, errors.BadRequest("property 'context.direct' is not a valid boolean")
 			}
 			context[name] = kind == 't'
+			_ = d.dec.SkipValue()
+		case "sessionStart":
+			if kind != 't' && kind != 'f' {
+				return nil, errors.BadRequest("property 'context.sessionStart' is not a valid boolean")
+			}
+			if start := kind == 't'; start {
+				if session, ok := context["session"].(map[string]any); ok {
+					session["start"] = start
+				} else {
+					context["session"] = map[string]any{"start": start}
+				}
+			}
 			_ = d.dec.SkipValue()
 		case "ip", "locale", "groupId", "timezone", "userAgent":
 			if kind != '"' {
@@ -732,9 +744,14 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 				return nil, errors.BadRequest("property 'context.sessionId' is not a valid number")
 			}
 			tok, _ = d.dec.ReadToken()
-			context["sessionId"], err = tok.Int()
+			sessionId, err := tok.Int()
 			if err != nil {
 				return nil, errors.BadRequest("property 'sessionId' is not a 64-bit integer")
+			}
+			if session, ok := context["session"].(map[string]any); ok {
+				session["id"] = sessionId
+			} else {
+				context["session"] = map[string]any{"id": sessionId}
 			}
 		case "traits":
 			if kind == 'n' {
