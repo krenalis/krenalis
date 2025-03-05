@@ -16,6 +16,7 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 		case 'array':
 		case 'object':
 		case 'map':
+		case 'decimal':
 			value = JSONbig.stringify(cell.value);
 			break;
 		case 'datetime':
