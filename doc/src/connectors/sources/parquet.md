@@ -50,46 +50,53 @@ This table describes how Parquet physical types (without any logical type annota
 
 This table describes how Parquet logical and converted types are imported into Meergo.
 
-| Parquet Type             | Imported in Meergo as                  |
-|--------------------------|----------------------------------------|
-| `STRING`                 | `text`                                 |
-| `ENUM`                   | `text`                                 |
-| `UUID`                   | `uuid`                                 |
-| `INT(8, true)`           | `int(8)`                               |
-| `INT(16, true)`          | `int(16)`                              |
-| `INT(32, true)`          | `int(32)`                              |
-| `INT(64, true)`          | `int(64)`                              |
-| `INT(8, false)`          | `uint(8)`                              |
-| `INT(16, false)`         | `uint(16)`                             |
-| `INT(32, false)`         | `uint(32)`                             |
-| `INT(64, false)`         | `uint(64)`                             |
-| `INT_8`                  | `int(8)`                               |
-| `INT_16`                 | `int(16)`                              |
-| `INT_32`                 | `int(32)`                              |
-| `INT_64`                 | `int(64)`                              |
-| `UINT_8`                 | `uint(8)`                              |
-| `UINT_16`                | `uint(16)`                             |
-| `UINT_32`                | `uint(32)`                             |
-| `UINT_64`                | `uint(64)`                             |
-| `DECIMAL`                | `decimal` [^decimal_limits]            |
-| `DECIMAL` converted type | Not supported [^decimal_converted]     |
-| `FLOAT16`                | Not supported                          |
-| `DATE`                   | `date`                                 |
-| `TIME`                   | `time`                                 |
-| `TIME_MILLIS`            | `time`                                 |
-| `TIME_MICROS`            | `time`                                 |
-| `TIMESTAMP`              | `datetime`                             |
-| `TIMESTAMP_MILLIS`       | Not supported [^timestamp_milli_micro] |
-| `TIMESTAMP_MICROS`       | Not supported [^timestamp_milli_micro] |
-| `INTERVAL`               | Not supported                          |
-| `JSON`                   | `json`                                 |
-| `BSON`                   | Not supported [^bson_support]          |
-| `VARIANT`                | Not supported                          |
-| `GEOMETRY`               | Not supported                          |
-| `GEOGRAPHY`              | Not supported                          |
-| `LIST`                   | Not supported [^list_support]          |
-| `MAP`                    | Not supported [^map_support]           |
-| `UNKNOWN`                | Not supported                          |
+| Logical (or Converted) type | Underlying physical type | Imported in Meergo as                  |
+|-----------------------------|--------------------------|----------------------------------------|
+| `STRING`                    | `BYTE_ARRAY`             | `text`                                 |
+| `ENUM`                      | `BYTE_ARRAY`             | `text`                                 |
+| `UUID`                      | `FIXED_LEN_BYTE_ARRAY`   | `uuid`                                 |
+| `INT(8, true)`              | `INT32`                  | `int(8)`                               |
+| `INT(16, true)`             | `INT32`                  | `int(16)`                              |
+| `INT(32, true)`             | `INT32`                  | `int(32)`                              |
+| `INT(64, true)`             | `INT64`                  | `int(64)`                              |
+| `INT(8, false)`             | `INT32`                  | `uint(8)`                              |
+| `INT(16, false)`            | `INT32`                  | `uint(16)`                             |
+| `INT(32, false)`            | `INT32`                  | `uint(32)`                             |
+| `INT(64, false)`            | `INT64`                  | `uint(64)`                             |
+| `INT_8`                     | `INT32`                  | `int(8)`                               |
+| `INT_16`                    | `INT32`                  | `int(16)`                              |
+| `INT_32`                    | `INT32`                  | `int(32)`                              |
+| `INT_64`                    | `INT64`                  | `int(64)`                              |
+| `UINT_8`                    | `INT32`                  | `uint(8)`                              |
+| `UINT_16`                   | `INT32`                  | `uint(16)`                             |
+| `UINT_32`                   | `INT32`                  | `uint(32)`                             |
+| `UINT_64`                   | `INT64`                  | `uint(64)`                             |
+| `DECIMAL`                   | `INT32`                  | `decimal` [^decimal_limits]            |
+| `DECIMAL`                   | `INT64`                  | `decimal` [^decimal_limits]            |
+| `DECIMAL`                   | `FIXED_LEN_BYTE_ARRAY`   | `decimal` [^decimal_limits]            |
+| `DECIMAL`                   | `BYTE_ARRAY`             | `decimal` [^decimal_limits]            |
+| `DECIMAL` (converted type)  | -                        | Not supported [^decimal_converted]     |
+| `FLOAT16`                   | -                        | Not supported                          |
+| `DATE`                      | `INT32`                  | `date`                                 |
+| `TIME` (unit `MILLIS`)      | `INT32`                  | `time`                                 |
+| `TIME` (unit `MICROS`)      | `INT64`                  | `time`                                 |
+| `TIME` (unit `NANOS`)       | `INT64`                  | `time`                                 |
+| `TIME_MILLIS`               | `INT32`                  | `time`                                 |
+| `TIME_MICROS`               | `INT64`                  | `time`                                 |
+| `TIMESTAMP` (unit `MILLIS`) | `INT64`                  | `datetime`                             |
+| `TIMESTAMP` (unit `MICROS`) | `INT64`                  | `datetime`                             |
+| `TIMESTAMP` (unit `NANOS`)  | `INT64`                  | `datetime`                             |
+| `TIMESTAMP_MILLIS`          | -                        | Not supported [^timestamp_milli_micro] |
+| `TIMESTAMP_MICROS`          | -                        | Not supported [^timestamp_milli_micro] |
+| `INTERVAL`                  | -                        | Not supported                          |
+| `JSON`                      | `BYTE_ARRAY`             | `json`                                 |
+| `BSON`                      | -                        | Not supported [^bson_support]          |
+| `VARIANT`                   | -                        | Not supported                          |
+| `GEOMETRY`                  | -                        | Not supported                          |
+| `GEOGRAPHY`                 | -                        | Not supported                          |
+| `LIST`                      | -                        | Not supported [^list_support]          |
+| `MAP`                       | -                        | Not supported [^map_support]           |
+| `UNKNOWN`                   | -                        | Not supported                          |
 
 #### Column groups
 
