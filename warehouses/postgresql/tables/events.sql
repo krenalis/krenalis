@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS events (
     "user" UUID,
     "connection" integer NOT NULL,
     "anonymous_id" character varying NOT NULL,
+    "channel" character varying NOT NULL,
     "category" character varying NOT NULL,
     "context_app_name" character varying NOT NULL,
     "context_app_version" character varying NOT NULL,

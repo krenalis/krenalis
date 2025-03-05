@@ -23,6 +23,7 @@ var eventColumnNameFromPropertyPath = map[string]string{
 	"user":                             "user",
 	"connection":                       "connection",
 	"anonymousId":                      "anonymous_id",
+	"channel":                          "channel",
 	"category":                         "category",
 	"context.app.name":                 "context_app_name",
 	"context.app.version":              "context_app_version",

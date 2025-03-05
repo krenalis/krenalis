@@ -348,7 +348,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 				continue
 			}
 			fallthrough
-		case "category", "event", "name", "sentAt", "type", "previousId":
+		case "channel", "category", "event", "name", "sentAt", "type", "previousId":
 			if _, ok := event[name]; ok {
 				return nil, errors.BadRequest("property '%s' is specified multiple times", name)
 			}

@@ -24,6 +24,7 @@ var Schema = types.Object([]types.Property{
 	{Name: "user", Type: types.UUID(), ReadOptional: true},
 	{Name: "connection", Type: types.Int(32)},
 	{Name: "anonymousId", Type: types.Text()},
+	{Name: "channel", Type: types.Text()},
 	{Name: "category", Type: types.Text(), ReadOptional: true},
 	{
 		Name: "context",
@@ -178,6 +179,10 @@ func NewConnectorEvent(event Event) ConnectorEvent {
 
 func (c ConnectorEvent) AnonymousId() string {
 	return c.event["anonymousId"].(string)
+}
+
+func (c ConnectorEvent) Channel() string {
+	return c.event["channel"].(string)
 }
 
 func (c ConnectorEvent) Category() string {

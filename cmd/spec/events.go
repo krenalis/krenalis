@@ -140,6 +140,7 @@ var eventContextType = types.Object([]types.Property{
 
 var eventProperties = []types.Property{
 	{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
+	{Name: "channel", Type: types.Text(), ReadOptional: true},
 	{Name: "category", Type: types.Text(), ReadOptional: true},
 	{
 		Name: "context",
@@ -214,6 +215,10 @@ func init() {
 								Placeholder:    `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`,
 								UpdateRequired: true,
 								Description:    "Either `anonymousId` or `userId` must be provided and cannot be left empty.",
+							},
+							{
+								Name: "channel",
+								Type: types.Text(),
 							},
 							{
 								Name:        "category",
@@ -342,6 +347,10 @@ func init() {
 						Description:    "Either `anonymousId` or `userId` must be provided and cannot be left empty.",
 					},
 					{
+						Name: "channel",
+						Type: types.Text(),
+					},
+					{
 						Name:        "category",
 						Type:        types.Text(),
 						Description: "It is allowed only for page events.",
@@ -439,7 +448,7 @@ func init() {
 					},
 					{
 						Name:        "order",
-						Type:        types.Text().WithValues("id", "user", "connection", "anonymousId", "category", "event", "groupId", "messageId", "name", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type", "userId"),
+						Type:        types.Text().WithValues("id", "user", "connection", "anonymousId", "channel", "category", "event", "groupId", "messageId", "name", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type", "userId"),
 						Placeholder: `"..."`,
 						Description: "The name of the property by which to sort the events to be returned.",
 					},

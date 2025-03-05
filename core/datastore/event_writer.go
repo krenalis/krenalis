@@ -71,7 +71,7 @@ func (ew *EventWriter) Close(ctx context.Context) {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (ew *EventWriter) Write(event events.Event, action int) error {
 
-	row := make([]any, 64)
+	row := make([]any, 65)
 
 	// id
 	row[0] = event["id"]
@@ -82,215 +82,222 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 	// anonymousId
 	row[2] = event["anonymousId"]
 
-	// category
-	if category, ok := event["category"]; ok {
-		row[3] = category
+	// channel
+	if channel, ok := event["channel"]; ok {
+		row[3] = channel
 	} else {
 		row[3] = ""
+	}
+
+	// category
+	if category, ok := event["category"]; ok {
+		row[4] = category
+	} else {
+		row[4] = ""
 	}
 
 	eventContext := event["context"].(map[string]any)
 
 	// app
 	if app, ok := eventContext["app"].(map[string]any); ok {
-		row[4] = app["name"]
-		row[5] = app["version"]
-		row[6] = app["build"]
-		row[7] = app["namespace"]
+		row[5] = app["name"]
+		row[6] = app["version"]
+		row[7] = app["build"]
+		row[8] = app["namespace"]
 	} else {
-		row[4], row[5], row[6], row[7] = "", "", "", ""
+		row[5], row[6], row[7], row[8] = "", "", "", ""
 	}
 
 	// browser
 	if browser, ok := eventContext["browser"].(map[string]any); ok {
-		row[8] = browser["name"]
-		row[9] = browser["other"]
-		row[10] = browser["version"]
+		row[9] = browser["name"]
+		row[10] = browser["other"]
+		row[11] = browser["version"]
 	} else {
-		row[8], row[9], row[10] = "", "", ""
+		row[9], row[10], row[11] = "", "", ""
 	}
 
 	// campaign
 	if campaign, ok := eventContext["campaign"].(map[string]any); ok {
-		row[11] = campaign["name"]
-		row[12] = campaign["source"]
-		row[13] = campaign["medium"]
-		row[14] = campaign["term"]
-		row[15] = campaign["content"]
+		row[12] = campaign["name"]
+		row[13] = campaign["source"]
+		row[14] = campaign["medium"]
+		row[15] = campaign["term"]
+		row[16] = campaign["content"]
 	} else {
-		row[11], row[12], row[13], row[14], row[15] = "", "", "", "", ""
+		row[12], row[13], row[14], row[15], row[16] = "", "", "", "", ""
 	}
 
 	// device
 	if device, ok := eventContext["device"].(map[string]any); ok {
-		row[16] = device["id"]
-		row[17] = device["advertisingId"]
-		row[18] = device["adTrackingEnabled"]
-		row[19] = device["manufacturer"]
-		row[20] = device["model"]
-		row[21] = device["name"]
-		row[22] = device["type"]
-		row[23] = device["token"]
+		row[17] = device["id"]
+		row[18] = device["advertisingId"]
+		row[19] = device["adTrackingEnabled"]
+		row[20] = device["manufacturer"]
+		row[21] = device["model"]
+		row[22] = device["name"]
+		row[23] = device["type"]
+		row[24] = device["token"]
 	} else {
-		row[16], row[17], row[18], row[19], row[20], row[21], row[22], row[23] = "", "", false, "", "", "", "", ""
+		row[17], row[18], row[19], row[20], row[21], row[22], row[23], row[24] = "", "", false, "", "", "", "", ""
 	}
 
 	// ip
 	if ip, ok := eventContext["ip"]; ok {
-		row[24] = ip
+		row[25] = ip
 	} else {
-		row[24] = "0.0.0.0"
+		row[25] = "0.0.0.0"
 	}
 
 	// library
 	if library, ok := eventContext["library"].(map[string]any); ok {
-		row[25] = library["name"]
-		row[26] = library["version"]
+		row[26] = library["name"]
+		row[27] = library["version"]
 	} else {
-		row[25], row[26] = "", ""
+		row[26], row[27] = "", ""
 	}
 
 	// locale
 	if locale, ok := eventContext["locale"]; ok {
-		row[27] = locale
+		row[28] = locale
 	} else {
-		row[27] = ""
+		row[28] = ""
 	}
 
 	// location
 	if location, ok := eventContext["location"].(map[string]any); ok {
-		row[28] = location["city"]
-		row[29] = location["country"]
-		row[30] = location["latitude"]
-		row[31] = location["longitude"]
-		row[32] = location["speed"]
+		row[29] = location["city"]
+		row[30] = location["country"]
+		row[31] = location["latitude"]
+		row[32] = location["longitude"]
+		row[33] = location["speed"]
 	} else {
-		row[28], row[29], row[30], row[31], row[32] = "", "", 0.0, 0.0, 0.0
+		row[29], row[30], row[31], row[32], row[33] = "", "", 0.0, 0.0, 0.0
 	}
 
 	// network
 	if network, ok := eventContext["network"].(map[string]any); ok {
-		row[33] = network["bluetooth"]
-		row[34] = network["carrier"]
-		row[35] = network["cellular"]
-		row[36] = network["wifi"]
+		row[34] = network["bluetooth"]
+		row[35] = network["carrier"]
+		row[36] = network["cellular"]
+		row[37] = network["wifi"]
 	} else {
-		row[33], row[34], row[35], row[36] = false, "", false, false
+		row[34], row[35], row[36], row[37] = false, "", false, false
 	}
 
 	// os
 	if os, ok := eventContext["os"].(map[string]any); ok {
-		row[37] = os["name"]
-		row[38] = os["version"]
+		row[38] = os["name"]
+		row[39] = os["version"]
 	} else {
-		row[37], row[38] = "", ""
+		row[38], row[39] = "", ""
 	}
 
 	// page
 	if page, ok := eventContext["page"].(map[string]any); ok {
-		row[39] = page["path"]
-		row[40] = page["referrer"]
-		row[41] = page["search"]
-		row[42] = page["title"]
-		row[43] = page["url"]
+		row[40] = page["path"]
+		row[41] = page["referrer"]
+		row[42] = page["search"]
+		row[43] = page["title"]
+		row[44] = page["url"]
 	} else {
-		row[39], row[40], row[41], row[42], row[43] = "", "", "", "", ""
+		row[40], row[41], row[42], row[43], row[44] = "", "", "", "", ""
 	}
 
 	// referrer
 	if referrer, ok := eventContext["referrer"].(map[string]any); ok {
-		row[44] = referrer["name"]
-		row[45] = referrer["version"]
+		row[45] = referrer["name"]
+		row[46] = referrer["version"]
 	} else {
-		row[44], row[45] = "", ""
+		row[45], row[46] = "", ""
 	}
 
 	// screen
 	if screen, ok := eventContext["screen"].(map[string]any); ok {
-		row[46] = screen["width"]
-		row[47] = screen["height"]
-		row[48] = screen["density"]
+		row[47] = screen["width"]
+		row[48] = screen["height"]
+		row[49] = screen["density"]
 	} else {
-		row[46], row[47], row[48] = int16(0), int16(0), decimal.Decimal{}
+		row[47], row[48], row[49] = int16(0), int16(0), decimal.Decimal{}
 	}
 
 	// session
 	if session, ok := eventContext["session"].(map[string]any); ok {
-		row[49] = session["id"]
-		row[50] = session["start"]
+		row[50] = session["id"]
+		row[51] = session["start"]
 	} else {
-		row[49], row[50] = 0, false
+		row[50], row[51] = 0, false
 	}
 
 	// timezone
 	if timezone, ok := eventContext["timezone"]; ok {
-		row[51] = timezone
-	} else {
-		row[51] = ""
-	}
-
-	// userAgent
-	if userAgent, ok := eventContext["userAgent"]; ok {
-		row[52] = userAgent
+		row[52] = timezone
 	} else {
 		row[52] = ""
 	}
 
-	// event
-	if event, ok := event["event"]; ok {
-		row[53] = event
+	// userAgent
+	if userAgent, ok := eventContext["userAgent"]; ok {
+		row[53] = userAgent
 	} else {
 		row[53] = ""
 	}
 
-	// groupId
-	if groupId, ok := event["groupId"]; ok {
-		row[54] = groupId
+	// event
+	if event, ok := event["event"]; ok {
+		row[54] = event
 	} else {
 		row[54] = ""
 	}
 
+	// groupId
+	if groupId, ok := event["groupId"]; ok {
+		row[55] = groupId
+	} else {
+		row[55] = ""
+	}
+
 	// messageId
-	row[55] = event["messageId"]
+	row[56] = event["messageId"]
 
 	// name
 	if name, ok := eventContext["name"]; ok {
-		row[56] = name
+		row[57] = name
 	} else {
-		row[56] = ""
+		row[57] = ""
 	}
 
 	// properties
 	if properties, ok := event["properties"]; ok {
-		row[57] = properties
+		row[58] = properties
 	} else {
-		row[57] = emptyJSONObject
+		row[58] = emptyJSONObject
 	}
 
 	// receivedAt
-	row[58] = event["receivedAt"]
+	row[59] = event["receivedAt"]
 
 	// sentAt
-	row[59] = event["sentAt"]
+	row[60] = event["sentAt"]
 
 	// timestamp
-	row[60] = event["timestamp"]
+	row[61] = event["timestamp"]
 
 	// traits
 	if traits, ok := event["traits"]; ok {
-		row[61] = traits
+		row[62] = traits
 	} else {
-		row[61] = emptyJSONObject
+		row[62] = emptyJSONObject
 	}
 
 	// type
-	row[62] = event["type"]
+	row[63] = event["type"]
 
 	// userId
 	if userId := event["userId"]; userId != nil {
-		row[63] = userId
+		row[64] = userId
 	} else {
-		row[63] = ""
+		row[64] = ""
 	}
 
 	ew.mu.Lock()

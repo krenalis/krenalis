@@ -221,6 +221,7 @@ type Records interface {
 // Event represents an event.
 type Event interface {
 	AnonymousId() string
+	Channel() string
 	Category() string
 	Context() EventContext
 	Event() string

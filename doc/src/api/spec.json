@@ -10551,6 +10551,13 @@
                                             "description": "Either `anonymousId` or `userId` must be provided and cannot be left empty."
                                         },
                                         {
+                                            "name": "channel",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": ""
+                                        },
+                                        {
                                             "name": "category",
                                             "type": {
                                                 "kind": "text"
@@ -11749,6 +11756,13 @@
                             "description": "Either `anonymousId` or `userId` must be provided and cannot be left empty."
                         },
                         {
+                            "name": "channel",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
                             "name": "category",
                             "type": {
                                 "kind": "text"
@@ -12479,6 +12493,7 @@
                                     "user",
                                     "connection",
                                     "anonymousId",
+                                    "channel",
                                     "category",
                                     "event",
                                     "groupId",
@@ -12568,6 +12583,14 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "channel",
+                                                "type": {
+                                                    "kind": "text"
+                                                },
+                                                "readOptional": true,
                                                 "description": ""
                                             },
                                             {
@@ -13398,6 +13421,14 @@
                                             "type": {
                                                 "kind": "text"
                                             },
+                                            "description": ""
+                                        },
+                                        {
+                                            "name": "channel",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "readOptional": true,
                                             "description": ""
                                         },
                                         {
@@ -15054,6 +15085,14 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "channel",
+                                                "type": {
+                                                    "kind": "text"
+                                                },
+                                                "readOptional": true,
                                                 "description": ""
                                             },
                                             {

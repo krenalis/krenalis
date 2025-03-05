@@ -260,9 +260,10 @@ func Test_Decoder(t *testing.T) {
 
 		// meergo.screen('login')
 		{
-			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","name":"login"}]}`,
+			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","channel":"web","name":"login"}]}`,
 			expected: []expectedEvent{{
 				event: events.Event{
+					"channel":    "web",
 					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"properties": json.Value(`{}`),
 					"type":       "screen",
