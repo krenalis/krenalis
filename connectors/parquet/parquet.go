@@ -754,8 +754,11 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			}
 			return types.Type{}, fmt.Errorf("unexpected Parquet bitWidth value: %d", lt.INTEGER.BitWidth)
 		}
-		if lt.JSON != nil || lt.BSON != nil {
+		if lt.JSON != nil {
 			return types.JSON(), nil
+		}
+		if lt.BSON != nil {
+			return types.Type{}, nil // TODO: see https://github.com/meergo/meergo/issues/1400.
 		}
 		if lt.UUID != nil {
 			return types.UUID(), nil
@@ -784,8 +787,10 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			return types.Uint(32), nil
 		case parquet.ConvertedType_UINT_64:
 			return types.Uint(64), nil
-		case parquet.ConvertedType_JSON, parquet.ConvertedType_BSON:
+		case parquet.ConvertedType_JSON:
 			return types.JSON(), nil
+		case parquet.ConvertedType_BSON:
+			return types.Type{}, nil // TODO: see https://github.com/meergo/meergo/issues/1400.
 		case parquet.ConvertedType_DECIMAL:
 			// Not supported.
 			// See https://github.com/meergo/meergo/issues/1394.

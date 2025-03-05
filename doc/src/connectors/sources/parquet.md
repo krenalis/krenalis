@@ -83,7 +83,7 @@ This table describes how Parquet logical and converted types are imported into M
 | `TIMESTAMP_MICROS`       | Not supported [^timestamp_milli_micro] |
 | `INTERVAL`               | Not supported                          |
 | `JSON`                   | `json`                                 |
-| `BSON`                   | `json`                                 |
+| `BSON`                   | Not supported [^bson_support]          |
 | `VARIANT`                | Not supported                          |
 | `GEOMETRY`               | Not supported                          |
 | `GEOGRAPHY`              | Not supported                          |
@@ -101,3 +101,4 @@ Import of columns groups is currently not supported.
 [^timestamp_milli_micro]: Support for importing `TIME_MILLIS` and `TIMESTAMP_MICROS` is discussed here: https://github.com/meergo/meergo/issues/1385
 [^decimal_converted]: `DECIMAL` converted types are not supported. See https://github.com/meergo/meergo/issues/1394.
 [^decimal_limits]: `DECIMAL` types from Parquet are supported if the precision is ≤ 76 and the scale is ≤ 37.
+[^bson_support]: Support for the `BSON` type is discussed in: https://github.com/meergo/meergo/issues/1400.
