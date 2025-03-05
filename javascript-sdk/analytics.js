@@ -466,7 +466,7 @@ class Analytics {
 			screen: {
 				width: globalThis.screen.width,
 				height: globalThis.screen.height,
-				density: globalThis.devicePixelRatio,
+				density: Number((globalThis.devicePixelRatio || 1).toFixed(2)),
 			},
 			userAgent: n.userAgent,
 		}
