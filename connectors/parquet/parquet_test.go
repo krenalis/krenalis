@@ -19,12 +19,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fraugster/parquet-go/parquet"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
+
+	"github.com/fraugster/parquet-go/parquet"
 )
 
 func TestExportAndImportParquet(t *testing.T) {
@@ -96,10 +97,10 @@ func TestExportAndImportParquet(t *testing.T) {
 			"score64":    float64(5678),
 		},
 		{
-			"rank_int8":   int(-80),
-			"rank_int16":  int(-160),
-			"rank_int32":  int(-320),
-			"rank_int64":  int(-640),
+			"rank_int8":   -80,
+			"rank_int16":  -160,
+			"rank_int32":  -320,
+			"rank_int64":  -640,
 			"rank_uint8":  uint(80),
 			"rank_uint16": uint(160),
 			"rank_uint32": uint(320),
@@ -279,7 +280,7 @@ func TestExportAndImportParquet(t *testing.T) {
 }
 
 // TestExport tests all those cases that cannot be tested in
-// TestExportAndImportParquet, perhaps because they involve values ​​that cannot
+// TestExportAndImportParquet, perhaps because they involve values that cannot
 // be read back from Parquet without losing information.
 func TestExport(t *testing.T) {
 

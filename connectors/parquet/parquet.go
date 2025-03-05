@@ -403,7 +403,7 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 			case prec <= 9:
 				i64, ok := decimalToInt64(dec, p.Type.Scale())
 				if !ok {
-					// This never happens except for out of scale values ​​read
+					// This never happens except for out of scale values read
 					// from the data warehouse, because the type chosen for
 					// export to Parquet is chosen based on the decimal
 					// precision and scale to represent all decimal values
@@ -419,7 +419,7 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 					// details.
 					return nil, fmt.Errorf("decimal value read from Meergo cannot be represented with Parquet's INT64")
 				}
-				converted[p.Name] = int64(i64)
+				converted[p.Name] = i64
 			default:
 				bytes, err := dec.Binary(p.Type.Scale())
 				if err != nil {
