@@ -441,6 +441,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
+			if c.maxmindDB != nil {
+				dec.SetMaxMindDB(c.maxmindDB)
+			}
 			// Read the connection.
 			id, ok := dec.Connection()
 			if !ok {
@@ -475,6 +478,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		dec, err = newDecoder(r)
 		if err != nil {
 			return err
+		}
+		if c.maxmindDB != nil {
+			dec.SetMaxMindDB(c.maxmindDB)
 		}
 	}
 
