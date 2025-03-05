@@ -78,7 +78,10 @@ func TestParquetImport(t *testing.T) {
 				Language: "Python",
 				Source: strings.Join([]string{
 					`def transform(user: dict) -> dict:`,
-					`	return {"parquet_id": user["parquet_id"], "parquet_imported": user}`,
+					`    return {`,
+					`        "parquet_id": user["parquet_id"],`,
+					`        "parquet_imported": {k: v for k, v in user.items() if v is not None}`,
+					`    }`,
 				}, "\n"),
 				InPaths:  []string{"parquet_id", "first_name", "last_name", "date_of_birth", "updated_at", "lunch_time", "score"},
 				OutPaths: []string{"parquet_id", "parquet_imported"},
@@ -103,7 +106,6 @@ func TestParquetImport(t *testing.T) {
 	var fail bool
 	for i := range users {
 		gotTraits := users[i].Traits["parquet_imported"].(map[string]any)
-		stripNilProperties(gotTraits)
 		expectedTraits := expectedUsers[i]
 		if !reflect.DeepEqual(gotTraits, expectedTraits) {
 			t.Errorf("users[%d]: expected traits %#v, got %#v", i, expectedTraits, gotTraits)
@@ -126,16 +128,4 @@ var expectedUsers = []map[string]any{
 	{"parquet_id": json.Number("106"), "updated_at": "2012-01-20 07:20:01"},
 	{"parquet_id": json.Number("107"), "lunch_time": "13:30:00"},
 	{"parquet_id": json.Number("108"), "score": "-1234.56789"},
-}
-
-func stripNilProperties(properties map[string]any) {
-	var toStrip []string
-	for k, v := range properties {
-		if v == nil {
-			toStrip = append(toStrip, k)
-		}
-	}
-	for _, p := range toStrip {
-		delete(properties, p)
-	}
 }
