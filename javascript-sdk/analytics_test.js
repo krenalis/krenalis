@@ -41,7 +41,7 @@ Deno.test('Analytics', async (t) => {
 		globalThis.devicePixelRatio = 1.25
 
 		// Mock Intl.DateTimeFormat.
-		const originalDateTimeFormat = Intl.DateTimeFormat;
+		const originalDateTimeFormat = Intl.DateTimeFormat
 		Intl.DateTimeFormat = function (locales, options) {
 			if (!options) {
 				options = {}

@@ -484,7 +484,7 @@ class Analytics {
 		try {
 			const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
 			if (typeof tz === 'string') {
-				event.context.timezone = tz;
+				event.context.timezone = tz
 			}
 		} catch (_) {
 			// The browser may not support Intl.
