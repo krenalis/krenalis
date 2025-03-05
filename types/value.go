@@ -561,27 +561,27 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 		b = append(b, '"')
 		switch t.Kind() {
 		case DateTimeKind:
-			format := "2006-01-02T15:04:05.000000000Z07:00"
-			if ns := v.Nanosecond(); ns%1e3 == 0 {
-				format = "2006-01-02T15:04:05.000000Z07:00"
+			layout := "2006-01-02T15:04:05.000000000Z07:00"
+			if ns := v.Nanosecond(); ns == 0 {
+				layout = "2006-01-02T15:04:05Z07:00"
 			} else if ns%1e6 == 0 {
-				format = "2006-01-02T15:04:05.000Z07:00"
-			} else if ns == 0 {
-				format = "2006-01-02T15:04:05Z07:00"
+				layout = "2006-01-02T15:04:05.000Z07:00"
+			} else if ns%1e3 == 0 {
+				layout = "2006-01-02T15:04:05.000000Z07:00"
 			}
-			b = v.AppendFormat(b, format)
+			b = v.AppendFormat(b, layout)
 		case DateKind:
 			b = v.AppendFormat(b, time.DateOnly)
 		case TimeKind:
-			format := "15:04:05.000000000"
-			if ns := v.Nanosecond(); ns%1e3 == 0 {
-				format = "15:04:05.000000"
+			layout := "15:04:05.000000000"
+			if ns := v.Nanosecond(); ns == 0 {
+				layout = "15:04:05"
 			} else if ns%1e6 == 0 {
-				format = "15:04:05.000"
-			} else if ns == 0 {
-				format = "15:04:05"
+				layout = "15:04:05.000"
+			} else if ns%1e3 == 0 {
+				layout = "15:04:05.000000"
 			}
-			b = v.AppendFormat(b, format)
+			b = v.AppendFormat(b, layout)
 		}
 		b = append(b, '"')
 	case json.Value:
