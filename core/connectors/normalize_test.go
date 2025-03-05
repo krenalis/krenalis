@@ -71,6 +71,9 @@ func Test_normalize(t *testing.T) {
 		{types.Decimal(8, 0), 793012, decimal.MustInt(793012), false, nil},
 		{types.Decimal(5, 0), -14044, decimal.MustInt(-14044), false, nil},
 		{types.Decimal(3, 2), "", nil, true, nil},
+		{types.Decimal(3, 2), decimal.MustInt(0), decimal.MustInt(0), false, nil},
+		{types.Decimal(3, 2), decimal.MustParse("3.14"), decimal.MustParse("3.14"), false, nil},
+		{types.Decimal(3, 2), decimal.MustParse("3.14"), decimal.MustParse("3.14"), true, nil},
 		// datetime.
 		{types.DateTime(), aDateTime, aDateTime, false, nil},
 		{types.DateTime(), strconv.FormatInt(aDateTime.Unix(), 10), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), false, &state.TimeLayouts{DateTime: "unix"}},

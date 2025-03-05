@@ -288,7 +288,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		case uint64:
 			v, err = decimal.Uint(uint(src), p, s)
 		case decimal.Decimal:
-			v, err = decimal.Parse(v.String(), p, s)
+			v, err = decimal.Parse(src.String(), p, s)
 		case string:
 			if src == "" && nullable {
 				return nil, nil
