@@ -499,7 +499,12 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		context["browser"], context["os"] = parseUserAgent(d.userAgent)
 	} else {
 		if userAgent, ok := context["userAgent"].(string); ok {
-			context["browser"], context["os"] = parseUserAgent(userAgent)
+			contextBrowser, contextOS := parseUserAgent(userAgent)
+			context["browser"] = contextBrowser
+			if _, ok := context["os"]; !ok {
+				context["os"] = contextOS
+			}
+
 		}
 	}
 
@@ -829,6 +834,13 @@ var contextSections = map[string]*contextSection{
 			{name: "carrier", typ: types.Text()},
 			{name: "cellular", typ: types.Boolean()},
 			{name: "wifi", typ: types.Boolean()},
+		},
+	},
+	"os": {
+		name: "os",
+		properties: []contextProperty{
+			{name: "name", typ: types.Text()},
+			{name: "version", typ: types.Text()},
 		},
 	},
 	"page": {
