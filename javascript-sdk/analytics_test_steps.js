@@ -12,11 +12,12 @@ const properties = { path, referrer, search, title, url }
 const page = { path, referrer, search, title, url }
 const library = { name: 'meergo.js', version: '0.0.0' }
 const screen = { width: 2560, height: 1440, density: 1.25 }
+const timezone = 'America/New_York'
 const userAgent =
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
 const locale = 'en-US'
 const sessionId = 1704070861000
-const context = { library, locale, page, screen, sessionId, userAgent }
+const context = { library, locale, page, screen, sessionId, timezone, userAgent }
 const integrations = {}
 const traits = {}
 const userId = null
@@ -64,6 +65,7 @@ const steps = [
 				page: { path, referrer, search, title: 'alternative title', url },
 				screen,
 				sessionId,
+				timezone,
 				userAgent,
 			},
 			integrations,
@@ -123,6 +125,7 @@ const steps = [
 				page: { path, referrer, search, title: 'alternative title', url },
 				screen,
 				sessionId,
+				timezone,
 				userAgent,
 			},
 			integrations,
@@ -159,7 +162,7 @@ const steps = [
 			name: '',
 			anonymousId,
 			properties: { path, referrer, search, title, url, data: { a: 'b' } },
-			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent },
+			context: { library, locale: 'it-IT', page, screen, sessionId, timezone, userAgent },
 			integrations,
 			userId,
 		},
@@ -177,7 +180,7 @@ const steps = [
 			category: 'videos',
 			anonymousId,
 			properties: { path, referrer, search, title, url, name: 'cats', category: 'videos', data: { a: 'b' } },
-			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent },
+			context: { library, locale: 'it-IT', page, screen, sessionId, timezone, userAgent },
 			integrations,
 			userId,
 		},
@@ -276,6 +279,7 @@ const steps = [
 				page: { path, referrer, search, title, url },
 				screen,
 				sessionId,
+				timezone,
 				userAgent,
 			},
 			integrations,
@@ -312,7 +316,7 @@ const steps = [
 			name: '',
 			anonymousId,
 			properties: { data: { a: 'b' } },
-			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent },
+			context: { library, locale: 'it-IT', page, screen, sessionId, timezone, userAgent },
 			integrations,
 			userId,
 		},
@@ -330,7 +334,7 @@ const steps = [
 			category: 'videos',
 			anonymousId,
 			properties: { data: { a: 'b' } },
-			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent },
+			context: { library, locale: 'it-IT', page, screen, sessionId, timezone, userAgent },
 			integrations,
 			userId,
 		},
@@ -389,7 +393,7 @@ const steps = [
 			messageId,
 			anonymousId,
 			properties: { productId: 819382 },
-			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent },
+			context: { library, locale: 'it-IT', page, screen, sessionId, timezone, userAgent },
 			integrations,
 			userId,
 		},
@@ -522,7 +526,7 @@ const steps = [
 			timestamp,
 			messageId,
 			anonymousId,
-			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent, key: 'value' },
+			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent, timezone, key: 'value' },
 			integrations,
 			traits: { first_name: 'Susan', last_name: 'Davis' },
 			userId,
@@ -538,7 +542,7 @@ const steps = [
 			timestamp,
 			messageId,
 			anonymousId,
-			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent, key: 'value' },
+			context: { library, locale: 'it-IT', page, screen, sessionId, userAgent, timezone, key: 'value' },
 			integrations,
 			traits: { age: 36 },
 			userId: '603614922',
@@ -667,7 +671,7 @@ const steps = [
 			timestamp,
 			messageId,
 			anonymousId,
-			context: { library, locale, page, screen, sessionId, userAgent, k: true },
+			context: { library, locale, page, screen, sessionId, timezone, userAgent, k: true },
 			integrations,
 			traits: { name: 'Acme Inc.' },
 			userId,
@@ -683,7 +687,7 @@ const steps = [
 			timestamp,
 			messageId,
 			anonymousId,
-			context: { library, locale, page, screen, sessionId, userAgent, k: true },
+			context: { library, locale, page, screen, sessionId, timezone, userAgent, k: true },
 			integrations,
 			traits: { name: 'Acme Inc.' },
 			groupId: '3617408',
@@ -703,7 +707,7 @@ const steps = [
 			messageId,
 			anonymousId,
 			properties,
-			context: { library, locale, page, screen, userAgent },
+			context: { library, locale, page, screen, timezone, userAgent },
 			integrations,
 			userId,
 		},
@@ -721,7 +725,7 @@ const steps = [
 			messageId,
 			anonymousId,
 			properties,
-			context: { library, locale, page, screen, sessionId: 1508273, sessionStart: true, userAgent },
+			context: { library, locale, page, screen, sessionId: 1508273, sessionStart: true, timezone, userAgent },
 			integrations,
 			userId,
 		},

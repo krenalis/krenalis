@@ -39,6 +39,16 @@ Deno.test('Analytics', async (t) => {
 
 		// Mock devicePixelRatio.
 		globalThis.devicePixelRatio = 1.25
+
+		// Mock Intl.DateTimeFormat.
+		const originalDateTimeFormat = Intl.DateTimeFormat;
+		Intl.DateTimeFormat = function (locales, options) {
+			if (!options) {
+				options = {}
+			}
+			options.timeZone = 'America/New_York'
+			return new originalDateTimeFormat(locales, options)
+		}
 	}
 
 	const _Promise = globalThis.Promise

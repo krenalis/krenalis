@@ -481,6 +481,15 @@ class Analytics {
 			}
 		}
 
+		try {
+			const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+			if (typeof tz === 'string') {
+				event.context.timezone = tz;
+			}
+		} catch (_) {
+			// The browser may not support Intl.
+		}
+
 		event.integrations = {}
 		if (options && typeof options.integrations == 'object') {
 			for (const n in options.integrations) {
