@@ -22,6 +22,7 @@ import (
 	"github.com/fraugster/parquet-go/parquet"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/util"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
@@ -59,6 +60,15 @@ func TestExportAndImportParquet(t *testing.T) {
 		{Name: "last_name", Type: types.Text(), ReadOptional: true},
 		{Name: "score32", Type: types.Float(32), ReadOptional: true},
 		{Name: "score64", Type: types.Float(64), ReadOptional: true},
+		{Name: "decimal_1_0", Type: types.Decimal(1, 0), ReadOptional: true},
+		{Name: "decimal_3_3", Type: types.Decimal(3, 3), ReadOptional: true},
+		{Name: "decimal_10_3", Type: types.Decimal(10, 3), ReadOptional: true},
+		{Name: "decimal_20_0", Type: types.Decimal(20, 0), ReadOptional: true},
+		{Name: "decimal_20_20", Type: types.Decimal(20, 20), ReadOptional: true},
+		{Name: "decimal_32_32", Type: types.Decimal(32, 32), ReadOptional: true},
+		{Name: "decimal_37_37", Type: types.Decimal(37, 37), ReadOptional: true},
+		{Name: "decimal_50_37", Type: types.Decimal(50, 37), ReadOptional: true},
+		{Name: "decimal_76_37", Type: types.Decimal(76, 37), ReadOptional: true},
 		{Name: "my_datetime", Type: types.DateTime(), ReadOptional: true},
 		{Name: "my_date", Type: types.Date(), ReadOptional: true},
 		{Name: "my_time", Type: types.Time(), ReadOptional: true},
@@ -94,6 +104,33 @@ func TestExportAndImportParquet(t *testing.T) {
 			"rank_uint16": uint(160),
 			"rank_uint32": uint(320),
 			"rank_uint64": uint(640),
+		},
+		// Positive decimals.
+		{
+			"decimal_1_0":   decimal.MustParse("4"),
+			"decimal_3_3":   decimal.MustParse("0.431"),
+			"decimal_10_3":  decimal.MustParse("43298.432"),
+			"decimal_20_0":  decimal.MustParse("12345678910111213141"),
+			"decimal_20_20": decimal.MustParse("0.43274891578423975289"),
+			"decimal_32_32": decimal.MustParse("0.43274891578423975289432789473289"),
+			"decimal_37_37": decimal.MustParse("0.4327489157842397528943278947328943289"),
+			"decimal_50_37": decimal.MustParse("1443328948239.4327489157842397528943278947328943289"),
+			"decimal_76_37": decimal.MustParse("114328928398432438294823981443328948239.4327489157842397528943278947328943289"),
+		},
+		// Negative decimals.
+		{
+			"decimal_1_0":   decimal.MustParse("-4"),
+			"decimal_3_3":   decimal.MustParse("-0.431"),
+			"decimal_10_3":  decimal.MustParse("-43298.432"),
+			"decimal_20_0":  decimal.MustParse("-12345678910111213141"),
+			"decimal_20_20": decimal.MustParse("-0.43274891578423975289"),
+			"decimal_32_32": decimal.MustParse("-0.43274891578423975289432789473289"),
+			"decimal_37_37": decimal.MustParse("-0.4327489157842397528943278947328943289"),
+			"decimal_50_37": decimal.MustParse("-1443328948239.4327489157842397528943278947328943289"),
+			"decimal_76_37": decimal.MustParse("-114328928398432438294823981443328948239.4327489157842397528943278947328943289"),
+		},
+		{
+			"decimal_1_0": decimal.MustParse("0"),
 		},
 		{
 			"my_datetime": time.Date(2012, 12, 21, 15, 30, 2, 123456789, time.UTC),
@@ -133,6 +170,7 @@ func TestExportAndImportParquet(t *testing.T) {
 
 	// Export the Parquet file.
 	recordReader := &testRecordReader{
+		t:       t,
 		columns: exportedColumns,
 		records: exportedRecords,
 	}
@@ -209,24 +247,32 @@ func TestExportAndImportParquet(t *testing.T) {
 			len(exportedRecords), len(recordWriter.readRecords))
 	}
 	t.Logf("%d record(s) read from the Parquet file", len(recordWriter.readRecords))
-	fail = false
 	for i := range exportedRecords {
-		expected := exportedRecords[i]
-		got := recordWriter.readRecords[i]
-		if !reflect.DeepEqual(expected, got) {
-			for _, c := range exportedColumns {
-				if !reflect.DeepEqual(expected[c.Name], got[c.Name]) {
-					t.Logf("record [%d], column %q: expected %#v (type %T), got %#v (type %T)",
-						i, c.Name, expected[c.Name], expected[c.Name], got[c.Name], got[c.Name])
+		expectedRecord := exportedRecords[i]
+		gotRecords := recordWriter.readRecords[i]
+		if len(expectedRecord) != len(gotRecords) {
+			t.Fatalf("expected %v properties, got %v", len(expectedRecord), len(gotRecords))
+		}
+		for _, c := range exportedColumns {
+			expectedProperty := expectedRecord[c.Name]
+			gotProperty := gotRecords[c.Name]
+			var equalProperty bool
+			if c.Type.Kind() == types.DecimalKind {
+				expectedDec, ok1 := expectedProperty.(decimal.Decimal)
+				gotDec, ok2 := gotProperty.(decimal.Decimal)
+				if ok1 && ok2 {
+					equalProperty = expectedDec.Equal(gotDec)
+				} else {
+					equalProperty = reflect.DeepEqual(expectedProperty, gotProperty)
 				}
+			} else {
+				equalProperty = reflect.DeepEqual(expectedProperty, gotProperty)
 			}
-			fail = true
-			continue
+			if !equalProperty {
+				t.Fatalf("%q: expected property value %q, got %q", c.Name, expectedProperty, gotProperty)
+			}
 		}
 		t.Logf("imported record [%d] matches with exported record", i)
-	}
-	if fail {
-		t.Fatal("read records do not match with exported records")
 	}
 	t.Logf("record value(s) match with expected values")
 
@@ -271,6 +317,7 @@ func TestExport(t *testing.T) {
 
 	var parquetFile bytes.Buffer
 	recordReader := &testRecordReader{
+		t:       t,
 		columns: exportedColumns,
 		records: exportedRecords,
 	}
@@ -288,6 +335,7 @@ func TestExport(t *testing.T) {
 var _ meergo.RecordReader = &testRecordReader{}
 
 type testRecordReader struct {
+	t            *testing.T
 	columns      []types.Property
 	records      []map[string]any
 	index        int
@@ -295,6 +343,9 @@ type testRecordReader struct {
 }
 
 func (records *testRecordReader) Ack(id string, err error) {
+	if err != nil {
+		records.t.Fatalf("called ack function with an error: %v", err)
+	}
 	records.acksReceived++
 }
 
@@ -341,7 +392,7 @@ func (writer *testRecordWriter) columnByName(name string) types.Property {
 }
 
 func (writer *testRecordWriter) Record(record map[string]any) error {
-	// Normalize record values.
+	// Normalize and do some checks on record values.
 	toDelete := []string{}
 	for name, value := range record {
 		if value == nil {
@@ -365,6 +416,11 @@ func (writer *testRecordWriter) Record(record map[string]any) error {
 		case types.FloatKind:
 			if column.Type.BitSize() == 32 {
 				record[name] = float64(value.(float32))
+			}
+		case types.DecimalKind:
+			_, ok := record[name].(decimal.Decimal)
+			if !ok {
+				writer.t.Fatalf("decimal values should have type decimal.Decimal, got %v (type %T)", record[name], record[name])
 			}
 		case types.UUIDKind:
 			record[name], _ = util.UUIDFromBytes(value.([]byte))

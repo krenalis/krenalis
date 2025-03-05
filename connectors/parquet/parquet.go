@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
@@ -89,6 +90,13 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 		name string
 		unit *parquet.TimeUnit
 	}
+	type decimalColumn struct {
+		name   string
+		phType parquet.Type
+		prec   int
+		scale  int
+	}
+	var decimalColumns []decimalColumn
 	var dateColumns []string
 	var timeColumns []unitColumn
 	var int64TimestampColumns []unitColumn
@@ -133,6 +141,21 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 				name: name,
 				unit: element.LogicalType.TIME.Unit,
 			})
+		}
+		if lt := element.LogicalType; lt != nil && lt.DECIMAL != nil {
+			switch *element.Type {
+			case
+				parquet.Type_INT32,
+				parquet.Type_INT64,
+				parquet.Type_BYTE_ARRAY,
+				parquet.Type_FIXED_LEN_BYTE_ARRAY:
+				decimalColumns = append(decimalColumns, decimalColumn{
+					name:   name,
+					prec:   typ.Precision(),
+					scale:  typ.Scale(),
+					phType: *element.Type,
+				})
+			}
 		}
 		if ct := element.ConvertedType; ct != nil {
 			unit := parquet.NewTimeUnit()
@@ -215,6 +238,31 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 			if column.unit.NANOS != nil {
 				if nano, ok := record[column.name].(int64); ok {
 					record[column.name] = time.Unix(0, nano).UTC()
+					continue
+				}
+			}
+		}
+		for _, column := range decimalColumns {
+			switch column.phType {
+			case parquet.Type_INT32:
+				if i32, ok := record[column.name].(int32); ok {
+					record[column.name] = decimal.New(int64(i32), column.scale)
+					continue
+				}
+			case parquet.Type_INT64:
+				if i64, ok := record[column.name].(int64); ok {
+					record[column.name] = decimal.New(i64, column.scale)
+					continue
+				}
+			case
+				parquet.Type_BYTE_ARRAY,
+				parquet.Type_FIXED_LEN_BYTE_ARRAY:
+				if bytes, ok := record[column.name].([]byte); ok {
+					dec, err := decimal.Binary(bytes, column.prec, column.scale)
+					if err != nil {
+						return fmt.Errorf("invalid decimal value: %s", err)
+					}
+					record[column.name] = dec
 					continue
 				}
 			}
@@ -347,7 +395,39 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 				}
 			}
 		case types.DecimalKind:
-			return nil, errors.New("decimal properties are not supported") // TODO: see the issue https://github.com/meergo/meergo/issues/1370.
+			dec, ok := record[p.Name].(decimal.Decimal)
+			if !ok {
+				continue
+			}
+			switch prec := p.Type.Precision(); {
+			case prec <= 9:
+				i64, ok := decimalToInt64(dec, p.Type.Scale())
+				if !ok {
+					// This never happens except for out of scale values ​​read
+					// from the data warehouse, because the type chosen for
+					// export to Parquet is chosen based on the decimal
+					// precision and scale to represent all decimal values
+					// allowed for p.Type. We return error here to avoid strange
+					// errors in the Parquet library.
+					return nil, fmt.Errorf("decimal value read from Meergo cannot be represented with Parquet's INT32")
+				}
+				converted[p.Name] = int32(i64)
+			case 10 <= prec && prec <= 18:
+				i64, ok := decimalToInt64(dec, p.Type.Scale())
+				if !ok {
+					// This should never happen, see the comment above for more
+					// details.
+					return nil, fmt.Errorf("decimal value read from Meergo cannot be represented with Parquet's INT64")
+				}
+				converted[p.Name] = int64(i64)
+			default:
+				bytes, err := dec.Binary(p.Type.Scale())
+				if err != nil {
+					return nil, fmt.Errorf("cannot convert decimal value read from Meergo to Parquet binary representation: %s", err)
+				}
+				converted[p.Name] = bytes
+			}
+			continue
 		case types.DateTimeKind:
 			if ts, ok := record[p.Name].(time.Time); ok {
 				ts, err := timeTimeToInt64(ts)
@@ -401,6 +481,20 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 		converted[p.Name] = record[p.Name]
 	}
 	return converted, nil
+}
+
+// decimalToInt64 converts the decimal d to an "unscaled int" using the given
+// scale, in the format expected by Parquet.
+//
+// The returned boolean reports whether d can be represented exactly with the
+// provided scale.
+func decimalToInt64(d decimal.Decimal, scale int) (int64, bool) {
+	bytes, err := d.Binary(scale)
+	if err != nil {
+		return 0, false
+	}
+	u64 := binary.BigEndian.Uint64(bytes)
+	return int64(u64), true
 }
 
 // int64ToTimeTime converts an int64 timestamp, read from Parquet, to a
@@ -528,7 +622,18 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_DOUBLE)
 			}
 		case types.DecimalKind:
-			return nil, errors.New("decimal properties are not supported") // TODO: see the issue https://github.com/meergo/meergo/issues/1370.
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.DECIMAL = parquet.NewDecimalType()
+			col.SchemaElement.LogicalType.DECIMAL.Precision = int32(property.Type.Precision())
+			col.SchemaElement.LogicalType.DECIMAL.Scale = int32(property.Type.Scale())
+			switch p := property.Type.Precision(); {
+			case p <= 9:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
+			case 10 <= p && p <= 18:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
+			default:
+				col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
+			}
 		case types.DateTimeKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT64)
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
@@ -608,15 +713,11 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			return types.Text(), nil
 		}
 		if d := lt.DECIMAL; d != nil {
+			if 0 < d.Precision && d.Precision <= types.MaxDecimalPrecision &&
+				d.Scale <= types.MaxDecimalScale && d.Scale <= d.Precision {
+				return types.Decimal(int(d.Precision), int(d.Scale)), nil
+			}
 			return types.Type{}, nil
-			// TODO: decimal are currenty not supported.
-			// See the issue https://github.com/meergo/meergo/issues/1370.
-			//
-			// if 0 < d.Precision && d.Precision <= types.MaxDecimalPrecision &&
-			// 	d.Scale <= types.MaxDecimalScale && d.Scale <= d.Precision {
-			// 	return types.Decimal(int(d.Precision), int(d.Scale)), nil
-			// }
-			// return types.Decimal(0, 0), nil
 		}
 		if lt.DATE != nil {
 			return types.Date(), nil
@@ -686,11 +787,9 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		case parquet.ConvertedType_JSON, parquet.ConvertedType_BSON:
 			return types.JSON(), nil
 		case parquet.ConvertedType_DECIMAL:
-			if elem.Precision != nil && *elem.Precision <= types.MaxDecimalPrecision &&
-				elem.Scale != nil && *elem.Scale <= types.MaxDecimalScale && *elem.Scale <= *elem.Precision {
-				return types.Decimal(int(*elem.Precision), int(*elem.Scale)), nil
-			}
-			return types.Decimal(0, 0), nil
+			// Not supported.
+			// See https://github.com/meergo/meergo/issues/1394.
+			return types.Type{}, nil
 		case parquet.ConvertedType_DATE:
 			return types.Date(), nil
 		case parquet.ConvertedType_TIMESTAMP_MICROS, parquet.ConvertedType_TIMESTAMP_MILLIS:

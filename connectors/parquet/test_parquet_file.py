@@ -14,7 +14,7 @@ def main() -> None:
     df = pd.read_parquet(parquet_filename)
 
     try:
-        assert len(df.dtypes) == 18, f"unexpected {len(df.dtypes)} columns"
+        assert len(df.dtypes) == 27, f"unexpected {len(df.dtypes)} columns"
         assert df.subscribed[0] == True, df.subscribed[0]
         assert df.first_name[0] == "John", f"unexpected: {df.first_name[0]}"
         assert df.last_name[0] == "Lemon", f"unexpected: {df.last_name[0]}"

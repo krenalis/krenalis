@@ -6,6 +6,7 @@
 #
 
 from datetime import date, datetime, time, timezone
+from decimal import Decimal
 
 import pandas as pd
 
@@ -22,5 +23,6 @@ pd.DataFrame(
             "updated_at": datetime(2012, 1, 20, 7, 20, 1, tzinfo=timezone.utc),
         },
         {"parquet_id": 107, "lunch_time": time(13, 30, 0)},
+        {"parquet_id": 108, "score": Decimal("-1234.56789")},
     ]
 ).to_parquet("test.parquet")
