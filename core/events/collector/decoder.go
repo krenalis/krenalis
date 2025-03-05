@@ -361,8 +361,6 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 				continue
 			}
 			switch name {
-			case "anonymousId":
-				event["anonymousId"] = s
 			case "messageId":
 				id := makeEventID(connection, s)
 				event["id"] = id.String()
