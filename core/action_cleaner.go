@@ -46,17 +46,13 @@ type actionCleaner struct {
 	state            *state.State
 	datastore        *datastore.Datastore
 	functionProvider transformers.FunctionProvider
+	workspaces       sync.Map // map of workspaces indicating if an operation is in progress
+	actions          sync.Map // map of actions indicating if an operation is in progress
 	close            struct {
 		ctx    context.Context
 		cancel context.CancelFunc
-		closed atomic.Bool
+		atomic.Bool
 		sync.WaitGroup
-	}
-
-	mu      sync.Mutex // for the 'backoff' field
-	backoff struct {
-		workspace map[int]*backoff.Backoff // backoff for workspace. access using 'mu'
-		action    map[int]*backoff.Backoff // backoff for action. access using 'mu'
 	}
 }
 
@@ -71,8 +67,6 @@ func newActionCleaner(db *db.DB, state *state.State, datastore *datastore.Datast
 		datastore:        datastore,
 		functionProvider: provider,
 	}
-	p.backoff.workspace = map[int]*backoff.Backoff{}
-	p.backoff.action = map[int]*backoff.Backoff{}
 	p.close.ctx, p.close.cancel = context.WithCancel(context.Background())
 
 	state.Freeze()
@@ -95,17 +89,14 @@ func newActionCleaner(db *db.DB, state *state.State, datastore *datastore.Datast
 	}
 	state.Unfreeze()
 	for _, ws := range workspaces {
-		p.close.Add(1)
-		go p.purgeWorkspace(ws, nil)
+		go p.purgeWorkspace(ws)
 	}
 	for _, action := range actions {
-		p.close.Add(1)
-		go p.unsetIdentityProperties(action, nil)
+		go p.unsetIdentityProperties(action)
 	}
 
 	// Start a goroutine to delete functions that have been discontinued.
 	if provider != nil {
-		p.close.Add(1)
 		go p.deleteDiscontinuedFunctions()
 	}
 
@@ -116,29 +107,27 @@ func newActionCleaner(db *db.DB, state *state.State, datastore *datastore.Datast
 // operations. If the context is canceled, it interrupts ongoing operations and
 // returns. If p is already closed, it does nothing and returns immediately.
 func (c *actionCleaner) Close(ctx context.Context) {
-	if c.close.closed.Load() {
+	if c.close.Swap(true) {
 		return
 	}
-	// Signals the closure.
-	c.close.closed.Store(true)
-	// Stop the backoff.
-	c.mu.Lock()
-	for _, bo := range c.backoff.workspace {
-		if bo.Stop() {
-			c.close.Done()
-		}
-	}
-	for _, bo := range c.backoff.action {
-		if bo.Stop() {
-			c.close.Done()
-		}
-	}
-	c.mu.Unlock()
-	// Cancel p.close.ctx if ctx is cancelled.
+	// Cancel c.close.ctx if ctx is cancelled.
 	stop := context.AfterFunc(ctx, func() { c.close.cancel() })
 	defer stop()
 	// Waits for the ongoing operations to finish.
 	c.close.Wait()
+}
+
+// complete calls f, ensuring it completes even if c is closed.
+// If c is already closed, it does nothing.
+func (c *actionCleaner) complete(f func() error) error {
+	c.close.Add(1)
+	if c.close.Load() {
+		c.close.Done()
+		return nil
+	}
+	err := f()
+	c.close.Done()
+	return err
 }
 
 // deleteDiscontinuedFunctions starts the deletion task for function that have
@@ -157,62 +146,61 @@ func (c *actionCleaner) deleteDiscontinuedFunctions() {
 		tick := time.NewTicker(d)
 		select {
 		case <-c.close.ctx.Done():
-			c.close.Done()
 			return
 		case <-tick.C:
 		}
 		d = functionDeletionInterval
-		// Read the functions. These are the discontinued ones from over ten
-		// minutes ago, with no actions still using them.
-		rows, err := c.db.Query(c.close.ctx, "SELECT f.id\n"+
-			"FROM discontinued_functions AS f\n"+
-			"LEFT JOIN actions_executions AS e ON f.id = e.function AND e.end_time IS NULL\n"+
-			"WHERE f.discontinued_at < $1 AND e.id IS NULL",
-			time.Now().Add(-10*time.Minute))
-		if err != nil {
-			slog.Error("cannot retrive discontinued functions", "err", err)
-			continue
-		}
-		ids = ids[:0]
-		for rows.Next() {
-			var id string
-			if err := rows.Scan(&id); err != nil {
-				break
-			}
-			ids = append(ids, id)
-		}
-		if err = rows.Err(); err != nil {
-			slog.Error("error occurred scanning discontinued functions", "err", err)
-			continue
-		}
-		if len(ids) == 0 {
-			continue
-		}
-		// Delete the functions.
-		deleted = deleted[:0]
-		for _, id := range ids {
-			err = c.functionProvider.Delete(c.close.ctx, id)
+		err := c.complete(func() error {
+			// Read the functions. These are the discontinued ones from over ten
+			// minutes ago, with no actions still using them.
+			rows, err := c.db.Query(c.close.ctx, "SELECT f.id\n"+
+				"FROM discontinued_functions AS f\n"+
+				"LEFT JOIN actions_executions AS e ON f.id = e.function AND e.end_time IS NULL\n"+
+				"WHERE f.discontinued_at < $1 AND e.id IS NULL",
+				time.Now().Add(-10*time.Minute))
 			if err != nil {
-				slog.Error("cannot delete discontinued function", "function", id, "err", err)
-				continue
+				return err
 			}
-			deleted = append(deleted, id)
-		}
-		if len(deleted) == 0 {
-			continue
-		}
-		// Delete the functions from the database.
-		bo := backoff.New(1000)
-		bo.SetCap(functionDeletionInterval)
-		for bo.Next(c.close.ctx) {
-			_, err = c.db.Exec(c.close.ctx,
-				fmt.Sprintf("DELETE FROM discontinued_functions WHERE id IN %s", db.Quote(deleted)))
-			if err == nil {
-				break
+			ids = ids[:0]
+			for rows.Next() {
+				var id string
+				if err := rows.Scan(&id); err != nil {
+					break
+				}
+				ids = append(ids, id)
 			}
-		}
+			if err = rows.Err(); err != nil {
+				return err
+			}
+			if len(ids) == 0 {
+				return nil
+			}
+			// Delete the functions.
+			deleted = deleted[:0]
+			for _, id := range ids {
+				err = c.functionProvider.Delete(c.close.ctx, id)
+				if err != nil {
+					return fmt.Errorf("deleting function %q: %s", id, err)
+				}
+				deleted = append(deleted, id)
+			}
+			if len(deleted) == 0 {
+				return nil
+			}
+			// Delete the functions from the database.
+			bo := backoff.New(1000)
+			bo.SetCap(functionDeletionInterval)
+			for bo.Next(c.close.ctx) {
+				_, err = c.db.Exec(c.close.ctx,
+					fmt.Sprintf("DELETE FROM discontinued_functions WHERE id IN %s", db.Quote(deleted)))
+				if err == nil {
+					break
+				}
+			}
+			return err
+		})
 		if err != nil {
-			slog.Error("cannot delete discontinued functions", "err", err)
+			slog.Error("an error occurred deleting discontinued functions", "err", err)
 		}
 	}
 }
@@ -228,8 +216,7 @@ func (c *actionCleaner) onDeleteAction(n state.DeleteAction) {
 	if ws.Warehouse.Mode != state.Normal {
 		return
 	}
-	c.close.Add(1)
-	go c.purgeWorkspace(ws.ID, nil)
+	go c.purgeWorkspace(ws.ID)
 }
 
 // onDeleteConnection is called when a connection is deleted.
@@ -244,8 +231,7 @@ func (c *actionCleaner) onDeleteConnection(n state.DeleteConnection) {
 	}
 	for _, action := range connection.Actions() {
 		if action.Target == state.Users {
-			c.close.Add(1)
-			go c.purgeWorkspace(ws.ID, nil)
+			go c.purgeWorkspace(ws.ID)
 			return
 		}
 	}
@@ -261,8 +247,7 @@ func (c *actionCleaner) onUpdateAction(n state.UpdateAction) {
 	if ws.Warehouse.Mode != state.Normal {
 		return
 	}
-	c.close.Add(1)
-	go c.unsetIdentityProperties(n.ID, nil)
+	go c.unsetIdentityProperties(n.ID)
 }
 
 // onUpdateWarehouse is called when a warehouse is updated.
@@ -273,8 +258,7 @@ func (c *actionCleaner) onUpdateWarehouse(n state.UpdateWarehouse) {
 	if ws, _ := c.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
 		return
 	}
-	c.close.Add(1)
-	go c.purgeWorkspace(n.Workspace, nil)
+	go c.purgeWorkspace(n.Workspace)
 }
 
 // onUpdateWarehouseMode is called when the mode of a warehouse is updated.
@@ -284,14 +268,12 @@ func (c *actionCleaner) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	}
 	ws, _ := c.state.Workspace(n.Workspace)
 	if ws.NumActionsToPurge() > 0 {
-		c.close.Add(1)
-		go c.purgeWorkspace(n.Workspace, nil)
+		go c.purgeWorkspace(n.Workspace)
 	}
 	for _, connection := range ws.Connections() {
 		for _, action := range connection.Actions() {
 			if paths := action.PropertiesToUnset(); paths != nil {
-				c.close.Add(1)
-				go c.unsetIdentityProperties(action.ID, nil)
+				go c.unsetIdentityProperties(action.ID)
 			}
 		}
 	}
@@ -299,181 +281,147 @@ func (c *actionCleaner) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 
 // purgeWorkspace purges the identities associated with the delete actions of
 // a workspace. bo is non-nil only when a purge is being retried.
-func (c *actionCleaner) purgeWorkspace(id int, bo *backoff.Backoff) {
+func (c *actionCleaner) purgeWorkspace(id int) {
 
-	defer c.close.Done()
-	if c.close.closed.Load() {
+	if _, ok := c.workspaces.Swap(id, true); ok {
 		return
 	}
+	defer c.workspaces.Delete(id)
 
-	c.mu.Lock()
-	if bo, ok := c.backoff.workspace[id]; ok {
-		if bo.Stop() {
-			c.close.Done()
+	bo := backoff.New(backoffBase)
+	for bo.Next(c.close.ctx) {
+
+		// Purge the workspace.
+		ws, ok := c.state.Workspace(id)
+		if !ok {
+			return
 		}
-		delete(c.backoff.workspace, id)
-	}
-	c.mu.Unlock()
+		if ws.Warehouse.Mode != state.Normal {
+			return
+		}
+		actions := ws.ActionsToPurge()
+		if len(actions) == 0 {
+			return
+		}
+		err := c.complete(func() error {
 
-	ws, ok := c.state.Workspace(id)
-	if !ok {
-		return
-	}
-	if ws.Warehouse.Mode != state.Normal {
-		return
-	}
-	actions := ws.ActionsToPurge()
-	if len(actions) == 0 {
-		return
-	}
-
-	err := c.purgeActions(id, actions)
-	if err != nil {
-		c.mu.Lock()
-		if _, ok := c.backoff.workspace[id]; !ok {
-			if bo == nil {
-				bo = backoff.New(backoffBase)
+			store := c.datastore.Store(id)
+			err := store.PurgeActions(c.close.ctx, actions)
+			if err != nil {
+				return err
 			}
-			c.close.Add(1)
-			bo.AfterFunc(c.close.ctx, func(ctx context.Context) {
-				c.purgeWorkspace(id, bo)
+
+			n := state.PurgeActions{
+				Workspace: id,
+			}
+
+			// Build the query that updates the actions to purge of the workspace.
+			var b strings.Builder
+			b.WriteString("UPDATE workspaces\nSET actions_to_purge = ")
+			for range len(actions) {
+				b.WriteString("array_remove(")
+			}
+			b.WriteString("actions_to_purge")
+			for _, action := range actions {
+				b.WriteByte(',')
+				b.WriteString(strconv.Itoa(action))
+				b.WriteByte(')')
+			}
+			b.WriteString("\nWHERE id = $1 AND actions_to_purge IS NOT NULL\nRETURNING actions_to_purge")
+			update := b.String()
+
+			err = c.state.Transaction(c.close.ctx, func(tx *state.Tx) error {
+				var actions []int
+				err := tx.QueryRow(c.close.ctx, update, id).Scan(&actions)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						return nil
+					}
+					return err
+				}
+				n.ActionsToPurge = actions
+				return tx.Notify(c.close.ctx, n)
 			})
-			c.backoff.workspace[id] = bo
-		}
-		c.mu.Unlock()
-	}
 
-}
-
-// purgeActions purges the identities and the destination users of the provided
-// actions from the workspace's data warehouse.
-func (c *actionCleaner) purgeActions(ws int, actions []int) error {
-
-	store := c.datastore.Store(ws)
-	err := store.PurgeActions(c.close.ctx, actions)
-	if err != nil {
-		return err
-	}
-
-	n := state.PurgeActions{
-		Workspace: ws,
-	}
-
-	// Build the query that updates the actions to purge of the workspace.
-	var b strings.Builder
-	b.WriteString("UPDATE workspaces\nSET actions_to_purge = ")
-	for range len(actions) {
-		b.WriteString("array_remove(")
-	}
-	b.WriteString("actions_to_purge")
-	for _, action := range actions {
-		b.WriteByte(',')
-		b.WriteString(strconv.Itoa(action))
-		b.WriteByte(')')
-	}
-	b.WriteString("\nWHERE id = $1 AND actions_to_purge IS NOT NULL\nRETURNING actions_to_purge")
-	update := b.String()
-
-	err = c.state.Transaction(c.close.ctx, func(tx *state.Tx) error {
-		var actions []int
-		err := tx.QueryRow(c.close.ctx, update, ws).Scan(&actions)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil
-			}
 			return err
+		})
+		if err == nil {
+			break
 		}
-		n.ActionsToPurge = actions
-		return tx.Notify(c.close.ctx, n)
-	})
 
-	return err
+	}
+
 }
 
 // unsetIdentityProperties unsets the identity properties that are no longer
 // being transformed, for the action with the provided ID.
-func (c *actionCleaner) unsetIdentityProperties(id int, bo *backoff.Backoff) {
+func (c *actionCleaner) unsetIdentityProperties(id int) {
 
-	defer c.close.Done()
-	if c.close.closed.Load() {
+	if _, ok := c.actions.Swap(id, true); ok {
 		return
 	}
+	defer c.actions.Delete(id)
 
-	c.mu.Lock()
-	if bo, ok := c.backoff.action[id]; ok {
-		if bo.Stop() {
-			c.close.Done()
+	bo := backoff.New(backoffBase)
+	for bo.Next(c.close.ctx) {
+
+		action, ok := c.state.Action(id)
+		if !ok {
+			return
 		}
-		delete(c.backoff.action, id)
-	}
-	c.mu.Unlock()
-
-	action, ok := c.state.Action(id)
-	if !ok {
-		return
-	}
-	ws := action.Connection().Workspace()
-	if ws.Warehouse.Mode != state.Normal {
-		return
-	}
-	paths := action.PropertiesToUnset()
-	if len(paths) == 0 {
-		return
-	}
-
-	// Unset the properties.
-	err := func() error {
-
-		store := c.datastore.Store(action.Connection().Workspace().ID)
-		err := store.UnsetIdentityProperties(c.close.ctx, action.ID, paths)
-		if err != nil {
-			return err
+		ws := action.Connection().Workspace()
+		if ws.Warehouse.Mode != state.Normal {
+			return
 		}
-		n := state.UpdateIdentityPropertiesToUnset{
-			Action: action.ID,
+		paths := action.PropertiesToUnset()
+		if len(paths) == 0 {
+			return
 		}
 
-		// Build the query that updates the identity properties to unset.
-		var b strings.Builder
-		b.WriteString("UPDATE actions\nSET properties_to_unset = ")
-		for range len(paths) {
-			b.WriteString("array_remove(")
-		}
-		b.WriteString("properties_to_unset")
-		for _, path := range paths {
-			b.WriteByte(',')
-			b.WriteString(db.Quote(path))
-			b.WriteByte(')')
-		}
-		b.WriteString("\nWHERE id = $1\nRETURNING properties_to_unset")
-		update := b.String()
+		// Unset the properties.
+		err := c.complete(func() error {
 
-		err = c.state.Transaction(c.close.ctx, func(tx *state.Tx) error {
-			err := tx.QueryRow(c.close.ctx, update, id).Scan(&n.Properties)
+			store := c.datastore.Store(action.Connection().Workspace().ID)
+			err := store.UnsetIdentityProperties(c.close.ctx, action.ID, paths)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil
-				}
 				return err
 			}
-			return tx.Notify(c.close.ctx, n)
-		})
-
-		return nil
-	}()
-	if err != nil {
-		c.mu.Lock()
-		if _, ok := c.backoff.action[id]; !ok {
-			if bo == nil {
-				bo = backoff.New(backoffBase)
+			n := state.UpdateIdentityPropertiesToUnset{
+				Action: action.ID,
 			}
-			c.close.Add(1)
-			bo.AfterFunc(c.close.ctx, func(ctx context.Context) {
-				c.unsetIdentityProperties(id, bo)
+
+			// Build the query that updates the identity properties to unset.
+			var b strings.Builder
+			b.WriteString("UPDATE actions\nSET properties_to_unset = ")
+			for range len(paths) {
+				b.WriteString("array_remove(")
+			}
+			b.WriteString("properties_to_unset")
+			for _, path := range paths {
+				b.WriteByte(',')
+				b.WriteString(db.Quote(path))
+				b.WriteByte(')')
+			}
+			b.WriteString("\nWHERE id = $1\nRETURNING properties_to_unset")
+			update := b.String()
+
+			err = c.state.Transaction(c.close.ctx, func(tx *state.Tx) error {
+				err := tx.QueryRow(c.close.ctx, update, id).Scan(&n.Properties)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						return nil
+					}
+					return err
+				}
+				return tx.Notify(c.close.ctx, n)
 			})
-			c.backoff.action[id] = bo
+
+			return err
+		})
+		if err == nil {
+			break
 		}
-		c.mu.Unlock()
+
 	}
 
 }
