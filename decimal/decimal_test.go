@@ -626,6 +626,8 @@ func Test_Parse(t *testing.T) {
 		{"0.a", 20, 5, "", "", ErrSyntax},
 		{"8..56", 20, 5, "", "", ErrSyntax},
 		{"6.5.7", 20, 5, "", "", ErrSyntax},
+		{"+", 20, 5, "", "", ErrSyntax},
+		{"-", 20, 5, "", "", ErrSyntax},
 
 		{"1", 1, 1, "", "", ErrOutOfRange},
 		{"678", 3, 1, "", "", ErrOutOfRange},

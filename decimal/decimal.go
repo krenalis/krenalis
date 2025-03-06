@@ -474,6 +474,9 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		fallthrough
 	case '-':
 		n = n[1:]
+		if len(n) == 0 {
+			return Decimal{}, ErrSyntax
+		}
 	}
 	dot := 0 // dot position relative to n[0]; it can be negative, and is 0 if there is no dot.
 	switch n[0] {
