@@ -190,8 +190,8 @@ func init() {
 						CreateRequired: true,
 						Placeholder:    `"WebSite"`,
 						Description: "The name of the [connector](/connectors/) for which to create the connection. " +
-							"It can be an app, database, file storage, mobile, server, stream, or website connector, " +
-							"but cannot be a file connector.",
+							"It can be an app, database, file storage, mobile, server, or website connector, " +
+							"but cannot be a file connector or a stream connector.\n\nStream connections will be available soon.",
 					},
 					strategyParameter,
 					sendingModeParameter,

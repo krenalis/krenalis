@@ -58,6 +58,28 @@ func TestConnections(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Check that a stream connection cannot be created.
+	stream := &meergotester.ConnectionToCreate{
+		Name:      "Kafka",
+		Role:      meergotester.Source,
+		Connector: "Kafka",
+	}
+	var id int
+	err := c.Call("POST", "/api/v1/connections", stream, &id)
+	if err == nil {
+		t.Fatalf("expected Bad Request error, got no error")
+	}
+	if err, ok := err.(*meergotester.StatusCodeError); !ok {
+		t.Fatalf("expected *StatusCodeError error, got %T error", err)
+	} else {
+		if err.Code != 400 {
+			t.Fatalf("expected error status 400, got %d", err.Code)
+		}
+		if text := `{"error":{"code":"BadRequest","message":"stream connectors are not currently supported"}}`; err.ResponseText != text {
+			t.Fatalf("expected error text %q, got %q", text, err.ResponseText)
+		}
+	}
+
 }
 
 func isValidSchema(schema any) error {

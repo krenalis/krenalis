@@ -506,6 +506,8 @@ func (this *Workspace) Connections() []*Connection {
 // token returned by the AuthToken method and must be empty if the connector
 // does not support authorization.
 //
+// Stream connectors are not currently supported.
+//
 // It returns an errors.UnprocessableError error with code
 //
 //   - ConnectorNotExist, if the connector does not exist.
@@ -552,6 +554,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		if connection.Role == Destination {
 			return 0, errors.BadRequest("%s connections cannot be destinations", strings.ToLower(c.Type.String()))
 		}
+	case state.Stream:
+		return 0, errors.BadRequest("stream connectors are not currently supported")
 	}
 
 	if connection.WebsiteHost != "" && c.Type != state.Website {

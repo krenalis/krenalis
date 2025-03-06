@@ -68,7 +68,7 @@ const ConnectorsList = () => {
 					type={c.type}
 					description={connectionRole === 'Source' ? c.asSource.description : c.asDestination.description}
 				>
-					<SlTooltip content={`Add ${c.name}`}>
+					<SlTooltip content={c.isStream ? 'Stream connectors will be available soon' : `Add ${c.name}`}>
 						<Link
 							path={
 								c.requiresAuth
@@ -81,6 +81,7 @@ const ConnectorsList = () => {
 							<SlButton
 								size='medium'
 								variant='default'
+								disabled={c.isStream}
 								onClick={
 									c.requiresAuth ? () => authorizeWithOAuth(c.name, connectionRole as Role) : null
 								}
