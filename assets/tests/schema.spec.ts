@@ -9,8 +9,7 @@ test.afterEach(async ({ page }) => {
 	await logout(page);
 });
 
-// TODO(Andrea): see the issue https://github.com/meergo/meergo/issues/1200.
-test.skip(`Add schema property`, async ({ page }) => {
+test(`Add schema property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -31,14 +30,14 @@ test.skip(`Add schema property`, async ({ page }) => {
 	let cell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^foo$/ });
 	await expect(cell).toBeVisible();
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 
 	cell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^foo$/ });
 	await expect(cell).toBeVisible();
 });
 
-// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1200.
-test.skip(`Edit schema property`, async ({ page }) => {
+test(`Edit schema property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -59,6 +58,7 @@ test.skip(`Edit schema property`, async ({ page }) => {
 	await expect(fooCell).not.toBeVisible();
 	await expect(barCell).toBeVisible();
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 
 	fooCell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', {
@@ -69,8 +69,7 @@ test.skip(`Edit schema property`, async ({ page }) => {
 	await expect(barCell).toBeVisible();
 });
 
-// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1200.
-test.skip(`Check that RePaths are sent correctly`, async ({ page }) => {
+test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -87,7 +86,7 @@ test.skip(`Check that RePaths are sent correctly`, async ({ page }) => {
 
 	let isRequestDone = false;
 	page.on('request', async (request) => {
-		if (request.url().includes('/user-schema') && request.method() === 'PUT') {
+		if (request.url().includes('/users/schema') && request.method() === 'PUT') {
 			isRequestDone = true;
 			const body = request.postData();
 			const parsed = JSON.parse(body);
@@ -98,13 +97,13 @@ test.skip(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.click('.schema-edit__header-apply-button');
 	await page.click('.schema-edit__apply-alter-button');
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	expect(isRequestDone).toBe(true);
 
 	await expect(page.locator('.schema-grid')).toBeVisible();
 });
 
-// TODO(Andrea): see the issue https://github.com/meergo/meergo/issues/1200.
-test.skip(`Add schema object property with sub-property`, async ({ page }) => {
+test(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -142,6 +141,7 @@ test.skip(`Add schema object property with sub-property`, async ({ page }) => {
 		}),
 	).toBeVisible();
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 
 	await expect(
@@ -157,8 +157,7 @@ test.skip(`Add schema object property with sub-property`, async ({ page }) => {
 	).toBeVisible();
 });
 
-// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1200.
-test.skip(`Remove schema properties`, async ({ page }) => {
+test(`Remove schema properties`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -187,6 +186,7 @@ test.skip(`Remove schema properties`, async ({ page }) => {
 		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^test_obj$/ }),
 	).not.toBeVisible();
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 
 	await expect(
@@ -200,8 +200,7 @@ test.skip(`Remove schema properties`, async ({ page }) => {
 	).not.toBeVisible();
 });
 
-// TODO(Andrea): see the issue https://github.com/meergo/meergo/issues/1200.
-test.skip(`Check that the property name is correctly validated`, async ({ page }) => {
+test(`Check that the property name is correctly validated`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');

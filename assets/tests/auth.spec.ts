@@ -4,7 +4,9 @@ import { config, login, logout, uiURL } from './utils';
 const LOGIN_BUTTON_CLASS = '.login__button';
 const LOGOUT_BUTTON_CLASS = '.sidebar__item-text-logout';
 
-test('Try to access a page that requires authentication and check that it redirects to the login page', async ({ page }) => {
+test('Try to access a page that requires authentication and check that it redirects to the login page', async ({
+	page,
+}) => {
 	await page.goto(`${uiURL}`);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
 	await page.goto(`${uiURL}connections`);
@@ -24,7 +26,9 @@ test('Login', async ({ page }) => {
 		// The user must first select a workspace, because the
 		// organization has more than one.
 		const workspaceList = page.locator('.workspace-list__workspaces');
-		const firstWorkspaceTile = workspaceList.locator(`.workspace-list__workspace[data-id="${String(config.workspaceID)}"]`).nth(0);
+		const firstWorkspaceTile = workspaceList
+			.locator(`.workspace-list__workspace[data-id="${String(config.workspaceID)}"]`)
+			.nth(0);
 		await firstWorkspaceTile.click();
 		await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeVisible();
 	}

@@ -18,6 +18,7 @@ test(`Change the workspace name`, async ({ page }) => {
 	await expect(page.locator('.workspace-selector__value')).toContainText('Test workspace');
 	await page.locator('.general-settings__name >> input').fill('Workspace');
 	await page.click('.general-settings__save-workspace-button');
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 	await expect(page.locator('.general-settings__name >> input')).toHaveValue('Workspace');
 	await expect(page.locator('.workspace-selector__value')).toContainText('Workspace');
@@ -43,6 +44,7 @@ test(`Change the UI user profile properties`, async ({ page }) => {
 	await expect(userProfileAdditionalLine).toHaveValue('email');
 	await expect(userProfileImage).toHaveValue('dummy_id');
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 
 	await expect(userProfileFirstName).toHaveValue('first_name');
@@ -66,6 +68,7 @@ test(`Change the automatic execution of the identity resolution`, async ({ page 
 	await page.click('.identifiers__save-button');
 	await expect(automaticExecutionLabel).not.toHaveClass(/checkbox--checked/);
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 	await expect(automaticExecutionLabel).not.toHaveClass(/checkbox--checked/);
 
@@ -76,6 +79,7 @@ test(`Change the automatic execution of the identity resolution`, async ({ page 
 	await page.click('.identifiers__save-button');
 	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
 
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
 });
@@ -100,6 +104,7 @@ test(`Change the identifiers`, async ({ page }) => {
 	await identInputs.nth(1).fill('first_name');
 	await identInputs.nth(2).fill('last_name');
 	await page.click('.identifiers__save-button');
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 	await expect(identInputs.nth(0)).toHaveValue('email');
 	await expect(identInputs.nth(1)).toHaveValue('first_name');
@@ -115,6 +120,7 @@ test(`Sort the identifiers`, async ({ page }) => {
 	await identifiers.nth(2).locator('.identifiers__identifier-menu').click();
 	await identifiers.nth(2).locator('.identifiers__mapping-up').click();
 	await page.click('.identifiers__save-button');
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 	const identInputs = page.locator('.identifiers__identifier sl-input >> input');
 	await expect(identInputs.nth(0)).toHaveValue('first_name');
@@ -137,6 +143,7 @@ test(`Remove the identifiers`, async ({ page }) => {
 	await identifiers.nth(0).locator('.identifiers__mapping-remove').click();
 
 	await page.click('.identifiers__save-button');
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 
 	expect(await page.locator('.identifiers__identifier').count()).toBe(0);

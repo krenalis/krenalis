@@ -32,8 +32,29 @@ export default defineConfig({
 	/* Configure projects for major browsers */
 	projects: [
 		{
-			name: 'chromium',
+			name: 'schema.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/schema.spec.ts'],
+		},
+		{
+			name: 'auth.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/auth.spec.ts'],
+		},
+		{
+			name: 'connections.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/connections.spec.ts'],
+		},
+		{
+			name: 'actions.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/actions.spec.ts'],
+		},
+		{
+			name: 'settings.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/settings.spec.ts'],
 		},
 
 		// {
