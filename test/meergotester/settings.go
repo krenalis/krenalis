@@ -8,8 +8,10 @@
 package meergotester
 
 import (
+	"fmt"
 	"os"
-	"runtime"
+	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -56,8 +58,7 @@ func init() {
 			Password: "test_postgres",
 			Schema:   "public",
 		},
-		PythonExecutable: "python3",
-		WarehouseType:    "PostgreSQL",
+		WarehouseType: "PostgreSQL",
 		Warehouse: &DBSettings{
 			// Host and Port will be set when warehouse container starts.
 			Database: "test_warehouse",
@@ -66,13 +67,31 @@ func init() {
 			Schema:   "public",
 		},
 	}
-	if runtime.GOOS == "windows" {
-		testsSettings.PythonExecutable = "python"
+	pyExecutable, err := lookupPythonExecPath()
+	if err != nil {
+		panic(err)
 	}
+	testsSettings.PythonExecutable = pyExecutable
 	if host := os.Getenv("MEERGO_TESTS_HOST"); host != "" {
 		testsSettings.MeergoHost = host
 	}
 	if pythonPath := os.Getenv("MEERGO_TESTS_PYTHON_PATH"); pythonPath != "" {
 		testsSettings.PythonExecutable = pythonPath
 	}
+}
+
+// lookupPythonExecPath returns the path of the Python executable available on
+// this system, or an error if it cannot be found.
+func lookupPythonExecPath() (string, error) {
+	// TODO: Keep in sync with other copies of this function, scattered
+	// throughout the code, that have the same name.
+	pythonNames := []string{"python", "python3", "python3.13"}
+	for _, name := range pythonNames {
+		path, err := exec.LookPath(name)
+		if err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("the Python executable cannot be found "+
+		"with any of these names: %s", strings.Join(pythonNames, ", "))
 }

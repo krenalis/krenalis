@@ -10,12 +10,14 @@ package parquet
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"math"
 	"os"
 	"os/exec"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -192,7 +194,11 @@ func TestExportAndImportParquet(t *testing.T) {
 	t.Logf("correctly received %d ack(s)", recordReader.acksReceived)
 
 	// Check the exported file with Pandas.
-	cmd := exec.Command("python", "test_parquet_file.py", parquetFileName)
+	pyExec, err := lookupPythonExecPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(pyExec, "test_parquet_file.py", parquetFileName)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
@@ -608,4 +614,20 @@ func Test_timeTimeToInt64(t *testing.T) {
 		})
 	}
 
+}
+
+// lookupPythonExecPath returns the path of the Python executable available on
+// this system, or an error if it cannot be found.
+func lookupPythonExecPath() (string, error) {
+	// TODO: Keep in sync with other copies of this function, scattered
+	// throughout the code, that have the same name.
+	pythonNames := []string{"python", "python3", "python3.13"}
+	for _, name := range pythonNames {
+		path, err := exec.LookPath(name)
+		if err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("the Python executable cannot be found "+
+		"with any of these names: %s", strings.Join(pythonNames, ", "))
 }
