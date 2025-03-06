@@ -29,7 +29,10 @@ import (
 )
 
 // exportUsers exports the users for the action.
-// The action must have a store.
+//
+// Returns an error if execution does not reach its natural completion.
+// If the error is caused by the schema, the connector, or the data warehouse,
+// it returns an *actionError, which is expected to be logged as is.
 func (this *Action) exportUsers(ctx context.Context) error {
 
 	action := this.action

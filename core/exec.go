@@ -115,16 +115,17 @@ func (this *Action) exec(ctx context.Context) {
 			if actionErr, ok := err.(*actionError); ok {
 				errorStep = actionErr.step
 				errorMessage = err.Error()
-				this.core.metrics.Failed(errorStep, this.action.ID, 0, errorMessage)
 			} else {
+				errorStep = metrics.ReceiveStep
 				select {
 				case <-ctx.Done():
-					this.core.metrics.ReceiveFailed(this.action.ID, 0, "execution has been cancelled")
+					errorMessage = "execution has been cancelled"
 				default:
-					this.core.metrics.ReceiveFailed(this.action.ID, 0, "an internal error has occurred")
+					errorMessage = "an internal error has occurred"
 					slog.Error("cannot execute action", "action", this.action.ID, "execution", execution.ID, "err", err)
 				}
 			}
+			this.core.metrics.Failed(errorStep, this.action.ID, 0, errorMessage)
 		}
 
 		this.core.metrics.WaitStore()
@@ -137,7 +138,7 @@ func (this *Action) exec(ctx context.Context) {
 		}
 
 		// TODO(marco) retry if the transaction fails.
-		err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 			_, err := tx.Exec(ctx,
 				"WITH s AS (\n"+
 					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
