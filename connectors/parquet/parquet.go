@@ -740,7 +740,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 				case 64:
 					return types.Int(64), nil
 				}
-				return types.Type{}, fmt.Errorf("unexpected Parquet bitWidth value: %d", lt.INTEGER.BitWidth)
+				return types.Type{}, nil
 			}
 			switch lt.INTEGER.BitWidth {
 			case 8:
@@ -752,7 +752,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			case 64:
 				return types.Uint(64), nil
 			}
-			return types.Type{}, fmt.Errorf("unexpected Parquet bitWidth value: %d", lt.INTEGER.BitWidth)
+			return types.Type{}, nil
 		}
 		if lt.JSON != nil {
 			return types.JSON(), nil
@@ -763,7 +763,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		if lt.UUID != nil {
 			return types.UUID(), nil
 		}
-		return types.Type{}, fmt.Errorf("unsupported logical Parquet type %q", lt)
+		return types.Type{}, nil
 	}
 
 	// Converted types.
@@ -804,7 +804,7 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		case parquet.ConvertedType_TIME_MICROS, parquet.ConvertedType_TIME_MILLIS:
 			return types.Time(), nil
 		}
-		return types.Type{}, fmt.Errorf("unsupported converted Parquet type %q", *ct)
+		return types.Type{}, nil
 	}
 
 	// Kinds.
