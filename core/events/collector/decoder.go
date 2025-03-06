@@ -528,39 +528,33 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	}
 
 	// Location.
-	if loc, ok := context["location"].(map[string]any); ok {
-		country, _ := loc["country"].(string)
-		city, _ := loc["city"].(string)
-		if country != "" && city != "" {
-			if d.maxmind != nil && requestIP != nil {
-				var record struct {
-					City struct {
-						Names struct {
-							EN string `maxminddb:"en"`
-						} `maxminddb:"names"`
-					} `maxminddb:"city"`
-					Country struct {
-						IsoCode string `maxminddb:"iso_code"`
-					} `maxminddb:"country"`
-					Location struct {
-						Latitude  float64 `maxminddb:"latitude"`
-						Longitude float64 `maxminddb:"longitude"`
-					} `maxminddb:"location"`
-				}
-				err := d.maxmind.Lookup(requestIP, &record)
-				if err == nil {
-					if code, ok := countryCode(record.Country.IsoCode); ok {
-						loc["country"] = code
-					}
-					loc["city"] = record.City.Names.EN
-					loc["latitude"] = record.Location.Latitude
-					loc["longitude"] = record.Location.Longitude
-				}
+	if _, ok := context["location"].(string); !ok && requestIP != nil && d.maxmind != nil {
+		var record struct {
+			City struct {
+				Names struct {
+					EN string `maxminddb:"en"`
+				} `maxminddb:"names"`
+			} `maxminddb:"city"`
+			Country struct {
+				IsoCode string `maxminddb:"iso_code"`
+			} `maxminddb:"country"`
+			Location struct {
+				Latitude  float64 `maxminddb:"latitude"`
+				Longitude float64 `maxminddb:"longitude"`
+			} `maxminddb:"location"`
+		}
+		if err := d.maxmind.Lookup(requestIP, &record); err == nil {
+			loc := map[string]any{
+				"city":      record.City.Names.EN,
+				"latitude":  record.Location.Latitude,
+				"longitude": record.Location.Longitude,
 			}
-		} else {
-			if code, ok := countryCode(country); ok {
+			if code, ok := countryCode(record.Country.IsoCode); ok {
 				loc["country"] = code
+			} else {
+				loc["country"] = ""
 			}
+			context["location"] = loc
 		}
 	}
 
@@ -832,8 +826,8 @@ var contextSections = map[string]*contextSection{
 			{name: "version", typ: types.Text()},
 		},
 	},
-	"locale": {
-		name: "locale",
+	"location": {
+		name: "location",
 		properties: []contextProperty{
 			{name: "city", typ: types.Text()},
 			{name: "country", typ: types.Text()},

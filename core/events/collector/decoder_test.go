@@ -385,6 +385,34 @@ func Test_Decoder(t *testing.T) {
 			}},
 		},
 
+		// Location.
+		{
+			typ:  "screen",
+			body: `{"context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"location":{"city":"London","country":"GB","latitude":51.5074,"longitude":-0.1278,"speed":25.562}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","name":"login"}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context": map[string]any{
+						"screen":    map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")},
+						"browser":   browser,
+						"ip":        ip,
+						"os":        os,
+						"userAgent": userAgent,
+						"location": map[string]any{
+							"city":      "London",
+							"country":   "GB",
+							"latitude":  51.5074,
+							"longitude": -0.1278,
+							"speed":     25.562,
+						},
+					},
+					"properties": json.Value(`{}`),
+					"type":       "screen",
+					"name":       "login",
+					"userId":     nil,
+				}},
+			},
+		},
+
 		// Errors reading events.
 		{
 			body: `{"batch":[` +
