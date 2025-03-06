@@ -528,7 +528,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	}
 
 	// Location.
-	if _, ok := context["location"].(string); !ok && requestIP != nil && d.maxmind != nil {
+	if _, ok := context["location"]; !ok && requestIP != nil && d.maxmind != nil {
 		var record struct {
 			City struct {
 				Names struct {
