@@ -53,7 +53,8 @@ type Filesystem struct {
 }
 
 type innerSettings struct {
-	Root string
+	Root                  string
+	SimulateHighIOLatency bool
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
@@ -86,7 +87,11 @@ func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadC
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	return f, fi.ModTime().UTC(), nil
+	var rc io.ReadCloser = f
+	if filesystem.settings.SimulateHighIOLatency {
+		rc = &highLatencyReadCloser{rc}
+	}
+	return rc, fi.ModTime().UTC(), nil
 }
 
 // ServeUI serves the connector's user interface.
@@ -109,6 +114,7 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 		Fields: []meergo.Component{
 			&meergo.Text{Label: "Warning", Text: "The Filesystem connector exposes you local filesystem to Meergo for read and write operations. Use this with caution."},
 			&meergo.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
+			&meergo.Checkbox{Name: "SimulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
 		},
 		Settings: settings,
 	}
@@ -131,13 +137,22 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 			return
 		}
 	}()
+	if filesystem.settings.SimulateHighIOLatency {
+		simulateHighIOLatency()
+	}
 	_, err = io.Copy(f, r)
+	if filesystem.settings.SimulateHighIOLatency {
+		simulateHighIOLatency()
+	}
 	err2 := f.Close()
 	if err != nil {
 		return err
 	}
 	if err2 != nil {
 		return err2
+	}
+	if filesystem.settings.SimulateHighIOLatency {
+		simulateHighIOLatency()
 	}
 	err = os.Rename(tmpPath, path)
 	return err
