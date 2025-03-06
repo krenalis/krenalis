@@ -122,12 +122,12 @@ func Test_parseNumber(t *testing.T) {
 		{`-3'a'`, `-3`, `'a'`, nil},
 		{`5, `, `5`, `, `, nil},
 		{`-3)`, `-3`, `)`, nil},
-		{`3e`, ``, ``, errInvalidNumber},
-		{`2.7name`, ``, ``, errInvalidNumber},
-		{`1.x`, ``, ``, errInvalidNumber},
-		{`1e a`, ``, ``, errInvalidNumber},
-		{`1_000`, ``, ``, errInvalidNumber},
-		{`0x123`, ``, ``, errInvalidNumber},
+		{`3e`, ``, `3e`, errInvalidNumber},
+		{`2.7name`, ``, `2.7name`, errInvalidNumber},
+		{`1.x`, ``, `1.x`, errInvalidNumber},
+		{`1e a`, ``, `1e a`, errInvalidNumber},
+		{`1_000`, ``, `1_000`, errInvalidNumber},
+		{`0x123`, ``, `0x123`, errInvalidNumber},
 	}
 
 	for _, test := range tests {
@@ -139,13 +139,12 @@ func Test_parseNumber(t *testing.T) {
 			if err.Error() != test.err.Error() {
 				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
 			}
-			continue
-		}
-		if test.err != nil {
+		} else if test.err != nil {
 			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
-		}
-		if got.Cmp(decimal.MustParse(test.expected)) != 0 {
-			t.Fatalf("%q. expected number %s, got %s", test.src, test.expected, got)
+		} else {
+			if got.Cmp(decimal.MustParse(test.expected)) != 0 {
+				t.Fatalf("%q. expected number %s, got %s", test.src, test.expected, got)
+			}
 		}
 		if src != test.unparsed {
 			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)

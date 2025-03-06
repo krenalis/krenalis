@@ -234,6 +234,15 @@ Expression:
 				var n decimal.Decimal
 				n, src, err = parseNumber(src)
 				if err != nil {
+					// For '-' followed by a path, return a clearer and more descriptive error message.
+					// See issue https://github.com/meergo/meergo/issues/1344.
+					if c == '-' && len(src) > 1 {
+						if c = src[1]; 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' {
+							if _, _, err := parsePath(src[1:]); err == nil {
+								return nil, "", errors.New("the ‘-’ character is used for negation. Did you mean the ‘_’ character?")
+							}
+						}
+					}
 					return nil, "", err
 				}
 				p.value, p.typ = p.appendValue(n, len(expr) > 0)
@@ -316,6 +325,7 @@ Expression:
 
 // parseNumber parses a number and returns the parsed number and the remaining
 // unparsed source. It expects that src starts with '0'-'9', '-', or '.'.
+// If an error occurs, it returns 0, src, errInvalidNumber.
 func parseNumber(src string) (decimal.Decimal, string, error) {
 	var i int
 Number:
@@ -327,7 +337,7 @@ Number:
 		case 'e', 'E':
 		default:
 			if isPathByte(c) {
-				return decimal.Decimal{}, "", errInvalidNumber
+				return decimal.Decimal{}, src, errInvalidNumber
 			}
 			break Number
 		}
@@ -335,7 +345,7 @@ Number:
 	}
 	n, err := decimal.Parse(src[:i], 0, 0)
 	if err != nil {
-		return decimal.Decimal{}, "", errInvalidNumber
+		return decimal.Decimal{}, src, errInvalidNumber
 	}
 	return n, src[i:], nil
 }
