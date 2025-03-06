@@ -95,7 +95,61 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	case types.IntKind:
 		var v int64
-		v, valid = asInt64(src)
+		// Keep in sync with the case 'types.YearKind'.
+		switch src := src.(type) {
+		case int:
+			v = int64(src)
+			valid = true
+		case int8:
+			v = int64(src)
+			valid = true
+		case int16:
+			v = int64(src)
+			valid = true
+		case int32:
+			v = int64(src)
+			valid = true
+		case int64:
+			v = src
+			valid = true
+		case uint:
+			v = int64(src)
+			valid = src <= math.MaxInt64
+		case uint8:
+			v = int64(src)
+			valid = true
+		case uint16:
+			v = int64(src)
+			valid = true
+		case uint32:
+			v = int64(src)
+			valid = true
+		case uint64:
+			v = int64(src)
+			valid = src <= math.MaxInt64
+		case float32:
+			f := float64(src)
+			v = int64(f)
+			valid = !math.IsInf(f, 0) && f == math.Trunc(f)
+		case float64:
+			v = int64(src)
+			valid = !math.IsInf(src, 0) && src == math.Trunc(src)
+		case decimal.Decimal:
+			i, err := src.Int64()
+			v = i
+			valid = err == nil
+		case string:
+			value, err := strconv.ParseInt(src, 10, 64)
+			v = value
+			valid = err == nil
+		case []byte:
+			if src == nil && nullable {
+				return nil, nil
+			}
+			var err error
+			value, err = strconv.ParseInt(string(src), 10, 64)
+			valid = err == nil
+		}
 		if valid {
 			min, max := typ.IntRange()
 			if v < min || v > max {
@@ -160,6 +214,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v, err = strconv.ParseUint(src, 10, 64)
 			valid = err == nil
 		case []byte:
+			if src == nil && nullable {
+				return nil, nil
+			}
 			var err error
 			v, err = strconv.ParseUint(string(src), 10, 64)
 			valid = err == nil
@@ -245,6 +302,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v, err = strconv.ParseFloat(src, typ.BitSize())
 			valid = err == nil
 		case []byte:
+			if src == nil && nullable {
+				return nil, nil
+			}
 			var err error
 			v, err = strconv.ParseFloat(string(src), typ.BitSize())
 			valid = err == nil
@@ -295,6 +355,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			}
 			v, err = decimal.Parse(src, p, s)
 		case []byte:
+			if src == nil && nullable {
+				return nil, nil
+			}
 			v, err = decimal.Parse(src, p, s)
 		case fmt.Stringer:
 			v, err = decimal.Parse(src.String(), p, s)
@@ -388,6 +451,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				value = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
 			}
 		case []byte:
+			if src == nil && nullable {
+				return nil, nil
+			}
 			var t time.Time
 			var err error
 			if layouts.Time == "" {
@@ -402,7 +468,61 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	case types.YearKind:
 		var v int64
-		v, valid = asInt64(src)
+		// Keep in sync with the case 'types.IntKind'.
+		switch src := src.(type) {
+		case int:
+			v = int64(src)
+			valid = true
+		case int8:
+			v = int64(src)
+			valid = true
+		case int16:
+			v = int64(src)
+			valid = true
+		case int32:
+			v = int64(src)
+			valid = true
+		case int64:
+			v = src
+			valid = true
+		case uint:
+			v = int64(src)
+			valid = src <= math.MaxInt64
+		case uint8:
+			v = int64(src)
+			valid = true
+		case uint16:
+			v = int64(src)
+			valid = true
+		case uint32:
+			v = int64(src)
+			valid = true
+		case uint64:
+			v = int64(src)
+			valid = src <= math.MaxInt64
+		case float32:
+			f := float64(src)
+			v = int64(f)
+			valid = !math.IsInf(f, 0) && f == math.Trunc(f)
+		case float64:
+			v = int64(src)
+			valid = !math.IsInf(src, 0) && src == math.Trunc(src)
+		case decimal.Decimal:
+			i, err := src.Int64()
+			v = i
+			valid = err == nil
+		case string:
+			value, err := strconv.ParseInt(src, 10, 64)
+			v = value
+			valid = err == nil
+		case []byte:
+			if src == nil && nullable {
+				return nil, nil
+			}
+			var err error
+			value, err = strconv.ParseInt(string(src), 10, 64)
+			valid = err == nil
+		}
 		value = int(v)
 		valid = valid && types.MinYear <= v && v <= types.MaxYear
 	case types.UUIDKind:
@@ -422,8 +542,14 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		var data []byte
 		switch src := src.(type) {
 		case json.Value:
+			if src == nil && nullable {
+				return nil, nil
+			}
 			data = src
 		case []byte:
+			if src == nil && nullable {
+				return nil, nil
+			}
 			data = src
 		case string:
 			if src == "" && nullable {
@@ -456,6 +582,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			}
 			src, _ = netip.ParseAddr(ip)
 		case net.IP:
+			if ip == nil && nullable {
+				return nil, nil
+			}
 			if addr, ok := netip.AddrFromSlice(ip); ok {
 				// Unmap an IPv6-mapped IPv4 address as the net.IP.String method does.
 				if addr.Is4In6() {
@@ -480,6 +609,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v = s
 			valid = true
 		case []byte:
+			if s == nil && nullable {
+				return nil, nil
+			}
 			v = string(s)
 			valid = true
 		}
@@ -531,6 +663,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		} else {
 			rv := reflect.ValueOf(src)
 			if rv.Kind() == reflect.Slice {
+				if rv.IsNil() && nullable {
+					return nil, nil
+				}
 				var err error
 				n := rv.Len()
 				if n < typ.MinElements() || n > typ.MaxElements() {
@@ -560,6 +695,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	case types.ObjectKind:
 		if src, ok := src.(map[string]any); ok {
+			if src == nil && nullable {
+				return nil, nil
+			}
 			var err error
 			for _, p := range typ.Properties() {
 				value, ok := src[p.Name]
@@ -610,6 +748,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		} else {
 			rv := reflect.ValueOf(src)
 			if rv.Kind() == reflect.Map {
+				if rv.IsNil() && nullable {
+					return nil, nil
+				}
 				var err error
 				n := rv.Len()
 				m := make(map[string]any, n)
@@ -632,46 +773,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		return nil, newNormalizationErrorf(name, "has value %#v and type %T that cannot be represented as the %s type", src, src, typ)
 	}
 	return value, nil
-}
-
-func asInt64(v any) (int64, bool) {
-	switch v := v.(type) {
-	case int:
-		return int64(v), true
-	case int8:
-		return int64(v), true
-	case int16:
-		return int64(v), true
-	case int32:
-		return int64(v), true
-	case int64:
-		return v, true
-	case uint:
-		return int64(v), v <= math.MaxInt64
-	case uint8:
-		return int64(v), true
-	case uint16:
-		return int64(v), true
-	case uint32:
-		return int64(v), true
-	case uint64:
-		return int64(v), v <= math.MaxInt64
-	case float32:
-		f := float64(v)
-		return int64(f), !math.IsInf(f, 0) && f == math.Trunc(f)
-	case float64:
-		return int64(v), !math.IsInf(v, 0) && v == math.Trunc(v)
-	case decimal.Decimal:
-		i, err := v.Int64()
-		return i, err == nil
-	case string:
-		value, err := strconv.ParseInt(v, 10, 64)
-		return value, err == nil
-	case []byte:
-		value, err := strconv.ParseInt(string(v), 10, 64)
-		return value, err == nil
-	}
-	return 0, false
 }
 
 // dateTimeFromUnixInt returns the local Time corresponding to the provided Unix

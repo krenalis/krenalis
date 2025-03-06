@@ -51,21 +51,27 @@ func Test_normalize(t *testing.T) {
 		// int(16).
 		{types.Int(16), -6, -6, false, nil},
 		{types.Int(16), -6.0, -6, false, nil},
+		{types.Int(16), []byte(nil), nil, true, nil},
 		// int(32).
 		{types.Int(32), -9261, -9261, false, nil},
 		{types.Int(32), -9261.0, -9261, false, nil},
+		{types.Int(32), []byte(nil), nil, true, nil},
 		// uint(8).
 		{types.Uint(8), uint(3), uint(3), false, nil},
 		{types.Uint(8), 3.0, uint(3), false, nil},
+		{types.Uint(8), []byte(nil), nil, true, nil},
 		// uint(32).
 		{types.Uint(32), uint(47303), uint(47303), false, nil},
 		{types.Uint(32), 47303.0, uint(47303), false, nil},
+		{types.Uint(32), []byte(nil), nil, true, nil},
 		// float(32).
 		{types.Float(32), float64(float32(12.79)), float64(float32(12.79)), false, nil},
 		{types.Float(32), math.NaN(), math.NaN(), false, nil},
+		{types.Float(32), []byte(nil), nil, true, nil},
 		// float(64).
 		{types.Float(64), 12.7902743017496882, 12.7902743017496882, false, nil},
 		{types.Float(64), math.NaN(), math.NaN(), false, nil},
+		{types.Float(64), []byte(nil), nil, true, nil},
 		// decimal.
 		{types.Decimal(10, 3), "6.639e2", decimal.MustParse("663.9"), false, nil},
 		{types.Decimal(8, 0), 793012, decimal.MustInt(793012), false, nil},
@@ -74,6 +80,7 @@ func Test_normalize(t *testing.T) {
 		{types.Decimal(3, 2), decimal.MustInt(0), decimal.MustInt(0), false, nil},
 		{types.Decimal(3, 2), decimal.MustParse("3.14"), decimal.MustParse("3.14"), false, nil},
 		{types.Decimal(3, 2), decimal.MustParse("3.14"), decimal.MustParse("3.14"), true, nil},
+		{types.Decimal(3, 2), []byte(nil), nil, true, nil},
 		// datetime.
 		{types.DateTime(), aDateTime, aDateTime, false, nil},
 		{types.DateTime(), strconv.FormatInt(aDateTime.Unix(), 10), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), false, &state.TimeLayouts{DateTime: "unix"}},
@@ -99,9 +106,11 @@ func Test_normalize(t *testing.T) {
 		{types.Time(), "09:22:51.834", time.Date(1970, 1, 1, 9, 22, 51, 834000000, time.UTC), false, &state.TimeLayouts{Time: "15:04:05.000"}},
 		{types.Time(), "09h 31m 13s", time.Date(1970, 1, 1, 9, 31, 13, 0, time.UTC), false, &state.TimeLayouts{Time: "15h 04m 05s"}},
 		{types.Time(), "", nil, true, &state.TimeLayouts{Time: "15h 04m 05s"}},
+		{types.Time(), []byte(nil), nil, true, &state.TimeLayouts{Time: "15h 04m 05s"}},
 		// year.
 		{types.Year(), 2023, 2023, false, nil},
 		{types.Year(), 2023.0, 2023, false, nil},
+		{types.Year(), []byte(nil), nil, true, nil},
 		// uuid.
 		{types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", false, nil},
 		{types.UUID(), "", nil, true, nil},
@@ -135,6 +144,7 @@ func Test_normalize(t *testing.T) {
 		{types.Inet(), netip.MustParseAddr("2001:0db8:0000:0000:0000:ff00:0042:8329"), "2001:db8::ff00:42:8329", false, nil},
 		{types.Inet(), netip.MustParseAddr("fe80::1ff:fe23:4567:890a%eth0"), "fe80::1ff:fe23:4567:890a", false, nil},
 		{types.Inet(), netip.MustParseAddr("::ffff:192.168.1.10"), "::ffff:192.168.1.10", false, nil},
+		{types.Inet(), net.IP(nil), nil, true, nil},
 		// text.
 		{types.Text(), "foo", "foo", false, nil},
 		{types.Text().WithValues("foo", "boo"), "boo", "boo", false, nil},
@@ -142,16 +152,25 @@ func Test_normalize(t *testing.T) {
 		{types.Text().WithByteLen(3), "boo", "boo", false, nil},
 		{types.Text().WithCharLen(3), "bòò", "bòò", false, nil},
 		{types.Text().WithValues("foo", "boo"), "", nil, true, nil},
+		{types.Text(), []byte(nil), nil, true, nil},
 		// array.
 		{types.Array(types.Int(32)), []any{1, 2}, []any{1, 2}, false, nil},
 		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, false, nil},
 		{types.Array(types.Array(types.Text())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, false, nil},
+		{types.Array(types.Int(32)), []any(nil), nil, true, nil},
+		{types.Array(types.Int(32)), []int(nil), nil, true, nil},
+		{types.Array(types.Int(32)), []string(nil), nil, true, nil},
+		{types.Array(types.Int(32)), []decimal.Decimal(nil), nil, true, nil},
+		{types.Array(types.Int(32)), []map[string][]map[string][]int(nil), nil, true, nil},
 		// object.
 		{types.Object([]types.Property{{Name: "foo", Type: types.Text()}, {Name: "boo", Type: types.Int(32)}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.Inet(), Nullable: true}}), map[string]any{"foo": ""}, map[string]any{"foo": nil}, true, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.Text()}, {Name: "boo", Type: types.Int(32)}}), map[string]any(nil), nil, true, nil},
 		// map.
 		{types.Map(types.Text()), map[string]any{"foo": "boo"}, map[string]any{"foo": "boo"}, false, nil},
 		{types.Map(types.Array(types.Boolean())), map[string]any{"foo": []any{true, false}}, map[string]any{"foo": []any{true, false}}, false, nil},
+		{types.Map(types.Text()), map[string]any(nil), nil, true, nil},
+		{types.Map(types.Text()), map[string]string(nil), nil, true, nil},
 	}
 
 	for _, test := range tests {
