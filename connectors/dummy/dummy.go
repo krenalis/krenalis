@@ -14,7 +14,6 @@ import (
 	"errors"
 	"io"
 	"maps"
-	"math"
 	"math/rand/v2"
 	"net/http"
 	"slices"
@@ -26,15 +25,6 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
-)
-
-// Constants for simulating the HTTP delay.
-// The enabling of the delay is controlled by a connector setting.
-const (
-	httpDelayStdDev = 1.1
-	httpDelayMean   = 0.02
-	httpDelayMin    = 0.05 // seconds
-	httpDelayMax    = 10   // seconds
 )
 
 // Connector icon.
@@ -401,12 +391,8 @@ func (dummy *Dummy) simulateHTTPDelay() {
 	if !dummy.settings.SimulateHTTPDelay {
 		return
 	}
-	// Determine the delay (in seconds).
-	delay := rand.NormFloat64()*httpDelayStdDev + httpDelayMean
-	delay = math.Max(httpDelayMin, delay)
-	delay = math.Min(httpDelayMax, delay)
-	// Sleep.
-	time.Sleep(time.Duration(delay * 10e9))
+	latency := rand.Float64()*1.3 + 1.5 // seconds.
+	time.Sleep(time.Duration(latency * 1e9))
 	metrics.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
 }
 
