@@ -228,7 +228,7 @@ func newActionSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Cont
 								if _, ok := err.(*errors.UnprocessableError); ok {
 									return
 								}
-								slog.Debug("cannot add execution for action", "action", a.ID, "err", err)
+								slog.Debug("core: cannot add execution for action", "action", a.ID, "err", err)
 							}
 						}()
 					}

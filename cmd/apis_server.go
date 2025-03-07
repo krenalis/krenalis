@@ -193,7 +193,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 					_ = err.WriteTo(w)
 					return
 				}
-				slog.Error("error occurred serving Core", "err", err)
+				slog.Error("cmd: error occurred serving Core", "err", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}

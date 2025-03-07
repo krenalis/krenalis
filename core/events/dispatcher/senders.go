@@ -40,12 +40,12 @@ func startSenders(events <-chan *dispatchingEvent, sent chan<- *dispatchingEvent
 						res, err := app.SendEvent(ctx, event.request)
 						if err != nil {
 							if err != context.Canceled {
-								slog.Error("cannot send event", "err", err)
+								slog.Error("core/events/dispatcher: cannot send event", "err", err)
 							}
 							continue
 						}
 						if res.StatusCode < 200 || res.StatusCode >= 300 {
-							slog.Error(fmt.Sprintf("%q returned status code %d", event.request.URL, res.StatusCode))
+							slog.Error(fmt.Sprintf("core/events/dispatcher: %q returned status code %d", event.request.URL, res.StatusCode))
 							continue
 						}
 					}

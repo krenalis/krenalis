@@ -328,7 +328,7 @@ WHERE ctid = ANY (SELECT unnest(row_ctids) FROM aggregated)`
 		a = err
 		print(a)
 		if msg := err.Error(); msg != loggedMsg {
-			slog.Error("failed to aggregate the metrics on action", "err", msg)
+			slog.Error("core/metrics: failed to aggregate the metrics on action", "err", msg)
 		}
 	}
 
@@ -470,7 +470,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 				break
 			}
 			if msg := err.Error(); msg != loggedMsg {
-				slog.Error("failed to store the metrics on action", "err", msg)
+				slog.Error("core/metrics: failed to store the metrics on action", "err", msg)
 			}
 		}
 
@@ -513,7 +513,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 			break
 		}
 		if msg := err.Error(); msg != loggedMsg {
-			slog.Error("failed to store the errors on action", "err", msg)
+			slog.Error("core/metrics: failed to store the errors on action", "err", msg)
 		}
 	}
 }

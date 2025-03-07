@@ -511,7 +511,7 @@ func (store *Store) StartIdentityResolution(ctx context.Context) error {
 		// https://github.com/meergo/meergo/issues/1224.
 		err := store.warehouse().ResolveIdentities(context.Background(), identifiers, userColumns, userPrimarySources)
 		if err != nil {
-			slog.Error("the execution of the Identity Resolution failed", "workspace", store.workspace, "err", err)
+			slog.Error("core/datastore: the execution of the Identity Resolution failed", "workspace", store.workspace, "err", err)
 		}
 	}()
 

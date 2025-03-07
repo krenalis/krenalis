@@ -48,7 +48,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 		err := warehouse.endOperation(ctx, opID, time.Now().UTC())
 		if err != nil {
 			go func() {
-				slog.Error("cannot end data warehouse operation", "id", opID, "err", err)
+				slog.Error("warehouses/snowflake: cannot end data warehouse operation", "id", opID, "err", err)
 			}()
 		}
 	}()

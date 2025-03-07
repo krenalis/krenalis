@@ -200,7 +200,7 @@ func (c *actionCleaner) deleteDiscontinuedFunctions() {
 			return err
 		})
 		if err != nil {
-			slog.Error("an error occurred deleting discontinued functions", "err", err)
+			slog.Error("core: an error occurred deleting discontinued functions", "err", err)
 		}
 	}
 }

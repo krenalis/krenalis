@@ -161,20 +161,20 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 			if r := recover(); r != nil {
 				panicsFilename, err := filepath.Abs("panics.log")
 				if err != nil {
-					slog.Error("cannot get absolute filepath of 'panics.log'", "err", err)
+					slog.Error("cmd: cannot get absolute filepath of 'panics.log'", "err", err)
 					return
 				}
-				slog.Error("a panic occurred, Meergo will exit with status code 1. See the file 'panics.log' for the panic details", "panic reason", r, "panics.log filename", panicsFilename)
+				slog.Error("cmd: a panic occurred, Meergo will exit with status code 1. See the file 'panics.log' for the panic details", "panic reason", r, "panics.log filename", panicsFilename)
 				f, err := os.OpenFile(panicsFilename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 				if err != nil {
-					slog.Error("cannot open panic file", "err", err)
+					slog.Error("cmd: cannot open panic file", "err", err)
 					return
 				}
 				defer f.Close()
 				_, err = fmt.Fprintf(f, "\n----- %s -----\nPanic reason: %v\nStack trace:\n%s",
 					time.Now().Format("2006-01-02 15:04:05.000"), r, debug.Stack())
 				if err != nil {
-					slog.Error("cannot write on panic file", "err", err)
+					slog.Error("cmd: cannot write on panic file", "err", err)
 					return
 				}
 				os.Exit(1)

@@ -150,7 +150,7 @@ func TraceSpan(ctx context.Context, name string, args ...any) (context.Context, 
 	}
 	ctx, span := otel.Tracer(tracerName).Start(ctx, name, keyValuePairsToOptions(args))
 	if logTraces {
-		slog.Info("TraceSpan", name, "name", "id", span.SpanContext().TraceID())
+		slog.Info("telemetry: TraceSpan", name, "name", "id", span.SpanContext().TraceID())
 	}
 	return ctx, &Span{span: span}
 }

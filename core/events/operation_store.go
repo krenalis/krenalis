@@ -76,12 +76,12 @@ func (store *PostgreStore) Done(events ...DoneEvent) {
 		ctx := context.Background()
 		_, err := store.db.Exec(ctx, b.String(), action)
 		if err != nil {
-			slog.Error("cannot update event operations", "err", err)
+			slog.Error("core/events: cannot update event operations", "err", err)
 			return
 		}
 		_, err = store.db.Exec(ctx, "DELETE FROM event_payloads WHERE actions = '{}'")
 		if err != nil {
-			slog.Error("cannot delete event operations", "err", err)
+			slog.Error("core/events: cannot delete event operations", "err", err)
 			return
 		}
 	}

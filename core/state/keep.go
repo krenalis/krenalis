@@ -38,7 +38,7 @@ func (state *State) keep() {
 		case n = <-state.notifications.channel:
 		}
 		if logNotifications {
-			slog.Info("received notification", "pid", n.PID, "name", n.Name, "payload", n.Payload)
+			slog.Info("core/state: received notification", "pid", n.PID, "name", n.Name, "payload", n.Payload)
 		}
 		if !state.syncing && n.Name != "LoadState" {
 			if n.Ack != nil {
@@ -115,7 +115,7 @@ func (state *State) keep() {
 		case "UnlinkConnection":
 			state.unlinkConnection(n)
 		default:
-			slog.Warn("unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
+			slog.Warn("core/state: unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
 		}
 		state.changing.Unlock()
 		if n.Ack != nil {
@@ -129,7 +129,7 @@ func (state *State) keep() {
 func decodeNotification(n notification, e any) bool {
 	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
 	if err != nil {
-		slog.Error("cannot unmarshal notification", "name", n.Name, "pid", n.PID, "err", err)
+		slog.Error("core/state: cannot unmarshal notification", "name", n.Name, "pid", n.PID, "err", err)
 		return false
 	}
 	return true

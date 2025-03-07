@@ -122,7 +122,7 @@ func (this *Action) exec(ctx context.Context) {
 					errorMessage = "execution has been cancelled"
 				default:
 					errorMessage = "an internal error has occurred"
-					slog.Error("cannot execute action", "action", this.action.ID, "execution", execution.ID, "err", err)
+					slog.Error("core: cannot execute action", "action", this.action.ID, "execution", execution.ID, "err", err)
 				}
 			}
 			this.core.metrics.Failed(errorStep, this.action.ID, 0, errorMessage)
@@ -173,7 +173,7 @@ func (this *Action) exec(ctx context.Context) {
 			return tx.Notify(ctx, n)
 		})
 		if err != nil {
-			slog.Error("cannot update action execution status",
+			slog.Error("core: cannot update action execution status",
 				"action", this.action.ID,
 				"execution", execution.ID,
 				"err", err,
@@ -185,7 +185,7 @@ func (this *Action) exec(ctx context.Context) {
 		if actionImportedUsers && ws.ResolveIdentitiesOnBatchImport {
 			err = this.connection.store.StartIdentityResolution(ctx)
 			if err != nil {
-				slog.Error("cannot start Identity Resolution at the end of import", "action", this.action.ID, "execution", execution.ID, "err", err)
+				slog.Error("core: cannot start Identity Resolution at the end of import", "action", this.action.ID, "execution", execution.ID, "err", err)
 				return
 			}
 		}

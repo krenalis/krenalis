@@ -110,7 +110,7 @@ func (core *Core) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		slog.Error("cannot serve webhook", "err", err)
+		slog.Error("core: cannot serve webhook", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}

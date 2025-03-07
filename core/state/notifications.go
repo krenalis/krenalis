@@ -175,7 +175,7 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 					bo = backoff.New(10)
 					bo.SetCap(5 * time.Second)
 				}
-				slog.Error(fmt.Sprintf("error occurred listening notifications, try again after %s", bo.WaitTime()), "err", err)
+				slog.Error(fmt.Sprintf("core/state: error occurred listening notifications, try again after %s", bo.WaitTime()), "err", err)
 				err = nil
 				bo.Next(ctx)
 				continue

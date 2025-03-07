@@ -150,7 +150,7 @@ dispatch:
 		case event, ok := <-d.events.in:
 			if !ok {
 				if debug {
-					slog.Debug("dispatcher: events channel closed")
+					slog.Debug("core/events/dispatcher: events channel closed")
 				}
 				if numEvents == 0 {
 					break dispatch
@@ -160,7 +160,7 @@ dispatch:
 			}
 			meergoMetrics.Increment("Dispatcher.dispatch.new_events_received", 1)
 			if debug {
-				slog.Debug("dispatcher: receive event", "id", event.id)
+				slog.Debug("core/events/dispatcher: receive event", "id", event.id)
 			}
 			// push.
 			key := queueKey{
@@ -189,9 +189,9 @@ dispatch:
 			}
 			if debug {
 				if event == nil {
-					slog.Debug("dispatcher: no event to pop")
+					slog.Debug("core/events/dispatcher: no event to pop")
 				} else {
-					slog.Debug("dispatcher: pop event", "id", event.id)
+					slog.Debug("core/events/dispatcher: pop event", "id", event.id)
 				}
 			}
 			if event != nil {
@@ -203,7 +203,7 @@ dispatch:
 		// send is nil if there is no sending event.
 		case send <- sendingEvent:
 			if debug {
-				slog.Debug("dispatcher: sent event", "id", sendingEvent.id)
+				slog.Debug("core/events/dispatcher: sent event", "id", sendingEvent.id)
 			}
 			send = nil // there are no more requests to send
 			sendingEvent = nil
@@ -212,7 +212,7 @@ dispatch:
 		// Receive an event from the senders pool.
 		case event := <-d.sent:
 			if debug {
-				slog.Debug("dispatcher: receive response for event", "event", event.id)
+				slog.Debug("core/events/dispatcher: receive response for event", "event", event.id)
 			}
 			// ack.
 			key := queueKey{
@@ -247,7 +247,7 @@ dispatch:
 		case queue := <-ready:
 			if debug {
 				endpoint := endpoints.string(queue.endpoint)
-				slog.Debug("dispatcher: queue ready again", "destination", queue.destination, "endpoint", endpoint)
+				slog.Debug("core/events/dispatcher: queue ready again", "destination", queue.destination, "endpoint", endpoint)
 			}
 			key := queueKey{destination: queue.destination, endpoint: queue.endpoint}
 			readyQueues[key] = queue
@@ -269,7 +269,7 @@ dispatch:
 				s += " "
 			}
 			s += "]"
-			slog.Debug("dispatcher: queue",
+			slog.Debug("core/events/dispatcher: queue",
 				"ready", isReady,
 				"total", len(q.events),
 				"sending", len(q.sendingOffsets),
@@ -283,7 +283,7 @@ dispatch:
 	close(d.events.out)
 
 	if debug {
-		slog.Debug("dispatcher: exited")
+		slog.Debug("core/events/dispatcher: exited")
 	}
 
 }

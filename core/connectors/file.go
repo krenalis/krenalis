@@ -978,7 +978,7 @@ func (c storageWriteCloser) CloseWithError(err error) error {
 func removeTempFile(fi *os.File) error {
 	err := fi.Close()
 	if err := os.Remove(fi.Name()); err != nil {
-		slog.Warn("cannot remove temporary file", "path", fi.Name(), "err", err)
+		slog.Warn("core/connectors: cannot remove temporary file", "path", fi.Name(), "err", err)
 	}
 	return err
 }

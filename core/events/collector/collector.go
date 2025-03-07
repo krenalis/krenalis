@@ -182,7 +182,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			reader, err := gzip.NewReader(r.Body)
 			if err != nil {
-				slog.Error("collector: an error occurred creating gzip reader", "err", err)
+				slog.Error("core/events/collector: an error occurred creating gzip reader", "err", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -213,9 +213,9 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		default:
 			if serveSettings {
-				slog.Error("collector: an error occurred serving the settings", "err", err)
+				slog.Error("core/events/collector: an error occurred serving the settings", "err", err)
 			} else {
-				slog.Error("collector: an error occurred collecting an event", "err", err)
+				slog.Error("core/events/collector: an error occurred collecting an event", "err", err)
 			}
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
@@ -326,7 +326,7 @@ func (c *Collector) reloadEvents(ctx context.Context) {
 		}
 	}
 	if err := errf(); err != nil {
-		slog.Error("error occurred reloading events", "err", err)
+		slog.Error("core/events/collector: error occurred reloading events", "err", err)
 	}
 }
 

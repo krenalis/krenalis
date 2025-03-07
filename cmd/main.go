@@ -45,7 +45,7 @@ func Main(assets fs.FS) {
 		if err != nil {
 			p = "error.log"
 		}
-		slog.Error("cannot open log file", "path", p, "err", err)
+		slog.Error("cmd: cannot open log file", "path", p, "err", err)
 		os.Exit(1)
 	}
 	defer logFile.Close()
@@ -59,7 +59,7 @@ func Main(assets fs.FS) {
 	}
 	settingsFileContent, err := os.ReadFile(settingsFile)
 	if err != nil {
-		slog.Error("cannot read configuration file", "path", settingsFile, "err", err)
+		slog.Error("cmd: cannot read configuration file", "path", settingsFile, "err", err)
 		os.Exit(1)
 	}
 	var settings Settings
@@ -67,7 +67,7 @@ func Main(assets fs.FS) {
 	dec.KnownFields(true)
 	err = dec.Decode(&settings)
 	if err != nil {
-		slog.Error("cannot parse configuration file", "path", settingsFile, "err", err)
+		slog.Error("cmd: cannot parse configuration file", "path", settingsFile, "err", err)
 		os.Exit(1)
 	}
 
@@ -81,7 +81,7 @@ func Main(assets fs.FS) {
 
 	err = Run(ctx, &settings, assets)
 	if err != nil {
-		slog.Error("error occurred running server", "err", err)
+		slog.Error("cmd: error occurred running server", "err", err)
 		os.Exit(1)
 	}
 }

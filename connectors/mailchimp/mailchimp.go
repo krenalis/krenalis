@@ -545,7 +545,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 				return fmt.Errorf("cannot parse the JSON response from Mailchimp: %s", err)
 			}
 			if result.StatusCode == 400 {
-				slog.Error("Mailchimp has returned a 400 error", "details", response.Detail)
+				slog.Error("connectors/mailchimp: server has returned a 400 error", "details", response.Detail)
 				recordsErr[i] = fmt.Errorf("mailchimp has returned a 400 %s error to the connector", response.Title)
 				continue
 			}
