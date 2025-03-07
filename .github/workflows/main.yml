@@ -23,7 +23,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           # Keep in sync with the version within "commit/commit.go".
-          deno-version: v2.1.0
+          deno-version: v2.2.0
 
       - uses: actions/setup-node@v4
         with:
@@ -32,6 +32,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+
+      - name: Install Python dependencies
+        run: |
+          pip install pandas
+          pip install pyarrow
 
       - name: go run ./commit -x
         run: go run ./commit -x
