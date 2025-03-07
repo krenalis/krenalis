@@ -89,6 +89,8 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				c.DestinationTargets = UsersFlag
 				// It is assumed that each Database connector always have both
 				// source and destination settings.
+				c.SourceDescription = "Import users from " + article(c.Name) + " " + c.Name + " database"
+				c.DestinationDescription = "Exports users to " + article(c.Name) + " " + c.Name + " database"
 				c.HasSourceSettings = true
 				c.HasDestinationSettings = true
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
@@ -98,12 +100,14 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				c.Name = connector.Name
 				c.Type = File
 				if connector.AsSource != nil {
-					c.HasSourceSettings = connector.AsSource.HasSettings
 					c.SourceTargets = UsersFlag
+					c.SourceDescription = "Import users from " + article(c.Name) + " " + c.Name + " file"
+					c.HasSourceSettings = connector.AsSource.HasSettings
 				}
 				if connector.AsDestination != nil {
-					c.HasDestinationSettings = connector.AsDestination.HasSettings
 					c.DestinationTargets = UsersFlag
+					c.DestinationDescription = "Exports users to " + article(c.Name) + " " + c.Name + " file"
+					c.HasDestinationSettings = connector.AsDestination.HasSettings
 				}
 				c.FileExtension = connector.Extension
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
@@ -113,17 +117,19 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				c.Name = connector.Name
 				c.Type = FileStorage
 				if connector.AsSource {
-					// It is assumed that, if a FileStorage connector can be
-					// used as a source, it always have source settings.
-					c.HasSourceSettings = true
 					c.SourceTargets = UsersFlag
+					c.SourceDescription = "Import users from a file on " + c.Name
+					// It is assumed that, if a FileStorage connector can be
+					// used as a source, it always has source settings.
+					c.HasSourceSettings = true
 				}
 				if connector.AsDestination {
+					c.DestinationTargets = UsersFlag
+					c.DestinationDescription = "Exports users to a file on " + c.Name
 					// It is assumed that, if a FileStorage connector can be
-					// used as a destination, it always have destination
+					// used as a destination, it always has destination
 					// settings.
 					c.HasDestinationSettings = true
-					c.DestinationTargets = UsersFlag
 				}
 				c.Icon = connector.Icon
 			case meergo.MobileInfo:
@@ -483,4 +489,13 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 	})
 
 	return err
+}
+
+// article returns "a" or "an" based on the first letter of the name.
+func article(name string) string {
+	switch name[0] {
+	case 'A', 'E', 'I', 'O', 'U', 'a', 'e', 'i', 'o', 'u':
+		return "an"
+	}
+	return "a"
 }

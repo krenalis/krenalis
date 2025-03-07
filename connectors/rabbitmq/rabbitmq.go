@@ -28,8 +28,9 @@ var icon = "<svg></svg>"
 
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
-		Name: "RabbitMQ",
-		Icon: icon,
+		Name:              "RabbitMQ",
+		SourceDescription: "Import events and users from RabbitMQ",
+		Icon:              icon,
 	}, New)
 }
 

@@ -31,8 +31,9 @@ var icon = "<svg></svg>"
 
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
-		Name: "Kafka",
-		Icon: icon,
+		Name:              "Kafka",
+		SourceDescription: "Import events and users from Kafka",
+		Icon:              icon,
 	}, New)
 }
 
