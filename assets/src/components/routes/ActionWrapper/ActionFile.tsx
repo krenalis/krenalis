@@ -265,6 +265,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const [filePreviewColumns, setFilePreviewColumns] = useState<GridColumn[] | null>(null);
 	const [filePreviewRows, setFilePreviewRows] = useState<GridRow[] | null>(null);
 	const [showFilePreviewContent, setShowFilePreviewContent] = useState<boolean>(false);
+	const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
 
 	const { handleError, api } = useContext(AppContext);
 	const {
@@ -578,10 +579,12 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			handleError('Please enter a sheet');
 			return;
 		}
+		setIsLoadingPreview(true);
 		let res: RecordsResponse;
 		try {
 			res = await records(20);
 		} catch (err) {
+			setIsLoadingPreview(false);
 			return;
 		}
 		const columns: GridColumn[] = [];
@@ -605,6 +608,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			rows.push({ cells: row });
 		}
 		setFilePreviewRows(rows);
+		setIsLoadingPreview(false);
 	};
 
 	const onConfirmFile = async () => {
@@ -790,7 +794,14 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			)}
 			{isImport && (
 				<div className='action__file-buttons'>
-					<SlButton className='action__file-preview' variant='neutral' size='small' onClick={onFilePreview}>
+					<SlButton
+						className='action__file-preview'
+						variant='neutral'
+						size='small'
+						onClick={onFilePreview}
+						loading={isLoadingPreview}
+						disabled={isLoadingPreview}
+					>
 						Preview
 					</SlButton>
 					<FeedbackButton
