@@ -137,7 +137,10 @@ const ConnectionsList = () => {
 			<div className='route-content'>
 				{connectionsRows.length === 0 ? (
 					<div className='connections-list__no-connection'>
-						<IconWrapper name={role === 'Source' ? 'file-arrow-down' : 'file-arrow-up'} size={40} />
+						<IconWrapper
+							name={role === 'Source' ? 'arrow-down-right-square' : 'arrow-up-right-square'}
+							size={40}
+						/>
 						<div className='connections-list__no-connection-text'>
 							You don't have any {role?.toLowerCase()} installed
 						</div>
