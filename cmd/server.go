@@ -8,12 +8,14 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
 	"expvar"
 	"fmt"
 	"io/fs"
+	"log"
 	"log/slog"
 	"maps"
 	"net/http"
@@ -199,8 +201,9 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	})
 
 	httpServer := http.Server{
-		Addr:    addr,
-		Handler: handler,
+		Addr:     addr,
+		Handler:  handler,
+		ErrorLog: log.New(&httpLogger{}, "", 0),
 	}
 	var certPem, keyPem string
 	if settings.Main.HTTPS {
@@ -237,4 +240,24 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 
 	return nil
+}
+
+// httpLogger is the HTTP server's logger that filters out unwanted messages.
+type httpLogger struct{}
+
+var tlsHandshakeMsg = []byte("http: TLS handshake error from ")
+
+func (f *httpLogger) Write(p []byte) (n int, err error) {
+	n = len(p)
+	if n == 0 {
+		return
+	}
+	if bytes.HasPrefix(p, tlsHandshakeMsg) {
+		return
+	}
+	if p[len(p)-1] == '\n' {
+		p = p[:len(p)-1]
+	}
+	slog.Info(string(p))
+	return
 }
