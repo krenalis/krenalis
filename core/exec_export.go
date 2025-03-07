@@ -10,7 +10,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
@@ -90,9 +89,6 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		}
 		switch err := err.(type) {
 		case *datastore.UnavailableError:
-			// TODO(marco): log the error in a log specific of the workspace.
-			ws := action.Connection().Workspace()
-			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return err
 		case *schemas.Error:
 			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the action before attempting to export the users.", err.Msg)

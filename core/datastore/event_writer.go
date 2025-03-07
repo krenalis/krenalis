@@ -321,7 +321,6 @@ func (ew *EventWriter) flush() {
 		return
 	}
 
-	slog.Info("flush events", "count", len(rows))
 	for {
 		metrics.Increment("EventWriter.flush.for_loop_iterations", 1)
 		err := ew.store.warehouse().Merge(ew.close.ctx, eventsMergeTable, rows, nil)

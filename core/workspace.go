@@ -12,7 +12,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"slices"
 	"sort"
 	"strconv"
@@ -948,8 +947,6 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
 		if err, ok := err.(*datastore.UnavailableError); ok {
-			// TODO(marco): log the error in a log specific of the workspace.
-			slog.Error("cannot get users from the data warehouse", "workspace", this.workspace.ID, "err", err)
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
@@ -1349,8 +1346,6 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
 		if err, ok := err.(*datastore.UnavailableError); ok {
-			// TODO(marco): log the error in a log specific of the workspace.
-			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
@@ -1691,8 +1686,6 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
 		if err, ok := err.(*datastore.UnavailableError); ok {
-			// TODO(marco): log the error in a log specific of the workspace.
-			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return nil, types.Type{}, 0, errors.Unavailable("%s", err)
 		}
 		return nil, types.Type{}, 0, err
