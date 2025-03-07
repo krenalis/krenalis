@@ -43,9 +43,10 @@
 
 .combobox-input__error {
 	position: absolute;
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--sl-color-danger-500);
-	line-height: 1.2;
+	line-height: 1.6;
+	margin-left: 6px;
 }
 
 .combobox-input__error-icon {
