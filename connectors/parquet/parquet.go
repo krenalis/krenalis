@@ -174,10 +174,14 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 				})
 			}
 		}
+		var nullable bool
+		if rep := element.RepetitionType; rep != nil && *rep == parquet.FieldRepetitionType_OPTIONAL {
+			nullable = true
+		}
 		columns = append(columns, types.Property{
 			Name:     name,
 			Type:     typ,
-			Nullable: true,
+			Nullable: nullable,
 		})
 	}
 	// Write the columns.

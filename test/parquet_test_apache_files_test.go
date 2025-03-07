@@ -44,7 +44,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		// },
 		{
 			path:               "fixed_length_byte_array.parquet",
-			expectedProperties: []types.Property{{Name: "flba_field", Type: types.Text(), Nullable: true}},
+			expectedProperties: []types.Property{{Name: "flba_field", Type: types.Text(), Nullable: false}},
 		},
 		{
 			path: "sort_columns.parquet",
@@ -71,8 +71,8 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		{
 			path: "lz4_raw_compressed.parquet",
 			expectedProperties: []types.Property{
-				{Name: "c0", Type: types.Int(64), Nullable: true}, // TODO: this should have Nullable: false, but non-nullable columns are not supported. See https://github.com/meergo/meergo/issues/1412.
-				{Name: "c1", Type: types.Text(), Nullable: true},  // TODO: this should have Nullable: false, but non-nullable columns are not supported. See https://github.com/meergo/meergo/issues/1412.
+				{Name: "c0", Type: types.Int(64), Nullable: false},
+				{Name: "c1", Type: types.Text(), Nullable: false},
 				{Name: "v11", Type: types.Float(64), Nullable: true},
 			},
 		},
