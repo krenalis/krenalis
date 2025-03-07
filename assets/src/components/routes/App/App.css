@@ -150,6 +150,10 @@ sl-button[variant='text'] sl-icon {
 	color: var(--sl-color-primary-600);
 }
 
+sl-button[disabled]::part(base) {
+	cursor: default;
+}
+
 sl-button > a {
 	position: absolute;
 	left: 0;
