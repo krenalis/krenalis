@@ -717,11 +717,20 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			return types.Text(), nil
 		}
 		if d := lt.DECIMAL; d != nil {
-			if 0 < d.Precision && d.Precision <= types.MaxDecimalPrecision &&
-				d.Scale <= types.MaxDecimalScale && d.Scale <= d.Precision {
-				return types.Decimal(int(d.Precision), int(d.Scale)), nil
+			prec := int(d.Precision)
+			scale := int(d.Scale)
+			if prec == 0 && scale == 0 {
+				switch *elem.Type {
+				case parquet.Type_INT32:
+					prec = 10 // Length of max int32.
+				case parquet.Type_INT64:
+					prec = 19 // Length of max int64.
+				}
 			}
-			return types.Type{}, nil
+			if (scale > prec) || (scale < 0 || scale > types.MaxDecimalScale) || (prec < 1 || prec > types.MaxDecimalPrecision) {
+				return types.Type{}, nil
+			}
+			return types.Decimal(prec, scale), nil
 		}
 		if lt.DATE != nil {
 			return types.Date(), nil
