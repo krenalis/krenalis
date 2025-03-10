@@ -108,6 +108,6 @@ Import of columns groups is currently not supported.
 [^int96]: `INT96` types are always treated as `datetime` Meergo types, because that is in fact how they are used in the Parquet files. However, please note that this type of representation is deprecated, and is kept in the Parquet connector only for compatibility with older Parquet files.
 [^list_support]: Support for importing `LIST` columns is discussed here: https://github.com/meergo/meergo/issues/1325
 [^map_support]: Support for importing `MAP` columns is discussed here: https://github.com/meergo/meergo/issues/1371
-[^timestamp_milli_micro]: Support for importing `TIME_MILLIS` and `TIMESTAMP_MICROS` is discussed here: https://github.com/meergo/meergo/issues/1385
+[^timestamp_milli_micro]: Support for importing `TIMESTAMP_MILLIS` and `TIMESTAMP_MICROS` is discussed here: https://github.com/meergo/meergo/issues/1385
 [^decimal_limits]: `DECIMAL` types from Parquet are supported if the precision is ≤ 76 and the scale is ≤ 37.
 [^bson_support]: Support for the `BSON` type is discussed in: https://github.com/meergo/meergo/issues/1400.

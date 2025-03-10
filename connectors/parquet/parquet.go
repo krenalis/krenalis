@@ -845,7 +845,6 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		case parquet.ConvertedType_DATE:
 			return types.Date(), nil
 		case parquet.ConvertedType_TIMESTAMP_MICROS, parquet.ConvertedType_TIMESTAMP_MILLIS:
-			// return types.DateTime(), nil
 			// TODO: https://github.com/meergo/meergo/issues/1385
 			return types.Type{}, nil
 		case parquet.ConvertedType_TIME_MICROS, parquet.ConvertedType_TIME_MILLIS:
