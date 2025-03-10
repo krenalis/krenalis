@@ -331,7 +331,7 @@ github.com/dvsekhvalnov/jose2go/padding
 github.com/ericlagergren/decimal
 github.com/ericlagergren/decimal/internal/arith
 github.com/ericlagergren/decimal/internal/c
-# github.com/evanw/esbuild v0.25.0
+# github.com/evanw/esbuild v0.25.1
 ## explicit; go 1.13
 github.com/evanw/esbuild/internal/api_helpers
 github.com/evanw/esbuild/internal/ast
