@@ -875,7 +875,7 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		}
 		b.writeString(`{"id":"`)
 		b.writeString(user.ID)
-		b.writeString(`","lastChangeTime":"`)
+		b.writeString(`","sourcesLastUpdate":"`)
 		buf := b.availableBuffer()
 		b.write(user.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
 		b.writeString(`","traits":`)

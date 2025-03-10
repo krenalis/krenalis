@@ -76,7 +76,7 @@ interface TransformDataResponse {
 
 interface ResponseUser {
 	id: string;
-	lastChangeTime: string;
+	sourcesLastUpdate: string;
 	traits: Record<string, any>;
 }
 

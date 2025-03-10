@@ -179,9 +179,9 @@ type KV struct {
 }
 
 type User struct {
-	ID             uuid.UUID      `json:"id"`
-	LastChangeTime time.Time      `json:"lastChangeTime"`
-	Traits         map[string]any `json:"traits"`
+	ID                uuid.UUID      `json:"id"`
+	SourcesLastUpdate time.Time      `json:"sourcesLastUpdate"`
+	Traits            map[string]any `json:"traits"`
 }
 
 type UserIdentity struct {

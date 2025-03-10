@@ -14889,12 +14889,12 @@
                                                 "description": "The ID of the user."
                                             },
                                             {
-                                                "name": "lastChangeTime",
+                                                "name": "sourcesLastUpdate",
                                                 "placeholder": "\"2015-01-21T08:51:32.137139Z\"",
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": "The date and time when the user's data was last updated. It corresponds to the most recent last change time of its identities.\n\nIts value is independent of which properties were requested."
+                                                "description": "The date and time when the user's data was last updated on the sources. It corresponds to the most recent last update of its identities.\n\nIts value is independent of which properties were requested."
                                             },
                                             {
                                                 "name": "traits",

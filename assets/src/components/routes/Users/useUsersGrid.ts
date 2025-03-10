@@ -41,7 +41,7 @@ const useUsersGrid = (
 
 			const row: GridRow = {
 				onClick: () => onUserClick(user.id),
-				cells: [userCopy.lastChangeTime, ...cells],
+				cells: [userCopy.sourcesLastUpdate, ...cells],
 				selected: isSelected,
 			};
 			rows.push(row);
@@ -53,8 +53,9 @@ const useUsersGrid = (
 		// compute the columns for the grid component.
 		const userColumns: GridColumn[] = [];
 		userColumns.push({
-			name: 'Last Change Time',
+			name: 'Sources last update',
 			type: 'datetime',
+			explanation: 'The last update time on the sources from which the user has been imported.',
 		});
 		for (const p of usersProperties) {
 			if (p.isUsed) {

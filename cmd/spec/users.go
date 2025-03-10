@@ -113,10 +113,10 @@ func init() {
 									Description: "The ID of the user.",
 								},
 								{
-									Name:        "lastChangeTime",
+									Name:        "sourcesLastUpdate",
 									Type:        types.DateTime(),
 									Placeholder: `"2015-01-21T08:51:32.137139Z"`,
-									Description: "The date and time when the user's data was last updated. It corresponds to the most recent last change time of its identities.\n\n" +
+									Description: "The date and time when the user's data was last updated on the sources. It corresponds to the most recent last update of its identities.\n\n" +
 										"Its value is independent of which properties were requested.",
 								},
 								{
