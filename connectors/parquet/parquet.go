@@ -157,6 +157,21 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 				})
 			}
 		}
+		if ct := element.ConvertedType; ct != nil && *ct == parquet.ConvertedType_DECIMAL {
+			switch *element.Type {
+			case
+				parquet.Type_INT32,
+				parquet.Type_INT64,
+				parquet.Type_BYTE_ARRAY,
+				parquet.Type_FIXED_LEN_BYTE_ARRAY:
+				decimalColumns = append(decimalColumns, decimalColumn{
+					name:   name,
+					prec:   typ.Precision(),
+					scale:  typ.Scale(),
+					phType: *element.Type,
+				})
+			}
+		}
 		if ct := element.ConvertedType; ct != nil {
 			unit := parquet.NewTimeUnit()
 			switch *ct {
@@ -501,6 +516,24 @@ func decimalToInt64(d decimal.Decimal, scale int) (int64, bool) {
 	return int64(u64), true
 }
 
+// determineDecimalType determines the Meergo decimal type based on available
+// Parquet type information. If the decimal type cannot be determined, or the
+// determined type is not valid in Meergo, types.Type{} and false are returned.
+func determineDecimalType(prec, scale int, elem *parquet.SchemaElement) (types.Type, bool) {
+	if prec == 0 && scale == 0 {
+		switch *elem.Type {
+		case parquet.Type_INT32:
+			prec = 10 // Length of max int32.
+		case parquet.Type_INT64:
+			prec = 19 // Length of max int64.
+		}
+	}
+	if (scale > prec) || (scale < 0 || scale > types.MaxDecimalScale) || (prec < 1 || prec > types.MaxDecimalPrecision) {
+		return types.Type{}, false
+	}
+	return types.Decimal(prec, scale), true
+}
+
 // int64ToTimeTime converts an int64 timestamp, read from Parquet, to a
 // time.Time. unit is the timestamp unit; if nil, it is considered nanoseconds.
 func int64ToTimeTime(v int64, unit *parquet.TimeUnit) time.Time {
@@ -717,20 +750,11 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 			return types.Text(), nil
 		}
 		if d := lt.DECIMAL; d != nil {
-			prec := int(d.Precision)
-			scale := int(d.Scale)
-			if prec == 0 && scale == 0 {
-				switch *elem.Type {
-				case parquet.Type_INT32:
-					prec = 10 // Length of max int32.
-				case parquet.Type_INT64:
-					prec = 19 // Length of max int64.
-				}
-			}
-			if (scale > prec) || (scale < 0 || scale > types.MaxDecimalScale) || (prec < 1 || prec > types.MaxDecimalPrecision) {
+			typ, ok := determineDecimalType(int(d.Precision), int(d.Scale), elem)
+			if !ok {
 				return types.Type{}, nil
 			}
-			return types.Decimal(prec, scale), nil
+			return typ, nil
 		}
 		if lt.DATE != nil {
 			return types.Date(), nil
@@ -805,9 +829,19 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 		case parquet.ConvertedType_BSON:
 			return types.Type{}, nil // TODO: see https://github.com/meergo/meergo/issues/1400.
 		case parquet.ConvertedType_DECIMAL:
-			// Not supported.
-			// See https://github.com/meergo/meergo/issues/1394.
-			return types.Type{}, nil
+			var prec, scale int
+			if elem.Precision != nil {
+				prec = int(*elem.Precision)
+			}
+			if elem.Scale != nil {
+				scale = int(*elem.Scale)
+			}
+			typ, ok := determineDecimalType(prec, scale, elem)
+			if !ok {
+				return types.Type{}, nil
+			}
+			return typ, nil
+
 		case parquet.ConvertedType_DATE:
 			return types.Date(), nil
 		case parquet.ConvertedType_TIMESTAMP_MICROS, parquet.ConvertedType_TIMESTAMP_MILLIS:

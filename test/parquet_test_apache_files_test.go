@@ -36,12 +36,10 @@ func TestParquetTestApacheFiles(t *testing.T) {
 			path:               "binary.parquet",
 			expectedProperties: []types.Property{{Name: "foo", Type: types.Text(), Nullable: true}},
 		},
-		// TODO: DECIMAL converted types are not supported.
-		// https://github.com/meergo/meergo/issues/1394.
-		// {
-		// 	path:               "int32_decimal.parquet",
-		// 	expectedProperties: []types.Property{{Name: "value", Type: types.Decimal(3, 3)}},
-		// },
+		{
+			path:               "int32_decimal.parquet",
+			expectedProperties: []types.Property{{Name: "value", Type: types.Decimal(4, 2), Nullable: true}},
+		},
 		{
 			path:               "fixed_length_byte_array.parquet",
 			expectedProperties: []types.Property{{Name: "flba_field", Type: types.Text(), Nullable: false}},
@@ -53,15 +51,12 @@ func TestParquetTestApacheFiles(t *testing.T) {
 				{Name: "b", Type: types.Text(), Nullable: true},
 			},
 		},
-		// TODO: investigate on this test. Is it related to
-		// https://github.com/meergo/meergo/issues/1394?
-		//
-		// {
-		// 	path: "byte_array_decimal.parquet",
-		// 	expectedProperties: []types.Property{
-		// 		{Name: "value", Type: types.Decimal(4, 2)},
-		// 	},
-		// },
+		{
+			path: "byte_array_decimal.parquet",
+			expectedProperties: []types.Property{
+				{Name: "value", Type: types.Decimal(4, 2), Nullable: true},
+			},
+		},
 		{
 			path: "data_index_bloom_encoding_stats.parquet",
 			expectedProperties: []types.Property{

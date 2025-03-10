@@ -75,7 +75,10 @@ This table describes how Parquet logical and converted types are imported into M
 | `DECIMAL`                   | `INT64`                  | `decimal` [^decimal_limits]            |
 | `DECIMAL`                   | `FIXED_LEN_BYTE_ARRAY`   | `decimal` [^decimal_limits]            |
 | `DECIMAL`                   | `BYTE_ARRAY`             | `decimal` [^decimal_limits]            |
-| `DECIMAL` (converted type)  | -                        | Not supported [^decimal_converted]     |
+| `DECIMAL` (converted type)  | `INT32`                  | `decimal` [^decimal_limits]            |
+| `DECIMAL` (converted type)  | `INT64`                  | `decimal` [^decimal_limits]            |
+| `DECIMAL` (converted type)  | `FIXED_LEN_BYTE_ARRAY`   | `decimal` [^decimal_limits]            |
+| `DECIMAL` (converted type)  | `BYTE_ARRAY`             | `decimal` [^decimal_limits]            |
 | `FLOAT16`                   | -                        | Not supported                          |
 | `DATE`                      | `INT32`                  | `date`                                 |
 | `TIME` (unit `MILLIS`)      | `INT32`                  | `time`                                 |
@@ -106,6 +109,5 @@ Import of columns groups is currently not supported.
 [^list_support]: Support for importing `LIST` columns is discussed here: https://github.com/meergo/meergo/issues/1325
 [^map_support]: Support for importing `MAP` columns is discussed here: https://github.com/meergo/meergo/issues/1371
 [^timestamp_milli_micro]: Support for importing `TIME_MILLIS` and `TIMESTAMP_MICROS` is discussed here: https://github.com/meergo/meergo/issues/1385
-[^decimal_converted]: `DECIMAL` converted types are not supported. See https://github.com/meergo/meergo/issues/1394.
 [^decimal_limits]: `DECIMAL` types from Parquet are supported if the precision is ≤ 76 and the scale is ≤ 37.
 [^bson_support]: Support for the `BSON` type is discussed in: https://github.com/meergo/meergo/issues/1400.
