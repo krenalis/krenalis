@@ -33,8 +33,9 @@ import (
 
 type Settings struct {
 	Main struct {
-		Host  string
-		HTTPS bool
+		Host             string
+		HTTPS            bool
+		TerminationDelay time.Duration `yaml:"terminationDelay"`
 	}
 	EncryptionKey string `yaml:"encryptionKey"`
 	ESBuild       struct {
@@ -228,6 +229,13 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	select {
 	case <-ctx.Done():
+		if delay := settings.Main.TerminationDelay; delay == 0 {
+			slog.Info("cmd: received termination signal, shutting down")
+		} else {
+			slog.Info(fmt.Sprintf("cmd: received termination signal. Waiting for %s before proceeding...", delay))
+			time.Sleep(delay)
+			slog.Info("cmd: initiating shutdown")
+		}
 		err = httpServer.Shutdown(context.Background())
 		if err != nil {
 			return err
