@@ -373,7 +373,6 @@
 	position: relative;
 	font-size: 14px;
 	bottom: 1px;
-	padding-left: 10px;
 }
 
 .action__transformation-output-property-key {
@@ -405,7 +404,6 @@ inherit the disabled style */
 	content: '';
 	display: block;
 	position: absolute;
-	left: 15px;
 	width: 15px;
 	height: 15px;
 	border-left: 2px solid var(--sl-color-neutral-400);
