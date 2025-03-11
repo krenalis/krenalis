@@ -70,7 +70,7 @@ func (my *MySQL) Columns(ctx context.Context, table string) ([]meergo.Column, er
 	if err != nil {
 		return nil, err
 	}
-	rows, columns, err := my.query(ctx, "SELECT * FROM "+table+" LIMIT 0")
+	rows, columns, err := my.query(ctx, "SELECT * FROM "+table+" LIMIT 0", true)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (my *MySQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) er
 
 // Query executes the given query and returns the resulting rows and columns.
 func (my *MySQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
-	return my.query(ctx, query)
+	return my.query(ctx, query, false)
 }
 
 // QuoteTime returns a quoted time value for the specified type or "NULL" if the
@@ -166,7 +166,9 @@ func (my *MySQL) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+// writable indicates whether the resulting columns should be marked as
+// writable.
+func (my *MySQL) query(ctx context.Context, query string, writable bool) (meergo.Rows, []meergo.Column, error) {
 	if err := my.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -193,6 +195,7 @@ func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []meergo
 			Name:     column.Name(),
 			Type:     typ,
 			Nullable: nullable || !ok,
+			Writable: writable,
 		}
 	}
 	return rows, columns, nil

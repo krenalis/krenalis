@@ -72,7 +72,7 @@ func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]meergo.Colum
 	}
 	// The "SELECT * FROM table" query does not return MATERIALIZED columns.
 	// See issue https://github.com/meergo/meergo/issues/1417.
-	rows, columns, err := ch.query(ctx, "SELECT * FROM "+table+" LIMIT 0")
+	rows, columns, err := ch.query(ctx, "SELECT * FROM "+table+" LIMIT 0", true)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (ch *ClickHouse) Merge(ctx context.Context, table meergo.Table, rows [][]an
 
 // Query executes the given query and returns the resulting rows and columns.
 func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
-	return ch.query(ctx, query)
+	return ch.query(ctx, query, false)
 }
 
 // QuoteTime returns a quoted time value for the specified type or "NULL" if the
@@ -160,7 +160,9 @@ func (ch *ClickHouse) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+// writable indicates whether the resulting columns should be marked as
+// writable.
+func (ch *ClickHouse) query(ctx context.Context, query string, writable bool) (meergo.Rows, []meergo.Column, error) {
 	if err := ch.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -180,7 +182,7 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []m
 			Name:     c.Name(),
 			Type:     typ,
 			Nullable: nullable,
-			Writable: true,
+			Writable: writable,
 		}
 	}
 	return rows, columns, nil

@@ -65,7 +65,7 @@ func (sf *Snowflake) Close() error {
 
 // Columns returns the columns of the given table.
 func (sf *Snowflake) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
-	rows, columns, err := sf.query(ctx, "SELECT * FROM "+quoteTable(table)+" LIMIT 0")
+	rows, columns, err := sf.query(ctx, "SELECT * FROM "+quoteTable(table)+" LIMIT 0", true)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any
 
 // Query executes the given query and returns the resulting rows and columns.
 func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
-	return sf.query(ctx, query)
+	return sf.query(ctx, query, false)
 }
 
 // QuoteTime returns a quoted time value for the specified type or "NULL" if the
@@ -185,7 +185,9 @@ func (sf *Snowflake) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+// writable indicates whether the resulting columns should be marked as
+// writable.
+func (sf *Snowflake) query(ctx context.Context, query string, writable bool) (meergo.Rows, []meergo.Column, error) {
 	if err := sf.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -210,6 +212,7 @@ func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []me
 			Name:     column.Name(),
 			Type:     typ,
 			Nullable: nullable || !ok,
+			Writable: writable,
 		}
 	}
 	return rows, columns, nil

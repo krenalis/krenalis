@@ -79,7 +79,6 @@ func Test_Merge_Query(t *testing.T) {
 			Name:     fmt.Sprintf("c%d", i),
 			Type:     c.MeergoType,
 			Nullable: strings.HasPrefix(c.DriverType, "Nullable("),
-			Writable: true,
 		}
 	}
 

@@ -60,16 +60,16 @@ func Test_Columns(t *testing.T) {
 	}()
 
 	expected := []meergo.Column{
-		{Name: "a", Type: types.Boolean()},
-		{Name: "b", Type: types.Float(64), Nullable: true},
-		{Name: "c", Type: types.Decimal(10, 3)},
-		{Name: "d", Type: types.DateTime(), Nullable: true},
-		{Name: "e", Type: types.Date()},
-		{Name: "f", Type: types.Time(), Nullable: true},
-		{Name: "g", Type: types.JSON(), Nullable: true},
-		{Name: "h", Type: types.Text().WithByteLen(16_777_216).WithCharLen(16_777_216)},
-		{Name: "i", Type: types.Text().WithCharLen(50), Nullable: true},
-		{Name: "j", Type: types.Array(types.JSON())},
+		{Name: "a", Type: types.Boolean(), Writable: true},
+		{Name: "b", Type: types.Float(64), Nullable: true, Writable: true},
+		{Name: "c", Type: types.Decimal(10, 3), Writable: true},
+		{Name: "d", Type: types.DateTime(), Nullable: true, Writable: true},
+		{Name: "e", Type: types.Date(), Writable: true},
+		{Name: "f", Type: types.Time(), Nullable: true, Writable: true},
+		{Name: "g", Type: types.JSON(), Nullable: true, Writable: true},
+		{Name: "h", Type: types.Text().WithByteLen(16_777_216).WithCharLen(16_777_216), Writable: true},
+		{Name: "i", Type: types.Text().WithCharLen(50), Nullable: true, Writable: true},
+		{Name: "j", Type: types.Array(types.JSON()), Writable: true},
 	}
 
 	// Test the Columns method.
