@@ -65,7 +65,7 @@ func (sf *Snowflake) Close() error {
 
 // Columns returns the columns of the given table.
 func (sf *Snowflake) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
-	rows, columns, err := sf.query(ctx, "SELECT * FROM "+quoteTable(table))
+	rows, columns, err := sf.query(ctx, "SELECT * FROM "+quoteTable(table)+" LIMIT 0")
 	if err != nil {
 		return nil, err
 	}
