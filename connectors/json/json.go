@@ -111,7 +111,10 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 
 	// Read '[' or '{'.
 	tok, err = dec.Token()
-	if err != nil && tok == jsonstd.Delim('{') {
+	if err != nil {
+		return jsonError(err)
+	}
+	if tok == jsonstd.Delim('{') {
 		isObject = true
 		// Read a property name.
 		tok, err = dec.Token()
@@ -123,9 +126,9 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		}
 		// Read '['.
 		tok, err = dec.Token()
-	}
-	if err != nil {
-		return jsonError(err)
+		if err != nil {
+			return jsonError(err)
+		}
 	}
 	if tok != jsonstd.Delim('[') {
 		return errInvalidFormat
@@ -182,7 +185,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 	}
 
 	// Read EOF.
-	tok, err = dec.Token()
+	_, err = dec.Token()
 	if err != io.EOF {
 		if err == nil {
 			return errInvalidFormat
