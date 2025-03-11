@@ -70,7 +70,9 @@ func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]meergo.Colum
 	if err != nil {
 		return nil, err
 	}
-	rows, columns, err := ch.query(ctx, "SELECT * FROM "+table)
+	// The "SELECT * FROM table" query does not return MATERIALIZED columns.
+	// See issue https://github.com/meergo/meergo/issues/1417.
+	rows, columns, err := ch.query(ctx, "SELECT * FROM "+table+" LIMIT 0")
 	if err != nil {
 		return nil, err
 	}
@@ -178,6 +180,7 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []m
 			Name:     c.Name(),
 			Type:     typ,
 			Nullable: nullable,
+			Writable: true,
 		}
 	}
 	return rows, columns, nil
