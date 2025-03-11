@@ -156,7 +156,7 @@ func (database *Database) Schema(ctx context.Context, table string, role state.R
 	}
 	schema, err := types.ObjectOf(columnsToProperties(columns, role))
 	if err != nil {
-		return types.Type{}, rewriteColumnErrors(err)
+		return types.Type{}, connectorError(rewriteColumnErrors(err))
 	}
 	return schema, nil
 }
@@ -247,7 +247,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	// Check that schema is aligned with the query's schema.
 	querySchema, err := types.ObjectOf(columnsToProperties(columns, state.Source))
 	if err != nil {
-		return nil, rewriteColumnErrors(err)
+		return nil, connectorError(rewriteColumnErrors(err))
 	}
 	err = schemas.CheckAlignment(action.InSchema, querySchema, nil)
 	if err != nil {

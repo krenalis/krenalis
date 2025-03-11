@@ -658,7 +658,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	}
 	fileSchema, err := types.ObjectOf(columns)
 	if err != nil {
-		return rewriteColumnErrors(err)
+		return connectorError(rewriteColumnErrors(err))
 	}
 	if rw.action == nil {
 		rw.properties = columns
