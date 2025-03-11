@@ -519,19 +519,19 @@ func decimalToInt64(d decimal.Decimal, scale int) (int64, bool) {
 // determineDecimalType determines the Meergo decimal type based on available
 // Parquet type information. If the decimal type cannot be determined, or the
 // determined type is not valid in Meergo, types.Type{} and false are returned.
-func determineDecimalType(prec, scale int, elem *parquet.SchemaElement) (types.Type, bool) {
-	if prec == 0 && scale == 0 {
+func determineDecimalType(precision, scale int, elem *parquet.SchemaElement) (types.Type, bool) {
+	if precision == 0 && scale == 0 {
 		switch *elem.Type {
 		case parquet.Type_INT32:
-			prec = 10 // Length of max int32.
+			precision = 10 // Length of max int32.
 		case parquet.Type_INT64:
-			prec = 19 // Length of max int64.
+			precision = 19 // Length of max int64.
 		}
 	}
-	if (scale > prec) || (scale < 0 || scale > types.MaxDecimalScale) || (prec < 1 || prec > types.MaxDecimalPrecision) {
+	if precision < 1 || scale < 0 || scale > precision || precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
 		return types.Type{}, false
 	}
-	return types.Decimal(prec, scale), true
+	return types.Decimal(precision, scale), true
 }
 
 // int64ToTimeTime converts an int64 timestamp, read from Parquet, to a

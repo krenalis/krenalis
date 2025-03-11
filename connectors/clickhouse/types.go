@@ -83,7 +83,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 	switch s[:i] {
 	case "Decimal":
 		precision, s, _ := parseUint(s[i+1:])
-		if precision == 0 || precision > 76 {
+		if precision == 0 || precision > types.MaxDecimalPrecision {
 			return types.Type{}, false, ""
 		}
 		s, ok := trimComma(s)
@@ -91,7 +91,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 			return types.Type{}, false, ""
 		}
 		scale, s, ok := parseUint(s)
-		if !ok || scale > precision || s == "" {
+		if !ok || scale > precision || scale > types.MaxDecimalScale || s == "" {
 			return types.Type{}, false, ""
 		}
 		return types.Decimal(precision, scale), false, s[1:]

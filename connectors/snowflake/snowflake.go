@@ -296,9 +296,14 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		if !ok {
 			return types.Type{}, errors.New("cannot get decimal size")
 		}
-		if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
-			return types.Type{}, fmt.Errorf("Snowflake type %s(%d,%d) is not supported",
-				t.DatabaseTypeName(), precision, scale)
+		if precision < 1 || scale < 0 || scale > precision {
+			return types.Type{}, fmt.Errorf("precision and scale (%d,%d) are invalid", precision, scale)
+		}
+		if precision > types.MaxDecimalPrecision {
+			return types.Type{}, fmt.Errorf("precision %d exceeds the maximum supported precision of %d", precision, types.MaxDecimalPrecision)
+		}
+		if scale > types.MaxDecimalScale {
+			return types.Type{}, fmt.Errorf("scale %d exceeds the maximum supported scale of %d", scale, types.MaxDecimalScale)
 		}
 		return types.Decimal(int(precision), int(scale)), nil
 	case "OBJECT":

@@ -184,7 +184,7 @@ func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []meergo
 		typ, err := propertyType(column)
 		if err != nil {
 			_ = rows.Close()
-			return nil, nil, fmt.Errorf("cannot get type for property %q: %s", column.Name(), err)
+			return nil, nil, fmt.Errorf("cannot get type for column %q: %s", column.Name(), err)
 		}
 		// Unlike what happens with PostgreSQL, the MySQL driver is able to
 		// determine whether a column returned by the query is nullable or not.
@@ -287,6 +287,15 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		precision, scale, ok := t.DecimalSize()
 		if !ok {
 			return types.Type{}, errors.New("cannot get decimal size")
+		}
+		if precision < 1 || scale < 0 || scale > precision {
+			return types.Type{}, fmt.Errorf("precision and scale (%d,%d) are invalid", precision, scale)
+		}
+		if precision > types.MaxDecimalPrecision {
+			return types.Type{}, fmt.Errorf("precision %d exceeds the maximum supported precision of %d", precision, types.MaxDecimalPrecision)
+		}
+		if scale > types.MaxDecimalScale {
+			return types.Type{}, fmt.Errorf("scale %d exceeds the maximum supported scale of %d", scale, types.MaxDecimalScale)
 		}
 		return types.Decimal(int(precision), int(scale)), nil
 	case "DOUBLE":

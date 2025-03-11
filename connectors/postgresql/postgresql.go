@@ -14,6 +14,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -296,9 +297,16 @@ func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescripti
 	case pgtype.NumericOID:
 		mod := fd.TypeModifier - 4
 		precision, scale := int((mod>>16)&0xffff), int(mod&0xffff)
-		if 1 <= precision && precision <= types.MaxDecimalPrecision && 0 <= scale && scale <= types.MaxDecimalScale && scale <= precision {
-			return types.Decimal(precision, scale), nil
+		if precision < 1 || scale < 0 || scale > precision {
+			return types.Type{}, fmt.Errorf("precision and scale (%d,%d) are invalid", precision, scale)
 		}
+		if precision > types.MaxDecimalPrecision {
+			return types.Type{}, fmt.Errorf("precision %d exceeds the maximum supported precision of %d", precision, types.MaxDecimalPrecision)
+		}
+		if scale > types.MaxDecimalScale {
+			return types.Type{}, fmt.Errorf("scale %d exceeds the maximum supported scale of %d", scale, types.MaxDecimalScale)
+		}
+		return types.Decimal(precision, scale), nil
 	case pgtype.TimestampOID, pgtype.TimestamptzOID:
 		return types.DateTime(), nil
 	case pgtype.DateOID:
