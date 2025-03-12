@@ -29,6 +29,7 @@ import (
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
@@ -1553,7 +1554,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
 		} else {
 			switch err.(type) {
-			case *connectors.SchemaError:
+			case *schemas.Error:
 				err = errors.Unprocessable(SchemaNotAligned, "output schema is not compatible with the event type's schema: %w", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("connector returned an error preparing the preview: %w", err)
