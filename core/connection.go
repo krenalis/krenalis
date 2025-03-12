@@ -615,7 +615,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 		switch err.(type) {
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("%s", err)
-		case *connectors.SchemaError:
+		case *schemas.Error:
 			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the app's source schema: %w", err)
 		}
 		return nil, "", err
