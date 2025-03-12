@@ -125,15 +125,6 @@ type Records interface {
 	Last() bool
 }
 
-// SchemaError represents an error with a schema.
-type SchemaError struct {
-	Msg string
-}
-
-func (err *SchemaError) Error() string {
-	return err.Msg
-}
-
 type Event = meergo.Event
 type EventType = meergo.EventType
 
