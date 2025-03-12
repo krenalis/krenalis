@@ -556,7 +556,7 @@ func (this *Connection) AppEventSchema(ctx context.Context, eventType string) (t
 		}
 		return types.Type{}, err
 	}
-	return schema, nil
+	return schema, nil // schema can be invalid.
 }
 
 // AppGroupSchemas returns the group schemas for the connection. The connection
@@ -2028,7 +2028,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 			}
 			return types.Type{}, err
 		}
-		return schema, nil
+		return schema, nil // schema can be invalid.
 	}
 	return types.Type{}, nil
 }

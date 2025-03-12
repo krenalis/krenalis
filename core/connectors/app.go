@@ -221,6 +221,10 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 // Schema returns the app's schema for the provided target. If target is
 // state.Events, eventType represents the type of the event.
 //
+// If the target is state.Events and the event type refers to an app event for
+// which no schema is expected, this method returns the invalid type and no
+// errors.
+//
 // For the users and the groups target, the returned schema contains only the
 // properties compatible with the app's role. For the events target, the
 // returned schema can be the invalid schema.
@@ -233,6 +237,11 @@ func (app *App) Schema(ctx context.Context, target state.Target, eventType strin
 
 // SchemaAsRole is like Schema but returns the schema as the provided role,
 // instead of the role of the app's connection.
+//
+// If the target is state.Events and the event type refers to an app event for
+// which no schema is expected, this method returns the invalid type and no
+// errors.
+//
 // If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
 // error. If the connector returns an error, it returns a *UnavailableError
 // error.
@@ -252,6 +261,9 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Events, meergo.Destination, eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
+		}
+		if !schema.Valid() {
+			return types.Type{}, nil
 		}
 		return types.AsRole(schema, types.Destination), nil
 	case state.Users:
