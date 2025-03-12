@@ -93,6 +93,16 @@ type RecordWriter interface {
 	// Columns must be called before Record, RecordSlice, and RecordStrings.
 	Columns(columns []types.Property) error
 
+	// Issue reports an issue encountered during file reading that did not
+	// prevent the file from being processed. For instance, an issue might occur
+	// if a column is excluded due to an unsupported data type.
+	//
+	// The format and its arguments are formatted using the syntax and rules of
+	// fmt.Sprintf.
+	//
+	// Subsequent calls will append new issues to the ones previously reported.
+	Issue(format string, a ...any)
+
 	// Record writes a record represented as a string to any map.
 	// The record's length must equal to the number of columns.
 	Record(record map[string]any) error

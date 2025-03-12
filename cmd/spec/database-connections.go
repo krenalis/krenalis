@@ -51,14 +51,23 @@ func init() {
 						{
 							Name:        "schema",
 							Type:        types.Parameter("Schema"),
+							Nullable:    true,
 							Placeholder: `{ ... }`,
-							Description: "The schema of the query.",
+							Description: "The schema of the query. It will be null if there are no supported columns.",
 						},
 						{
 							Name:        "rows",
 							Type:        types.Array(types.Map(types.JSON())),
 							Placeholder: `[ { ... } ]`,
 							Description: "The rows.",
+						},
+						{
+							Name:        "issues",
+							Type:        types.Array(types.Text()),
+							Nullable:    true,
+							Placeholder: `[ "Column \"mac_addr\" cannot be imported because its type \"MACADDR\" is not supported" ]`,
+							Description: "The issues encountered while reading the table, such as unsupported columns, which did not prevent processing. " +
+								"If it is not null, it contains at least one issue.",
 						},
 					},
 				},
@@ -93,8 +102,17 @@ func init() {
 						{
 							Name:        "schema",
 							Type:        types.Parameter("Schema"),
+							Nullable:    true,
 							Placeholder: `{ ... }`,
-							Description: "The schema of the table.",
+							Description: "The schema of the table. It will be null if there are no supported columns.",
+						},
+						{
+							Name:        "issues",
+							Type:        types.Array(types.Text()),
+							Nullable:    true,
+							Placeholder: `[ "Column \"mac_addr\" cannot be imported because its type \"MACADDR\" is not supported" ]`,
+							Description: "The issues encountered while reading the table, such as unsupported columns, which did not prevent processing. " +
+								"If it is not null, it contains at least one issue.",
 						},
 					},
 				},

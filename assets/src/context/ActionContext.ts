@@ -36,6 +36,10 @@ interface ActionContext {
 	setSelectedInPaths: React.Dispatch<React.SetStateAction<string[]>>;
 	selectedOutPaths: string[];
 	setSelectedOutPaths: React.Dispatch<React.SetStateAction<string[]>>;
+	issues: string[];
+	setIssues: React.Dispatch<React.SetStateAction<string[]>>;
+	showIssues: boolean;
+	setShowIssues: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const actionContext = createContext<ActionContext>({} as ActionContext);

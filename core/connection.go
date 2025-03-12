@@ -1083,29 +1083,32 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 // query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes.
 // limit must be in range [0, 100].
 //
+// The method may also return issues that did not prevent it from being
+// processed. These issues are reported as a slice of strings.
+//
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // It returns an errors.UnprocessableError error with code:
 //
 //   - InvalidPlaceholder, if the query contains an invalid placeholder.
 //   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) (json.Value, types.Type, error) {
+func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) (json.Value, types.Type, []string, error) {
 
 	this.core.mustBeOpen()
 
 	if err := util.ValidateStringField("query", query, queryMaxSize); err != nil {
-		return nil, types.Type{}, errors.BadRequest("%s", err)
+		return nil, types.Type{}, nil, errors.BadRequest("%s", err)
 	}
 	if limit < 0 || limit > 100 {
-		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
+		return nil, types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.Database {
-		return nil, types.Type{}, errors.BadRequest("connection %d is not a database", c.ID)
+		return nil, types.Type{}, nil, errors.BadRequest("connection %d is not a database", c.ID)
 	}
 	if c.Role != state.Source {
-		return nil, types.Type{}, errors.BadRequest("database %d is not a source", c.ID)
+		return nil, types.Type{}, nil, errors.BadRequest("database %d is not a source", c.ID)
 	}
 
 	// Execute the query.
@@ -1121,19 +1124,20 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 		return "", false
 	}
 	defer database.Close()
-	rows, err := database.Query(ctx, query, replacer)
+	rows, schema, issues, err := database.Query(ctx, query, replacer)
 	if err != nil {
 		switch err.(type) {
 		case *connectors.PlaceholderError:
 			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
-		case *meergo.UnsupportedColumnTypeError:
-			err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("%s", err)
 		}
-		return nil, types.Type{}, err
+		return nil, types.Type{}, nil, err
 	}
 	defer rows.Close()
+	if !schema.Valid() {
+		return json.Value("[]"), types.Type{}, issues, nil
+	}
 
 	// Scan the rows.
 	var results []any
@@ -1146,7 +1150,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 			if _, ok := err.(*connectors.UnavailableError); ok {
 				err = errors.Unavailable("%s", err)
 			}
-			return nil, types.Type{}, err
+			return nil, types.Type{}, nil, err
 		}
 		results = append(results, row)
 	}
@@ -1155,18 +1159,16 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 		if _, ok := err.(*connectors.UnavailableError); ok {
 			err = errors.Unavailable("%s", err)
 		}
-		return nil, types.Type{}, err
+		return nil, types.Type{}, nil, err
 	}
 	_ = rows.Close()
 
-	schema := types.Object(rows.Columns())
-
 	marshaledRows, err := types.Marshal(results, types.Array(schema))
 	if err != nil {
-		return nil, types.Type{}, err
+		return nil, types.Type{}, nil, err
 	}
 
-	return marshaledRows, schema, nil
+	return marshaledRows, schema, issues, nil
 }
 
 // An Execution describes an action execution as returned by Executions.
@@ -1196,6 +1198,10 @@ type Execution struct {
 // format settings, and limit restricts the number of records to return, between
 // 0 and 100.
 //
+// The method may also return issues encountered during the reading process that
+// did not prevent the file from being processed. These issues are reported as
+// a slice of strings.
+//
 // It returns an errors.UnprocessableError error with code
 //
 //   - FormatNotExist, if the format does not exist.
@@ -1203,7 +1209,7 @@ type Execution struct {
 //   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
 //   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) File(ctx context.Context, path, format, sheet string, compression Compression, settings json.Value, limit int) (json.Value, types.Type, error) {
+func (this *Connection) File(ctx context.Context, path, format, sheet string, compression Compression, settings json.Value, limit int) (json.Value, types.Type, []string, error) {
 
 	this.core.mustBeOpen()
 
@@ -1211,63 +1217,63 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 
 	// Validate the connection type.
 	if c.Connector().Type != state.FileStorage {
-		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
+		return nil, types.Type{}, nil, errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
 
 	// Ensure that the FileStorage connection supports read operations.
 	if !c.Connector().SourceTargets.Contains(state.Users) {
-		return nil, types.Type{}, errors.BadRequest("connection %d does not support read operations", c.ID)
+		return nil, types.Type{}, nil, errors.BadRequest("connection %d does not support read operations", c.ID)
 	}
 
 	// Validate the path.
 	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
-		return nil, types.Type{}, errors.BadRequest("%s", err)
+		return nil, types.Type{}, nil, errors.BadRequest("%s", err)
 	}
 
 	// Validate the format.
 	formatConnector, ok := this.core.state.Connector(format)
 	if !ok {
-		return nil, types.Type{}, errors.Unprocessable(FormatNotExist, "format %q does not exist", format)
+		return nil, types.Type{}, nil, errors.Unprocessable(FormatNotExist, "format %q does not exist", format)
 	}
 	if formatConnector.Type != state.File {
-		return nil, types.Type{}, errors.BadRequest("format %q does not refer to a file connector", format)
+		return nil, types.Type{}, nil, errors.BadRequest("format %q does not refer to a file connector", format)
 	}
 	if !formatConnector.SourceTargets.Contains(state.Users) {
-		return nil, types.Type{}, errors.BadRequest("format %q does not support reading of users", format)
+		return nil, types.Type{}, nil, errors.BadRequest("format %q does not support reading of users", format)
 	}
 
 	// Validate the sheet.
 	if formatConnector.HasSheets {
 		if sheet == "" {
-			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+			return nil, types.Type{}, nil, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
 		}
 		if !connectors.IsValidSheetName(sheet) {
-			return nil, types.Type{}, errors.BadRequest("sheet is not valid")
+			return nil, types.Type{}, nil, errors.BadRequest("sheet is not valid")
 		}
 	} else {
 		if sheet != "" {
-			return nil, types.Type{}, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
+			return nil, types.Type{}, nil, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
 		}
 	}
 
 	// Validate the settings.
 	if formatConnector.HasSourceSettings {
 		if settings == nil {
-			return nil, types.Type{}, errors.BadRequest("format settings must be provided because connector %s has source settings", formatConnector.Name)
+			return nil, types.Type{}, nil, errors.BadRequest("format settings must be provided because connector %s has source settings", formatConnector.Name)
 		}
 		if !json.Valid(settings) || !settings.IsObject() {
-			return nil, types.Type{}, errors.BadRequest("format settings are not a valid JSON Object")
+			return nil, types.Type{}, nil, errors.BadRequest("format settings are not a valid JSON Object")
 		}
 	} else if settings != nil {
-		return nil, types.Type{}, errors.BadRequest("format settings cannot be provided because connector %s has no source settings", formatConnector.Name)
+		return nil, types.Type{}, nil, errors.BadRequest("format settings cannot be provided because connector %s has no source settings", formatConnector.Name)
 	}
 
 	// Validate the limit.
 	if limit < 0 || limit > 100 {
-		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
+		return nil, types.Type{}, nil, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	columns, records, err := this.storage().Read(ctx, formatConnector, path, sheet, settings, state.Compression(compression), limit)
+	columns, records, issues, err := this.storage().Read(ctx, formatConnector, path, sheet, settings, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
 		case connectors.ErrNoColumnsFound:
@@ -1278,13 +1284,11 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 			switch err.(type) {
 			case *meergo.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *meergo.UnsupportedColumnTypeError:
-				err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("cannot read records: %w", err)
 			}
 		}
-		return nil, types.Type{}, err
+		return nil, types.Type{}, nil, err
 	}
 
 	recs := make([]any, len(records))
@@ -1295,10 +1299,10 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	schema := types.Object(columns)
 	marshaledRecords, err := types.Marshal(recs, types.Array(schema))
 	if err != nil {
-		return nil, types.Type{}, err
+		return nil, types.Type{}, nil, err
 	}
 
-	return marshaledRecords, schema, nil
+	return marshaledRecords, schema, issues, nil
 }
 
 // Identities returns the user identities of the connection, and an estimate of
@@ -1729,33 +1733,34 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 // connection. connection must be a destination database connection, and table
 // must be UTF-8 encoded with a length in range [1, MaxTableNameSize].
 //
+// The method may also return issues that did not prevent it from being
+// processed. These issues are reported as a slice of strings.
+//
 // If the table contains a column with an unsupported type, it returns an
 // errors.UnprocessableError error.
-func (this *Connection) TableSchema(ctx context.Context, table string) (types.Type, error) {
+func (this *Connection) TableSchema(ctx context.Context, table string) (types.Type, []string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.Database {
-		return types.Type{}, errors.BadRequest("connection %d is not a database", c.ID)
+		return types.Type{}, nil, errors.BadRequest("connection %d is not a database", c.ID)
 	}
 	if c.Role != state.Destination {
-		return types.Type{}, errors.BadRequest("database %d is not a destination", c.ID)
+		return types.Type{}, nil, errors.BadRequest("database %d is not a destination", c.ID)
 	}
 	if err := util.ValidateStringField("table name", table, MaxTableNameSize); err != nil {
-		return types.Type{}, errors.BadRequest("%s", err)
+		return types.Type{}, nil, errors.BadRequest("%s", err)
 	}
 	database := this.database()
 	defer database.Close()
-	schema, err := database.Schema(ctx, table, state.Destination)
+	schema, issues, err := database.Schema(ctx, table, state.Destination)
 	if err != nil {
 		switch err.(type) {
-		case *meergo.UnsupportedColumnTypeError:
-			err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("an error occurred fetching the columns: %w", err)
 		}
 	}
-	return schema, err
+	return schema, issues, err
 }
 
 // UnlinkConnection unlinks the connection (which must be a website, mobile, or

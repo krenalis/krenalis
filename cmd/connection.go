@@ -152,11 +152,11 @@ func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	rows, schema, err := c.ExecQuery(r.Context(), body.Query, body.Limit)
+	rows, schema, issues, err := c.ExecQuery(r.Context(), body.Query, body.Limit)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"rows": rows, "schema": schema}, nil
+	return map[string]any{"rows": rows, "schema": schema, "issues": issues}, nil
 }
 
 // File returns the records and schema of the file located at the specified path
@@ -181,11 +181,11 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 	if body.FormatSettings != nil && body.FormatSettings.IsNull() {
 		body.FormatSettings = nil
 	}
-	records, schema, err := c.File(r.Context(), path, body.Format, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
+	records, schema, issues, err := c.File(r.Context(), path, body.Format, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"records": records, "schema": schema}, nil
+	return map[string]any{"records": records, "schema": schema, "issues": issues}, nil
 }
 
 // Identities returns the user identities of a connection.
@@ -306,7 +306,11 @@ func (connection connection) TableSchema(_ http.ResponseWriter, r *http.Request)
 	if err != nil {
 		return nil, err
 	}
-	return c.TableSchema(r.Context(), r.PathValue("name"))
+	schema, issues, err := c.TableSchema(r.Context(), r.PathValue("name"))
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"schema": schema, "issues": issues}, nil
 }
 
 // UnlinkConnection unlink a connection from another connection and vice versa.

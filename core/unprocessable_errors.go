@@ -48,7 +48,6 @@ const (
 	TooManyListeners             errors.Code = "TooManyListeners"
 	TransformationFailed         errors.Code = "TransformationFailed"
 	TypeNotAllowed               errors.Code = "TypeNotAllowed"
-	UnsupportedColumnType        errors.Code = "UnsupportedColumnType"
 	UnsupportedLanguage          errors.Code = "UnsupportedLanguage"
 	WarehouseNonInitializable    errors.Code = "WarehouseNonInitializable"
 	WarehouseTypeNotExist        errors.Code = "WarehouseTypeNotExist"

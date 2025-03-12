@@ -182,21 +182,27 @@ func (my *MySQL) query(ctx context.Context, query string, writable bool) (meergo
 		return nil, nil, err
 	}
 	columns := make([]meergo.Column, len(columnTypes))
-	for i, column := range columnTypes {
-		typ, err := propertyType(column)
+	for i, c := range columnTypes {
+		typ, issue, err := propertyType(c)
 		if err != nil {
 			_ = rows.Close()
-			return nil, nil, fmt.Errorf("cannot get type for column %q: %s", column.Name(), err)
+			return nil, nil, fmt.Errorf("cannot get type for column %q: %s", c.Name(), err)
+		}
+		if !typ.Valid() {
+			columns[i].Issue = issue
+			continue
+		}
+		if !types.IsValidPropertyPath(c.Name()) {
+			columns[i].Issue = fmt.Sprintf("Column %q does not have a valid property name. Valid names start with a letter or underscore, followed by only letters, numbers, or underscores.", c.Name())
+			continue
 		}
 		// Unlike what happens with PostgreSQL, the MySQL driver is able to
 		// determine whether a column returned by the query is nullable or not.
-		nullable, ok := column.Nullable()
-		columns[i] = meergo.Column{
-			Name:     column.Name(),
-			Type:     typ,
-			Nullable: nullable || !ok,
-			Writable: writable,
-		}
+		nullable, ok := c.Nullable()
+		columns[i].Name = c.Name()
+		columns[i].Type = typ
+		columns[i].Nullable = nullable || !ok
+		columns[i].Writable = writable
 	}
 	return rows, columns, nil
 }
@@ -278,80 +284,85 @@ func testConnection(ctx context.Context, settings *innerSettings) error {
 }
 
 // propertyType returns the property type of the column with type t.
-func propertyType(t *sql.ColumnType) (types.Type, error) {
+// If the column type is not supported, it returns an invalid type and an issue
+// message.
+func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	switch t.DatabaseTypeName() {
 	case "BLOB":
-		return types.Text(), nil
+		return types.Text(), "", nil
 	case "DATE":
-		return types.Date(), nil
+		return types.Date(), "", nil
 	case "DATETIME":
-		return types.DateTime(), nil
+		return types.DateTime(), "", nil
 	case "DECIMAL":
 		precision, scale, ok := t.DecimalSize()
 		if !ok {
-			return types.Type{}, errors.New("cannot get decimal size")
+			return types.Type{}, "", errors.New("cannot get decimal size")
 		}
 		if precision < 1 || scale < 0 || scale > precision {
-			return types.Type{}, fmt.Errorf("precision and scale (%d,%d) are invalid", precision, scale)
+			return types.Type{}, "", fmt.Errorf("precision and scale (%d, %d) are invalid", precision, scale)
 		}
 		if precision > types.MaxDecimalPrecision {
-			return types.Type{}, fmt.Errorf("precision %d exceeds the maximum supported precision of %d", precision, types.MaxDecimalPrecision)
+			issue := fmt.Sprintf("Column %q has a precision of %d, which exceeds the maximum supported precision of %d.", t.Name(), precision, types.MaxDecimalPrecision)
+			return types.Type{}, issue, nil
 		}
 		if scale > types.MaxDecimalScale {
-			return types.Type{}, fmt.Errorf("scale %d exceeds the maximum supported scale of %d", scale, types.MaxDecimalScale)
+			issue := fmt.Sprintf("Column %q has a scale of %d, which exceeds the maximum supported scale of %d.", t.Name(), scale, types.MaxDecimalScale)
+			return types.Type{}, issue, nil
 		}
-		return types.Decimal(int(precision), int(scale)), nil
+		return types.Decimal(int(precision), int(scale)), "", nil
 	case "DOUBLE":
-		return types.Float(64), nil
+		return types.Float(64), "", nil
 	case "ENUM":
-		return types.Text(), nil
+		return types.Text(), "", nil
 	// TODO(marco): SET can be implemented as an array(T), but the driver only returns the first element of the set.
 	//case "SET":
-	//return types.Array(types.Text()), nil
+	//return types.Array(types.Text()), "", nil
 	case "FLOAT":
-		return types.Float(32), nil
+		return types.Float(32), "", nil
 	case "UNSIGNED MEDIUMINT":
-		return types.Uint(24), nil
+		return types.Uint(24), "", nil
 	case "MEDIUMINT":
-		return types.Int(24), nil
+		return types.Int(24), "", nil
 	case "JSON":
-		return types.JSON(), nil
+		return types.JSON(), "", nil
 	case "UNSIGNED INT":
-		return types.Uint(32), nil
+		return types.Uint(32), "", nil
 	case "INT":
-		return types.Int(32), nil
+		return types.Int(32), "", nil
 	case "UNSIGNED BIGINT":
-		return types.Uint(64), nil
+		return types.Uint(64), "", nil
 	case "BIGINT":
-		return types.Int(64), nil
+		return types.Int(64), "", nil
 	case "UNSIGNED SMALLINT":
-		return types.Uint(16), nil
+		return types.Uint(16), "", nil
 	case "SMALLINT":
-		return types.Int(16), nil
+		return types.Int(16), "", nil
 	case "VARCHAR", "CHAR":
 		length, ok := t.Length()
 		if !ok {
-			return types.Text(), nil
+			return types.Text(), "", nil
 		}
-		return types.Text().WithCharLen(int(length)), nil
+		return types.Text().WithCharLen(int(length)), "", nil
 	case "VARBINARY", "BINARY":
 		length, ok := t.Length()
 		if !ok {
-			return types.Text(), nil
+			return types.Text(), "", nil
 		}
-		return types.Text().WithByteLen(int(length)), nil
+		return types.Text().WithByteLen(int(length)), "", nil
 	case "TEXT":
-		return types.Text(), nil
+		return types.Text(), "", nil
 	case "TIME":
-		return types.Time(), nil
+		return types.Time(), "", nil
 	case "TIMESTAMP":
-		return types.DateTime(), nil
+		return types.DateTime(), "", nil
 	case "UNSIGNED TINYINT":
-		return types.Uint(8), nil
+		return types.Uint(8), "", nil
 	case "TINYINT":
-		return types.Int(8), nil
+		return types.Int(8), "", nil
 	case "YEAR":
-		return types.Year(), nil
+		return types.Year(), "", nil
 	}
-	return types.Type{}, meergo.NewUnsupportedColumnTypeError(t.Name(), t.DatabaseTypeName())
+	issue := fmt.Sprintf("Column %q has an unsupported type %q.", t.Name(), t.DatabaseTypeName())
+	return types.Type{}, issue, nil
 }

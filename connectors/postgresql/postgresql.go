@@ -105,19 +105,25 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []m
 	}
 	fieldDescriptions := rows.FieldDescriptions()
 	columns := make([]meergo.Column, len(fieldDescriptions))
-	for i, field := range fieldDescriptions {
-		typ, err := ps.propertyType(ctx, field)
+	for i, c := range fieldDescriptions {
+		typ, issue, err := ps.propertyType(ctx, c)
 		if err != nil {
 			rows.Close()
 			return nil, nil, err
 		}
-		columns[i] = meergo.Column{
-			Name: field.Name,
-			Type: typ,
-			// Nullable is always considered true, as the PostgreSQL driver does
-			// not have information about nullability of returned columns.
-			Nullable: true,
+		if !typ.Valid() {
+			columns[i].Issue = issue
+			continue
 		}
+		if !types.IsValidPropertyPath(c.Name) {
+			columns[i].Issue = fmt.Sprintf("Column %q does not have a valid property name. Valid names start with a letter or underscore, followed by only letters, numbers, or underscores.", c.Name)
+			continue
+		}
+		columns[i].Name = c.Name
+		columns[i].Type = typ
+		// Nullable is always considered true, as the PostgreSQL driver does
+		// not have information about nullability of returned columns.
+		columns[i].Nullable = true
 	}
 	return withCloseError{rows}, columns, nil
 }
@@ -279,68 +285,73 @@ func testConnection(ctx context.Context, settings *innerSettings) error {
 	return db.PingContext(ctx)
 }
 
-// propertyType returns the property type of the column type t.
-func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescription) (types.Type, error) {
+// propertyType returns the property type of the column with type t.
+// If the column type is not supported, it returns an invalid type and an issue
+// message.
+func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescription) (types.Type, string, error) {
 	switch fd.DataTypeOID {
 	case pgtype.BoolOID:
-		return types.Boolean(), nil
+		return types.Boolean(), "", nil
 	case pgtype.Int8OID:
-		return types.Int(64), nil
+		return types.Int(64), "", nil
 	case pgtype.Int2OID:
-		return types.Int(16), nil
+		return types.Int(16), "", nil
 	case pgtype.Int4OID:
-		return types.Int(32), nil
+		return types.Int(32), "", nil
 	case pgtype.Float4OID:
-		return types.Float(32), nil
+		return types.Float(32), "", nil
 	case pgtype.Float8OID:
-		return types.Float(64), nil
+		return types.Float(64), "", nil
 	case pgtype.NumericOID:
 		mod := fd.TypeModifier - 4
 		precision, scale := int((mod>>16)&0xffff), int(mod&0xffff)
 		if precision < 1 || scale < 0 || scale > precision {
-			return types.Type{}, fmt.Errorf("precision and scale (%d,%d) are invalid", precision, scale)
+			return types.Type{}, "", fmt.Errorf("precision and scale (%d, %d) are invalid", precision, scale)
 		}
 		if precision > types.MaxDecimalPrecision {
-			return types.Type{}, fmt.Errorf("precision %d exceeds the maximum supported precision of %d", precision, types.MaxDecimalPrecision)
+			issue := fmt.Sprintf("Column %q has a precision of %d, which exceeds the maximum supported precision of %d.", fd.Name, precision, types.MaxDecimalPrecision)
+			return types.Type{}, issue, nil
 		}
 		if scale > types.MaxDecimalScale {
-			return types.Type{}, fmt.Errorf("scale %d exceeds the maximum supported scale of %d", scale, types.MaxDecimalScale)
+			issue := fmt.Sprintf("Column %q has a scale of %d, which exceeds the maximum supported scale of %d.", fd.Name, scale, types.MaxDecimalScale)
+			return types.Type{}, issue, nil
 		}
-		return types.Decimal(precision, scale), nil
+		return types.Decimal(precision, scale), "", nil
 	case pgtype.TimestampOID, pgtype.TimestamptzOID:
-		return types.DateTime(), nil
+		return types.DateTime(), "", nil
 	case pgtype.DateOID:
-		return types.Date(), nil
+		return types.Date(), "", nil
 	case pgtype.TimeOID, pgtype.TimetzOID:
-		return types.Time(), nil
+		return types.Time(), "", nil
 	case pgtype.UUIDOID:
-		return types.UUID(), nil
+		return types.UUID(), "", nil
 	case pgtype.JSONOID, pgtype.JSONBOID:
-		return types.JSON(), nil
+		return types.JSON(), "", nil
 	case pgtype.InetOID:
-		return types.Inet(), nil
+		return types.Inet(), "", nil
 	case pgtype.BPCharOID, pgtype.VarcharOID:
 		length := int(fd.TypeModifier - 4)
 		if 1 <= length && length <= types.MaxTextLen {
-			return types.Text().WithCharLen(length), nil
+			return types.Text().WithCharLen(length), "", nil
 		}
-		return types.Text(), nil
+		return types.Text(), "", nil
 	case pgtype.TextOID, pgtype.ByteaOID:
-		return types.Text(), nil
+		return types.Text(), "", nil
 	}
 	conn, err := ps.pool.Acquire(ctx)
 	if err != nil {
-		return types.Type{}, err
+		return types.Type{}, "", err
 	}
 	defer conn.Release()
-	var name string
+	var typ string
 	if t, ok := conn.Conn().TypeMap().TypeForOID(fd.DataTypeOID); ok {
-		name = strings.ToUpper(t.Name)
-		if strings.HasPrefix(name, "_") {
-			name = "array"
+		typ = strings.ToUpper(t.Name)
+		if strings.HasPrefix(typ, "_") {
+			typ = "array"
 		}
 	} else {
-		name = strconv.FormatUint(uint64(fd.DataTypeOID), 10)
+		typ = strconv.FormatUint(uint64(fd.DataTypeOID), 10)
 	}
-	return types.Type{}, meergo.NewUnsupportedColumnTypeError(fd.Name, name)
+	issue := fmt.Sprintf("Column %q has an unsupported type %q.", fd.Name, typ)
+	return types.Type{}, issue, nil
 }

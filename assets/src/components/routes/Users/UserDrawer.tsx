@@ -87,7 +87,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	};
 
 	const onClose = (e) => {
-		if (e.target.className === 'drawer-trait__value-copy') {
+		if (e.target.classList.contains('drawer-trait__value-copy')) {
 			e.stopPropagation();
 			return;
 		}
@@ -307,7 +307,9 @@ const DrawerTrait = ({ name, value, isParent, isIndented, isExpanded, setIsExpan
 		<div
 			className={`drawer-trait${isParent ? ' drawer-trait--parent' : ''}`}
 			onClick={() => {
-				setIsExpanded(!isExpanded);
+				if (isParent) {
+					setIsExpanded(!isExpanded);
+				}
 			}}
 		>
 			<span className='drawer-trait__property-padding'>
@@ -332,6 +334,7 @@ const DrawerTrait = ({ name, value, isParent, isIndented, isExpanded, setIsExpan
 						copyLabel='Click to copy'
 						successLabel='✓ Copied'
 						errorLabel='Copying to clipboard is not supported by your browser'
+						hoist={true}
 					/>
 				</span>
 			)}

@@ -41,8 +41,6 @@ type fileReadConnector interface {
 	// Read reads the records from r and writes them to records. If the connector
 	// has multiple sheets, sheet is the name of the sheet to be read.
 	// If the provided sheet does not exist, it returns the ErrSheetNotExist error.
-	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
-	// error
 	Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error
 }
 
@@ -104,8 +102,7 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 // If the action's sheet is not found in the file, the All method of the
 // iterator returns immediately, and a subsequent call to the Err method will
 // return the meergo.ErrSheetNotExist error. The same occurs if the file has no
-// columns; in this case, the error is ErrNoColumnsFound, and if a column type
-// is not supported, the error is a *meergo.UnsupportedColumnType error.
+// columns; in this case, the error is ErrNoColumnsFound.
 //
 // It returns an error if a non-zero start time is provided and the action has
 // no last change property.
@@ -642,6 +639,7 @@ type recordWriter struct {
 	lastChangeTimeIndex    int
 	numPropertiesPerRecord int
 	properties             []types.Property // properties of the action's schema, or the file's columns if an action has not been provided
+	issues                 []string
 	record                 Record
 	yield                  func(Record) bool
 	isLast                 bool
@@ -694,6 +692,12 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		return errRecordStop
 	}
 	return nil
+}
+
+// Issue reports an issue encountered during file reading that did not prevent
+// the file from being processed.
+func (rw *recordWriter) Issue(format string, a ...any) {
+	rw.issues = append(rw.issues, fmt.Sprintf(format, a...))
 }
 
 // Record writes a record as a map.

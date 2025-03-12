@@ -104,6 +104,14 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 	parquetColumns := fr.Columns()
 	columns := make([]types.Property, 0, len(parquetColumns))
 	for _, c := range parquetColumns {
+		var pathFirstComponent string
+		if len(c.Path()) > 0 {
+			// I don't know if this check is necessary, but just in case, since
+			// the library doesn't document whether path should always contain a
+			// component or not, it seems preferable to do this check rather
+			// than risk a panic in the connector.
+			pathFirstComponent = c.Path()[0]
+		}
 		if len(c.Path()) > 1 {
 			// Skip columns referring to groups and arrays (and possibly also to
 			// other composite types in Parquet), which are not currently
@@ -112,6 +120,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 			// TODO: see the issues:
 			//  - https://github.com/meergo/meergo/issues/1369 (groups)
 			//  - https://github.com/meergo/meergo/issues/1325 (arrays)
+			records.Issue("Column %q is not supported because column groups (which are used to represent types as object, arrays, and maps) are not supported.", strings.Join(c.Path(), "."))
 			continue
 		}
 		element := c.Element()
@@ -120,6 +129,12 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 			return err
 		}
 		if !typ.Valid() {
+			records.Issue("Column %q has an unsupported type.", pathFirstComponent)
+			continue
+		}
+		if !types.IsValidPropertyName(pathFirstComponent) {
+			// TODO: see https://github.com/meergo/meergo/issues/1405.
+			records.Issue("Column %q does not have a valid property name. Valid names start with a letter or underscore, followed by only letters, numbers, or underscores.", pathFirstComponent)
 			continue
 		}
 		name := strings.Join(c.Path(), ".")

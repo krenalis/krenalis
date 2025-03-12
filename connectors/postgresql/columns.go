@@ -35,9 +35,6 @@ type pgTypeInfo struct {
 // columns returns the columns of the table in schema.
 //
 // If the table does not exist, this method returns an error.
-//
-// It returns a *meergo.UnsupportedColumnTypeError error, if a column type is
-// not supported.
 func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]meergo.Column, error) {
 
 	if err := ps.openDB(ctx); err != nil {
@@ -159,20 +156,18 @@ func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]meer
 			if isUpdatable == nil {
 				return nil, errors.New("database has returned NULL as updatability of column")
 			}
-			column := meergo.Column{
-				Name:     row.column,
-				Nullable: *isNullable == "YES",
-			}
-			column.Type, err = columnType(row, enums, attTypMods)
+			typ, issue, err := columnType(row, enums, attTypMods)
 			if err != nil {
-				if _, ok := err.(*meergo.UnsupportedColumnTypeError); ok {
-					return nil, err
-				}
 				return nil, fmt.Errorf("database has returned an invalid type: %s", err)
 			}
-			if *isUpdatable == "YES" {
-				column.Writable = true
+			var column meergo.Column
+			if typ.Valid() {
+				column.Name = row.column
+				column.Type = typ
+				column.Nullable = *isNullable == "YES"
+				column.Writable = *isUpdatable == "YES"
 			}
+			column.Issue = issue
 			columns = append(columns, column)
 		}
 		rows.Close()
@@ -199,10 +194,7 @@ func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]meer
 // the maximum length of a varchar column or the maximum length of the text of
 // an array element); may not contain a key if the column type has no associated
 // type-specific data.
-//
-// It returns an error if an argument is not valid. If typ is not supported, it
-// returns a *meergo.UnsupportedColumnTypeError error.
-func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[string]map[string]*int) (types.Type, error) {
+func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[string]map[string]*int) (types.Type, string, error) {
 	var t types.Type
 	switch column.dataType {
 	case "smallint":
@@ -214,27 +206,35 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 	case "numeric":
 		// Parse precision radix.
 		if column.radix == nil {
-			return types.Type{}, errors.New("numeric_precision_radix value is NULL")
+			return types.Type{}, "", errors.New("numeric_precision_radix value is NULL")
 		}
 		rdx, _ := strconv.Atoi(*column.radix)
 		if rdx != 2 && rdx != 10 {
-			return types.Type{}, fmt.Errorf("numeric_precision_radix value %q is not valid", *column.radix)
+			return types.Type{}, "", fmt.Errorf("numeric_precision_radix value %q is not valid", *column.radix)
 		}
 		// Parse precision.
 		if column.precision == nil {
-			return types.Type{}, errors.New("numeric_precision value is NULL")
+			return types.Type{}, "", errors.New("numeric_precision value is NULL")
 		}
 		p, err := strconv.ParseInt(*column.precision, rdx, 64)
 		if err != nil || p < 1 {
-			return types.Type{}, fmt.Errorf("numeric_precision value %q is not valid", *column.precision)
+			return types.Type{}, "", fmt.Errorf("numeric_precision value %q is not valid", *column.precision)
 		}
 		// Parse scale.
 		if column.scale == nil {
-			return types.Type{}, errors.New("numeric_scale value is NULL")
+			return types.Type{}, "", errors.New("numeric_scale value is NULL")
 		}
 		s, err := strconv.ParseInt(*column.scale, rdx, 64)
 		if err != nil || s < 0 || s > p {
-			return types.Type{}, fmt.Errorf("numeric_scale value %q is not valid", *column.scale)
+			return types.Type{}, "", fmt.Errorf("numeric_scale value %q is not valid", *column.scale)
+		}
+		if p > types.MaxDecimalPrecision {
+			issue := fmt.Sprintf("Column %q has a precision of %d, which exceeds the maximum supported precision of %d.", column.column, p, types.MaxDecimalPrecision)
+			return types.Type{}, issue, nil
+		}
+		if s > types.MaxDecimalScale {
+			issue := fmt.Sprintf("Column %q has a scale of %d, which exceeds the maximum supported scale of %d.", column.column, s, types.MaxDecimalScale)
+			return types.Type{}, issue, nil
 		}
 		t = types.Decimal(int(p), int(s))
 	case "real":
@@ -243,9 +243,13 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 		t = types.Float(64)
 	case "character varying", "character":
 		if column.charLength != nil {
-			chars, _ := strconv.Atoi(*column.charLength)
+			chars, err := strconv.Atoi(*column.charLength)
+			if err != nil {
+				return types.Type{}, "", fmt.Errorf("character_maximum_length value %q is not valid", *column.precision)
+			}
 			if chars < 1 || chars > types.MaxTextLen {
-				return types.Type{}, fmt.Errorf("character_maximum_length value %q is not valid", *column.charLength)
+				issue := fmt.Sprintf("Column %q has a character length of %d, which exceeds the maximum allowed length of %d", column.column, chars, types.MaxTextLen)
+				return types.Type{}, issue, nil
 			}
 			t = types.Text().WithCharLen(chars)
 		} else {
@@ -308,7 +312,7 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 			if attTypMod != nil {
 				length := *attTypMod - 4 // See the function "_pg_char_max_length".
 				if length < 1 {
-					return types.Type{}, fmt.Errorf("atttypmod value %d is not valid", *attTypMod)
+					return types.Type{}, "", fmt.Errorf("atttypmod value %d is not valid", *attTypMod)
 				}
 				et = types.Text().WithCharLen(length)
 			} else {
@@ -316,19 +320,22 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 			}
 		}
 		if !et.Valid() {
-			return types.Type{}, meergo.NewUnsupportedColumnTypeError(column.column, fmt.Sprintf("ARRAY of %s", column.udtName))
+			issue := fmt.Sprintf("Column %q is an array, but its element type %q is not supported.", column.column, column.udtName)
+			return types.Type{}, issue, nil
 		}
 		t = types.Array(et)
 	case "USER-DEFINED":
 		// Check if the user-defined type is an enum.
-		if typ, ok := enums[column.udtName]; ok {
-			t = typ
-		} else {
-			// Composite types are not supported.
+		var ok bool
+		t, ok = enums[column.udtName]
+		if !ok {
+			issue := fmt.Sprintf("Column %q has a composite type, which is not supported.", column.column)
+			return types.Type{}, issue, nil
 		}
 	}
 	if !t.Valid() {
-		return types.Type{}, meergo.NewUnsupportedColumnTypeError(column.column, column.dataType)
+		issue := fmt.Sprintf("Column %q has an unsupported type %q.", column.column, column.dataType)
+		return types.Type{}, issue, nil
 	}
-	return t, nil
+	return t, "", nil
 }

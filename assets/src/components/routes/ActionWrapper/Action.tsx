@@ -67,6 +67,10 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
+		issues,
+		setIssues,
+		showIssues,
+		setShowIssues,
 	} = useAction(connection, providedActionType, providedAction);
 
 	if (isLoading) {
@@ -123,6 +127,10 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				setSelectedInPaths,
 				selectedOutPaths,
 				setSelectedOutPaths,
+				issues,
+				setIssues,
+				showIssues,
+				setShowIssues,
 			}}
 		>
 			<div className='action'>

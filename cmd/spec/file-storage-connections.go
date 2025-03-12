@@ -89,14 +89,23 @@ func init() {
 						{
 							Name:        "schema",
 							Type:        types.Parameter("Schema"),
+							Nullable:    true,
 							Placeholder: `{ ... }`,
-							Description: "The file's schema.",
+							Description: "The file's schema. It will be null if there are no supported columns.",
 						},
 						{
 							Name:        "rows",
 							Type:        types.Array(types.Map(types.JSON())),
 							Placeholder: `[ { ... } ]`,
 							Description: "The file's rows.",
+						},
+						{
+							Name:        "issues",
+							Type:        types.Array(types.Text()),
+							Nullable:    true,
+							Placeholder: `[ "Column \"score\" cannot be imported because its type \"INT128\" is not supported" ]`,
+							Description: "The issues encountered while reading the file, such as unsupported columns, which did not prevent processing. " +
+								"If it is not null, it contains at least one issue.",
 						},
 					},
 				},

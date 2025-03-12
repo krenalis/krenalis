@@ -23,6 +23,7 @@
 	border-bottom: 1px solid var(--border-primary);
 	z-index: 1000;
 	height: 90px;
+	gap: 20px;
 }
 
 .action__header-title {
@@ -33,6 +34,7 @@
 		'logo description';
 	column-gap: 25px;
 	align-items: center;
+	width: 370px;
 }
 
 .action__header-title .little-logo {
@@ -71,19 +73,31 @@
 	font-size: 14px;
 }
 
+.action__header .action__issues::part(trigger) {
+	text-align: center;
+}
+
 .action__header-buttons {
 	display: flex;
 	align-items: center;
 	justify-content: end;
 	gap: 20px;
-	transition:
-		visibility 0.5s,
-		opacity 0.5s;
 }
 
 .action__header-buttons--hidden {
+	gap: 0;
+}
+
+.action__header-buttons--hidden .action__header-buttons-save {
 	visibility: hidden;
 	opacity: 0;
+}
+
+.action__header-buttons-save {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	width: 370px;
 }
 
 .action__header-cancel {
@@ -1427,6 +1441,11 @@ inherit the disabled style */
 	margin-bottom: 30px;
 }
 
+.action__query-preview-drawer::part(base),
+.action__file-preview-drawer::part(base) {
+	z-index: 9999;
+}
+
 .action__query-preview-drawer .grid,
 .action__file-preview-drawer .grid {
 	height: 100%;
@@ -1445,8 +1464,65 @@ inherit the disabled style */
 	line-height: 2;
 }
 
+.action__query-preview-drawer-label,
+.action__file-preview-drawer-label {
+	display: flex;
+	gap: 50px;
+	align-items: center;
+}
+
+.action__query-preview-drawer-label sl-dropdown,
+.action__file-preview-drawer-label sl-dropdown {
+	margin-left: auto;
+	margin-right: auto;
+	position: relative;
+	left: -52px;
+}
+
 .action sl-drawer sl-spinner {
 	display: block;
 	margin: auto;
 	margin-top: 50px !important;
+}
+
+.action__issues {
+	visibility: hidden;
+	opacity: 0;
+	width: 0;
+	transition: opacity 0.5s;
+}
+
+.action__issues--visible {
+	visibility: visible;
+	opacity: 1;
+	width: unset;
+}
+
+.action__issues > sl-button::part(base) {
+	padding-left: 20px;
+	background-color: transparent;
+	color: var(--sl-color-warning-600);
+}
+
+.action__issues > sl-button::part(label) {
+	padding-right: 20px;
+}
+
+.action__issues-list {
+	background-color: var(--bg-primary);
+	border: 1px solid var(--border-primary);
+	border-radius: 5px;
+	max-width: 500px;
+	font-size: 13px;
+	max-height: 500px;
+	overflow-y: auto;
+}
+
+.action__issue {
+	padding: 20px 30px;
+	border-bottom: 1px solid var(--border-primary);
+}
+
+.action__issue:last-child {
+	border-bottom: 0;
 }

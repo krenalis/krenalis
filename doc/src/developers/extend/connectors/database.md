@@ -148,14 +148,26 @@ The `Columns` method returns the table's columns as a slice of `Column` values, 
 ```go
 // Column represents a database table column.
 type Column struct {
-	Name     string     // column name
-	Type     types.Type // data type of the column
-	Nullable bool       // true if the column can contain NULL values
-	Writable bool       // true if the column is writable
+    Name     string     // column name
+    Type     types.Type // data type of the column
+    Nullable bool       // true if the column can contain NULL values
+    Writable bool       // true if the column is writable
+    Issue    string     // issue message
 }
 ```
 
-If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.  
+#### Handling column issues
+
+If a column's type is not supported, its name is not a valid property name, or any other issue occurs with the column, leave `Column.Type` unset. Likewise, leave the other fields unset, as they are not relevant in this case, and describe the issue in `Column.Issue`.
+
+Such a column will not appear among the available table columns. However, the issue will be brought to the user's attention without preventing the use of the other columns.
+
+The following are examples of common issue messages used by database connectors:
+
+* _Column "perf" has an unsupported type "INT96"._
+* _Column "score:value " does not have a valid property name. Valid names start with a letter or underscore, followed by only letters, numbers, or underscores._
+* _Column "amount" has a precision of 100, which exceeds the maximum supported precision of 76._
+* _Column "value" has a scale of 50, which exceeds the maximum supported precision of 37._
 
 ### Merge method
 
@@ -169,9 +181,9 @@ The `table` parameter provides details about the table to update, including its 
 
 ```go
 type Table struct {
-	Name    string
-	Columns []Column
-	Keys    []string
+    Name    string
+    Columns []Column
+    Keys    []string
 }
 ```
 
@@ -190,7 +202,7 @@ A database connector can require that the columns in `table.Keys` form the prima
 ### Query method
 
 ```go
-Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error)
+Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, []string, error)
 ```
 
 Meergo invokes the `Query` method when previewing the rows returned by a query while creating or updating a database source action, and to get the data during an import. The query is provided after replacing any placeholders like `${limit}`.
@@ -208,7 +220,31 @@ type Rows interface {
 
 The standard Go library's `sql.Rows` type implements this interface. So, the connector can just return a `sql.Rows` value.
 
-If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.
+Here's what the `Column` type look like:
+
+```go
+// Column represents a database table column.
+type Column struct {
+    Name     string     // column name
+    Type     types.Type // data type of the column
+    Nullable bool       // true if the column can contain NULL values
+    Writable bool       // true if the column is writable (generally false for columns returned by Query).
+    Issue    string     // issue message
+}
+```
+
+#### Handling column issues
+
+If a column's type is not supported, its name is not a valid property name, or any other issue occurs with the column, leave `Column.Type` unset. Likewise, leave the other fields unset, as they are not relevant in this case, and describe the issue in `Column.Issue`.
+
+Such a column will not appear among the available table columns. However, the issue will be brought to the user's attention without preventing the use of the other columns.
+
+The following are examples of common issue messages used by database connectors:
+
+* _Column "perf" has an unsupported type "INT96"._
+* _Column "score:value " does not have a valid property name. Valid names start with a letter or underscore, followed by only letters, numbers, or underscores._
+* _Column "amount" has a precision of 100, which exceeds the maximum supported precision of 76._
+* _Column "value" has a scale of 50, which exceeds the maximum supported precision of 37._
 
 ### QuoteTime method
 

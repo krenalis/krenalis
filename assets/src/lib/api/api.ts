@@ -47,6 +47,7 @@ import {
 	RePaths,
 	RecordsResponse,
 	SheetsResponse,
+	TableSchemaResponse,
 	TransformDataResponse,
 	TransformationLanguagesResponse,
 	UserEventsResponse,
@@ -471,7 +472,7 @@ class Connections {
 		);
 	};
 
-	tableSchema = async (connection: number, tableName: string): Promise<ObjectType> => {
+	tableSchema = async (connection: number, tableName: string): Promise<TableSchemaResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/tables/${encodeURIComponent(tableName)}`,
 			http.GET,

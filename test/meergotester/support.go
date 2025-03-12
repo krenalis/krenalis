@@ -400,11 +400,14 @@ func (c *Meergo) Sheets(storage int, path string, format string, compression Com
 	return response.Sheets
 }
 
-func (c *Meergo) TableSchema(conn int, table string) types.Type {
-	var schema types.Type
+func (c *Meergo) TableSchema(conn int, table string) (types.Type, []string) {
+	var response struct {
+		Schema types.Type `json:"schema"`
+		Issues []string   `json:"issues"`
+	}
 	path := fmt.Sprintf("/api/v1/connections/%d/tables/%s", conn, url.PathEscape(table))
-	c.MustCall("GET", path, nil, &schema)
-	return schema
+	c.MustCall("GET", path, nil, &response)
+	return response.Schema, response.Issues
 }
 
 func (c *Meergo) TestWarehouseUpdate(settings []byte) {

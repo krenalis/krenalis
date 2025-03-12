@@ -393,7 +393,6 @@ func connectorError(err error) error {
 		switch err.(type) {
 		case *meergo.InvalidPathError:
 		case *meergo.InvalidSettingsError:
-		case *meergo.UnsupportedColumnTypeError:
 		case *UnavailableError:
 		default:
 			err = &UnavailableError{Err: err}

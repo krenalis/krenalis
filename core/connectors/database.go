@@ -28,8 +28,6 @@ type databaseConnector interface {
 	Close() error
 
 	// Columns returns the columns of the given table.
-	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
-	// error.
 	Columns(ctx context.Context, table string) ([]meergo.Column, error)
 
 	// Merge performs batch insert and update operations on the specified table,
@@ -44,8 +42,8 @@ type databaseConnector interface {
 	Merge(ctx context.Context, table meergo.Table, rows [][]any) error
 
 	// Query executes the given query and returns the resulting rows and columns.
-	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
-	// error.
+	// If a column is unsupported, its type will be the invalid type, and the Issue
+	// property will describe the problem.
 	Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error)
 
 	// QuoteTime returns a quoted time value for the specified type or "NULL" if the
@@ -136,57 +134,78 @@ func (database *Database) LastChangeTimePlaceholder(action *state.Action) (strin
 	return database.inner.QuoteTime(value, p.Type), nil
 }
 
-// Schema returns the schema of the provided table and role. If a column type is
-// not supported, it returns a *meergo.UnsupportedColumnTypeError error. If the
-// connector returns an error, it returns an *UnavailableError error.
+// Schema returns the schema for the given table and role, along with any issues
+// encountered while reading the schema, such as unsupported column types.
+// The returned schema may be invalid if there are no supported columns.
+//
+// If the connector returns an error, it will be an *UnavailableError error.
 // It panics if role is not Source or Destination.
-func (database *Database) Schema(ctx context.Context, table string, role state.Role) (types.Type, error) {
+func (database *Database) Schema(ctx context.Context, table string, role state.Role) (types.Type, []string, error) {
 	if database.err != nil {
-		return types.Type{}, database.err
+		return types.Type{}, nil, database.err
 	}
 	if role != state.Source && role != state.Destination {
 		panic("invalid role")
 	}
 	columns, err := database.inner.Columns(ctx, table)
 	if err != nil {
-		return types.Type{}, connectorError(err)
+		return types.Type{}, nil, connectorError(err)
 	}
 	if len(columns) == 0 {
-		return types.Type{}, errors.New("no columns defined for table")
+		return types.Type{}, nil, errors.New("no columns defined for table")
 	}
-	schema, err := types.ObjectOf(columnsToProperties(columns, role))
+	properties := columnsProperties(columns, role)
+	var schema types.Type
+	if properties != nil {
+		schema, err = types.ObjectOf(properties)
+		if err != nil {
+			return types.Type{}, nil, rewriteColumnErrors(err)
+		}
+	}
+	issues, err := columnsIssues(columns)
 	if err != nil {
-		return types.Type{}, connectorError(rewriteColumnErrors(err))
+		return types.Type{}, nil, connectorError(fmt.Errorf("connector %s %s", database.connector, err))
 	}
-	return schema, nil
+	return schema, issues, nil
 }
 
-// Query executes a query and returns the resulting rows.
+// Query executes a query and returns the resulting rows and schema, along with
+// any issues encountered while reading the schema, such as unsupported column
+// types.
+//
 // If queryReplacer is not nil, then the placeholders in the query are replaced
 // using it; in this case, a *PlaceholderError error may be returned in case of
-// an error with placeholders. If a column type is not supported, it returns a
-// *meergo.UnsupportedColumnTypeError error. If the connector returns an error,
-// it returns an *UnavailableError error.
-func (database *Database) Query(ctx context.Context, query string, queryReplacer PlaceholderReplacer) (*Rows, error) {
+// an error with placeholders. If the connector returns an error, it returns an
+// *UnavailableError error.
+func (database *Database) Query(ctx context.Context, query string, queryReplacer PlaceholderReplacer) (*Rows, types.Type, []string, error) {
 	if database.err != nil {
-		return nil, database.err
+		return nil, types.Type{}, nil, database.err
 	}
 	if queryReplacer != nil {
 		var err error
 		query, err = ReplacePlaceholders(query, queryReplacer)
 		if err != nil {
-			return nil, err
+			return nil, types.Type{}, nil, err
 		}
 	}
 	rows, columns, err := database.inner.Query(ctx, query)
 	if err != nil {
-		return nil, connectorError(err)
+		return nil, types.Type{}, nil, connectorError(err)
 	}
-	if _, err = types.ObjectOf(columnsToProperties(columns, state.Source)); err != nil {
-		_ = rows.Close()
-		return nil, connectorError(rewriteColumnErrors(err))
+	properties := columnsProperties(columns, state.Source)
+	var schema types.Type
+	if properties != nil {
+		schema, err = types.ObjectOf(properties)
+		if err != nil {
+			_ = rows.Close()
+			return nil, types.Type{}, nil, connectorError(rewriteColumnErrors(err))
+		}
 	}
-	return newRows(rows, columns, database.timeLayouts), nil
+	issues, err := columnsIssues(columns)
+	if err != nil {
+		return nil, types.Type{}, nil, connectorError(fmt.Errorf("connector %s %s", database.connector, err))
+	}
+	return newRows(rows, columns, database.timeLayouts), schema, issues, nil
 }
 
 // Records executes the action's query and returns an iterator to iterate over
@@ -198,9 +217,8 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 // an error with placeholders.
 //
 // If the action's input schema does not align with the query's results schema,
-// it returns a *schemas.Error error. If a column type is not supported, it
-// returns a *meergo.UnsupportedColumnTypeError error. If the connector returns
-// an error, it returns an *UnavailableError error.
+// it returns a *schemas.Error error. If the connector returns an error, it
+// returns an *UnavailableError error.
 func (database *Database) Records(ctx context.Context, action *state.Action, queryReplacer PlaceholderReplacer) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
@@ -230,6 +248,9 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	}()
 	var identityColumn, lastChangeTimeColumn types.Property
 	for _, c := range columns {
+		if !c.Type.Valid() {
+			continue
+		}
 		if c.Name == action.IdentityColumn {
 			identityColumn, _ = action.InSchema.Property(c.Name)
 		}
@@ -243,13 +264,13 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	if action.LastChangeTimeColumn != "" && lastChangeTimeColumn.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no last change time column %q", action.LastChangeTimeColumn)}
 	}
-
+	properties := columnsProperties(columns, state.Source)
 	// Check that schema is aligned with the query's schema.
-	querySchema, err := types.ObjectOf(columnsToProperties(columns, state.Source))
+	schema, err := types.ObjectOf(properties)
 	if err != nil {
 		return nil, connectorError(rewriteColumnErrors(err))
 	}
-	err = schemas.CheckAlignment(action.InSchema, querySchema, nil)
+	err = schemas.CheckAlignment(action.InSchema, schema, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +294,10 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	properties := columnsToProperties(columns, state.Destination)
+	properties := columnsProperties(columns, state.Destination)
+	if properties == nil {
+		return nil, &UnavailableError{Err: fmt.Errorf("table has no supported columns")}
+	}
 	for i, p := range properties {
 		// The table key cannot be nullable. This sets it as not nullable as a
 		// temporary workaround, until we can ensure that all connector
@@ -304,6 +328,38 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	return &w, nil
 }
 
+// columnsIssues returns the issues found in the provided columns. It returns a
+// nil slice if there are no issues. If a column has a valid type but an issue,
+// or an invalid type but no issue, it returns an error.
+func columnsIssues(columns []meergo.Column) ([]string, error) {
+	var n int
+	for i := 0; i < len(columns); i++ {
+		valid := columns[i].Type.Valid()
+		if columns[i].Issue == "" {
+			if !valid {
+				return nil, fmt.Errorf("has returned column %q with the invalid type but without the issue", columns[i].Name)
+			}
+			continue
+		} else if valid {
+			return nil, fmt.Errorf("has returned column %q with a valid type but with an issue", columns[i].Name)
+		}
+		n++
+	}
+	if n == 0 {
+		return nil, nil
+	}
+	issues := make([]string, n)
+	j := 0
+	for i := 0; i < len(columns); i++ {
+		if columns[i].Issue == "" {
+			continue
+		}
+		issues[j] = columns[i].Issue
+		j++
+	}
+	return issues, nil
+}
+
 // columnsOfType returns the properties of a type as meergo.Column values.
 func columnsOfType(t types.Type) []meergo.Column {
 	columns := make([]meergo.Column, types.NumProperties(t))
@@ -315,17 +371,33 @@ func columnsOfType(t types.Type) []meergo.Column {
 	return columns
 }
 
-// columnsToProperties returns the provided columns as types.Property values.
-// If role is Destination, it excludes non-writable columns.
-func columnsToProperties(columns []meergo.Column, role state.Role) []types.Property {
-	properties := make([]types.Property, len(columns))
-	for i, c := range columns {
-		if role == state.Destination && !c.Writable {
+// columnsProperties returns the provided columns as types.Property values.
+// It excludes columns with an invalid type and, if the role is Destination,
+// also excludes non-writable columns. If there are no properties to return,
+// it returns a nil slice.
+func columnsProperties(columns []meergo.Column, role state.Role) []types.Property {
+	var n int
+	for i := 0; i < len(columns); i++ {
+		if columns[i].Type.Valid() && (role == state.Source || columns[i].Writable) {
+			n++
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	properties := make([]types.Property, n)
+	j := 0
+	for i := 0; i < len(columns); i++ {
+		if !columns[i].Type.Valid() {
 			continue
 		}
-		properties[i].Name = c.Name
-		properties[i].Type = c.Type
-		properties[i].Nullable = c.Nullable
+		if role == state.Destination && !columns[i].Writable {
+			continue
+		}
+		properties[j].Name = columns[i].Name
+		properties[j].Type = columns[i].Type
+		properties[j].Nullable = columns[i].Nullable
+		j++
 	}
 	return properties
 }
@@ -407,11 +479,6 @@ func (rs *Rows) Close() error {
 	return rs.rows.Close()
 }
 
-// Columns returns the columns as properties.
-func (rs *Rows) Columns() []types.Property {
-	return columnsToProperties(rs.columns, state.Source)
-}
-
 // Err returns the error encountered during iteration, if any. It can be called
 // after an explicit or implicit Close
 func (rs *Rows) Err() error {
@@ -432,7 +499,11 @@ func (rs *Rows) Next() bool {
 func (rs *Rows) Scan() (map[string]any, error) {
 	row := make(map[string]any, len(rs.columns))
 	for i, c := range rs.columns {
-		rs.dst[i] = queryScanValue{column: c, row: row, timeLayouts: rs.timeLayouts}
+		if c.Type.Valid() {
+			rs.dst[i] = queryScanValue{column: c, row: row, timeLayouts: rs.timeLayouts}
+		} else {
+			rs.dst[i] = nil
+		}
 	}
 	if err := rs.rows.Scan(rs.dst...); err != nil {
 		return nil, &UnavailableError{Err: err}

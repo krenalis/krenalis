@@ -9,7 +9,6 @@ package meergo
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"reflect"
 	"time"
@@ -18,23 +17,6 @@ import (
 // ConnectorInfo is the interface implemented by connector infos.
 type ConnectorInfo interface {
 	ReflectType() reflect.Type
-}
-
-// A UnsupportedColumnTypeError error is returned by File.Read and
-// Database.Query methods when a column type is not supported.
-type UnsupportedColumnTypeError struct {
-	Column string
-	Type   string
-}
-
-// NewUnsupportedColumnTypeError returns a UnsupportedColumnTypeError error for
-// the given column and type.
-func NewUnsupportedColumnTypeError(column, typ string) error {
-	return &UnsupportedColumnTypeError{Column: column, Type: typ}
-}
-
-func (err *UnsupportedColumnTypeError) Error() string {
-	return fmt.Sprintf("column %q has an unsupported type %s", err.Column, err.Type)
 }
 
 // A SetSettingsFunc value is a function used by connectors to set settings.

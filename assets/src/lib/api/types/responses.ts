@@ -51,11 +51,13 @@ interface ActionSchemasResponse {
 interface ExecQueryResponse {
 	rows: Record<string, any>[];
 	schema: ObjectType;
+	issues: string[];
 }
 
 interface RecordsResponse {
 	records: Record<string, any>[];
 	schema: ObjectType;
+	issues: string[];
 }
 
 interface AbsolutePathResponse {
@@ -64,6 +66,11 @@ interface AbsolutePathResponse {
 
 interface SheetsResponse {
 	sheets: string[];
+}
+
+interface TableSchemaResponse {
+	schema: ObjectType;
+	issues: string[];
 }
 
 interface TransformationLanguagesResponse {
@@ -196,6 +203,7 @@ export type {
 	RecordsResponse,
 	ResponseUser,
 	SheetsResponse,
+	TableSchemaResponse,
 	TransformDataResponse,
 	TransformationLanguagesResponse,
 	UserEventsResponse,

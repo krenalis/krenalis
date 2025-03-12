@@ -114,15 +114,18 @@ func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameR
 // the number of records to return. If limit is negative, there is no upper
 // limit on the number of records returned.
 //
+// The method may also return issues encountered during the reading process that
+// did not prevent the file from being processed. These issues are reported as a
+// slice of strings. The slice will be nil if there are no issues.
+//
 // If the settings are not valid, it returns a *meergo.InvalidSettingsError
 // error. If the file has no columns, it returns the ErrNoColumnsFound error. If
 // the file does not have the provided sheet, it returns the
-// meergo.ErrSheetNotExist error. If a column type is not supported, it returns
-// a *meergo.UnsupportedColumnTypeError error. If the connector returns an
-// error, it returns a *UnavailableError error.
-func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings json.Value, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
+// meergo.ErrSheetNotExist error. If the connector returns an error, it returns
+// a *UnavailableError error.
+func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings json.Value, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, issues []string, err error) {
 	if storage.err != nil {
-		return nil, nil, storage.err
+		return nil, nil, nil, storage.err
 	}
 	if limit < 0 {
 		limit = math.MaxInt
@@ -130,23 +133,23 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	s := newCompressedStorage(storage.inner, compression)
 	r, storageTimestamp, err := s.Reader(ctx, name)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer r.Close()
 	if err = validateLastChangeTime(storageTimestamp); err != nil {
-		return nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
+		return nil, nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 
 	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileConfig{
 		SetSettings: func(ctx context.Context, innerSettings []byte) error { return nil },
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to register the file: %s", err)
+		return nil, nil, nil, fmt.Errorf("failed to register the file: %s", err)
 	}
 	if file.HasSourceSettings {
 		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -164,18 +167,21 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	err = _file.(fileReadConnector).Read(ctx, r, sheet, rw)
 	rw.close()
 	if err != nil && err != errRecordStop {
-		return nil, nil, connectorError(err)
+		return nil, nil, nil, connectorError(err)
 	}
 	if err = r.Close(); err != nil {
-		return nil, nil, connectorError(err)
+		return nil, nil, nil, connectorError(err)
 	}
 	if recordErr != nil {
-		return nil, nil, connectorError(recordErr)
+		return nil, nil, nil, connectorError(recordErr)
 	}
 	if rw.properties == nil {
-		return nil, nil, ErrNoColumnsFound
+		return nil, nil, nil, ErrNoColumnsFound
 	}
-	return rw.properties, records, nil
+	if len(rw.issues) > 0 {
+		issues = rw.issues
+	}
+	return rw.properties, records, issues, nil
 }
 
 // Sheets returns the sheets of the file with the provided name. Sheet names

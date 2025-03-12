@@ -69,13 +69,16 @@ func TestExportToPostgreSQL(t *testing.T) {
 
 	// Check if the schema is correct.
 	{
-		schema := c.TableSchema(pgsql, "test_export_to_db")
+		schema, issues := c.TableSchema(pgsql, "test_export_to_db")
 		expectedSchema := types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 			{Name: "full_name", Type: types.Text()},
 		})
 		if !types.Equal(expectedSchema, schema) {
 			t.Fatalf("\nexpected:  %#v\ngot:        %#v", types.Properties(expectedSchema), types.Properties(schema))
+		}
+		if issues != nil {
+			t.Fatalf("\nexpected nil issues\ngot issues: %#v", issues)
 		}
 	}
 

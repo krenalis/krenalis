@@ -378,6 +378,7 @@ type testRecordWriter struct {
 	t           *testing.T
 	readColumns []types.Property
 	readRecords []map[string]any
+	issues      []string
 }
 
 func (writer *testRecordWriter) Columns(columns []types.Property) error {
@@ -396,6 +397,10 @@ func (writer *testRecordWriter) columnByName(name string) types.Property {
 	}
 	writer.t.Fatalf("column %q not read from the Parquet file", name)
 	return types.Property{}
+}
+
+func (writer *testRecordWriter) Issue(format string, a ...any) {
+	writer.issues = append(writer.issues, fmt.Sprintf(format, a...))
 }
 
 func (writer *testRecordWriter) Record(record map[string]any) error {

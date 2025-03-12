@@ -37,6 +37,8 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
 	const [selectedInPaths, setSelectedInPaths] = useState<string[]>([]);
 	const [selectedOutPaths, setSelectedOutPaths] = useState<string[]>([]);
+	const [issues, setIssues] = useState<string[]>([]);
+	const [showIssues, setShowIssues] = useState<boolean>(true);
 
 	const { api, handleError, redirect, connectors } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
@@ -138,6 +140,7 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 					try {
 						res = await api.workspaces.connections.execQuery(connection.id, providedAction.query!, 0);
 						inputSchema = res.schema;
+						setIssues(res.issues);
 					} catch (err) {
 						if (
 							err instanceof UnavailableError ||
@@ -177,6 +180,7 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 							0,
 						);
 						inputSchema = res.schema;
+						setIssues(res.issues);
 					} catch (err) {
 						if (
 							err instanceof UnavailableError ||
@@ -199,10 +203,13 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 				// destination, the output schema is the schema of the
 				// database table itself.
 				if (fields.includes('TableName') && isEditing) {
-					let schema: ObjectType;
 					try {
-						schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.tableName);
-						outputSchema = schema;
+						const res = await api.workspaces.connections.tableSchema(
+							connection.id,
+							providedAction.tableName,
+						);
+						outputSchema = res.schema;
+						setIssues(res.issues);
 					} catch (err) {
 						if (
 							err instanceof UnavailableError ||
@@ -403,6 +410,10 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
+		issues,
+		setIssues,
+		showIssues,
+		setShowIssues,
 	};
 };
 

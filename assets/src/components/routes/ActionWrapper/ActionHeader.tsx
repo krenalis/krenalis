@@ -5,6 +5,7 @@ import getConnectorLogo from '../../helpers/getConnectorLogo';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
+import { ActionIssues } from './ActionIssues';
 
 const ActionHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
@@ -23,6 +24,8 @@ const ActionHeader = () => {
 		isEditing,
 		isSaveHidden,
 		onClose,
+		issues,
+		showIssues,
 	} = useContext(ActionContext);
 
 	const onUpdateName = (e) => {
@@ -82,19 +85,22 @@ const ActionHeader = () => {
 				</div>
 				{!isNameEditable && <div className='action__header-description'>{actionType.description}</div>}
 			</div>
+			<ActionIssues issues={issues} type={connection.connector.type} role={connection.role} show={showIssues} />
 			<div className={`action__header-buttons${isSaveHidden ? ' action__header-buttons--hidden' : ''}`}>
-				<SlButton className='action__header-cancel' variant='default' onClick={onCancel}>
-					Cancel
-				</SlButton>
-				<SlButton
-					className='action__header-save'
-					variant='primary'
-					disabled={isTransformationHidden || isTransformationDisabled || isSaving}
-					onClick={onSave}
-					loading={isSaving}
-				>
-					{isEditing ? 'Save' : 'Add'}
-				</SlButton>
+				<div className='action__header-buttons-save'>
+					<SlButton className='action__header-cancel' variant='default' onClick={onCancel}>
+						Cancel
+					</SlButton>
+					<SlButton
+						className='action__header-save'
+						variant='primary'
+						disabled={isTransformationHidden || isTransformationDisabled || isSaving}
+						onClick={onSave}
+						loading={isSaving}
+					>
+						{isEditing ? 'Save' : 'Add'}
+					</SlButton>
+				</div>
 			</div>
 		</div>
 	);

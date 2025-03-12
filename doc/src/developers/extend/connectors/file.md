@@ -160,6 +160,16 @@ type RecordWriter interface {
 	// Columns must be called before Record, RecordSlice, and RecordStrings.
 	Columns(columns []types.Property) error
 
+	// Issue reports an issue encountered during file reading that did not
+	// prevent the file from being processed. For instance, an issue might occur
+	// if a column is excluded due to an unsupported data type.
+	//
+	// The format and its arguments are formatted using the syntax and rules of
+	// fmt.Sprintf.
+	//
+	// Subsequent calls will append new issues to the ones previously reported.
+	Issue(format string, a ...any)
+
 	// Record writes a record represented as a string to any map.
 	// The record's length must equal to the number of columns.
 	Record(record map[string]any) error
@@ -190,7 +200,18 @@ The `sheet` parameter is only used if the connector supports multiple sheets, me
 > The columns passed to the `Columns` method must have valid property names. To assist with this, you can use the `meergo.SuggestPropertyName` function, which suggests column names that are valid.
 > For example, if a column in the file is named `"Prénom"`, calling `SuggestPropertyName("Prénom")` will suggest `"Prenom"`, which is a valid property name that can be used with the `Columns` method.
 
-If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.
+#### Handling column issues
+
+If a column's type is not supported, its name is not a valid property name, or any other issue occurs with the column, leave `Column.Type` unset. Likewise, leave the other fields unset, as they are not relevant in this case, and describe the issue in `Column.Issue`.
+
+Such a column will not appear among the available file columns. However, the issue will be brought to the user's attention without preventing the use of the other columns.
+
+The following are examples of common issue messages used by file connectors:
+
+* _Column "perf" has an unsupported type "INT96"._
+* _Column "score:value " does not have a valid property name._
+* _Column "amount" has a precision of 100, which exceeds the maximum supported precision of 76._
+* _Column "value" has a scale of 50, which exceeds the maximum supported precision of 37._
 
 ### Write method
 

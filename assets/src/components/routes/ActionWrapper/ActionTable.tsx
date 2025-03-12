@@ -3,13 +3,13 @@ import Section from '../../base/Section/Section';
 import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
-import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
+import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Action.constants';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import { ObjectType } from '../../../lib/api/types/types';
 import { flattenSchema } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
 import { getTableKeyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import { Combobox } from '../../base/Combobox/Combobox';
+import { TableSchemaResponse } from '../../../lib/api/types/responses';
 
 const ActionTable = () => {
 	const { handleError, api } = useContext(AppContext);
@@ -23,6 +23,7 @@ const ActionTable = () => {
 		setIsTableChanged,
 		isTransformationDisabled,
 		isTransformationHidden,
+		setIssues,
 	} = useContext(ActionContext);
 
 	const tableConfirmationButtonRef = useRef<any>();
@@ -73,38 +74,50 @@ const ActionTable = () => {
 	};
 
 	const onConfirmTable = async () => {
+		setIssues([]);
 		tableConfirmationButtonRef.current!.load();
-		let schema: ObjectType;
+		let res: TableSchemaResponse;
 		try {
-			schema = await api.workspaces.connections.tableSchema(connection.id, action.tableName);
+			res = await api.workspaces.connections.tableSchema(connection.id, action.tableName);
 		} catch (err) {
 			tableConfirmationButtonRef.current!.stop();
 			handleError(err);
 			return;
 		}
-		tableConfirmationButtonRef.current!.confirm();
-		setTimeout(() => {
-			tableRef.current.lastConfirmation = action.tableName;
-			setIsTableChanged(false);
-			const actionTyp = { ...actionType };
-			actionTyp.outputSchema = schema;
-			setActionType(actionTyp);
-			const a = { ...action };
-			a.transformation.mapping = flattenSchema(schema);
-			setAction(a);
+		if (res.schema == null) {
+			tableConfirmationButtonRef.current!.error("This table doesn't have any compatible column");
 			setTimeout(() => {
-				let scrollSection = transformationSectionRef.current;
-				if (tableKeyRef.current != null) {
-					scrollSection = tableKeySectionRef.current;
-				}
-				const top = scrollSection.getBoundingClientRect().top;
-				scrollSection.closest('.fullscreen').scrollBy({
-					top: top - 130,
-					left: 0,
-					behavior: 'smooth',
-				});
-			}, 100);
-		}, CONFIRM_ANIMATION_DURATION);
+				setIssues(res.issues);
+				const actionTyp = { ...actionType };
+				actionTyp.outputSchema = null;
+				setActionType(actionTyp);
+			}, ERROR_ANIMATION_DURATION);
+		} else {
+			tableConfirmationButtonRef.current!.confirm();
+			setTimeout(() => {
+				setIssues(res.issues);
+				tableRef.current.lastConfirmation = action.tableName;
+				setIsTableChanged(false);
+				const actionTyp = { ...actionType };
+				actionTyp.outputSchema = res.schema;
+				setActionType(actionTyp);
+				const a = { ...action };
+				a.transformation.mapping = flattenSchema(res.schema);
+				setAction(a);
+				setTimeout(() => {
+					let scrollSection = transformationSectionRef.current;
+					if (tableKeyRef.current != null) {
+						scrollSection = tableKeySectionRef.current;
+					}
+					const top = scrollSection.getBoundingClientRect().top;
+					scrollSection.closest('.fullscreen').scrollBy({
+						top: top - 130,
+						left: 0,
+						behavior: 'smooth',
+					});
+				}, 100);
+			}, CONFIRM_ANIMATION_DURATION);
+		}
 	};
 
 	return (

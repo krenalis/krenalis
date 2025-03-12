@@ -5,7 +5,7 @@ import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { UnprocessableError, NotFoundError } from '../../../lib/api/errors';
-import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
+import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Action.constants';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -35,6 +35,7 @@ import {
 	getOrderingPropertyPathComboboxItems,
 } from '../../helpers/getSchemaComboboxItems';
 import { Combobox } from '../../base/Combobox/Combobox';
+import { ActionIssues } from './ActionIssues';
 
 const ActionFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
@@ -52,6 +53,7 @@ const ActionFile = () => {
 		isFormatChanged,
 		actionType,
 		isEditing,
+		setIssues,
 	} = useContext(actionContext);
 
 	const formatRef = useRef<string>(action.format);
@@ -173,6 +175,7 @@ const ActionFile = () => {
 		setIsFormatLoading(true);
 		setIsFormatChanged(true);
 		setIsFileChanged(false);
+		setIssues([]);
 		setAction(a);
 	};
 
@@ -264,6 +267,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const [absolutePathError, setAbsolutePathError] = useState<string>('');
 	const [filePreviewColumns, setFilePreviewColumns] = useState<GridColumn[] | null>(null);
 	const [filePreviewRows, setFilePreviewRows] = useState<GridRow[] | null>(null);
+	const [filePreviewIssues, setFilePreviewIssues] = useState<string[]>([]);
 	const [showFilePreviewContent, setShowFilePreviewContent] = useState<boolean>(false);
 	const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
 
@@ -283,6 +287,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		isFormatChanged,
 		isTransformationDisabled,
 		isEditing,
+		setIssues,
+		setShowIssues,
 	} = useContext(ActionContext);
 
 	const getAbsolutePathTimeoutID = useRef<number>();
@@ -579,6 +585,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			handleError('Please enter a sheet');
 			return;
 		}
+		setFilePreviewIssues([]);
 		setIsLoadingPreview(true);
 		let res: RecordsResponse;
 		try {
@@ -587,14 +594,17 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			setIsLoadingPreview(false);
 			return;
 		}
+		setShowIssues(false);
 		const columns: GridColumn[] = [];
-		for (const prop of res.schema.properties!) {
-			columns.push({ name: prop.name, type: prop.type.kind });
-		}
-		const areExcelLike = areColumnsExcelLike(columns);
-		if (areExcelLike) {
-			for (const column of columns) {
-				column.alignment = 'header-center';
+		if (res.schema != null) {
+			for (const prop of res.schema.properties!) {
+				columns.push({ name: prop.name, type: prop.type.kind });
+			}
+			const areExcelLike = areColumnsExcelLike(columns);
+			if (areExcelLike) {
+				for (const column of columns) {
+					column.alignment = 'header-center';
+				}
 			}
 		}
 		setFilePreviewColumns(columns);
@@ -608,6 +618,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			rows.push({ cells: row });
 		}
 		setFilePreviewRows(rows);
+		setFilePreviewIssues(res.issues);
 		setIsLoadingPreview(false);
 	};
 
@@ -620,6 +631,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			handleError('Please enter a sheet');
 			return;
 		}
+		setIssues([]);
 		fileConfirmButtonRef.current!.load();
 		let res: RecordsResponse;
 		try {
@@ -628,21 +640,32 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			fileConfirmButtonRef.current!.stop();
 			return;
 		}
-		fileConfirmButtonRef.current!.confirm();
-		setTimeout(() => {
-			const actionTyp = { ...actionType };
-			actionTyp.inputSchema = res.schema;
-			setActionType(actionTyp);
-			setIsFormatChanged(false);
+		if (res.schema == null) {
+			fileConfirmButtonRef.current.error("This file doesn't have any compatible column");
 			setTimeout(() => {
-				const top = transformationSectionRef.current!.getBoundingClientRect().top;
-				transformationSectionRef.current!.closest('.fullscreen').scrollBy({
-					top: top - 130,
-					left: 0,
-					behavior: 'smooth',
-				});
-			}, 100);
-		}, CONFIRM_ANIMATION_DURATION);
+				setIssues(res.issues);
+				const actionTyp = { ...actionType };
+				actionTyp.inputSchema = null;
+				setActionType(actionTyp);
+			}, ERROR_ANIMATION_DURATION);
+		} else {
+			fileConfirmButtonRef.current!.confirm();
+			setTimeout(() => {
+				setIssues(res.issues);
+				const actionTyp = { ...actionType };
+				actionTyp.inputSchema = res.schema;
+				setActionType(actionTyp);
+				setIsFormatChanged(false);
+				setTimeout(() => {
+					const top = transformationSectionRef.current!.getBoundingClientRect().top;
+					transformationSectionRef.current!.closest('.fullscreen').scrollBy({
+						top: top - 130,
+						left: 0,
+						behavior: 'smooth',
+					});
+				}, 100);
+			}, CONFIRM_ANIMATION_DURATION);
+		}
 	};
 
 	const records = async (limit: number, isConfirmation?: boolean) => {
@@ -822,24 +845,42 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			)}
 			<SlDrawer
 				className='action__file-preview-drawer'
-				label='File Preview'
 				open={filePreviewColumns != null && filePreviewRows != null}
 				onSlAfterShow={() => setShowFilePreviewContent(true)}
-				onSlAfterHide={() => {
+				onSlAfterHide={(e: any) => {
+					if (e.target.classList.contains('action__issues')) {
+						e.stopPropagation();
+						return;
+					}
 					setFilePreviewColumns(null);
 					setFilePreviewRows(null);
 					setShowFilePreviewContent(false);
+					setShowIssues(true);
 				}}
 				placement='bottom'
 				style={{ '--size': '600px' } as React.CSSProperties}
 			>
+				<div className='action__file-preview-drawer-label' slot='label'>
+					<span>File Preview</span>
+					{showFilePreviewContent && (
+						<ActionIssues
+							issues={filePreviewIssues}
+							type={connection.connector.type}
+							role={connection.role}
+						/>
+					)}
+				</div>
 				{showFilePreviewContent ? (
 					<Grid
 						columns={filePreviewColumns!}
 						rows={filePreviewRows!}
 						showColumnBorder={true}
 						showRowBorder={true}
-						noRowsMessage={'Your file did not return data'}
+						noRowsMessage={
+							filePreviewColumns.length === 0
+								? "This file doesn't have any compatible column"
+								: 'This file did not return data'
+						}
 					/>
 				) : (
 					<SlSpinner

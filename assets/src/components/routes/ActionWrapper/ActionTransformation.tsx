@@ -1673,7 +1673,7 @@ const FullscreenTransformation = ({
 						Show only selected properties
 					</SlSwitch>
 				)}
-				{inputSchema.properties.map((p) => {
+				{inputSchema?.properties.map((p) => {
 					if (transformationType === 'function') {
 						const isSelected = selectedInPaths.includes(p.name);
 						const hasSelectedChildren =

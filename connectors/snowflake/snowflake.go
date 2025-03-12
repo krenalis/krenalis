@@ -201,19 +201,25 @@ func (sf *Snowflake) query(ctx context.Context, query string, writable bool) (me
 		return nil, nil, err
 	}
 	columns := make([]meergo.Column, len(columnTypes))
-	for i, column := range columnTypes {
-		typ, err := propertyType(column)
+	for i, c := range columnTypes {
+		typ, issue, err := propertyType(c)
 		if err != nil {
 			_ = rows.Close()
 			return nil, nil, err
 		}
-		nullable, ok := column.Nullable()
-		columns[i] = meergo.Column{
-			Name:     column.Name(),
-			Type:     typ,
-			Nullable: nullable || !ok,
-			Writable: writable,
+		if !typ.Valid() {
+			columns[i].Issue = issue
+			continue
 		}
+		if !types.IsValidPropertyPath(c.Name()) {
+			columns[i].Issue = fmt.Sprintf("Column %q does not have a valid property name. Valid names start with a letter or underscore, followed by only letters, numbers, or underscores.", c.Name())
+			continue
+		}
+		nullable, ok := c.Nullable()
+		columns[i].Name = c.Name()
+		columns[i].Type = typ
+		columns[i].Nullable = nullable || !ok
+		columns[i].Writable = writable
 	}
 	return rows, columns, nil
 }
@@ -285,54 +291,63 @@ func testConnection(ctx context.Context, settings *innerSettings) error {
 	return db.PingContext(ctx)
 }
 
-// propertyType returns the property type of the column type t.
-func propertyType(t *sql.ColumnType) (types.Type, error) {
+// propertyType returns the property type of the column with type t.
+// If the column type is not supported, it returns an invalid type and an issue
+// message.
+func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	switch t.DatabaseTypeName() {
 	case "ARRAY":
-		return types.Array(types.JSON()), nil
+		return types.Array(types.JSON()), "", nil
 	case "BOOLEAN":
-		return types.Boolean(), nil
+		return types.Boolean(), "", nil
 	case "DATE":
-		return types.Date(), nil
+		return types.Date(), "", nil
 	case "FIXED":
 		precision, scale, ok := t.DecimalSize()
 		if !ok {
-			return types.Type{}, errors.New("cannot get decimal size")
+			return types.Type{}, "", errors.New("cannot get decimal size")
 		}
 		if precision < 1 || scale < 0 || scale > precision {
-			return types.Type{}, fmt.Errorf("precision and scale (%d,%d) are invalid", precision, scale)
+			return types.Type{}, "", fmt.Errorf("precision and scale (%d, %d) are invalid", precision, scale)
 		}
 		if precision > types.MaxDecimalPrecision {
-			return types.Type{}, fmt.Errorf("precision %d exceeds the maximum supported precision of %d", precision, types.MaxDecimalPrecision)
+			issue := fmt.Sprintf("Column %q has a precision of %d, which exceeds the maximum supported precision of %d.", t.Name(), precision, types.MaxDecimalPrecision)
+			return types.Type{}, issue, nil
 		}
 		if scale > types.MaxDecimalScale {
-			return types.Type{}, fmt.Errorf("scale %d exceeds the maximum supported scale of %d", scale, types.MaxDecimalScale)
+			issue := fmt.Sprintf("Column %q has a scale of %d, which exceeds the maximum supported scale of %d.", t.Name(), scale, types.MaxDecimalScale)
+			return types.Type{}, issue, nil
 		}
-		return types.Decimal(int(precision), int(scale)), nil
+		return types.Decimal(int(precision), int(scale)), "", nil
 	case "OBJECT":
-		return types.Map(types.JSON()), nil
+		return types.Map(types.JSON()), "", nil
 	case "REAL":
-		return types.Float(64), nil
+		return types.Float(64), "", nil
 	case "TEXT":
 		length, ok := t.Length()
 		if !ok {
-			return types.Type{}, errors.New("cannot get length")
+			return types.Type{}, "", errors.New("cannot get length")
 		}
 		if length < 0 {
-			return types.Type{}, errors.New("invalid TEXT length")
+			return types.Type{}, "", errors.New("invalid TEXT length")
+		}
+		if length > types.MaxTextLen {
+			issue := fmt.Sprintf("Column %q is not available because its %d characters exceed the maximum length of %d", t.Name(), length, types.MaxTextLen)
+			return types.Type{}, issue, nil
 		}
 		t := types.Text().WithCharLen(int(length))
 		const maxBytesLen = 16_777_216
 		if length > maxBytesLen/4 {
 			t = t.WithByteLen(min(int(length*4), maxBytesLen))
 		}
-		return t, nil
+		return t, "", nil
 	case "TIME":
-		return types.Time(), nil
+		return types.Time(), "", nil
 	case "TIMESTAMP_NTZ":
-		return types.DateTime(), nil
+		return types.DateTime(), "", nil
 	case "VARIANT":
-		return types.JSON(), nil
+		return types.JSON(), "", nil
 	}
-	return types.Type{}, meergo.NewUnsupportedColumnTypeError(t.Name(), t.DatabaseTypeName())
+	issue := fmt.Sprintf("Column %q has an unsupported type %q.", t.Name(), t.DatabaseTypeName())
+	return types.Type{}, issue, nil
 }

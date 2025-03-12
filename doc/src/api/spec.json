@@ -10273,7 +10273,8 @@
                                 "type": {
                                     "kind": "Schema"
                                 },
-                                "description": "The schema of the query."
+                                "nullable": true,
+                                "description": "The schema of the query. It will be null if there are no supported columns."
                             },
                             {
                                 "name": "rows",
@@ -10288,6 +10289,18 @@
                                     }
                                 },
                                 "description": "The rows."
+                            },
+                            {
+                                "name": "issues",
+                                "placeholder": "[ \"Column \\\"mac_addr\\\" cannot be imported because its type \\\"MACADDR\\\" is not supported\" ]",
+                                "type": {
+                                    "kind": "array",
+                                    "elementType": {
+                                        "kind": "text"
+                                    }
+                                },
+                                "nullable": true,
+                                "description": "The issues encountered while reading the table, such as unsupported columns, which did not prevent processing. If it is not null, it contains at least one issue."
                             }
                         ]
                     },
@@ -10340,7 +10353,20 @@
                                 "type": {
                                     "kind": "Schema"
                                 },
-                                "description": "The schema of the table."
+                                "nullable": true,
+                                "description": "The schema of the table. It will be null if there are no supported columns."
+                            },
+                            {
+                                "name": "issues",
+                                "placeholder": "[ \"Column \\\"mac_addr\\\" cannot be imported because its type \\\"MACADDR\\\" is not supported\" ]",
+                                "type": {
+                                    "kind": "array",
+                                    "elementType": {
+                                        "kind": "text"
+                                    }
+                                },
+                                "nullable": true,
+                                "description": "The issues encountered while reading the table, such as unsupported columns, which did not prevent processing. If it is not null, it contains at least one issue."
                             }
                         ]
                     },
@@ -14198,7 +14224,8 @@
                                 "type": {
                                     "kind": "Schema"
                                 },
-                                "description": "The file's schema."
+                                "nullable": true,
+                                "description": "The file's schema. It will be null if there are no supported columns."
                             },
                             {
                                 "name": "rows",
@@ -14213,6 +14240,18 @@
                                     }
                                 },
                                 "description": "The file's rows."
+                            },
+                            {
+                                "name": "issues",
+                                "placeholder": "[ \"Column \\\"score\\\" cannot be imported because its type \\\"INT128\\\" is not supported\" ]",
+                                "type": {
+                                    "kind": "array",
+                                    "elementType": {
+                                        "kind": "text"
+                                    }
+                                },
+                                "nullable": true,
+                                "description": "The issues encountered while reading the file, such as unsupported columns, which did not prevent processing. If it is not null, it contains at least one issue."
                             }
                         ]
                     },

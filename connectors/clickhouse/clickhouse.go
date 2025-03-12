@@ -13,6 +13,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -173,17 +174,19 @@ func (ch *ClickHouse) query(ctx context.Context, query string, writable bool) (m
 	columnTypes := rows.ColumnTypes()
 	columns := make([]meergo.Column, len(columnTypes))
 	for i, c := range columnTypes {
-		typ, nullable, err := propertyType(c)
-		if err != nil {
-			_ = rows.Close()
-			return nil, nil, err
+		typ, nullable, issue := propertyType(c)
+		if !typ.Valid() {
+			columns[i].Issue = issue
+			continue
 		}
-		columns[i] = meergo.Column{
-			Name:     c.Name(),
-			Type:     typ,
-			Nullable: nullable,
-			Writable: writable,
+		if !types.IsValidPropertyPath(c.Name()) {
+			columns[i].Issue = fmt.Sprintf("Column %q does not have a valid property name. Valid names start with a letter or underscore, followed by only letters, numbers, or underscores.", c.Name())
+			continue
 		}
+		columns[i].Name = c.Name()
+		columns[i].Type = typ
+		columns[i].Nullable = nullable
+		columns[i].Writable = writable
 	}
 	return rows, columns, nil
 }
@@ -253,13 +256,15 @@ func (s *innerSettings) options() *clickhouse.Options {
 }
 
 // propertyType returns the property type of the column type and a boolean
-// indicating if it is nullable.
-func propertyType(t driver.ColumnType) (types.Type, bool, error) {
+// indicating if it is nullable. If the type is not supported, it returns an
+// invalid type and the issue message.
+func propertyType(t driver.ColumnType) (types.Type, bool, string) {
 	typ, nullable := columnType(t.DatabaseTypeName())
 	if !typ.Valid() {
-		return types.Type{}, false, meergo.NewUnsupportedColumnTypeError(t.Name(), t.DatabaseTypeName())
+		issue := fmt.Sprintf("Column %q has an unsupported type %q.", t.Name(), t.DatabaseTypeName())
+		return types.Type{}, false, issue
 	}
-	return typ, nullable, nil
+	return typ, nullable, ""
 }
 
 // testConnection tests a connection with the given settings.

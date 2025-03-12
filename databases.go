@@ -55,12 +55,14 @@ type Table struct {
 	Keys    []string
 }
 
-// Column represents a database table column.
+// Column represents a database table column. If Type is invalid, Issue
+// describes the problem, and the other fields are not meaningful.
 type Column struct {
 	Name     string     // column name
 	Type     types.Type // data type of the column
 	Nullable bool       // true if the column can contain NULL values
 	Writable bool       // true if the column is writable
+	Issue    string     // issue message
 }
 
 // Rows is the result of a database query. Its cursor starts before the first
