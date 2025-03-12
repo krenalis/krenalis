@@ -1852,11 +1852,9 @@ const FullscreenTransformation = ({
 		if (isAppEventsExport && (connection.linkedConnections == null || connection.linkedConnections.length === 0)) {
 			inputPanelContent = (
 				<div className='fullscreen-transformation__no-sample'>
-					<SlIcon name='x-lg' />
 					<p className='fullscreen-transformation__no-sample-text'>
-						This connection cannot retrieve events for testing the transformation because no event source
-						has been added. Please add an event source in the connection settings to start collecting events
-						and enable transformation testing.
+						<h3>There are no events</h3>
+						<div>Please link an event source to this connection to start collecting events.</div>
 					</p>
 				</div>
 			);
@@ -1928,19 +1926,18 @@ const FullscreenTransformation = ({
 	} else if (connection.isDestination && actionType.target === 'Users') {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
-				<SlIcon name='x-lg' />
 				<p className='fullscreen-transformation__no-sample-text'>
-					Users cannot be retrieved to test the transformation because no users have been imported into the
-					warehouse yet. Please import some users into the warehouse to enable transformation testing.
+					<h3>There are no users</h3>
+					<div>No users have been imported into the warehouse yet.</div>
 				</p>
 			</div>
 		);
 	} else {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
-				<SlIcon name='x-lg' />
 				<p className='fullscreen-transformation__no-sample-text'>
-					This connection cannot retrieve samples to test the transformation
+					<h3>There are no samples</h3>
+					<div>No samples can be retrieved to test the transformation.</div>
 				</p>
 			</div>
 		);
