@@ -24,7 +24,7 @@ var Schema = types.Object([]types.Property{
 	{Name: "user", Type: types.UUID(), ReadOptional: true},
 	{Name: "connection", Type: types.Int(32)},
 	{Name: "anonymousId", Type: types.Text()},
-	{Name: "channel", Type: types.Text()},
+	{Name: "channel", Type: types.Text(), ReadOptional: true},
 	{Name: "category", Type: types.Text(), ReadOptional: true},
 	{
 		Name: "context",
