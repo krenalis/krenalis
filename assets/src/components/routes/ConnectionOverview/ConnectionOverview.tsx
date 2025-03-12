@@ -601,7 +601,7 @@ const computeActionErrorRows = (connection: TransformedConnection, actionErrors:
 					{connection.actions.find((a) => a.id == error.action)?.name}
 				</Link>,
 				STEP_NAMES[error.step],
-				error.count,
+				formatNumber(error.count),
 				<RelativeTime date={error.lastOccurred} />,
 				error.message,
 			],

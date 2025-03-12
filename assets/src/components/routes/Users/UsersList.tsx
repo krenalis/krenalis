@@ -16,6 +16,7 @@ import { UserProperty } from './Users.types';
 import AppContext from '../../../context/AppContext';
 import { LatestIdentityResolution } from '../../../lib/api/types/workspace';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
+import { formatNumber } from '../../../utils/formatNumber';
 
 const UsersList = () => {
 	const [selectedUser, setSelectedUser] = useState<string>('');
@@ -207,7 +208,7 @@ const UsersList = () => {
 						<UserDrawer selectedUser={selectedUser} setSelectedUser={setSelectedUser} />
 						<div className='users-list__footer'>
 							<div className='users-list__footer-total'>
-								<div className='users-list__footer-found'>Found {usersTotal} users</div>
+								<div className='users-list__footer-found'>Found {formatNumber(usersTotal)} users</div>
 							</div>
 						</div>
 					</div>
