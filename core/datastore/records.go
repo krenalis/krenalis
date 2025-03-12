@@ -39,15 +39,6 @@ type Matching struct {
 	UpdateOnDuplicates bool
 }
 
-// SchemaError represents an error with a schema.
-type SchemaError struct {
-	Msg string
-}
-
-func (err *SchemaError) Error() string {
-	return err.Msg
-}
-
 // records executes a query on the provided warehouse and returns an iterator to
 // iterate on the resulting records. idProperty specifies the property whose
 // value is returned as ID, columnByProperty is the mapping from the path of a
