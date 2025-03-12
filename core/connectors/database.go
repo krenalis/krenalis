@@ -217,8 +217,9 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 // an error with placeholders.
 //
 // If the action's input schema does not align with the query's results schema,
-// it returns a *schemas.Error error. If the connector returns an error, it
-// returns an *UnavailableError error.
+// or if the identity or timestamp columns defined in the action are not
+// returned by the query, it returns a *schemas.Error error. If the connector
+// returns an error, it returns an *UnavailableError error.
 func (database *Database) Records(ctx context.Context, action *state.Action, queryReplacer PlaceholderReplacer) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
@@ -259,10 +260,10 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 		}
 	}
 	if identityColumn.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", action.IdentityColumn)}
+		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no identity column %q", action.IdentityColumn)}
 	}
 	if action.LastChangeTimeColumn != "" && lastChangeTimeColumn.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no last change time column %q", action.LastChangeTimeColumn)}
+		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no last change time column %q", action.LastChangeTimeColumn)}
 	}
 	properties := columnsProperties(columns, state.Source)
 	// Check that schema is aligned with the query's schema.
