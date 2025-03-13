@@ -100,7 +100,7 @@ const LinkedConnectionSelector = ({
 								<SlDropdown className='linked-connection-selector__dropdown'>
 									<SlButton slot='trigger' caret>
 										<SlIcon slot='prefix' name='plus' />
-										Link {role === 'Source' ? 'destination' : 'source'}...
+										Link event {role === 'Source' ? 'destination' : 'source'}...
 									</SlButton>
 									<SlMenu onSlSelect={onSelectLinkedConnection}>
 										{selectableConnections.map((c) => {

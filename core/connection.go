@@ -358,7 +358,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			} else {
 				// Destination/App/Users.
 				name = "Export " + connector.TermForUsers
-				description = "Export the users "
+				description = "Export users from the data warehouse"
 				if connector.TermForUsers != "users" {
 					description += " as " + connector.TermForUsers
 				}

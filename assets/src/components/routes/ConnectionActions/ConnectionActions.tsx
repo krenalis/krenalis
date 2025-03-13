@@ -85,6 +85,29 @@ const ConnectionActions = () => {
 		);
 	}
 
+	let linkedConnections = (
+		<Section
+			title={connection.isSource ? 'Event destinations' : 'Event sources'}
+			description={
+				<>
+					{connection.isSource
+						? 'Select which destinations should receive events from this source.'
+						: 'Select which sources should send events to this destination.'}
+					<br />
+					{connection.isSource
+						? 'When you link a destination connection here, events from this source will automatically be forwarded to that destination and processed by its actions'
+						: 'When you link a source connection here, events from that source will automatically be forwarded to this destination and processed by its actions'}
+				</>
+			}
+			annotated={true}
+			className={
+				connection.isSource ? 'connection-actions__linked-destinations' : 'connection-actions__linked-sources'
+			}
+		>
+			<LinkedConnections connection={connection} />
+		</Section>
+	);
+
 	return (
 		<div
 			className={`connection-actions${connection.actions!.length === 0 ? ' connection-actions--no-action' : ''}`}
@@ -106,6 +129,17 @@ const ConnectionActions = () => {
 					<Snippet connectionID={connection.id} />
 				</Section>
 			)}
+
+			{/* Linked connections are shown: before the actions, in the case of destination actions; after the actions,
+			in the case of source actions. This is to better suggest the usability flow. */}
+			{connection.isDestination &&
+				isEventConnection(
+					'Destination',
+					connection.connector.type,
+					connection.connector.asDestination.targets,
+				) &&
+				linkedConnections}
+
 			<Section
 				className='connection-actions__list'
 				title='Actions'
@@ -121,7 +155,7 @@ const ConnectionActions = () => {
 									icon={getConnectorLogo(connection.connector.icon)}
 									name={actionType.name}
 									description={actionType.description}
-									className='connection-actions__action-type'
+									className={`connection-actions__action-type connection-actions__action-type--${actionType.target.toLowerCase()}`}
 									action={
 										<SlButton
 											size='small'
@@ -160,32 +194,11 @@ const ConnectionActions = () => {
 				)}
 			</Section>
 
-			{isEventConnection(
-				connection.role,
-				connection.connector.type,
-				connection.isSource
-					? connection.connector.asSource.targets
-					: connection.connector.asDestination.targets,
-			) && (
-				<Section
-					title={connection.isSource ? 'Linked destinations' : 'Linked sources'}
-					description={
-						<>
-							{connection.isSource
-								? 'Select which destinations should receive events from this source.'
-								: 'Select which sources should send events to this destination.'}
-							<br />
-							{connection.isSource
-								? 'When you link a destination connection here, events from this source will automatically be forwarded to that destination and processed by its actions'
-								: 'When you link a source connection here, events from that source will automatically be forwarded to this destination and processed by its actions'}
-						</>
-					}
-					annotated={true}
-					className='connection-actions__linked'
-				>
-					<LinkedConnections connection={connection} />
-				</Section>
-			)}
+			{/* Linked connections are shown: before the actions, in the case of destination actions; after the actions,
+			in the case of source actions. This is to better suggest the usability flow. */}
+			{connection.isSource &&
+				isEventConnection('Source', connection.connector.type, connection.connector.asSource.targets) &&
+				linkedConnections}
 
 			<ActionTypesDialog
 				isOpen={isActionTypesDialogOpen}
