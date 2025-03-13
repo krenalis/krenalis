@@ -26,15 +26,15 @@ const steps = [
 	// Page.
 	{
 		name: `page()`,
-		call: (analytics) => {
-			analytics.page()
+		call: (meergo) => {
+			meergo.page()
 		},
 		event: { type: 'page', timestamp, messageId, anonymousId, properties, context, integrations, userId },
 	},
 	{
 		name: `page(name)`,
-		call: (analytics) => {
-			analytics.page('Meergo Home')
+		call: (meergo) => {
+			meergo.page('Meergo Home')
 		},
 		event: {
 			type: 'page',
@@ -50,8 +50,8 @@ const steps = [
 	},
 	{
 		name: `page(properties)`,
-		call: (analytics) => {
-			analytics.page({ title: 'alternative title', foo: 'boo' })
+		call: (meergo) => {
+			meergo.page({ title: 'alternative title', foo: 'boo' })
 		},
 		event: {
 			type: 'page',
@@ -74,8 +74,8 @@ const steps = [
 	},
 	{
 		name: `page(category, name)`,
-		call: (analytics) => {
-			analytics.page('Products', 'Shirt')
+		call: (meergo) => {
+			meergo.page('Products', 'Shirt')
 		},
 		event: {
 			type: 'page',
@@ -92,8 +92,8 @@ const steps = [
 	},
 	{
 		name: `page(name, properties)`,
-		call: (analytics) => {
-			analytics.page('Sign Up', { resellers: true })
+		call: (meergo) => {
+			meergo.page('Sign Up', { resellers: true })
 		},
 		event: {
 			type: 'page',
@@ -109,8 +109,8 @@ const steps = [
 	},
 	{
 		name: `page(properties, options)`,
-		call: (analytics) => {
-			analytics.page({ title: 'alternative title', foo: 'boo' }, { count: 150 })
+		call: (meergo) => {
+			meergo.page({ title: 'alternative title', foo: 'boo' }, { count: 150 })
 		},
 		event: {
 			type: 'page',
@@ -134,8 +134,8 @@ const steps = [
 	},
 	{
 		name: `page(category, name, properties)`,
-		call: (analytics) => {
-			analytics.page('users', 'Sign Up', { resellers: true })
+		call: (meergo) => {
+			meergo.page('users', 'Sign Up', { resellers: true })
 		},
 		event: {
 			type: 'page',
@@ -152,8 +152,8 @@ const steps = [
 	},
 	{
 		name: `page(name, properties, options)`,
-		call: (analytics) => {
-			analytics.page('', { data: { a: 'b' } }, { locale: 'it-IT' })
+		call: (meergo) => {
+			meergo.page('', { data: { a: 'b' } }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'page',
@@ -169,8 +169,8 @@ const steps = [
 	},
 	{
 		name: `page(category, name, properties, options)`,
-		call: (analytics) => {
-			analytics.page('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' })
+		call: (meergo) => {
+			meergo.page('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'page',
@@ -188,15 +188,15 @@ const steps = [
 	// Screen.
 	{
 		name: `screen()`,
-		call: (analytics) => {
-			analytics.screen()
+		call: (meergo) => {
+			meergo.screen()
 		},
 		event: { type: 'screen', timestamp, messageId, anonymousId, properties: {}, context, integrations, userId },
 	},
 	{
 		name: `screen(name)`,
-		call: (analytics) => {
-			analytics.screen('Meergo Main')
+		call: (meergo) => {
+			meergo.screen('Meergo Main')
 		},
 		event: {
 			type: 'screen',
@@ -212,8 +212,8 @@ const steps = [
 	},
 	{
 		name: `screen(properties)`,
-		call: (analytics) => {
-			analytics.screen({ score: 517836 })
+		call: (meergo) => {
+			meergo.screen({ score: 517836 })
 		},
 		event: {
 			type: 'screen',
@@ -228,8 +228,8 @@ const steps = [
 	},
 	{
 		name: `screen(category, name)`,
-		call: (analytics) => {
-			analytics.screen('Products', 'Shirt')
+		call: (meergo) => {
+			meergo.screen('Products', 'Shirt')
 		},
 		event: {
 			type: 'screen',
@@ -246,8 +246,8 @@ const steps = [
 	},
 	{
 		name: `screen(name, properties)`,
-		call: (analytics) => {
-			analytics.screen('Sign Up', { resellers: true })
+		call: (meergo) => {
+			meergo.screen('Sign Up', { resellers: true })
 		},
 		event: {
 			type: 'screen',
@@ -263,8 +263,8 @@ const steps = [
 	},
 	{
 		name: `screen(properties, options)`,
-		call: (analytics) => {
-			analytics.screen({ step: 6 }, { count: 150 })
+		call: (meergo) => {
+			meergo.screen({ step: 6 }, { count: 150 })
 		},
 		event: {
 			type: 'screen',
@@ -288,8 +288,8 @@ const steps = [
 	},
 	{
 		name: `screen(category, name, properties)`,
-		call: (analytics) => {
-			analytics.screen('users', 'Sign Up', { resellers: true })
+		call: (meergo) => {
+			meergo.screen('users', 'Sign Up', { resellers: true })
 		},
 		event: {
 			type: 'screen',
@@ -306,8 +306,8 @@ const steps = [
 	},
 	{
 		name: `screen(name, properties, options)`,
-		call: (analytics) => {
-			analytics.screen('', { data: { a: 'b' } }, { locale: 'it-IT' })
+		call: (meergo) => {
+			meergo.screen('', { data: { a: 'b' } }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'screen',
@@ -323,8 +323,8 @@ const steps = [
 	},
 	{
 		name: `screen(category, name, properties, options)`,
-		call: (analytics) => {
-			analytics.screen('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' })
+		call: (meergo) => {
+			meergo.screen('videos', 'cats', { data: { a: 'b' } }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'screen',
@@ -342,15 +342,15 @@ const steps = [
 	// Track.
 	{
 		name: `track()`,
-		call: (analytics) => {
-			return analytics.track()
+		call: (meergo) => {
+			return meergo.track()
 		},
 		error: new Error('Event name is missing'),
 	},
 	{
 		name: `track(event)`,
-		call: (analytics) => {
-			analytics.track('Click')
+		call: (meergo) => {
+			meergo.track('Click')
 		},
 		event: {
 			type: 'track',
@@ -366,8 +366,8 @@ const steps = [
 	},
 	{
 		name: `track(event, properties)`,
-		call: (analytics) => {
-			analytics.track('Product Viewed', { productId: 819382 })
+		call: (meergo) => {
+			meergo.track('Product Viewed', { productId: 819382 })
 		},
 		event: {
 			type: 'track',
@@ -383,8 +383,8 @@ const steps = [
 	},
 	{
 		name: `track(event, properties, options)`,
-		call: (analytics) => {
-			analytics.track('Product Viewed', { productId: 819382 }, { locale: 'it-IT' })
+		call: (meergo) => {
+			meergo.track('Product Viewed', { productId: 819382 }, { locale: 'it-IT' })
 		},
 		event: {
 			type: 'track',
@@ -401,8 +401,8 @@ const steps = [
 	// Identify.
 	{
 		name: `identify()`,
-		call: (analytics) => {
-			analytics.identify()
+		call: (meergo) => {
+			meergo.identify()
 		},
 		event: {
 			type: 'identify',
@@ -417,8 +417,8 @@ const steps = [
 	},
 	{
 		name: `identify(userId)`,
-		call: (analytics) => {
-			analytics.identify('920577314')
+		call: (meergo) => {
+			meergo.identify('920577314')
 		},
 		event: {
 			type: 'identify',
@@ -433,9 +433,9 @@ const steps = [
 	},
 	{
 		name: `identify(userId) // with anonymous traits`,
-		call: (analytics) => {
-			analytics.user().traits({ first_name: 'Susan', last_name: 'Davis' })
-			analytics.identify('920577314')
+		call: (meergo) => {
+			meergo.user().traits({ first_name: 'Susan', last_name: 'Davis' })
+			meergo.identify('920577314')
 		},
 		event: {
 			type: 'identify',
@@ -450,10 +450,10 @@ const steps = [
 	},
 	{
 		name: `identify(null)`,
-		call: (analytics) => {
-			analytics.user().id('920577314')
-			analytics.user().traits({ first_name: 'Susan' })
-			analytics.identify(null)
+		call: (meergo) => {
+			meergo.user().id('920577314')
+			meergo.user().traits({ first_name: 'Susan' })
+			meergo.identify(null)
 		},
 		event: {
 			type: 'identify',
@@ -468,8 +468,8 @@ const steps = [
 	},
 	{
 		name: `identify(traits)`,
-		call: (analytics) => {
-			analytics.identify({ first_name: 'Susan', last_name: 'Davis' })
+		call: (meergo) => {
+			meergo.identify({ first_name: 'Susan', last_name: 'Davis' })
 		},
 		event: {
 			type: 'identify',
@@ -484,8 +484,8 @@ const steps = [
 	},
 	{
 		name: `identify(userId, traits)`,
-		call: (analytics) => {
-			analytics.identify('920577314', { first_name: 'Susan', last_name: 'Davis' })
+		call: (meergo) => {
+			meergo.identify('920577314', { first_name: 'Susan', last_name: 'Davis' })
 		},
 		event: {
 			type: 'identify',
@@ -500,10 +500,10 @@ const steps = [
 	},
 	{
 		name: `identify(null, traits)`,
-		call: (analytics) => {
-			analytics.user().id('920577314')
-			analytics.user().traits({ first_name: 'Susan' })
-			analytics.identify(null, { last_name: 'Davis' })
+		call: (meergo) => {
+			meergo.user().id('920577314')
+			meergo.user().traits({ first_name: 'Susan' })
+			meergo.identify(null, { last_name: 'Davis' })
 		},
 		event: {
 			type: 'identify',
@@ -518,8 +518,8 @@ const steps = [
 	},
 	{
 		name: `identify(traits, options)`,
-		call: (analytics) => {
-			analytics.identify({ first_name: 'Susan', last_name: 'Davis' }, { locale: 'it-IT', key: 'value' })
+		call: (meergo) => {
+			meergo.identify({ first_name: 'Susan', last_name: 'Davis' }, { locale: 'it-IT', key: 'value' })
 		},
 		event: {
 			type: 'identify',
@@ -534,8 +534,8 @@ const steps = [
 	},
 	{
 		name: `identify(userId, traits, options)`,
-		call: (analytics) => {
-			analytics.identify(603614922, { age: 36 }, { locale: 'it-IT', key: 'value' })
+		call: (meergo) => {
+			meergo.identify(603614922, { age: 36 }, { locale: 'it-IT', key: 'value' })
 		},
 		event: {
 			type: 'identify',
@@ -550,16 +550,16 @@ const steps = [
 	},
 	{
 		name: `identify(userId, userId)`,
-		call: (analytics) => {
-			return analytics.identify(603614922, 603614922)
+		call: (meergo) => {
+			return meergo.identify(603614922, 603614922)
 		},
 		error: new Error('Invalid arguments'),
 	},
 	// Group.
 	{
 		name: `group(groupId)`,
-		call: (analytics) => {
-			analytics.group('3617408')
+		call: (meergo) => {
+			meergo.group('3617408')
 		},
 		event: {
 			type: 'group',
@@ -575,8 +575,8 @@ const steps = [
 	},
 	{
 		name: `group(undefined)`,
-		call: (analytics) => {
-			analytics.group(undefined)
+		call: (meergo) => {
+			meergo.group(undefined)
 		},
 		event: {
 			type: 'group',
@@ -592,10 +592,10 @@ const steps = [
 	},
 	{
 		name: `group(null)`,
-		call: (analytics) => {
-			analytics.group().id('acme')
-			analytics.group().traits({ name: 'Acme' })
-			analytics.group(null)
+		call: (meergo) => {
+			meergo.group().id('acme')
+			meergo.group().traits({ name: 'Acme' })
+			meergo.group(null)
 		},
 		event: {
 			type: 'group',
@@ -611,8 +611,8 @@ const steps = [
 	},
 	{
 		name: `group(traits)`,
-		call: (analytics) => {
-			analytics.group({ name: 'Acme Inc.' })
+		call: (meergo) => {
+			meergo.group({ name: 'Acme Inc.' })
 		},
 		event: {
 			type: 'group',
@@ -627,8 +627,8 @@ const steps = [
 	},
 	{
 		name: `group(groupId, traits)`,
-		call: (analytics) => {
-			analytics.group(3617408, { name: 'Acme Inc.' })
+		call: (meergo) => {
+			meergo.group(3617408, { name: 'Acme Inc.' })
 		},
 		event: {
 			type: 'group',
@@ -644,10 +644,10 @@ const steps = [
 	},
 	{
 		name: `group(null, traits)`,
-		call: (analytics) => {
-			analytics.group().id('acme')
-			analytics.group().traits({ name: 'Acme' })
-			analytics.group(null, { employees: 85 })
+		call: (meergo) => {
+			meergo.group().id('acme')
+			meergo.group().traits({ name: 'Acme' })
+			meergo.group(null, { employees: 85 })
 		},
 		event: {
 			type: 'group',
@@ -663,8 +663,8 @@ const steps = [
 	},
 	{
 		name: `group(traits, options)`,
-		call: (analytics) => {
-			analytics.group({ name: 'Acme Inc.' }, { k: true })
+		call: (meergo) => {
+			meergo.group({ name: 'Acme Inc.' }, { k: true })
 		},
 		event: {
 			type: 'group',
@@ -679,8 +679,8 @@ const steps = [
 	},
 	{
 		name: `group(groupId, traits, options)`,
-		call: (analytics) => {
-			analytics.group('3617408', { name: 'Acme Inc.' }, { k: true })
+		call: (meergo) => {
+			meergo.group('3617408', { name: 'Acme Inc.' }, { k: true })
 		},
 		event: {
 			type: 'group',
@@ -698,8 +698,8 @@ const steps = [
 	{
 		name: `no session`,
 		options: { sessions: { autoTrack: false } },
-		call: (analytics) => {
-			analytics.page()
+		call: (meergo) => {
+			meergo.page()
 		},
 		event: {
 			type: 'page',
@@ -715,9 +715,9 @@ const steps = [
 	{
 		name: `session started`,
 		options: { sessions: { autoTrack: false } },
-		call: (analytics) => {
-			analytics.startSession(1508273)
-			analytics.page()
+		call: (meergo) => {
+			meergo.startSession(1508273)
+			meergo.page()
 		},
 		event: {
 			type: 'page',

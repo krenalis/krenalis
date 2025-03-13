@@ -4,10 +4,10 @@
 
 # Group class
 
-The `Group` class represents a group. An instance representing the current group is returned calling  the [`group`](methods#group) method of `Analytics`. For example:
+The `Group` class represents a group. An instance representing the current group is returned calling  the [`group`](methods#group) method of `Meergo`. For example:
 
 ```javascript
-const groupId = meergoAnalytics.group().id();
+const groupId = meergo.group().id();
 ```
 
 ## id
@@ -44,15 +44,15 @@ id(id?: string | null): string | null
 #### Examples
 
 ```javascript
-const groupId = meergoAnalytics.group().id();
+const groupId = meergo.group().id();
 ```
 
 ```javascript
-meergoAnalytics.group().id(null);
+meergo.group().id(null);
 ```
 
 ```javascript
-meergoAnalytics.group().id('acme');
+meergo.group().id('acme');
 ```
 
 ## traits
@@ -89,14 +89,14 @@ traits(traits?: Record<string, unknown> | null): Record<string, unknown>
 #### Examples
 
 ```javascript
-const traits = meergoAnalytics.group().traits();
+const traits = meergo.group().traits();
 ```
 
 ```javascript
-meergoAnalytics.group().traits(null);
+meergo.group().traits(null);
 ```
 
 ```javascript
-meergoAnalytics.group().traits({ name: 'Acme Inc.' });
+meergo.group().traits({ name: 'Acme Inc.' });
 ```
 

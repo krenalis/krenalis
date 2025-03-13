@@ -1,4 +1,4 @@
-export class Analytics {
+export class Meergo {
 	constructor(writeKey: string, endpoint: string, options?: Options)
 
 	alias(

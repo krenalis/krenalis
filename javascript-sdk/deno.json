@@ -5,12 +5,12 @@
 		"@std/uuid": "jsr:@std/uuid@^1.0.4"
 	},
 	"tasks": {
-		"bundle": "deno lint && deno test --fail-fast && npx esbuild meergo.js --bundle --sourcemap --outfile=build/meergo.bundle.js",
+		"bundle": "deno lint && deno test --fail-fast && npx esbuild main.js --bundle --sourcemap --outfile=build/meergo.bundle.js",
 		"transpile": "npx swc build/meergo.bundle.js -o build/meergo.es5.js",
 		"minify": "npx esbuild build/meergo.es5.js --outfile=dist/meergo.min.js --minify --sourcemap --format=iife --target=es5",
 		"build": "deno task bundle && deno task transpile && deno task minify",
-		"build:es6": "deno lint && deno test --fail-fast && npx esbuild analytics.js --bundle --sourcemap --define:'globalThis=window' --format=esm --target=es6 --minify --outfile=dist/meergo.es6.min.js",
-		"build:cjs": "deno lint && deno test --fail-fast && npx esbuild analytics.js --bundle --sourcemap --define:'globalThis=window' --format=cjs --target=esnext --outfile=dist/analytics.bundle.cjs"
+		"build:es6": "deno lint && deno test --fail-fast && npx esbuild meergo.js --bundle --sourcemap --define:'globalThis=window' --format=esm --target=es6 --minify --outfile=dist/meergo.es6.min.js",
+		"build:cjs": "deno lint && deno test --fail-fast && npx esbuild meergo.js --bundle --sourcemap --define:'globalThis=window' --format=cjs --target=esnext --outfile=dist/meergo.bundle.cjs"
 	},
 	"fmt": {
 		"lineWidth": 120,
@@ -21,10 +21,10 @@
 	},
 	"lint": {
 		"include": [
-			"analytics.cjs",
-			"analytics.js",
 			"elections.js",
 			"group.js",
+			"main.js",
+			"meergo.cjs",
 			"meergo.js",
 			"options.js",
 			"queue.js",

@@ -1,7 +1,7 @@
 import { decodeBase64, encodeBase64 } from './utils.js'
 
 const storeNotSupported = new Error('store is not supported')
-const warnMsg = 'Analytics: cannot stringify traits'
+const warnMsg = 'Meergo: cannot stringify traits'
 
 class Storage {
 	#key

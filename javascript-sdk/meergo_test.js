@@ -2,16 +2,16 @@ import { assert, assertEquals, AssertionError, assertNotEquals, assertThrows } f
 import { FakeTime } from '@std/testing/time'
 import * as uuid from '@std/uuid/v4'
 import * as fake from './test_fake.js'
-import { steps } from './analytics_test_steps.js'
+import { steps } from './meergo_test_steps.js'
 import { getTime } from './utils.js'
-import Analytics from './analytics.js'
+import Meergo from './meergo.js'
 
 const DEBUG = false
 
 const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
 const endpoint = 'https://example.com/api/v1/events/'
 
-Deno.test('Analytics', async (t) => {
+Deno.test('Meergo', async (t) => {
 	// Prepare the execution environment.
 	{
 		globalThis.navigator.onLine = true
@@ -57,7 +57,7 @@ Deno.test('Analytics', async (t) => {
 	const thirtyMinutes = 30 * minute
 	const fiveMinutes = 5 * minute
 
-	// newAnalytics returns a new instance of Analytics. However, the returned
+	// newMeergo returns a new instance of Meergo. However, the returned
 	// instance is not immediately ready; it becomes ready after a delay of
 	// 'latency' milliseconds.
 	//
@@ -65,7 +65,7 @@ Deno.test('Analytics', async (t) => {
 	// promise. If using fake time, you can advance the time by calling
 	// time.tick(latency), or alternatively, call time.next() to avoid advancing
 	// the fake time.
-	function newAnalytics(options, strategy, latency) {
+	function newMeergo(options, strategy, latency) {
 		const fetch = globalThis.fetch
 		globalThis.fetch = function () {
 			return new _Promise(function (resolve) {
@@ -86,7 +86,7 @@ Deno.test('Analytics', async (t) => {
 			options.debug = true
 		}
 		try {
-			return new Analytics(writeKey, endpoint, options)
+			return new Meergo(writeKey, endpoint, options)
 		} finally {
 			globalThis.fetch = fetch
 		}
@@ -94,58 +94,58 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('ready, when Promise is not supported', async () => {
 		globalThis.Promise = null
-		const a = newAnalytics()
+		const m = newMeergo()
 		try {
-			// Before Analytics is ready.
+			// Before Meergo is ready.
 			let cb
 			let promise = new _Promise((resolve) => {
 				cb = resolve
 			})
-			void a.ready(cb)
+			void m.ready(cb)
 			let cb2
 			const promise2 = new _Promise((resolve) => {
 				cb2 = resolve
 			})
-			void a.ready(cb2)
+			void m.ready(cb2)
 			await promise
 			await promise2
-			// After Analytics is ready.
+			// After Meergo is ready.
 			promise = new _Promise((resolve) => {
 				cb = resolve
 			})
-			void a.ready(cb)
+			void m.ready(cb)
 			await promise
 		} finally {
 			globalThis.Promise = _Promise
 		}
-		a.close()
+		m.close()
 	})
 
 	await t.step('ready, when Promise is supported', async () => {
-		const a = newAnalytics()
-		// Before Analytics is ready.
-		await a.ready()
-		// After Analytics is ready.
-		await a.ready()
-		// With a callback.
+		const m = newMeergo()
+		// Before Meergo is ready.
+		await m.ready()
+		// After Meergo is ready.
+		await m.ready()
+		// With m callback.
 		let callback
 		const promise = new Promise((resolve) => {
 			callback = resolve
 		})
-		void a.ready(callback)
+		void m.ready(callback)
 		await promise
-		a.close()
+		m.close()
 	})
 
 	await t.step('no key is created in the localStorage', () => {
-		const a = newAnalytics({ sessions: { autoTrack: false } })
+		const a = newMeergo({ sessions: { autoTrack: false } })
 		assertEquals(localStorage.length, 0)
 		a.close()
 	})
 
 	await t.step('reset function', async () => {
 		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
-		const a = newAnalytics({ sessions: { autoTrack: false } }, 'Preservation')
+		const a = newMeergo({ sessions: { autoTrack: false } }, 'Preservation')
 		await a.ready()
 		a.startSession(137206)
 		a.setAnonymousId('53c5986a-7fa4-493c-9a61-75c483aaf3d7')
@@ -176,7 +176,7 @@ Deno.test('Analytics', async (t) => {
 	})
 
 	await t.step('startSession argument validation', async () => {
-		const a = newAnalytics({ sessions: { autoTrack: false } }, 'Preservation')
+		const a = newMeergo({ sessions: { autoTrack: false } }, 'Preservation')
 		await a.ready()
 		// Check valid startSession arguments.
 		let ids = [null, undefined, 1, 300, Number.MAX_SAFE_INTEGER]
@@ -198,7 +198,7 @@ Deno.test('Analytics', async (t) => {
 	})
 
 	await t.step('getAnonymousId function', () => {
-		const a = newAnalytics()
+		const a = newMeergo()
 		assert(uuid.validate(a.getAnonymousId()))
 		a.setAnonymousId('f5d354ed')
 		assertEquals(a.getAnonymousId(), 'f5d354ed')
@@ -212,7 +212,7 @@ Deno.test('Analytics', async (t) => {
 	})
 
 	await t.step('setAnonymousId function', () => {
-		const a = newAnalytics()
+		const a = newMeergo()
 		assert(uuid.validate(a.setAnonymousId()))
 		const anonymousId = 'f5d354ed'
 		assertEquals(a.setAnonymousId(anonymousId), anonymousId)
@@ -232,7 +232,7 @@ Deno.test('Analytics', async (t) => {
 		fetch.install()
 		let a
 		try {
-			a = newAnalytics()
+			a = newMeergo()
 			let sessionId = getTime()
 			assertEquals(a.getSessionId(), sessionId)
 			time.tick(fiveMinutes)
@@ -274,7 +274,7 @@ Deno.test('Analytics', async (t) => {
 		fetch.install()
 		let a
 		try {
-			a = newAnalytics({ useQueryString: { aid: /^\d+$/, uid: /^u\d+$/ } })
+			a = newMeergo({ useQueryString: { aid: /^\d+$/, uid: /^u\d+$/ } })
 			await a.ready()
 			assertEquals(a.user().anonymousId(), '90261537')
 			let events = await fetch.events(2)
@@ -290,7 +290,7 @@ Deno.test('Analytics', async (t) => {
 			assertEquals(events[1].properties, { a: 'foo', b: '', c: 'boo' })
 			a.close()
 
-			a = newAnalytics({ useQueryString: { aid: /^[a-z]+$/, uid: /^[A-Za-z\-]+$/ } })
+			a = newMeergo({ useQueryString: { aid: /^[a-z]+$/, uid: /^[A-Za-z\-]+$/ } })
 			await a.ready()
 			assertNotEquals(a.user().anonymousId(), '90261537')
 			events = await fetch.events(1)
@@ -311,7 +311,7 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('sessions without auto tracking', async () => {
 		const time = new FakeTime()
-		const a = await newAnalytics({ sessions: { autoTrack: false } }, null, 10)
+		const a = await newMeergo({ sessions: { autoTrack: false } }, null, 10)
 		time.tick(10)
 		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 		fetch.install()
@@ -356,7 +356,7 @@ Deno.test('Analytics', async (t) => {
 	for (const strategy of ['Fusion', 'Conversion', 'Isolation', 'Preservation']) {
 		for (const autoTrack of [true, false]) {
 			await t.step(`strategy ${strategy} with${autoTrack ? '' : 'out'} sessions`, async () => {
-				const a = newAnalytics({ sessions: { autoTrack } }, strategy)
+				const a = newMeergo({ sessions: { autoTrack } }, strategy)
 				await a.ready()
 
 				const time = new FakeTime()
@@ -470,7 +470,7 @@ Deno.test('Analytics', async (t) => {
 		const time = new FakeTime()
 		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 		fetch.install()
-		const a = newAnalytics({ sessions: { autoTrack: false } })
+		const a = newMeergo({ sessions: { autoTrack: false } })
 		try {
 			a.user().id('274084295')
 			a.user().traits({ first_name: 'Susan' })
@@ -495,7 +495,7 @@ Deno.test('Analytics', async (t) => {
 		const time = new FakeTime()
 		const sendBeacon = new fake.SendBeacon(writeKey, endpoint, DEBUG)
 		sendBeacon.install()
-		const a = newAnalytics()
+		const a = newMeergo()
 		try {
 			time.tick(200)
 			void a.track('click')
@@ -524,7 +524,7 @@ Deno.test('Analytics', async (t) => {
 		const time = new FakeTime()
 		const fetch = new fake.Fetch(writeKey, endpoint, true, DEBUG)
 		fetch.install()
-		const a = newAnalytics()
+		const a = newMeergo()
 		try {
 			time.tick(200)
 			void a.track('click')
@@ -551,7 +551,7 @@ Deno.test('Analytics', async (t) => {
 			fetch.install()
 			randomUUID.install()
 			navigator.install()
-			const a = await newAnalytics(step.options, null, 0)
+			const a = await newMeergo(step.options, null, 0)
 			try {
 				time.next()
 				a.setAnonymousId('1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7')

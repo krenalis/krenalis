@@ -1,4 +1,4 @@
-# Meergo Analytics
+# Meergo Meergo
 
 - [Format files](#format-files)
 - [Build `dist/meergo.min.js`](#build-distmeergominjs)
@@ -63,9 +63,9 @@ deno task minify
 To import the JavaScript SDK into an application as an ES6 module:
 
 ```javascript
-import Analytics from "../meergo/javascript-sdk";
-const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
-analytics.page("home");
+import Meergo from "../meergo/javascript-sdk";
+const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
+meergo.page("home");
 ```
 
 To import the JavaScript SDK into a browser as an ES6 module, follow these steps:
@@ -80,9 +80,9 @@ To import the JavaScript SDK into a browser as an ES6 module, follow these steps
 
    ```html
    <script type="module">
-       import Analytics from "https://example.com/meergo.es6.min.js";
-       const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
-       analytics.page("home");
+       import Meergo from "https://example.com/meergo.es6.min.js";
+       const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
+       meergo.page("home");
    </script>
    ```
 
@@ -103,9 +103,9 @@ To import the JavaScript SDK into an application using CommonJS (CJS) using the 
 2. Import the module in the application:
 
     ```javascript
-    const { Analytics } = require("../meergo/javascript-sdk");
-    const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
-    analytics.page("home");
+    const { Meergo } = require("../meergo/javascript-sdk");
+    const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
+    meergo.page("home");
     ```
 
 ## Execute Tests

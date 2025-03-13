@@ -4,10 +4,10 @@
 
 # User class
 
-The `User` class represents a user. An instance representing the current user is returned calling the [`user`](methods#user) method of `Analytics`. For example:
+The `User` class represents a user. An instance representing the current user is returned calling the [`user`](methods#user) method of `Meergo`. For example:
 
 ```javascript
-const userId = meergoAnalytics.user().id();
+const userId = meergo.user().id();
 ```
 
 ## id
@@ -44,15 +44,15 @@ id(id?: string | null): string | null
 #### Examples
 
 ```javascript
-const userId = meergoAnalytics.user().id();
+const userId = meergo.user().id();
 ```
 
 ```javascript
-meergoAnalytics.user().id(null);
+meergo.user().id(null);
 ```
 
 ```javascript
-meergoAnalytics.user().id('509284521');
+meergo.user().id('509284521');
 ```
 
 ## anonymousId
@@ -89,15 +89,15 @@ anonymousId(id?: string | null): string
 #### Examples
 
 ```javascript
-const anonymousId = meergoAnalytics.user().anonymousId();
+const anonymousId = meergo.user().anonymousId();
 ```
 
 ```javascript
-meergoAnalytics.user().anonymousId(null);
+meergo.user().anonymousId(null);
 ```
 
 ```javascript
-meergoAnalytics.user().anonymousId('e2984831-431d-44ad-b1ec-4b901392fb67');
+meergo.user().anonymousId('e2984831-431d-44ad-b1ec-4b901392fb67');
 ```
 
 ## traits
@@ -134,14 +134,14 @@ traits(traits?: Record<string, unknown> | null): Record<string, unknown>
 #### Examples
 
 ```javascript
-const traits = meergoAnalytics.user().traits();
+const traits = meergo.user().traits();
 ```
 
 ```javascript
-meergoAnalytics.user().traits(null);
+meergo.user().traits(null);
 ```
 
 ```javascript
-meergoAnalytics.user().traits({ firstName: 'Emily', lastName: 'Johnson' });
+meergo.user().traits({ firstName: 'Emily', lastName: 'Johnson' });
 ```
 

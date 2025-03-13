@@ -11,23 +11,23 @@ When initializing the JavaScript SDK, you have the flexibility to provide variou
 When utilizing the snippet, locate the following line at the end of the snippet:
 
 ```javascript
-meergoAnalytics.load('<write key>', '<endpoint>');
+meergo.load('<write key>', '<endpoint>');
 ```
 
 Instead of `<write key>` and `<endpoint>`, you should already see your specific write key and endpoint, respectively. Following these two arguments, add a third argument of type object:
 
 ```javascript
-meergoAnalytics.load('<write key>', '<endpoint>', { <options> });
+meergo.load('<write key>', '<endpoint>', { <options> });
 ```
 
 Where `<options>` represent one or more of the options shown below.
 
 ### Using `import` or `require`
 
-When importing the package using `import` or `require`, pass an additional argument to the `Analytics` constructor.  
+When importing the package using `import` or `require`, pass an additional argument to the `Meergo` constructor.  
 
 ```javascript
-const meergoAnalytics = new Analytics('<write key>', '<endpoint>', { <options> });
+const meergo = new Meergo('<write key>', '<endpoint>', { <options> });
 ```
 
 Where `<options>` represent one or more of the options shown below.
@@ -69,7 +69,7 @@ If you prefer a different approach, you have options. You can set the domain to 
 #### Example:
 
 ```javascript
-meergoAnalytics.load('<write key>', '<endpoint>', {
+meergo.load('<write key>', '<endpoint>', {
     cookie: {
         domain: 'www.example.com',
         maxage: 365,
@@ -91,7 +91,7 @@ The `group` option has the following sub-option:
 #### Example:
 
 ```javascript
-meergoAnalytics.load('<write key>', '<endpoint>', {
+meergo.load('<write key>', '<endpoint>', {
 	group: {
 		storage: {
 			stores: ['cookies', 'memory']
@@ -112,7 +112,7 @@ The `session` option has the following sub-options:
 #### Example:
 
 ```javascript
-meergoAnalytics.load('<write key>', '<endpoint>', {
+meergo.load('<write key>', '<endpoint>', {
 	session: {
 		autoTrack: true, // enable the auto tracking
         timeout: 45 * 60 * 60000 // 45 minutes
@@ -135,7 +135,7 @@ Alternatively, you can keep it active but validate the Anonymous ID and User ID 
 #### Examples
 
 ```javascript
-meergoAnalytics.load('<write key>', '<endpoint>', {
+meergo.load('<write key>', '<endpoint>', {
 	useQueryString: {
 		aid: /^[a-z0-9]+$/
     }
@@ -153,7 +153,7 @@ The `user` option has the following sub-option:
 #### Example:
 
 ```javascript
-meergoAnalytics.load('<write key>', '<endpoint>', {
+meergo.load('<write key>', '<endpoint>', {
 	user: {
 		storage: {
 			stores: ['cookies', 'memory']
@@ -179,7 +179,7 @@ See also [Storage&nbsp;Locations](storage-locations).
 #### Example:
 
 ```javascript
-meergoAnalytics.load('<write key>', '<endpoint>', {
+meergo.load('<write key>', '<endpoint>', {
 	// Global storage locations.
 	storage: {
         stores: ['cookies', 'localStorage', 'memory'] 

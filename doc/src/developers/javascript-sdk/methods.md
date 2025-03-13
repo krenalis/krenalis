@@ -83,7 +83,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-meergoAnalytics.page('Shirt', {
+meergo.page('Shirt', {
     productId: 308263,
 }).then(() => console.log('event queued'));
 ```
@@ -146,7 +146,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-meergoAnalytics.screen('Order Completed', {
+meergo.screen('Order Completed', {
 	items: 3,
     total: 274.99,
 }).then(() => console.log('event queued'));
@@ -194,7 +194,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-meergoAnalytics.screen('Order Completed', {
+meergo.screen('Order Completed', {
 	items: 3,
 	total: 274.99,
 });
@@ -248,7 +248,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-meergoAnalytics.identify('59a20n37ec82', {
+meergo.identify('59a20n37ec82', {
 	firstName: 'Emily',
 	lastName: 'Johnson',
 	email: 'emma.johnson@example.com',
@@ -327,11 +327,11 @@ If no arguments are provided, it returns an instance of the [Group class](group-
 #### Example
 
 ```javascript
-const groupId = meergoAnalytics.group().id();
+const groupId = meergo.group().id();
 ```
 
 ```javascript
-meergoAnalytics.group('84s76y49tb28v1jxq', {
+meergo.group('84s76y49tb28v1jxq', {
 	name: "AcmeTech",
 	industry: "Technology",
 	employeeCount: 100
@@ -366,12 +366,12 @@ Returns an instance of the [`User class`](user-class) representing the user.
 #### Example
 
 ```javascript
-const traits = meergoAnalytics.user().traits();
+const traits = meergo.user().traits();
 ```
 
 ## setAnonymousId
 
-The `setAnonymousId` method is used to set the Anonymous ID. It's necessary because you can't call the `user().anonymousId` method before `Analytics` is ready. If you need to set the Anonymous ID before `Analytics` is ready, using the `setAnonymousId` method is your only option.
+The `setAnonymousId` method is used to set the Anonymous ID. It's necessary because you can't call the `user().anonymousId` method before `Meergo` is ready. If you need to set the Anonymous ID before `Meergo` is ready, using the `setAnonymousId` method is your only option.
 
 Call the `setAnonymousId` method with an argument:
 
@@ -379,7 +379,7 @@ Call the `setAnonymousId` method with an argument:
 
 - to set the Anonymous ID with a specified value, pass a non-empty `String` or a `Number` (the number will be converted to a `String`).
 
-If it is called after `Analytics` is ready, it also returns the Anonymous ID.
+If it is called after `Meergo` is ready, it also returns the Anonymous ID.
 
 #### Syntax
 
@@ -402,12 +402,12 @@ setAnonymousId(id?: string): string | undefined
 |------|------------|----------|--------------------------------------------------------|
 | `id` | `String`   |          | Anonymous ID to set. If it is missing it does nothing. |
 
-It returns the Anonymous ID, if called after `Analytics` is ready.
+It returns the Anonymous ID, if called after `Meergo` is ready.
 
 #### Example
 
 ```javascript
-meergoAnalytics.setAnonymousId('cd320a46-0642-468c-9f03-c8647faa8ac4');
+meergo.setAnonymousId('cd320a46-0642-468c-9f03-c8647faa8ac4');
 ```
 
 ## getSessionId
@@ -436,7 +436,7 @@ There are no parameters. Returns a `Number` representing the current session ide
 #### Example
 
 ```javascript
-const sessionId = meergoAnalytics.getSessionId();
+const sessionId = meergo.getSessionId();
 ```
 
 ## startSession
@@ -467,7 +467,7 @@ startSession(id?: number): void
 #### Example
 
 ```javascript
-meergoAnalytics.startSession();
+meergo.startSession();
 ```
 
 ## endSession
@@ -496,12 +496,12 @@ There are no parameters.
 #### Example
 
 ```javascript
-meergoAnalytics.endSession();
+meergo.endSession();
 ```
 
 ## ready
 
-The `ready` method calls a callback after the Analytics finishes initializing. If promises are supported, it also returns a promise.
+The `ready` method calls a callback after the Meergo finishes initializing. If promises are supported, it also returns a promise.
 
 #### Syntax
 
@@ -522,20 +522,20 @@ ready(callback?: () => void): Promise<void>
 
 | Name       | Type       | Required | Description                                            |
 |------------|------------|----------|--------------------------------------------------------|
-| `callback` | `Function` |          | Callback to call when Analytics finishes initializing. |
+| `callback` | `Function` |          | Callback to call when Meergo finishes initializing. |
 
-It returns a `Promise` that resolves or rejects when Analytics finishes initializing. If the browser does not support promises and no polyfill has been installed, it returns `undefined`.       
+It returns a `Promise` that resolves or rejects when Meergo finishes initializing. If the browser does not support promises and no polyfill has been installed, it returns `undefined`.       
 
 #### Example
 
 ```javascript
-meergoAnalytics.ready(() => console.log('Analytics has been inizialized'));
+meergo.ready(() => console.log('Meergo has been inizialized'));
 ```
 
 ```javascript
-import Analytics from 'meergo-javascript-sdk';
-const meergoAnalytics = new Analytics('<write key>', '<endpoint>');
-await meergoAnalytics.ready();
+import Meergo from 'meergo-javascript-sdk';
+const meergo = new Meergo('<write key>', '<endpoint>');
+await meergo.ready();
 ```
 
 ## reset
@@ -574,7 +574,7 @@ reset(all?: boolean): void
 #### Example
 
 ```javascript
-meergoAnalytics.reset();  // same as meergoAnalytics.reset(false)
+meergo.reset();  // same as meergo.reset(false)
 ```
 
 #### Segment Compatibility
@@ -614,12 +614,12 @@ debug(on: boolean): void
 #### Example
 
 ```javascript
-meergoAnalytics.debug(true);
+meergo.debug(true);
 ```
 
 ## close
 
-The `close` method closes the Analytics instance. It tries to preserve the queue in the localStorage before returning.
+The `close` method closes the Meergo instance. It tries to preserve the queue in the localStorage before returning.
 
 #### Syntax
 
@@ -643,5 +643,5 @@ There are no parameters.
 #### Example
 
 ```javascript
-meergoAnalytics.close();
+meergo.close();
 ```

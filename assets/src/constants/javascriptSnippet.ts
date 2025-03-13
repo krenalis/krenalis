@@ -1,5 +1,5 @@
 export const SNIPPET = `<script>
-	(function(){var e=window.meergoAnalytics=window.meergoAnalytics||[];if(e.load)window.console&&console.error&&console.error("The Meergo snippet is included twice");else{e.load=function(n,a,i){e.key=n,e.url=a,e.options=i;var r=document.createElement("script");r.async=!0,r.type="text/javascript",r.src="/javascript-sdk/dist/meergo.min.js";var o=document.getElementsByTagName("script")[0];o.parentNode.insertBefore(r,o)};for(var s=["alias","close","debug","endSession","getAnonymousId","getSessionId","group","identify","page","ready","reset","screen","setAnonymousId","startSession","track","user"],t=0;t<s.length;t++)(function(n){e[n]=function(){return e.push([n].concat(Array.prototype.slice.call(arguments))),e}})(s[t]);
-	meergoAnalytics.load("writekey","endpoint");
+	(function(){var e=window.meergo=window.meergo||[];if(e.load)window.console&&console.error&&console.error("The Meergo snippet is included twice");else{e.load=function(r,i,a){e.key=r,e.url=i,e.options=a;var o=document.createElement("script");o.async=!0,o.type="text/javascript",o.src="/javascript-sdk/dist/meergo.min.js";var t=document.getElementsByTagName("script")[0];t.parentNode.insertBefore(o,t)};for(var s=["alias","close","debug","endSession","getAnonymousId","getSessionId","group","identify","page","ready","reset","screen","setAnonymousId","startSession","track","user"],n=0;n<s.length;n++)(function(r){e[r]=function(){return e.push([r].concat(Array.prototype.slice.call(arguments))),e}})(s[n]);
+	meergo.load("writekey","endpoint");
 	}})();
 </script>`;

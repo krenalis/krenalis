@@ -23,7 +23,7 @@ For best results, it is recommended to make a group call in the following scenar
 To make a group call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you can make a group call in the following way:
 
 ```javascript
-meergoAnalytics.group('84s76y49tb28v1jxq', {
+meergo.group('84s76y49tb28v1jxq', {
 	name: "AcmeTech",
 	industry: "Technology",
 	employeeCount: 100

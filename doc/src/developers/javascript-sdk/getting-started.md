@@ -42,10 +42,10 @@ The JavaScript SDK can be imported with `import` into TypeScript and JavaScript 
     ```
 5. Import and use the SDK, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```javascript
-    import Analytics from 'meergo-javascript-sdk';
+    import Meergo from 'meergo-javascript-sdk';
    
-    const meergoAnalytics = new Analytics('<write key>', '<endpoint>');
-    meergoAnalytics.page('home');
+    const meergo = new Meergo('<write key>', '<endpoint>');
+    meergo.page('home');
     ```
 
 ### Import into an application using `require`
@@ -61,10 +61,10 @@ The JavaScript SDK can be imported with `require` into JavaScript projects, usin
     ```
 5. Import and use the SDK, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```javascript
-    const { Analytics } = require('meergo-javascript-sdk');
+    const { Meergo } = require('meergo-javascript-sdk');
    
-    const meergoAnalytics = new Analytics('<write key>', '<endpoint>');
-    meergoAnalytics.page('home');
+    const meergo = new Meergo('<write key>', '<endpoint>');
+    meergo.page('home');
     ```
 
 ## Step 3: Add an action

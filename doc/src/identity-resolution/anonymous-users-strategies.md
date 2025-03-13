@@ -31,7 +31,7 @@ The Preservation strategy unifies the anonymous user data before login and after
 To implement a specific strategy, you need to set the strategy option when loading a Meergo SDK. For example, with the [JavaScript SDK](../developers/javascript-sdk) in the browser:
 
 ```javascript
-meergoAnalytics.load(writeKey, endpoint, { strategy: 'Conversion' });
+meergo.load(writeKey, endpoint, { strategy: 'Conversion' });
 ```
 
 Then, use the [`identify`](../events/identify) call when the user logs in and the [`reset`](../developers/javascript-sdk/methods#reset) method when the user logs out. You can customize different strategies for various devices or situations based on your requirements. Refer to the SDK documentation for more details on how to implement these strategies in your application.

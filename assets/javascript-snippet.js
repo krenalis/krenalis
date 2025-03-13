@@ -1,13 +1,13 @@
 // Minimize this code snippet by running: npm run minify-snippet
-var analytics = window.meergoAnalytics = window.meergoAnalytics || [];
-if (analytics.load) {
+var e = window.meergo = window.meergo || [];
+if (e.load) {
   window.console && console.error &&
     console.error("The Meergo snippet is included twice");
 } else {
-  analytics.load = function (key, url, options) {
-    analytics.key = key;
-    analytics.url = url;
-    analytics.options = options;
+  e.load = function (key, url, options) {
+    e.key = key;
+    e.url = url;
+    e.options = options;
     var script = document.createElement("script");
     script.async = !0;
     script.type = "text/javascript";
@@ -35,11 +35,11 @@ if (analytics.load) {
   ];
   for (var i = 0; i < methods.length; i++) {
     (function (name) {
-      analytics[name] = function () {
-        analytics.push([name].concat(Array.prototype.slice.call(arguments)));
-        return analytics;
+      e[name] = function () {
+        e.push([name].concat(Array.prototype.slice.call(arguments)));
+        return e;
       };
     })(methods[i]);
   }
-  meergoAnalytics.load("writekey", "endpoint");
+  meergo.load("writekey", "endpoint");
 }
