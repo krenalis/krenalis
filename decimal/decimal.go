@@ -506,7 +506,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 			zeros++
 			continue
 		}
-		if '1' <= c && c <= '9' || c == '.' && dot == 0 {
+		if '1' <= c && c <= '9' {
 			if zeros > 0 {
 				if mantissa.digits() > 0 {
 					for range zeros {
@@ -515,11 +515,11 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 				}
 				zeros = 0
 			}
-			if c == '.' {
-				dot = i
-			} else {
-				mantissa.add(uint64(c - '0'))
-			}
+			mantissa.add(uint64(c - '0'))
+			continue
+		}
+		if c == '.' && dot == 0 {
+			dot = i
 			continue
 		}
 		if c == 'e' || c == 'E' {
@@ -531,7 +531,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 	if dot == 0 {
 		s = -zeros
 	} else {
-		s = max(0, i-(dot+1)-zeros)
+		s = i - (dot + 1) - zeros
 	}
 	if i < len(n) {
 		// Parse the exponent.

@@ -545,6 +545,7 @@ func Test_Parse(t *testing.T) {
 		{"+.00", 1, 0, "0", "0", nil},
 		{"0e0", 1, 0, "0", "0", nil},
 		{"0e12", 1, 0, "0", "0", nil},
+		{"0e-5", 1, 0, "0", "0", nil},
 		{"-0.1e0", 1, 1, "-0.1", "-0.1", nil},
 		{"-.0", 1, 0, "0", "0", nil},
 		{"-.00", 1, 0, "0", "0", nil},
@@ -561,8 +562,8 @@ func Test_Parse(t *testing.T) {
 		{"23.670", 4, 2, "23.67", "23.67", nil},
 		{"-8492.033", 9, 5, "-8492.033", "-8492.033", nil},
 		{"6800", 4, 0, "6.8e+3", "6800", nil},
-		{"6800.", 6, 2, "6800", "6800", nil},
-		{"6800.00", 6, 2, "6800", "6800", nil},
+		{"6800.", 6, 2, "6.8e+3", "6800", nil},
+		{"6800.00", 6, 2, "6.8e+3", "6800", nil},
 		{"33510672.20416625806", 19, 11, "33510672.20416625806", "33510672.20416625806", nil},
 		{"0.17305728433", 12, 11, "0.17305728433", "0.17305728433", nil},
 		{"-0.0000001", 7, 7, "-1e-7", "-0.0000001", nil},
@@ -649,6 +650,9 @@ func Test_Parse(t *testing.T) {
 		}
 		if test.expectedS != got.s {
 			t.Fatalf("Parse(%q): expected s=%q, got s=%q", test.n, test.expectedS, got.s)
+		}
+		if err := isMinimal(got); err != nil {
+			t.Fatalf("Parse(%q): %s", test.n, got)
 		}
 	}
 
@@ -764,6 +768,22 @@ func Test_alloc(t *testing.T) {
 		t.Fatalf("Parse: expected 0 allocations, got %.0f", a)
 	}
 
+}
+
+// isMinimal checks whether x is internally represented with a mantissa using
+// the minimum number of significant digits. If x is not minimal, it returns an
+// error indicating the issue.
+func isMinimal(x Decimal) error {
+	d := new(decimal.Big)
+	d.Copy(&x.b)
+	decimal.ContextUnlimited.Reduce(d)
+	if d.Precision() != x.b.Precision() {
+		return fmt.Errorf("expected precision %d, got %d", d.Precision(), x.b.Precision())
+	}
+	if d.Scale() != x.b.Scale() {
+		return fmt.Errorf("expected scale %d, got %d", d.Scale(), x.b.Scale())
+	}
+	return nil
 }
 
 // str returns a string representation of x, intended for use in tests.
