@@ -300,6 +300,8 @@ func (x Decimal) WriteTo(w io.Writer) (int64, error) {
 // resulting decimal exceeds the given precision, it returns [ErrOutOfRange].
 // An error is also returned if b is empty.
 //
+// Binary may modify the content of b.
+//
 // See the [Decimal.Binary] method for the inverse operation.
 func Binary(b []byte, precision, scale int) (Decimal, error) {
 	if len(b) == 0 {
@@ -308,7 +310,7 @@ func Binary(b []byte, precision, scale int) (Decimal, error) {
 	if err := validPrecisionScale(precision, scale); err != nil {
 		return Decimal{}, err
 	}
-	neg := (b[0] & 0x80) != 0
+	neg := (b[0] & 0b1000_0000) != 0
 	// If negative, convert it to its absolute value.
 	if neg {
 		for i := range b {
@@ -323,9 +325,9 @@ func Binary(b []byte, precision, scale int) (Decimal, error) {
 	}
 	bi := new(big.Int).SetBytes(b)
 	if neg {
-		bi = bi.Neg(bi)
+		bi.Neg(bi)
 	}
-	n := Decimal{}
+	var n Decimal
 	n.b.SetBigMantScale(bi, scale)
 	if n.b.Precision() > precision {
 		return Decimal{}, ErrOutOfRange
