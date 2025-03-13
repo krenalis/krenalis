@@ -11,12 +11,10 @@ import { ComboboxItem } from './Combobox.types';
 import { ExpressionFragment, parseMapExpression } from '../../../utils/parseMapExpression';
 import { autocompleteExpression } from './Combobox.helpers';
 import { MEERGO_FUNCTIONS, MeergoFunction } from '../../../constants/function';
-import { TransformedMapping } from '../../../lib/core/action';
 
 interface ComboboxProps {
 	value: string;
 	items: ComboboxItem[];
-	sharedMapping?: React.MutableRefObject<TransformedMapping>;
 	onInput: (name: string, value: string) => void;
 	onSelect: (name: string, value: string) => void;
 	name: string;
@@ -39,7 +37,6 @@ interface ComboboxProps {
 const Combobox = ({
 	value,
 	items,
-	sharedMapping,
 	onInput: onInputFunc,
 	onSelect: onSelectFunc,
 	name,
@@ -156,7 +153,6 @@ const Combobox = ({
 		setTimeout(() => {
 			// See if the menu is overflowing the width of the input and
 			// in that case expand it to avoid horizontal scrollbars.
-
 			const menu = listRef.current;
 			if (menu == null) {
 				return;
@@ -217,12 +213,6 @@ const Combobox = ({
 			}, 50);
 		}
 	}, []);
-
-	useEffect(() => {
-		if (sharedMapping?.current) {
-			setVal(sharedMapping.current[name]?.value || '');
-		}
-	}, [sharedMapping?.current[name]?.value]);
 
 	useLayoutEffect(() => {
 		if (listRef.current == null || !isOpen) {

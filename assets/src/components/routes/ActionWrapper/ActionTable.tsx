@@ -5,7 +5,7 @@ import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Action.constants';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import { flattenSchema } from '../../../lib/core/action';
+import { flattenSchema, propertyTypesAreEqual } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
 import { getTableKeyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import { Combobox } from '../../base/Combobox/Combobox';
@@ -102,7 +102,25 @@ const ActionTable = () => {
 				actionTyp.outputSchema = res.schema;
 				setActionType(actionTyp);
 				const a = { ...action };
-				a.transformation.mapping = flattenSchema(res.schema);
+				const mapping = flattenSchema(res.schema);
+				if (a.transformation.mapping != null) {
+					// Keep the old mapping (if the column stil exists
+					// in the new out schema and the type is the same).
+					for (const path in mapping) {
+						const existedInOldSchema = a.transformation.mapping[path] != null;
+						if (!existedInOldSchema) {
+							continue;
+						}
+						const newType = mapping[path].full.type;
+						const oldType = a.transformation.mapping[path].full.type;
+						if (!propertyTypesAreEqual(newType, oldType)) {
+							continue;
+						}
+						mapping[path].value = a.transformation.mapping[path].value;
+						mapping[path].error = a.transformation.mapping[path].error;
+					}
+				}
+				a.transformation.mapping = mapping;
 				setAction(a);
 				setTimeout(() => {
 					let scrollSection = transformationSectionRef.current;

@@ -93,7 +93,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const isFirstCompilation = useRef(true);
 	const lastChangeTimeFormatRef = useRef(null);
 	const lastChangeTimeCustomFormatInputRef = useRef(null);
-	const sharedMapping = useRef<TransformedMapping>();
 
 	const hasIdentityColumns = useMemo(() => {
 		return (
@@ -130,7 +129,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			setSelectedLanguage(action.transformation.function.language);
 		} else {
 			setTransformationType('mappings');
-			sharedMapping.current = action.transformation.mapping;
 		}
 	}, []);
 
@@ -238,10 +236,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			validateExpressions();
 		}
 	}, [flatSchema, transformationType]);
-
-	useEffect(() => {
-		sharedMapping.current = { ...action.transformation.mapping };
-	}, [action.transformation.mapping]);
 
 	const needFormat: boolean = useMemo(() => {
 		if (
@@ -432,7 +426,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const box = (
 		<TransformationBox
-			sharedMapping={sharedMapping}
 			transformationType={transformationType}
 			setTransformationType={setTransformationType}
 			workspaces={workspaces}
@@ -577,7 +570,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 });
 
 interface TransformationBoxProps {
-	sharedMapping: React.MutableRefObject<TransformedMapping>;
 	transformationType: 'mappings' | 'function' | '';
 	setTransformationType: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
 	workspaces: Workspace[];
@@ -637,7 +629,6 @@ const isMappingModified = (
 };
 
 const TransformationBox = ({
-	sharedMapping,
 	transformationType,
 	setTransformationType,
 	workspaces,
@@ -707,13 +698,11 @@ const TransformationBox = ({
 		setTimeout(() => {
 			if (pendingTransformationType.current == 'mappings') {
 				a.transformation.mapping = flattenSchema(actionType.outputSchema);
-				sharedMapping.current = { ...a.transformation.mapping };
 				a.transformation.function = null;
 				setSelectedLanguage('');
 				setTransformationType('mappings');
 			} else {
 				a.transformation.mapping = null;
-				sharedMapping.current = null;
 				a.transformation.function = {
 					source: RAW_TRANSFORMATION_FUNCTIONS[pendingTransformationType.current].replace(
 						'$parameterName',
@@ -849,8 +838,7 @@ const TransformationBox = ({
 					<Combobox
 						onInput={onUpdateMapping}
 						value={showMatchingIn ? action.matching.in : property.value}
-						sharedMapping={showMatchingIn ? null : sharedMapping}
-						controlled={showMatchingIn}
+						controlled={true}
 						name={k}
 						disabled={isDisabled}
 						className='action__transformation-input-property'
