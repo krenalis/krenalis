@@ -1,4 +1,4 @@
-# Meergo Meergo
+# Meergo JavaScript SDK
 
 - [Format files](#format-files)
 - [Build `dist/meergo.min.js`](#build-distmeergominjs)
