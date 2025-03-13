@@ -147,7 +147,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 
 ```javascript
 meergo.screen('Order Completed', {
-	items: 3,
+    items: 3,
     total: 274.99,
 }).then(() => console.log('event queued'));
 ```
@@ -195,8 +195,8 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 
 ```javascript
 meergo.screen('Order Completed', {
-	items: 3,
-	total: 274.99,
+    items: 3,
+    total: 274.99,
 });
 ```
 
@@ -249,16 +249,16 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 
 ```javascript
 meergo.identify('59a20n37ec82', {
-	firstName: 'Emily',
-	lastName: 'Johnson',
-	email: 'emma.johnson@example.com',
-	address: {
-		street: "123 Main Street",
-		city: "San Francisco",
-		state: "CA",
-		postalCode: "94104",
-		country: "USA"
-	}
+    firstName: 'Emily',
+    lastName: 'Johnson',
+    email: 'emma.johnson@example.com',
+    address: {
+        street: "123 Main Street",
+        city: "San Francisco",
+        state: "CA",
+        postalCode: "94104",
+        country: "USA"
+    }
 });
 ```
 
@@ -332,9 +332,9 @@ const groupId = meergo.group().id();
 
 ```javascript
 meergo.group('84s76y49tb28v1jxq', {
-	name: "AcmeTech",
-	industry: "Technology",
-	employeeCount: 100
+    name: "AcmeTech",
+    industry: "Technology",
+    employeeCount: 100
 });
 ```
 
@@ -520,8 +520,8 @@ ready(callback?: () => void): Promise<void>
 
 #### Parameters
 
-| Name       | Type       | Required | Description                                            |
-|------------|------------|----------|--------------------------------------------------------|
+| Name       | Type       | Required | Description                                         |
+|------------|------------|----------|-----------------------------------------------------|
 | `callback` | `Function` |          | Callback to call when Meergo finishes initializing. |
 
 It returns a `Promise` that resolves or rejects when Meergo finishes initializing. If the browser does not support promises and no polyfill has been installed, it returns `undefined`.       
@@ -567,9 +567,9 @@ reset(all?: boolean): void
 
 #### Parameters
 
-| Name       | Type      | Required | Description                                                                              |
-|------------|-----------|----------|------------------------------------------------------------------------------------------|
-| `all`      | `Boolean` |          | Indicates if the Anonymous ID and the session must be reset, regardless of the strategy. |
+| Name  | Type      | Required | Description                                                                              |
+|-------|-----------|----------|------------------------------------------------------------------------------------------|
+| `all` | `Boolean` |          | Indicates if the Anonymous ID and the session must be reset, regardless of the strategy. |
 
 #### Example
 
@@ -606,9 +606,9 @@ debug(on: boolean): void
 
 #### Parameters
 
-| Name       | Type      | Required                               | Description                            |
-|------------|-----------|----------------------------------------|----------------------------------------|
-| `on`       | `Boolean` | <div style="text-align:center">✓</div> | Indicates if the debug mode is active. |
+| Name | Type      | Required                               | Description                            |
+|------|-----------|----------------------------------------|----------------------------------------|
+| `on` | `Boolean` | <div style="text-align:center">✓</div> | Indicates if the debug mode is active. |
 
 
 #### Example

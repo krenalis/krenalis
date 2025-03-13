@@ -38,10 +38,10 @@ Below are the options that control various aspects of the JavaScript SDK.
 
 | Option                                     | Type                                 | Default | Description                                                                                                                                                      |
 |--------------------------------------------|--------------------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                                          |
+| [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                                          | 
 | `debug`                                    | `Boolean`                            | `false` | **debug mode**: when enabled status messages will appear on the console. You can also enable/disable debug mode later using the [`debug`](methods#debug) method. |
 | [`group`](#group-option)                   | `Object`                             |         | Customize the storage priority for group data.                                                                                                                   |
-| [`session`](#session-option)               | `Object`                             |         | Controls whether the [session tracking](../../events/session-tracking) is automatic or not, and sets its timeout.                                                   |
+| [`session`](#session-option)               | `Object`                             |         | Controls whether the [session tracking](../../events/session-tracking) is automatic or not, and sets its timeout.                                                |
 | [`storage`](#storage-option)               | `Object`                             |         | Customize the global storage priority.                                                                                                                           |
 | [`useQueryString`](#usequerystring-option) | `Boolean`<center>or</center>`Object` | `true`  | Indicates whether to process query parameters using the [Querystring API](querystring-api), and if enforce validation rules.                                     |
 | [`user`](#user-option)                     | `Object`                             |         | Customize the storage priority for user data.                                                                                                                    |
@@ -92,11 +92,11 @@ The `group` option has the following sub-option:
 
 ```javascript
 meergo.load('<write key>', '<endpoint>', {
-	group: {
-		storage: {
-			stores: ['cookies', 'memory']
-		}
-	}
+    group: {
+        storage: {
+            stores: ['cookies', 'memory']
+        }
+    }
 });
 ```
 
@@ -104,17 +104,17 @@ meergo.load('<write key>', '<endpoint>', {
 
 The `session` option has the following sub-options:
 
-| Option      | Type      | Default    | Description                                                                                    |
-|-------------|-----------|------------|------------------------------------------------------------------------------------------------|
-| `autoTrack` | `Boolean` | `true`     | Indicates if the auto tracking is enabled. See [session tracking](../../events/session-tracking). |
-| `timeout`   | `Number`  | 30 minutes | Timeout in milliseconds for session expiration due to inactivity.                              |
+| Option      | Type      | Default    | Description                                                                                        |
+|-------------|-----------|------------|----------------------------------------------------------------------------------------------------|
+| `autoTrack` | `Boolean` | `true`     | Indicates if the auto tracking is enabled. See [session tracking](../../events/session-tracking).  |
+| `timeout`   | `Number`  | 30 minutes | Timeout in milliseconds for session expiration due to inactivity.                                  |
 
 #### Example:
 
 ```javascript
 meergo.load('<write key>', '<endpoint>', {
-	session: {
-		autoTrack: true, // enable the auto tracking
+    session: {
+        autoTrack: true, // enable the auto tracking
         timeout: 45 * 60 * 60000 // 45 minutes
     }
 });
@@ -136,8 +136,8 @@ Alternatively, you can keep it active but validate the Anonymous ID and User ID 
 
 ```javascript
 meergo.load('<write key>', '<endpoint>', {
-	useQueryString: {
-		aid: /^[a-z0-9]+$/
+    useQueryString: {
+        aid: /^[a-z0-9]+$/
     }
 });
 ```
@@ -154,11 +154,11 @@ The `user` option has the following sub-option:
 
 ```javascript
 meergo.load('<write key>', '<endpoint>', {
-	user: {
-		storage: {
-			stores: ['cookies', 'memory']
-		}
-	}
+    user: {
+        storage: {
+            stores: ['cookies', 'memory']
+        }
+    }
 });
 ```
 
@@ -180,21 +180,21 @@ See also [Storage&nbsp;Locations](storage-locations).
 
 ```javascript
 meergo.load('<write key>', '<endpoint>', {
-	// Global storage locations.
-	storage: {
+    // Global storage locations.
+    storage: {
         stores: ['cookies', 'localStorage', 'memory'] 
     },
-	// Storage locations to user data.
-	user: {
-		storage: {
-			stores: ['cookies', 'memory'] 
-		}
-	},
-	// Storage locations to group data.
-	group: {
-		storage: {
-			stores: ['localStorage', 'memory'] 
-		}
-	}
+    // Storage locations to user data.
+    user: {
+        storage: {
+            stores: ['cookies', 'memory'] 
+        }
+    },
+    // Storage locations to group data.
+    group: {
+        storage: {
+            stores: ['localStorage', 'memory'] 
+        }
+    }
 });
 ```
