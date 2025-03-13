@@ -45,7 +45,7 @@ deno task transpile
 deno task minify
 ```
 
-* `deno task bundle` bundles the `meergo.js` file and creates the `build/meergo.bundle.js` file.
+* `deno task bundle` bundles the `main.js` file and creates the `build/meergo.bundle.js` file.
 * `deno task transpile` transpiles the `build/meergo.bundle.js` file to ES5 and creates the `build/meergo.es5.js` file.
 * `deno task minify` minifies the `build/meergo.es5.js` file and creates the `dist/meergo.min.js` file.
 
@@ -64,7 +64,7 @@ To import the JavaScript SDK into an application as an ES6 module:
 
 ```javascript
 import Meergo from "../meergo/javascript-sdk";
-const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
+const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/events");
 meergo.page("home");
 ```
 
@@ -81,7 +81,7 @@ To import the JavaScript SDK into a browser as an ES6 module, follow these steps
    ```html
    <script type="module">
        import Meergo from "https://example.com/meergo.es6.min.js";
-       const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
+       const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/events");
        meergo.page("home");
    </script>
    ```
@@ -104,7 +104,7 @@ To import the JavaScript SDK into an application using CommonJS (CJS) using the 
 
     ```javascript
     const { Meergo } = require("../meergo/javascript-sdk");
-    const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
+    const meergo = new Meergo("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/events");
     meergo.page("home");
     ```
 
