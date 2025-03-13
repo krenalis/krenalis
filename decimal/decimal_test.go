@@ -342,6 +342,26 @@ func Test_Decimal_Binary(t *testing.T) {
 		}
 	}
 
+	// Test integers in range [-1000,1000].
+	N := 1000
+	for i := -N; i < N-1; i++ {
+		bin, err := New(int64(i), 0).Binary(0)
+		if err != nil {
+			t.Fatalf("%q.Binary(0): unexpected error '%#v'", i, err)
+		}
+		d, err := Binary(bin, 4, 0)
+		if err != nil {
+			t.Fatalf("Binary(%x,4,0): unexpected error '%#v'", i, err)
+		}
+		j, err := d.Int64()
+		if err != nil {
+			t.Fatalf("%d.Int64(): unexpected error '%#v'", i, err)
+		}
+		if int64(i) != j {
+			t.Fatalf("%d: expected i = %d, got %d", i, i, j)
+		}
+	}
+
 }
 
 // TestBinaryBackAndForth tests whether a Decimal, put in binary form by calling

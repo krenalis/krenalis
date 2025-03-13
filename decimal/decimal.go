@@ -103,55 +103,47 @@ func (x Decimal) Append(buf []byte) []byte {
 // See the [Binary] function for the inverse operation.
 func (x Decimal) Binary(scale int) ([]byte, error) {
 	if scale < 0 || scale > MaxScale {
-		return nil, ErrOutOfRange
+		panic(ErrOutOfRange.Error())
 	}
-	// TODO(marco): The copy is required due to the Reduce and Quantize operations.
-	// TODO(marco): For small mantissas, the returned slice length can be reduced.
-	d := new(decimal.Big).Copy(&x.b)
-	decimal.ContextUnlimited.Reduce(d)
-	_, neg, coefficient, exp := d.Decompose(nil)
-	e := scale + int(exp)
-	if e < 0 {
-		return nil, ErrOutOfRange
+	b := &x.b
+	if b.Scale() != scale {
+		b2 := new(decimal.Big)
+		b2.Copy(b)
+		decimal.ContextUnlimited.Quantize(b2, scale)
+		if b.Cmp(b2) != 0 {
+			return nil, ErrOutOfRange
+		}
+		b = b2
 	}
-	if e > 0 {
-		decimal.ContextUnlimited.Quantize(d, scale)
-		_, _, coefficient, _ = d.Decompose(nil)
-	}
+	var b0 byte
+	_, neg, bin, _ := b.Decompose(nil)
 	if neg {
-		for i := range coefficient {
-			coefficient[i] = ^coefficient[i]
+		// Convert the binary representation to two's complement.
+		for i := range bin {
+			bin[i] = ^bin[i]
 		}
 		carry := byte(1)
-		for i := len(coefficient) - 1; i >= 0; i-- {
-			coefficient[i] += carry
-			if coefficient[i] != 0 {
+		for i := len(bin) - 1; i >= 0; i-- {
+			bin[i] += carry
+			if bin[i] != 0 {
 				break
 			}
 		}
-		// When the number is negative, if the msb bit is 0 then it is necessary
-		// to prepend a 0xff byte to it, because, since the number is
-		// represented in two's complement, the msb must be 1 when the number is
-		// negative.
-		//
-		// TODO: review and optimize this.
-		msbIsZero := (coefficient[0] & 0b1000_0000) == 0
-		if msbIsZero {
-			coefficient = append([]byte{0xff}, coefficient...)
-		}
-	} else {
-		// When the number is positive, if the msb bit is 1 then it is necessary
-		// to prepend a zero-byte to it, because, since the number is
-		// represented in two's complement, the msb must be 0 when the number is
-		// positive.
-		//
-		// TODO: review and optimize this.
-		msbIsOne := (coefficient[0] & 0b1000_0000) != 0
-		if msbIsOne {
-			coefficient = append([]byte{0x00}, coefficient...)
+		b0 = 0xff
+	}
+	// The most significant bit must be 0 for a positive number and 1 for a
+	// negative number. If this is not the case, prepend a byte 0x00 or 0xff.
+	if neg == ((bin[0] & 0b1000_0000) == 0) {
+		n := 1 + len(bin)
+		if n > cap(bin) {
+			bin = append([]byte{b0}, bin...)
+		} else {
+			bin = bin[:n]
+			copy(bin[1:], bin[:n-1])
+			bin[0] = b0
 		}
 	}
-	return coefficient, nil
+	return bin, nil
 }
 
 // Cmp compares x and y and returns:
