@@ -32,8 +32,9 @@ const (
 // mark the operation as completed.
 //
 // In the case that an AlterSchema operation is already in progress, the error
-// ErrAlterInProgress is returned; if an IdentityResolution operation is
-// already in progress, the error ErrIdentityResolutionInProgress is returned.
+// ErrWarehouseAlterInProgress is returned; if an IdentityResolution operation
+// is already in progress, the error ErrWarehouseIdentityResolutionInProgress
+// is returned.
 func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation warehouseOperation) (int, error) {
 	var opID int
 	err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
@@ -50,9 +51,9 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 		if runningOp != nil {
 			switch *runningOp {
 			case alterUserColumns:
-				return meergo.ErrAlterInProgress
+				return meergo.ErrWarehouseAlterInProgress
 			case identityResolution:
-				return meergo.ErrIdentityResolutionInProgress
+				return meergo.ErrWarehouseIdentityResolutionInProgress
 			default:
 				return fmt.Errorf("unexpected operation %q", *runningOp)
 			}

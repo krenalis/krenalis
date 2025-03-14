@@ -97,8 +97,8 @@ func (op AlterOperationType) MarshalJSON() ([]byte, error) {
 }
 
 var (
-	ErrAlterInProgress              = errors.New("alter schema currently in progress on the data warehouse")
-	ErrIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
+	ErrWarehouseAlterInProgress              = errors.New("alter schema currently in progress on the data warehouse")
+	ErrWarehouseIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
 )
 
 // Warehouse is the interface implemented by warehouse drivers.
@@ -112,10 +112,10 @@ type Warehouse interface {
 	// columns to the given columns.
 	//
 	// If another alter operation is in progress on the data warehouse, returns an
-	// ErrAlterInProgress error.
+	// ErrWarehouseAlterInProgress error.
 	//
 	// If an Identity Resolution is in progress, returns an
-	// ErrIdentityResolutionInProgress error.
+	// ErrWarehouseIdentityResolutionInProgress error.
 	AlterUserColumns(ctx context.Context, columns []Column, operations []AlterOperation) error
 
 	// AlterUserColumnsQueries returns the queries that alter the columns of the
@@ -207,10 +207,10 @@ type Warehouse interface {
 	// connections.
 	//
 	// If an Identity Resolution is already in execution, returns an
-	// ErrIdentityResolutionInProgress error.
+	// ErrWarehouseIdentityResolutionInProgress error.
 	//
 	// If an alter schema operation is in progress on the data warehouse, returns a
-	// ErrAlterInProgress error.
+	// ErrWarehouseAlterInProgress error.
 	ResolveIdentities(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// Repair repairs the database objects on the data warehouse needed by Meergo.

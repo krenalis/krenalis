@@ -48,11 +48,11 @@ var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
 // ErrAlterInProgress is a error indicating that an operation that alter the
 // columns of the user tables is currently in progress on the data warehouse.
-var ErrAlterInProgress = meergo.ErrAlterInProgress
+var ErrAlterInProgress = meergo.ErrWarehouseAlterInProgress
 
 // ErrIdentityResolutionInProgress is a error indicating that the Identity
 // Resolution is currently in progress on the data warehouse.
-var ErrIdentityResolutionInProgress = meergo.ErrIdentityResolutionInProgress
+var ErrIdentityResolutionInProgress = meergo.ErrWarehouseIdentityResolutionInProgress
 
 // AckEvent represents an ack event.
 type AckEvent struct {
