@@ -24,11 +24,14 @@ func (err *UnavailableError) Error() string {
 	return fmt.Sprintf("data warehouse: %s", err.Err)
 }
 
-// unavailableError wraps err in a *UnavailableError, if it is a generic error.
+// unavailableError wraps err in *UnavailableError if it is an internal error.
 func unavailableError(err error) error {
+	switch err {
+	case nil, meergo.ErrWarehouseAlterInProgress, meergo.ErrWarehouseIdentityResolutionInProgress:
+		return err
+	}
 	switch err.(type) {
 	case
-		nil,
 		*meergo.WarehouseNonInitializableError,
 		*meergo.WarehouseSettingsError:
 		return err
@@ -50,8 +53,8 @@ func getWarehouseInstance(name string, settings []byte) (warehouse, error) {
 	return warehouse{inner}, nil
 }
 
-// warehouse wraps a meergo.Warehouse, returning any error from its methods
-// wrapped in a UnavailableError.
+// warehouse wraps a meergo.Warehouse and returns any internal errors from its
+// methods as an UnavailableError.
 type warehouse struct {
 	inner meergo.Warehouse
 }
