@@ -41,7 +41,7 @@ type State struct {
 	connectors     map[string]*Connector
 	warehouseTypes map[string]WarehouseType
 
-	mu               *sync.Mutex            // for the 'actions', 'accounts', 'connections', 'connectionsByKey', 'election', 'organizations', and 'workspaces' fields
+	mu               *sync.Mutex            // for the 'actions', ..., and 'workspaces' fields
 	actions          map[int]*Action        // protected by mu
 	accounts         map[int]*Account       // protected by mu
 	connections      map[int]*Connection    // protected by mu
