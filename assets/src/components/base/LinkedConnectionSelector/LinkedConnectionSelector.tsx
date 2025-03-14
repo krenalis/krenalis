@@ -123,7 +123,7 @@ const LinkedConnectionSelector = ({
 					<Grid
 						rows={rows}
 						columns={columns}
-						noRowsMessage={`Select "Link ${role === 'Source' ? 'destination' : 'source'}..." to link a ${
+						noRowsMessage={`Select "Link event ${role === 'Source' ? 'destination' : 'source'}..." to link a ${
 							role === 'Source' ? 'destination' : 'source'
 						} connection`}
 					/>
