@@ -445,6 +445,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			onCloseFullscreenTransformation={onCloseFullscreenTransformation}
 			actionType={actionType}
 			isTransformationFunctionSupported={isTransformationFunctionSupported}
+			hasSchema={actionType.outputSchema != null}
 		/>
 	);
 
@@ -589,6 +590,7 @@ interface TransformationBoxProps {
 	onCloseFullscreenTransformation: () => void;
 	actionType: TransformedActionType;
 	isTransformationFunctionSupported: boolean;
+	hasSchema: boolean;
 }
 
 const isMappingChanged = (oldMapping: TransformedMapping, newMapping: TransformedMapping): boolean => {
@@ -648,6 +650,7 @@ const TransformationBox = ({
 	onCloseFullscreenTransformation,
 	actionType,
 	isTransformationFunctionSupported,
+	hasSchema,
 }: TransformationBoxProps) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [isCompletelyOpen, setIsCompletelyOpen] = useState<boolean>(false);
@@ -913,49 +916,53 @@ const TransformationBox = ({
 			}`}
 		>
 			<div className='transformation-box__header'>
-				<div className='transformation-box__header-title'>
-					{isCompletelyOpen || !isTransformationFunctionSupported || transformationLanguages.length == 0 ? (
-						<>
-							<span className='transformation-box__header-icon'>
-								{transformationType === 'mappings' ? (
-									<SlIcon name='shuffle' />
-								) : (
-									getLanguageLogo(selectedLanguage)
-								)}
-							</span>
-							<div className='transformation-box__header-text'>
-								{transformationType === 'mappings' ? 'Mappings' : selectedLanguage}
-							</div>
-						</>
-					) : (
-						<SlButtonGroup className='transformation-box__header-buttons'>
-							<SlButton
-								className='transformation-box__mappings-button'
-								variant={transformationType === 'mappings' ? 'primary' : 'default'}
-								onClick={() => onTransformationTypeClick('mappings')}
-								disabled={isTransformationDisabled}
-							>
-								Mappings
-							</SlButton>
-							{transformationLanguages.map((language) => {
-								return (
-									<SlButton
-										key={language}
-										variant={
-											transformationType === 'function' && selectedLanguage === language
-												? 'primary'
-												: 'default'
-										}
-										onClick={() => onTransformationTypeClick(language)}
-										disabled={isTransformationDisabled}
-									>
-										{language}
-									</SlButton>
-								);
-							})}
-						</SlButtonGroup>
-					)}
-				</div>
+				{hasSchema && (
+					<div className='transformation-box__header-title'>
+						{isCompletelyOpen ||
+						!isTransformationFunctionSupported ||
+						transformationLanguages.length == 0 ? (
+							<>
+								<span className='transformation-box__header-icon'>
+									{transformationType === 'mappings' ? (
+										<SlIcon name='shuffle' />
+									) : (
+										getLanguageLogo(selectedLanguage)
+									)}
+								</span>
+								<div className='transformation-box__header-text'>
+									{transformationType === 'mappings' ? 'Mappings' : selectedLanguage}
+								</div>
+							</>
+						) : (
+							<SlButtonGroup className='transformation-box__header-buttons'>
+								<SlButton
+									className='transformation-box__mappings-button'
+									variant={transformationType === 'mappings' ? 'primary' : 'default'}
+									onClick={() => onTransformationTypeClick('mappings')}
+									disabled={isTransformationDisabled}
+								>
+									Mappings
+								</SlButton>
+								{transformationLanguages.map((language) => {
+									return (
+										<SlButton
+											key={language}
+											variant={
+												transformationType === 'function' && selectedLanguage === language
+													? 'primary'
+													: 'default'
+											}
+											onClick={() => onTransformationTypeClick(language)}
+											disabled={isTransformationDisabled}
+										>
+											{language}
+										</SlButton>
+									);
+								})}
+							</SlButtonGroup>
+						)}
+					</div>
+				)}
 				<div className='transformation-box__header-right-buttons'>
 					{transformationType === 'function' && (
 						<SlDropdown
@@ -1010,7 +1017,15 @@ const TransformationBox = ({
 					</SlTooltip>
 				</div>
 			</div>
-			<div className='transformation-box__body'>{body}</div>
+			<div className='transformation-box__body'>
+				{hasSchema ? (
+					body
+				) : (
+					<div className='transformation-box__no-transformation-text'>
+						Sending these events does not require an explicit mapping or function transformation
+					</div>
+				)}
+			</div>
 			<AlertDialog
 				variant='danger'
 				isOpen={isAlertOpen}
@@ -1151,6 +1166,16 @@ const FullscreenTransformation = ({
 		setInSearchTerm('');
 		setOutSearchTerm('');
 	}, [transformationType]);
+
+	useEffect(() => {
+		if (actionType.target === 'Events' && outputSchema == null) {
+			// The action doesn't have a transformation. The fullscreen
+			// is shown only to allow testing of event dispatching, so
+			// we preselect the samples and preview panels.
+			setIsInputSchemaSelected(false);
+			setIsOutputSchemaSelected(false);
+		}
+	}, []);
 
 	useEffect(() => {
 		if (isFullscreenTransformationOpen) {
@@ -2017,74 +2042,81 @@ const FullscreenTransformation = ({
 					</div>
 					<div className='fullscreen-transformation__panel-content'>
 						{isOutputSchemaSelected ? (
-							<div className='fullscreen-transformation__panel-schema'>
-								<SlInput
-									className='fullscreen-transformation__panel-schema-search'
-									onSlInput={onInputOutSearchTerm}
-									value={outSearchTerm}
-									placeholder='Search a property...'
-									size='small'
-									clearable
-								>
-									<SlIcon name='search' slot='prefix' />
-								</SlInput>
-								{transformationType === 'function' && (
-									<SlSwitch
-										className='fullscreen-transformation__panel-schema-show-only-selected'
+							outputSchema == null ? (
+								<h3 className='fullscreen-transformation__panel-schema--no-schema'>
+									There is no output schema
+								</h3>
+							) : (
+								<div className='fullscreen-transformation__panel-schema'>
+									<SlInput
+										className='fullscreen-transformation__panel-schema-search'
+										onSlInput={onInputOutSearchTerm}
+										value={outSearchTerm}
+										placeholder='Search a property...'
 										size='small'
-										onSlChange={onChangeShowOnlyOutSelected}
+										clearable
 									>
-										Show only selected properties
-									</SlSwitch>
-								)}
-								{outputSchema?.properties.map((p) => {
-									if (transformationType === 'function') {
-										const isSelected = selectedOutPaths.includes(p.name);
-										const hasSelectedChildren =
-											selectedOutPaths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
-										if (showOnlyOutSelected && !isSelected && !hasSelectedChildren) {
-											return null;
+										<SlIcon name='search' slot='prefix' />
+									</SlInput>
+									{transformationType === 'function' && (
+										<SlSwitch
+											className='fullscreen-transformation__panel-schema-show-only-selected'
+											size='small'
+											onSlChange={onChangeShowOnlyOutSelected}
+										>
+											Show only selected properties
+										</SlSwitch>
+									)}
+									{outputSchema?.properties.map((p) => {
+										if (transformationType === 'function') {
+											const isSelected = selectedOutPaths.includes(p.name);
+											const hasSelectedChildren =
+												selectedOutPaths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !==
+												-1;
+											if (showOnlyOutSelected && !isSelected && !hasSelectedChildren) {
+												return null;
+											}
 										}
-									}
 
-									if (p.type.kind === 'object') {
-										return (
-											<TransformationNestedProperties
-												key={p.name}
-												property={p}
-												language={selectedLanguage}
-												nesting={1}
-												side='output'
-												transformationType={transformationType}
-												exportMode={action.exportMode}
-												searchTerm={outSearchTerm}
-												flatSchema={flatOutputSchema}
-												selectedPaths={selectedOutPaths}
-												onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
-												tableKey={action.tableKey}
-											/>
-										);
-									} else {
-										return (
-											<TransformationProperty
-												key={p.name}
-												property={p}
-												language={selectedLanguage}
-												side='output'
-												transformationType={transformationType}
-												exportMode={action.exportMode}
-												searchTerm={outSearchTerm}
-												selectedPaths={selectedOutPaths}
-												onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
-												isOutMatchingProperty={
-													action.matching?.out && action.matching.out === p.name
-												}
-												tableKey={action.tableKey}
-											/>
-										);
-									}
-								})}
-							</div>
+										if (p.type.kind === 'object') {
+											return (
+												<TransformationNestedProperties
+													key={p.name}
+													property={p}
+													language={selectedLanguage}
+													nesting={1}
+													side='output'
+													transformationType={transformationType}
+													exportMode={action.exportMode}
+													searchTerm={outSearchTerm}
+													flatSchema={flatOutputSchema}
+													selectedPaths={selectedOutPaths}
+													onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
+													tableKey={action.tableKey}
+												/>
+											);
+										} else {
+											return (
+												<TransformationProperty
+													key={p.name}
+													property={p}
+													language={selectedLanguage}
+													side='output'
+													transformationType={transformationType}
+													exportMode={action.exportMode}
+													searchTerm={outSearchTerm}
+													selectedPaths={selectedOutPaths}
+													onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
+													isOutMatchingProperty={
+														action.matching?.out && action.matching.out === p.name
+													}
+													tableKey={action.tableKey}
+												/>
+											);
+										}
+									})}
+								</div>
+							)
 						) : isExecuting ? (
 							<SlSpinner
 								style={

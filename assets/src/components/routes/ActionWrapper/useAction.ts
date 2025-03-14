@@ -126,7 +126,7 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 			}
 
 			// Compute which fields are supported by the action type.
-			const fields = computeActionTypeFields(connection, actionType, outputSchema);
+			const fields = computeActionTypeFields(connection, actionType);
 
 			try {
 				// Handle cases that requires additional steps to

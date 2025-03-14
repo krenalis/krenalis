@@ -1150,11 +1150,7 @@ const hasFilters = (connection: TransformedConnection, target: ActionTarget) => 
 	return !(connection.role === 'Source' && connection.connector.type === 'Database' && target === 'Users');
 };
 
-const computeActionTypeFields = (
-	connection: TransformedConnection,
-	actionType: ActionType,
-	outpuSchema: ObjectType,
-) => {
+const computeActionTypeFields = (connection: TransformedConnection, actionType: ActionType) => {
 	const fields: ActionTypeField[] = [];
 
 	if (hasFilters(connection, actionType.target)) {
@@ -1162,15 +1158,7 @@ const computeActionTypeFields = (
 	}
 
 	if (connection.connector.type === 'App') {
-		if (connection.role === 'Source') {
-			fields.push('Transformation');
-		} else {
-			if (actionType.target === 'Users' || actionType.target === 'Groups') {
-				fields.push('Transformation');
-			} else if (actionType.target === 'Events' && outpuSchema != null) {
-				fields.push('Transformation');
-			}
-		}
+		fields.push('Transformation');
 	} else if (connection.connector.type === 'Database') {
 		fields.push('Transformation');
 	} else if (connection.connector.type === 'FileStorage' && connection.role === 'Source') {
