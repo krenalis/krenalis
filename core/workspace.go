@@ -1562,7 +1562,7 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 	}
 
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2", n.Mode, n.Workspace)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2 AND warehouse_mode != $1", n.Mode, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -1572,8 +1572,9 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 				return err
 			}
 			if !exists {
-				err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				return errors.NotFound("workspace %d does not exist", n.Workspace)
 			}
+			return nil
 		}
 		return tx.Notify(ctx, n)
 	})
