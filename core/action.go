@@ -575,7 +575,7 @@ func (this *Action) SetSchedulePeriod(ctx context.Context, period *SchedulePerio
 		if err != nil {
 			return err
 		}
-		if result.RowsAffected() == 0 && false {
+		if result.RowsAffected() == 0 {
 			return nil
 		}
 		return tx.Notify(ctx, n)
