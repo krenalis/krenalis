@@ -605,9 +605,10 @@ const transformInActionToSet = async (
 			const isFirstLevel = pair.indentation === 0;
 			if (pair.value === '') {
 				const hasRequired =
-					action.exportMode != null &&
-					((pair.createRequired && action.exportMode.includes('Create')) ||
-						(pair.updateRequired && action.exportMode.includes('Update')));
+					(actionType.target === 'Events' && (pair.createRequired || pair.updateRequired)) ||
+					(action.exportMode != null &&
+						((pair.createRequired && action.exportMode.includes('Create')) ||
+							(pair.updateRequired && action.exportMode.includes('Update'))));
 
 				const siblings: string[] = [];
 				for (const key of keys) {

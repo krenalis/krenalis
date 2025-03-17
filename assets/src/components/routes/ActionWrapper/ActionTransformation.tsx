@@ -776,6 +776,7 @@ const TransformationBox = ({
 
 			const hasRequired =
 				isTableKey ||
+				(actionType.target === 'Events' && (property.createRequired || property.updateRequired)) ||
 				(action.exportMode != null &&
 					((property.createRequired && action.exportMode.includes('Create')) ||
 						(property.updateRequired && action.exportMode.includes('Update'))));
@@ -2377,8 +2378,8 @@ const TransformationProperty = ({
 	tableKey,
 	hideCheckbox = false,
 }: TransformationPropertyProps) => {
-	const { isImport } = useContext(ActionContext);
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
+	const { isImport, actionType } = useContext(ActionContext);
 
 	let path = property.name;
 	if (parentName) {
@@ -2403,6 +2404,7 @@ const TransformationProperty = ({
 
 	const hasRequired =
 		isTableKey ||
+		(actionType.target === 'Events' && (property.createRequired || property.updateRequired)) ||
 		(exportMode != null &&
 			((property.createRequired && exportMode.includes('Create')) ||
 				(property.updateRequired && exportMode.includes('Update'))));
