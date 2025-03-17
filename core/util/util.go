@@ -14,10 +14,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
-
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
+
+	"github.com/google/uuid"
 )
 
 // ParseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as

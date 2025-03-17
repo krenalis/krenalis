@@ -23,7 +23,6 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/testimages"
 	"github.com/meergo/meergo/types"
-
 	_ "github.com/meergo/meergo/warehouses" // for registering warehouses.
 
 	"github.com/testcontainers/testcontainers-go"

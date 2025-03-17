@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
@@ -26,6 +25,8 @@ import (
 	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
+
+	"github.com/google/uuid"
 )
 
 // Action represents an action of a connection.

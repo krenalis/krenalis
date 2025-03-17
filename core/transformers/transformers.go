@@ -14,9 +14,8 @@ import (
 
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers/mappings"
-	"github.com/meergo/meergo/types"
-
 	meergoMetrics "github.com/meergo/meergo/metrics"
+	"github.com/meergo/meergo/types"
 )
 
 // Purpose represents the purpose of a record transformation.
