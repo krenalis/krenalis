@@ -19,6 +19,157 @@ import (
 // load loads the state.
 func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
+	// Read all connectors.
+	connectors := meergo.Connectors()
+	state.connectors = make(map[string]*Connector, len(connectors))
+	for name, connector := range connectors {
+		c := Connector{}
+		switch connector := connector.(type) {
+		case meergo.AppInfo:
+			c.Name = connector.Name
+			c.Type = App
+			if asSource := connector.AsSource; asSource != nil {
+				c.SourceTargets = ConnectorTargets(asSource.Targets)
+				c.SourceDescription = asSource.Description
+				c.HasSourceSettings = asSource.HasSettings
+			}
+			if asDest := connector.AsDestination; asDest != nil {
+				c.DestinationTargets = ConnectorTargets(asDest.Targets)
+				c.DestinationDescription = asDest.Description
+				c.HasDestinationSettings = asDest.HasSettings
+			}
+			c.TermForUsers = connector.TermForUsers
+			c.TermForGroups = connector.TermForGroups
+			switch connector.AsDestination.SendingMode {
+			case meergo.Cloud:
+				mode := Cloud
+				c.SendingMode = &mode
+			case meergo.Device:
+				mode := Device
+				c.SendingMode = &mode
+			case meergo.Combined:
+				mode := Combined
+				c.SendingMode = &mode
+			}
+			c.IdentityIDLabel = connector.IdentityIDLabel
+			c.WebhooksPer = WebhooksPer(connector.WebhooksPer)
+			if connector.OAuth.AuthURL != "" {
+				c.OAuth = &OAuth{
+					OAuth: connector.OAuth,
+				}
+			}
+			c.BackoffPolicy = connector.BackoffPolicy
+			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
+			c.Icon = connector.Icon
+			if connectorsOAuth != nil {
+				if oAuth, ok := connectorsOAuth[c.Name]; ok {
+					c.OAuth.ClientID = oAuth.ClientID
+					c.OAuth.ClientSecret = oAuth.ClientSecret
+				}
+			}
+		case meergo.DatabaseInfo:
+			c.Name = connector.Name
+			c.Type = Database
+			// It is assumed that each Database connector supports both read
+			// and write operations.
+			c.SourceTargets = UsersFlag
+			c.DestinationTargets = UsersFlag
+			// It is assumed that each Database connector always have both
+			// source and destination settings.
+			c.SourceDescription = "Import users from " + article(c.Name) + " " + c.Name + " database"
+			c.DestinationDescription = "Exports users to " + article(c.Name) + " " + c.Name + " database"
+			c.HasSourceSettings = true
+			c.HasDestinationSettings = true
+			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
+			c.SampleQuery = connector.SampleQuery
+			c.Icon = connector.Icon
+		case meergo.FileInfo:
+			c.Name = connector.Name
+			c.Type = File
+			if connector.AsSource != nil {
+				c.SourceTargets = UsersFlag
+				c.SourceDescription = "Import users from " + article(c.Name) + " " + c.Name + " file"
+				c.HasSourceSettings = connector.AsSource.HasSettings
+			}
+			if connector.AsDestination != nil {
+				c.DestinationTargets = UsersFlag
+				c.DestinationDescription = "Exports users to " + article(c.Name) + " " + c.Name + " file"
+				c.HasDestinationSettings = connector.AsDestination.HasSettings
+			}
+			c.FileExtension = connector.Extension
+			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
+			c.Icon = connector.Icon
+			c.HasSheets = connector.HasSheets
+		case meergo.FileStorageInfo:
+			c.Name = connector.Name
+			c.Type = FileStorage
+			if connector.AsSource {
+				c.SourceTargets = UsersFlag
+				c.SourceDescription = "Import users from a file on " + c.Name
+				// It is assumed that, if a FileStorage connector can be
+				// used as a source, it always has source settings.
+				c.HasSourceSettings = true
+			}
+			if connector.AsDestination {
+				c.DestinationTargets = UsersFlag
+				c.DestinationDescription = "Exports users to a file on " + c.Name
+				// It is assumed that, if a FileStorage connector can be
+				// used as a destination, it always has destination
+				// settings.
+				c.HasDestinationSettings = true
+			}
+			c.Icon = connector.Icon
+		case meergo.MobileInfo:
+			c.Name = connector.Name
+			c.Type = Mobile
+			c.SourceDescription = connector.SourceDescription
+			c.DestinationDescription = connector.DestinationDescription
+			c.TermForUsers = "users"
+			c.TermForGroups = "groups"
+			c.SourceTargets = EventsFlag | UsersFlag
+			c.Icon = connector.Icon
+		case meergo.ServerInfo:
+			c.Name = connector.Name
+			c.Type = Server
+			c.SourceDescription = connector.SourceDescription
+			c.DestinationDescription = connector.DestinationDescription
+			c.TermForUsers = "users"
+			c.TermForGroups = "groups"
+			c.SourceTargets = EventsFlag | UsersFlag
+			c.Icon = connector.Icon
+		case meergo.StreamInfo:
+			c.Name = connector.Name
+			c.Type = Stream
+			c.SourceDescription = connector.SourceDescription
+			c.DestinationDescription = connector.DestinationDescription
+			c.SourceTargets = EventsFlag
+			// It is assumed that a stream connector always have settings.
+			c.HasSourceSettings = true
+			c.HasDestinationSettings = true
+			c.Icon = connector.Icon
+		case meergo.WebsiteInfo:
+			c.Name = connector.Name
+			c.Type = Website
+			c.SourceDescription = connector.SourceDescription
+			c.DestinationDescription = connector.DestinationDescription
+			c.TermForUsers = "users"
+			c.TermForGroups = "groups"
+			c.SourceTargets = EventsFlag | UsersFlag
+			c.Icon = connector.Icon
+		}
+		state.connectors[name] = &c
+	}
+
+	// Read all warehouse types.
+	drivers := meergo.WarehouseDrivers()
+	state.warehouseTypes = make(map[string]WarehouseType, len(drivers))
+	for _, driver := range drivers {
+		state.warehouseTypes[driver.Name] = WarehouseType{
+			Name: driver.Name,
+			Icon: driver.Icon,
+		}
+	}
+
 	n := LoadState{ID: state.id}
 
 	ctx := state.close.ctx
@@ -30,157 +181,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			Scan(&state.election.number, &state.election.leader)
 		if err != nil {
 			return err
-		}
-
-		// Read all connectors.
-		connectors := meergo.Connectors()
-		state.connectors = make(map[string]*Connector, len(connectors))
-		for name, connector := range connectors {
-			c := Connector{}
-			switch connector := connector.(type) {
-			case meergo.AppInfo:
-				c.Name = connector.Name
-				c.Type = App
-				if asSource := connector.AsSource; asSource != nil {
-					c.SourceTargets = ConnectorTargets(asSource.Targets)
-					c.SourceDescription = asSource.Description
-					c.HasSourceSettings = asSource.HasSettings
-				}
-				if asDest := connector.AsDestination; asDest != nil {
-					c.DestinationTargets = ConnectorTargets(asDest.Targets)
-					c.DestinationDescription = asDest.Description
-					c.HasDestinationSettings = asDest.HasSettings
-				}
-				c.TermForUsers = connector.TermForUsers
-				c.TermForGroups = connector.TermForGroups
-				switch connector.AsDestination.SendingMode {
-				case meergo.Cloud:
-					mode := Cloud
-					c.SendingMode = &mode
-				case meergo.Device:
-					mode := Device
-					c.SendingMode = &mode
-				case meergo.Combined:
-					mode := Combined
-					c.SendingMode = &mode
-				}
-				c.IdentityIDLabel = connector.IdentityIDLabel
-				c.WebhooksPer = WebhooksPer(connector.WebhooksPer)
-				if connector.OAuth.AuthURL != "" {
-					c.OAuth = &OAuth{
-						OAuth: connector.OAuth,
-					}
-				}
-				c.BackoffPolicy = connector.BackoffPolicy
-				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
-				c.Icon = connector.Icon
-				if connectorsOAuth != nil {
-					if oAuth, ok := connectorsOAuth[c.Name]; ok {
-						c.OAuth.ClientID = oAuth.ClientID
-						c.OAuth.ClientSecret = oAuth.ClientSecret
-					}
-				}
-			case meergo.DatabaseInfo:
-				c.Name = connector.Name
-				c.Type = Database
-				// It is assumed that each Database connector supports both read
-				// and write operations.
-				c.SourceTargets = UsersFlag
-				c.DestinationTargets = UsersFlag
-				// It is assumed that each Database connector always have both
-				// source and destination settings.
-				c.SourceDescription = "Import users from " + article(c.Name) + " " + c.Name + " database"
-				c.DestinationDescription = "Exports users to " + article(c.Name) + " " + c.Name + " database"
-				c.HasSourceSettings = true
-				c.HasDestinationSettings = true
-				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
-				c.SampleQuery = connector.SampleQuery
-				c.Icon = connector.Icon
-			case meergo.FileInfo:
-				c.Name = connector.Name
-				c.Type = File
-				if connector.AsSource != nil {
-					c.SourceTargets = UsersFlag
-					c.SourceDescription = "Import users from " + article(c.Name) + " " + c.Name + " file"
-					c.HasSourceSettings = connector.AsSource.HasSettings
-				}
-				if connector.AsDestination != nil {
-					c.DestinationTargets = UsersFlag
-					c.DestinationDescription = "Exports users to " + article(c.Name) + " " + c.Name + " file"
-					c.HasDestinationSettings = connector.AsDestination.HasSettings
-				}
-				c.FileExtension = connector.Extension
-				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
-				c.Icon = connector.Icon
-				c.HasSheets = connector.HasSheets
-			case meergo.FileStorageInfo:
-				c.Name = connector.Name
-				c.Type = FileStorage
-				if connector.AsSource {
-					c.SourceTargets = UsersFlag
-					c.SourceDescription = "Import users from a file on " + c.Name
-					// It is assumed that, if a FileStorage connector can be
-					// used as a source, it always has source settings.
-					c.HasSourceSettings = true
-				}
-				if connector.AsDestination {
-					c.DestinationTargets = UsersFlag
-					c.DestinationDescription = "Exports users to a file on " + c.Name
-					// It is assumed that, if a FileStorage connector can be
-					// used as a destination, it always has destination
-					// settings.
-					c.HasDestinationSettings = true
-				}
-				c.Icon = connector.Icon
-			case meergo.MobileInfo:
-				c.Name = connector.Name
-				c.Type = Mobile
-				c.SourceDescription = connector.SourceDescription
-				c.DestinationDescription = connector.DestinationDescription
-				c.TermForUsers = "users"
-				c.TermForGroups = "groups"
-				c.SourceTargets = EventsFlag | UsersFlag
-				c.Icon = connector.Icon
-			case meergo.ServerInfo:
-				c.Name = connector.Name
-				c.Type = Server
-				c.SourceDescription = connector.SourceDescription
-				c.DestinationDescription = connector.DestinationDescription
-				c.TermForUsers = "users"
-				c.TermForGroups = "groups"
-				c.SourceTargets = EventsFlag | UsersFlag
-				c.Icon = connector.Icon
-			case meergo.StreamInfo:
-				c.Name = connector.Name
-				c.Type = Stream
-				c.SourceDescription = connector.SourceDescription
-				c.DestinationDescription = connector.DestinationDescription
-				c.SourceTargets = EventsFlag
-				// It is assumed that a stream connector always have settings.
-				c.HasSourceSettings = true
-				c.HasDestinationSettings = true
-				c.Icon = connector.Icon
-			case meergo.WebsiteInfo:
-				c.Name = connector.Name
-				c.Type = Website
-				c.SourceDescription = connector.SourceDescription
-				c.DestinationDescription = connector.DestinationDescription
-				c.TermForUsers = "users"
-				c.TermForGroups = "groups"
-				c.SourceTargets = EventsFlag | UsersFlag
-				c.Icon = connector.Icon
-			}
-			state.connectors[name] = &c
-		}
-
-		// Read all warehouse types.
-		drivers := meergo.WarehouseDrivers()
-		state.warehouseTypes = make(map[string]WarehouseType, len(drivers))
-		for _, driver := range drivers {
-			state.warehouseTypes[driver.Name] = WarehouseType{
-				Name: driver.Name,
-				Icon: driver.Icon,
-			}
 		}
 
 		// Read all organizations.
