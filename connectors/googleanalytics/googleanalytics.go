@@ -69,6 +69,7 @@ type innerSettings struct {
 
 // EventRequest returns a request to dispatch an event to the app.
 func (ga *Analytics) EventRequest(ctx context.Context, event meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+
 	req := &meergo.EventRequest{
 		Method: "POST",
 		URL:    "https://www.google-analytics.com/",
@@ -83,74 +84,54 @@ func (ga *Analytics) EventRequest(ctx context.Context, event meergo.Event, event
 	}
 	req.URL += "mp/collect?api_secret=" + _url.QueryEscape(secret) + "&measurement_id=" + _url.QueryEscape(ga.settings.MeasurementID)
 	req.Header.Set("Content-Type", "application/json")
-	var ev map[string]any
-	switch eventType {
-	case "page_view":
-		page, ok := event.Context().Page()
-		if !ok {
-			return nil, errors.New("event does not have a page in the context")
-		}
-		ev = map[string]any{
-			"page_location": page.URL(),
-			"page_referrer": page.Referrer(),
-			"page_title":    page.Title(),
-		}
-	case "share":
-		ev = map[string]any{}
-		if method, ok := properties["method"].(string); ok {
-			ev["method"] = method
-		}
-		if contentType, ok := properties["content_type"].(string); ok {
-			ev["content_type"] = contentType
-		}
-		if itemID, ok := properties["item_id"].(string); ok {
-			ev["item_id"] = itemID
+
+	// Marshal the properties, if present.
+	var propertiesJSON json.Value
+	if schema.Valid() {
+		var err error
+		propertiesJSON, err = types.Marshal(properties, schema)
+		if err != nil {
+			return nil, err
 		}
 	}
-	body := map[string]any{
-		// TODO(Gianluca): consider sending the user ID as the client_id, if
-		// defined, otherwise the anonymousID.
-		"client_id": event.AnonymousId(),
-		"user_id":   event.UserId(),
-		"events":    []map[string]any{ev},
+
+	// Prepare the request's body.
+	type requestEvent struct {
+		Name   string     `json:"name"`
+		Params json.Value `json:"params,omitempty"`
+	}
+	body := struct {
+		ClientID        string         `json:"client_id"`
+		UserID          string         `json:"user_id,omitempty"`
+		TimestampMicros int64          `json:"timestamp_micros"`
+		Events          []requestEvent `json:"events"`
+	}{
+		ClientID:        event.AnonymousId(),
+		UserID:          event.UserId(),
+		TimestampMicros: event.Timestamp().UnixMicro(),
+		Events: []requestEvent{
+			{Name: eventType, Params: propertiesJSON},
+		},
 	}
 	var err error
 	req.Body, err = json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
+
 	return req, nil
 }
 
 // EventTypes returns the event types of the connector's instance.
 func (ga *Analytics) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
-	return []*meergo.EventType{
-		// https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
-		{
-			ID:          "page_view",
-			Name:        "Page view",
-			Description: "Send a Page view event to Google Analytics",
-		},
-		// https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events#share
-		{
-			ID:          "share",
-			Name:        "Share",
-			Description: "Send a Share event to Google Analytics",
-		},
-	}, nil
+	return meergoEventTypes, nil
 }
 
 // Schema returns the schema of the specified target in the specified role.
 func (ga *Analytics) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-	switch eventType {
-	case "page_view":
-		return types.Type{}, nil
-	case "share":
-		return types.Object([]types.Property{
-			{Name: "method", Type: types.Text()},
-			{Name: "content_type", Type: types.Text()},
-			{Name: "item_id", Type: types.Text()},
-		}), nil
+	event, ok := eventTypeByID[eventType]
+	if ok {
+		return event.Schema, nil
 	}
 	return types.Type{}, meergo.ErrEventTypeNotExist
 }
