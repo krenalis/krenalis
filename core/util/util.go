@@ -16,8 +16,6 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
-
-	"github.com/google/uuid"
 )
 
 // ParseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as
@@ -57,20 +55,6 @@ func ParseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
 }
 
-// ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
-// and returns it in the canonical form without uppercase letters. The boolean
-// return value reports whether s is a UUID in the standard form.
-func ParseUUID(s string) (string, bool) {
-	if len(s) != 36 {
-		return "", false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
-}
-
 // PropertiesToColumns returns the columns of properties of t.
 func PropertiesToColumns(t types.Type) []meergo.Column {
 
@@ -90,18 +74,6 @@ func PropertiesToColumns(t types.Type) []meergo.Column {
 		})
 	}
 	return columns
-}
-
-// UUIDFromBytes returns the UUID corresponding to the given byte slice
-// (representing the 128 bit of the UUID, so it must have lenght 16) it in the
-// canonical string form without uppercase letters. The boolean return value
-// reports whether s represent an UUID or not.
-func UUIDFromBytes(s []byte) (string, bool) {
-	id, err := uuid.FromBytes(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
 }
 
 // ValidateStringField validates a string field identified by the provided name.

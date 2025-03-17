@@ -21,7 +21,6 @@ import (
 
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -531,12 +530,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if src == "" && nullable {
 				return nil, nil
 			}
-			value, valid = util.ParseUUID(src)
+			value, valid = types.ParseUUID(src)
 		case []byte:
 			if src == nil && nullable {
 				return nil, nil
 			}
-			value, valid = util.UUIDFromBytes(src)
+			value, valid = types.DecodeUUID(src)
 		}
 	case types.JSONKind:
 		var data []byte

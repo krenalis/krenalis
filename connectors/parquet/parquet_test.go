@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -435,7 +434,7 @@ func (writer *testRecordWriter) Record(record map[string]any) error {
 				writer.t.Fatalf("decimal values should have type decimal.Decimal, got %v (type %T)", record[name], record[name])
 			}
 		case types.UUIDKind:
-			record[name], _ = util.UUIDFromBytes(value.([]byte))
+			record[name], _ = types.DecodeUUID(value.([]byte))
 		case types.JSONKind:
 			record[name] = json.Value(value.([]byte))
 		case types.TextKind:

@@ -22,7 +22,6 @@ import (
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
-	"github.com/meergo/meergo/core/util"
 	meergoMetrics "github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 )
@@ -458,7 +457,7 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		case types.UUIDKind:
 			return v, nil
 		case types.TextKind:
-			u, ok := util.ParseUUID(v.(string))
+			u, ok := types.ParseUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inName, exName)
 			}

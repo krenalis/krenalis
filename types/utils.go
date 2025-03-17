@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // PathNotExistError is returned by PropertyByPath when the path does not exist.
@@ -54,6 +56,18 @@ func AsRole(t Type, role Role) Type {
 	}
 	t, _ = asRole(t, role)
 	return t
+}
+
+// DecodeUUID returns the UUID corresponding to the given byte slice
+// (representing the 128 bit of the UUID, so it must have length 16) it in the
+// canonical string form without uppercase letters. The boolean return value
+// reports whether s represent a UUID or not.
+func DecodeUUID(s []byte) (string, bool) {
+	id, err := uuid.FromBytes(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
 }
 
 // Equal reports whether two types are equal.
@@ -148,6 +162,20 @@ func NumProperties(t Type) int {
 		panic("cannot get the properties of a non-object type")
 	}
 	return len(t.vl.([]Property))
+}
+
+// ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
+// and returns it in the canonical form without uppercase letters. The boolean
+// return value reports whether s is a UUID in the standard form.
+func ParseUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
 }
 
 // Properties returns the properties of the object type t.
