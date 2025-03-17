@@ -37,7 +37,6 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
-	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
 )
 
@@ -819,7 +818,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 
 	var function state.TransformationFunction
 	if fn := n.Transformation.Function; fn != nil {
-		name := util.TransformationFunctionName(n.ID)
+		name := transformationFunctionName(n.ID)
 		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
 		if err != nil {
 			return 0, err
@@ -1497,13 +1496,11 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 				Source:  transformation.Function.Source,
 				Version: "1", // no matter the version, it will be overwritten by the temporary function.
 			}
-			name := "temp-" + uuid.NewString()
+			name := transformationFunctionName(0)
 			switch transformation.Function.Language {
 			case "JavaScript":
-				name += ".js"
 				action.Transformation.Function.Language = state.JavaScript
 			case "Python":
-				name += ".py"
 				action.Transformation.Function.Language = state.Python
 			}
 			action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
@@ -2330,7 +2327,7 @@ func (tp *tempFunctionProvider) Call(ctx context.Context, _, _ string, inSchema,
 			}
 		}()
 	}()
-	return tp.provider.Call(ctx, tp.name, version, inSchema, outSchema, preserveJSON, records)
+	return tp.provider.Call(ctx, id, version, inSchema, outSchema, preserveJSON, records)
 }
 
 func (tp *tempFunctionProvider) Close(_ context.Context) error { panic("not supported") }

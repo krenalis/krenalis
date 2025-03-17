@@ -92,13 +92,6 @@ func PropertiesToColumns(t types.Type) []meergo.Column {
 	return columns
 }
 
-// TransformationFunctionName returns the name of the transformation function
-// for an action in the specified language.
-func TransformationFunctionName(action int) string {
-	now := time.Now().UTC()
-	return fmt.Sprintf("meergo_action%d_%s-%09d", action, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
-}
-
 // UUIDFromBytes returns the UUID corresponding to the given byte slice
 // (representing the 128 bit of the UUID, so it must have lenght 16) it in the
 // canonical string form without uppercase letters. The boolean return value

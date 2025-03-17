@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
@@ -23,7 +24,6 @@ import (
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers/mappings"
-	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
@@ -733,7 +733,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	if fn := n.Transformation.Function; fn != nil {
 		current := this.action.Transformation.Function
 		if current == nil || fn.Language != current.Language {
-			name := util.TransformationFunctionName(n.ID)
+			name := transformationFunctionName(n.ID)
 			fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
 			if err != nil {
 				return err
@@ -1342,4 +1342,16 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 		InPaths:  fn.InPaths,
 		OutPaths: fn.OutPaths,
 	}
+}
+
+// transformationFunctionName returns the name of the transformation function
+// for an action in the specified language.
+// If action is 0, the returned name refers to a preview transformation
+// function.
+func transformationFunctionName(action int) string {
+	if action == 0 {
+		return fmt.Sprintf("meergo_preview_%s", uuid.NewString())
+	}
+	now := time.Now().UTC()
+	return fmt.Sprintf("meergo_action%d_%s-%09d", action, now.Format("2006-01-02T15-04-05"), now.Nanosecond())
 }

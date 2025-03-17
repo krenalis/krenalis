@@ -39,7 +39,6 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -660,13 +659,11 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 			Source:  transformation.Function.Source,
 			Version: "1", // no matter the version, it will be overwritten by the temporary function.
 		}
-		name := "temp-" + uuid.NewString()
+		name := transformationFunctionName(0)
 		switch transformation.Function.Language {
 		case "JavaScript":
-			name += ".js"
 			action.Transformation.Function.Language = state.JavaScript
 		case "Python":
-			name += ".py"
 			action.Transformation.Function.Language = state.Python
 		}
 		action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
