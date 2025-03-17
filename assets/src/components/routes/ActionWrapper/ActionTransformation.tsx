@@ -877,7 +877,9 @@ const TransformationBox = ({
 						}`}
 					>
 						<span className='action__transformation-output-property-key'>{k}</span>
-						<span className='action__transformation-output-property-type'>{property.type}</span>
+						<span className='action__transformation-output-property-type'>
+							{typeToString(property.full.type)}
+						</span>
 						{showRequired && (
 							<span className='action__transformation-output-property-required'>required</span>
 						)}
@@ -2436,6 +2438,15 @@ const TransformationProperty = ({
 		}
 	}
 
+	let typeName = '';
+	if (language === '') {
+		typeName = typeToString(property.type);
+	} else if (language === 'Python') {
+		typeName = toPythonType(property.type, property.nullable);
+	} else {
+		typeName = toJavascriptType(property.type, property.nullable);
+	}
+
 	return (
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isSelected ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
@@ -2483,13 +2494,7 @@ const TransformationProperty = ({
 						{property.name}
 					</span>
 					<span className='fullscreen-transformation__property-type'>
-						<span>
-							{language === ''
-								? property.type.kind
-								: language === 'Python'
-									? toPythonType(property.type, property.nullable)
-									: toJavascriptType(property.type, property.nullable)}
-						</span>
+						<span>{typeName}</span>
 						{side === 'input' && property.readOptional && <span>- optional</span>}
 						{showRequired && <span className='fullscreen-transformation__property-required'>required</span>}
 					</span>
@@ -2560,9 +2565,14 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 	return isVerticallyVisible;
 }
 
-function toJavascriptType(type: Type, nullable: boolean) {
-	// TODO: add additional information (property values, property
-	// length).
+function typeToString(type: Type) {
+	if (type.kind === 'array' || type.kind === 'map') {
+		return `${type.kind} of ${type.elementType.kind}`;
+	}
+	return type.kind;
+}
+
+function toJavascriptType(type: Type, nullable?: boolean) {
 	const name = type.kind;
 
 	let t: string;
@@ -2603,13 +2613,15 @@ function toJavascriptType(type: Type, nullable: boolean) {
 			t = 'string';
 			break;
 		case 'array':
-			t = 'Array';
+			let arrayType = toJavascriptType(type.elementType);
+			t = `${arrayType}[]`;
 			break;
 		case 'object':
 			t = 'Object';
 			break;
 		case 'map':
-			t = 'Map';
+			let mapType = toJavascriptType(type.elementType);
+			t = `Record<string, ${mapType}>`;
 			break;
 		default:
 			console.error(`schema contains unknown property type ${name}`);
@@ -2623,10 +2635,7 @@ function toJavascriptType(type: Type, nullable: boolean) {
 	return t;
 }
 
-function toPythonType(type: Type, nullable: boolean) {
-	// TODO: add additional information (property values, property
-	// length).
-
+function toPythonType(type: Type, nullable?: boolean) {
 	let t: string;
 	switch (type.kind) {
 		case 'boolean':
@@ -2667,13 +2676,15 @@ function toPythonType(type: Type, nullable: boolean) {
 			t = 'str';
 			break;
 		case 'array':
-			t = 'list';
+			let arrayType = toPythonType(type.elementType);
+			t = `list[${arrayType}]`;
 			break;
 		case 'object':
 			t = 'dict';
 			break;
 		case 'map':
-			t = 'dict';
+			let mapType = toPythonType(type.elementType);
+			t = `dict[str, ${mapType}]`;
 			break;
 		default:
 			console.error(`schema contains unknow property type ${type}`);
