@@ -15,7 +15,16 @@ import {
 } from '../api/types/action';
 import { ConnectorSettings } from '../api/types/responses';
 import { Compression } from '../api/types/connection';
-import Type, { ArrayType, FloatType, IntType, ObjectType, Property, TextType, UintType } from '../api/types/types';
+import Type, {
+	ArrayType,
+	FloatType,
+	IntType,
+	MapType,
+	ObjectType,
+	Property,
+	TextType,
+	UintType,
+} from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection, { isSourceEventConnection } from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
@@ -372,8 +381,10 @@ const validateTransformation = (
 // takes the flatten schema and add values, and disableds. In
 // 'transformActionMapping' set the values or set ''. This should only return
 // the list of flattened keys mapping to the full property object.
-const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
-	if (schema == null || schema.kind !== 'object') return null;
+const flattenSchema = (typ: ObjectType | ArrayType | MapType): TransformedMapping | null => {
+	if (typ == null || !isRecursiveType(typ)) {
+		return null;
+	}
 
 	const flattenProperty = (property: Property): TransformedProperty => {
 		const flat = {
@@ -409,8 +420,17 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 		return flattenedSubProperties;
 	};
 
+	let properties: Property[] = [];
+	if (typ.kind === 'object') {
+		properties = typ.properties;
+	} else {
+		const t = typ as ArrayType | MapType;
+		const elementTyp = t.elementType as ObjectType;
+		properties = elementTyp.properties;
+	}
+
 	let flattenedSchema = {};
-	for (const property of schema.properties!) {
+	for (const property of properties) {
 		const indentation = 0;
 		const flattened = flattenProperty(property);
 		flattened.indentation = indentation;
@@ -423,6 +443,12 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 	}
 
 	return flattenedSchema;
+};
+
+const isRecursiveType = (type: Type): boolean => {
+	return (
+		type.kind === 'object' || ((type.kind === 'array' || type.kind === 'map') && type.elementType.kind === 'object')
+	);
 };
 
 const transformActionType = (
@@ -1467,6 +1493,7 @@ export {
 	FILTER_OPERATORS,
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
+	isRecursiveType,
 	computeDefaultAction,
 	hasFilters,
 	computeActionTypeFields,

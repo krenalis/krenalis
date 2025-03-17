@@ -807,6 +807,10 @@ inherit the disabled style */
 	display: flex;
 }
 
+.fullscreen-transformation__property-check-empty {
+	width: 21px;
+}
+
 .fullscreen-transformation__property-name {
 	font-family: var(--monospace-fonts);
 	width: fit-content;

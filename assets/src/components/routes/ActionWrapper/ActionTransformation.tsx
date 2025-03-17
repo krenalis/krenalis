@@ -12,6 +12,7 @@ import {
 	doesLastChangeTimeColumnNeedFormat,
 	flattenSchema,
 	getTransformationFunctionParameterName,
+	isRecursiveType,
 	transformInActionToSet,
 } from '../../../lib/core/action';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
@@ -49,7 +50,7 @@ import {
 	TransformDataResponse,
 } from '../../../lib/api/types/responses';
 import getLanguageLogo from '../../helpers/getLanguageLogo';
-import Type, { ObjectType, Property } from '../../../lib/api/types/types';
+import Type, { ArrayType, MapType, ObjectType, Property } from '../../../lib/api/types/types';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
@@ -1695,7 +1696,7 @@ const FullscreenTransformation = ({
 							return null;
 						}
 					}
-					if (p.type.kind === 'object') {
+					if (isRecursiveType(p.type)) {
 						return (
 							<TransformationNestedProperties
 								key={p.name}
@@ -2078,7 +2079,7 @@ const FullscreenTransformation = ({
 											}
 										}
 
-										if (p.type.kind === 'object') {
+										if (isRecursiveType(p.type)) {
 											return (
 												<TransformationNestedProperties
 													key={p.name}
@@ -2191,11 +2192,12 @@ const TransformationNestedProperties = ({
 }: TransformationNestedPropertiesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
-	const typ = property.type as ObjectType;
-
 	let path = property.name;
-	if (parentName) {
+	let parentProperty: Property;
+	const isFirstLevel = parentName == null;
+	if (!isFirstLevel) {
 		path = parentName + '.' + property.name;
+		parentProperty = flatSchema[parentName]?.full;
 	}
 
 	let isSearched = false;
@@ -2209,16 +2211,31 @@ const TransformationNestedProperties = ({
 	if (searchTerm === '') {
 		hasSearchedChildren = true;
 	} else {
-		for (const key in flatSchema) {
-			const isChildren = key.startsWith(`${path}.`);
-			if (!isChildren) {
-				continue;
+		if (property.type.kind === 'object') {
+			for (const key in flatSchema) {
+				const isChildren = key.startsWith(`${path}.`);
+				if (!isChildren) {
+					continue;
+				}
+				const name = flatSchema[key].full.name;
+				const isSearched = name.toLowerCase().includes(searchTerm.toLowerCase());
+				if (isSearched) {
+					hasSearchedChildren = true;
+					break;
+				}
 			}
-			const name = flatSchema[key].full.name;
-			const isSearched = name.toLowerCase().includes(searchTerm.toLowerCase());
-			if (isSearched) {
-				hasSearchedChildren = true;
-				break;
+		} else {
+			// compute the sub-properties on the fly since array and map
+			// sub-properties are not already included inside the
+			// schemas of the action.
+			const s = flattenSchema(property.type as ArrayType | MapType);
+			for (const key in s) {
+				const name = s[key].full.name;
+				const isSearched = name.toLowerCase().includes(searchTerm.toLowerCase());
+				if (isSearched) {
+					hasSearchedChildren = true;
+					break;
+				}
 			}
 		}
 	}
@@ -2228,6 +2245,28 @@ const TransformationNestedProperties = ({
 	}
 
 	const showSearchedChildren = searchTerm !== '' && hasSearchedChildren;
+
+	let properties: Property[] = [];
+	if (property.type.kind === 'object') {
+		properties = property.type.properties;
+	} else {
+		const t = property.type as ArrayType | MapType;
+		const elementTyp = t.elementType as ObjectType;
+		properties = elementTyp.properties;
+	}
+
+	let hideCheckbox = false;
+	if (parentProperty != null && (parentProperty.type.kind === 'array' || parentProperty.type.kind === 'map')) {
+		// direct children of an array or map property.
+		hideCheckbox = true;
+	} else if (
+		(property.type.kind === 'array' || property.type.kind === 'map') &&
+		parentName != null &&
+		parentProperty == null
+	) {
+		// descendant of an array or map property.
+		hideCheckbox = true;
+	}
 
 	return (
 		<div
@@ -2247,14 +2286,15 @@ const TransformationNestedProperties = ({
 				isExpanded={isExpanded || showSearchedChildren}
 				setIsExpanded={setIsExpanded}
 				tableKey={tableKey}
+				hideCheckbox={hideCheckbox}
 			/>
 			<div
 				className='fullscreen-transformation__sub-properties'
 				style={{ '--property-indentation': `${nesting * 20}px` } as React.CSSProperties}
 			>
 				{(isExpanded || showSearchedChildren) &&
-					typ.properties.map((p) => {
-						if (p.type.kind === 'object') {
+					properties.map((p) => {
+						if (isRecursiveType(p.type)) {
 							return (
 								<TransformationNestedProperties
 									key={p.name}
@@ -2286,6 +2326,9 @@ const TransformationNestedProperties = ({
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
 									tableKey={tableKey}
+									hideCheckbox={
+										property.type.kind === 'array' || property.type.kind === 'map' || hideCheckbox
+									}
 								/>
 							);
 						}
@@ -2311,6 +2354,7 @@ interface TransformationPropertyProps {
 	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
 	isOutMatchingProperty?: boolean;
 	tableKey: string | null;
+	hideCheckbox?: boolean;
 }
 
 const TransformationProperty = ({
@@ -2329,6 +2373,7 @@ const TransformationProperty = ({
 	setIsExpanded,
 	isOutMatchingProperty,
 	tableKey,
+	hideCheckbox = false,
 }: TransformationPropertyProps) => {
 	const { isImport } = useContext(ActionContext);
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
@@ -2406,16 +2451,19 @@ const TransformationProperty = ({
 					/>
 				)}
 			</div>
-			{transformationType === 'function' && (
-				<SlCheckbox
-					className='fullscreen-transformation__property-check'
-					checked={isSelected || hasSelectedParent}
-					indeterminate={hasSelectedChildren && !isSelected}
-					disabled={(isOutMatchingProperty && !isSelected) || hasSelectedParent}
-					onSlChange={() => onChangeSelectedPath(path)}
-					size='small'
-				/>
-			)}
+			{transformationType === 'function' &&
+				(hideCheckbox ? (
+					<div className='fullscreen-transformation__property-check-empty' />
+				) : (
+					<SlCheckbox
+						className='fullscreen-transformation__property-check'
+						checked={isSelected || hasSelectedParent}
+						indeterminate={hasSelectedChildren && !isSelected}
+						disabled={(isOutMatchingProperty && !isSelected) || hasSelectedParent}
+						onSlChange={() => onChangeSelectedPath(path)}
+						size='small'
+					/>
+				))}
 			<div className='fullscreen-transformation__property'>
 				<div className='fullscreen-transformation__property-name'>
 					{parentName != null && <span className='fullscreen-transformation__property-nested-icon' />}
