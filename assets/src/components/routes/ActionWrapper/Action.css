@@ -1199,9 +1199,9 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__output-clear {
-	position: absolute;
-	right: 10px;
-	top: 5px;
+    position: fixed;
+    right: 25px;
+    top: 65px;
 }
 
 .fullscreen-transformation__output-success {
