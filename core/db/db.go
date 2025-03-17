@@ -31,6 +31,19 @@ var (
 	_ Connection = (*Tx)(nil)
 )
 
+// ErrTxClosed is the error returned by the Tx.Rollback method if the
+// transaction has already been closed.
+var ErrTxClosed = errors.New("transaction has already been closed")
+
+// TxCommitRollbackError is returned when a commit results in a rollback.
+type TxCommitRollbackError struct {
+	Err error
+}
+
+func (err TxCommitRollbackError) Error() string {
+	return fmt.Sprintf("transaction rolled back during commit: %s", err.Err)
+}
+
 // Result is the result returned by a call to the Exec method.
 type Result struct {
 	ct pgconn.CommandTag
@@ -336,13 +349,26 @@ type Tx struct {
 	ack     <-chan struct{}
 }
 
-// Commit the transaction. It cannot be called from within the function passed
-// to the Transaction method.
+// Commit commits the transaction. It must not be called from within the
+// function provided to the Transaction method.
+//
+// If no error is returned, the transaction has been committed successfully.
+// If a TxRollbackError is returned, the commit resulted in a rollback.
+// If any other error occurs, the connection is closed and the error is
+// returned.
 func (tx *Tx) Commit(ctx context.Context) error {
 	if tx.wrapped {
 		return errors.New("commit called in a wrapped transaction")
 	}
-	return tx.tx.Commit(ctx)
+	err := tx.tx.Commit(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrTxCommitRollback) {
+			return TxCommitRollbackError{Err: err}
+		}
+		_ = tx.tx.Conn().Close(ctx)
+		return err
+	}
+	return nil
 }
 
 // Exec implements the [Connection.Exec] method.
@@ -408,13 +434,29 @@ func (tx *Tx) QueryRow(ctx context.Context, query string, args ...any) *Row {
 	return &Row{Row: row}
 }
 
-// Rollback aborts the transaction. It cannot be called from within the function
-// passed to the Transaction method.
+// Rollback aborts the transaction. It must not be called from within the
+// function provided to the Transaction method.
+//
+// If the transaction is already closed, it returns ErrTxClosed.
+// If any other error occurs, the connection is closed and the error is
+// returned.
+//
+// It is safe to call Rollback in a defer statement to ensure that the
+// transaction is properly closed, even if it has already been closed by a
+// commit.
 func (tx *Tx) Rollback(ctx context.Context) error {
 	if tx.wrapped {
 		return errors.New("called in a wrapped transaction")
 	}
-	return tx.tx.Rollback(ctx)
+	err := tx.tx.Rollback(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrTxClosed) {
+			return ErrTxClosed
+		}
+		_ = tx.tx.Conn().Close(ctx)
+		return err
+	}
+	return nil
 }
 
 // ErrConstraintName returns the name of the constraint in err, if any.
