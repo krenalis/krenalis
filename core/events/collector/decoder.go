@@ -548,6 +548,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 				"city":      record.City.Names.EN,
 				"latitude":  record.Location.Latitude,
 				"longitude": record.Location.Longitude,
+				"speed":     0.0,
 			}
 			if code, ok := countryCode(record.Country.IsoCode); ok {
 				loc["country"] = code
