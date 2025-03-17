@@ -1127,7 +1127,7 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__event {
-	padding: 18px 20px;
+	padding: 18px 30px;
 	border-top: 1px solid var(--border-primary);
 	font-size: 13px;
 	display: flex;
@@ -1183,7 +1183,7 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__event-source {
-	padding: 20px;
+	padding: 20px 30px;
 	background-color: #fafbff;
 }
 
@@ -1199,9 +1199,9 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__output-clear {
-    position: fixed;
-    right: 25px;
-    top: 65px;
+	position: fixed;
+	right: 25px;
+	top: 65px;
 }
 
 .fullscreen-transformation__output-success {
