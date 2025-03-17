@@ -2320,7 +2320,7 @@ func newTempTransformerProvider(name string, language state.Language, source str
 func (tp *tempFunctionProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	id, version, err := tp.provider.Create(ctx, tp.name, tp.language, tp.source)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer func() {
 		go func() {
