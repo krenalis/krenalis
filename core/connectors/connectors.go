@@ -604,12 +604,12 @@ func setActionSettings(ctx context.Context, st *state.State, action int, setting
 		Action:   action,
 		Settings: settings,
 	}
-	err := st.Transaction(ctx, func(tx *state.Tx) error {
+	err := st.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "UPDATE actions SET format_settings = $1 WHERE id = $2", n.Settings, n.Action)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -634,12 +634,12 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 		Connection: connection,
 		Settings:   settings,
 	}
-	err := st.Transaction(ctx, func(tx *state.Tx) error {
+	err := st.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "UPDATE connections SET settings = $1 WHERE id = $2", n.Settings, n.Connection)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, err
 	})
 	return err
 }

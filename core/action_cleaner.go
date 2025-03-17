@@ -330,17 +330,17 @@ func (c *actionCleaner) purgeWorkspace(id int) {
 			b.WriteString("\nWHERE id = $1 AND actions_to_purge IS NOT NULL\nRETURNING actions_to_purge")
 			update := b.String()
 
-			err = c.state.Transaction(c.close.ctx, func(tx *state.Tx) error {
+			err = c.state.Transaction(c.close.ctx, func(tx *db.Tx) (any, error) {
 				var actions []int
 				err := tx.QueryRow(c.close.ctx, update, id).Scan(&actions)
 				if err != nil {
 					if err == sql.ErrNoRows {
-						return nil
+						return nil, nil
 					}
-					return err
+					return nil, err
 				}
 				n.ActionsToPurge = actions
-				return tx.Notify(c.close.ctx, n)
+				return n, nil
 			})
 
 			return err
@@ -405,15 +405,15 @@ func (c *actionCleaner) unsetIdentityProperties(id int) {
 			b.WriteString("\nWHERE id = $1\nRETURNING properties_to_unset")
 			update := b.String()
 
-			err = c.state.Transaction(c.close.ctx, func(tx *state.Tx) error {
+			err = c.state.Transaction(c.close.ctx, func(tx *db.Tx) (any, error) {
 				err := tx.QueryRow(c.close.ctx, update, id).Scan(&n.Properties)
 				if err != nil {
 					if err == sql.ErrNoRows {
-						return nil
+						return nil, nil
 					}
-					return err
+					return nil, err
 				}
-				return tx.Notify(c.close.ctx, n)
+				return n, nil
 			})
 
 			return err

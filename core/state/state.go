@@ -52,14 +52,14 @@ type State struct {
 	workspaces       map[int]*Workspace     // protected by mu
 
 	notifications struct {
-		channel <-chan notification
-		acks    *acks
-		stop    func()
+		*notifier
+		ch   <-chan notification
+		acks sync.Map
 	}
 	listeners []any
 	close     struct {
-		ctx       context.Context
-		CancelCtx context.CancelFunc
+		ctx    context.Context
+		cancel context.CancelFunc
 		sync.WaitGroup
 	}
 }
@@ -94,21 +94,27 @@ func New(db *db.DB, encryptionKey []byte, connectorsOAuth map[string]*ConnectorO
 		accounts:         map[int]*Account{},
 	}
 
-	// Listen to notifications.
-	state.notifications.acks = newAcks()
-	state.notifications.channel, state.notifications.stop = state.listenToNotifications()
+	// Init the notifier.
+	ch := make(chan notification, 10)
+	state.notifications.notifier = newNotifier(db, ch, encryptionKey[:32])
+	state.notifications.ch = ch
 
-	state.close.ctx, state.close.CancelCtx = context.WithCancel(context.Background())
+	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
 
+	// Load the state.
 	err = state.load(connectorsOAuth)
 	if err != nil {
-		state.notifications.stop()
+		state.notifications.Close()
 		return nil, err
 	}
 
-	// Keep updating.
+	// Keep the state updated.
 	state.close.Add(1)
 	go state.keep()
+
+	// Keep elections.
+	state.close.Add(1)
+	go state.keepElections()
 
 	return state, nil
 }
@@ -164,9 +170,9 @@ func (state *State) Actions() []*Action {
 // Close closes the state. When it is called, no calls to the State methods
 // should be in progress, and no further calls should be made.
 func (state *State) Close() {
-	state.close.CancelCtx()
+	state.close.cancel()
 	state.close.Wait()
-	state.notifications.stop()
+	state.notifications.Close()
 }
 
 // Connection returns the connection with identifier id.
@@ -269,6 +275,58 @@ func (state *State) Organizations() []*Organization {
 		return organizations[i].ID < organizations[j].ID
 	})
 	return organizations
+}
+
+// Transaction executes f in a transaction.
+func (state *State) Transaction(ctx context.Context, f func(tx *db.Tx) (any, error)) error {
+	tx, err := state.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	var id int64
+	var ack chan struct{}
+	defer func() {
+		if err := recover(); err != nil {
+			_ = tx.Rollback(ctx)
+			panic(err)
+		}
+	}()
+	n, err := f(tx)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return err
+	}
+	if n == nil {
+		return tx.Commit(ctx)
+	}
+	id, err = state.notifications.Notify(ctx, tx, n)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return err
+	}
+	if id == 0 {
+		return tx.Commit(ctx)
+	}
+	ack = make(chan struct{})
+	state.notifications.acks.Store(id, ack)
+	defer func() {
+		if ack == nil {
+			return
+		}
+		// Attempt to delete the ack channel.
+		if _, ok := state.notifications.acks.LoadAndDelete(id); !ok {
+			// If the keeper has already removed it, the notification was received.
+			// To prevent blocking the keeper, receive from the channel.
+			<-ack
+		}
+	}()
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+	<-ack
+	ack = nil
+	return nil
 }
 
 // Unfreeze unfreezes the state if there are no more pending Unfreeze calls.

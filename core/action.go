@@ -19,6 +19,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
@@ -184,7 +185,7 @@ func (this *Action) Delete(ctx context.Context) error {
 	n := state.DeleteAction{
 		ID: this.action.ID,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the action's function as discontinued.
 		now := time.Now().UTC()
 		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
@@ -193,25 +194,25 @@ func (this *Action) Delete(ctx context.Context) error {
 			"WHERE a.transformation_id != '' AND a.id = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Delete the action.
 		result, err := tx.Exec(ctx, "DELETE FROM actions WHERE id = $1", n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("action %d does not exist", n.ID)
+			return nil, errors.NotFound("action %d does not exist", n.ID)
 		}
 		// Mark the action as deleted.
 		if c.Role == state.Source && this.action.Target == state.Users {
 			_, err = tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_append(actions_to_purge, $1)"+
 				" WHERE actions_to_purge IS NOT NULL", n.ID)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -571,15 +572,15 @@ func (this *Action) SetSchedulePeriod(ctx context.Context, period *SchedulePerio
 			return errors.BadRequest("schedule period %d is not valid", period)
 		}
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE actions SET schedule_period = $1 WHERE id = $2 AND schedule_period <> $1", n.SchedulePeriod, n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil
+			return nil, nil
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -594,15 +595,15 @@ func (this *Action) SetStatus(ctx context.Context, enabled bool) error {
 		ID:      this.action.ID,
 		Enabled: enabled,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE actions SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil
+			return nil, nil
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -765,7 +766,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	}
 	update += "\nWHERE id = $32"
 
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var function state.TransformationFunction
 		if fn := n.Transformation.Function; fn != nil {
 			var current state.TransformationFunction
@@ -773,10 +774,10 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 				err := tx.QueryRow(ctx, "SELECT transformation_id, transformation_version, transformation_language, transformation_source "+
 					"FROM actions WHERE id = $1", n.ID).Scan(&current.ID, &current.Version, &current.Language, &current.Source)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if current.Language != fn.Language || current.Source != fn.Source {
-					return fmt.Errorf("abort update action %d: it was optimistically assumed that the transformation"+
+					return nil, fmt.Errorf("abort update action %d: it was optimistically assumed that the transformation"+
 						" had not changed, but it has indeed changed", n.ID)
 				}
 				fn.ID = current.ID
@@ -792,7 +793,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			"WHERE a.transformation_id != '' AND a.transformation_id != $2 AND a.id = $3\n"+
 			"ON CONFLICT (id) DO NOTHING", now, function.ID, n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Determine properties that are no longer transformed.
 		if c.Role == state.Source && this.action.Target == state.Users {
@@ -800,7 +801,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			err := tx.QueryRow(ctx, "SELECT transformation_out_paths, properties_to_unset "+
 				"FROM actions WHERE id = $1", n.ID).Scan(&prevOutPaths, &n.PropertiesToUnset)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			hasPath := make(map[string]struct{}, len(n.Transformation.OutPaths))
 			for _, path := range n.Transformation.OutPaths {
@@ -822,12 +823,12 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			n.ID,
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil
+			return nil, nil
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 
 	return err

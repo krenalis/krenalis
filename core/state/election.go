@@ -17,6 +17,8 @@ import (
 	"math/rand/v2"
 	"os"
 	"time"
+
+	"github.com/meergo/meergo/core/db"
 )
 
 var debugElection = false
@@ -31,7 +33,8 @@ const (
 // It is called in its own goroutine after the state is loaded.
 func (state *State) keepElections() {
 
-	state.close.Add(1)
+	defer state.close.Done()
+	state.election.lastSeen = time.Now()
 
 	// Check if the MEERGO_DEBUG_ELECTION variable is set.
 	if v := os.Getenv("MEERGO_DEBUG_ELECTION"); v == "true" {
@@ -61,8 +64,8 @@ func (state *State) keepElections() {
 		debugf("-- %d Leader\n", election.number)
 		for {
 			// Send the see leader notification.
-			err := state.Transaction(state.close.ctx, func(tx *Tx) error {
-				return tx.Notify(state.close.ctx, SeeLeader{Election: election.number})
+			err := state.Transaction(state.close.ctx, func(tx *db.Tx) (any, error) {
+				return SeeLeader{Election: election.number}, nil
 			})
 			if err == nil {
 				break
@@ -148,8 +151,6 @@ func (state *State) keepElections() {
 		}
 	}
 
-	state.close.Done()
-
 }
 
 // errEndedElection indicates that an election is ended.
@@ -165,7 +166,7 @@ func (state *State) electAsLeader(election int) error {
 		prevElection = math.MaxInt32
 	}
 	ctx := state.close.ctx
-	err := state.Transaction(ctx, func(tx *Tx) error {
+	err := state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var t bool
 		err := tx.QueryRow(ctx, "UPDATE election\n"+
 			"SET number = $1, leader = $2, date = NOW()::timestamp\n"+
@@ -174,9 +175,9 @@ func (state *State) electAsLeader(election int) error {
 			if err == sql.ErrNoRows {
 				err = errEndedElection
 			}
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }

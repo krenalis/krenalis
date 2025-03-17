@@ -723,7 +723,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			"WHERE id IN (" + b.String() + ")"
 	}
 
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		if n.Account.Code != "" {
 			if n.Account.ID == 0 {
 				// Insert a new account.
@@ -741,7 +741,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "accounts_workspace_fkey" {
 					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				}
-				return err
+				return nil, err
 			}
 		}
 		// Insert the connection.
@@ -755,16 +755,16 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_fkey" {
 				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 			}
-			return err
+			return nil, err
 		}
 		// Link connections.
 		if n.LinkedConnections != nil {
 			result, err := tx.Exec(ctx, add, n.ID)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if int(result.RowsAffected()) < len(n.LinkedConnections) {
-				return errors.Unprocessable(LinkedConnectionNotExist, "a linked connection does not exist")
+				return nil, errors.Unprocessable(LinkedConnectionNotExist, "a linked connection does not exist")
 			}
 		}
 		if n.EventWriteKey != "" {
@@ -772,10 +772,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, created_at) VALUES ($1, $2, $3)",
 				n.ID, n.EventWriteKey, time.Now().UTC())
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	if err != nil {
 		return 0, err
@@ -826,7 +826,7 @@ func (this *Workspace) Delete(ctx context.Context) error {
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the action functions as discontinued.
 		now := time.Now().UTC()
 		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
@@ -836,17 +836,17 @@ func (this *Workspace) Delete(ctx context.Context) error {
 			"WHERE a.transformation_id != '' AND c.workspace = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Delete the workspace.
 		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("workspace %d does not exist", n.ID)
+			return nil, errors.NotFound("workspace %d does not exist", n.ID)
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -1150,15 +1150,15 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 		Workspace: this.workspace.ID,
 		Name:      name,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1 WHERE id = $2", n.Name, n.Workspace)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("workspace %d does not exist", n.Workspace)
+			return nil, errors.NotFound("workspace %d does not exist", n.Workspace)
 		}
-		return tx.Notify(ctx, n)
+		return n, err
 	})
 	return err
 }
@@ -1375,16 +1375,16 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 		Name:          name,
 		UIPreferences: state.UIPreferences(uiPreferences),
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_user_profile_image = $2, "+
 			"ui_user_profile_first_name = $3, ui_user_profile_last_name = $4, "+
 			"ui_user_profile_extra = $5 WHERE id = $6",
 			n.Name, n.UIPreferences.UserProfile.Image, n.UIPreferences.UserProfile.FirstName,
 			n.UIPreferences.UserProfile.LastName, n.UIPreferences.UserProfile.Extra, n.Workspace)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -1429,7 +1429,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 		Identifiers:                    identifiers,
 	}
 
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		if len(identifiers) > 0 {
 			var s []byte
 			err := tx.QueryRow(ctx, "SELECT user_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
@@ -1437,29 +1437,29 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
 				}
-				return err
+				return nil, err
 			}
 			var schema types.Type
 			err = json.Unmarshal(s, &schema)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			for _, path := range identifiers {
 				p, err := types.PropertyByPath(schema, path)
 				if err != nil {
-					return errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
+					return nil, errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
 				}
 				if !canBeIdentifier(p.Type) {
-					return errors.Unprocessable(TypeNotAllowed, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
+					return nil, errors.Unprocessable(TypeNotAllowed, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
 				}
 			}
 		}
 		_, err := tx.Exec(ctx, "UPDATE workspaces SET resolve_identities_on_batch_import = $1,\n"+
 			"identifiers = $2 WHERE id = $3", n.ResolveIdentitiesOnBatchImport, n.Identifiers, n.Workspace)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 
 	return err
@@ -1514,11 +1514,11 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		CancelIncompatibleOperations: cancelIncompatibleOperations,
 	}
 
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3",
 			n.Mode, string(n.Settings), n.Workspace)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
 			var warehouseName string
@@ -1527,11 +1527,11 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
 				}
-				return err
+				return nil, err
 			}
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 
 	return err
@@ -1561,22 +1561,22 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 		CancelIncompatibleOperations: cancelIncompatibleOperations,
 	}
 
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2 AND warehouse_mode != $1", n.Mode, n.Workspace)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
 			exists, err := tx.QueryExists(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if !exists {
-				return errors.NotFound("workspace %d does not exist", n.Workspace)
+				return nil, errors.NotFound("workspace %d does not exist", n.Workspace)
 			}
-			return nil
+			return nil, nil
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 
 	return err

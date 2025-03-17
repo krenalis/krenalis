@@ -256,22 +256,22 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	if err != nil {
 		return err
 	}
-	err = core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
 		err := core.db.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return errors.NotFound("invitation token %q does not exist", token)
+				return nil, errors.NotFound("invitation token %q does not exist", token)
 			}
-			return err
+			return nil, err
 		}
 		if isInvitationTokenExpired(createdAt) {
-			return errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
+			return nil, errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
 		}
 		_, err = core.db.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3",
 			name, string(pass), id)
-		return err
+		return nil, err
 	})
 	return err
 }

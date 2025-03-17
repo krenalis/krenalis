@@ -15,7 +15,7 @@ func TestParsePayload(t *testing.T) {
 
 	tests := []struct {
 		notification string
-		id           int
+		id           int64
 		name         string
 		payload      string
 		err          bool

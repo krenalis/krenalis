@@ -27,7 +27,9 @@ const logNotifications = false // Set to true to enable logging of received noti
 func (state *State) keep() {
 
 	defer state.close.Done()
+
 	done := state.close.ctx.Done()
+	notifications := state.notifications.ch
 
 	var n notification
 
@@ -35,16 +37,10 @@ func (state *State) keep() {
 		select {
 		case <-done:
 			return
-		case n = <-state.notifications.channel:
+		case n = <-notifications:
 		}
 		if logNotifications {
-			slog.Info("core/state: received notification", "pid", n.PID, "name", n.Name, "payload", n.Payload)
-		}
-		if !state.syncing && n.Name != "LoadState" {
-			if n.Ack != nil {
-				n.Ack <- struct{}{}
-			}
-			continue
+			slog.Info("core/state: received notification", "id", n.ID, "name", n.Name, "payload", n.Payload)
 		}
 		state.changing.Lock()
 		switch n.Name {
@@ -76,8 +72,6 @@ func (state *State) keep() {
 			state.executeAction(n)
 		case "LinkConnection":
 			state.linkConnection(n)
-		case "LoadState":
-			state.loadState(n)
 		case "PurgeActions":
 			state.purgeActions(n)
 		case "RenameConnection":
@@ -115,11 +109,14 @@ func (state *State) keep() {
 		case "UnlinkConnection":
 			state.unlinkConnection(n)
 		default:
-			slog.Warn("core/state: unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
+			slog.Warn("core/state: unknown notification", "id", n.ID, "name", n.Name, "payload", n.Payload)
 		}
 		state.changing.Unlock()
-		if n.Ack != nil {
-			n.Ack <- struct{}{}
+		if n.ID > 0 {
+			// Acknowledge that the notification has been received.
+			if ack, ok := state.notifications.acks.LoadAndDelete(n.ID); ok {
+				ack.(chan struct{}) <- struct{}{}
+			}
 		}
 	}
 
@@ -129,7 +126,7 @@ func (state *State) keep() {
 func decodeNotification(n notification, e any) bool {
 	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
 	if err != nil {
-		slog.Error("core/state: cannot unmarshal notification", "name", n.Name, "pid", n.PID, "err", err)
+		slog.Error("core/state: cannot unmarshal notification", "id", n.ID, "name", n.Name, "err", err)
 		return false
 	}
 	return true
@@ -820,26 +817,6 @@ func (state *State) linkConnection(n notification) {
 				c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[(i+1)%2])
 			})
 		}
-	}
-}
-
-// LoadState is the event sent when a state is loaded.
-type LoadState struct {
-	ID uuid.UUID
-}
-
-// loadState loads the state.
-func (state *State) loadState(n notification) {
-	e := LoadState{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	if e.ID == state.id {
-		state.syncing = true
-		state.mu.Lock()
-		state.election.lastSeen = time.Now()
-		state.mu.Unlock()
-		go state.keepElections()
 	}
 }
 

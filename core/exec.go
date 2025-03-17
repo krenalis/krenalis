@@ -48,7 +48,7 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 		StartTime: time.Now().UTC(),
 	}
 
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var function string
 		var inc, executing bool
 		var cursor time.Time
@@ -60,12 +60,12 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 			"LIMIT 1", n.Action).Scan(&function, &inc, &cursor, &executing)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return errors.NotFound("action %d does not exist", n.Action)
+				return nil, errors.NotFound("action %d does not exist", n.Action)
 			}
-			return err
+			return nil, err
 		}
 		if executing {
-			return errors.Unprocessable(ExecutionInProgress, "execution of action %d is in progress", this.action.ID)
+			return nil, errors.Unprocessable(ExecutionInProgress, "execution of action %d is in progress", this.action.ID)
 		}
 		if incremental == nil {
 			n.Incremental = inc
@@ -83,9 +83,9 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 					err = errors.NotFound("action %d does not exit", n.Action)
 				}
 			}
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	if err != nil {
 		return 0, err
@@ -138,7 +138,7 @@ func (this *Action) exec(ctx context.Context) {
 		}
 
 		// TODO(marco) retry if the transaction fails.
-		err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			_, err := tx.Exec(ctx,
 				"WITH s AS (\n"+
 					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
@@ -158,7 +158,7 @@ func (this *Action) exec(ctx context.Context) {
 					"FROM s\n"+
 					"WHERE id = $1", n.ID, this.action.ID, timeSlot, endTime, errorStep, errorMessage)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			var exists bool
 			err = tx.QueryRow(ctx, "UPDATE actions SET cursor = (SELECT cursor FROM actions_executions WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
@@ -166,11 +166,11 @@ func (this *Action) exec(ctx context.Context) {
 			if err != nil {
 				if err == sql.ErrNoRows {
 					// The action does not exist anymore.
-					return nil
+					return nil, nil
 				}
-				return err
+				return nil, err
 			}
-			return tx.Notify(ctx, n)
+			return n, nil
 		})
 		if err != nil {
 			slog.Error("core: cannot update action execution status",

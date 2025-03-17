@@ -251,3 +251,44 @@ CREATE TABLE accounts (
 );
 
 CREATE INDEX ON accounts (connector);
+
+CREATE TYPE notification_name AS ENUM (
+    'CreateAPIKey',
+    'CreateAction',
+    'CreateConnection',
+    'CreateEventWriteKey',
+    'CreateWorkspace',
+    'DeleteAPIKey',
+    'DeleteAction',
+    'DeleteConnection',
+    'DeleteEventWriteKey',
+    'DeleteWorkspace',
+    'EndActionExecution',
+    'ExecuteAction',
+    'LinkConnection',
+    'PurgeActions',
+    'RenameConnection',
+    'RenameWorkspace',
+    'SetAccount',
+    'SetActionFormatSettings',
+    'SetActionSchedulePeriod',
+    'SetActionStatus',
+    'SetConnectionSettings',
+    'UnlinkConnection',
+    'UpdateAction',
+    'UpdateConnection',
+    'UpdateIdentityPropertiesToUnset',
+    'UpdateIdentityResolutionSettings',
+    'UpdateUserSchema',
+    'UpdateWarehouse',
+    'UpdateWarehouseMode',
+    'UpdateWorkspace'
+);
+
+CREATE TABLE notifications (
+    id bigint GENERATED ALWAYS AS IDENTITY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    name notification_name NOT NULL,
+    payload jsonb NOT NULL,
+    PRIMARY KEY (id)
+);

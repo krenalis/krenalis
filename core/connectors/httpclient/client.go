@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
 
@@ -87,14 +88,14 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 		ExpiresIn:    expiresIn,
 	}
 
-	err = c.http.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = c.http.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err = tx.Exec(ctx,
 			"UPDATE accounts SET access_token = $1, refresh_token = $2, expires_in = $3 WHERE id = $4",
 			n.AccessToken, n.RefreshToken, n.ExpiresIn, n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	if err != nil {
 		return "", err

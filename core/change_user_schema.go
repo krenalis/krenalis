@@ -199,7 +199,7 @@ Identifiers:
 		insertPrimarySources = "INSERT INTO user_schema_primary_sources (source, path) VALUES " + b.String()
 	}
 
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 
 		// TODO(Gianluca): the altering of the columns of the users table is
 		// done within the transaction to avoid updating the state when in
@@ -214,30 +214,30 @@ Identifiers:
 		err = this.store.AlterUserSchema(ctx, schema, operations)
 		if err != nil {
 			if err == datastore.ErrAlterInProgress {
-				return errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is already in progress on the warehouse")
+				return nil, errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is already in progress on the warehouse")
 			}
 			if err == datastore.ErrIdentityResolutionInProgress {
-				return errors.Unprocessable(IdentityResolutionInProgress, "an Identity Resolution is currently in progress on the warehouse")
+				return nil, errors.Unprocessable(IdentityResolutionInProgress, "an Identity Resolution is currently in progress on the warehouse")
 			}
 			if err == datastore.ErrInspectionMode {
-				return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+				return nil, errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 			}
 			if err, ok := err.(*datastore.UnavailableError); ok {
-				return errors.Unavailable("%s", err)
+				return nil, errors.Unavailable("%s", err)
 			}
-			return err
+			return nil, err
 		}
 
 		// Update the schema.
 		_, err := tx.Exec(ctx, "UPDATE workspaces SET user_schema = $1, identifiers = $2 WHERE id = $3", schemaJSON, n.Identifiers, n.Workspace)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Update the primary sources.
 		_, err = tx.Exec(ctx, "DELETE FROM user_schema_primary_sources s USING connections c\n"+
 			"WHERE c.workspace = $1 AND s.source = c.id", n.Workspace)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if insertPrimarySources != "" {
 			_, err = tx.Exec(ctx, insertPrimarySources, paths...)
@@ -245,11 +245,11 @@ Identifiers:
 				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "user_schema_primary_sources_source_fkey" {
 					err = errors.Unprocessable(ConnectionNotExist, "a primary source does not exist")
 				}
-				return err
+				return nil, err
 			}
 		}
 
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	if err != nil {
 		return err

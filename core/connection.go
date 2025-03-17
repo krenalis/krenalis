@@ -844,17 +844,17 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	}
 
 	// Add the action.
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		switch n.Target {
 		case state.Events:
 			switch connector.Type {
 			case state.Mobile, state.Server, state.Website:
 				exists, err := tx.QueryExists(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if exists {
-					return errors.Unprocessable(TargetExist,
+					return nil, errors.Unprocessable(TargetExist,
 						"action with target %s already exists for %s connection %d", n.Target, connector.Type, n.Connection)
 				}
 			}
@@ -863,7 +863,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 			err = tx.QueryRow(ctx, "SELECT schedule_start FROM actions WHERE connection = $1\n"+
 				" AND target IN ('Users', 'Groups') LIMIT 1", n.Connection).Scan(&n.ScheduleStart)
 			if err != nil && err != sql.ErrNoRows {
-				return err
+				return nil, err
 			}
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
@@ -885,9 +885,9 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
 			}
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	if err != nil {
 		return 0, err
@@ -923,14 +923,14 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 		Key:        key,
 		CreatedAt:  time.Now().UTC(),
 	}
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM event_write_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if count == maxKeysPerConnection {
-			return errors.Unprocessable(TooManyEventWriteKeys, "connection %d has already %d event write keys", n.Connection, maxKeysPerConnection)
+			return nil, errors.Unprocessable(TooManyEventWriteKeys, "connection %d has already %d event write keys", n.Connection, maxKeysPerConnection)
 		}
 		_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, created_at) VALUES ($1, $2, $3)",
 			n.Connection, n.Key, n.CreatedAt)
@@ -940,9 +940,9 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 					err = errors.NotFound("connection %d does not exist", n.Connection)
 				}
 			}
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	if err != nil {
 		return "", err
@@ -962,7 +962,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 	}
 	connector := c.Connector()
 	workspace := c.Workspace()
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the connection's functions as discontinued.
 		now := time.Now().UTC()
 		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
@@ -971,7 +971,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 			"WHERE a.transformation_id != '' AND a.connection = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Mark the connection's actions on Users as deleted.
 		if c.Role == state.Source {
@@ -979,16 +979,16 @@ func (this *Connection) Delete(ctx context.Context) error {
 				"\tSELECT array_agg(a.id) FROM actions a WHERE a.connection = $1 AND a.target = 'Users'\n"+
 				"))\nWHERE id = $2 AND actions_to_purge IS NOT NULL", n.ID, workspace.ID)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 		// Delete the connection.
 		result, err := tx.Exec(ctx, "DELETE FROM connections WHERE id = $1", n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("connection %d does not exist", n.ID)
+			return nil, errors.NotFound("connection %d does not exist", n.ID)
 		}
 		role := "Source"
 		if c.Role == state.Source {
@@ -1004,7 +1004,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 			"WHERE workspace = $2 AND role = $3 AND linked_connections IS NOT NULL AND $1 = ANY(linked_connections)",
 			n.ID, workspace.ID, role)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if connector.OAuth != nil {
 			// Delete the account of the deleted connection if it has no other connections.
@@ -1012,15 +1012,15 @@ func (this *Connection) Delete(ctx context.Context) error {
 				"\tSELECT FROM connections AS c\n"+
 				"\tWHERE a.id = c.account AND c.id <> $1 AND c.account IS NULL\n)", n.ID)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 		// Remove the connection as primary source, if any.
 		_, err = tx.Exec(ctx, "DELETE FROM user_schema_primary_sources WHERE source = $1", n.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -1054,23 +1054,23 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 		Connection: c.ID,
 		Key:        key,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var count int
 		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM event_write_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if count == 1 {
-			return errors.Unprocessable(SingleEventWriteKey, "key cannot be deleted as it is the connection’s only key")
+			return nil, errors.Unprocessable(SingleEventWriteKey, "key cannot be deleted as it is the connection’s only key")
 		}
 		result, err := tx.Exec(ctx, "DELETE FROM event_write_keys WHERE connection = $1 AND key = $2", n.Connection, n.Key)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("key %q does not exist", key)
+			return nil, errors.NotFound("key %q does not exist", key)
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 
 	return err
@@ -1376,25 +1376,25 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	n := state.LinkConnection{
 		Connections: [2]int{this.connection.ID, dst},
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		const add = "UPDATE connections\n" +
 			"SET linked_connections = (SELECT ARRAY(SELECT DISTINCT unnest(array_append(linked_connections, $1)) ORDER BY 1))\n" +
 			"WHERE id = $2"
 		result, err := tx.Exec(ctx, add, n.Connections[1], n.Connections[0])
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil
+			return nil, nil
 		}
 		result, err = tx.Exec(ctx, add, n.Connections[0], n.Connections[1])
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("destination %d does not exist", n.Connections[1])
+			return nil, errors.NotFound("destination %d does not exist", n.Connections[1])
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -1612,15 +1612,15 @@ func (this *Connection) Rename(ctx context.Context, name string) error {
 		Connection: this.connection.ID,
 		Name:       name,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1 WHERE id = $2", n.Name, n.Connection)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("connection %d does not exist", n.Connection)
+			return nil, errors.NotFound("connection %d does not exist", n.Connection)
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -1798,7 +1798,7 @@ func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
 	n := state.UnlinkConnection{
 		Connections: [2]int{this.connection.ID, dst},
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		const remove = "UPDATE connections\n" +
 			"SET linked_connections =\n" +
 			"\tCASE\n" +
@@ -1808,19 +1808,19 @@ func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
 			"WHERE id = $2 AND $1 = ANY(linked_connections)"
 		result, err := tx.Exec(ctx, remove, n.Connections[1], n.Connections[0])
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil
+			return nil, nil
 		}
 		result, err = tx.Exec(ctx, remove, n.Connections[0], n.Connections[1])
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("destination %d does not exist", n.Connections[1])
+			return nil, errors.NotFound("destination %d does not exist", n.Connections[1])
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -1893,17 +1893,17 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 			c.Name, strings.ToLower(c.Type.String()))
 	}
 
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1,"+
 			" strategy = $2, sending_mode = $3, website_host = $4 WHERE id = $5",
 			n.Name, n.Strategy, n.SendingMode, n.WebsiteHost, n.Connection)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil
+			return nil, nil
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 
 	return err

@@ -202,7 +202,7 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 		Token:        generateAPIKeyToken(),
 	}
 	createdAt := time.Now().UTC().Truncate(time.Second)
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO api_keys (id, organization, workspace, name, token, created_at) "+
 			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6)", n.ID, n.Organization, n.Workspace, name, n.Token, createdAt)
 		if err != nil {
@@ -214,9 +214,9 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				}
 			}
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	if err != nil {
 		return 0, "", err
@@ -280,7 +280,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		return 0, err
 	}
 
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 			" user_schema, resolve_identities_on_batch_import, ui_user_profile_image, ui_user_profile_first_name, "+
 			" ui_user_profile_last_name, ui_user_profile_extra, warehouse_type, warehouse_mode, warehouse_settings)"+
@@ -292,12 +292,12 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
-					return errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
+					return nil, errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
 				}
 			}
-			return err
+			return nil, err
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	if err != nil {
 		return 0, err
@@ -317,15 +317,15 @@ func (this *Organization) DeleteAPIKey(ctx context.Context, id int) error {
 	n := state.DeleteAPIKey{
 		ID: id,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "DELETE FROM api_keys WHERE id = $1 AND organization = $2", id, this.organization.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.NotFound("API key %d does not exist", id)
+			return nil, errors.NotFound("API key %d does not exist", id)
 		}
-		return tx.Notify(ctx, n)
+		return n, nil
 	})
 	return err
 }
@@ -367,18 +367,18 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
 	now := time.Now().UTC()
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if exists {
-			return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		_, err = this.core.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
 			"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $6, created_at = $7",
 			this.organization.ID, "", email, "", nil, invitationToken, now)
-		return err
+		return nil, err
 	})
 	if err != nil {
 		return err
@@ -526,25 +526,25 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 			return err
 		}
 	}
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !exists {
-			return errors.NotFound("member %d does not exist", id)
+			return nil, errors.NotFound("member %d does not exist", id)
 		}
 		exists, err = this.core.db.QueryExists(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if exists {
-			return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		_, err = this.core.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE id = $3 AND organization = $4",
 			member.Name, member.Email, id, this.organization.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if member.Avatar != nil {
 			_, err = this.core.db.Exec(ctx, "UPDATE members SET avatar.image = $1, avatar.mime_type = $2 WHERE id = $3 AND organization = $4",
@@ -554,13 +554,13 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 				nil, id, this.organization.ID)
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if password != nil {
 			_, err = this.core.db.Exec(ctx, "UPDATE members SET password = $1 WHERE id = $2 AND organization = $3",
 				string(password), id, this.organization.ID)
 		}
-		return err
+		return nil, err
 	})
 	return err
 }
