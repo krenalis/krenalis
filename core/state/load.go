@@ -26,7 +26,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 	err := state.Transaction(ctx, func(tx *Tx) error {
 
 		// Read the latest election.
-		err := state.db.QueryRow(ctx, "SELECT number, leader FROM election LIMIT 1").
+		err := tx.QueryRow(ctx, "SELECT number, leader FROM election LIMIT 1").
 			Scan(&state.election.number, &state.election.leader)
 		if err != nil {
 			return err
@@ -185,7 +185,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all organizations.
 		state.organizations = map[int]*Organization{}
-		err = state.db.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
+		err = tx.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
 			var id int
 			var name string
 			for rows.Next() {
@@ -208,7 +208,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
+		err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
 			" warehouse_settings, user_schema, resolve_identities_on_batch_import,"+
 			" identifiers, ui_user_profile_image, ui_user_profile_first_name,"+
 			" ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
@@ -257,7 +257,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all API keys.
 		state.apiKeyByToken = map[string]*APIKey{}
-		err = state.db.QueryScan(ctx, "SELECT id, organization, workspace, token FROM api_keys",
+		err = tx.QueryScan(ctx, "SELECT id, organization, workspace, token FROM api_keys",
 			func(rows *db.Rows) error {
 				for rows.Next() {
 					k := APIKey{}
@@ -279,7 +279,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all accounts.
 		state.accounts = map[int]*Account{}
-		err = state.db.QueryScan(ctx, "SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM accounts",
+		err = tx.QueryScan(ctx, "SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM accounts",
 			func(rows *db.Rows) error {
 				for rows.Next() {
 					a := Account{}
@@ -302,7 +302,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all connections.
 		state.connections = map[int]*Connection{}
-		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, connector, role,"+
+		err = tx.QueryScan(ctx, "SELECT id, workspace, name, connector, role,"+
 			" account, strategy, sending_mode, website_host, linked_connections,"+
 			" settings, health FROM connections", func(rows *db.Rows) error {
 			for rows.Next() {
@@ -353,7 +353,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		}
 
 		// Read all event write keys.
-		err = state.db.QueryScan(ctx, `SELECT connection, key FROM event_write_keys ORDER BY connection, created_at`,
+		err = tx.QueryScan(ctx, `SELECT connection, key FROM event_write_keys ORDER BY connection, created_at`,
 			func(rows *db.Rows) error {
 				for rows.Next() {
 					var connectionID int
@@ -372,7 +372,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		}
 
 		// Read all actions.
-		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
+		err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_id,\n"+
 			"transformation_version, transformation_language, transformation_source, transformation_preserve_json,\n"+
 			"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression::TEXT,\n"+
@@ -443,7 +443,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		}
 
 		// Read running action executions.
-		err = state.db.QueryScan(ctx, "SELECT id, action, cursor, incremental, start_time\n"+
+		err = tx.QueryScan(ctx, "SELECT id, action, cursor, incremental, start_time\n"+
 			"FROM actions_executions\nWHERE end_time IS NULL",
 			func(rows *db.Rows) error {
 				for rows.Next() {
@@ -468,7 +468,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		}
 
 		// Read all primary sources.
-		err = state.db.QueryScan(ctx, "SELECT source, path FROM user_schema_primary_sources",
+		err = tx.QueryScan(ctx, "SELECT source, path FROM user_schema_primary_sources",
 			func(rows *db.Rows) error {
 				var source int
 				var path string
