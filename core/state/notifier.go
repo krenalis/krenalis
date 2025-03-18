@@ -119,7 +119,10 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int64, 
 		if err != nil {
 			return 0, err
 		}
-		err = tx.QueryRow(ctx, "INSERT INTO notifications (name, payload) VALUES ($1, $2) RETURNING id", name, payload).Scan(&id)
+		err = tx.QueryRow(ctx, "INSERT INTO notifications (id, name, payload)\n"+
+			"SELECT COALESCE(MAX(id), 0) + 1, $1, $2\n"+
+			"FROM notifications\n"+
+			"RETURNING id", name, payload).Scan(&id)
 		if err != nil {
 			return 0, err
 		}

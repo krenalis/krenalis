@@ -286,7 +286,7 @@ CREATE TYPE notification_name AS ENUM (
 );
 
 CREATE TABLE notifications (
-    id bigint GENERATED ALWAYS AS IDENTITY,
+    id bigint NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     name notification_name NOT NULL,
     payload jsonb NOT NULL,
