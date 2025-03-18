@@ -19,7 +19,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/db"
@@ -54,37 +53,6 @@ type ValidationError interface {
 	PropertyPath() string
 }
 
-// actionIdentityWriter represents an identity writer for an action.
-type actionIdentityWriter struct {
-	id          int //action identifier
-	writer      *datastore.EventIdentityWriter
-	mu          sync.Mutex // for transformer, records, and timer.
-	transformer *transformers.Transformer
-	identities  []events.Event
-	timer       *time.Timer
-}
-
-// newActionIdentityWriter returns a new actionIdentityWriter.
-func newActionIdentityWriter(ds *datastore.Datastore, action *state.Action, provider transformers.FunctionProvider, ack datastore.EventIdentityWriterAckFunc) *actionIdentityWriter {
-	sa := &actionIdentityWriter{id: action.ID}
-	ws := action.Connection().Workspace()
-	store := ds.Store(ws.ID)
-	sa.writer, _ = store.NewEventIdentityWriter(action.ID, ack)
-	if t := action.Transformation; t.Mapping != nil || t.Function != nil {
-		sa.transformer, _ = transformers.New(action, provider, nil)
-	}
-	return sa
-}
-
-// Close closes sa.
-func (sa *actionIdentityWriter) Close(ctx context.Context) error {
-	if sa.timer != nil {
-		sa.timer.Stop()
-		sa.timer = nil
-	}
-	return sa.writer.Close(ctx)
-}
-
 // A Collector collects events, persists them in the database and sends them to
 // the dispatcher.
 type Collector struct {
@@ -99,7 +67,7 @@ type Collector struct {
 	dispatcher       *dispatcher.Dispatcher
 	maxmindDB        *maxminddb.Reader
 	eventWriters     sync.Map // a map from workspace identifier to a *datastore.EventWriter value
-	actions          sync.Map // a map from action identifier to a *actionIdentityWriter value
+	identityWriters  sync.Map // a map from action identifier to a *identityWriter value
 	closed           atomic.Bool
 }
 
@@ -135,8 +103,8 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.Ope
 		if action.Connection().Keys == nil {
 			continue
 		}
-		sa := newActionIdentityWriter(c.datastore, action, provider, c.identityAck)
-		c.actions.Store(action.ID, sa)
+		iw := newIdentityWriter(c.datastore, action, provider, c.identityAck)
+		c.identityWriters.Store(action.ID, iw)
 	}
 	st.Unfreeze()
 
@@ -636,8 +604,8 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 		return
 	}
 	go func() {
-		sa := newActionIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
-		c.actions.Store(action.ID, sa)
+		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
+		c.identityWriters.Store(action.ID, iw)
 	}()
 }
 
@@ -649,11 +617,11 @@ func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
 
 // onDeleteAction is called when an action is deleted.
 func (c *Collector) onDeleteAction(n state.DeleteAction) {
-	sa, ok := c.actions.LoadAndDelete(n.ID)
+	iw, ok := c.identityWriters.LoadAndDelete(n.ID)
 	if !ok {
 		return
 	}
-	_ = sa.(*actionIdentityWriter).Close(context.Background())
+	_ = iw.(*identityWriter).Close(context.Background())
 	// TODO(marco): should the ongoing transformations be interrupted?
 }
 
@@ -667,11 +635,11 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 		if action.Target != state.Users || !action.Enabled {
 			continue
 		}
-		sa, ok := c.actions.LoadAndDelete(action.ID)
+		iw, ok := c.identityWriters.LoadAndDelete(action.ID)
 		if !ok {
 			continue
 		}
-		_ = sa.(*actionIdentityWriter).Close(context.Background())
+		_ = iw.(*identityWriter).Close(context.Background())
 	}
 }
 
@@ -692,13 +660,13 @@ func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 	}
 	if action.Enabled {
 		go func() {
-			sa := newActionIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
-			c.actions.Store(action.ID, sa)
+			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
+			c.identityWriters.Store(action.ID, iw)
 		}()
 		return
 	}
-	if a, ok := c.actions.LoadAndDelete(n.ID); ok {
-		_ = a.(*actionIdentityWriter).Close(context.Background())
+	if a, ok := c.identityWriters.LoadAndDelete(n.ID); ok {
+		_ = a.(*identityWriter).Close(context.Background())
 	}
 }
 
@@ -713,28 +681,28 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 		return
 	}
 	if !action.Enabled {
-		if a, ok := c.actions.LoadAndDelete(action.ID); ok {
-			_ = a.(*actionIdentityWriter).Close(context.Background())
+		if iw, ok := c.identityWriters.LoadAndDelete(action.ID); ok {
+			_ = iw.(*identityWriter).Close(context.Background())
 		}
 		return
 	}
-	a, ok := c.actions.Load(action.ID)
+	w, ok := c.identityWriters.Load(action.ID)
 	if !ok {
 		go func() {
-			sa := newActionIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
-			c.actions.Store(action.ID, sa)
+			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
+			c.identityWriters.Store(action.ID, iw)
 		}()
 		return
 	}
 	// The transformation might have changed.
-	sa := a.(*actionIdentityWriter)
-	sa.mu.Lock()
+	iw := w.(*identityWriter)
+	iw.mu.Lock()
 	if action.Transformation.Mapping == nil && action.Transformation.Function == nil {
-		sa.transformer = nil
+		iw.transformer = nil
 	} else {
-		sa.transformer, _ = transformers.New(action, c.functionProvider, nil)
+		iw.transformer, _ = transformers.New(action, c.functionProvider, nil)
 	}
-	sa.mu.Unlock()
+	iw.mu.Unlock()
 	// TODO(marco): il cambio del warehouse mode come influisce sulla source action?
 }
 
