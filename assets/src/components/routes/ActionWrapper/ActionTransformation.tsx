@@ -402,6 +402,12 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
+	const onChangeIncremental = () => {
+		const a = { ...action };
+		a.incremental = !a.incremental;
+		setAction(a);
+	};
+
 	const onOpenFullscreenTransformation = () => {
 		if (actionType.fields.includes('Matching')) {
 			// If the matching properties are not defined, prevent the opening
@@ -455,7 +461,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			className={`action__transformation${isTransformationDisabled ? ' action__transformation--disabled' : ''}`}
 			ref={ref}
 		>
-			{hasIdentityColumns && (
+			{hasIdentityColumns ? (
 				<Section
 					title='Identity columns'
 					description='The columns from which to import the value to uniquely identify a user identity, and possibly the time of its last modification.'
@@ -549,8 +555,33 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								</div>
 							)}
 						</div>
+						{actionType.fields.includes('Incremental') && (
+							<div className='action__transformation-incremental'>
+								<SlCheckbox
+									checked={action.incremental}
+									onSlChange={onChangeIncremental}
+									disabled={action.lastChangeTimeColumn === ''}
+									helpText='Only imports users whose last change time is subsequent to the last import'
+								>
+									Run incremental import
+								</SlCheckbox>
+							</div>
+						)}
 					</div>
 				</Section>
+			) : (
+				actionType.fields.includes('Incremental') && (
+					<Section
+						title='Incremental import'
+						description='Only imports users that have been updated since the last import'
+						padded={true}
+						annotated={true}
+					>
+						<SlCheckbox checked={action.incremental} onSlChange={onChangeIncremental}>
+							Run incremental import
+						</SlCheckbox>
+					</Section>
+				)
 			)}
 			<Section
 				title='Transformation'

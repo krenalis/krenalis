@@ -274,6 +274,10 @@ sl-switch::part(label) {
 	color: var(--text-light);
 }
 
+sl-checkbox::part(form-control-help-text) {
+	font-size: 12px;
+}
+
 /* || Panels */
 
 sl-dialog::part(panel) {

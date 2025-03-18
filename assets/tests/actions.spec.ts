@@ -78,7 +78,7 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 				{ "name": "last_name", "type": { "kind": "text", "charLen": 300 }, "readOptional": true, "description": "" }
 			]
 		},
-		"incremental": true,
+		"incremental": false,
 		"transformation": {
 			"mapping": {
 				"email": "email",
@@ -470,6 +470,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 			}
 		},
 		"query": "SELECT email, first_name, last_name FROM users WHERE \${last_change_time} LIMIT \${limit}",
+		"incremental": false,
 		"identityColumn": "email",
 		"lastChangeTimeColumn": "",
 		"lastChangeTimeFormat": ""
@@ -813,6 +814,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			"path": "test.csv",
 			"sheet": null,
 			"identityColumn": "email",
+			"incremental": false,
 			"lastChangeTimeColumn": "",
 			"lastChangeTimeFormat": "",
 			"compression": "",

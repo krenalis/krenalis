@@ -98,6 +98,7 @@ interface Action {
 	identityColumn: string | null;
 	lastChangeTimeColumn: string | null;
 	lastChangeTimeFormat: string | null;
+	incremental: boolean | null;
 	exportMode: ExportMode | null;
 	matching: Matching | null;
 	updateOnDuplicates: boolean | null;

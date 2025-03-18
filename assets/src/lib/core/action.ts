@@ -171,7 +171,8 @@ type ActionTypeField =
 	| 'Query'
 	| 'File'
 	| 'OrderBy'
-	| 'TableName';
+	| 'TableName'
+	| 'Incremental';
 
 interface TransformedActionType {
 	name: string;
@@ -207,6 +208,7 @@ interface TransformedAction {
 	identityColumn?: string | null;
 	lastChangeTimeColumn?: string | null;
 	lastChangeTimeFormat?: string | null;
+	incremental?: boolean | null;
 	orderBy?: string | null;
 	exportMode?: ExportMode | null;
 	matching?: Matching | null;
@@ -548,6 +550,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		identityColumn: action.identityColumn,
 		lastChangeTimeColumn: action.lastChangeTimeColumn,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
+		incremental: action.incremental,
 		exportMode: action.exportMode,
 		matching: action.matching,
 		updateOnDuplicates: action.updateOnDuplicates,
@@ -1063,6 +1066,15 @@ const transformInActionToSet = async (
 		inSchema = null;
 	}
 
+	let incremental = action.incremental;
+	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
+		// If last change time is not set the import cannot be
+		// incremental.
+		if (action.lastChangeTimeColumn === '') {
+			incremental = false;
+		}
+	}
+
 	const actionToSet: ActionToSet = {
 		name: action.name,
 		enabled: action.enabled,
@@ -1081,6 +1093,7 @@ const transformInActionToSet = async (
 		identityColumn: action.identityColumn,
 		lastChangeTimeColumn: action.lastChangeTimeColumn,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
+		incremental: incremental,
 		compression: action.compression,
 		orderBy: action.orderBy,
 		format: action.format,
@@ -1103,10 +1116,6 @@ const transformInActionToSet = async (
 
 	if (action.exportMode != null) {
 		actionToSet.exportMode = action.exportMode;
-	}
-
-	if (action.lastChangeTimeColumn || (connection.isSource && connection.isApp)) {
-		actionToSet.incremental = true;
 	}
 
 	try {
@@ -1168,6 +1177,9 @@ const computeDefaultAction = (
 	if (fields.includes('UpdateOnDuplicates')) {
 		action.updateOnDuplicates = false;
 	}
+	if (fields.includes('Incremental')) {
+		action.incremental = false;
+	}
 	return action;
 };
 
@@ -1184,24 +1196,22 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		fields.push('Filter');
 	}
 
-	if (connection.connector.type === 'App') {
+	const type = connection.connector.type;
+
+	if (type === 'App') {
 		fields.push('Transformation');
-	} else if (connection.connector.type === 'Database') {
+	} else if (type === 'Database') {
 		fields.push('Transformation');
-	} else if (connection.connector.type === 'FileStorage' && connection.role === 'Source') {
+	} else if (type === 'FileStorage' && connection.role === 'Source') {
 		fields.push('Transformation');
-	} else if (
-		connection.connector.type === 'Mobile' ||
-		connection.connector.type === 'Server' ||
-		connection.connector.type === 'Website'
-	) {
+	} else if (type === 'Mobile' || type === 'Server' || type === 'Website') {
 		if (connection.role === 'Source' && (actionType.target === 'Users' || actionType.target === 'Groups')) {
 			fields.push('Transformation');
 		}
 	}
 
 	if (
-		connection.connector.type === 'App' &&
+		type === 'App' &&
 		connection.role === 'Destination' &&
 		(actionType.target === 'Users' || actionType.target === 'Groups')
 	) {
@@ -1210,11 +1220,11 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		fields.push('ExportMode');
 	}
 
-	if (connection.connector.type === 'Database' && connection.role === 'Source') {
+	if (type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');
 	}
 
-	if (connection.connector.type === 'FileStorage') {
+	if (type === 'FileStorage') {
 		if (connection.role === 'Destination') {
 			if (actionType.target === 'Users') {
 				fields.push('OrderBy');
@@ -1223,8 +1233,16 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		fields.push('File');
 	}
 
-	if (connection.connector.type === 'Database' && connection.role === 'Destination') {
+	if (type === 'Database' && connection.role === 'Destination') {
 		fields.push('TableName');
+	}
+
+	if (
+		(type === 'App' || type === 'Database' || type === 'FileStorage') &&
+		connection.role === 'Source' &&
+		(actionType.target === 'Users' || actionType.target === 'Groups')
+	) {
+		fields.push('Incremental');
 	}
 
 	return fields;
