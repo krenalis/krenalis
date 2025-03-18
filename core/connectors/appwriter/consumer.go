@@ -46,7 +46,7 @@ func (c *consumer) First() meergo.Record {
 	record, ok := c.writer.read(opAll, 0)
 	c.writer.complete()
 	if !ok {
-		panic("core/collectors/appwriter: consumer has called Writer.read, but no records are available")
+		panic("core/connectors/appwriter: consumer has called Writer.read, but no records are available")
 	}
 	return record
 }
