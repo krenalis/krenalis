@@ -330,7 +330,7 @@ func (state *State) createAction(n notification) {
 		IdentityColumn:       e.IdentityColumn,
 		LastChangeTimeColumn: e.LastChangeTimeColumn,
 		LastChangeTimeFormat: e.LastChangeTimeFormat,
-		Incremental:          true,
+		Incremental:          e.Incremental,
 	}
 	if c.Role == Source && e.Target == Users {
 		action.propertiesToUnset = []string{}
