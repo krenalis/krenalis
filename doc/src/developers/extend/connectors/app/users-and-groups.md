@@ -405,8 +405,8 @@ Below is an example implementation:
 When records are sent in a batch, some APIs respond with specific error messages for each individual record in the batch. In this case, instead of returning a common error for all records, you can return a specific error for each record that encountered an issue using the `RecordsError` type:
 
 ```go
-// RecordsError is returned by the AppRecords.Upsert method when only some
-// records have failed or when the method can distinguish errors based on
+// RecordsError is returned by the Upsert method of an app connector when only
+// some records have failed or when the method can distinguish errors based on
 // individual records. It maps record indices to their respective errors.
 type RecordsError map[int]error
 

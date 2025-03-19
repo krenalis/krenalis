@@ -171,8 +171,8 @@ type Record struct {
 	Err error
 }
 
-// RecordsError is returned by the AppRecords.Upsert method when only some
-// records have failed or when the method can distinguish errors based on
+// RecordsError is returned by the Upsert method of an app connector when only
+// some records have failed or when the method can distinguish errors based on
 // individual records. It maps record indices to their respective errors.
 type RecordsError map[int]error
 
