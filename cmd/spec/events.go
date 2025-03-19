@@ -444,6 +444,7 @@ func init() {
 					{
 						Name:        "filter",
 						Type:        filterType,
+						Nullable:    true,
 						Description: "The filter applied to the events. If it's not null, only the events that match the filter will be returned.",
 					},
 					{
