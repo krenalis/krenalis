@@ -152,7 +152,6 @@ type Records interface {
     // if the record's properties have not been modified.
     Skip()
 }
-
 ```
 
 #### Sending one record at a time
@@ -206,10 +205,10 @@ func (my *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meer
 
 #### Key concepts:
 
-* **Read the First Record**\
+* **Read the first record**\
    Use `records.First()` to read the first record that needs to be processed.
 
-* **Determine the Type of Operation**\
+* **Determine the type of operation**\
    If `record.ID` is empty, the record should be created; otherwise, it should be updated.
 
 This method ensures that only one record is processed per request, aligning with the API's limitations. Meergo will automatically re-invoke the method for unread records.
@@ -273,17 +272,17 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
 
 #### Key concepts:
 
-* **Determine the Type of Operation**\
+* **Determine the type of operation**\
    Use `records.Peek()` to examine the first record without consuming it.
    - If the record has an `ID`, it's an update.
    - If `ID` is empty, it's a creation.
 
    Do not use the `records.First()` in this scenario, as it consumes the record and prevents any other methods from being called.
 
-* **Iterate Over Records**\
+* **Iterate over records**\
    Use `records.Same()` to read only records of the same type as the first one. This ensures all records in the batch are valid for the chosen operation.
 
-* **Batch Size Limitation**\
+* **Batch size limitation**\
    The example demonstrates breaking the loop once the maximum number of records (`bodyMaxRecords`) is reached. This ensures the request complies with the application's API limits.
 
 ### Batch of records of mixed types (create and update)
@@ -338,13 +337,13 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
 
 #### Key concepts:
 
-* **Iterating Over All Records**\
+* **Iterating over all records**\
    The method `records.All()` is used to iterate over both types of records—those to be created and those to be updated. This makes it possible to process mixed batches in a single request.
 
-* **Determine the Type of Operation**\
+* **Determine the type of operation**\
    If the record has an `ID`, it's an update, if `ID` is empty, it's a creation.
 
-* **Limit on Records**\
+* **Limit on records**\
    The loop stops once the maximum number of records (`bodyMaxRecords`) is reached, ensuring that the body size does not exceed the application’s limit.
 
 This approach allows you to efficiently handle mixed record types (create and update) in a single batch request, reducing the number of API calls required.
@@ -388,15 +387,15 @@ Below is an example implementation:
 
 #### Key concepts:
 
-* **Tracking Body Size**\
+* **Tracking body size**\
   Before adding a record to the request body, the current length of the body is tracked using `body.Len()`. This allows for easy truncation if the body size limit is exceeded.
 
-* **Truncating the Body**\
+* **Truncating the body**\
   To ensure the request is valid, the `body.Truncate(n)` method removes the last added record from the body. This prevents the body from exceeding the size limit while maintaining a valid JSON structure.
 
-* **Using `Skip` to Reprocess Records**\
+* **Using `Skip` to reprocess records**\
   When the body size exceeds the limit:
-    - The Skip method is called to notify Meergo that the last processed record has been skipped.
+    - The `Skip` method is called to notify Meergo that the last processed record has been skipped.
     - The processed records remain unchanged, meaning they can potentially be skipped later.
     - This skipped record will remain unprocessed and will be included in the next call to the `Upsert` method.
 
@@ -421,10 +420,10 @@ func (err RecordsError) Error() string {
 
 ### Key concepts:
 
-* **Error Handling for Individual Records**\
+* **Error handling for individual records**\
    Instead of returning a single error for the entire batch, you can return an error specific to each record that failed. This helps identify exactly which record(s) caused the issue.
 
-* **Mapping Errors by Record Index**\
+* **Mapping errors by record index**\
    The key of the `RecordsError` type is the index of the record in the iteration, which corresponds to the position of the record in the request body (assuming the records were written in the same order). The value is the error associated with that specific record.
 
 This approach lets you identify and handle errors for each record separately, instead of having a single error for the whole batch.
