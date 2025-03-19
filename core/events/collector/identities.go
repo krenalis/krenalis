@@ -54,6 +54,14 @@ func (iw *identityWriter) Close(ctx context.Context) error {
 	return iw.writer.Close(ctx)
 }
 
+// SetTransformer sets the transformer.
+// If the transformer is nil, no transformation will be performed.
+func (iw *identityWriter) SetTransformer(transformer *transformers.Transformer) {
+	iw.mu.Lock()
+	iw.transformer = transformer
+	iw.mu.Unlock()
+}
+
 func (c *Collector) writeIdentity(action *state.Action, identity events.Event) error {
 
 	meergoMetrics.Increment("Collector.writeIdentity.calls", 1)

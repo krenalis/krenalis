@@ -695,14 +695,11 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 		return
 	}
 	// The transformation might have changed.
-	iw := w.(*identityWriter)
-	iw.mu.Lock()
-	if action.Transformation.Mapping == nil && action.Transformation.Function == nil {
-		iw.transformer = nil
-	} else {
-		iw.transformer, _ = transformers.New(action, c.functionProvider, nil)
+	var transformer *transformers.Transformer
+	if action.Transformation.Mapping != nil || action.Transformation.Function != nil {
+		transformer, _ = transformers.New(action, c.functionProvider, nil)
 	}
-	iw.mu.Unlock()
+	w.(*identityWriter).SetTransformer(transformer)
 	// TODO(marco): il cambio del warehouse mode come influisce sulla source action?
 }
 
