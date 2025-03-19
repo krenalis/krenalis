@@ -112,7 +112,7 @@ Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error
 
 This method is used during an export process to update existing users or groups, or to create new users or groups in the application. The `target` parameter specifies whether the operation applies to **Users** or **Groups**, depending on what the connector supports.
 
-The `records` parameter contains a collection of items to update or create. **You don’t need to process all the records in the collection at once.** Instead, only handle as many as you can send in a single HTTP request to the application. Even if the application supports processing only one record per request, that's fine. Meergo will automatically call the method again for any records that remain unprocessed.
+The `records` parameter contains a collection of records to update or create. **You don’t need to process all the records in the collection at once.** Instead, only handle as many as you can send in a single HTTP request to the application. Even if the application supports processing only one record per request, that's fine. Meergo will automatically call the method again for any records that remain unprocessed.
 
 #### Key concept: processed records
 
