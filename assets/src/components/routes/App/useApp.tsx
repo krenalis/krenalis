@@ -342,9 +342,9 @@ const useApp = (
 			<div className='connection-actions__link-to-overview'>
 				Go to{' '}
 				<Link path={link}>
-					<span className='connection-actions__link'>overview</span>
+					<span className='connection-actions__link'>Metrics</span>
 				</Link>{' '}
-				for details
+				for details.
 			</div>
 		);
 
