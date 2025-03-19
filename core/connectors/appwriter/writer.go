@@ -54,25 +54,25 @@ type Writer struct {
 	name   string         // name of the app connector
 	ack    AckFunc        // ack function
 
-	mu        sync.Mutex // mutex for consumer, records, index, and available fields
-	consumer  *consumer  // current consumer, if any; protected by mu
+	mu        sync.Mutex // mutex for iterator, records, index, and available fields
+	iterator  *iterator  // current iterator, if any; protected by mu
 	records   []record   // records in the queue; protected by mu
-	index     int        // read index in records for the current consumer; protected by mu
+	index     int        // read index in records for the current iterator; protected by mu
 	available int        // number of available (non-read) records; protected by mu
 
 	close struct {
 		closed    atomic.Bool        // indicates if the writer has been closed
-		ctx       context.Context    // context passes to consumers
-		cancel    context.CancelFunc // function to cancel consumers executions
+		ctx       context.Context    // context passes to iterators
+		cancel    context.CancelFunc // function to cancel iterators executions
 		completed sync.Cond          // signal the completion of the current iteration
-		consumers sync.WaitGroup     // waiting group for the consumers
+		iterators sync.WaitGroup     // waiting group for the iterators
 	}
 }
 
 // record represents a single user or group to be written and sent to the app.
 type record struct {
-	consumer   *consumer      // consumer that has consumed the record, if any
-	index      int            // range index of the consumer; it is 0 if consumer is nil
+	iterator   *iterator      // iterator that has consumed the record, if any
+	index      int            // range index of the iterator; it is 0 if iterator is nil
 	id         string         // user or group identifier
 	properties map[string]any // user or group properties
 }
@@ -105,37 +105,37 @@ func (w *Writer) Close(ctx context.Context) error {
 		fmt.Print("Writer.Close: start closing down\n")
 	}
 	for {
-		var consumer *consumer
+		var iter *iterator
 		w.mu.Lock()
-		if w.consumer != nil {
+		if w.iterator != nil {
 			if trace {
-				fmt.Printf("Writer.Close: wait for the iteration of consumer %p to complete\n", w.consumer)
+				fmt.Printf("Writer.Close: wait for the iteration of iterator %p to complete\n", w.iterator)
 			}
 			w.close.completed.Wait()
 		}
 		if w.available > 0 {
-			consumer = newConsumer(w)
-			w.consumer = consumer
+			iter = newIterator(w)
+			w.iterator = iter
 			if trace {
-				fmt.Printf("Writer.Close: %d records available; create new consumer %p\n", w.available, consumer)
+				fmt.Printf("Writer.Close: %d records available; create new iterator %p\n", w.available, iter)
 			}
 		}
 		w.mu.Unlock()
-		if consumer == nil {
+		if iter == nil {
 			break
 		}
-		w.close.consumers.Add(1)
-		go w.consume(consumer)
+		w.close.iterators.Add(1)
+		go w.consume(iter)
 	}
 	if trace {
-		fmt.Print("Writer.Close: wait for consumers to terminate\n")
+		fmt.Print("Writer.Close: wait for iterators to terminate\n")
 	}
-	w.close.consumers.Wait()
+	w.close.iterators.Wait()
 	if assert && ctx.Done() == nil {
 		w._assertAvailable(0)
 	}
 	if trace {
-		fmt.Print("Writer.Close: consumers are terminated; writer is now closed\n")
+		fmt.Print("Writer.Close: iterators are terminated; writer is now closed\n")
 	}
 	return nil
 }
@@ -146,20 +146,20 @@ func (w *Writer) Write(_ context.Context, id string, properties map[string]any) 
 	if w.close.closed.Load() {
 		panic("core/connectors/appwriter: Write called on a closed writer")
 	}
-	var iter *consumer
+	var iter *iterator
 	w.mu.Lock()
 	w.records = append(w.records, record{id: id, properties: properties})
 	w.available++
-	// If there are no consumers and at least maxAvailable records are present,
-	// prepare a new consumer to be started after releasing the lock.
-	if w.consumer == nil && w.available >= maxAvailable {
-		iter = newConsumer(w)
-		w.consumer = iter
+	// If there are no iterators and at least maxAvailable records are present,
+	// prepare a new iterator to be started after releasing the lock.
+	if w.iterator == nil && w.available >= maxAvailable {
+		iter = newIterator(w)
+		w.iterator = iter
 	}
 	if trace {
 		fmt.Printf("Writer.Write: write record id=%q, properties=%p, available=%d\n", id, properties, w.available)
 		if iter != nil {
-			fmt.Printf("Writer.Write: start new consumer %p\n", iter)
+			fmt.Printf("Writer.Write: start new iterator %p\n", iter)
 		}
 	}
 	if assert {
@@ -167,7 +167,7 @@ func (w *Writer) Write(_ context.Context, id string, properties map[string]any) 
 	}
 	w.mu.Unlock()
 	if iter != nil {
-		w.close.consumers.Add(1)
+		w.close.iterators.Add(1)
 		go w.consume(iter)
 	}
 	return true
@@ -195,14 +195,14 @@ func (w *Writer) compact() {
 	w.mu.Unlock()
 }
 
-// complete marks the iteration of the current consumer as completed, allowing
-// other consumers to be executed.
+// complete marks the iteration of the current iterator as completed, allowing
+// other iterators to be executed.
 func (w *Writer) complete() {
 	w.mu.Lock()
 	if trace {
-		fmt.Printf("Writer.complete: iteration of consumer %p is completed\n", w.consumer)
+		fmt.Printf("Writer.complete: iteration of iterator %p is completed\n", w.iterator)
 	}
-	w.consumer = nil
+	w.iterator = nil
 	w.index = 0
 	w.mu.Unlock()
 	w.close.completed.Signal()
@@ -219,7 +219,7 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 	var i int
 	for i = w.index; i < len(w.records); i++ {
 		r := w.records[i]
-		if r.consumer != nil || r.properties == nil {
+		if r.iterator != nil || r.properties == nil {
 			continue
 		}
 		ok = op == opAll || op == opUpdate && r.id != "" || op == opCreate && r.id == ""
@@ -232,7 +232,7 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 	w.index = i
 	if ok && index != dontConsume {
 		w.available--
-		w.records[i].consumer = w.consumer
+		w.records[i].iterator = w.iterator
 		w.records[i].index = index
 		w.index++
 		if assert {
@@ -242,16 +242,16 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 	if trace {
 		if ok {
 			if index == dontConsume {
-				fmt.Printf("Writer.read: consumer %p read ID %q, without consuming, at index %d (%d remaining)\n", w.consumer, record.ID, i, w.available)
+				fmt.Printf("Writer.read: iterator %p read ID %q, without consuming, at index %d (%d remaining)\n", w.iterator, record.ID, i, w.available)
 			} else {
-				fmt.Printf("Writer.read: consumer %p read and consumed ID %q at index %d (%d remaining)\n", w.consumer, record.ID, i, w.available)
+				fmt.Printf("Writer.read: iterator %p read and consumed ID %q at index %d (%d remaining)\n", w.iterator, record.ID, i, w.available)
 
 			}
 		} else {
 			if index == dontConsume {
-				fmt.Printf("Writer.read: consumer %p tried to read, without consuming, at index %d, but no record available\n", w.consumer, i)
+				fmt.Printf("Writer.read: iterator %p tried to read, without consuming, at index %d, but no record available\n", w.iterator, i)
 			} else {
-				fmt.Printf("Writer.read: consumer %p tried to read, with consuming, at index %d, but no record available\n", w.consumer, i)
+				fmt.Printf("Writer.read: iterator %p tried to read, with consuming, at index %d, but no record available\n", w.iterator, i)
 			}
 		}
 	}
@@ -264,14 +264,14 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 func (w *Writer) skip() {
 	w.mu.Lock()
 	i := w.index - 1
-	for w.records[i].consumer != w.consumer {
+	for w.records[i].iterator != w.iterator {
 		i--
 	}
-	w.records[i].consumer = nil
+	w.records[i].iterator = nil
 	w.records[i].index = 0
 	w.available++
 	if trace {
-		fmt.Printf("Writer.skip: consumer %p; skip index %d, current %d\n", w.consumer, i, w.index)
+		fmt.Printf("Writer.skip: iterator %p; skip index %d, current %d\n", w.iterator, i, w.index)
 	}
 	if assert {
 		w._assertAvailable(w.available)
@@ -287,31 +287,31 @@ func (w *Writer) skip() {
 //  4. Compacts records.
 //
 // It runs in its own goroutine when records are available.
-func (w *Writer) consume(iter *consumer) {
+func (w *Writer) consume(iter *iterator) {
 	if trace {
-		fmt.Printf("Writer.consume: consumer %p started\n", iter)
+		fmt.Printf("Writer.consume: iterator %p started\n", iter)
 	}
 	err := w.app.Upsert(w.close.ctx, w.target, iter)
 	errors, _ := err.(meergo.RecordsError)
 	var errorOf map[error][]string
 	w.mu.Lock()
-	if w.consumer == iter {
+	if w.iterator == iter {
 		// Upsert hasn’t started the iteration; mark it as completed.
 		if trace {
-			fmt.Printf("Writer.consume: Upsert of consumer %p has returned without starting an iteration, with error %#v\n", iter, err)
+			fmt.Printf("Writer.consume: Upsert of iterator %p has returned without starting an iteration, with error %#v\n", iter, err)
 		}
-		w.consumer = nil
+		w.iterator = nil
 		w.index = 0
 		w.close.completed.Signal()
 	} else {
 		// Upsert has completed the iteration.
 		if trace {
-			fmt.Printf("Writer.consume: Upsert of consumer %p has returned, with error %#v\n", iter, err)
+			fmt.Printf("Writer.consume: Upsert of iterator %p has returned, with error %#v\n", iter, err)
 		}
 		errorOf = make(map[error][]string)
 		var index int
 		for i := 0; i < len(w.records); i++ {
-			if w.records[i].consumer != iter {
+			if w.records[i].iterator != iter {
 				continue
 			}
 			id := w.records[i].id
@@ -329,11 +329,11 @@ func (w *Writer) consume(iter *consumer) {
 	w.mu.Unlock()
 	for err, ids := range errorOf {
 		if trace {
-			fmt.Printf("Writer.consume: send ack for consumer %p with ids %#v and error %#v\n", iter, ids, err)
+			fmt.Printf("Writer.consume: send ack for iterator %p with ids %#v and error %#v\n", iter, ids, err)
 		}
 		w.ack(ids, err)
 	}
-	w.close.consumers.Done()
+	w.close.iterators.Done()
 	w.compact()
 }
 
@@ -342,7 +342,7 @@ func (w *Writer) consume(iter *consumer) {
 func (w *Writer) _assertAvailable(n int) {
 	var got int
 	for _, r := range w.records {
-		if r.consumer == nil && r.properties != nil {
+		if r.iterator == nil && r.properties != nil {
 			got++
 		}
 	}
