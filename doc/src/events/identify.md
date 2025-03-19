@@ -22,16 +22,16 @@ To make an identify call, you can use a Meergo SDK. Refer to its documentation f
 
 ```javascript
 meergo.identify('59a20n37ec82', {
-	firstName: 'Emily',
+    firstName: 'Emily',
     lastName: 'Johnson',
     email: 'emma.johnson@example.com',
-	address: {
-		street: "123 Main Street",
-		city: "San Francisco",
-		state: "CA",
-		postalCode: "94104",
-		country: "USA"
-	}
+    address: {
+        street: "123 Main Street",
+        city: "San Francisco",
+        state: "CA",
+        postalCode: "94104",
+        country: "USA"
+    }
 });
 ```
 

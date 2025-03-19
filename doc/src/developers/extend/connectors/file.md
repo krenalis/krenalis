@@ -20,47 +20,47 @@ In the creation of a new Go module, for your file connector, you can utilize the
 package csv
 
 import (
-	"context"
-	"io"
+    "context"
+    "io"
 
-	"github.com/meergo/meergo"
+    "github.com/meergo/meergo"
 )
 
 func init() {
-	meergo.RegisterFile(meergo.FileInfo{
-		Name:      "CSV",
-		Extension: "csv",
-		AsSource: &meergo.AsSourceFile{
-			HasSettings: true,
-		},
-		AsDestination: &meergo.AsDestinationFile{
-			HasSettings: true,
-		},
-	}, New)
+    meergo.RegisterFile(meergo.FileInfo{
+        Name:      "CSV",
+        Extension: "csv",
+        AsSource: &meergo.AsSourceFile{
+            HasSettings: true,
+        },
+        AsDestination: &meergo.AsDestinationFile{
+            HasSettings: true,
+        },
+    }, New)
 }
 
 type CSV struct {
-	// Your connector fields.
+    // Your connector fields.
 }
 
 // New returns a new CSV connector instance.
 func New(conf *meergo.FileConfig) (*CSV, error) {
-	// ...
+    // ...
 }
 
 // ContentType returns the content type of the file.
 func (csv *CSV) ContentType(ctx context.Context) string {
-	return "text/csv"
+    return "text/csv"
 }
 
 // Read reads the records from r and writes them to records.
 func (csv *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
-	// ...
+    // ...
 }
 
 // Write writes to w the records read from records.
 func (csv *CSV) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
-	// ...
+    // ...
 }
 ```
 
@@ -99,16 +99,16 @@ This information is passed to the `RegisterFile` function that, executed during 
 ```go
 func init() {
     meergo.RegisterFile(meergo.FileInfo{
-		Name:      "CSV",
-		Icon:      icon,
-		Extension: "csv",
-		AsSource: &meergo.AsSourceFile{
-			HasSettings: true,
-		},
-		AsDestination: &meergo.AsDestinationFile{
-			HasSettings: true,
-		},
-	}, New)
+        Name:      "CSV",
+        Icon:      icon,
+        Extension: "csv",
+        AsSource: &meergo.AsSourceFile{
+            HasSettings: true,
+        },
+        AsDestination: &meergo.AsDestinationFile{
+            HasSettings: true,
+        },
+    }, New)
 }
 ```
 
@@ -156,34 +156,34 @@ The `Read` method takes an `io.Reader` as an argument from which to read the fil
 // A RecordWriter interface is used by file connectors to write read records.
 type RecordWriter interface {
 
-	// Columns sets the columns of the records as properties.
-	// Columns must be called before Record, RecordSlice, and RecordStrings.
-	Columns(columns []types.Property) error
+    // Columns sets the columns of the records as properties.
+    // Columns must be called before Record, RecordSlice, and RecordStrings.
+    Columns(columns []types.Property) error
 
-	// Issue reports an issue encountered during file reading that did not
-	// prevent the file from being processed. For instance, an issue might occur
-	// if a column is excluded due to an unsupported data type.
-	//
-	// The format and its arguments are formatted using the syntax and rules of
-	// fmt.Sprintf.
-	//
-	// Subsequent calls will append new issues to the ones previously reported.
-	Issue(format string, a ...any)
+    // Issue reports an issue encountered during file reading that did not
+    // prevent the file from being processed. For instance, an issue might occur
+    // if a column is excluded due to an unsupported data type.
+    //
+    // The format and its arguments are formatted using the syntax and rules of
+    // fmt.Sprintf.
+    //
+    // Subsequent calls will append new issues to the ones previously reported.
+    Issue(format string, a ...any)
 
-	// Record writes a record represented as a string to any map.
-	// The record's length must equal to the number of columns.
-	Record(record map[string]any) error
+    // Record writes a record represented as a string to any map.
+    // The record's length must equal to the number of columns.
+    Record(record map[string]any) error
 
-	// RecordSlice writes a record represented as a slice of any.
-	// The record's length must equal to the number of columns.
-	RecordSlice(record []any) error
+    // RecordSlice writes a record represented as a slice of any.
+    // The record's length must equal to the number of columns.
+    RecordSlice(record []any) error
 
-	// RecordStrings writes a record represented as a string slice.
-	// The record's length must be less than or equal to the number of columns, and
-	// record cannot be nil.
-	//
-	// RecordStrings may modify the elements of the record.
-	RecordStrings(record []string) error
+    // RecordStrings writes a record represented as a string slice.
+    // The record's length must be less than or equal to the number of columns, and
+    // record cannot be nil.
+    //
+    // RecordStrings may modify the elements of the record.
+    RecordStrings(record []string) error
 }
 ```
 
@@ -226,20 +226,20 @@ The `Write` method takes an `io.Writer` as an argument to write the contents of 
 ```go
 type RecordReader interface {
 
-	// Ack acknowledges the processing of the record with the given GID.
-	// err is the error occurred processing the record, if any.
-	Ack(gid uuid.UUID, err error)
+    // Ack acknowledges the processing of the record with the given GID.
+    // err is the error occurred processing the record, if any.
+    Ack(gid uuid.UUID, err error)
 
-	// Columns returns the columns of the records as properties.
-	Columns() []types.Property
+    // Columns returns the columns of the records as properties.
+    Columns() []types.Property
 
-	// Record returns the next record with its ack ID. The keys of record represent
-	// column names. A record may be empty or contain only a subset of columns.
-	// It returns "", nil, and io.EOF if there are no more records.
-	//
-	// After a record has been read and processed, the caller should call Ack
-	// to acknowledge the processing of the record.
-	Record(ctx context.Context) (ackID string, record map[string]any, err error)}
+    // Record returns the next record with its ack ID. The keys of record represent
+    // column names. A record may be empty or contain only a subset of columns.
+    // It returns "", nil, and io.EOF if there are no more records.
+    //
+    // After a record has been read and processed, the caller should call Ack
+    // to acknowledge the processing of the record.
+    Record(ctx context.Context) (ackID string, record map[string]any, err error)}
 ```
 
 The `Write` method first needs to call the `Columns` method to determine the columns of the records to be written. Then it calls the `Record` method to read each individual record. It can then either immediately write the read record to the `io.Writer` or continue reading to do so later.

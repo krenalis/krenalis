@@ -273,7 +273,7 @@ For example:
 
 ```go
 types.Object([]types.Property{
-	{Name: "first_name", Type: types.Text().WithCharLen(30)},
+    {Name: "first_name", Type: types.Text().WithCharLen(30)},
     {Name: "last_name", Type: types.Text().WithCharLen(30)},
     {Name: "birth_date", Type: types.Year()},
 })
@@ -284,7 +284,7 @@ You can also use the `types.ObjectOf` function to construct an `object`. Unlike 
 ```go
 typ, err := types.ObjectOf([]types.Property{...})
 if err != nil {
-	...
+    ...
 }
 ```
 
@@ -294,14 +294,14 @@ An object property is defined as follows:
 
 ```go
 type Property struct {
-	Name           string
-	Placeholder    string
-	Type           Type
-	CreateRequired bool
-	UpdateRequired bool
-	ReadOptional   bool
-	Nullable       bool
-	Description    string
+    Name           string
+    Placeholder    string
+    Type           Type
+    CreateRequired bool
+    UpdateRequired bool
+    ReadOptional   bool
+    Nullable       bool
+    Description    string
 }
 ```
 

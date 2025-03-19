@@ -8,14 +8,14 @@ This is how a Python transform function looks like:
 
 ```python
 def transform(user: dict) -> dict:
-	return {}
+    return {}
 ```
 
 So, for example, it could be written like this:
 
 ```python
 def transform(user: dict) -> dict:
-	return {
+    return {
         "email": user["email"],
         "first_name": user.get("first_name", ""),
     }

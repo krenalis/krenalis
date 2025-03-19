@@ -20,11 +20,11 @@ In the creation of a new Go module, for your file storage connector, you can uti
 package s3
 
 import (
-	"context"
-	"io"
-	"time"
+    "context"
+    "io"
+    "time"
 
-	"github.com/meergo/meergo"
+    "github.com/meergo/meergo"
 )
 
 func init() {
@@ -36,28 +36,28 @@ func init() {
 }
 
 type S3 struct {
-	// Your connector fields.
+    // Your connector fields.
 }
 
 // New returns a new S3 connector instance.
 func New(conf *meergo.FileStorageConfig) (*S3, error) {
-	// ...
+    // ...
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (s3 *S3) AbsolutePath(ctx context.Context, name string) (string, error) {
-	// ...
+    // ...
 }
 
 // Reader opens the file at the given path name and returns a ReadCloser from
 // which to read the file and its last update time.
 func (s3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	// ...
+    // ...
 }
 
 // Write writes the data read from r into the file with the given path name.
 func (s3 *S3) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	// ...
+    // ...
 }
 ```
 

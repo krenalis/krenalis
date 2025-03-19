@@ -88,7 +88,7 @@ This behavior is the default setting. To disable it, set the `autoTrack` option 
 ```javascript
 meergo.load(writeKey, endpoint, {
     sessions: {
-		autoTrack: false // disable the automatic session tracking
+        autoTrack: false // disable the automatic session tracking
     }
 });
 ```
@@ -101,7 +101,7 @@ The default session timeout is 30 minutes. If you wish to set a different timeou
 ```javascript
 meergo.load(writeKey, endpoint, {
     sessions: {
-		timeout: 15 * 60000 // set the timeout to 15 minutes
+        timeout: 15 * 60000 // set the timeout to 15 minutes
     }
 });
 ```

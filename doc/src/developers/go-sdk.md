@@ -31,9 +31,9 @@ To create a source Go connection in Meergo:
 
     client := analytics.New("<write key>", "<endpoint>")
     client.Enqueue(analytics.Track{
-		UserId: "test-user",
-		Event:  "test-snippet",
-	})
+        UserId: "test-user",
+        Event:  "test-snippet",
+    })
    ```
 
 ## Step 3: Add an action
@@ -59,24 +59,24 @@ Refer to the [Meergo events documentation](./events) for more information on the
 package main
 
 import (
-	"github.com/open2b/analytics-go"
+    "github.com/open2b/analytics-go"
 )
 
 func main() {
-	// Instantiates a client to send messages to the Meergo API.
+    // Instantiates a client to send messages to the Meergo API.
 
-	// Use your write key in the below placeholder:
+    // Use your write key in the below placeholder:
 
-	client := analytics.New("<write key>", "<endpoint>")
+    client := analytics.New("<write key>", "<endpoint>")
 
-	// Enqueues a track event that will be sent asynchronously.
-	client.Enqueue(analytics.Track{
-		UserId: "test-user",
-		Event:  "test-snippet",
-	})
+    // Enqueues a track event that will be sent asynchronously.
+    client.Enqueue(analytics.Track{
+        UserId: "test-user",
+        Event:  "test-snippet",
+    })
 
-	// Flushes any queued messages and closes the client.
-	client.Close()
+    // Flushes any queued messages and closes the client.
+    client.Close()
 }
 ```
 
@@ -86,34 +86,34 @@ Alternatively, you can run the following program:
 package main
 
 import (
-	"time"
+    "time"
 
-	"github.com/open2b/analytics-go"
+    "github.com/open2b/analytics-go"
 )
 
 func main() {
-	// Instantiates a client to use send messages to the Meergo API.
+    // Instantiates a client to use send messages to the Meergo API.
 
-	// User your write key in the below placeholder:
+    // User your write key in the below placeholder:
 
-	client, _ := analytics.NewWithConfig("<write key>",
-		analytics.Config{
-			Endpoint:  "<endpoint>",
-			Interval:  30 * time.Second,
-			BatchSize: 100,
-			Verbose:   true,
-		})
+    client, _ := analytics.NewWithConfig("<write key>",
+        analytics.Config{
+            Endpoint:  "<endpoint>",
+            Interval:  30 * time.Second,
+            BatchSize: 100,
+            Verbose:   true,
+        })
 
-	// Enqueues a track event that will be sent asynchronously.
+    // Enqueues a track event that will be sent asynchronously.
 
-	client.Enqueue(analytics.Track{
-		UserId: "test-user",
-		Event:  "test-snippet",
-	})
+    client.Enqueue(analytics.Track{
+        UserId: "test-user",
+        Event:  "test-snippet",
+    })
 
-	// Flushes any queued messages and closes the client.
+    // Flushes any queued messages and closes the client.
 
-	client.Close()
+    client.Close()
 }
 ```
 

@@ -18,26 +18,26 @@ In the creation of a new Go module, for your database connector, you can utilize
 package postgresql
 
 import (
-	"context"
+    "context"
 
-	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+    "github.com/meergo/meergo"
+    "github.com/meergo/meergo/types"
 )
 
 func init() {
-	meergo.RegisterDatabase(meergo.DatabaseInfo{
-		Name:        "PostgreSQL",
-		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
-	}, New)
+    meergo.RegisterDatabase(meergo.DatabaseInfo{
+        Name:        "PostgreSQL",
+        SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
+    }, New)
 }
 
 type PostgreSQL struct {
-	// Your connector fields.
+    // Your connector fields.
 }
 
 // New returns a new PostgreSQL connector instance.
 func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
-	// ...
+    // ...
 }
 
 // Close closes the database.
@@ -47,24 +47,24 @@ func (ps *PostgreSQL) Close() error {
 
 // Columns returns the columns of the given table.
 func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
-	// ...
+    // ...
 }
 
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
 func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
-	// ...
+    // ...
 }
 
 // Query executes the given query and returns the resulting rows and columns.
 func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
-	// ...
+    // ...
 }
 
 // QuoteTime returns a quoted time value for the specified type or "NULL" if the
 // value is nil.
 func (ps *PostgreSQL) QuoteTime(value any, typ types.Type) string {
-	// ...
+    // ...
 }
 ```
 

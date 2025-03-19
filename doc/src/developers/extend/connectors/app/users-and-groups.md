@@ -10,18 +10,18 @@ Firstly, include the `Users` and `Groups` flags during connector registration, b
 
 ```go
 meergo.RegisterApp(meergo.AppInfo{
-	...
-	AsSource: &meergo.AsAppSource{
-		...
-		Targets:  meergo.Users,
-		...
-	},
-	AsDestination: &meergo.AsAppDestination{
-		...
-		Targets:  meergo.Users,
-		...
-	},
-	...
+    ...
+    AsSource: &meergo.AsAppSource{
+        ...
+        Targets:  meergo.Users,
+        ...
+    },
+    AsDestination: &meergo.AsAppDestination{
+        ...
+        Targets:  meergo.Users,
+        ...
+    },
+    ...
 }, New)
 ```
 
@@ -58,11 +58,11 @@ The `Record` type is defined as follows:
 
 ```go
 type Record struct {
-	ID             string
-	Properties     map[string]any
-	LastChangeTime time.Time
-	Associations   []string
-	Err            error // Not used by the Records method.
+    ID             string
+    Properties     map[string]any
+    LastChangeTime time.Time
+    Associations   []string
+    Err            error // Not used by the Records method.
 }
 ```
 
@@ -87,14 +87,14 @@ The client implements the following interface:
 ```go
 type HTTPClient interface {
 
-	// Do sends an HTTP request with an Authorization header if required.
-	Do(req *http.Request) (res *http.Response, err error)
+    // Do sends an HTTP request with an Authorization header if required.
+    Do(req *http.Request) (res *http.Response, err error)
 
-	// ClientSecret returns the OAuth client secret of the HTTP client.
-	ClientSecret() (string, error)
+    // ClientSecret returns the OAuth client secret of the HTTP client.
+    ClientSecret() (string, error)
 
-	// AccessToken returns an OAuth access token.
-	AccessToken(ctx context.Context) (string, error)
+    // AccessToken returns an OAuth access token.
+    AccessToken(ctx context.Context) (string, error)
 }
 ```
 
@@ -127,30 +127,30 @@ Meergo considers a record processed as soon as it has been read from the `Record
 // further method calls on Records are allowed.
 type Records interface {
 
-	// All returns an iterator to read all records. Properties of the records in the
-	// sequence may be modified unless the record is subsequently skipped.
-	All() iter.Seq2[int, Record]
+    // All returns an iterator to read all records. Properties of the records in the
+    // sequence may be modified unless the record is subsequently skipped.
+    All() iter.Seq2[int, Record]
 
-	// First returns the first record. The record's properties may be modified.
-	// After First is called, no further method calls on Records are allowed.
-	First() Record
+    // First returns the first record. The record's properties may be modified.
+    // After First is called, no further method calls on Records are allowed.
+    First() Record
 
-	// Peek retrieves the next record without advancing the iterator. It returns the
-	// record and true if a record is available, or false if there are no further
-	// records. The returned record must not be modified.
-	Peek() (Record, bool)
+    // Peek retrieves the next record without advancing the iterator. It returns the
+    // record and true if a record is available, or false if there are no further
+    // records. The returned record must not be modified.
+    Peek() (Record, bool)
 
-	// Same returns an iterator for records: either all records to update
-	// (if the first record is for update) or all records to create
-	// (if the first record is for creation). Properties of the records in the
-	// sequence may be modified unless the record is subsequently skipped.
-	Same() iter.Seq2[int, Record]
+    // Same returns an iterator for records: either all records to update
+    // (if the first record is for update) or all records to create
+    // (if the first record is for creation). Properties of the records in the
+    // sequence may be modified unless the record is subsequently skipped.
+    Same() iter.Seq2[int, Record]
 
-	// Skip skips the current record in the iteration and marks it as unread. The
-	// subsequent iteration will resume at the next record while preserving the same
-	// index. Skip may only be called during iterations from All or Same, and only
-	// if the record's properties have not been modified.
-	Skip()
+    // Skip skips the current record in the iteration and marks it as unread. The
+    // subsequent iteration will resume at the next record while preserving the same
+    // index. Skip may only be called during iterations from All or Same, and only
+    // if the record's properties have not been modified.
+    Skip()
 }
 
 ```
@@ -164,43 +164,43 @@ Below is an example implementation:
 ```go
 func (my *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
-	// Read the first record.
-	record := records.First()
+    // Read the first record.
+    record := records.First()
 
-	// Prepare request body.
-	var body bytes.Buffer
-	body.WriteString(`{"properties":`)
-	json.Encode(&body, record.Properties)
-	body.WriteString(`}`)
+    // Prepare request body.
+    var body bytes.Buffer
+    body.WriteString(`{"properties":`)
+    json.Encode(&body, record.Properties)
+    body.WriteString(`}`)
 
-	// Prepare the method for update (PUT) or create (POST).
-	method := http.MethodPut
-	if record.ID == "" {
-		method = http.MethodPost
-	}
+    // Prepare the method for update (PUT) or create (POST).
+    method := http.MethodPut
+    if record.ID == "" {
+        method = http.MethodPost
+    }
 
-	// Prepare the path.
-	path := "/v1/customers"
-	if method == http.MethodPost {
-		path += "/" + url.PathEscape(record.ID)
-	}
+    // Prepare the path.
+    path := "/v1/customers"
+    if method == http.MethodPost {
+        path += "/" + url.PathEscape(record.ID)
+    }
 
-	// Create the HTTP request.
-	req, _ := http.NewRequestWithContext(ctx, method, "https://api.myapp.com"+path, &body)
+    // Create the HTTP request.
+    req, _ := http.NewRequestWithContext(ctx, method, "https://api.myapp.com"+path, &body)
 
-	// Send the HTTP request.
-	res, err := my.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
+    // Send the HTTP request.
+    res, err := my.httpClient.Do(req)
+    if err != nil {
+        return err
+    }
+    defer res.Body.Close()
 
-	// Check the response status code.
-	if res.StatusCode != 200 {
-		return fmt.Errorf("app server response: %s", res.Status)
-	}
+    // Check the response status code.
+    if res.StatusCode != 200 {
+        return fmt.Errorf("app server response: %s", res.Status)
+    }
 
-	return nil
+    return nil
 }
 ```
 
@@ -223,51 +223,51 @@ Below is an example implementation:
 ```go
 func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
-	// Peek at the first record to determine the type of request.
-	record, _ := records.Peek()
-	method := http.MethodPut
-	if record.ID == "" {
-		method = http.MethodPost
-	}
+    // Peek at the first record to determine the type of request.
+    record, _ := records.Peek()
+    method := http.MethodPut
+    if record.ID == "" {
+        method = http.MethodPost
+    }
 
-	// Prepare request body.
-	var body bytes.Buffer
-	body.WriteString(`{"customers":[`)
-	for i, record := range records.Same() {
-		if i > 0 {
-			body.WriteString(`,`)
-		}
-		body.WriteString(`{`)
-		if record.ID != "" {
-			body.WriteString(`"id":`)
-			json.Encode(&body, record.ID)
-			body.WriteString(`,`)
-		}
-		body.WriteString(`"properties":`)
-		json.Encode(&body, record.Properties)
-		body.WriteString(`}`)
-		if i+1 == bodyMaxRecords {
-			break
-		}
-	}
-	body.WriteString(`]}`)
+    // Prepare request body.
+    var body bytes.Buffer
+    body.WriteString(`{"customers":[`)
+    for i, record := range records.Same() {
+        if i > 0 {
+            body.WriteString(`,`)
+        }
+        body.WriteString(`{`)
+        if record.ID != "" {
+            body.WriteString(`"id":`)
+            json.Encode(&body, record.ID)
+            body.WriteString(`,`)
+        }
+        body.WriteString(`"properties":`)
+        json.Encode(&body, record.Properties)
+        body.WriteString(`}`)
+        if i+1 == bodyMaxRecords {
+            break
+        }
+    }
+    body.WriteString(`]}`)
 
-	// Create the HTTP request.
-	req, _ := http.NewRequestWithContext(ctx, method, "https://api.myapp.com/v1/customers/batch", &body)
+    // Create the HTTP request.
+    req, _ := http.NewRequestWithContext(ctx, method, "https://api.myapp.com/v1/customers/batch", &body)
 
-	// Send the HTTP request.
-	res, err := m.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
+    // Send the HTTP request.
+    res, err := m.httpClient.Do(req)
+    if err != nil {
+        return err
+    }
+    defer res.Body.Close()
 
-	// Check the response status code.
-	if res.StatusCode != 200 {
-		return fmt.Errorf("server responded with status %s", res.Status)
-	}
+    // Check the response status code.
+    if res.StatusCode != 200 {
+        return fmt.Errorf("server responded with status %s", res.Status)
+    }
 
-	return nil
+    return nil
 }
 ```
 
@@ -295,44 +295,44 @@ Here is an example implementation:
 ```go
 func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
-	// Prepare request body.
-	var body bytes.Buffer
-	body.WriteString(`{"customers":[`)
-	for i, record := range records.All() {
-		if i > 0 {
-			body.WriteString(`,`)
-		}
-		body.WriteString(`{`)
-		if record.ID != "" {
-			body.WriteString(`"id":`)
-			json.Encode(&body, record.ID)
-			body.WriteString(`,`)
-		}
-		body.WriteString(`"properties":`)
-		json.Encode(&body, record.Properties)
-		body.WriteString(`}`)
-		if i+1 == bodyMaxRecords {
-			break
-		}
-	}
-	body.WriteString(`}]`)
+    // Prepare request body.
+    var body bytes.Buffer
+    body.WriteString(`{"customers":[`)
+    for i, record := range records.All() {
+        if i > 0 {
+            body.WriteString(`,`)
+        }
+        body.WriteString(`{`)
+        if record.ID != "" {
+            body.WriteString(`"id":`)
+            json.Encode(&body, record.ID)
+            body.WriteString(`,`)
+        }
+        body.WriteString(`"properties":`)
+        json.Encode(&body, record.Properties)
+        body.WriteString(`}`)
+        if i+1 == bodyMaxRecords {
+            break
+        }
+    }
+    body.WriteString(`}]`)
 
-	// Create the HTTP request.
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/customers/batch", &body)
+    // Create the HTTP request.
+    req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/customers/batch", &body)
 
-	// Send the HTTP request.
-	res, err := m.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
+    // Send the HTTP request.
+    res, err := m.httpClient.Do(req)
+    if err != nil {
+        return err
+    }
+    defer res.Body.Close()
 
-	// Check the response status code.
-	if res.StatusCode != 200 {
-		return fmt.Errorf("server responded with status %s", res.Status)
-	}
+    // Check the response status code.
+    if res.StatusCode != 200 {
+        return fmt.Errorf("server responded with status %s", res.Status)
+    }
 
-	return nil
+    return nil
 }
 ```
 
@@ -356,34 +356,34 @@ In the previous examples, the loop stops when the number of records reaches the 
 Below is an example implementation:
 
 ```go
-	for i, record := range records.All() {
+    for i, record := range records.All() {
 
-		// Track length before adding the record.
-		n = body.Len()
+        // Track length before adding the record.
+        n = body.Len()
 
-		if i > 0 {
-			body.WriteString(`,`)
-		}
+        if i > 0 {
+            body.WriteString(`,`)
+        }
 
-		// Build the record JSON object.
-		body.WriteString(`{`)
-		if record.ID != "" {
-			body.WriteString(`"id":`)
-			json.Encode(&body, record.ID)
-			body.WriteString(`,`)
-		}
-		body.WriteString(`"properties":`)
-		json.Encode(&body, record.Properties)
-		body.WriteString(`}`)
+        // Build the record JSON object.
+        body.WriteString(`{`)
+        if record.ID != "" {
+            body.WriteString(`"id":`)
+            json.Encode(&body, record.ID)
+            body.WriteString(`,`)
+        }
+        body.WriteString(`"properties":`)
+        json.Encode(&body, record.Properties)
+        body.WriteString(`}`)
 
-		// Stop if body exceeds app size limit.
-		if body.Len() > bodySizeLimit {
-			body.Truncate(n)
-			records.Skip()
-			break
-		}
+        // Stop if body exceeds app size limit.
+        if body.Len() > bodySizeLimit {
+            body.Truncate(n)
+            records.Skip()
+            break
+        }
 
-	}
+    }
 ```
 
 #### Key concepts:

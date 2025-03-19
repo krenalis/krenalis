@@ -63,24 +63,24 @@ For example, for the previous two settings of Google Analytics, the interface co
 &meergo.UI{
     Fields: []meergo.Component{
         &meergo.Input{
-			Name:        "MeasurementID",
-			Label:       "Measurement ID",
-			Placeholder: "G-2XYZBEB6AB",
-			Type:        "text",
-			MinLength:   2,
-			MaxLength:   20,
-			HelpText:    "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID",
-		},
+            Name:        "MeasurementID",
+            Label:       "Measurement ID",
+            Placeholder: "G-2XYZBEB6AB",
+            Type:        "text",
+            MinLength:   2,
+            MaxLength:   20,
+            HelpText:    "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID",
+        },
         &meergo.Input{
-			Name:        "APISecret",
-			Label:       "API Secret",
-			Placeholder: "ZuHCHFZbRBi8V7u8crWFUz",
-			Type:        "text",
-			MinLength:   1,
-			MaxLength:   40,
-		},
+            Name:        "APISecret",
+            Label:       "API Secret",
+            Placeholder: "ZuHCHFZbRBi8V7u8crWFUz",
+            Type:        "text",
+            MinLength:   1,
+            MaxLength:   40,
+        },
     },
-	Settings: settings,
+    Settings: settings,
 }
 ```
 
@@ -121,34 +121,34 @@ The following is the `ServeUI` method of the Google Analytics connector:
 ```go
 func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
-	switch event {
-	case "load":
-		// Load the user interface.
-		var s settings
-		if ga.settings != nil {
-			s = *ga.settings
-		}
-		settings, _ = json.Marshal(s)
-	case "save":
-		// Validate and save the settings.
-		s, err := validateSettings(settings)
-		if err != nil {
-			return nil, err
-		}
-		return nil, ga.conf.SetSettings(ctx, s)
-	default:
-		return nil, meergo.ErrEventNotExist
-	}
+    switch event {
+    case "load":
+        // Load the user interface.
+        var s settings
+        if ga.settings != nil {
+            s = *ga.settings
+        }
+        settings, _ = json.Marshal(s)
+    case "save":
+        // Validate and save the settings.
+        s, err := validateSettings(settings)
+        if err != nil {
+            return nil, err
+        }
+        return nil, ga.conf.SetSettings(ctx, s)
+    default:
+        return nil, meergo.ErrEventNotExist
+    }
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
-			&meergo.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
-		},
-		Settings: settings,
-	}
+    ui := &meergo.UI{
+        Fields: []meergo.Component{
+            &meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
+            &meergo.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
+        },
+        Settings: settings,
+    }
 
-	return ui, nil
+    return ui, nil
 }
 ```
 

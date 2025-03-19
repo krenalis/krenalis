@@ -24,9 +24,9 @@ To make a group call, you can use a Meergo SDK. Refer to its documentation for m
 
 ```javascript
 meergo.group('84s76y49tb28v1jxq', {
-	name: "AcmeTech",
-	industry: "Technology",
-	employeeCount: 100
+    name: "AcmeTech",
+    industry: "Technology",
+    employeeCount: 100
 });
 ```
 

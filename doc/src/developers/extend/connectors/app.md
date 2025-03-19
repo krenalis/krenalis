@@ -20,68 +20,68 @@ In the creation of a new Go module, for your app connector, you can utilize the 
 package klaviyo
 
 import (
-	"context"
-	"net/http"
+    "context"
+    "net/http"
 
-	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+    "github.com/meergo/meergo"
+    "github.com/meergo/meergo/types"
 )
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
-		Name: "Klaviyo",
-		AsSource: &meergo.AsAppSource{
-			Description: "Import profiles as users from Klaviyo",
-			Targets:     meergo.Users,
-			HasSettings: true,
-		},
-		AsDestination: &meergo.AsAppDestination{
-			Description: "Export users as profiles and send events to Klaviyo",
-			Targets:     meergo.Events | meergo.Users,
-			HasSettings: true,
-			SendingMode: meergo.Cloud,
-		},
-		TermForUsers: "clients",
-	}, New)
+    meergo.RegisterApp(meergo.AppInfo{
+        Name: "Klaviyo",
+        AsSource: &meergo.AsAppSource{
+            Description: "Import profiles as users from Klaviyo",
+            Targets:     meergo.Users,
+            HasSettings: true,
+        },
+        AsDestination: &meergo.AsAppDestination{
+            Description: "Export users as profiles and send events to Klaviyo",
+            Targets:     meergo.Events | meergo.Users,
+            HasSettings: true,
+            SendingMode: meergo.Cloud,
+        },
+        TermForUsers: "clients",
+    }, New)
 }
 
 type Klaviyo struct {
-	// Your connector fields.
+    // Your connector fields.
 }
 
 // New returns a new Klaviyo connector instance.
 func New(conf *meergo.AppConfig) (*Klaviyo, error) {
-	// ...
+    // ...
 }
 
 // EventRequest returns a request to dispatch an event to the app.
 func (ky *Klaviyo) EventRequest(ctx context.Context, typ string, event *meergo.Event, extra map[string]any, schema types.Type, redacted bool) (*meergo.EventRequest, error) {
-	// ...
+    // ...
 }
 
 // EventTypes returns the event types of the connector's instance.
 func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
-	// ...
+    // ...
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
 func (ky *Klaviyo) ReceiveWebhook(r *http.Request) ([]meergo.WebhookPayload, error) {
-	// ...
+    // ...
 }
 
 // Records returns the records of the specified target.
 func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
-	// ...
+    // ...
 }
 
 // Schema returns the schema of the specified target in the specified role.
 func (ky *Klaviyo) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-	// ...
+    // ...
 }
 
 // Upsert updates or creates records in the app for the specified target.
 func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
-	// ...
+    // ...
 }
 ```
 
@@ -128,22 +128,22 @@ This information is passed to the `RegisterApp` function that, executed during p
 
 ```go
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
-		Name: "Klaviyo",
-		AsSource: &meergo.AsAppSource{
-			Description: "Import profiles as users from Klaviyo",
-			Targets:     meergo.Users,
-			HasSettings: true,
-		},
-		AsDestination: &meergo.AsAppDestination{
-			Description: "Export users as profiles and send events to Klaviyo",
-			Targets:     meergo.Events | meergo.Users,
-			HasSettings: true,
-			SendingMode: meergo.Cloud,
-		},
-		TermForUsers: "clients",
-		Icon:         icon,
-	}, New)
+    meergo.RegisterApp(meergo.AppInfo{
+        Name: "Klaviyo",
+        AsSource: &meergo.AsAppSource{
+            Description: "Import profiles as users from Klaviyo",
+            Targets:     meergo.Users,
+            HasSettings: true,
+        },
+        AsDestination: &meergo.AsAppDestination{
+            Description: "Export users as profiles and send events to Klaviyo",
+            Targets:     meergo.Events | meergo.Users,
+            HasSettings: true,
+            SendingMode: meergo.Cloud,
+        },
+        TermForUsers: "clients",
+        Icon:         icon,
+    }, New)
 }
 ```
 

@@ -26,8 +26,8 @@ To make a track call, you can use a Meergo SDK. Refer to its documentation for m
 
 ```javascript
 meergo.track('Product Viewed', {
-	productId: 'ABC123',
-	category: 'Electronics'
+    productId: 'ABC123',
+    category: 'Electronics'
 });
 ```
 

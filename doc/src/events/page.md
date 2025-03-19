@@ -20,7 +20,7 @@ For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you ca
 
 ```javascript
 meergo.page('Product View', {
-	productId: 308263,
+    productId: 308263,
 });
 ```
 
