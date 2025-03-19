@@ -103,7 +103,7 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.Ope
 		if action.Connection().Keys == nil {
 			continue
 		}
-		iw := newIdentityWriter(c.datastore, action, provider, c.identityAck)
+		iw := newIdentityWriter(c.datastore, action, provider, opStore, metrics)
 		c.identityWriters.Store(action.ID, iw)
 	}
 	st.Unfreeze()
@@ -190,21 +190,6 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// identityAck acknowledges when identities are written to the data warehouse.
-func (c *Collector) identityAck(action int, ids []string, err error) {
-	doneEvents := make([]events.DoneEvent, len(ids))
-	for i, id := range ids {
-		doneEvents[i].Action = action
-		doneEvents[i].ID = id
-	}
-	c.operationStore.Done(doneEvents...)
-	if err != nil {
-		c.metrics.FinalizeFailed(action, len(ids), err.Error())
-		return
-	}
-	c.metrics.FinalizePassed(action, len(ids))
-}
-
 // connectionByKey returns an enable source mobile, server or website connection
 // given its key and true, if exists, otherwise returns nil and false.
 func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
@@ -276,7 +261,9 @@ func (c *Collector) reloadEvents(ctx context.Context) {
 			}
 			if action.Target == state.Users {
 				// Import the user identities into the data warehouse
-				_ = c.writeIdentity(action, op.Event)
+				if w, ok := c.identityWriters.Load(action.ID); ok {
+					w.(*identityWriter).Write(op.Event)
+				}
 				continue
 			}
 			connection := action.Connection()
@@ -536,15 +523,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				c.metrics.FilterPassed(action.ID, 1)
-				err = c.writeIdentity(action, event)
-				if err != nil {
-					c.metrics.FinalizeFailed(action.ID, 1, err.Error())
-					if eventErr == nil {
-						eventErr = errServiceUnavailable
+				if w, ok := c.identityWriters.Load(action.ID); ok {
+					err = w.(*identityWriter).Write(event)
+					if err != nil {
+						c.metrics.FinalizeFailed(action.ID, 1, err.Error())
+						if eventErr == nil {
+							eventErr = errServiceUnavailable
+						}
+						continue
 					}
-					continue
+					actions = append(actions, action.ID)
 				}
-				actions = append(actions, action.ID)
 			}
 		}
 
@@ -604,7 +593,7 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 		return
 	}
 	go func() {
-		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
+		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.operationStore, c.metrics)
 		c.identityWriters.Store(action.ID, iw)
 	}()
 }
@@ -660,7 +649,7 @@ func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 	}
 	if action.Enabled {
 		go func() {
-			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
+			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.operationStore, c.metrics)
 			c.identityWriters.Store(action.ID, iw)
 		}()
 		return
@@ -689,7 +678,7 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	w, ok := c.identityWriters.Load(action.ID)
 	if !ok {
 		go func() {
-			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.identityAck)
+			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.operationStore, c.metrics)
 			c.identityWriters.Store(action.ID, iw)
 		}()
 		return
