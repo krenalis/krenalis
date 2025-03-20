@@ -1392,8 +1392,8 @@ const FullscreenTransformation = ({
 	};
 
 	const onChangeSelectedPath = (side: 'in' | 'out', path: string) => {
-		let paths;
-		let schema;
+		let paths: string[];
+		let schema: TransformedMapping;
 		if (side === 'in') {
 			paths = selectedInPaths;
 			schema = flatInputSchema;
@@ -2423,6 +2423,22 @@ const TransformationProperty = ({
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
 	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
 	const isTableKey = !!tableKey && tableKey === path;
+	const isSelectDisabled =
+		transformationType === 'function' && ((isOutMatchingProperty && !isSelected) || hasSelectedParent);
+
+	const onWrapperClick = (e: any) => {
+		if (isSelectDisabled) {
+			return;
+		}
+		const isCopy = e.target.closest('.fullscreen-transformation__property-copy') != null;
+		const isCaret = e.target.closest('.fullscreen-transformation__property-caret') != null;
+		const isCheckbox = e.target.closest('.fullscreen-transformation__property-check') != null;
+		if (isCopy || isCaret || isCheckbox) {
+			e.stopPropagation();
+			return;
+		}
+		onChangeSelectedPath(path);
+	};
 
 	let isSearched = true;
 	if (searchTerm != null && searchTerm !== '') {
@@ -2483,6 +2499,8 @@ const TransformationProperty = ({
 	return (
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isSelected ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
+			style={{ cursor: transformationType === 'function' ? 'pointer' : 'default' }}
+			onClick={transformationType === 'function' ? onWrapperClick : null}
 		>
 			<div className='fullscreen-transformation__property-padding'>
 				{isParent && showCaret && (
@@ -2503,7 +2521,7 @@ const TransformationProperty = ({
 						className='fullscreen-transformation__property-check'
 						checked={isSelected || hasSelectedParent}
 						indeterminate={hasSelectedChildren && !isSelected}
-						disabled={(isOutMatchingProperty && !isSelected) || hasSelectedParent}
+						disabled={isSelectDisabled}
 						onSlChange={() => onChangeSelectedPath(path)}
 						size='small'
 					/>
@@ -2519,13 +2537,7 @@ const TransformationProperty = ({
 							/>
 						</SlTooltip>
 					)}
-					<span
-						className='fullscreen-transformation__property-name-text'
-						style={{ cursor: transformationType === 'function' ? 'pointer' : 'default' }}
-						onClick={transformationType === 'function' ? () => onChangeSelectedPath(path) : null}
-					>
-						{property.name}
-					</span>
+					<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
 					<span className='fullscreen-transformation__property-type'>
 						<span>{typeName}</span>
 						{side === 'input' && property.readOptional && <span>- optional</span>}
