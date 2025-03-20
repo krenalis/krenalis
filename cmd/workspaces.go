@@ -415,6 +415,9 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 		if err != nil {
 			return nil, errors.BadRequest("invalid filter")
 		}
+		if filter == nil {
+			return nil, errors.BadRequest("filter cannot be null")
+		}
 	}
 	order := q.Get("order")
 	orderDesc := q.Get("orderDesc") == "true"
@@ -870,6 +873,9 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		err := json.Unmarshal([]byte(f), &filter)
 		if err != nil {
 			return nil, errors.BadRequest("invalid filter")
+		}
+		if filter == nil {
+			return nil, errors.BadRequest("filter cannot be null")
 		}
 	}
 	order := q.Get("order")

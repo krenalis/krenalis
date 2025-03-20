@@ -71,13 +71,12 @@ func init() {
 						Description:    "The names of the properties to return. At least one property must be included.",
 					},
 					{
-						Name:     "filter",
-						Type:     filterType,
-						Nullable: true,
-						Description: "The filter applied to the users. If it's not null, only the users that match the filter will be returned. \n\n" +
+						Name: "filter",
+						Type: filterType,
+						Description: "The filter applied to the users. Only the users that match the filter will be returned.\n\n" +
 							"It must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n" +
 							"`" + `{"logical":"and","conditions":[{"property":"email","operator":"is","values":["my.friend@example.com"]}]}` + "`\n\n" +
-							"must be then be escaped and passed in the query string as:\n\n" +
+							"must then be escaped and passed in the query string as:\n\n" +
 							"`" + `filter=%7B%22logical%22%3A%22and%22%2C%22conditions%22%3A%5B%7B%22property%22%3A%22email%22%2C%22operator%22%3A%22is%22%2C%22values%22%3A%5B%22my.friend%40example.com%22%5D%7D%5D%7D` + "`",
 					},
 					{

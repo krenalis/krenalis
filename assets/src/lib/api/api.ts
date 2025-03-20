@@ -580,7 +580,7 @@ class Users {
 
 	find = async (
 		properties: string[],
-		filter: Filter,
+		filter: Filter | null,
 		order: string,
 		orderDesc: boolean,
 		first: number,
@@ -590,7 +590,9 @@ class Users {
 		properties.forEach(function (property) {
 			params.push(['properties', property]);
 		});
-		params.push(['filter', JSON.stringify(filter)]);
+		if (filter != null) {
+			params.push(['filter', JSON.stringify(filter)]);
+		}
 		params.push(['order', order]);
 		params.push(['orderDesc', orderDesc]);
 		params.push(['first', first]);

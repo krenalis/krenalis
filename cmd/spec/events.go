@@ -442,10 +442,9 @@ func init() {
 						Description:    "The event properties to return.",
 					},
 					{
-						Name:     "filter",
-						Type:     filterType,
-						Nullable: true,
-						Description: "The filter applied to the events. If it's not null, only the events that match the filter will be returned.\n\n" +
+						Name: "filter",
+						Type: filterType,
+						Description: "The filter applied to the events. Only the events that match the filter will be returned.\n\n" +
 							"It must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n" +
 							"`" + `{"logical":"and","conditions":[{"property":"user","operator":"is","values":["960ae86c-fc6e-438a-ae03-838fa6c94946"]}]}` + "`\n\n" +
 							"must be then be escaped and passed in the query string as:\n\n" +
