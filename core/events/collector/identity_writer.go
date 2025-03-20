@@ -30,10 +30,10 @@ type identityWriter struct {
 	writer         *datastore.EventIdentityWriter
 	metrics        *metrics.Collector
 	operationStore events.OperationStore
-	mu             sync.Mutex // for transformer, records, and timer.
-	transformer    *transformers.Transformer
-	identities     []events.Event
-	timer          *time.Timer
+	mu             sync.Mutex                // for transformer, identities, and timer
+	transformer    *transformers.Transformer // protected by mu
+	identities     []events.Event            // protected by mu
+	timer          *time.Timer               // protected by mu
 }
 
 // newIdentityWriter returns a new identityWriter for the provided action.
@@ -54,10 +54,12 @@ func newIdentityWriter(ds *datastore.Datastore, action *state.Action, provider t
 
 // Close closes iw.
 func (iw *identityWriter) Close(ctx context.Context) error {
+	iw.mu.Lock()
 	if iw.timer != nil {
 		iw.timer.Stop()
 		iw.timer = nil
 	}
+	iw.mu.Unlock()
 	return iw.writer.Close(ctx)
 }
 
@@ -74,8 +76,11 @@ func (iw *identityWriter) Write(event events.Event) error {
 
 	meergoMetrics.Increment("Collector.IdentityWriter.Write.calls", 1)
 
+	iw.mu.Lock()
+
 	// If the action lacks a transformation, write the identity directly to the store.
 	if iw.transformer == nil {
+		iw.mu.Unlock()
 		id, ok := event["userId"].(string)
 		// Since there are no properties, do not store anonymous identities.
 		if !ok {
@@ -97,7 +102,6 @@ func (iw *identityWriter) Write(event events.Event) error {
 
 	var evs []events.Event
 
-	iw.mu.Lock()
 	if iw.identities == nil {
 		// Set the timer.
 		iw.timer = time.AfterFunc(maxQueuedEventIdentityTime, func() {
@@ -153,8 +157,12 @@ func (iw *identityWriter) transformAndWrite(evs []events.Event) {
 		records[i].Properties = identity
 	}
 
+	iw.mu.Lock()
+	transformer := iw.transformer
+	iw.mu.Unlock()
+
 	ctx := context.Background()
-	err := iw.transformer.Transform(ctx, records)
+	err := transformer.Transform(ctx, records)
 	if err != nil {
 		slog.Error("core/events/collector: unexpected error occurred transforming event", "err", err)
 		return
