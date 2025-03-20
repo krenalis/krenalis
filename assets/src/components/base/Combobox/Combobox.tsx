@@ -12,6 +12,8 @@ import { ExpressionFragment, parseMapExpression } from '../../../utils/parseMapE
 import { autocompleteExpression } from './Combobox.helpers';
 import { MEERGO_FUNCTIONS, MeergoFunction } from '../../../constants/function';
 
+const CONSTANT_REGEX = /"([^"]*)"/;
+
 interface ComboboxProps {
 	value: string;
 	items: ComboboxItem[];
@@ -19,6 +21,7 @@ interface ComboboxProps {
 	onSelect: (name: string, value: string) => void;
 	name: string;
 	isExpression: boolean;
+	enumValues?: string[];
 	size?: 'small' | 'medium' | 'large';
 	className?: string;
 	error?: string;
@@ -41,6 +44,7 @@ const Combobox = ({
 	onSelect: onSelectFunc,
 	name,
 	isExpression,
+	enumValues,
 	size = 'medium',
 	className,
 	error,
@@ -229,6 +233,18 @@ const Combobox = ({
 		}, 20);
 	}, [isOpen]);
 
+	useLayoutEffect(() => {
+		if (enumValues == null) {
+			return;
+		}
+		setTimeout(() => {
+			const isConstant = CONSTANT_REGEX.test(val);
+			if (val === '' || isConstant) {
+				tabGroupRef.current?.show('enum');
+			}
+		});
+	}, [isOpen]);
+
 	useEffect(() => {
 		const onPageClick = (e) => {
 			const target = e.target;
@@ -336,22 +352,39 @@ const Combobox = ({
 
 	const hasTabs = useMemo(() => {
 		return (
-			((filteredProperties != null && filteredProperties.length > 0) ||
+			enumValues != null ||
+			(((filteredProperties != null && filteredProperties.length > 0) ||
 				(filteredFunctions != null && filteredFunctions.length > 0)) &&
-			isExpression
+				isExpression)
 		);
 	}, [filteredProperties, filteredFunctions]);
 
 	useEffect(() => {
-		if (hasTabs) {
+		if (enumValues != null) {
+			setSelectedTab('enum');
+		} else if (hasTabs) {
 			// set the initial value of the selected tab.
 			setSelectedTab('properties');
 		}
 	}, []);
 
-	const onSelect = (e, term: string, type: 'property' | 'function') => {
+	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum') => {
 		e.preventDefault();
 		e.stopPropagation();
+
+		if (type === 'enum') {
+			let v = term;
+			setVal(v);
+			inputRef.current.focus();
+			setTimeout(() => {
+				if (autoResize) {
+					resizeCombobox();
+				}
+			});
+			onSelectFunc(name, v);
+			setIsOpen(false);
+			return;
+		}
 
 		let position = 0;
 		let v = '';
@@ -490,12 +523,32 @@ const Combobox = ({
 					)}
 					{hasTabs ? (
 						<SlTabGroup className='combobox-list__tabs' onSlTabShow={onTabClick} ref={tabGroupRef}>
-							<SlTab slot='nav' panel='properties'>
-								Properties ({filteredProperties.length})
-							</SlTab>
-							<SlTab slot='nav' panel='functions'>
-								Functions ({filteredFunctions.length})
-							</SlTab>
+							{enumValues != null && (
+								<SlTab slot='nav' panel='enum'>
+									Enum ({enumValues.length})
+								</SlTab>
+							)}
+							{filteredProperties && (
+								<SlTab slot='nav' panel='properties'>
+									Properties ({filteredProperties.length})
+								</SlTab>
+							)}
+							{filteredFunctions && (
+								<SlTab slot='nav' panel='functions'>
+									Functions ({filteredFunctions.length})
+								</SlTab>
+							)}
+							{enumValues != null && (
+								<SlTabPanel name='enum'>
+									{enumValues.map((v) => {
+										return (
+											<SlMenuItem key={v} onClick={(e) => onSelect(e, v, 'enum')}>
+												<div className='enum-item'>{v}</div>
+											</SlMenuItem>
+										);
+									})}
+								</SlTabPanel>
+							)}
 							<SlTabPanel name='properties'>
 								{filteredProperties?.map((item) => {
 									return (

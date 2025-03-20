@@ -50,7 +50,7 @@ import {
 	TransformDataResponse,
 } from '../../../lib/api/types/responses';
 import getLanguageLogo from '../../helpers/getLanguageLogo';
-import Type, { ArrayType, MapType, ObjectType, Property } from '../../../lib/api/types/types';
+import Type, { ArrayType, MapType, ObjectType, Property, TextType } from '../../../lib/api/types/types';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
@@ -860,6 +860,20 @@ const TransformationBox = ({
 				}
 			}
 
+			const typ = property.full.type;
+			const isEnum = typ.kind === 'text' && (typ as TextType).values != null;
+			const isBool = typ.kind === 'boolean';
+
+			let enumValues: string[] = [];
+			if (isEnum) {
+				const values = (typ as TextType).values;
+				for (const v of values) {
+					enumValues.push(`"${v}"`);
+				}
+			} else if (isBool) {
+				enumValues = ['true', 'false'];
+			}
+
 			mappings.push(
 				<div
 					key={k}
@@ -886,6 +900,7 @@ const TransformationBox = ({
 						}
 						autocompleteExpressions={true}
 						isExpression={true}
+						enumValues={enumValues.length > 0 ? enumValues : undefined}
 						items={mappingItems}
 						onSelect={onSelectMappingItem}
 					>

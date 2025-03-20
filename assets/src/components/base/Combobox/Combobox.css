@@ -149,6 +149,12 @@
 	opacity: 1;
 }
 
+.combobox-list .enum-item {
+	padding-left: 20px;
+	font-family: var(--monospace-fonts);
+	font-size: 15px;
+}
+
 .combobox-list sl-menu-item::part(label) {
 	overflow: visible !important;
 }
