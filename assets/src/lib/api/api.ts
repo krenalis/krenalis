@@ -272,7 +272,7 @@ class Connections {
 		format: string,
 		sheet: string | null,
 		compression: string,
-		formatSettings: ConnectorSettings | null | undefined,
+		formatSettings: ConnectorSettings | null,
 		limit: number,
 	): Promise<RecordsResponse> => {
 		let params = [];
@@ -281,7 +281,7 @@ class Connections {
 			params.push(['sheet', sheet]);
 		}
 		params.push(['compression', compression]);
-		if (formatSettings !== null && formatSettings !== undefined) {
+		if (formatSettings != null) {
 			params.push(['formatSettings', JSON.stringify(formatSettings)]);
 		}
 		params.push(['limit', limit]);
@@ -298,12 +298,12 @@ class Connections {
 		path: string,
 		format: string,
 		compression: string,
-		formatSettings: ConnectorSettings | null | undefined,
+		formatSettings: ConnectorSettings | null,
 	): Promise<SheetsResponse> => {
 		let params = [];
 		params.push(['format', format]);
 		params.push(['compression', compression]);
-		if (formatSettings !== null && formatSettings !== undefined) {
+		if (formatSettings != null) {
 			params.push(['formatSettings', JSON.stringify(formatSettings)]);
 		}
 		return await call(
