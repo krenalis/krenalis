@@ -245,7 +245,14 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 												</div>
 											</div>
 											<div className='user-drawer__action'>
-												Imported from action: <code>{identity.action}</code>
+												Imported from action:{' '}
+												<span className='user-drawer__identity-action-link'>
+													<Link
+														path={`connections/${connection.id}/actions/edit/${identity.action}`}
+													>
+														{identity.action}
+													</Link>
+												</span>
 											</div>
 											{identity.id && (
 												<div className='user-drawer__identity-id'>

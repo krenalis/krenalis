@@ -439,6 +439,12 @@
 	align-items: start;
 }
 
+.user-drawer__identity-action-link {
+	color: var(--sl-color-primary-600);
+	text-decoration: underline;
+	cursor: pointer;
+}
+
 .user-drawer__identity-connection-logo .little-logo {
 	position: relative;
 	top: 1px;
