@@ -811,6 +811,10 @@ inherit the disabled style */
 	display: flex;
 }
 
+.fullscreen-transformation__property-check::part(control) {
+	border-color: var(--sl-color-neutral-400);
+}
+
 .fullscreen-transformation__property-check-empty {
 	width: 21px;
 }
