@@ -160,7 +160,7 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 				// If the action type is an import from a file source,
 				// the input schema is the schema of the file itself.
 				if (fields.includes('File') && isEditing && isImport) {
-					let s: ConnectorSettings = null;
+					let s: ConnectorSettings | null = null;
 					const connector = connectors.find((c) => c.name === providedAction.format);
 					if (connector.hasSettings(connection.role)) {
 						// get the settings of the file.
