@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/state"
@@ -23,6 +24,7 @@ const trace = false // set to true to trace execution flow
 type AckFunc func(ids []string, err error)
 
 const maxAvailable = 1000
+const maxTimeBetweenIterations = 200 * time.Millisecond
 const dontConsume = -1
 
 // UpsertableApp is an interface implemented by app connectors that support
@@ -53,6 +55,7 @@ type Writer struct {
 	app    UpsertableApp  // app connector
 	name   string         // name of the app connector
 	ack    AckFunc        // ack function
+	timer  *time.Timer    // timer to trigger an iterator every maxTimeBetweenIterations
 
 	mu        sync.Mutex // mutex for iterator, records, index, and available fields
 	iterator  *iterator  // current iterator, if any; protected by mu
@@ -77,8 +80,8 @@ type record struct {
 	properties map[string]any // user or group properties
 }
 
-// New returns a new writer for the provided target and app. name is the
-// name of the app connector.
+// New returns a new writer for the provided target and app. name is the name of
+// the app connector.
 func New(ack AckFunc, target state.Target, app UpsertableApp, name string) *Writer {
 	w := &Writer{
 		target:  meergo.Targets(target),
@@ -86,9 +89,32 @@ func New(ack AckFunc, target state.Target, app UpsertableApp, name string) *Writ
 		name:    name,
 		ack:     ack,
 		records: make([]record, 0, 100),
+		timer:   time.NewTimer(maxTimeBetweenIterations),
 	}
 	w.close.completed.L = &w.mu
 	w.close.ctx, w.close.cancel = context.WithCancel(context.Background())
+	// Start an iteration every maxTimeBetweenIterations.
+	go func() {
+		for {
+			select {
+			case <-w.timer.C:
+				var iter *iterator
+				w.mu.Lock()
+				if w.iterator == nil && w.available > 0 {
+					iter = newIterator(w)
+					w.iterator = iter
+				}
+				w.mu.Unlock()
+				if iter != nil {
+					w.close.iterators.Add(1)
+					go w.consume(iter)
+				}
+				w.timer.Reset(maxTimeBetweenIterations)
+			case <-w.close.ctx.Done():
+				return
+			}
+		}
+	}()
 	return w
 }
 
@@ -150,11 +176,8 @@ func (w *Writer) Write(_ context.Context, id string, properties map[string]any) 
 	w.mu.Lock()
 	w.records = append(w.records, record{id: id, properties: properties})
 	w.available++
-	// If there are no iterators and at least maxAvailable records are present,
-	// prepare a new iterator to be started after releasing the lock.
-	if w.iterator == nil && w.available >= maxAvailable {
-		iter = newIterator(w)
-		w.iterator = iter
+	if w.available == maxAvailable {
+		w.timer.Reset(time.Nanosecond)
 	}
 	if trace {
 		fmt.Printf("Writer.Write: write record id=%q, properties=%p, available=%d\n", id, properties, w.available)
@@ -166,10 +189,6 @@ func (w *Writer) Write(_ context.Context, id string, properties map[string]any) 
 		w._assertAvailable(w.available)
 	}
 	w.mu.Unlock()
-	if iter != nil {
-		w.close.iterators.Add(1)
-		go w.consume(iter)
-	}
 	return true
 }
 
@@ -204,6 +223,9 @@ func (w *Writer) complete() {
 	}
 	w.iterator = nil
 	w.index = 0
+	if w.available >= maxAvailable {
+		w.timer.Reset(time.Nanosecond)
+	}
 	w.mu.Unlock()
 	w.close.completed.Signal()
 }

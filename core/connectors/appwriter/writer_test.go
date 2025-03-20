@@ -63,20 +63,23 @@ func Test_Writer(t *testing.T) {
 					t.Fatal("Write: expected true, got false")
 				}
 			}
-			if err := w.Close(ctx); err != nil {
-				t.Fatalf("Close: expected no error, got error %q", err)
-			}
 
-			app.mu.Lock()
-			defer app.mu.Unlock()
-
-			n := 0
-			for _, ack := range app.acks {
-				n += len(ack.ids)
+			var n int
+			for {
+				time.Sleep(10 * time.Millisecond)
+				app.mu.Lock()
+				n = app.n
+				app.mu.Unlock()
+				if n == test.num {
+					break
+				}
 			}
 			if n != test.num {
 				t.Fatalf("expected %d IDs, got %d", test.num, n)
 			}
+
+			app.mu.Lock()
+			defer app.mu.Unlock()
 
 			for i, ack := range app.acks {
 				if ack.err != nil {
@@ -93,6 +96,10 @@ func Test_Writer(t *testing.T) {
 				t.Fatalf("missing %d created", ids[""])
 			}
 
+			if err := w.Close(ctx); err != nil {
+				t.Fatalf("Close: expected no error, got error %q", err)
+			}
+
 		})
 	}
 
@@ -107,6 +114,7 @@ type app struct {
 	t    *testing.T
 	rng  *rand.Rand
 	mu   sync.Mutex
+	n    int
 	acks []ack
 }
 
@@ -189,5 +197,6 @@ func (app *app) ack(ids []string, err error) {
 		app.acks = []ack{}
 	}
 	app.acks = append(app.acks, ack{ids: ids, err: err})
+	app.n += len(ids)
 	app.mu.Unlock()
 }
