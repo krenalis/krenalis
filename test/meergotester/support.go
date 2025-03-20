@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/meergo/meergo/backoff"
@@ -281,19 +282,19 @@ func (c *Meergo) Executions() []Execution {
 }
 
 func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
-	req := map[string]any{
-		"format":         format,
-		"sheet":          sheet,
-		"compression":    compression,
-		"formatSettings": settings,
-		"limit":          limit,
+	queryString := url.Values{
+		"format":         []string{format},
+		"sheet":          []string{sheet},
+		"compression":    []string{string(compression)},
+		"formatSettings": []string{string(settings)},
+		"limit":          []string{strconv.Itoa(limit)},
 	}
 	var response struct {
 		Records []map[string]any `json:"records"`
 		Schema  types.Type       `json:"schema"`
 	}
 	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/%s", storage, url.PathEscape(path))
-	c.MustCall("POST", endpointPath, req, &response)
+	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, &response)
 	return response.Records, response.Schema
 }
 
@@ -387,16 +388,16 @@ func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
 }
 
 func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.RawMessage) []string {
-	request := map[string]any{
-		"format":         format,
-		"compression":    compression,
-		"formatSettings": settings,
+	queryString := url.Values{
+		"format":         []string{format},
+		"compression":    []string{string(compression)},
+		"formatSettings": []string{string(settings)},
 	}
 	var response struct {
 		Sheets []string `json:"sheets"`
 	}
 	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/%s/sheets", storage, url.PathEscape(path))
-	c.MustCall("POST", endpointPath, request, &response)
+	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, &response)
 	return response.Sheets
 }
 
@@ -481,25 +482,30 @@ func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
 }
 
 func (c *Meergo) UserEvents(user uuid.UUID, properties []string) []map[string]any {
-	request := map[string]any{
+	queryString := url.Values{
 		"properties": properties,
-		"filter": Filter{
-			Logical: OpAnd,
-			Conditions: []FilterCondition{
-				{Property: "user",
-					Operator: OpIs,
-					Values:   []string{user.String()}},
-			},
-		},
-		"order":     "timestamp",
-		"orderDesc": true,
-		"first":     0,
-		"limit":     10,
+		"order":      []string{"timestamp"},
+		"orderDesc":  []string{"true"},
+		"first":      []string{"0"},
+		"limit":      []string{"10"},
 	}
+	filter := Filter{
+		Logical: OpAnd,
+		Conditions: []FilterCondition{
+			{Property: "user",
+				Operator: OpIs,
+				Values:   []string{user.String()}},
+		},
+	}
+	jsonFilter, err := json.Marshal(filter)
+	if err != nil {
+		panic(err)
+	}
+	queryString.Add("filter", string(jsonFilter))
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	c.MustCall("POST", "/api/v1/events/retrive", request, &response)
+	c.MustCall("GET", "/api/v1/events"+"?"+queryString.Encode(), nil, &response)
 	return response.Events
 }
 
@@ -514,19 +520,19 @@ func (c *Meergo) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentit
 }
 
 func (c *Meergo) Users(properties []string, order string, orderDesc bool, first, limit int) (users []User, schema types.Type, total int) {
-	req := map[string]any{
+	queryString := url.Values{
 		"properties": properties,
-		"order":      order,
-		"orderDesc":  orderDesc,
-		"first":      first,
-		"limit":      limit,
+		"order":      []string{order},
+		"orderDesc":  []string{fmt.Sprintf("%t", orderDesc)},
+		"first":      []string{strconv.Itoa(first)},
+		"limit":      []string{strconv.Itoa(limit)},
 	}
 	var response struct {
 		Users  []User     `json:"users"`
 		Schema types.Type `json:"schema"`
 		Total  int        `json:"total"`
 	}
-	c.MustCall("POST", "/api/v1/users", req, &response)
+	c.MustCall("GET", "/api/v1/users"+"?"+queryString.Encode(), nil, &response)
 	return response.Users, response.Schema, response.Total
 }
 

@@ -51,22 +51,28 @@ func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request)
 
 // AppUsers returns the users of an app connection.
 func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (any, error) {
+
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		Schema types.Type `json:"schema"`
-		Cursor string     `json:"cursor"`
+
+	// Read and parse the parameters from the query string.
+	q := r.URL.Query()
+	var schema types.Type
+	if s := q.Get("schema"); s != "" {
+		err := json.Unmarshal([]byte(s), &schema)
+		if err != nil {
+			return nil, errors.BadRequest("invalid schema: %s", err)
+		}
 	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	users, cursor, err := c.AppUsers(r.Context(), body.Schema, body.Cursor)
+	cursor := q.Get("cursor")
+
+	users, cursor, err := c.AppUsers(r.Context(), schema, cursor)
 	if err != nil {
 		return nil, err
 	}
+
 	return map[string]any{"users": users, "cursor": cursor}, nil
 }
 
@@ -167,21 +173,43 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	path := r.PathValue("path")
-	var body struct {
-		Format         string           `json:"format"`
-		Sheet          string           `json:"sheet"`
-		Compression    core.Compression `json:"compression"`
-		FormatSettings json.Value       `json:"formatSettings"`
-		Limit          int              `json:"limit"`
+
+	// Read and parse the parameters from the query string.
+	q := r.URL.Query()
+	format := q.Get("format")
+	sheet := q.Get("sheet")
+	var compression core.Compression
+	switch c := q.Get("compression"); c {
+	case "":
+		compression = core.NoCompression
+	case "Zip":
+		compression = core.ZipCompression
+	case "Gzip":
+		compression = core.GzipCompression
+	case "Snappy":
+		compression = core.SnappyCompression
+	default:
+		return nil, errors.BadRequest("invalid compression %q", c)
 	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
+	var formatSettings json.Value
+	if sett := q.Get("formatSettings"); sett != "" {
+		if err := json.Validate([]byte(sett)); err != nil {
+			return nil, errors.BadRequest("invalid formatSettings: %s", err)
+		}
+		formatSettings = json.Value(sett)
+		if formatSettings.IsNull() {
+			formatSettings = nil
+		}
 	}
-	if body.FormatSettings != nil && body.FormatSettings.IsNull() {
-		body.FormatSettings = nil
+	var limit int
+	if l := q.Get("limit"); l != "" {
+		limit, err = strconv.Atoi(l)
+		if err != nil {
+			return nil, errors.BadRequest("invalid limit")
+		}
 	}
-	records, schema, issues, err := c.File(r.Context(), path, body.Format, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
+
+	records, schema, issues, err := c.File(r.Context(), path, format, sheet, compression, json.Value(formatSettings), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -281,19 +309,35 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 	path := r.PathValue("path")
-	var body struct {
-		Format         string           `json:"format"`
-		Compression    core.Compression `json:"compression"`
-		FormatSettings json.Value       `json:"formatSettings"`
+
+	// Read and parse the parameters from the query string.
+	q := r.URL.Query()
+	format := q.Get("format")
+	var compression core.Compression
+	switch c := q.Get("compression"); c {
+	case "":
+		compression = core.NoCompression
+	case "Zip":
+		compression = core.ZipCompression
+	case "Gzip":
+		compression = core.GzipCompression
+	case "Snappy":
+		compression = core.SnappyCompression
+	default:
+		return nil, errors.BadRequest("invalid compression")
 	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
+	var formatSettings json.Value
+	if sett := q.Get("formatSettings"); sett != "" {
+		if err := json.Validate([]byte(sett)); err != nil {
+			return nil, errors.BadRequest("invalid 'formatSettings': %s", err)
+		}
+		formatSettings = json.Value(sett)
+		if formatSettings.IsNull() {
+			formatSettings = nil
+		}
 	}
-	if body.FormatSettings != nil && body.FormatSettings.IsNull() {
-		body.FormatSettings = nil
-	}
-	sheets, err := c.Sheets(r.Context(), path, body.Format, body.Compression, body.FormatSettings)
+
+	sheets, err := c.Sheets(r.Context(), path, format, compression, formatSettings)
 	if err != nil {
 		return nil, err
 	}

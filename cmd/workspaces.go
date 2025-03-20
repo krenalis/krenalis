@@ -400,27 +400,45 @@ func (workspace workspace) DeleteEventListener(_ http.ResponseWriter, r *http.Re
 
 // Events returns the events.
 func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, error) {
+
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		Properties []string     `json:"properties"`
-		Filter     *core.Filter `json:"filter"`
-		Order      string       `json:"order"`
-		OrderDesc  bool         `json:"orderDesc"`
-		First      int          `json:"first"`
-		Limit      int          `json:"limit"`
+
+	// Read and parse the parameters from the query string.
+	q := r.URL.Query()
+	properties := q["properties"]
+	var filter *core.Filter
+	if f := q.Get("filter"); f != "" {
+		err := json.Unmarshal([]byte(f), &filter)
+		if err != nil {
+			return nil, errors.BadRequest("invalid filter")
+		}
 	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
+	order := q.Get("order")
+	orderDesc := q.Get("orderDesc") == "true"
+	var first int
+	if f := q.Get("first"); f != "" {
+		first, err = strconv.Atoi(f)
+		if err != nil {
+			return nil, errors.BadRequest("invalid first")
+		}
 	}
-	evts, err := ws.Events(r.Context(), body.Properties, body.Filter, body.Order, body.OrderDesc, body.First, body.Limit)
+	var limit int
+	if l := q.Get("limit"); l != "" {
+		limit, err = strconv.Atoi(l)
+		if err != nil {
+			return nil, errors.BadRequest("invalid limit")
+		}
+	}
+
+	evts, err := ws.Events(r.Context(), properties, filter, order, orderDesc, first, limit)
 	if err != nil {
 		return nil, err
 	}
 	events, _ := types.Marshal(evts, types.Array(events.Schema))
+
 	return map[string]any{"events": events}, nil
 }
 
@@ -843,25 +861,35 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		Properties []string     `json:"properties"`
-		Filter     *core.Filter `json:"filter"`
-		Order      string       `json:"order"`
-		OrderDesc  bool         `json:"orderDesc"`
-		First      int          `json:"first"`
-		Limit      *int         `json:"limit"`
+
+	// Read and parse the parameters from the query string.
+	q := r.URL.Query()
+	properties := q["properties"]
+	var filter *core.Filter
+	if f := q.Get("filter"); f != "" {
+		err := json.Unmarshal([]byte(f), &filter)
+		if err != nil {
+			return nil, errors.BadRequest("invalid filter")
+		}
 	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
+	order := q.Get("order")
+	orderDesc := q.Get("orderDesc") == "true"
+	var first int
+	if f := q.Get("first"); f != "" {
+		first, err = strconv.Atoi(f)
+		if err != nil {
+			return nil, errors.BadRequest("invalid first")
+		}
 	}
 	var limit int
-	if body.Limit == nil {
-		limit = 100
-	} else {
-		limit = *body.Limit
+	if l := q.Get("limit"); l != "" {
+		limit, err = strconv.Atoi(l)
+		if err != nil {
+			return nil, errors.BadRequest("invalid limit")
+		}
 	}
-	users, schema, total, err := ws.Users(r.Context(), body.Properties, body.Filter, body.Order, body.OrderDesc, body.First, limit)
+
+	users, schema, total, err := ws.Users(r.Context(), properties, filter, order, orderDesc, first, limit)
 	if err != nil {
 		return nil, err
 	}

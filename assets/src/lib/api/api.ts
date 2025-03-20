@@ -275,17 +275,19 @@ class Connections {
 		formatSettings: ConnectorSettings,
 		limit: number,
 	): Promise<RecordsResponse> => {
+		let params = [];
+		params.push(['format', format]);
+		if (sheet !== null) {
+			params.push(['sheet', sheet]);
+		}
+		params.push(['compression', compression]);
+		params.push(['formatSettings', JSON.stringify(formatSettings)]);
+		params.push(['limit', limit]);
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/${encodeURIComponent(path)}`,
-			http.POST,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/${encodeURIComponent(path)}` +
+				queryString(params),
+			http.GET,
 			this.workspaceID,
-			{
-				format,
-				sheet,
-				compression,
-				formatSettings,
-				limit,
-			},
 		);
 	};
 
@@ -296,15 +298,15 @@ class Connections {
 		compression: string,
 		formatSettings: ConnectorSettings,
 	): Promise<SheetsResponse> => {
+		let params = [];
+		params.push(['format', format]);
+		params.push(['compression', compression]);
+		params.push(['formatSettings', JSON.stringify(formatSettings)]);
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/${encodeURIComponent(path)}/sheets`,
-			http.POST,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/${encodeURIComponent(path)}/sheets` +
+				queryString(params),
+			http.GET,
 			this.workspaceID,
-			{
-				format,
-				compression,
-				formatSettings,
-			},
 		);
 	};
 
@@ -481,14 +483,15 @@ class Connections {
 	};
 
 	appUsers = async (connection: number, schema: ObjectType, cursor?: string): Promise<AppUsersResponse> => {
+		let params = [];
+		params.push(['schema', JSON.stringify(schema)]);
+		if (cursor !== undefined) {
+			params.push(['cursor', cursor]);
+		}
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/users`,
-			http.POST,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/users` + queryString(params),
+			http.GET,
 			this.workspaceID,
-			{
-				schema,
-				cursor,
-			},
 		);
 	};
 
@@ -579,52 +582,58 @@ class Users {
 		first: number,
 		limit: number,
 	): Promise<FindUsersResponse> => {
-		return await call(`${this.apiURL}/users`, http.POST, this.workspaceID, {
-			properties,
-			filter,
-			order,
-			orderDesc,
-			first,
-			limit,
+		let params = [];
+		properties.forEach(function (property) {
+			params.push(['properties', property]);
 		});
+		params.push(['filter', JSON.stringify(filter)]);
+		params.push(['order', order]);
+		params.push(['orderDesc', orderDesc]);
+		params.push(['first', first]);
+		params.push(['limit', limit]);
+		return await call(`${this.apiURL}/users` + queryString(params), http.GET, this.workspaceID);
 	};
 
 	events = async (user: string): Promise<UserEventsResponse> => {
-		return await call(`${this.apiURL}/events/retrive`, http.POST, this.workspaceID, {
-			properties: [
-				'id',
-				'user',
-				'connection',
-				'anonymousId',
-				'category',
-				'context',
-				'event',
-				'groupId',
-				'messageId',
-				'name',
-				'properties',
-				'receivedAt',
-				'sentAt',
-				'timestamp',
-				'traits',
-				'type',
-				'userId',
-			],
-			filter: {
-				logical: 'and',
-				conditions: [
-					{
-						property: 'user',
-						operator: 'is',
-						values: [user],
-					},
-				],
-			},
-			order: 'timestamp',
-			orderDesc: true,
-			first: 0,
-			limit: 10,
+		let params = [];
+		let properties = [
+			'id',
+			'user',
+			'connection',
+			'anonymousId',
+			'category',
+			'context',
+			'event',
+			'groupId',
+			'messageId',
+			'name',
+			'properties',
+			'receivedAt',
+			'sentAt',
+			'timestamp',
+			'traits',
+			'type',
+			'userId',
+		];
+		properties.forEach(function (property) {
+			params.push(['properties', property]);
 		});
+		let filter = {
+			logical: 'and',
+			conditions: [
+				{
+					property: 'user',
+					operator: 'is',
+					values: [user],
+				},
+			],
+		};
+		params.push(['filter', JSON.stringify(filter)]);
+		params.push(['order', 'timestamp']);
+		params.push(['orderDesc', true]);
+		params.push(['first', 0]);
+		params.push(['limit', 10]);
+		return await call(`${this.apiURL}/events` + queryString(params), http.GET, this.workspaceID);
 	};
 
 	traits = async (user: string): Promise<userTraitsResponse> => {
@@ -966,6 +975,19 @@ class Connectors {
 // TODO: review this for production.
 if (typeof window !== 'undefined') {
 	(window as any).API = API;
+}
+
+function queryString(parameters: Array<[string, any]>) {
+	if (parameters.length == 0) {
+		return '';
+	}
+	const parts: string[] = [];
+	parameters.forEach(([key, value]) => {
+		const encodedKey = encodeURIComponent(key);
+		const encodedValue = encodeURIComponent(String(value));
+		parts.push(`${encodedKey}=${encodedValue}`);
+	});
+	return '?' + parts.join('&');
 }
 
 export default API;

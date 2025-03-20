@@ -431,8 +431,8 @@ func init() {
 				Name: "Retrieve all events",
 				Description: "Retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. " +
 					"If a filter is provided, only events that match the filter criteria will be returned.",
-				Method: POST,
-				URL:    "/v1/events/retrive",
+				Method: GET,
+				URL:    "/v1/events",
 				Parameters: []types.Property{
 					{
 						Name:           "properties",
@@ -442,10 +442,14 @@ func init() {
 						Description:    "The event properties to return.",
 					},
 					{
-						Name:        "filter",
-						Type:        filterType,
-						Nullable:    true,
-						Description: "The filter applied to the events. If it's not null, only the events that match the filter will be returned.",
+						Name:     "filter",
+						Type:     filterType,
+						Nullable: true,
+						Description: "The filter applied to the events. If it's not null, only the events that match the filter will be returned.\n\n" +
+							"It must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n" +
+							"`" + `{"logical":"and","conditions":[{"property":"user","operator":"is","values":["960ae86c-fc6e-438a-ae03-838fa6c94946"]}]}` + "`\n\n" +
+							"must be then be escaped and passed in the query string as:\n\n" +
+							"`" + `filter=%7B%22logical%22%3A%22and%22%2C%22conditions%22%3A%5B%7B%22property%22%3A%22user%22%2C%22operator%22%3A%22is%22%2C%22values%22%3A%5B%22960ae86c-fc6e-438a-ae03-838fa6c94946%22%5D%7D%5D%7D` + "`",
 					},
 					{
 						Name:        "order",
@@ -457,7 +461,7 @@ func init() {
 						Name:        "orderDesc",
 						Type:        types.Boolean(),
 						Placeholder: `false`,
-						Description: "Indicates if the returned events are sorted in descending order; if not true, they are sorted in ascending order.",
+						Description: "Indicates if the returned events are sorted in descending order; if not `true`, they are sorted in ascending order.",
 					},
 					{
 						Name:        "first",

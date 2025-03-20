@@ -22,7 +22,7 @@ func init() {
 				Name: "Retrieve app users",
 				Description: "Retrieves users directly from the app. These are the users as they appear in the app.\n\n" +
 					"For users that have already been imported into the workspace, refer to the [/users](/api/users) endpoint.",
-				Method: POST,
+				Method: GET,
 				URL:    "/v1/connections/:id/users",
 				Parameters: []types.Property{
 					{
@@ -37,7 +37,7 @@ func init() {
 						Type:           types.Parameter("Schema"),
 						Placeholder:    `{ ... }`,
 						CreateRequired: true,
-						Description:    "The schema that the returned users must satisfy.",
+						Description:    "The schema that the returned users must satisfy",
 					},
 					{
 						Name:        "cursor",

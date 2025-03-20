@@ -103,14 +103,18 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /connections/{id}/actions/schemas/Events/{type}": connection.ActionSchemas, /* only UI */
 		"GET    /connections/{id}/actions/schemas/{target}":      connection.ActionSchemas, /* only UI */
 		"GET    /connections/{id}/event-write-keys":              connection.EventWriteKeys,
+		"GET    /connections/{id}/files/{path}":                  connection.File,
 		"GET    /connections/{id}/files/{path}/absolute":         connection.AbsolutePath,
+		"GET    /connections/{id}/files/{path}/sheets":           connection.Sheets,
 		"GET    /connections/{id}/schemas/event/{type}":          connection.AppEventSchema,
 		"GET    /connections/{id}/schemas/user":                  connection.AppUserSchemas,
 		"GET    /connections/{id}/tables/{name}":                 connection.TableSchema,
 		"GET    /connections/{id}/ui":                            connection.ServeUI, /* only UI */
+		"GET    /connections/{id}/users":                         connection.AppUsers,
 		"GET    /connectors":                                     api.Connectors,
 		"GET    /connectors/{name}":                              api.Connector,
 		"GET    /events/listeners/{id}":                          workspace.ListenedEvents,
+		"GET    /events":                                         workspace.Events,
 		"GET    /events/schema":                                  api.EventSchema,
 		"GET    /events/settings/{write_key}":                    api.EventsSettings,
 		"GET    /identifiers-schema":                             workspace.IdentifiersSchema,
@@ -121,6 +125,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /members/current":                                api.Member,           /* only UI */
 		"GET    /members/invitations/{token}":                    api.MemberInvitation, /* only UI */
 		"GET    /transformation-languages":                       api.TransformationLanguages,
+		"GET    /users":                                          workspace.Users,
 		"GET    /users/schema":                                   workspace.UserSchema,
 		"GET    /users/{id}/events":                              workspace.UserEvents,
 		"GET    /users/{id}/identities":                          workspace.Identities,
@@ -134,16 +139,12 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"POST   /actions/{id}/ui-event":                          action.ServeUI, /* only UI */
 		"POST   /connections":                                    workspace.CreateConnection,
 		"POST   /connections/{id}/event-write-keys":              connection.CreateEventWriteKey,
-		"POST   /connections/{id}/files/{path}":                  connection.File,
-		"POST   /connections/{id}/files/{path}/sheets":           connection.Sheets,
 		"POST   /connections/{id}/identities":                    connection.Identities,
 		"POST   /connections/{id}/preview-send-event":            connection.PreviewSendEvent,
 		"POST   /connections/{id}/query":                         connection.ExecQuery,
 		"POST   /connections/{id}/ui-event":                      connection.ServeUI, /* only UI */
-		"POST   /connections/{id}/users":                         connection.AppUsers,
 		"POST   /connections/{src}/links/{dst}":                  connection.LinkConnection,
 		"POST   /events":                                         workspace.IngestEvents,
-		"POST   /events/retrive":                                 workspace.Events,
 		"POST   /events/listeners":                               workspace.CreateEventListener,
 		"POST   /events/{type}":                                  workspace.IngestEvents,
 		"POST   /expressions-properties":                         api.ExpressionsProperties, /* only UI */
@@ -155,8 +156,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"POST   /transformations":                                api.TransformData,         /* only UI */
 		"POST   /ui":                                             workspace.ServeUI,         /* only UI */
 		"POST   /ui-event":                                       workspace.ServeUI,         /* only UI */
-		"POST   /users":                                          workspace.Users,
-		"POST   /validate-expression":                            api.ValidateExpression, /* only UI */
+		"POST   /validate-expression":                            api.ValidateExpression,    /* only UI */
 		"POST   /warehouse/repair":                               workspace.RepairWarehouse,
 		"POST   /workspaces":                                     organization.CreateWorkspace,
 		"POST   /workspaces/test":                                organization.TestWorkspaceCreation,

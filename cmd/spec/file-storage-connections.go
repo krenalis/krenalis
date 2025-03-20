@@ -50,7 +50,7 @@ func init() {
 		Nullable:    true,
 		Placeholder: `{ "HasColumnNames": true }`,
 		Description: "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
-			"If the file format does not require any settings, the `formatSettings` field must be either omitted or set to null.",
+			"If the file format does not require any settings, the `formatSettings` parameter must be either omitted or set to `null`.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -61,7 +61,7 @@ func init() {
 			{
 				Name:        "Retrieve file",
 				Description: "Returns schema and first rows of a file.",
-				Method:      POST,
+				Method:      GET,
 				URL:         "/v1/connections/:id/files/:path",
 				Parameters: []types.Property{
 					idProperty,
@@ -118,7 +118,7 @@ func init() {
 			{
 				Name:        "Read sheets",
 				Description: "Returns the list of sheets in a file, applicable to file formats that supports sheets.",
-				Method:      POST,
+				Method:      GET,
 				URL:         "/v1/connections/:id/files/:path/sheets",
 				Parameters: []types.Property{
 					idProperty,

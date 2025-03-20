@@ -8476,7 +8476,7 @@
                 {
                     "name": "Retrieve app users",
                     "description": "Retrieves users directly from the app. These are the users as they appear in the app.\n\nFor users that have already been imported into the workspace, refer to the [/users](/api/users) endpoint.",
-                    "method": "POST",
+                    "method": "GET",
                     "url": "/v1/connections/:id/users",
                     "parameters": [
                         {
@@ -8496,7 +8496,7 @@
                                 "kind": "Schema"
                             },
                             "createRequired": true,
-                            "description": "The schema that the returned users must satisfy."
+                            "description": "The schema that the returned users must satisfy"
                         },
                         {
                             "name": "cursor",
@@ -12405,8 +12405,8 @@
                 {
                     "name": "Retrieve all events",
                     "description": "Retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. If a filter is provided, only events that match the filter criteria will be returned.",
-                    "method": "POST",
-                    "url": "/v1/events/retrive",
+                    "method": "GET",
+                    "url": "/v1/events",
                     "parameters": [
                         {
                             "name": "properties",
@@ -12508,7 +12508,7 @@
                                 ]
                             },
                             "nullable": true,
-                            "description": "The filter applied to the events. If it's not null, only the events that match the filter will be returned."
+                            "description": "The filter applied to the events. If it's not null, only the events that match the filter will be returned.\n\nIt must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n`{\"logical\":\"and\",\"conditions\":[{\"property\":\"user\",\"operator\":\"is\",\"values\":[\"960ae86c-fc6e-438a-ae03-838fa6c94946\"]}]}`\n\nmust be then be escaped and passed in the query string as:\n\n`filter=%7B%22logical%22%3A%22and%22%2C%22conditions%22%3A%5B%7B%22property%22%3A%22user%22%2C%22operator%22%3A%22is%22%2C%22values%22%3A%5B%22960ae86c-fc6e-438a-ae03-838fa6c94946%22%5D%7D%5D%7D`"
                         },
                         {
                             "name": "order",
@@ -12542,7 +12542,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the returned events are sorted in descending order; if not true, they are sorted in ascending order."
+                            "description": "Indicates if the returned events are sorted in descending order; if not `true`, they are sorted in ascending order."
                         },
                         {
                             "name": "first",
@@ -14134,7 +14134,7 @@
                 {
                     "name": "Retrieve file",
                     "description": "Returns schema and first rows of a file.",
-                    "method": "POST",
+                    "method": "GET",
                     "url": "/v1/connections/:id/files/:path",
                     "parameters": [
                         {
@@ -14201,7 +14201,7 @@
                                 "kind": "Settings"
                             },
                             "nullable": true,
-                            "description": "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\nIf the file format does not require any settings, the `formatSettings` field must be either omitted or set to null."
+                            "description": "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\nIf the file format does not require any settings, the `formatSettings` parameter must be either omitted or set to `null`."
                         },
                         {
                             "name": "limit",
@@ -14277,7 +14277,7 @@
                 {
                     "name": "Read sheets",
                     "description": "Returns the list of sheets in a file, applicable to file formats that supports sheets.",
-                    "method": "POST",
+                    "method": "GET",
                     "url": "/v1/connections/:id/files/:path/sheets",
                     "parameters": [
                         {
@@ -14335,7 +14335,7 @@
                                 "kind": "Settings"
                             },
                             "nullable": true,
-                            "description": "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\nIf the file format does not require any settings, the `formatSettings` field must be either omitted or set to null."
+                            "description": "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\nIf the file format does not require any settings, the `formatSettings` parameter must be either omitted or set to `null`."
                         }
                     ],
                     "moreParameters": null,
@@ -14766,7 +14766,7 @@
                 {
                     "name": "Retrieve all users",
                     "description": "Retrieves users stored in the workspace's data warehouse, up to a maximum number of users defined by `limit`. You must specify which properties to include. If a filter is provided, only users that match the filter criteria will be returned.",
-                    "method": "POST",
+                    "method": "GET",
                     "url": "/v1/users",
                     "parameters": [
                         {
@@ -14869,7 +14869,7 @@
                                 ]
                             },
                             "nullable": true,
-                            "description": "The filter applied to the users. If it's not null, only the users that match the filter will be returned."
+                            "description": "The filter applied to the users. If it's not null, only the users that match the filter will be returned. \n\nIt must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n`{\"logical\":\"and\",\"conditions\":[{\"property\":\"email\",\"operator\":\"is\",\"values\":[\"my.friend@example.com\"]}]}`\n\nmust be then be escaped and passed in the query string as:\n\n`filter=%7B%22logical%22%3A%22and%22%2C%22conditions%22%3A%5B%7B%22property%22%3A%22email%22%2C%22operator%22%3A%22is%22%2C%22values%22%3A%5B%22my.friend%40example.com%22%5D%7D%5D%7D`"
                         },
                         {
                             "name": "order",
@@ -14885,7 +14885,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the returned users are sorted in descending order; if not true, they are sorted in ascending order."
+                            "description": "Indicates if the returned users are sorted in descending order; if not `true`, they are sorted in ascending order."
                         },
                         {
                             "name": "first",
