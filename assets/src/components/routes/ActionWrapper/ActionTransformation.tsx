@@ -1150,6 +1150,8 @@ const FullscreenTransformation = ({
 	const lastExecutedEvent = useRef<EventListenerEvent>(null);
 	const eventSchema = useRef<ObjectType>(null);
 	const hasAlreadyFetchedSamples = useRef<boolean>(false);
+	const selectedInProperties = useRef<string[]>();
+	const selectedOutProperties = useRef<string[]>();
 
 	const collectEvents = (newly: EventListenerEvent[]) => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
@@ -1213,6 +1215,8 @@ const FullscreenTransformation = ({
 	useEffect(() => {
 		setShowOnlyInSelected(false);
 		setShowOnlyOutSelected(false);
+		selectedInProperties.current = null;
+		selectedOutProperties.current = null;
 		setInSearchTerm('');
 		setOutSearchTerm('');
 	}, [transformationType]);
@@ -1398,12 +1402,42 @@ const FullscreenTransformation = ({
 		setOutSearchTerm(e.target.value);
 	};
 
-	const onChangeShowOnlyInSelected = () => {
-		setShowOnlyInSelected(!showOnlyInSelected);
-	};
-
-	const onChangeShowOnlyOutSelected = () => {
-		setShowOnlyOutSelected(!showOnlyOutSelected);
+	const onChangeShowOnlySelected = (side: 'in' | 'out') => {
+		let selectedProperties: React.MutableRefObject<string[]>;
+		let setterFunc: React.Dispatch<React.SetStateAction<boolean>>;
+		if (side === 'in') {
+			selectedProperties = selectedInProperties;
+			setterFunc = setShowOnlyInSelected;
+		} else {
+			selectedProperties = selectedOutProperties;
+			setterFunc = setShowOnlyOutSelected;
+		}
+		const isShowingOnlySelected = selectedProperties.current != null;
+		if (isShowingOnlySelected) {
+			selectedProperties.current = null;
+			setterFunc(false);
+		} else {
+			const toShow: string[] = [];
+			let properties: Property[];
+			let paths: string[];
+			if (side === 'in') {
+				properties = inputSchema.properties;
+				paths = selectedInPaths;
+			} else {
+				properties = outputSchema.properties;
+				paths = selectedOutPaths;
+			}
+			for (const p of properties) {
+				const isSelected = paths.includes(p.name);
+				const hasSelectedChildren = paths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
+				if (!isSelected && !hasSelectedChildren) {
+					continue;
+				}
+				toShow.push(p.name);
+			}
+			selectedProperties.current = toShow;
+			setterFunc(true);
+		}
 	};
 
 	const onChangeSelectedPath = (side: 'in' | 'out', path: string) => {
@@ -1731,18 +1765,18 @@ const FullscreenTransformation = ({
 					<SlSwitch
 						className='fullscreen-transformation__panel-schema-show-only-selected'
 						size='small'
-						onSlChange={onChangeShowOnlyInSelected}
+						onSlChange={() => onChangeShowOnlySelected('in')}
 					>
 						Show only selected properties
 					</SlSwitch>
 				)}
 				{inputSchema?.properties.map((p) => {
 					if (transformationType === 'function') {
-						const isSelected = selectedInPaths.includes(p.name);
-						const hasSelectedChildren =
-							selectedInPaths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
-						if (showOnlyInSelected && !isSelected && !hasSelectedChildren) {
-							return null;
+						if (showOnlyInSelected) {
+							const isSelected = selectedInProperties.current?.includes(p.name);
+							if (!isSelected) {
+								return null;
+							}
 						}
 					}
 					if (isRecursiveType(p.type)) {
@@ -2112,22 +2146,20 @@ const FullscreenTransformation = ({
 										<SlSwitch
 											className='fullscreen-transformation__panel-schema-show-only-selected'
 											size='small'
-											onSlChange={onChangeShowOnlyOutSelected}
+											onSlChange={() => onChangeShowOnlySelected('out')}
 										>
 											Show only selected properties
 										</SlSwitch>
 									)}
 									{outputSchema?.properties.map((p) => {
 										if (transformationType === 'function') {
-											const isSelected = selectedOutPaths.includes(p.name);
-											const hasSelectedChildren =
-												selectedOutPaths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !==
-												-1;
-											if (showOnlyOutSelected && !isSelected && !hasSelectedChildren) {
-												return null;
+											if (showOnlyOutSelected) {
+												const isSelected = selectedOutProperties.current?.includes(p.name);
+												if (!isSelected) {
+													return null;
+												}
 											}
 										}
-
 										if (isRecursiveType(p.type)) {
 											return (
 												<TransformationNestedProperties
