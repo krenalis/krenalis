@@ -433,10 +433,28 @@
 
 .user-drawer__identity {
 	margin-bottom: 15px;
-	display: grid;
-	grid-template-columns: 25px auto;
-	gap: 5px;
-	align-items: start;
+	--logo-width: 22px;
+	--logo-gap: 5px;
+}
+
+.user-drawer__identity-head {
+	display: inline-flex;
+	gap: 3px;
+	align-items: end;
+}
+
+.user-drawer__identity-connection {
+	display: flex;
+	gap: var(--logo-gap);
+	align-items: center;
+}
+
+.user-drawer__action::part(body) {
+	pointer-events: all;
+}
+
+.user-drawer__action .user-drawer__identity-action-link a {
+	color: var(--sl-color-primary-300);
 }
 
 .user-drawer__identity-action-link {
@@ -450,6 +468,11 @@
 	top: 1px;
 }
 
+.user-drawer__identity-connection-logo .little-logo > svg {
+	width: var(--logo-width);
+	height: auto;
+}
+
 .user-drawer__identity-connection-logo,
 .user-drawer__identity-connection-name {
 	cursor: pointer;
@@ -459,13 +482,6 @@
 	padding-top: 4px;
 }
 
-.user-drawer__identity-connection-date {
-	display: flex;
-	align-items: baseline;
-	gap: 4px;
-	margin-bottom: 3px;
-}
-
 .user-drawer__identity-date {
 	font-size: 13px;
 	opacity: 0.8;
@@ -473,10 +489,12 @@
 	left: 2px;
 }
 
+.user-drawer__identity-info {
+	padding-left: calc(var(--logo-width) + var(--logo-gap));
+}
+
 .user-drawer__identity-id,
-.user-drawer__action,
 .user-drawer__identity-anonymous-ids {
-	font-weight: 500;
 	font-size: 13px;
 	margin-bottom: 2px;
 }

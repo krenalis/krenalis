@@ -12,6 +12,7 @@ import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
@@ -82,12 +83,15 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 		setSelectedUser(newUserID);
 	};
 
-	const onSelectTab = (e) => {
+	const onSelectTab = (e: any) => {
 		setSelectedTab(e.detail.name);
 	};
 
-	const onClose = (e) => {
-		if (e.target.classList.contains('drawer-trait__value-copy')) {
+	const onClose = (e: any) => {
+		if (
+			e.target.classList.contains('drawer-trait__value-copy') ||
+			e.target.classList.contains('user-drawer__action')
+		) {
 			e.stopPropagation();
 			return;
 		}
@@ -230,30 +234,33 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 								const logo = getConnectorLogo(connection?.connector.icon);
 								return (
 									<div className='user-drawer__identity' key={identity.lastChangeTime}>
-										<Link path={`connections/${connection.id}/actions`}>
-											<div className='user-drawer__identity-connection-logo'>{logo}</div>
-										</Link>
-										<div className='user-drawer__identity-info'>
-											<div className='user-drawer__identity-connection-date'>
-												<Link path={`connections/${connection.id}/actions`}>
+										<div className='user-drawer__identity-head'>
+											<SlTooltip className='user-drawer__action' placement='left' hoist>
+												<div slot='content'>
+													Imported from action{' '}
+													<span className='user-drawer__identity-action-link'>
+														<Link
+															path={`connections/${connection.id}/actions/edit/${identity.action}`}
+														>
+															{identity.action}
+														</Link>
+													</span>
+												</div>
+												<Link
+													path={`connections/${connection.id}/actions`}
+													className='user-drawer__identity-connection'
+												>
+													<div className='user-drawer__identity-connection-logo'>{logo}</div>
 													<div className='user-drawer__identity-connection-name'>
 														{connection.name}
 													</div>
 												</Link>
-												<div className='user-drawer__identity-date'>
-													{toJSDate(identity.lastChangeTime).toLocaleString()}
-												</div>
+											</SlTooltip>
+											<div className='user-drawer__identity-date'>
+												{toJSDate(identity.lastChangeTime).toLocaleString()}
 											</div>
-											<div className='user-drawer__action'>
-												Imported from action:{' '}
-												<span className='user-drawer__identity-action-link'>
-													<Link
-														path={`connections/${connection.id}/actions/edit/${identity.action}`}
-													>
-														{identity.action}
-													</Link>
-												</span>
-											</div>
+										</div>
+										<div className='user-drawer__identity-info'>
 											{identity.id && (
 												<div className='user-drawer__identity-id'>
 													{connection.connector.getIdentityIDLabel()}:{' '}

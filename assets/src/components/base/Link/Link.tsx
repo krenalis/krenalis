@@ -7,10 +7,11 @@ import AppContext from '../../../context/AppContext';
 interface LinkProps {
 	children: ReactNode;
 	path: string | null;
+	className?: string;
 	onRedirect?: (...args: any) => void | Promise<void>;
 }
 
-const Link = ({ children, path, onRedirect }: LinkProps) => {
+const Link = ({ children, path, className, onRedirect }: LinkProps) => {
 	const { setIsLoadingState, toastRef } = useContext(AppContext);
 
 	const onClick = async (e) => {
@@ -37,7 +38,7 @@ const Link = ({ children, path, onRedirect }: LinkProps) => {
 	}
 
 	return (
-		<RouterLink to={`${UI_BASE_PATH}${path}`} onClick={onClick}>
+		<RouterLink to={`${UI_BASE_PATH}${path}`} onClick={onClick} className={className ? className : ''}>
 			{children}
 		</RouterLink>
 	);
