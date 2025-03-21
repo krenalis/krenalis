@@ -60,6 +60,7 @@ type fileSheetConnector interface {
 var storageTimeout = 10 * time.Second
 
 type File struct {
+	connector   string
 	state       *state.State
 	action      *state.Action
 	timeLayouts *state.TimeLayouts
@@ -67,11 +68,13 @@ type File struct {
 	err         error
 }
 
-// File returns a file for the provided action, on a connection with the given
-// role. Errors are deferred until a file's method is called.
-func (connectors *Connectors) File(action *state.Action, role state.Role) *File {
+// File returns a file for the provided action.
+// Errors are deferred until a file's method is called.
+func (connectors *Connectors) File(action *state.Action) *File {
 	format := action.Format()
+	connection := action.Connection()
 	file := &File{
+		connector:   connection.Connector().Name,
 		state:       connectors.state,
 		action:      action,
 		timeLayouts: &format.TimeLayouts,
@@ -81,6 +84,11 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
 	return file
+}
+
+// Connector returns the name of the file connector.
+func (file *File) Connector() string {
+	return file.connector
 }
 
 // Records returns an iterator to iterate over the file's records that are not

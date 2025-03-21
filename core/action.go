@@ -849,7 +849,7 @@ func (this *Action) database() *connectors.Database {
 
 // file returns the file of the action.
 func (this *Action) file() *connectors.File {
-	return this.core.connectors.File(this.action, this.connection.connection.Role)
+	return this.core.connectors.File(this.action)
 }
 
 // fromState serializes action into this.

@@ -59,8 +59,8 @@ type databaseConnector interface {
 
 // Database represents the database of a database connection.
 type Database struct {
-	closed      bool
 	connector   string
+	closed      bool
 	timeLayouts *state.TimeLayouts
 	inner       databaseConnector
 	err         error
@@ -75,7 +75,7 @@ type Database struct {
 func (connectors *Connectors) Database(connection *state.Connection) *Database {
 	connector := connection.Connector()
 	database := &Database{
-		connector:   connection.Connector().Name,
+		connector:   connector.Name,
 		timeLayouts: &connector.TimeLayouts,
 	}
 	inner, err := meergo.RegisteredDatabase(connector.Name).New(&meergo.DatabaseConfig{
@@ -101,6 +101,11 @@ func (database *Database) Close() error {
 	database.closed = true
 	err := database.inner.Close()
 	return connectorError(err)
+}
+
+// Connector returns the name of the database connector.
+func (database *Database) Connector() string {
+	return database.connector
 }
 
 // LastChangeTimePlaceholder returns the value used for the last_change_time

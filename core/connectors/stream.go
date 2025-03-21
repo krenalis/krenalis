@@ -44,8 +44,9 @@ type streamConnector interface {
 
 // Stream represents the stream of a stream connection.
 type Stream struct {
-	closed bool
-	inner  streamConnector
+	connector string
+	closed    bool
+	inner     streamConnector
 }
 
 // Stream returns a stream for the provided connection. It panics if connection
@@ -54,7 +55,9 @@ type Stream struct {
 // The caller must call the stream's Close method when the stream is no
 // longer needed.
 func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, error) {
-	stream := &Stream{}
+	stream := &Stream{
+		connector: connection.Connector().Name,
+	}
 	inner, err := meergo.RegisteredStream(connection.Connector().Name).New(&meergo.StreamConfig{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
@@ -77,6 +80,11 @@ func (stream *Stream) Close() error {
 	stream.closed = true
 	err := stream.inner.Close()
 	return connectorError(err)
+}
+
+// Connector returns the name of the stream connector.
+func (stream *Stream) Connector() string {
+	return stream.connector
 }
 
 // Receive receives an event from the stream. The caller can call the ack

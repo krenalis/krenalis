@@ -31,7 +31,7 @@ import (
 
 // App represents the app of an app connection.
 type App struct {
-	name        string
+	connector   string
 	role        state.Role
 	timeLayouts *state.TimeLayouts
 	httpClient  *httpclient.Client
@@ -133,7 +133,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		targets = connector.DestinationTargets
 	}
 	app := &App{
-		name:        connector.Name,
+		connector:   connector.Name,
 		role:        connection.Role,
 		timeLayouts: &connector.TimeLayouts,
 		httpClient:  connectors.http.ConnectionClient(connection.ID),
@@ -146,7 +146,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		accountID = a.ID
 		accountCode = a.Code
 	}
-	app.inner, app.err = meergo.RegisteredApp(app.name).New(&meergo.AppConfig{
+	app.inner, app.err = meergo.RegisteredApp(app.connector).New(&meergo.AppConfig{
 		Settings:     connection.Settings,
 		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 		OAuthAccount: accountCode,
@@ -154,6 +154,11 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		WebhookURL:   webhookURL(connection, accountID),
 	})
 	return app
+}
+
+// Connector returns the name of the app connector.
+func (app *App) Connector() string {
+	return app.connector
 }
 
 // EventRequest returns a request to dispatch an event to the app. event is the
@@ -278,7 +283,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 			return types.Type{}, connectorError(err)
 		}
 		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.name)
+			return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.connector)
 		}
 	}
 	panic("unexpected target")
@@ -338,7 +343,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 		appSchema:      appSchema,
 		timeLayouts:    app.timeLayouts,
 		lastChangeTime: lastChangeTime,
-		appName:        app.name,
+		connector:      app.connector,
 		inner:          app.inner,
 	}
 	return records, nil
@@ -368,7 +373,7 @@ func (app *App) Writer(ctx context.Context, outSchema types.Type, exportMode sta
 	if err != nil {
 		return nil, err
 	}
-	writer := appwriter.New(appwriter.AckFunc(ack), target, app.inner.(appwriter.UpsertableApp), app.name)
+	writer := appwriter.New(appwriter.AckFunc(ack), target, app.inner.(appwriter.UpsertableApp), app.connector)
 	return writer, nil
 }
 
@@ -395,7 +400,7 @@ func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, er
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
 	if !schema.Valid() {
-		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.name, strings.ToLower(role.String())))
+		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
 	}
 	schema = types.AsRole(schema, types.Role(role))
 	app.users.schemas[role-1] = schema
@@ -471,7 +476,7 @@ type appRecords struct {
 	appSchema      types.Type
 	timeLayouts    *state.TimeLayouts
 	lastChangeTime time.Time
-	appName        string
+	connector      string
 	inner          any
 	last           bool
 	err            error
@@ -512,11 +517,11 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			}
 			if len(users) == 0 {
 				if !eof {
-					r.err = fmt.Errorf("%s returned zero users but did not return io.EOF", r.appName)
+					r.err = fmt.Errorf("%s returned zero users but did not return io.EOF", r.connector)
 					return
 				}
 				if cursor != "" {
-					r.err = fmt.Errorf("%s returned zero users but returned a non-empty next value", r.appName)
+					r.err = fmt.Errorf("%s returned zero users but returned a non-empty next value", r.connector)
 				}
 				return
 			}
@@ -534,7 +539,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 
 				if user.ID == "" {
-					r.err = fmt.Errorf("%s returned a record with an empty ID", r.appName)
+					r.err = fmt.Errorf("%s returned a record with an empty ID", r.connector)
 					return
 				}
 				// Skip the record if its ID has already been processed.
@@ -555,7 +560,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 				if !r.lastChangeTime.IsZero() && record.LastChangeTime.Before(r.lastChangeTime) {
 					r.err = fmt.Errorf("%s returned a record with a last change %s earlier than the required minimum",
-						r.appName, r.lastChangeTime.Sub(record.LastChangeTime))
+						r.connector, r.lastChangeTime.Sub(record.LastChangeTime))
 					return
 				}
 
@@ -566,7 +571,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 						v, ok := user.Properties[p.Name]
 						if !ok {
 							if !p.ReadOptional {
-								record.Err = newNormalizationErrorf(p.Name, "(returned by %s connector) does not have a value, but the property is not optional for reading", r.appName)
+								record.Err = newNormalizationErrorf(p.Name, "(returned by %s connector) does not have a value, but the property is not optional for reading", r.connector)
 								break
 							}
 							continue

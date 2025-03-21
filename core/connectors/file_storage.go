@@ -23,10 +23,11 @@ import (
 )
 
 type FileStorage struct {
-	state   *state.State
-	storage *state.Connection
-	inner   any
-	err     error
+	connector string
+	state     *state.State
+	storage   *state.Connection
+	inner     any
+	err       error
 }
 
 type fileStorageAbsolutePathConnector interface {
@@ -59,8 +60,9 @@ type fileStorageWriteConnector interface {
 // Errors are deferred until a file storage's method is called.
 func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorage {
 	s := &FileStorage{
-		state:   connectors.state,
-		storage: storage,
+		connector: storage.Connector().Name,
+		state:     connectors.state,
+		storage:   storage,
 	}
 	s.inner, s.err = meergo.RegisteredFileStorage(storage.Connector().Name).New(&meergo.FileStorageConfig{
 		Settings:    storage.Settings,
@@ -94,6 +96,11 @@ func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameR
 		return "", connectorError(err)
 	}
 	return path, nil
+}
+
+// Connector returns the name of the file storage connector.
+func (storage *FileStorage) Connector() string {
+	return storage.connector
 }
 
 // Read reads the records from file in the storage at the provided path name and
