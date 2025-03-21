@@ -1120,6 +1120,7 @@ const FullscreenTransformation = ({
 	const [outSearchTerm, setOutSearchTerm] = useState<string>('');
 	const [showOnlyOutSelected, setShowOnlyOutSelected] = useState<boolean>();
 	const [samples, setSamples] = useState<Sample[]>(null);
+	const [isFetchingSamples, setIsFetchingSamples] = useState<boolean>(false);
 	const [selectedSample, setSelectedSample] = useState<Sample>(null);
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
 	const [selectedEvent, setSelectedEvent] = useState<EventListenerEvent>(null);
@@ -1257,6 +1258,7 @@ const FullscreenTransformation = ({
 			if (!isFullscreenTransformationOpen || hasAlreadyFetchedSamples.current) {
 				return;
 			}
+			setIsFetchingSamples(true);
 			let samples: Sample[];
 			if (connection.isFileStorage && connection.isSource) {
 				let res: RecordsResponse;
@@ -1271,6 +1273,7 @@ const FullscreenTransformation = ({
 						20,
 					);
 				} catch (err) {
+					setIsFetchingSamples(false);
 					handleError(err);
 					return;
 				}
@@ -1278,12 +1281,14 @@ const FullscreenTransformation = ({
 			} else if (connection.isDatabase && connection.isSource) {
 				// Will show a button to execute the query and retrieve the
 				// samples (as the query can be potentially destructive).
+				setIsFetchingSamples(false);
 				return;
 			} else if (connection.isApp && connection.isSource) {
 				let res: AppUsersResponse;
 				try {
 					res = await api.workspaces.connections.appUsers(connection.id, inputSchema);
 				} catch (err) {
+					setIsFetchingSamples(false);
 					handleError(err);
 					return;
 				}
@@ -1297,6 +1302,7 @@ const FullscreenTransformation = ({
 				try {
 					res = await api.workspaces.users.find(properties, null, '', true, 0, 20);
 				} catch (err) {
+					setIsFetchingSamples(false);
 					handleError(err);
 					return;
 				}
@@ -1309,8 +1315,10 @@ const FullscreenTransformation = ({
 				}
 				samples = s;
 			} else {
+				setIsFetchingSamples(false);
 				return;
 			}
+			setIsFetchingSamples(false);
 			hasAlreadyFetchedSamples.current = true;
 			const idents = getSampleIdentifiers(samples[0]);
 			if (idents != null) {
@@ -1813,6 +1821,19 @@ const FullscreenTransformation = ({
 						);
 					}
 				})}
+			</div>
+		);
+	} else if (isFetchingSamples) {
+		inputPanelContent = (
+			<div className='fullscreen-transformation__samples-loading'>
+				<SlSpinner
+					style={
+						{
+							fontSize: '3rem',
+							'--track-width': '6px',
+						} as React.CSSProperties
+					}
+				/>
 			</div>
 		);
 	} else if (samples) {

@@ -1023,6 +1023,11 @@ inherit the disabled style */
 	overflow-y: scroll;
 }
 
+.fullscreen-transformation__samples-loading {
+	padding: 30px;
+	text-align: center;
+}
+
 .fullscreen-transformation__sample {
 	padding: 15px 30px;
 	display: flex;

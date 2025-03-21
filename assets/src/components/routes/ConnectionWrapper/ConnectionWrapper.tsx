@@ -42,7 +42,7 @@ const ConnectionWrapper = () => {
 						'--track-width': '6px',
 					} as React.CSSProperties
 				}
-			></SlSpinner>
+			/>
 		);
 	}
 	return (
