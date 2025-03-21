@@ -865,14 +865,32 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__property-padding {
-	min-width: 20px;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	margin-right: 2px;
+	position: relative;
 }
 
 .fullscreen-transformation__property-caret {
 	color: var(--sl-color-neutral-400);
 	font-size: 12px;
-	margin-right: 8px;
 	cursor: pointer;
+	width: 24px;
+	height: 28px;
+	margin-right: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 3px;
+	position: absolute;
+	left: -4px;
+	transition: background-color 0.2s;
+}
+
+.fullscreen-transformation__property-caret:hover {
+	background-color: var(--sl-color-neutral-100);
 }
 
 .fullscreen-transformation__property-caret::part(svg) {
