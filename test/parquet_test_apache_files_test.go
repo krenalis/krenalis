@@ -34,8 +34,36 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		expectedProperties []types.Property
 	}{
 		{
+			path: "alltypes_plain.parquet",
+			expectedProperties: []types.Property{
+				{Name: "id", Type: types.Int(32), Nullable: true},
+				{Name: "bool_col", Type: types.Boolean(), Nullable: true},
+				{Name: "tinyint_col", Type: types.Int(32), Nullable: true},
+				{Name: "smallint_col", Type: types.Int(32), Nullable: true},
+				{Name: "int_col", Type: types.Int(32), Nullable: true},
+				{Name: "bigint_col", Type: types.Int(64), Nullable: true},
+				{Name: "float_col", Type: types.Float(32), Nullable: true},
+				{Name: "double_col", Type: types.Float(64), Nullable: true},
+				{Name: "date_string_col", Type: types.Text(), Nullable: true},
+				{Name: "string_col", Type: types.Text(), Nullable: true},
+				{Name: "timestamp_col", Type: types.DateTime(), Nullable: true},
+			},
+		},
+		{
+			path:               "byte_array_decimal.parquet",
+			expectedProperties: []types.Property{{Name: "value", Type: types.Decimal(4, 2), Nullable: true}},
+		},
+		{
 			path:               "binary.parquet",
 			expectedProperties: []types.Property{{Name: "foo", Type: types.Text(), Nullable: true}},
+		},
+		{
+			path:               "concatenated_gzip_members.parquet",
+			expectedProperties: []types.Property{{Name: "long_col", Type: types.Uint(64), Nullable: true}},
+		},
+		{
+			path:               "delta_length_byte_array.parquet",
+			expectedProperties: []types.Property{{Name: "FRUIT", Type: types.Text(), Nullable: true}},
 		},
 		{
 			path:               "int32_decimal.parquet",
@@ -70,6 +98,18 @@ func TestParquetTestApacheFiles(t *testing.T) {
 				{Name: "c0", Type: types.Int(64), Nullable: false},
 				{Name: "c1", Type: types.Text(), Nullable: false},
 				{Name: "v11", Type: types.Float(64), Nullable: true},
+			},
+		},
+		{
+			path: "nan_in_stats.parquet",
+			expectedProperties: []types.Property{
+				{Name: "x", Type: types.Float(64), Nullable: true},
+			},
+		},
+		{
+			path: "single_nan.parquet",
+			expectedProperties: []types.Property{
+				{Name: "mycol", Type: types.Float(64), Nullable: true},
 			},
 		},
 		{
