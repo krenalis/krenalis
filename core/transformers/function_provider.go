@@ -33,13 +33,17 @@ func (err FunctionExecutionError) Error() string { return string(err) }
 type FunctionProvider interface {
 
 	// Call calls the function with the given identifier and version for each record
-	// updating its Properties field with the result of each invocation. Record
-	// properties are supposed to conform to inSchema. After the transformation,
-	// Record properties conform to outSchema unless a transformation error
-	// occurred, and in that case, the error is stored in the Record's Err field.
+	// updating its Properties field with the result of each invocation.
 	//
-	// It returns the ErrFunctionNotExist error if the function does not exist, and
-	// a FunctionExecutionError if the execution fails.
+	// Before transformation, record properties must conform to inSchema.
+	// After transformation, they should conform to outSchema, unless an error
+	// occurs on the record.
+	//
+	// If the function does not exist, Call returns an ErrFunctionNotExist error.
+	// If the function exists but has an issue preventing execution (e.g., a syntax
+	// error), it returns a FunctionExecutionError.
+	// Even if the call succeeds, individual records may still encounter errors,
+	// which are stored in the Err field of each record.
 	Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
 
 	// Close closes the function.

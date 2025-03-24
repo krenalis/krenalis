@@ -192,6 +192,12 @@ var pythonDecoderOptions = decoderOptions{
 //   - array: an array
 //   - object: an object
 //   - map: an object
+//
+// Any errors resulting from the transformation of individual records are
+// reported in the Err field of each record. If the function execution fails due
+// to an issue within the function itself, such as a syntax error, Unmarshal
+// returns a FunctionExecutionError. Any other returned error should be
+// considered a general error not related to the function itself or the records.
 func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.Language, preserveJSON bool) error {
 	if r == nil {
 		return errors.New("core/transformers: r is nil")
