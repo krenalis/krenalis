@@ -893,6 +893,8 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		if err != nil {
 			return nil, errors.BadRequest("invalid limit")
 		}
+	} else {
+		limit = 100
 	}
 
 	users, schema, total, err := ws.Users(r.Context(), properties, filter, order, orderDesc, first, limit)
