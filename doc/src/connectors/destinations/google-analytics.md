@@ -4,15 +4,18 @@
 
 # Google Analytics data destination
 
-The **Google Analytics** data destination allows you to send the received events to Google Analytics.
+The **Google Analytics** data destination allows you to send the received events to [Google Analytics](https://developers.google.com/analytics).
 
 Google Analytics is a web analytics service that provides insights into website traffic and user behavior. It helps track and analyze data on visitor interactions, traffic sources, and conversion rates, enabling informed decision-making to improve online performance.
 
-### On this page
+In Meergo, it is possible to send events to Google Analytics using the [Measurement Protocol](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference?client_type=gtag). Once this data destination is configured, the events ingested by Meergo (e.g., from a website or server) are dispatched to Google Analytics.
 
-* [Add a Google Analytics data destination](#add-a-google-analytics-data-destination)
+## On this page
 
-### Add a Google Analytics data destination
+- [Add a Google Analytics data destination](#add-a-google-analytics-data-destination)
+- [Events that can be sent](#events-that-can-be-sent)
+
+## Add a Google Analytics data destination
 
 Before you can add a Google Analytics data destination, you need to create a private key in your Google Analytics account:
 
@@ -37,3 +40,11 @@ Now proceed to add a Google Analytics data destination:
 7. Click **Add**.
 
 Once the Google Analytics data destination is added, the **Actions** page will be displayed, indicating the actions required to send events to Google Analytics.
+
+## Events that can be sent
+
+Meergo supports all events from Google Analytics' Measurement Protocol. For each event you wish to send, you can add a specific action.
+
+[Here](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events) is a complete list of these events, including documentation for each one as well as for every field associated with each type of event.
+
+Once the type of event you want to send has been determined, you can add the corresponding action from the Meergo interface.
