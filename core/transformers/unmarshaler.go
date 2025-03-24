@@ -286,6 +286,9 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 				if err == errSyntaxInvalid {
 					return err
 				}
+				if _, ok := err.(*functionValidationError); !ok {
+					return err
+				}
 				records[i].Properties = nil
 				records[i].Err = err
 			} else {
