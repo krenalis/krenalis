@@ -15,11 +15,11 @@ func init() {
 
 	actionsParameter := types.Property{
 		Name:           "actions",
+		Placeholder:    "actions=705981339&actions=1360924687",
 		Type:           types.Array(types.Int(32)),
 		CreateRequired: true,
-		Placeholder:    "705981339,1360924687",
 		Description: "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\n" +
-			"The actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`",
+			"The actions can be specified in the query string in this way:\n\n`actions=705981339&actions=1360924687`",
 	}
 	responseParameters := []types.Property{
 		{
@@ -168,11 +168,11 @@ func init() {
 					},
 					{
 						Name:           "actions",
+						Placeholder:    "actions=705981339&actions=1360924687",
 						Type:           types.Array(types.Int(32)),
-						Placeholder:    "705981339,1360924687",
 						CreateRequired: true,
 						Description: "The IDs of the actions for which errors should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\n" +
-							"The actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`",
+							"The actions can be specified in the query string in this way:\n\n`actions=705981339&actions=1360924687`",
 					},
 					{
 						Name:        "step",

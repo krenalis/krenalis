@@ -67,8 +67,10 @@ func init() {
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Placeholder:    `[ "name", "email" ]`,
-						Description:    "The names of the properties to return. At least one property must be included.",
+						Placeholder:    `properties=first_name&properties=last_name`,
+						Description: "The names of the properties to return. At least one property must be included.\n\n" +
+							"The properties can be specified in query string in this way:\n" +
+							"```\nproperties=first_name&properties=last_name&properties=email\n```",
 					},
 					{
 						Name: "filter",

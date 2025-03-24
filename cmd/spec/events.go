@@ -438,8 +438,10 @@ func init() {
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Placeholder:    `[ "user", "type", "event" ]`,
-						Description:    "The event properties to return.",
+						Placeholder:    `properties=connection&properties=anonymousId`,
+						Description: "The event properties to return. " +
+							"The properties can be specified in the query string in this way:\n" +
+							"```\nproperties=user&properties=connection&properties=anonymousId\n```",
 					},
 					{
 						Name: "filter",
@@ -472,7 +474,7 @@ func init() {
 						Name:           "limit",
 						Type:           types.Int(32).WithIntRange(1, 1000),
 						CreateRequired: true,
-						Placeholder:    `1000`,
+						Placeholder:    `limit=1000`,
 						Description:    "The maximum number of events to return. The value must be within the range [1, 1000].",
 					},
 				},

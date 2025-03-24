@@ -29,7 +29,7 @@
                         },
                         {
                             "name": "actions",
-                            "placeholder": "705981339,1360924687",
+                            "placeholder": "actions=705981339&actions=1360924687",
                             "type": {
                                 "kind": "array",
                                 "elementType": {
@@ -38,7 +38,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
+                            "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in this way:\n\n`actions=705981339&actions=1360924687`"
                         }
                     ],
                     "moreParameters": null,
@@ -118,7 +118,7 @@
                         },
                         {
                             "name": "actions",
-                            "placeholder": "705981339,1360924687",
+                            "placeholder": "actions=705981339&actions=1360924687",
                             "type": {
                                 "kind": "array",
                                 "elementType": {
@@ -127,7 +127,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
+                            "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in this way:\n\n`actions=705981339&actions=1360924687`"
                         }
                     ],
                     "moreParameters": null,
@@ -207,7 +207,7 @@
                         },
                         {
                             "name": "actions",
-                            "placeholder": "705981339,1360924687",
+                            "placeholder": "actions=705981339&actions=1360924687",
                             "type": {
                                 "kind": "array",
                                 "elementType": {
@@ -216,7 +216,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
+                            "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in this way:\n\n`actions=705981339&actions=1360924687`"
                         }
                     ],
                     "moreParameters": null,
@@ -296,7 +296,7 @@
                         },
                         {
                             "name": "actions",
-                            "placeholder": "705981339,1360924687",
+                            "placeholder": "actions=705981339&actions=1360924687",
                             "type": {
                                 "kind": "array",
                                 "elementType": {
@@ -305,7 +305,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
+                            "description": "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in this way:\n\n`actions=705981339&actions=1360924687`"
                         }
                     ],
                     "moreParameters": null,
@@ -392,7 +392,7 @@
                         },
                         {
                             "name": "actions",
-                            "placeholder": "705981339,1360924687",
+                            "placeholder": "actions=705981339&actions=1360924687",
                             "type": {
                                 "kind": "array",
                                 "elementType": {
@@ -401,7 +401,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The IDs of the actions for which errors should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in two ways:\n* `actions=705981339,1360924687`\n* `actions=705981339&actions=1360924687`"
+                            "description": "The IDs of the actions for which errors should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\nThe actions can be specified in the query string in this way:\n\n`actions=705981339&actions=1360924687`"
                         },
                         {
                             "name": "step",
@@ -12410,7 +12410,7 @@
                     "parameters": [
                         {
                             "name": "properties",
-                            "placeholder": "[ \"user\", \"type\", \"event\" ]",
+                            "placeholder": "properties=connection&properties=anonymousId",
                             "type": {
                                 "kind": "array",
                                 "elementType": {
@@ -12418,7 +12418,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The event properties to return."
+                            "description": "The event properties to return. The properties can be specified in the query string in this way:\n```\nproperties=user&properties=connection&properties=anonymousId\n```"
                         },
                         {
                             "name": "filter",
@@ -12554,7 +12554,7 @@
                         },
                         {
                             "name": "limit",
-                            "placeholder": "1000",
+                            "placeholder": "limit=1000",
                             "type": {
                                 "kind": "int",
                                 "bitSize": 32,
@@ -14770,7 +14770,7 @@
                     "parameters": [
                         {
                             "name": "properties",
-                            "placeholder": "[ \"name\", \"email\" ]",
+                            "placeholder": "properties=first_name&properties=last_name",
                             "type": {
                                 "kind": "array",
                                 "elementType": {
@@ -14778,7 +14778,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The names of the properties to return. At least one property must be included."
+                            "description": "The names of the properties to return. At least one property must be included.\n\nThe properties can be specified in query string in this way:\n```\nproperties=first_name&properties=last_name&properties=email\n```"
                         },
                         {
                             "name": "filter",
