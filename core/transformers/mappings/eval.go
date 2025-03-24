@@ -64,7 +64,7 @@ func (expr *Expression) Eval(properties map[string]any, inPlace bool, purpose Pu
 		return nil, err
 	}
 	if v == nil {
-		return v, err
+		return nil, nil
 	}
 	c, err := convert(v, st, expr.dt, true, inPlace, expr.timeLayouts, purpose)
 	if err != nil {
