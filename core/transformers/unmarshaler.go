@@ -375,19 +375,8 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		defer func() {
 			// Consume the remaining items.
 			if _, ok := err.(*functionValidationError); ok {
-				for {
-					if d.peekKind() == ']' {
-						_, err2 := d.readToken()
-						if err2 != nil {
-							err = err2
-							break
-						}
-					}
-					_, err2 := d.readValue()
-					if err2 != nil {
-						err = err2
-						break
-					}
+				if e := d.skipOut(); e != nil {
+					err = e
 				}
 			}
 		}()
@@ -435,15 +424,8 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		defer func() {
 			// Consume the remaining key/value pairs.
 			if _, ok := err.(*functionValidationError); ok {
-				var er error
-				for er == nil && d.peekKind() != '}' {
-					_, er = d.readValue()
-				}
-				if er == nil {
-					_, er = d.readToken()
-				}
-				if er != nil {
-					err = er
+				if e := d.skipOut(); e != nil {
+					err = e
 				}
 			}
 		}()
@@ -561,6 +543,13 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		_, err := d.readToken()
 		return nil, err
 	}
+}
+
+// SkipOut skips out of the current object or array and advances the read offset
+// to the byte immediately after. If not in an object or array, it advances to
+// the end of the input and returns io.EOF.
+func (d decoder) skipOut() error {
+	return d.dec.SkipOut()
 }
 
 // value returns the unmarshalled value of v according to t.

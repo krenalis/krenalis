@@ -483,6 +483,12 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.JavaScript,
 			schema:   schema,
+			data:     `{"records":[{"value":{"Boolean":[true]}}]}`,
+			records:  []Record{{Err: newErrInvalidValue(`cannot be an array`, "Boolean", jsTerms)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
 			data:     `{"error":"unexpected token ')'"}`,
 			err:      FunctionExecutionError("unexpected token ')'"),
 		},
