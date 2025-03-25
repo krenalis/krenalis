@@ -17,11 +17,15 @@ import (
 
 var ErrFunctionNotExist = errors.New("function does not exist")
 
-// FunctionExecutionError represents an error resulting from the execution of a
+// FunctionExecError represents an error resulting from the execution of a
 // transformation function such as a syntax error in the function.
-type FunctionExecutionError string
+type FunctionExecError struct {
+	msg string
+}
 
-func (err FunctionExecutionError) Error() string { return string(err) }
+func (err FunctionExecError) Error() string {
+	return err.msg
+}
 
 // A FunctionProvider represents a function provider.
 //
@@ -41,7 +45,7 @@ type FunctionProvider interface {
 	//
 	// If the function does not exist, Call returns an ErrFunctionNotExist error.
 	// If the function exists but has an issue preventing execution (e.g., a syntax
-	// error), it returns a FunctionExecutionError.
+	// error), it returns a FunctionExecError.
 	// Even if the call succeeds, individual records may still encounter errors,
 	// which are stored in the Err field of each record.
 	Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error

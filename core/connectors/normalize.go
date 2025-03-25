@@ -36,41 +36,38 @@ const (
 	maxIntRepresentableAsFloat32 = 16777216
 )
 
-// normalizationError represents an error occurred normalizing a property. It
-// implements the ValidationError interface of core.
-type normalizationError struct {
+// InputValidationError represents an error that occurs when validating a
+// property value.
+type InputValidationError struct {
 	path string
 	msg  string
 }
 
-// newNormalizationErrorf returns a *normalizationError error based on a format
+// inputValidationErrorf returns an InputValidationError based on a format
 // specifier. The error message can report the invalid value and should complete
 // the sentence "property foo ".
-func newNormalizationErrorf(path string, format string, a ...any) *normalizationError {
-	return &normalizationError{
+func inputValidationErrorf(path string, format string, a ...any) InputValidationError {
+	return InputValidationError{
 		path: path,
 		msg:  fmt.Sprintf(format, a...),
 	}
 }
 
-func (err *normalizationError) Error() string {
+func (err InputValidationError) Error() string {
 	return fmt.Sprintf("property %q ", err.path) + err.msg
 }
 
-func (err *normalizationError) PropertyPath() string {
-	return err.path
-}
-
-func (err *normalizationError) prependPath(path string) {
+func (err InputValidationError) prependPath(path string) InputValidationError {
 	err.path = path + "." + err.path
+	return err
 }
 
 // normalize normalizes a property value, and returns its normalized value. If
-// the value is not valid it returns an error.
+// the value is not valid it returns an InputValidationError.
 func normalize(name string, typ types.Type, src any, nullable bool, layouts *state.TimeLayouts) (any, error) {
 	if src == nil {
 		if !nullable {
-			return nil, newNormalizationErrorf(name, "has value null but it is not nullable")
+			return nil, inputValidationErrorf(name, "has value null but it is not nullable")
 		}
 		return nil, nil
 	}
@@ -152,7 +149,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if valid {
 			min, max := typ.IntRange()
 			if v < min || v > max {
-				return nil, newNormalizationErrorf(name, "has value %d which is not in the range [%d, %d]", v, min, max)
+				return nil, inputValidationErrorf(name, "has value %d which is not in the range [%d, %d]", v, min, max)
 			}
 			value = int(v)
 		}
@@ -223,7 +220,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if valid {
 			min, max := typ.UintRange()
 			if v < min || v > max {
-				return nil, newNormalizationErrorf(name, "has value %d which is not in the range [%d, %d]", v, min, max)
+				return nil, inputValidationErrorf(name, "has value %d which is not in the range [%d, %d]", v, min, max)
 			}
 			value = uint(v)
 		}
@@ -311,12 +308,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if valid {
 			if math.IsNaN(v) {
 				if typ.IsReal() {
-					return nil, newNormalizationErrorf(name, "has a value of NaN, which is not allowed")
+					return nil, inputValidationErrorf(name, "has a value of NaN, which is not allowed")
 				}
 			} else {
 				min, max := typ.FloatRange()
 				if v < min || v > max {
-					return nil, newNormalizationErrorf(name, "has a value %f that is not in the range [%f, %f]", v, min, max)
+					return nil, inputValidationErrorf(name, "has a value %f that is not in the range [%f, %f]", v, min, max)
 				}
 			}
 			value = v
@@ -364,7 +361,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if err == nil {
 			min, max := typ.DecimalRange()
 			if v.Less(min) || v.Greater(max) {
-				return nil, newNormalizationErrorf(name, "has a value %s that is not in range [%s, %s]", v, min, max)
+				return nil, inputValidationErrorf(name, "has a value %s that is not in range [%s, %s]", v, min, max)
 			}
 			value = v
 			valid = true
@@ -400,7 +397,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if valid {
 			t = t.UTC()
 			if y := t.Year(); y < types.MinYear || y > types.MaxYear {
-				return nil, newNormalizationErrorf(name, "has date and time %q with a year not in range [1, 9999]", src)
+				return nil, inputValidationErrorf(name, "has date and time %q with a year not in range [1, 9999]", src)
 			}
 			value = t
 		}
@@ -425,7 +422,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if valid {
 			t = t.UTC()
 			if y := t.Year(); y < types.MinYear || y > types.MaxYear {
-				return nil, newNormalizationErrorf(name, "has date %q with a year not in range [1, 9999]", src)
+				return nil, inputValidationErrorf(name, "has date %q with a year not in range [1, 9999]", src)
 			}
 			value = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 		}
@@ -559,12 +556,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			var err error
 			data, err = src.MarshalJSON()
 			if err != nil {
-				return nil, newNormalizationErrorf(name, "cannot be unmarshalled; MarshalJSON returned an error: %s", err)
+				return nil, inputValidationErrorf(name, "cannot be unmarshalled; MarshalJSON returned an error: %s", err)
 			}
 		}
 		if data != nil {
 			if !json.Valid(data) {
-				return nil, newNormalizationErrorf(name, "is not valid JSON")
+				return nil, inputValidationErrorf(name, "is not valid JSON")
 			}
 			value = json.Value(data)
 			valid = true
@@ -616,22 +613,22 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		if valid {
 			if !utf8.ValidString(v) {
-				return nil, newNormalizationErrorf(name, "does not contain valid UTF-8 characters")
+				return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
 			}
 			if values := typ.Values(); values != nil {
 				if !slices.Contains(values, v) {
-					return nil, newNormalizationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
+					return nil, inputValidationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
 				}
 			} else if rx := typ.Regexp(); rx != nil {
 				if !rx.MatchString(v) {
-					return nil, newNormalizationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
+					return nil, inputValidationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
 				}
 			} else {
 				if l, ok := typ.ByteLen(); ok && len(v) > l {
-					return nil, newNormalizationErrorf(name, "has value %q that is longer than %d bytes", errors.Abbreviate(v, 20), l)
+					return nil, inputValidationErrorf(name, "has value %q that is longer than %d bytes", errors.Abbreviate(v, 20), l)
 				}
 				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-					return nil, newNormalizationErrorf(name, "has value %q that is longer than %d characters", errors.Abbreviate(v, 20), l)
+					return nil, inputValidationErrorf(name, "has value %q that is longer than %d characters", errors.Abbreviate(v, 20), l)
 				}
 			}
 			value = v
@@ -642,19 +639,19 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if s != "" && s[0] == '[' && typ.Elem().Kind() == types.JSONKind {
 				v := json.Value(s)
 				if !json.Valid(v) {
-					return nil, newNormalizationErrorf(name, "is not valid JSON")
+					return nil, inputValidationErrorf(name, "is not valid JSON")
 				}
 				min := typ.MinElements()
 				max := typ.MaxElements()
 				arr := []any{}
 				for i, element := range v.Elements() {
 					if i == max {
-						return nil, newNormalizationErrorf(name, "is an array with more than %d elements; they must be in range [%d, %d]", max, min, max)
+						return nil, inputValidationErrorf(name, "is an array with more than %d elements; they must be in range [%d, %d]", max, min, max)
 					}
 					arr = append(arr, element)
 				}
 				if len(arr) < min {
-					return nil, newNormalizationErrorf(name, "is an array with less than %d elements; they must be in range [%d, %d]", min, min, max)
+					return nil, inputValidationErrorf(name, "is an array with less than %d elements; they must be in range [%d, %d]", min, min, max)
 				}
 				value = arr
 				valid = true
@@ -668,7 +665,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				var err error
 				n := rv.Len()
 				if n < typ.MinElements() || n > typ.MaxElements() {
-					return nil, newNormalizationErrorf(name, "is an array with %d elements, but they must be in range [%d, %d]", n, typ.MinElements(), typ.MaxElements())
+					return nil, inputValidationErrorf(name, "is an array with %d elements, but they must be in range [%d, %d]", n, typ.MinElements(), typ.MaxElements())
 				}
 				a := make([]any, n)
 				t := typ.Elem()
@@ -683,7 +680,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 					for i, e := range a {
 						for _, e2 := range a[i:] {
 							if e == e2 {
-								return nil, newNormalizationErrorf(name, "contains the duplicated value %v", e)
+								return nil, inputValidationErrorf(name, "contains the duplicated value %v", e)
 							}
 						}
 					}
@@ -702,16 +699,15 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				value, ok := src[p.Name]
 				if !ok {
 					if !p.ReadOptional {
-						err := newNormalizationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
-						err.prependPath(name)
-						return nil, err
+						err := inputValidationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
+						return nil, err.prependPath(name)
 					}
 					continue
 				}
 				src[p.Name], err = normalize(p.Name, p.Type, value, p.Nullable, layouts)
 				if err != nil {
-					if err, ok := err.(*normalizationError); ok {
-						err.prependPath(name)
+					if err, ok := err.(InputValidationError); ok {
+						return nil, err.prependPath(name)
 					}
 					return nil, err
 				}
@@ -769,7 +765,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	}
 	if !valid {
-		return nil, newNormalizationErrorf(name, "has value %#v and type %T that cannot be represented as the %s type", src, src, typ)
+		return nil, inputValidationErrorf(name, "has value %#v and type %T that cannot be represented as the %s type", src, src, typ)
 	}
 	return value, nil
 }

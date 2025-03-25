@@ -123,12 +123,12 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 		if user.Err != nil {
 			iw.Keep(user.ID)
-			if _, ok := user.Err.(validationError); ok {
+			if err, ok := user.Err.(connectors.InputValidationError); ok {
 				this.core.metrics.ReceivePassed(action.ID, 1)
-				this.core.metrics.InputValidationFailed(action.ID, 1, user.Err.Error())
-				goto Next
+				this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
+			} else {
+				this.core.metrics.ReceiveFailed(action.ID, 1, user.Err.Error())
 			}
-			this.core.metrics.ReceiveFailed(action.ID, 1, user.Err.Error())
 			goto Next
 		}
 
@@ -162,8 +162,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 			}
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
-				if err, ok := err.(transformers.FunctionExecutionError); ok {
-					return newActionError(metrics.TransformationStep, err)
+				if _, ok := err.(transformers.FunctionExecError); ok {
+					err = newActionError(metrics.TransformationStep, err)
 				}
 				return err
 			}
@@ -171,13 +171,14 @@ func (this *Action) importUsers(ctx context.Context) error {
 			// Set the identities into the data warehouse.
 			for i, record := range transformationRecords {
 				user := users[i]
-				if record.Err != nil {
-					if _, ok := record.Err.(validationError); ok {
+				if err := record.Err; err != nil {
+					switch err.(type) {
+					case transformers.RecordTransformationError:
+						this.core.metrics.TransformationFailed(action.ID, 1, err.Error())
+					case transformers.RecordValidationError:
 						this.core.metrics.TransformationPassed(action.ID, 1)
-						this.core.metrics.OutputValidationFailed(action.ID, 1, record.Err.Error())
-						continue
+						this.core.metrics.OutputValidationFailed(action.ID, 1, err.Error())
 					}
-					this.core.metrics.TransformationFailed(action.ID, 1, record.Err.Error())
 					continue
 				}
 				user.Properties = record.Properties

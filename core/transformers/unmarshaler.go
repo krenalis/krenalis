@@ -38,27 +38,26 @@ var (
 // unmarshaled is not valid JSON, or does not conform to the expected structure.
 var errSyntaxInvalid = errors.New("syntax is not valid")
 
-// functionValidationError represents a validation error related to the output
-// schema. It can be returned by Unmarshal for each single record in the
-// Record.Err field. It implements the core.ValidationError interface.
-type functionValidationError struct {
+// RecordValidationError represents an error that occurs when validating a
+// transformed record.
+type RecordValidationError struct {
 	path string
 	msg  string
 }
 
-func (err *functionValidationError) Error() string {
+func (err RecordValidationError) Error() string {
+	if err.path == "" {
+		return err.msg
+	}
 	return fmt.Sprintf(err.msg, err.path)
 }
 
-func (err *functionValidationError) PropertyPath() string {
-	return err.path
-}
-
-func (err *functionValidationError) appendIndexToPath(i int) {
+func (err RecordValidationError) appendIndexToPath(i int) RecordValidationError {
 	err.path = "[" + strconv.Itoa(i) + "]." + err.path
+	return err
 }
 
-func (err *functionValidationError) appendNameToPath(name string) {
+func (err RecordValidationError) appendNameToPath(name string) RecordValidationError {
 	if err.path == "" {
 		err.path = name
 	} else if err.path[0] == '[' {
@@ -66,30 +65,31 @@ func (err *functionValidationError) appendNameToPath(name string) {
 	} else {
 		err.path = name + "." + err.path
 	}
+	return err
 }
 
-// newErrPropertyNotExist returns a new functionValidationError for a
-// nonexistent property.
-func newErrPropertyNotExist(path string, terms map[string]string) error {
-	return &functionValidationError{
+// errPropertyNotExist returns a new RecordValidationError for a nonexistent
+// property.
+func errPropertyNotExist(path string, terms map[string]string) error {
+	return RecordValidationError{
 		path: path,
 		msg:  terms["property"] + " %q does not exist",
 	}
 }
 
-// newErrMissingProperty returns a new functionValidationError indicating a
-// missing property.
-func newErrMissingProperty(path string, terms map[string]string) error {
-	return &functionValidationError{
+// errMissingProperty returns a new RecordValidationError indicating a missing
+// property.
+func errMissingProperty(path string, terms map[string]string) error {
+	return RecordValidationError{
 		path: path,
 		msg:  "required " + terms["property"] + " %q is missing",
 	}
 }
 
-// newErrInvalidValue returns a new functionValidationError indicating an
-// invalid value.
-func newErrInvalidValue(msg, path string, terms map[string]string) error {
-	return &functionValidationError{
+// errInvalidValue returns a new RecordValidationError indicating an invalid
+// value.
+func errInvalidValue(msg, path string, terms map[string]string) error {
+	return RecordValidationError{
 		path: path,
 		msg:  terms["property"] + " %q " + strings.ReplaceAll(msg, "%", "%%"),
 	}
@@ -193,11 +193,12 @@ var pythonDecoderOptions = decoderOptions{
 //   - object: an object
 //   - map: an object
 //
-// Any errors resulting from the transformation of individual records are
-// reported in the Err field of each record. If the function execution fails due
-// to an issue within the function itself, such as a syntax error, Unmarshal
-// returns a FunctionExecutionError. Any other returned error should be
-// considered a general error not related to the function itself or the records.
+// If an error occurred during the transformation of a single record, either a
+// RecordTransformationError or RecordValidationError is stored in the Err field
+// of the corresponding record.
+//
+// If an error occurred during the transformation function execution, it returns
+// a FunctionExecError.
 func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.Language, preserveJSON bool) error {
 	if r == nil {
 		return errors.New("core/transformers: r is nil")
@@ -230,7 +231,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 	}
 	key := tok.String()
 	if key == "error" {
-		// Parse and return a FunctionExecutionError error.
+		// Parse and return a FunctionExecError error.
 		if tok, err = d.readToken(); err != nil {
 			return err
 		}
@@ -247,7 +248,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 		if _, err := d.readToken(); err != io.EOF {
 			return errSyntaxInvalid
 		}
-		return FunctionExecutionError(msg)
+		return FunctionExecError{msg: msg}
 	}
 	if key != "records" {
 		return errSyntaxInvalid
@@ -284,9 +285,6 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 			properties, err := d.unmarshal(schema, preserveJSON, records[i].Purpose)
 			if err != nil {
 				if err == errSyntaxInvalid {
-					return err
-				}
-				if _, ok := err.(*functionValidationError); !ok {
 					return err
 				}
 				records[i].Properties = nil
@@ -374,7 +372,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		// Unmarshal an array.
 		defer func() {
 			// Consume the remaining items.
-			if _, ok := err.(*functionValidationError); ok {
+			if _, ok := err.(RecordValidationError); ok {
 				if e := d.skipOut(); e != nil {
 					err = e
 				}
@@ -384,19 +382,19 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			return nil, err
 		}
 		if t.Kind() != types.ArrayKind {
-			return nil, newErrInvalidValue("cannot be an "+d.opts.terms["array"], "", d.opts.terms)
+			return nil, errInvalidValue("cannot be an "+d.opts.terms["array"], "", d.opts.terms)
 		}
 		min := t.MinElements()
 		max := t.MaxElements()
 		arr := []any{}
 		for i := 0; d.peekKind() != ']'; i++ {
 			if i == max {
-				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d %s", max, d.opts.terms["elements"]), "", d.opts.terms)
+				return nil, errInvalidValue(fmt.Sprintf("contains more than %d %s", max, d.opts.terms["elements"]), "", d.opts.terms)
 			}
 			elem, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 			if err != nil {
-				if err, ok := err.(*functionValidationError); ok {
-					err.appendIndexToPath(i)
+				if e, ok := err.(RecordValidationError); ok {
+					err = e.appendIndexToPath(i)
 				}
 				return nil, err
 			}
@@ -407,13 +405,13 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			return nil, err
 		}
 		if len(arr) < min {
-			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d %s", min, d.opts.terms["elements"]), "", d.opts.terms)
+			return nil, errInvalidValue(fmt.Sprintf("contains less than %d %s", min, d.opts.terms["elements"]), "", d.opts.terms)
 		}
 		if t.Unique() {
 			for i, elem := range arr {
 				for _, item2 := range arr[i+1:] {
 					if elem == item2 {
-						return nil, newErrInvalidValue(fmt.Sprintf("contains a duplicated value: %v", elem), "", d.opts.terms)
+						return nil, errInvalidValue(fmt.Sprintf("contains a duplicated value: %v", elem), "", d.opts.terms)
 					}
 				}
 			}
@@ -423,7 +421,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		// Unmarshal an object.
 		defer func() {
 			// Consume the remaining key/value pairs.
-			if _, ok := err.(*functionValidationError); ok {
+			if _, ok := err.(RecordValidationError); ok {
 				if e := d.skipOut(); e != nil {
 					err = e
 				}
@@ -446,14 +444,14 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				}
 				name := tok.String()
 				if !types.IsValidPropertyName(name) {
-					return nil, newErrPropertyNotExist(name, d.opts.terms)
+					return nil, errPropertyNotExist(name, d.opts.terms)
 				}
 				if !t.Valid() {
-					return nil, newErrPropertyNotExist(name, d.opts.terms)
+					return nil, errPropertyNotExist(name, d.opts.terms)
 				}
 				p, ok := t.Property(name)
 				if !ok {
-					return nil, newErrPropertyNotExist(name, d.opts.terms)
+					return nil, errPropertyNotExist(name, d.opts.terms)
 				}
 				// Read the property's value.
 				var value any
@@ -463,15 +461,15 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					}
 					if !p.Nullable {
 						if p.Type.Kind() != types.JSONKind || preserveJSON {
-							return nil, newErrInvalidValue("cannot be "+d.opts.terms["null"], p.Name, d.opts.terms)
+							return nil, errInvalidValue("cannot be "+d.opts.terms["null"], p.Name, d.opts.terms)
 						}
 						value = json.Value("null")
 					}
 				} else {
 					value, err = d.unmarshal(p.Type, preserveJSON, purpose)
 					if err != nil {
-						if err, ok := err.(*functionValidationError); ok {
-							err.appendNameToPath(name)
+						if e, ok := err.(RecordValidationError); ok {
+							err = e.appendNameToPath(name)
 						}
 						return nil, err
 					}
@@ -486,7 +484,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 							continue
 						}
 						if _, ok := o[p.Name]; !ok {
-							return nil, newErrMissingProperty(p.Name, d.opts.terms)
+							return nil, errMissingProperty(p.Name, d.opts.terms)
 						}
 					}
 				case Update:
@@ -495,7 +493,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 							continue
 						}
 						if _, ok := o[p.Name]; !ok {
-							return nil, newErrMissingProperty(p.Name, d.opts.terms)
+							return nil, errMissingProperty(p.Name, d.opts.terms)
 						}
 					}
 				}
@@ -532,7 +530,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		} else {
 			msg += " " + term
 		}
-		return nil, newErrInvalidValue(msg, "", d.opts.terms)
+		return nil, errInvalidValue(msg, "", d.opts.terms)
 	default:
 		value, err := d.readValue()
 		if err != nil {
@@ -576,7 +574,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if s != "" {
 			if n, err := strconv.ParseInt(s, 10, 64); err == nil {
 				if min, max := t.IntRange(); n < min || n > max {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "", d.opts.terms)
+					return nil, errInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "", d.opts.terms)
 				}
 				return int(n), nil
 			}
@@ -596,7 +594,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if s != "" {
 			if n, err := strconv.ParseUint(s, 10, 64); err == nil {
 				if min, max := t.UintRange(); n < min || n > max {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "", d.opts.terms)
+					return nil, errInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "", d.opts.terms)
 				}
 				return uint(n), nil
 			}
@@ -606,13 +604,13 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		case '0':
 			if n, err := strconv.ParseFloat(string(v), t.BitSize()); err == nil {
 				if min, max := t.FloatRange(); n < min || n > max {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%g, %g]: %g", min, max, n), "", d.opts.terms)
+					return nil, errInvalidValue(fmt.Sprintf("is out of range [%g, %g]: %g", min, max, n), "", d.opts.terms)
 				}
 				return n, nil
 			}
 		case '"':
 			if t.IsReal() {
-				return nil, newErrInvalidValue(fmt.Sprintf("is not a real number: %s", string(v)), "", d.opts.terms)
+				return nil, errInvalidValue(fmt.Sprintf("is not a real number: %s", string(v)), "", d.opts.terms)
 			}
 			if bytes.Equal(v, nan) {
 				return math.NaN(), nil
@@ -628,7 +626,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if v.Kind() == '"' {
 			if n, err := decimal.Parse(d.unquoteString(v), t.Precision(), t.Scale()); err == nil {
 				if min, max := t.DecimalRange(); n.Less(min) || n.Greater(max) {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%s, %s]: %s", min, max, n), "", d.opts.terms)
+					return nil, errInvalidValue(fmt.Sprintf("is out of range [%s, %s]: %s", min, max, n), "", d.opts.terms)
 				}
 				return n, nil
 			}
@@ -663,7 +661,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			y, err := strconv.ParseInt(string(v), 10, 64)
 			if err == nil {
 				if y < types.MinYear || y > types.MaxYear {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [1, 9999]: %d", y), "", d.opts.terms)
+					return nil, errInvalidValue(fmt.Sprintf("is out of range [1, 9999]: %d", y), "", d.opts.terms)
 				}
 				return int(y), nil
 			}
@@ -678,7 +676,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if v.Kind() == '"' {
 			data := v.AppendUnquote(nil)
 			if !json.Valid(data) {
-				return nil, newErrInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", v), "", d.opts.terms)
+				return nil, errInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", v), "", d.opts.terms)
 			}
 			return json.Value(data), nil
 		}
@@ -693,22 +691,22 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			s := d.unquoteString(v)
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
-					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",
+					return nil, errInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",
 						d.formatString(v), formatValues(values)), "", d.opts.terms)
 				}
 				return s, nil
 			} else if rx := t.Regexp(); rx != nil {
 				if !rx.MatchString(s) {
-					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; it does not match the property's regular expression",
+					return nil, errInvalidValue(fmt.Sprintf("has an invalid value: %s; it does not match the property's regular expression",
 						d.formatString(v)), "", d.opts.terms)
 				}
 				return s, nil
 			} else {
 				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "", d.opts.terms)
+					return nil, errInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "", d.opts.terms)
 				}
 				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "", d.opts.terms)
+					return nil, errInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "", d.opts.terms)
 				}
 				return s, nil
 			}
@@ -730,7 +728,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	default:
 		return nil, fmt.Errorf("core/tranformations: unxpected kind '%s'", string(v.Kind()))
 	}
-	return nil, newErrInvalidValue("does not have a valid value: "+value, "", d.opts.terms)
+	return nil, errInvalidValue("does not have a valid value: "+value, "", d.opts.terms)
 }
 
 // unquoteString unquote a JSON string.

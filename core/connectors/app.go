@@ -571,7 +571,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 						v, ok := user.Properties[p.Name]
 						if !ok {
 							if !p.ReadOptional {
-								record.Err = newNormalizationErrorf(p.Name, "(returned by %s connector) does not have a value, but the property is not optional for reading", r.connector)
+								record.Err = inputValidationErrorf(p.Name, "(returned by %s connector) does not have a value, but the property is not optional for reading", r.connector)
 								break
 							}
 							continue

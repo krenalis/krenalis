@@ -758,7 +758,7 @@ func (rw *recordWriter) Record(record map[string]any) error {
 			v, ok := record[p.Name]
 			if !ok {
 				if !p.ReadOptional {
-					rw.record.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
+					rw.record.Err = inputValidationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
 					break
 				}
 				continue

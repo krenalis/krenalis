@@ -34,6 +34,16 @@ type Record struct {
 	Err        error
 }
 
+// RecordTransformationError represents an error that occurs when transforming a
+// record.
+type RecordTransformationError struct {
+	msg string
+}
+
+func (err RecordTransformationError) Error() string {
+	return err.msg
+}
+
 // Transformer represents a transformer.
 type Transformer struct {
 	action    int
@@ -97,14 +107,15 @@ func New(action *state.Action, provider FunctionProvider, layouts *state.TimeLay
 
 // Transform transforms the provided records and updates their properties.
 // Record properties, before transformation, are expected to conform to the
-// input schema. If an error occurs during the transformation of a single
-// record, the error is stored in the Err field of the corresponding record. If
-// the error is a validation error, it implements core.ValidationError;
-// otherwise it is a FunctionExecutionError error.
+// input schema.
 //
-// For function transformers, it returns the ErrFunctionNotExist error if the
-// function does not exist, and a FunctionExecutionError error if an error
-// occurs during function execution.
+// If an error occurs during the transformation of a single record, either a
+// RecordTransformationError or RecordValidationError is stored in the Err field
+// of the corresponding record.
+//
+// For function transformers, if the function does not exist, the method returns
+// ErrFunctionNotExist, and if an error occurs during function execution, it
+// returns a FunctionExecError.
 func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 
 	meergoMetrics.Increment("Transformer.Transform.calls", 1)
@@ -115,6 +126,14 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 		for i, record := range records {
 			properties, err := t.mapping.Transform(record.Properties, mappings.Purpose(record.Purpose))
 			if err != nil {
+				switch e := err.(type) {
+				case mappings.TransformationError:
+					err = RecordTransformationError{msg: e.Error()}
+				case mappings.ValidationError:
+					err = RecordValidationError{msg: e.Error()}
+				default:
+					return err
+				}
 				record.Properties = nil
 				records[i].Err = err
 				continue
@@ -136,8 +155,8 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 	fn := t.function
 	err := t.provider.Call(ctx, fn.ID, fn.Version, t.inSchema, t.outSchema, fn.PreserveJSON, records)
 	if err != nil {
-		if err, ok := err.(FunctionExecutionError); ok {
-			return FunctionExecutionError(fmt.Sprintf("%s: %s ", t.function.Language.String(), err))
+		if err, ok := err.(FunctionExecError); ok {
+			err.msg = fmt.Sprintf("%s: %s ", t.function.Language.String(), err.msg)
 		}
 		return err
 	}

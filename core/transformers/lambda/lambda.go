@@ -68,7 +68,7 @@ func New(settings Settings) transformers.FunctionProvider {
 //
 // If the function does not exist, Call returns an ErrFunctionNotExist error.
 // If the function exists but has an issue preventing execution (e.g., a syntax
-// error), it returns a FunctionExecutionError.
+// error), it returns a FunctionExecError.
 // Even if the call succeeds, individual records may still encounter errors,
 // which are stored in the Err field of each record.
 func (fn *function) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
@@ -152,7 +152,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		r = strings.NewReader(s)
 	}
 
-	// Unmarshal returns a FunctionExecutionError if execution fails, for example, due to a syntax error in the function.
+	// Unmarshal returns a FunctionExecError if execution fails, for example, due to a syntax error in the function.
 	return transformers.Unmarshal(r, records, outSchema, language, preserveJSON)
 }
 

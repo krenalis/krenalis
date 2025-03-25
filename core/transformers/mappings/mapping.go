@@ -27,18 +27,23 @@ const (
 	Update
 )
 
-// validationError implements the core.ValidationError interface.
-type validationError struct {
-	path string
-	msg  string
+// TransformationError represents an error that occurs when transforming
+// properties.
+type TransformationError struct {
+	msg string
 }
 
-func (err *validationError) Error() string {
+func (err TransformationError) Error() string {
 	return err.msg
 }
 
-func (err *validationError) PropertyPath() string {
-	return err.path
+// ValidationError represents an error that occurs when validating properties.
+type ValidationError struct {
+	msg string
+}
+
+func (err ValidationError) Error() string {
+	return err.msg
 }
 
 // Mapping represents a mapping transformer.
@@ -66,6 +71,7 @@ type mappingExpr struct {
 // date, and time values as strings.
 //
 // The source type can be the invalid type if expressions do not contain paths.
+//
 // It returns a types.PathNotExistError error if a path in expressions does not
 // exist in the source schema.
 func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace bool, layouts *state.TimeLayouts) (*Mapping, error) {
@@ -161,25 +167,18 @@ func (mapping *Mapping) OutPaths() []string {
 // null, that property will be omitted from the returned result, provided this
 // is allowed by the purpose.
 //
-// If the resulting value cannot be converted to the destination type, it
-// returns an error value implementing the ValidationError interface of core.
+// If an error occurs during property transformation or final validation, a
+// TransformationError or ValidationError is returned.
 func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
 	for _, e := range mapping.expressions {
 		v, err := e.expr.Eval(properties, mapping.inPlace, purpose)
 		if err != nil {
-			if err, ok := err.(*invalidConversionError); ok {
-				return nil, &validationError{
-					path: e.path,
-					msg:  err.Error(),
-				}
-			}
 			return nil, err
 		}
 		if v == nil && !e.nullable {
 			if e.createRequired && purpose == Create || e.updateRequired && purpose == Update {
-				msg := fmt.Sprintf("required property %q cannot be null", e.path)
-				return nil, &validationError{path: e.path, msg: msg}
+				return nil, ValidationError{fmt.Sprintf("required property %q cannot be null", e.path)}
 			}
 			continue
 		}

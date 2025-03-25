@@ -42,12 +42,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// validationError is the interface implemented by validation errors.
-type validationError interface {
-	error
-	PropertyPath() string
-}
-
 type Core struct {
 	db         *db.DB
 	state      *state.State
@@ -692,13 +686,13 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 	err = transformer.Transform(ctx, records)
 	if err != nil {
-		if err, ok := err.(transformers.FunctionExecutionError); ok {
-			return nil, errors.Unprocessable(TransformationFailed, "%w", err)
+		if _, ok := err.(transformers.FunctionExecError); ok {
+			err = errors.Unprocessable(TransformationFailed, "%s", err)
 		}
 		return nil, err
 	}
 	if err = records[0].Err; err != nil {
-		return nil, errors.Unprocessable(TransformationFailed, "%w", err)
+		return nil, errors.Unprocessable(TransformationFailed, "%s", err)
 	}
 
 	return types.Marshal(records[0].Properties, outSchema)

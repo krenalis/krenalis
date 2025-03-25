@@ -88,16 +88,21 @@ func (processor *processor) worker() {
 				records := []transformers.Record{{Properties: event.properties}}
 				err := transformer.Transform(ctx, records)
 				if err != nil {
-					processor.metrics.TransformationFailed(action.ID, len(records), err.Error())
+					if err, ok := err.(transformers.FunctionExecError); ok {
+						processor.metrics.TransformationFailed(action.ID, len(records), err.Error())
+					} else {
+						processor.metrics.TransformationFailed(action.ID, len(records), "an internal error occurred")
+					}
 					continue
 				}
 				if err := records[0].Err; err != nil {
-					if _, ok := err.(ValidationError); ok {
+					switch err.(type) {
+					case transformers.RecordTransformationError:
+						processor.metrics.TransformationFailed(action.ID, 1, err.Error())
+					case transformers.RecordValidationError:
 						processor.metrics.TransformationPassed(action.ID, 1)
 						processor.metrics.OutputValidationFailed(action.ID, 1, err.Error())
-						continue
 					}
-					processor.metrics.TransformationFailed(action.ID, 1, err.Error())
 					continue
 				}
 				processor.metrics.TransformationPassed(action.ID, 1)

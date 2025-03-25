@@ -213,20 +213,21 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			}
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
-				if err, ok := err.(transformers.FunctionExecutionError); ok {
-					return newActionError(metrics.TransformationStep, err)
+				if _, ok := err.(transformers.FunctionExecError); ok {
+					err = newActionError(metrics.TransformationStep, err)
 				}
 				return err
 			}
 			for i, record := range transformationRecords {
 				user := users[i]
-				if record.Err != nil {
-					if _, ok := record.Err.(validationError); ok {
+				if err := record.Err; err != nil {
+					switch err.(type) {
+					case transformers.RecordTransformationError:
+						this.core.metrics.TransformationFailed(action.ID, 1, err.Error())
+					case transformers.RecordValidationError:
 						this.core.metrics.TransformationPassed(action.ID, 1)
-						this.core.metrics.OutputValidationFailed(action.ID, 1, record.Err.Error())
-						continue
+						this.core.metrics.OutputValidationFailed(action.ID, 1, err.Error())
 					}
-					this.core.metrics.TransformationFailed(action.ID, 1, record.Err.Error())
 					continue
 				}
 				this.core.metrics.TransformationPassed(action.ID, 1)

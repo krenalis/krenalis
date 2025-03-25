@@ -322,7 +322,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "substring('Hello World', null, 12)", dt: types.Text(), expected: nil},
 		{expr: "substring('Hello World', 3, null)", dt: types.Text(), expected: nil},
 		{expr: "substring('Hello World', null)", dt: types.Text(), expected: nil},
-		{expr: "substring('Hello World', 3, -2)", dt: types.Text(), evalErr: errors.New("negative substring length is not allowed")},
+		{expr: "substring('Hello World', 3, -2)", dt: types.Text(), evalErr: errors.New("substring: negative substring length is not allowed")},
 		{expr: "substring(250, 2, 2)", dt: types.Int(32), expected: 50},
 		{expr: "substring('Hello World', 'a', 2)", dt: types.Int(32), compileErr: errors.New("cannot convert a (type text) to int(32)")},
 		{expr: "substring('Hello World', 0, 'b')", dt: types.Int(32), compileErr: errors.New("cannot convert b (type text) to int(32)")},

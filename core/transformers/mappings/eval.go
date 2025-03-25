@@ -8,7 +8,6 @@
 package mappings
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -27,27 +26,6 @@ import (
 // It is set to true during tests to ensure deterministic output.
 var encodeSorted = false
 
-// invalidConversionError is the error returned by the Eval and Transform
-// methods of when a value resulted from an evaluation cannot be converted to
-// the destination type.
-type invalidConversionError struct {
-	v   any
-	st  types.Type
-	dt  types.Type
-	msg string
-}
-
-func (err *invalidConversionError) Error() string {
-	if err.msg != "" {
-		return err.msg
-	}
-	switch err.v {
-	case nil:
-		return "cannot convert null to a non-nullable value"
-	}
-	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.v, err.st, err.dt)
-}
-
 // Eval evaluates the expression using the provided properties which must
 // conform to the expression's source schema, and returns the result that
 // conforms to the expression's destination type.
@@ -58,9 +36,15 @@ func (err *invalidConversionError) Error() string {
 //
 // Eval might replace json properties in the properties map with their
 // unmarshalled values.
+//
+// If an error occurs during property transformation or final validation, a
+// TransformationError or ValidationError is returned.
 func (expr *Expression) Eval(properties map[string]any, inPlace bool, purpose Purpose) (any, error) {
 	v, st, err := eval(expr.parts, properties)
 	if err != nil {
+		if err == errInvalidConversion {
+			return nil, TransformationError{err.Error()}
+		}
 		return nil, err
 	}
 	if v == nil {
@@ -69,7 +53,7 @@ func (expr *Expression) Eval(properties map[string]any, inPlace bool, purpose Pu
 	c, err := convert(v, st, expr.dt, true, inPlace, expr.timeLayouts, purpose)
 	if err != nil {
 		if err == errInvalidConversion {
-			err = &invalidConversionError{v, st, expr.dt, ""}
+			return nil, ValidationError{fmt.Sprintf("cannot convert %#v (type %s) to type %s", v, st, expr.dt)}
 		}
 		return nil, err
 	}
@@ -143,6 +127,9 @@ func digitCountUint(n uint64) int {
 
 // eval evaluates expression and returns its value and type. properties are the
 // property values.
+//
+// If it returns an error, it is either errInvalidConversion or a
+// TransformationError.
 func eval(expression []part, properties map[string]any) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
@@ -205,6 +192,9 @@ func eval(expression []part, properties map[string]any) (any, types.Type, error)
 
 // evalCall evaluates p representing a function call, and returns its value and
 // type. properties contains the property values.
+//
+// If it returns an error, it is either errInvalidConversion or a
+// TransformationError.
 func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 	switch name := p.path.elements[0]; name {
 	case "and":
@@ -328,7 +318,7 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 		}
 		jv := json.Value(v.(string))
 		if !json.Valid(jv) {
-			return nil, types.Type{}, errors.New("json_parse: input text is not valid JSON")
+			return nil, types.Type{}, TransformationError{"json_parse: input text is not valid JSON"}
 		}
 		return jv, types.JSON(), nil
 	case "len":
@@ -520,7 +510,7 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 			}
 			length = v2.(int)
 			if length < 0 {
-				return nil, types.Type{}, errors.New("negative substring length is not allowed")
+				return nil, types.Type{}, TransformationError{"substring: negative substring length is not allowed"}
 			}
 		}
 		return substring(v0.(string), start, length), types.Text(), nil
@@ -594,6 +584,9 @@ func substring(s string, start, length int) string {
 //
 // For non-object JSON values, accessing a key returns nil if the key is
 // optional; otherwise, it returns an error.
+//
+// It returns a TransformationError error if a path in a JSON Object does
+// not exist.
 func valueOf(path path, properties map[string]any) (any, error) {
 	last := len(path.elements) - 1
 	var i int
@@ -613,13 +606,13 @@ func valueOf(path path, properties map[string]any) (any, error) {
 			i += 1
 			v, err := v.Lookup(path.elements[i:])
 			if err != nil {
-				err := err.(json.NotExistError)
-				if err.Kind == json.Object || path.decorators[i+err.Index].optional() {
+				e := err.(json.NotExistError)
+				if e.Kind == json.Object || path.decorators[i+e.Index].optional() {
 					return nil, nil
 				}
 				msg := fmt.Sprintf("invalid %s: %s is not JSON object, it is %s",
-					path.slice(0, i+err.Index+1), path.slice(0, i+err.Index), err.Kind)
-				return nil, &invalidConversionError{msg: msg}
+					path.slice(0, i+e.Index+1), path.slice(0, i+e.Index), e.Kind)
+				return nil, TransformationError{msg}
 			}
 			return v, nil
 		}
