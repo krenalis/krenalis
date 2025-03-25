@@ -309,7 +309,7 @@ json_parse(null)        -> null
 
 If the input is not valid JSON, `json_parse` will produce an error, causing the entire mapping to fail.
 
-The argument of the `json_parse` function should have type `text`, and the result has type `json`.
+The argument of the `json_parse` function should have type `text` or `json`. If the argument has type `json`, the value must be a JSON string. The result has type `json`.
 
 #### **len** function
 

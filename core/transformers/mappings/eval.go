@@ -301,8 +301,19 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 		return strings.Title(v.(string)), types.Text(), nil
 	case "json_parse":
 		v, vt, err := eval(p.args[0], properties)
-		if err == nil && v != nil && vt.Kind() != types.TextKind {
-			v, err = convert(v, vt, types.Text(), true, false, nil, None)
+		if err == nil && v != nil {
+			k := vt.Kind()
+			if k != types.TextKind && k != types.JSONKind {
+				return nil, types.Type{}, errInvalidConversion
+			}
+			if k == types.JSONKind {
+				value := v.(json.Value)
+				if k := value.Kind(); k != json.String {
+					return nil, types.Type{}, errInvalidConversion
+				}
+				v = value.String()
+				vt = types.Text()
+			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err

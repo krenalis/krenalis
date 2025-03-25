@@ -248,6 +248,7 @@ func Test_Compile(t *testing.T) {
 		{expr: `json_parse('foo boo')`, dt: types.JSON(), evalErr: errors.New("json_parse: input text is not valid JSON")},
 		{expr: `json_parse(null)`, dt: types.JSON(), expected: nil},
 		{expr: `json_parse(false)`, dt: types.JSON(), expected: json.Value(`false`)},
+		{expr: `json_parse(json_parse('"\\"a\\""'))`, dt: types.JSON(), expected: json.Value(`"a"`)},
 
 		// len.
 		{expr: "len('')", dt: types.Int(32), expected: 0},
