@@ -119,7 +119,7 @@ github.com/apache/arrow/go/v15/internal/utils
 # github.com/apache/thrift v0.17.0
 ## explicit; go 1.18
 github.com/apache/thrift/lib/go/thrift
-# github.com/avct/uasurfer v0.0.0-20240501094946-ca0c4d1e541b
+# github.com/avct/uasurfer v0.0.0-20250320214457-f1f6afeb74db
 ## explicit; go 1.19
 github.com/avct/uasurfer
 # github.com/aws/aws-sdk-go-v2 v1.36.0

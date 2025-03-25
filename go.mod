@@ -9,7 +9,7 @@ replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-g
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.29.0-fix
 	github.com/andybalholm/brotli v1.1.1
-	github.com/avct/uasurfer v0.0.0-20240501094946-ca0c4d1e541b
+	github.com/avct/uasurfer v0.0.0-20250320214457-f1f6afeb74db
 	github.com/aws/aws-sdk-go-v2 v1.36.0
 	github.com/aws/aws-sdk-go-v2/config v1.29.4
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.57
