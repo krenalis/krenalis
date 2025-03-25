@@ -60,6 +60,8 @@ var (
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
 // in the returned value.
+//
+// If the value cannot be converted, it returns nil and errInvalidConversion.
 func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.TimeLayouts, purpose Purpose) (any, error) {
 	sk := st.Kind()
 	dk := dt.Kind()
@@ -445,7 +447,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return b.Value()
+			value, _ := b.Value()
+			return value, nil
 		}
 		value, err := json.Marshal(v)
 		if err != nil {

@@ -52,10 +52,7 @@ func (expr *Expression) Eval(properties map[string]any, inPlace bool, purpose Pu
 	}
 	c, err := convert(v, st, expr.dt, true, inPlace, expr.timeLayouts, purpose)
 	if err != nil {
-		if err == errInvalidConversion {
-			return nil, ValidationError{fmt.Sprintf("cannot convert %#v (type %s) to type %s", v, st, expr.dt)}
-		}
-		return nil, err
+		return nil, ValidationError{fmt.Sprintf("cannot convert %#v (type %s) to type %s", v, st, expr.dt)}
 	}
 	return c, nil
 }
@@ -271,10 +268,7 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 		if !types.Equal(t0, t1) {
 			v0, err = convert(v0, t0, t1, true, false, nil, None)
 			if err != nil {
-				if err == errInvalidConversion {
-					return false, types.Boolean(), nil
-				}
-				return nil, types.Type{}, err
+				return false, types.Boolean(), nil
 			}
 		}
 		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
@@ -418,10 +412,7 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 		if !types.Equal(t0, t1) {
 			v0, err = convert(v0, t0, t1, true, false, nil, None)
 			if err != nil {
-				if err == errInvalidConversion {
-					return true, types.Boolean(), nil
-				}
-				return nil, types.Type{}, err
+				return true, types.Boolean(), nil
 			}
 		}
 		return !reflect.DeepEqual(v0, v1), types.Boolean(), nil
