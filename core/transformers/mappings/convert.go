@@ -61,35 +61,35 @@ var (
 // then all the properties required for creation or the update must be present
 // in the returned value.
 func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.TimeLayouts, purpose Purpose) (any, error) {
-	spt := st.Kind()
-	dpt := dt.Kind()
+	sk := st.Kind()
+	dk := dt.Kind()
 	if nullable {
 		switch {
 		case v == nil:
 			return nil, nil
-		case spt == types.JSONKind && dpt != types.JSONKind:
+		case sk == types.JSONKind && dk != types.JSONKind:
 			if v := v.(json.Value); v.IsNull() {
 				return nil, nil
 			}
 		case v == "":
-			if dpt != types.TextKind && dpt != types.JSONKind {
+			if dk != types.TextKind && dk != types.JSONKind {
 				return nil, nil
 			}
 		}
 	} else if v == nil {
-		if dpt == types.JSONKind {
+		if dk == types.JSONKind {
 			return json.Value("null"), nil
 		}
 		return nil, errInvalidConversion
-	} else if spt == types.JSONKind && dpt != types.JSONKind {
+	} else if sk == types.JSONKind && dk != types.JSONKind {
 		if v := v.(json.Value); v.IsNull() {
 			return nil, errInvalidConversion
 		}
 	}
 	// Convert the unparsed cases, v is not nil.
-	switch dpt {
+	switch dk {
 	case types.BooleanKind:
-		switch spt {
+		switch sk {
 		case types.BooleanKind:
 			return v.(bool), nil
 		case types.IntKind:
@@ -116,7 +116,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.IntKind:
 		var err error
 		var n int
-		switch spt {
+		switch sk {
 		case types.BooleanKind:
 			if v.(bool) {
 				n = 1
@@ -156,7 +156,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.UintKind:
 		var err error
 		var n uint
-		switch spt {
+		switch sk {
 		case types.BooleanKind:
 			if v.(bool) {
 				n = 1
@@ -199,7 +199,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.FloatKind:
 		var err error
 		var n float64
-		switch spt {
+		switch sk {
 		case types.FloatKind:
 			n = v.(float64)
 			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
@@ -235,7 +235,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.DecimalKind:
 		var err error
 		var n decimal.Decimal
-		switch spt {
+		switch sk {
 		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal)
 		case types.IntKind:
@@ -266,7 +266,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.DateTimeKind:
 		var t time.Time
 		var err error
-		switch spt {
+		switch sk {
 		case types.DateTimeKind, types.DateKind:
 			t = v.(time.Time)
 		case types.TextKind:
@@ -316,7 +316,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.DateKind:
 		var t time.Time
 		var err error
-		switch spt {
+		switch sk {
 		case types.DateKind:
 			t = v.(time.Time)
 		case types.DateTimeKind:
@@ -353,7 +353,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		return t, nil
 	case types.TimeKind:
 		var t time.Time
-		switch spt {
+		switch sk {
 		case types.TimeKind:
 			t = v.(time.Time)
 		case types.DateTimeKind:
@@ -387,7 +387,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.YearKind:
 		var err error
 		var n int
-		switch spt {
+		switch sk {
 		case types.YearKind:
 			return v.(int), nil
 		case types.IntKind:
@@ -417,7 +417,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return n, nil
 		}
 	case types.UUIDKind:
-		switch spt {
+		switch sk {
 		case types.UUIDKind:
 			return v.(string), nil
 		case types.TextKind:
@@ -435,7 +435,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return u.String(), nil
 		}
 	case types.JSONKind:
-		if spt == types.JSONKind {
+		if sk == types.JSONKind {
 			return v, nil
 		}
 		// TODO(marco): time types are not correctly marshaled
@@ -453,7 +453,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 		return value, nil
 	case types.InetKind:
-		switch spt {
+		switch sk {
 		case types.InetKind:
 			return v.(string), nil
 		case types.TextKind:
@@ -475,7 +475,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 	case types.TextKind:
 		var s string
-		switch spt {
+		switch sk {
 		case types.TextKind:
 			s = v.(string)
 		case types.BooleanKind:
@@ -532,7 +532,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			if l, ok := dt.CharLen(); ok {
 				runes := len(s)
-				if spt == types.JSONKind || spt == types.TextKind {
+				if sk == types.JSONKind || sk == types.TextKind {
 					runes = utf8.RuneCountInString(s)
 				}
 				if runes > l {
@@ -542,7 +542,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 		return s, nil
 	case types.ArrayKind:
-		switch spt {
+		switch sk {
 		case types.JSONKind:
 			s := v.(json.Value)
 			if s.Kind() == json.Object {
@@ -618,7 +618,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 	case types.ObjectKind:
 		var d map[string]any
-		switch spt {
+		switch sk {
 		case types.ObjectKind:
 			if types.Equal(st, dt) {
 				return v, nil
@@ -719,7 +719,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 		return d, nil
 	case types.MapKind:
-		switch spt {
+		switch sk {
 		case types.MapKind:
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
