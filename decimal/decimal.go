@@ -65,7 +65,7 @@ const (
 )
 
 var ErrSyntax = errors.New("syntax error")
-var ErrOutOfRange = errors.New("out of range")
+var ErrRange = errors.New("out of range")
 
 // Decimal represents a decimal number.
 // The zero value for a Decimal represents the value 0.
@@ -89,8 +89,8 @@ func (x Decimal) Append(buf []byte) []byte {
 // to consider when interpreting the value.
 //
 // If x cannot be represented exactly with the provided scale, Binary returns
-// [ErrOutOfRange]. This occurs when the scale of x is greater than the
-// specified scale.
+// [ErrRange]. This occurs when the scale of x is greater than the specified
+// scale.
 //
 // The actual decimal value can be obtained by dividing the unscaled integer
 // by 10^scale. For example, the decimal value 1.25 is encoded, based on the
@@ -103,7 +103,7 @@ func (x Decimal) Append(buf []byte) []byte {
 // See the [Binary] function for the inverse operation.
 func (x Decimal) Binary(scale int) ([]byte, error) {
 	if scale < 0 || scale > MaxScale {
-		panic(ErrOutOfRange.Error())
+		panic(ErrRange.Error())
 	}
 	b := &x.b
 	if b.Scale() != scale {
@@ -111,7 +111,7 @@ func (x Decimal) Binary(scale int) ([]byte, error) {
 		b2.Copy(b)
 		decimal.ContextUnlimited.Quantize(b2, scale)
 		if b.Cmp(b2) != 0 {
-			return nil, ErrOutOfRange
+			return nil, ErrRange
 		}
 		b = b2
 	}
@@ -183,14 +183,14 @@ func (x Decimal) GreaterEqual(y Decimal) bool {
 }
 
 // Int64 converts x to its int64 representation.
-// It returns 0 and [ErrOutOfRange] if x cannot be represented as an int64.
+// It returns 0 and [ErrRange] if x cannot be represented as an int64.
 func (x Decimal) Int64() (int64, error) {
 	if !x.b.IsInt() {
-		return 0, ErrOutOfRange
+		return 0, ErrRange
 	}
 	i, ok := x.b.Int64()
 	if !ok {
-		return 0, ErrOutOfRange
+		return 0, ErrRange
 	}
 	return i, nil
 }
@@ -250,14 +250,14 @@ func (x Decimal) String() string {
 }
 
 // Uint64 converts x to its uint64 representation.
-// It returns 0 and [ErrOutOfRange] if x cannot be represented as an uint64.
+// It returns 0 and [ErrRange] if x cannot be represented as an uint64.
 func (x Decimal) Uint64() (uint64, error) {
 	if !x.b.IsInt() {
-		return 0, ErrOutOfRange
+		return 0, ErrRange
 	}
 	i, ok := x.b.Uint64()
 	if !ok {
-		return 0, ErrOutOfRange
+		return 0, ErrRange
 	}
 	return i, nil
 }
@@ -297,7 +297,7 @@ func (x Decimal) WriteTo(w io.Writer) (int64, error) {
 // Binary returns the decimal represented by b, interpreted as a big-endian
 // two’s complement integer, with the specified scale. It requires precision in
 // the range [1, [MaxPrecision]] and scale in the range [0, precision]. If the
-// resulting decimal exceeds the given precision, it returns [ErrOutOfRange].
+// resulting decimal exceeds the given precision, it returns [ErrRange].
 // An error is also returned if b is empty.
 //
 // Binary may modify the content of b.
@@ -330,20 +330,20 @@ func Binary(b []byte, precision, scale int) (Decimal, error) {
 	var n Decimal
 	n.b.SetBigMantScale(bi, scale)
 	if n.b.Precision() > precision {
-		return Decimal{}, ErrOutOfRange
+		return Decimal{}, ErrRange
 	}
 	return n, nil
 }
 
 // Float64 returns the decimal represented by f, rounded down scale; where
 // precision > 0 and scale <= precision. If the resulting decimal exceeds
-// precision, or f is NaN, +Inf, -Inf, it returns 0 and [ErrOutOfRange].
+// precision, or f is NaN, +Inf, -Inf, it returns 0 and [ErrRange].
 func Float64(f float64, precision, scale int) (Decimal, error) {
 	if err := validPrecisionScale(precision, scale); err != nil {
 		return Decimal{}, err
 	}
 	if math.IsNaN(f) || math.IsInf(f, 0) {
-		return Decimal{}, ErrOutOfRange
+		return Decimal{}, ErrRange
 	}
 	if f == 0 {
 		return Decimal{}, nil
@@ -353,12 +353,12 @@ func Float64(f float64, precision, scale int) (Decimal, error) {
 	s := x.b.Precision() - x.b.Scale() + scale
 	x.b.Round(s)
 	if x.b.Precision() > precision {
-		return Decimal{}, ErrOutOfRange
+		return Decimal{}, ErrRange
 	}
 	return x, nil
 }
 
-// Int returns the decimal represented by i. It returns [ErrOutOfRange] if the
+// Int returns the decimal represented by i. It returns [ErrRange] if the
 // decimal exceed the specified precision or scale, where precision > 0
 // and scale <= precision.
 func Int(i, precision, scale int) (Decimal, error) {
@@ -371,7 +371,7 @@ func Int(i, precision, scale int) (Decimal, error) {
 	n := Decimal{}
 	n.b.SetMantScale(int64(i), 0)
 	if n.b.Precision() > precision-scale {
-		return Decimal{}, ErrOutOfRange
+		return Decimal{}, ErrRange
 	}
 	return n, nil
 }
@@ -415,7 +415,7 @@ func MustUint(i uint) Decimal {
 // It panics if scale is not valid.
 func New(mantissa int64, scale int) Decimal {
 	if scale < MinScale || scale > MaxScale {
-		panic(ErrOutOfRange.Error())
+		panic(ErrRange.Error())
 	}
 	x := Decimal{}
 	x.b.SetMantScale(mantissa, scale)
@@ -427,7 +427,7 @@ func New(mantissa int64, scale int) Decimal {
 // and scale <= precision.
 //
 // If n is not syntactically correct, it returns the [ErrSyntax] error, and if it
-// is out of range, it returns the [ErrOutOfRange] error.
+// is out of range, it returns the [ErrRange] error.
 //
 // As a special case, if precision is 0, the precision and scale are ignored,
 // and no limits are enforced on the number of significant digits or the scale
@@ -456,7 +456,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		precision != 0 && (precision < MinPrecision || precision > MaxPrecision),
 		scale < MinScale || scale > MaxScale,
 		scale > precision:
-		return Decimal{}, ErrOutOfRange
+		return Decimal{}, ErrRange
 	}
 	if len(n) == 0 {
 		return Decimal{}, ErrSyntax
@@ -558,24 +558,24 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 			}
 			d := int(c-'0') * factor
 			if d < 0 {
-				return Decimal{}, ErrOutOfRange
+				return Decimal{}, ErrRange
 			}
 			s2 := s
 			if neg {
 				s += d
 				if s < s2 {
-					return Decimal{}, ErrOutOfRange
+					return Decimal{}, ErrRange
 				}
 			} else {
 				s -= d
 				if s > s2 {
-					return Decimal{}, ErrOutOfRange
+					return Decimal{}, ErrRange
 				}
 			}
 			factor *= 10
 		}
 		if s < MinScale || s > MaxScale {
-			return Decimal{}, ErrOutOfRange
+			return Decimal{}, ErrRange
 		}
 		if s == prev {
 			str = str[:start]
@@ -589,7 +589,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 	if precision > 0 {
 		p := max(0, mantissa.digits()-s) + scale
 		if p > precision || s > scale {
-			return Decimal{}, ErrOutOfRange
+			return Decimal{}, ErrRange
 		}
 	}
 	x := Decimal{}
@@ -651,7 +651,7 @@ func Uint(i uint, precision, scale int) (Decimal, error) {
 	n := Decimal{}
 	n.b.SetUint64(uint64(i))
 	if n.b.Precision() > precision-scale {
-		return Decimal{}, ErrOutOfRange
+		return Decimal{}, ErrRange
 	}
 	return n, nil
 }
@@ -742,13 +742,13 @@ func (s *fmtState) Flag(int) bool {
 // validPrecisionScale reports whether precision and scale are valid.
 func validPrecisionScale(precision, scale int) error {
 	if precision < MinPrecision || precision > MaxPrecision {
-		return ErrOutOfRange
+		return ErrRange
 	}
 	if scale < MinScale || scale > MaxScale {
-		return ErrOutOfRange
+		return ErrRange
 	}
 	if precision < scale {
-		return ErrOutOfRange
+		return ErrRange
 	}
 	return nil
 }

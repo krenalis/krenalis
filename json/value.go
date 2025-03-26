@@ -85,7 +85,7 @@ func (v Value) Bool() bool {
 // in range [decimal.MinScale, decimal.MaxScale].
 func (v Value) Decimal(precision, scale int) (decimal.Decimal, error) {
 	n, err := decimal.Parse(TrimSpace(v), precision, scale)
-	if err == decimal.ErrOutOfRange {
+	if err == decimal.ErrRange {
 		err = ErrRange
 	}
 	return n, err

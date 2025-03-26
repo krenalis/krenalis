@@ -93,12 +93,12 @@ func Test_Decimal_Int64(t *testing.T) {
 		{"-79406124", -79406124, nil},
 		{"9223372036854775807", math.MaxInt64, nil},  // MaxInt64
 		{"-9223372036854775808", math.MinInt64, nil}, // MinInt64
-		{"9223372036854775808", 0, ErrOutOfRange},    // MaxInt64+1
-		{"-9223372036854775809", 0, ErrOutOfRange},   // MinInt64-1
-		{"8305916205729431730562153", 0, ErrOutOfRange},
-		{"-8305916205729431730562153", 0, ErrOutOfRange},
-		{"1.1", 0, ErrOutOfRange},
-		{"-0.1", 0, ErrOutOfRange},
+		{"9223372036854775808", 0, ErrRange},         // MaxInt64+1
+		{"-9223372036854775809", 0, ErrRange},        // MinInt64-1
+		{"8305916205729431730562153", 0, ErrRange},
+		{"-8305916205729431730562153", 0, ErrRange},
+		{"1.1", 0, ErrRange},
+		{"-0.1", 0, ErrRange},
 	}
 
 	for _, test := range tests {
@@ -177,11 +177,11 @@ func Test_Decimal_Uint64(t *testing.T) {
 		{"813", 813, nil},
 		{"79406124", 79406124, nil},
 		{"18446744073709551615", math.MaxUint64, nil}, // MaxUint64
-		{"18446744073709551616", 0, ErrOutOfRange},    // MaxInt64+1
-		{"8305916205729431730562153", 0, ErrOutOfRange},
-		{"-1", 0, ErrOutOfRange},
-		{"1.1", 0, ErrOutOfRange},
-		{"0.1", 0, ErrOutOfRange},
+		{"18446744073709551616", 0, ErrRange},         // MaxInt64+1
+		{"8305916205729431730562153", 0, ErrRange},
+		{"-1", 0, ErrRange},
+		{"1.1", 0, ErrRange},
+		{"0.1", 0, ErrRange},
 	}
 
 	for _, test := range tests {
@@ -262,9 +262,9 @@ func Test_Binary(t *testing.T) {
 		{[]byte{0xab, 0x54, 0xa9, 0x8e, 0xfc, 0x35, 0xe6, 0x55}, 20, 0, "-6101065163598338475", nil},
 		{[]byte{0x00, 0xab, 0x54, 0xa9, 0x8e, 0xfc, 0x35, 0xe6, 0x55}, 20, 0, "12345678910111213141", nil},
 		{[]byte{0xff, 0xff, 0x54, 0xab, 0x56, 0x71, 0x3, 0xca, 0x19, 0xab}, 20, 0, "-12345678910111213141", nil},
-		{[]byte{0x1, 0xa}, 2, 0, "0", ErrOutOfRange},               // 266
-		{[]byte{0xff, 0xb1, 0xfb, 0x13}, 6, 3, "0", ErrOutOfRange}, // -5113.069
-		{[]byte{0x01}, 2, 3, "0", ErrOutOfRange},                   // 1
+		{[]byte{0x1, 0xa}, 2, 0, "0", ErrRange},               // 266
+		{[]byte{0xff, 0xb1, 0xfb, 0x13}, 6, 3, "0", ErrRange}, // -5113.069
+		{[]byte{0x01}, 2, 3, "0", ErrRange},                   // 1
 		{[]byte{}, 5, 3, "0", errors.New("invalid empty binary")},
 		{nil, 5, 3, "0", errors.New("invalid empty binary")},
 	}
@@ -296,7 +296,7 @@ func Test_Decimal_Binary(t *testing.T) {
 		{"1.62805", 10, []byte{0x0, 0x0, 0x0, 0x3, 0xca, 0x64, 0xb7, 0x20}, nil},
 		{"0.00123", 7, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0xc}, nil},
 		{"-0.00123", 7, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xcf, 0xf4}, nil},
-		{"0.00123", 4, nil, ErrOutOfRange},
+		{"0.00123", 4, nil, ErrRange},
 		{"803.691", 3, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0xc, 0x43, 0x6b}, nil},
 		{"803.691", 5, []byte{0x0, 0x0, 0x0, 0x0, 0x4, 0xca, 0x55, 0xcc}, nil},
 		{"10", 0, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa}, nil},
@@ -312,9 +312,9 @@ func Test_Decimal_Binary(t *testing.T) {
 		{"15307613224406839111403498083672134790953339307983.90091", 10, []byte{0x18, 0x62, 0xed, 0x64, 0x38, 0x27, 0x74, 0xd0, 0xc1, 0x83, 0xe4, 0x48, 0x3f, 0x5f, 0x87, 0x53, 0xef, 0xc9, 0xbe, 0xb1, 0xae, 0x90, 0xd5, 0x50, 0xe0}, nil},
 		{"12345678910111213141", 0, []byte{0x00, 0xab, 0x54, 0xa9, 0x8e, 0xfc, 0x35, 0xe6, 0x55}, nil},
 		{"-12345678910111213141", 0, []byte{0xff, 0x54, 0xab, 0x56, 0x71, 0x3, 0xca, 0x19, 0xab}, nil},
-		{"6.890", 0, nil, ErrOutOfRange},
-		{"6.890", 1, nil, ErrOutOfRange},
-		{"-79.061", 2, nil, ErrOutOfRange},
+		{"6.890", 0, nil, ErrRange},
+		{"6.890", 1, nil, ErrRange},
+		{"-79.061", 2, nil, ErrRange},
 	}
 
 	for _, test := range tests {
@@ -430,11 +430,11 @@ func Test_Float64(t *testing.T) {
 		{14627436592.089, 12, 1, "14627436592.1", nil},
 		{14627436592.089, 11, 0, "14627436592", nil},
 		{-22.951, 7, 5, "-22.951", nil},
-		{330.164, 5, 3, "", ErrOutOfRange},
-		{1, 1, 2, "", ErrOutOfRange},
-		{math.NaN(), 1, 2, "", ErrOutOfRange},
-		{math.Inf(-1), 1, 2, "", ErrOutOfRange},
-		{math.Inf(1), 1, 2, "", ErrOutOfRange},
+		{330.164, 5, 3, "", ErrRange},
+		{1, 1, 2, "", ErrRange},
+		{math.NaN(), 1, 2, "", ErrRange},
+		{math.Inf(-1), 1, 2, "", ErrRange},
+		{math.Inf(1), 1, 2, "", ErrRange},
 	}
 
 	for _, test := range tests {
@@ -465,9 +465,9 @@ func Test_Int(t *testing.T) {
 		{-1, 5, 4, "-1", nil},
 		{93506, 5, 0, "93506", nil},
 		{3774, 12, 3, "3774", nil},
-		{5712890, 10, 4, "0", ErrOutOfRange},
+		{5712890, 10, 4, "0", ErrRange},
 		{-92758264, 12, 4, "-92758264", nil},
-		{math.MaxInt64, 22, 4, "0", ErrOutOfRange},
+		{math.MaxInt64, 22, 4, "0", ErrRange},
 		{math.MaxInt64, 23, 4, "9223372036854775807", nil},
 	}
 
@@ -522,12 +522,12 @@ func Test_Uint(t *testing.T) {
 		{1, 1, 0, "1", nil},
 		{0, 2, 1, "0", nil},
 		{189, 4, 1, "189", nil},
-		{189, 4, 2, "0", ErrOutOfRange},
+		{189, 4, 2, "0", ErrRange},
 		{4021945, 7, 0, "4021945", nil},
 		{4021945, 20, 0, "4021945", nil},
 		{math.MaxUint64, 24, 4, "18446744073709551615", nil},
 		{math.MaxUint64, 30, 0, "18446744073709551615", nil},
-		{math.MaxUint64, 21, 2, "0", ErrOutOfRange},
+		{math.MaxUint64, 21, 2, "0", ErrRange},
 	}
 
 	for _, test := range tests {
@@ -650,14 +650,14 @@ func Test_Parse(t *testing.T) {
 		{"+", 20, 5, "", "", ErrSyntax},
 		{"-", 20, 5, "", "", ErrSyntax},
 
-		{"1", 1, 1, "", "", ErrOutOfRange},
-		{"678", 3, 1, "", "", ErrOutOfRange},
-		{"-8492.033", 8, 5, "", "", ErrOutOfRange},
-		{"1.0000001", 7, 7, "", "", ErrOutOfRange},
-		{"123.4", 4, 2, "", "", ErrOutOfRange},
-		{"0.0000001", 7, 6, "", "", ErrOutOfRange},
-		{"1e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrOutOfRange},
-		{"1e" + strconv.Itoa(decimal.MinScale-1), 0, 0, "", "", ErrOutOfRange},
+		{"1", 1, 1, "", "", ErrRange},
+		{"678", 3, 1, "", "", ErrRange},
+		{"-8492.033", 8, 5, "", "", ErrRange},
+		{"1.0000001", 7, 7, "", "", ErrRange},
+		{"123.4", 4, 2, "", "", ErrRange},
+		{"0.0000001", 7, 6, "", "", ErrRange},
+		{"1e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrRange},
+		{"1e" + strconv.Itoa(decimal.MinScale-1), 0, 0, "", "", ErrRange},
 	}
 
 	for _, test := range tests {
