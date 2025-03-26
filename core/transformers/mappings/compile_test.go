@@ -57,6 +57,7 @@ func Test_Compile(t *testing.T) {
 		layouts    *state.TimeLayouts
 		compileErr error
 		evalErr    error
+		convertErr error
 		expected   any
 	}{
 		{expr: "null", dt: types.Int(32), nullable: true, expected: nil},
@@ -156,7 +157,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "manufacturer.power", dt: types.Int(32), compileErr: errors.New(`invalid manufacturer.power: manufacturer (type text) cannot have properties or keys`)},
 
 		// Eval errors.
-		{expr: "manufacturer", dt: types.Int(32), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type text) to type int(32)`)},
+		{expr: "manufacturer", dt: types.Int(32), convertErr: errors.New(`cannot convert`)},
 
 		// and.
 		{expr: "and(true, true)", dt: types.Boolean(), expected: true},
@@ -408,7 +409,7 @@ func Test_Compile(t *testing.T) {
 			}
 
 			// Test Compile.
-			expr, err := Compile(test.expr, schema, test.dt, test.layouts)
+			expr, _, err := Compile(test.expr, schema, test.dt)
 			if err != nil {
 				if test.compileErr == nil {
 					t.Fatalf("unexpected compile error %q (type %T)", err, err)
@@ -423,7 +424,7 @@ func Test_Compile(t *testing.T) {
 			}
 
 			// Test Eval.
-			got, err := expr.Eval(properties, false, test.purpose)
+			v, vt, err := expr.Eval(properties)
 			if test.evalErr != nil {
 				if err == nil {
 					t.Fatalf("expected eval error %q, got no errors", test.evalErr)
@@ -436,11 +437,26 @@ func Test_Compile(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected eval error: %s", err)
 			}
-			if !cmp.Equal(test.expected, got) {
-				if j, ok := got.(json.Value); ok {
-					t.Fatalf("expected value %#v, got %#v (which represents the string %q)", test.expected, got, string(j))
+			if v != nil {
+				v, err = convert(v, vt, test.dt, true, false, test.layouts, test.purpose)
+			}
+			if test.convertErr != nil {
+				if err == nil {
+					t.Fatalf("expected convert error %q, got no errors", test.convertErr)
 				}
-				t.Fatalf("unexpected value:\n\texpected: %#v\n\tgot:      %#v\n\n%s\n", test.expected, got, cmp.Diff(test.expected, got))
+				if test.convertErr.Error() != err.Error() {
+					t.Fatalf("expected convert error %q, got %q", test.convertErr.Error(), err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected convert error: %s", err)
+			}
+			if !cmp.Equal(test.expected, v) {
+				if j, ok := v.(json.Value); ok {
+					t.Fatalf("expected value %#v, got %#v (which represents the string %q)", test.expected, v, string(j))
+				}
+				t.Fatalf("unexpected value:\n\texpected: %#v\n\tgot:      %#v\n\n%s\n", test.expected, v, cmp.Diff(test.expected, v))
 			}
 
 		})
@@ -461,7 +477,7 @@ func TestInvalidSchema(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.expr, func(t *testing.T) {
-			_, err := Compile(test.expr, types.Type{}, test.dt, nil)
+			_, _, err := Compile(test.expr, types.Type{}, test.dt)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -508,11 +524,10 @@ func TestPropertyPaths(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		expression, err := Compile(test.src, schema, types.JSON(), nil)
+		_, got, err := Compile(test.src, schema, types.JSON())
 		if err != nil {
 			t.Fatalf("%q. unexpected compilation error: %s", test.src, err)
 		}
-		got := expression.Properties()
 		if !reflect.DeepEqual(got, test.expected) {
 			t.Fatalf("%q. unexpected paths\nexpected %v\ngot      %v", test.src, test.expected, got)
 		}

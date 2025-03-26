@@ -55,9 +55,12 @@ type Mapping struct {
 type mappingExpr struct {
 	path           string
 	expr           *Expression
+	properties     []string
+	dt             types.Type // destination type.
 	nullable       bool
 	createRequired bool
 	updateRequired bool
+	timeLayouts    *state.TimeLayouts
 }
 
 // New returns a new mapping that transforms values according to the provided
@@ -88,33 +91,35 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		return nil, errors.New("outSchema is not an object")
 	}
 	// Compile the expressions.
-	mappingExpressions := make([]mappingExpr, len(expressions))
+	me := make([]mappingExpr, len(expressions))
 	i := 0
 	for path, expr := range expressions {
 		p, err := types.PropertyByPath(outSchema, path)
 		if err != nil {
 			return nil, err
 		}
-		mappingExpressions[i].path = path
-		mappingExpressions[i].expr, err = Compile(expr, inSchema, p.Type, layouts)
-		mappingExpressions[i].nullable = p.Nullable
-		mappingExpressions[i].createRequired = p.CreateRequired
-		mappingExpressions[i].updateRequired = p.UpdateRequired
+		me[i].path = path
+		me[i].expr, me[i].properties, err = Compile(expr, inSchema, p.Type)
+		me[i].dt = p.Type
+		me[i].nullable = p.Nullable
+		me[i].createRequired = p.CreateRequired
+		me[i].updateRequired = p.UpdateRequired
+		me[i].timeLayouts = layouts
 		if err != nil {
 			return nil, err
 		}
 		i++
 	}
 	// Sort the expressions based on their paths and ensure that no two paths have the same prefix.
-	slices.SortFunc(mappingExpressions, func(a, b mappingExpr) int {
+	slices.SortFunc(me, func(a, b mappingExpr) int {
 		return cmp.Compare(a.path, b.path)
 	})
-	for i, expr := range mappingExpressions[1:] {
-		if prev := mappingExpressions[i]; strings.HasPrefix(expr.path, prev.path) {
+	for i, expr := range me[1:] {
+		if prev := me[i]; strings.HasPrefix(expr.path, prev.path) {
 			return nil, fmt.Errorf("paths %q and %q have the same prefix", expr.path, prev.path)
 		}
 	}
-	return &Mapping{expressions: mappingExpressions, inPlace: inPlace}, nil
+	return &Mapping{expressions: me, inPlace: inPlace}, nil
 }
 
 // InPaths returns the input property paths, i.e., the property paths found in
@@ -128,7 +133,7 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 func (mapping *Mapping) InPaths() []string {
 	p := map[string]struct{}{}
 	for _, expr := range mapping.expressions {
-		for _, name := range expr.expr.properties {
+		for _, name := range expr.properties {
 			p[name] = struct{}{}
 		}
 	}
@@ -172,9 +177,15 @@ func (mapping *Mapping) OutPaths() []string {
 func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
 	for _, e := range mapping.expressions {
-		v, err := e.expr.Eval(properties, mapping.inPlace, purpose)
+		v, vt, err := e.expr.Eval(properties)
 		if err != nil {
 			return nil, err
+		}
+		if v != nil {
+			v, err = convert(v, vt, e.dt, true, mapping.inPlace, e.timeLayouts, purpose)
+			if err != nil {
+				return nil, ValidationError{fmt.Sprintf("cannot convert %#v (type %s) to type %s", v, vt, e.dt)}
+			}
 		}
 		if v == nil && !e.nullable {
 			if e.createRequired && purpose == Create || e.updateRequired && purpose == Update {

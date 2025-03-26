@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/types"
 )
 
@@ -24,68 +23,53 @@ var jsonArrayType = types.Array(types.JSON())
 // source to a destination. An Expression can contain strings, numbers, true,
 // false, null, property paths and function calls.
 type Expression struct {
-	parts       []part     // expression parts.
-	dt          types.Type // destination type.
-	properties  []string   // properties used in the expression; see the documentation of the Properties method.
-	timeLayouts *state.TimeLayouts
+	parts []part // expression parts.
 }
 
-// Properties returns the properties found in the expression, sorted by their
-// appearance order in the expression. The returned properties are guaranteed to
-// be unique. If no property are present, it returns nil.
+// Compile parses the given expression and returns an Expression that can be
+// used for evaluation, along with the property paths referenced in the
+// expression.
 //
-// If the expression contains a map or json indexing, Properties does not return
-// the key. For example, for the expression x.y.z, it returns {"x"} if x is a
-// JSON object, and returns {"x.z"} if x is a map of objects.
-func (expr *Expression) Properties() []string {
-	return slices.Clone(expr.properties)
-}
-
-// Compile parses an expression and returns an Expression value that can be used
-// to execute the expression.
+// The schema defines the structure of the paths used in the expression, while
+// dt specifies the destination type.
 //
-// schema is the schema of the paths in the expression, dt is the destination
-// type, and layouts represents, if not nil, the layouts used to format
-// datetime, date, and time values as strings.
-//
-// An invalid schema can be passed to compile an expression without paths.
-func Compile(expr string, schema, dt types.Type, layouts *state.TimeLayouts) (*Expression, error) {
+// If schema is invalid, the expression will be compiled without path resolution.
+func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) {
 	if expr == "" {
-		return nil, errors.New("expression is empty")
+		return nil, nil, errors.New("expression is empty")
 	}
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
-		return nil, errors.New("schema is non an object")
+		return nil, nil, errors.New("schema is non an object")
 	}
 	if !dt.Valid() {
-		return nil, errors.New("destination type is the invalid type")
+		return nil, nil, errors.New("destination type is the invalid type")
 	}
 	parts, src, err := parse(expr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if src != "" {
-		return nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
+		return nil, nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
 	}
-	properties := map[string]struct{}{}
-	err = typeCheck(parts, schema, dt, true, properties)
+	props := map[string]struct{}{}
+	err = typeCheck(parts, schema, dt, true, props)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	expression := &Expression{
-		parts:       parts,
-		dt:          dt,
-		timeLayouts: layouts,
+		parts: parts,
 	}
-	if len(properties) > 0 {
-		expression.properties = make([]string, len(properties))
+	var properties []string
+	if len(props) > 0 {
+		properties = make([]string, len(props))
 		i := 0
-		for name := range properties {
-			expression.properties[i] = name
+		for name := range props {
+			properties[i] = name
 			i++
 		}
-		slices.Sort(expression.properties)
+		slices.Sort(properties)
 	}
-	return expression, nil
+	return expression, properties, nil
 }
 
 // checkAnd type checks a call to 'and' with the given arguments.

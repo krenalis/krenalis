@@ -442,12 +442,11 @@ func (core *Core) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 		if !expression.Type.Valid() {
 			return nil, errors.BadRequest("expression type is not valid")
 		}
-		exp, err := mappings.Compile(expression.Value, schema, expression.Type, nil)
+		_, props, err := mappings.Compile(expression.Value, schema, expression.Type)
 		if err != nil {
 			return nil, errors.BadRequest("expression is not valid: %w", err)
 		}
-		expressionProperties := exp.Properties()
-		properties = append(properties, expressionProperties...)
+		properties = append(properties, props...)
 	}
 	// Remove duplicated properties.
 	m := map[string]string{}
@@ -725,7 +724,7 @@ func (core *Core) ValidateExpression(expression string, properties []types.Prope
 	if err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	_, err = mappings.Compile(expression, schema, typ, nil)
+	_, _, err = mappings.Compile(expression, schema, typ)
 	if err != nil {
 		return err.Error(), nil
 	}

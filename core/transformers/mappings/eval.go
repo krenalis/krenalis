@@ -26,35 +26,23 @@ import (
 // It is set to true during tests to ensure deterministic output.
 var encodeSorted = false
 
-// Eval evaluates the expression using the provided properties which must
-// conform to the expression's source schema, and returns the result that
-// conforms to the expression's destination type.
+// Eval evaluates the expression using the provided properties, which must
+// conform to the expression's source schema, and returns the result in the
+// destination type.
 //
-// purpose specifies the reason for the evaluation. If Create or Update, then
-// all the properties required for creation or the update must be present in the
-// returned value.
+// During evaluation, JSON properties in the map may be replaced with their
+// unmarshaled values.
 //
-// Eval might replace json properties in the properties map with their
-// unmarshalled values.
-//
-// If an error occurs during property transformation or final validation, a
-// TransformationError or ValidationError is returned.
-func (expr *Expression) Eval(properties map[string]any, inPlace bool, purpose Purpose) (any, error) {
+// If a property transformation fails, Eval returns a TransformationError.
+func (expr *Expression) Eval(properties map[string]any) (any, types.Type, error) {
 	v, st, err := eval(expr.parts, properties)
 	if err != nil {
 		if err == errInvalidConversion {
-			return nil, TransformationError{err.Error()}
+			return nil, types.Type{}, TransformationError{err.Error()}
 		}
-		return nil, err
+		return nil, types.Type{}, err
 	}
-	if v == nil {
-		return nil, nil
-	}
-	c, err := convert(v, st, expr.dt, true, inPlace, expr.timeLayouts, purpose)
-	if err != nil {
-		return nil, ValidationError{fmt.Sprintf("cannot convert %#v (type %s) to type %s", v, st, expr.dt)}
-	}
-	return c, nil
+	return v, st, nil
 }
 
 // appendAsString appends v to b after converting it to a string.
