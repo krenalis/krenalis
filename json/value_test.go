@@ -75,6 +75,11 @@ func Test_Value(t *testing.T) {
 		if n, err := Value(`true`).Decimal(1, 0); err == nil {
 			t.Fatalf("expected error, got %q and no error", n)
 		}
+		if n, err := Value(`12.8401`).Decimal(3, 2); err == nil {
+			t.Fatalf("expected error, got %q and no error", n)
+		} else if err != ErrRange {
+			t.Fatalf("expected error ErrRange, got error %#v", n)
+		}
 	})
 
 	t.Run("Elements", func(t *testing.T) {
@@ -115,6 +120,16 @@ func Test_Value(t *testing.T) {
 		}
 		if n, err := Value(`{}`).Float(64); err == nil {
 			t.Fatalf("expected error, got %f and no error", n)
+		}
+		if n, err := Value(`1.8e55`).Float(32); err == nil {
+			t.Fatalf("expected error, got %f and no error", n)
+		} else if err != ErrRange {
+			t.Fatalf("expected ErrRange error, got error %#v", err)
+		}
+		if n, err := Value(`1.8e529`).Float(64); err == nil {
+			t.Fatalf("expected error, got %f and no error", n)
+		} else if err != ErrRange {
+			t.Fatalf("expected error ErrRanger, got error %#v", err)
 		}
 	})
 
@@ -217,6 +232,11 @@ func Test_Value(t *testing.T) {
 		}
 		if n, err := Value(`3.45`).Int(); err == nil {
 			t.Fatalf("expected error, got %d and no error", n)
+		}
+		if n, err := Value(`74068198354071205726051295`).Uint(); err == nil {
+			t.Fatalf("expected error, got %d and no error", n)
+		} else if err != ErrRange {
+			t.Fatalf("expected error ErrRange, got error %#v", err)
 		}
 	})
 
@@ -452,6 +472,11 @@ func Test_Value(t *testing.T) {
 		}
 		if n, err := Value(`8.2`).Uint(); err == nil {
 			t.Fatalf("expected error, got %d and no error", n)
+		}
+		if n, err := Value(`74068198354071205726051295`).Uint(); err == nil {
+			t.Fatalf("expected error, got %d and no error", n)
+		} else if err != ErrRange {
+			t.Fatalf("expected error ErrRange, got error %#v", err)
 		}
 	})
 

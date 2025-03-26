@@ -25,6 +25,10 @@ var (
 	_ Unmarshaler = (*Value)(nil)
 )
 
+// ErrRange is returned by the [Value.Decimal], [Value.Float], [Value.Int], and
+// [Value.Uint] methods when the number is out of range.
+var ErrRange = errors.New("out of range")
+
 // NotExistError is returned by the Lookup method when the specified path does
 // not exist.
 type NotExistError struct {
@@ -72,15 +76,19 @@ func (v Value) Bool() bool {
 	return v.Kind() == True
 }
 
-// Decimal returns v as a decimal.Decimal. If v is not a number, it returns
-// decimal.ErrSyntax. If v does not fit in the provided precision and scale, it
-// returns decimal.ErrOutOfRange.
+// Decimal returns v as a decimal.Decimal. It returns an error if v is not a
+// number or if v does not fit in the provided precision and scale (in which
+// case it returns [ErrRange]).
 //
 // As a special case, if precision is 0, it only checks that the decimal's
 // precision is in range [1, decimal.MaxPrecision], and the decimal's scale is
 // in range [decimal.MinScale, decimal.MaxScale].
 func (v Value) Decimal(precision, scale int) (decimal.Decimal, error) {
-	return decimal.Parse(TrimSpace(v), precision, scale)
+	n, err := decimal.Parse(TrimSpace(v), precision, scale)
+	if err == decimal.ErrOutOfRange {
+		err = ErrRange
+	}
+	return n, err
 }
 
 // Elements returns an iterator over the elements of an array.
@@ -106,10 +114,18 @@ func (v Value) Elements() iter.Seq2[int, Value] {
 }
 
 // Float returns the floating-point value for a JSON number with the provided
-// bit size. It returns an error if v is not a JSON number, is out of range, or
-// bitSize is neither 32 nor 64.
+// bit size. It returns an error if bitSize is neither 32 nor 64, or if v is not
+// a JSON number, or if it is out of range (in which case it returns
+// [ErrRange]).
 func (v Value) Float(bitSize int) (float64, error) {
-	return strconv.ParseFloat(string(TrimSpace(v)), bitSize)
+	f, err := strconv.ParseFloat(string(TrimSpace(v)), bitSize)
+	if err != nil {
+		if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+			return 0, ErrRange
+		}
+		return 0, err
+	}
+	return f, nil
 }
 
 var formatText = []byte("json.Value{, }")
@@ -141,12 +157,17 @@ func (v Value) Get(path []string) (Value, bool) {
 var dotZero = []byte(".0")
 
 // Int returns the integer value for a JSON number. It returns an error if v is
-// not a valid JSON number, does not represent an integer, or is out of range.
-// As a special case, an integer followed by ".0" is considered valid;
-// for instance, "1" and "1.0" are both valid.
+// not a valid JSON number, or if it does not represent an integer, or if it is
+// out of range (in which case it returns [ErrRange]).
+//
+// As a special case, an integer followed by ".0" is considered to represent an
+// integer; for instance, "1" and "1.0" are both valid.
 func (v Value) Int() (int, error) {
 	n, err := strconv.ParseInt(string(bytes.TrimSuffix(TrimSpace(v), dotZero)), 10, 64)
 	if err != nil {
+		if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+			return 0, ErrRange
+		}
 		return 0, err
 	}
 	return int(n), nil
@@ -330,12 +351,17 @@ func (v Value) String() string {
 }
 
 // Uint returns the unsigned integer value for a JSON number. It returns an
-// error if v is not a valid JSON number, does not represent an integer, or is
-// out of range. As a special case, an integer followed by ".0" is considered
-// valid; for instance, "1" and "1.0" are both valid.
+// error if v is not a valid JSON number, or if it does not represent an
+// integer, or if it is out of range (in which case it returns [ErrRange]).
+//
+// As a special case, an integer followed by ".0" is considered to represent an
+// integer; for instance, "1" and "1.0" are both valid.
 func (v Value) Uint() (uint, error) {
 	n, err := strconv.ParseUint(string(bytes.TrimSuffix(TrimSpace(v), dotZero)), 10, 64)
 	if err != nil {
+		if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+			return 0, ErrRange
+		}
 		return 0, err
 	}
 	return uint(n), nil
