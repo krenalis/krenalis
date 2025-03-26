@@ -549,7 +549,11 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 				recordsErr[i] = fmt.Errorf("mailchimp has returned a 400 %s error to the connector", response.Title)
 				continue
 			}
-			recordsErr[i] = fmt.Errorf("%s: %s", response.Errors[0].Field, response.Errors[0].Message)
+			if len(response.Errors) == 0 {
+				recordsErr[i] = errors.New(response.Detail)
+			} else {
+				recordsErr[i] = fmt.Errorf("%s: %s", response.Errors[0].Field, response.Errors[0].Message)
+			}
 		}
 	}
 
