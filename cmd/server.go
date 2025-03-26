@@ -227,6 +227,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 	}()
 
+	_, _ = fmt.Fprint(os.Stdout, "Meergo is now ready to serve the UI and handle API requests\n")
+
 	select {
 	case <-ctx.Done():
 		if delay := settings.Main.TerminationDelay; delay == 0 {

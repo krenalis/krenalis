@@ -8,10 +8,11 @@ In this section you will find indications and instructions for getting started w
 
 ## Requirements
 
-First of all, you will need:
+First of all, you need a Linux, Unix, OSX or Windows system.
+
+Then, unless you use Docker, you need to have:
 
 - PostgreSQL 13 or higher
-- Linux, Unix, OSX or Windows
 - A data warehouse (Snowflake or PostgreSQL)
 
 Various installation methods may then require additional requirements depending on the level of customization required, specified in the sections below.
@@ -21,13 +22,66 @@ Various installation methods may then require additional requirements depending 
 
 ## Installation
 
-> 🚧 Some installation methods are currently under development and may have some problems that still needs to be resolved. For now, a working method is [Locally cloning the repository](#locally-cloning-the-repository).
+> 🚧 Some installation methods are currently under development and may have some problems that still needs to be resolved.
 
 There are several ways you can install Meergo. Choose the method that you deem most suitable for your needs and skills:
 
-- [Download a pre-built release](#download-a-pre-built-release). Recommended if you want to start using Meergo immediately without needing to compile or customize the executable.
+- [Run Meergo with Docker](#run-meergo-with-docker). Start Meergo and the necessary environment using Docker. Recommended to immediately start testing Meergo without having to manually configure databases and configuration files.
+- [Download a pre-built release](#download-a-pre-built-release). Recommended if you want to start using Meergo immediately without needing to compile or customize the executable, but want to have control over its configuration and database.
 - [Build with your custom connectors and data warehouses](#build-with-your-custom-connectors-and-data-warehouses). Recommended if you wish to choose the connectors and the data warehouses to include in the executable.
 - [Build from Git source](#build-from-git-source). Recommended if you want to work with Meergo's source code.
+
+### Run Meergo with Docker
+
+This method requires `docker` to be available on your system.
+
+Steps:
+
+1. Clone the Meergo's repository:
+
+   ```sh
+   git clone https://github.com/meergo/meergo
+   ```
+
+2. Enter into the directory of the Meergo's repository:
+
+   ```sh
+   cd meergo
+   ```
+
+3. Build the Docker image of Meergo:
+
+   > Note: this step, which may take some time, will be removed in the future, as a version of the Meergo image will already need to be available on platforms like Docker Hub.
+
+   ```sh
+   docker build -t meergo:dev . --progress=plain
+   ```
+
+4. Launch Meergo with:
+
+   ```
+   docker compose up
+   ```
+
+5. Open the login page of Meergo at:
+
+   [http://localhost:9090/ui/](http://localhost:9090/ui/)
+
+6. Login with:
+
+   - Email: `acme@open2b.com`
+   - Password: `foopass2`
+
+7. Add a workspace with an arbitrary name, using these PostgreSQL warehouse credentials:
+
+   - Host: `warehouse`
+   - Port: `5432`
+   - Username: `warehouse`
+   - Password: `warehouse`
+   - Database: `warehouse`
+   - Schema: `public`
+
+8. Start using Meergo by configuring the workspace settings, adding source and destination connections, etc...
 
 ### Download a pre-built release
 

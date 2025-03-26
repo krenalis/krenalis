@@ -1,0 +1,39 @@
+services:
+  meergo:
+    image: meergo:dev
+    command: /bin/meergo-files/config.yaml
+    ports:
+      - 9090:9090
+    volumes:
+      - ./docker-compose:/bin/meergo-files
+    depends_on:
+      db:
+        condition: service_healthy
+      warehouse:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: meergo
+      POSTGRES_PASSWORD: meergo
+      POSTGRES_DB: meergo
+    volumes:
+      - ./database:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meergo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  warehouse:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: warehouse
+      POSTGRES_DB: warehouse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

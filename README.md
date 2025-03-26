@@ -16,6 +16,7 @@
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How to test events (and eventually import user identities)](#how-to-test-events-and-eventually-import-user-identities)
 - [Docker](#docker)
+  - [Running a preconfigured version of Meergo](#running-a-preconfigured-version-of-meergo)
   - [Building Meergo Image](#building-meergo-image)
   - [Running Meergo within a Container](#running-meergo-within-a-container)
 
@@ -178,6 +179,10 @@ Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) an
 6. Visit the URL pointing to the HTML file, for example https://localhost:9090/javascript-sdk/mywebsite/.
 
 ## Docker
+
+The documentation on how to start Meergo inside Docker is available inside the [Getting started](doc/src/getting-started.md) documentation page, so it will not be repeated here.
+
+Only more technical information is kept here.
 
 ### Building Meergo Image
 
