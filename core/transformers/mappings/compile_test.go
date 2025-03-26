@@ -240,13 +240,13 @@ func Test_Compile(t *testing.T) {
 		{expr: "initcap(true)", dt: types.Text(), expected: "True"},
 
 		// json_parse.
-		{expr: "json_parse('')", dt: types.JSON(), evalErr: errors.New("json_parse: input text is not valid JSON")},
+		{expr: "json_parse('')", dt: types.JSON(), evalErr: errors.New("«''» cannot be parsed by «json_parse» because it is not valid JSON")},
 		{expr: `json_parse('"foo"')`, dt: types.JSON(), expected: json.Value(`"foo"`)},
 		{expr: `json_parse('[1, 2, 3]')`, dt: types.JSON(), expected: json.Value(`[1, 2, 3]`)},
 		{expr: `json_parse(' {"a": 5, "b": true }')`, dt: types.JSON(), expected: json.Value(` {"a": 5, "b": true }`)},
 		{expr: `json_parse('true')`, dt: types.JSON(), expected: json.Value(`true`)},
 		{expr: `json_parse('null')`, dt: types.JSON(), expected: json.Value(`null`)},
-		{expr: `json_parse('foo boo')`, dt: types.JSON(), evalErr: errors.New("json_parse: input text is not valid JSON")},
+		{expr: `json_parse('foo boo')`, dt: types.JSON(), evalErr: errors.New("«'foo boo'» cannot be parsed by «json_parse» because it is not valid JSON")},
 		{expr: `json_parse(null)`, dt: types.JSON(), expected: nil},
 		{expr: `json_parse(false)`, dt: types.JSON(), expected: json.Value(`false`)},
 		{expr: `json_parse(json_parse('"\\"a\\""'))`, dt: types.JSON(), expected: json.Value(`"a"`)},

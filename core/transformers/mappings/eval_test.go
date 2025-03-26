@@ -102,7 +102,7 @@ func Test_eval(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		got, typ, err := eval(test.expr, properties)
+		got, typ, err := eval(test.expr, "", properties)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%d. unexpected error: %s", i+1, err)

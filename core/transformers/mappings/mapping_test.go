@@ -314,14 +314,14 @@ func Test_Transform(t *testing.T) {
 			expressions: map[string]string{"F": "c.z"},
 			properties:  map[string]any{"c.z": nil},
 			purpose:     Create,
-			err:         ValidationError{msg: `required property "F" cannot be null`},
+			err:         ValidationError{msg: `«c.z» is null but it is required for creation while mapping to «F»`},
 		},
 		{
 			name:        `null assigned to a non nullable update required property -> error`,
 			expressions: map[string]string{"G": "c.z"},
 			properties:  map[string]any{"c.z": nil},
 			purpose:     Update,
-			err:         ValidationError{msg: `required property "G" cannot be null`},
+			err:         ValidationError{msg: `«c.z» is null but it is required for update while mapping to «G»`},
 		},
 	}
 

@@ -142,6 +142,9 @@ type part struct {
 	// Otherwise, it represents the type of the value. For some function calls, as coalesce, it is
 	// the invalid type, indicating that the call can return different types.
 	typ types.Type
+
+	// Positions in the source code, with expr.source[start:end] extracting the source code.
+	start, end int
 }
 
 // appendValue appends v to p.value, converting it to type text is necessary,
@@ -202,7 +205,7 @@ func isPathByte(c byte) bool {
 // parsed expression along with the remaining unparsed source. If no expression
 // is found, it returns nil. Leading and trailing spaces are trimmed, except
 // when they occur within a string.
-func parse(src string) ([]part, string, error) {
+func parse(src string, start, end int) ([]part, string, error) {
 	var expr []part
 	var err error
 	var dot bool
@@ -249,6 +252,8 @@ Expression:
 			default:
 				if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z') {
 					if p.typ.Valid() {
+						p.start = start
+						p.end = end - len(src)
 						expr = append(expr, p)
 					}
 					break Expression
@@ -298,7 +303,7 @@ Expression:
 						break
 					}
 					var arg []part
-					arg, src, err = parse(src)
+					arg, src, err = parse(src, end-len(src), end)
 					if err != nil {
 						return nil, "", err
 					}
@@ -318,7 +323,10 @@ Expression:
 				break Expr
 			}
 		}
+		p.start = start
+		p.end = end - len(src)
 		expr = append(expr, p)
+		start = p.end
 	}
 	return expr, src, nil
 }
@@ -552,4 +560,21 @@ func skipSpaces(src string) string {
 		}
 	}
 	return ""
+}
+
+// code returns the substring of s representing the source code of p. If s is
+// empty, it returns an empty string, and if p is empty, it returns s wrapped.
+// In the returned string, the character `»` is replaced with `≫`.
+func code(s string, p ...part) string {
+	if s == "" {
+		return ""
+	}
+	if len(p) > 0 {
+		first, last := p[0], p[len(p)-1]
+		s = s[first.start:last.end]
+	}
+	if strings.Contains(s, `»`) {
+		s = strings.ReplaceAll(s, `»`, `≫`)
+	}
+	return s
 }

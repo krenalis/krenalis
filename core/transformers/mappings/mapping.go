@@ -179,17 +179,59 @@ func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (m
 	for _, e := range mapping.expressions {
 		v, vt, err := e.expr.Eval(properties)
 		if err != nil {
-			return nil, err
+			switch err := err.(type) {
+			case TransformationError:
+				return nil, TransformationError{fmt.Sprintf("%s while mapping to «%s»", err.msg, code(e.path))}
+			case ValidationError:
+				return nil, ValidationError{fmt.Sprintf("%s while mapping to «%s»", err.msg, code(e.path))}
+			}
+			return nil, TransformationError{fmt.Sprintf("%s while mapping to «%s»", err, code(e.path))}
 		}
 		if v != nil {
 			v, err = convert(v, vt, e.dt, true, mapping.inPlace, e.timeLayouts, purpose)
 			if err != nil {
-				return nil, ValidationError{fmt.Sprintf("cannot convert %#v (type %s) to type %s", v, vt, e.dt)}
+				var msg string
+				switch err {
+				case errRangeConversion:
+					msg = fmt.Sprintf("number «%s» is not a «%s» value while mapping to «%s»", code(e.expr.source), e.dt, code(e.path))
+				case errParseConversion:
+					var to string
+					switch e.dt.Kind() {
+					case types.DateTimeKind:
+						to = "a date time in ISO 8601 format"
+					case types.DateKind:
+						to = "a date in ISO 8601 format"
+					case types.TimeKind:
+						to = "a time in ISO 8601 format"
+					case types.UUIDKind:
+						to = "a UUID"
+					case types.InetKind:
+						to = "an IP address"
+					}
+					msg = fmt.Sprintf("«%s» is not parsable as %s while mapping to «%s»", code(e.expr.source), to, code(e.path))
+				case errYearRangeConversion:
+					msg = fmt.Sprintf("year of «%s» is not in range [1,9999] while mapping to «%s»", code(e.expr.source), code(e.path))
+				case errEnumConversion:
+					msg = fmt.Sprintf("«%s» is not among the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
+				case errRegexpConversion:
+					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Regexp(), code(e.path))
+				case errByteLenConversion:
+					n, _ := e.dt.ByteLen()
+					msg = fmt.Sprintf("«%s» exceeds the %d-byte limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
+				case errCharLenConversion:
+					n, _ := e.dt.CharLen()
+					msg = fmt.Sprintf("«%s» exceeds the %d-char limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
+				default:
+					msg = fmt.Sprintf("«%s» is not convertible to the «%s» type while mapping to «%s»", code(e.expr.source), e.dt, code(e.path))
+				}
+				return nil, ValidationError{msg}
 			}
 		}
 		if v == nil && !e.nullable {
-			if e.createRequired && purpose == Create || e.updateRequired && purpose == Update {
-				return nil, ValidationError{fmt.Sprintf("required property %q cannot be null", e.path)}
+			if e.createRequired && purpose == Create {
+				return nil, ValidationError{fmt.Sprintf("«%s» is null but it is required for creation while mapping to «%s»", code(e.expr.source), code(e.path))}
+			} else if e.updateRequired && purpose == Update {
+				return nil, ValidationError{fmt.Sprintf("«%s» is null but it is required for update while mapping to «%s»", code(e.expr.source), code(e.path))}
 			}
 			continue
 		}

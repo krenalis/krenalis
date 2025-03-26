@@ -23,7 +23,8 @@ var jsonArrayType = types.Array(types.JSON())
 // source to a destination. An Expression can contain strings, numbers, true,
 // false, null, property paths and function calls.
 type Expression struct {
-	parts []part // expression parts.
+	parts  []part // parts.
+	source string // source code used for error messages.
 }
 
 // Compile parses the given expression and returns an Expression that can be
@@ -44,7 +45,7 @@ func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) 
 	if !dt.Valid() {
 		return nil, nil, errors.New("destination type is the invalid type")
 	}
-	parts, src, err := parse(expr)
+	parts, src, err := parse(expr, 0, len(expr))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -57,7 +58,8 @@ func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) 
 		return nil, nil, err
 	}
 	expression := &Expression{
-		parts: parts,
+		parts:  parts,
+		source: expr,
 	}
 	var properties []string
 	if len(props) > 0 {

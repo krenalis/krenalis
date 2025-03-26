@@ -29,7 +29,16 @@ import (
 
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
-var errInvalidConversion = errors.New("cannot convert")
+var (
+	errByteLenConversion   = errors.New("invalid byte length")
+	errCharLenConversion   = errors.New("invalid char length")
+	errEnumConversion      = errors.New("not a valid enum value")
+	errInvalidConversion   = errors.New("cannot convert")
+	errParseConversion     = errors.New("cannot parse")
+	errRangeConversion     = errors.New("out of range")
+	errRegexpConversion    = errors.New("regexp mismatch")
+	errYearRangeConversion = errors.New("year not in range [1,9999]")
+)
 
 const (
 	// Range of float values convertible to int(64): [-9223372036854776000.0, 9223372036854775000.0].
@@ -61,7 +70,15 @@ var (
 // then all the properties required for creation or the update must be present
 // in the returned value.
 //
-// If the value cannot be converted, it returns nil and errInvalidConversion.
+// If the value cannot be converted, it returns v and one of the following:
+//   - errByteLenConversion
+//   - errCharLenConversion
+//   - errEnumConversion
+//   - errInvalidConversion
+//   - errParseConversion
+//   - errRangeConversion
+//   - errRegexpConversion
+//   - errYearRangeConversion
 func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.TimeLayouts, purpose Purpose) (any, error) {
 	sk := st.Kind()
 	dk := dt.Kind()
@@ -82,10 +99,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		if dk == types.JSONKind {
 			return json.Value("null"), nil
 		}
-		return nil, errInvalidConversion
+		return v, errInvalidConversion
 	} else if sk == types.JSONKind && dk != types.JSONKind {
 		if v := v.(json.Value); v.IsNull() {
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 	}
 	// Convert the unparsed cases, v is not nil.
@@ -131,28 +148,42 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.UintKind:
 			u := v.(uint)
 			if u > math.MaxInt64 {
-				err = errInvalidConversion
+				return v, errRangeConversion
 			}
 			n = int(u)
 		case types.FloatKind:
 			n, err = floatToInt(v.(float64))
+			if err != nil {
+				return v, err
+			}
 		case types.DecimalKind:
 			n, err = decimalToInt(v.(decimal.Decimal))
+			if err != nil {
+				return v, err
+			}
 		case types.YearKind:
 			n = v.(int)
 		case types.TextKind:
 			n, err = strconv.Atoi(v.(string))
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+					return v, errRangeConversion
+				}
+			}
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Int()
+			if err == json.ErrRange {
+				return v, errRangeConversion
+			}
 		default:
 			err = errInvalidConversion
 		}
 		if err != nil {
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if min, max := dt.IntRange(); int64(n) < min || int64(n) > max {
-			return nil, errInvalidConversion
+			return v, errRangeConversion
 		}
 		return n, nil
 	case types.UintKind:
@@ -169,33 +200,47 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.IntKind:
 			i := v.(int)
 			if i < 0 {
-				return nil, errInvalidConversion
+				return v, errRangeConversion
 			}
 			n = uint(i)
 		case types.UintKind:
 			n = v.(uint)
 		case types.FloatKind:
 			n, err = floatToUint(v.(float64))
+			if err != nil {
+				return v, err
+			}
 		case types.DecimalKind:
 			n, err = decimalToUint(v.(decimal.Decimal))
+			if err != nil {
+				return v, err
+			}
 		case types.YearKind:
 			n = uint(v.(int))
 		case types.TextKind:
 			var u uint64
 			u, err = strconv.ParseUint(v.(string), 10, 64)
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+					return v, errRangeConversion
+				}
+			}
 			n = uint(u)
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Uint()
+			if err == json.ErrRange {
+				return v, errRangeConversion
+			}
 		default:
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if err != nil {
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		min, max := dt.UintRange()
 		if uint64(n) < min || uint64(n) > max {
-			return nil, errInvalidConversion
+			return v, errRangeConversion
 		}
 		return n, nil
 	case types.FloatKind:
@@ -205,7 +250,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.FloatKind:
 			n = v.(float64)
 			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
-				return nil, errInvalidConversion
+				return v, errRangeConversion
 			}
 			if dt.BitSize() == 32 && st.BitSize() != 32 {
 				n = float64(float32(n))
@@ -221,17 +266,25 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 		case types.TextKind:
 			n, err = strconv.ParseFloat(v.(string), dt.BitSize())
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+					return v, errRangeConversion
+				}
+			}
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Float(dt.BitSize())
+			if err == json.ErrRange {
+				return v, errRangeConversion
+			}
 		default:
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if err != nil {
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if min, max := dt.FloatRange(); n < min || n > max {
-			return nil, errInvalidConversion
+			return v, errRangeConversion
 		}
 		return n, nil
 	case types.DecimalKind:
@@ -242,27 +295,39 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			n, _ = v.(decimal.Decimal)
 		case types.IntKind:
 			n, err = decimal.Int(v.(int), dt.Precision(), dt.Scale())
+			if err == decimal.ErrRange {
+				return v, errRangeConversion
+			}
 		case types.UintKind:
 			n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
+			if err == decimal.ErrRange {
+				return v, errRangeConversion
+			}
 		case types.FloatKind:
 			f := v.(float64)
 			if math.IsNaN(f) || math.IsInf(f, 0) {
-				return nil, errInvalidConversion
+				return v, errRangeConversion
 			}
 			n, err = decimal.Float64(f, dt.Precision(), dt.Scale())
+			if err == decimal.ErrRange {
+				return v, errRangeConversion
+			}
 		case types.TextKind:
 			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Decimal(dt.Precision(), dt.Scale())
+			if err == json.ErrRange {
+				return v, errRangeConversion
+			}
 		default:
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if err != nil {
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if min, max := dt.DecimalRange(); n.Less(min) || n.Greater(max) {
-			return nil, errInvalidConversion
+			return v, errRangeConversion
 		}
 		return n, nil
 	case types.DateTimeKind:
@@ -274,27 +339,27 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.TextKind:
 			t, err = time.Parse(time.RFC3339Nano, v.(string))
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
-				return nil, errInvalidConversion
+				return v, errYearRangeConversion
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
 			if !v.IsString() {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			t, err = iso8601.Parse(v.Bytes())
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
-				return nil, errInvalidConversion
+				return v, errYearRangeConversion
 			}
 		default:
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if layouts != nil {
 			switch layouts.DateTime {
@@ -327,23 +392,23 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.TextKind:
 			t, err = convertTextToDate(v.(string))
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, err
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
 			if !v.IsString() {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			t, err = time.Parse(time.DateOnly, v.String())
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 			t = t.UTC()
 			if y := t.Year(); y < 1 || y > 9999 {
-				return nil, errInvalidConversion
+				return v, errYearRangeConversion
 			}
 		default:
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if layouts != nil {
 			layout := layouts.Date
@@ -365,17 +430,17 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			var ok bool
 			t, ok = util.ParseTime(v.(string))
 			if !ok {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
 			if !v.IsString() {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			var ok bool
 			t, ok = util.ParseTime(v.Bytes())
 			if !ok {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 		}
 		if layouts != nil {
@@ -397,27 +462,37 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.UintKind:
 			u := v.(uint)
 			if u > math.MaxInt64 {
-				return nil, errInvalidConversion
+				return v, errYearRangeConversion
 			}
 			n = int(u)
 		case types.TextKind:
 			s := v.(string)
 			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 			n, err = strconv.Atoi(s)
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+					return v, errYearRangeConversion
+				}
+				return v, errParseConversion
+			}
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Int()
 			if err != nil {
-				return nil, errInvalidConversion
+				if err == json.ErrRange {
+					return v, errYearRangeConversion
+				}
+				return v, errInvalidConversion
 			}
 		default:
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
-		if err == nil && 1 <= n && n <= 9999 {
-			return n, nil
+		if n < 1 || n > 9999 {
+			return v, errYearRangeConversion
 		}
+		return n, nil
 	case types.UUIDKind:
 		switch sk {
 		case types.UUIDKind:
@@ -425,14 +500,17 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.TextKind:
 			u, err := uuid.Parse(v.(string))
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 			return u.String(), nil
 		case types.JSONKind:
 			v := v.(json.Value)
+			if !v.IsString() {
+				return v, errInvalidConversion
+			}
 			u, err := uuid.ParseBytes(v.Bytes())
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 			return u.String(), nil
 		}
@@ -445,14 +523,14 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			var b json.Buffer
 			err := b.EncodeSorted(v)
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			value, _ := b.Value()
 			return value, nil
 		}
 		value, err := json.Marshal(v)
 		if err != nil {
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		return value, nil
 	case types.InetKind:
@@ -462,17 +540,17 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.TextKind:
 			ip, err := netip.ParseAddr(v.(string))
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 			return ip.String(), nil
 		case types.JSONKind:
 			v := v.(json.Value)
 			if !v.IsString() {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			ip, err := netip.ParseAddr(v.String())
 			if err != nil {
-				return nil, errInvalidConversion
+				return v, errParseConversion
 			}
 			return ip.String(), nil
 		}
@@ -508,11 +586,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			v := v.(json.Value)
 			switch v.Kind() {
 			case json.Array, json.Object:
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			s = v.String()
 		default:
-			return nil, errInvalidConversion
+			return v, errInvalidConversion
 		}
 		if values := dt.Values(); values != nil {
 			if s == "" && nullable {
@@ -521,17 +599,17 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			if slices.Contains(values, s) {
 				return s, nil
 			}
-			return nil, errInvalidConversion
+			return v, errEnumConversion
 		} else if re := dt.Regexp(); re != nil {
 			if !re.MatchString(s) {
 				if s == "" && nullable {
 					return nil, nil
 				}
-				return nil, errInvalidConversion
+				return v, errRegexpConversion
 			}
 		} else {
 			if l, ok := dt.ByteLen(); ok && l < len(s) {
-				return nil, errInvalidConversion
+				return v, errByteLenConversion
 			}
 			if l, ok := dt.CharLen(); ok {
 				runes := len(s)
@@ -539,7 +617,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					runes = utf8.RuneCountInString(s)
 				}
 				if runes > l {
-					return nil, errInvalidConversion
+					return v, errCharLenConversion
 				}
 			}
 		}
@@ -549,14 +627,14 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.JSONKind:
 			s := v.(json.Value)
 			if s.Kind() == json.Object {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			et := dt.Elem()
 			min := dt.MinElements()
 			max := dt.MaxElements()
 			if s.Kind() != json.Array {
 				if min > 1 || max == 0 {
-					return nil, errInvalidConversion
+					return v, errInvalidConversion
 				}
 				elem, err := convert(s, types.JSON(), et, false, inPlace, layouts, purpose)
 				if err != nil {
@@ -567,7 +645,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			d := make([]any, 0)
 			for i, elem := range s.Elements() {
 				if i == max {
-					return nil, errInvalidConversion
+					return v, errInvalidConversion
 				}
 				e, err := convert(elem, types.JSON(), et, false, inPlace, layouts, purpose)
 				if err != nil {
@@ -576,13 +654,13 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				d = append(d, e)
 			}
 			if len(d) < min {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			if dt.Unique() {
 				for i, it := range d {
 					for _, it2 := range d[i:] {
 						if it == it2 {
-							return nil, errInvalidConversion
+							return v, errInvalidConversion
 						}
 					}
 				}
@@ -592,7 +670,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			s := v.([]any)
 			d := s
 			if len(s) < dt.MinElements() || len(s) > dt.MaxElements() {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			it1 := st.Elem()
 			it2 := dt.Elem()
@@ -612,7 +690,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				for i, item := range d {
 					for _, item2 := range d[i:] {
 						if item == item2 {
-							return nil, errInvalidConversion
+							return v, errInvalidConversion
 						}
 					}
 				}
@@ -642,7 +720,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				}
 				if value == nil {
 					if !dp.Nullable {
-						return nil, errInvalidConversion
+						return v, errInvalidConversion
 					}
 					if !inPlace {
 						d[name] = nil
@@ -675,14 +753,14 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					continue
 				}
 				if purpose == Create && p.CreateRequired || purpose == Update && p.UpdateRequired {
-					return nil, errInvalidConversion
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil
 		case types.JSONKind:
 			v := v.(json.Value)
 			if v.Kind() != json.Object {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			var err error
 			d = make(map[string]any)
@@ -707,7 +785,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					continue
 				}
 				if _, ok := d[p.Name]; !ok {
-					return nil, errInvalidConversion
+					return v, errInvalidConversion
 				}
 			}
 		case Update:
@@ -716,7 +794,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					continue
 				}
 				if _, ok := d[p.Name]; !ok {
-					return nil, errInvalidConversion
+					return v, errInvalidConversion
 				}
 			}
 		}
@@ -762,7 +840,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.JSONKind:
 			s := v.(json.Value)
 			if s.Kind() != json.Object {
-				return nil, errInvalidConversion
+				return v, errInvalidConversion
 			}
 			vt := dt.Elem()
 			d := make(map[string]any)
@@ -776,7 +854,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return d, nil
 		}
 	}
-	return nil, errInvalidConversion
+	return v, errInvalidConversion
 }
 
 func convertTextToDate(s string) (time.Time, error) {
@@ -798,11 +876,11 @@ func convertTextToDate(s string) (time.Time, error) {
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
 		days, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return time.Time{}, errInvalidConversion
+			return time.Time{}, errParseConversion
 		}
 		if days == 60 {
 			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
-			return time.Time{}, errInvalidConversion
+			return time.Time{}, errParseConversion
 		}
 		if days > 60 {
 			days--
@@ -810,12 +888,15 @@ func convertTextToDate(s string) (time.Time, error) {
 		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
 	}
-	if year < 0 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31 {
-		return time.Time{}, errInvalidConversion
+	if month < 1 || month > 12 || day < 1 || day > 31 {
+		return time.Time{}, errParseConversion
+	}
+	if year < 1 || year > 9999 {
+		return time.Time{}, errYearRangeConversion
 	}
 	t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 	if t.Year() != year || int(t.Month()) != month || t.Day() != day {
-		return time.Time{}, errInvalidConversion
+		return time.Time{}, errParseConversion
 	}
 	return t, nil
 }
@@ -823,6 +904,9 @@ func convertTextToDate(s string) (time.Time, error) {
 func decimalToInt(n decimal.Decimal) (int, error) {
 	i, err := n.Int64()
 	if err != nil {
+		if err == decimal.ErrRange {
+			return 0, errRangeConversion
+		}
 		return 0, errInvalidConversion
 	}
 	return int(i), nil
@@ -831,6 +915,9 @@ func decimalToInt(n decimal.Decimal) (int, error) {
 func decimalToUint(n decimal.Decimal) (uint, error) {
 	i, err := n.Uint64()
 	if err != nil {
+		if err == decimal.ErrRange {
+			return 0, errRangeConversion
+		}
 		return 0, errInvalidConversion
 	}
 	return uint(i), nil
@@ -838,14 +925,14 @@ func decimalToUint(n decimal.Decimal) (uint, error) {
 
 func floatToInt(n float64) (int, error) {
 	if math.IsNaN(n) || n < minFloatConvertibleToInt64 || n > maxFloatConvertibleToInt64 {
-		return 0, errInvalidConversion
+		return 0, errRangeConversion
 	}
 	return int(math.Round(n)), nil
 }
 
 func floatToUint(n float64) (uint, error) {
 	if math.IsNaN(n) || n < 0 || n > maxFloatConvertibleToUint64 {
-		return 0, errInvalidConversion
+		return 0, errRangeConversion
 	}
 	return uint(math.Round(n)), nil
 }

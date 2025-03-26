@@ -27,48 +27,48 @@ func Test_parseExpression(t *testing.T) {
 		unparsed string
 		err      error
 	}{
-		{`"Page View"`, []part{{value: `Page View`, typ: types.Text()}}, ``, nil},
-		{` 'Page View' `, []part{{value: `Page View`, typ: types.Text()}}, ``, nil},
-		{`51`, []part{{value: 51, typ: types.Int(32)}}, ``, nil},
-		{`-6.803`, []part{{value: n, typ: dt}}, ``, nil},
-		{`true`, []part{{value: true, typ: types.Boolean()}}, ``, nil},
-		{`false`, []part{{value: false, typ: types.Boolean()}}, ``, nil},
-		{`null`, []part{{value: nil, typ: types.JSON()}}, ``, nil},
-		{`name`, []part{{path: path{elements: []string{`name`}, decorators: []decorators{0}}}}, ``, nil},
-		{`.name`, []part{{path: path{elements: []string{`name`}, decorators: []decorators{0}}}}, ``, nil},
-		{`context.os.version`, []part{{path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}}}, ``, nil},
-		{`.context.os.version`, []part{{path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}}}, ``, nil},
-		{`"Page " name`, []part{{value: `Page `, path: path{elements: []string{`name`}, decorators: []decorators{0}}, typ: types.Text()}}, ``, nil},
+		{`"Page View"`, []part{{value: `Page View`, typ: types.Text(), end: 11}}, ``, nil},
+		{` 'Page View' `, []part{{value: `Page View`, typ: types.Text(), end: 13}}, ``, nil},
+		{`51`, []part{{value: 51, typ: types.Int(32), end: 2}}, ``, nil},
+		{`-6.803`, []part{{value: n, typ: dt, end: 6}}, ``, nil},
+		{`true`, []part{{value: true, typ: types.Boolean(), end: 4}}, ``, nil},
+		{`false`, []part{{value: false, typ: types.Boolean(), end: 5}}, ``, nil},
+		{`null`, []part{{value: nil, typ: types.JSON(), end: 4}}, ``, nil},
+		{`name`, []part{{path: path{elements: []string{`name`}, decorators: []decorators{0}}, end: 4}}, ``, nil},
+		{`.name`, []part{{path: path{elements: []string{`name`}, decorators: []decorators{0}}, end: 5}}, ``, nil},
+		{`context.os.version`, []part{{path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}, end: 18}}, ``, nil},
+		{`.context.os.version`, []part{{path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}, end: 19}}, ``, nil},
+		{`"Page " name`, []part{{value: `Page `, path: path{elements: []string{`name`}, decorators: []decorators{0}}, typ: types.Text(), end: 12}}, ``, nil},
 		{`"OS " context.os.name " (" context.os.version ")"`, []part{
-			{value: `OS `, path: path{elements: []string{`context`, `os`, `name`}, decorators: []decorators{0, 0, 0}}, typ: types.Text()},
-			{value: ` (`, path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}, typ: types.Text()},
-			{value: `)`, typ: types.Text()},
+			{value: `OS `, path: path{elements: []string{`context`, `os`, `name`}, decorators: []decorators{0, 0, 0}}, typ: types.Text(), end: 22},
+			{value: ` (`, path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}, typ: types.Text(), start: 22, end: 46},
+			{value: `)`, typ: types.Text(), start: 46, end: 49},
 		}, ``, nil},
 		{`coalesce(event, 'Page ' true)`, []part{
 			{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
-				{{path: path{elements: []string{`event`}, decorators: []decorators{0}}}},
-				{{value: `Page true`, typ: types.Text()}},
-			}},
+				{{path: path{elements: []string{`event`}, decorators: []decorators{0}}, start: 9, end: 14}},
+				{{value: `Page true`, typ: types.Text(), start: 16, end: 28}},
+			}, end: 29},
 		}, ``, nil},
-		{`"" event`, []part{{value: ``, path: path{elements: []string{`event`}, decorators: []decorators{0}}, typ: types.Text()}}, ``, nil},
-		{`coalesce(a)`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`a`}, decorators: []decorators{0}}}}}}}, ``, nil},
-		{`coalesce(a, 'b')`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`a`}, decorators: []decorators{0}}}}, {{value: `b`, typ: types.Text()}}}}}, ``, nil},
+		{`"" event`, []part{{value: ``, path: path{elements: []string{`event`}, decorators: []decorators{0}}, typ: types.Text(), end: 8}}, ``, nil},
+		{`coalesce(a)`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`a`}, decorators: []decorators{0}}, start: 9, end: 10}}}, end: 11}}, ``, nil},
+		{`coalesce(a, 'b')`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`a`}, decorators: []decorators{0}}, start: 9, end: 10}}, {{value: `b`, typ: types.Text(), start: 12, end: 15}}}, end: 16}}, ``, nil},
 		{`coalesce(5, 'a', coalesce(b))`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
-			{{value: 5, typ: types.Int(32)}}, {{value: `a`, typ: types.Text()}}, {{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`b`}, decorators: []decorators{0}}}}}}},
-		}}}, ``, nil},
+			{{value: 5, typ: types.Int(32), start: 9, end: 10}}, {{value: `a`, typ: types.Text(), start: 12, end: 15}}, {{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`b`}, decorators: []decorators{0}}, start: 26, end: 27}}}, start: 17, end: 28}},
+		}, end: 29}}, ``, nil},
 		{`coalesce("a" coalesce(b, 5) c)`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
-			{{value: `a`, path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`b`}, decorators: []decorators{0}}}}, {{value: 5, typ: types.Int(32)}}}, typ: types.Text()}, {path: path{elements: []string{`c`}, decorators: []decorators{0}}}},
-		}}}, ``, nil},
+			{{value: `a`, path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`b`}, decorators: []decorators{0}}, start: 22, end: 23}}, {{value: 5, typ: types.Int(32), start: 25, end: 26}}}, typ: types.Text(), start: 9, end: 27}, {path: path{elements: []string{`c`}, decorators: []decorators{0}}, start: 27, end: 29}},
+		}, end: 30}}, ``, nil},
 		{`coalesce( coalesce ( x , 5 ) )`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
-			{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`x`}, decorators: []decorators{0}}}}, {{value: 5, typ: types.Int(32)}}}}},
-		}}}, ``, nil},
+			{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`x`}, decorators: []decorators{0}}, start: 21, end: 23}}, {{value: 5, typ: types.Int(32), start: 25, end: 27}}}, start: 10, end: 28}},
+		}, end: 30}}, ``, nil},
 		{`coalesce( , )`, nil, ``, errors.New("expected argument, got ','")},
 		{`coalesce(a, )`, nil, ``, errors.New("expected argument, got ')'")},
 		{`coalesce( @`, nil, ``, errors.New("expected argument, got '@'")},
 	}
 
 	for _, test := range tests {
-		got, src, err := parse(test.src)
+		got, src, err := parse(test.src, 0, len(test.src))
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%q. unexpected error: %s", test.src, err)
