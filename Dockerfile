@@ -18,8 +18,11 @@ RUN go build -tags osusergo,netgo -trimpath ./cmd/meergo
 
 # Since the Meergo build requires the Go toolchain, while its execution does
 # not, a multi-stage build is used here to have, as the resulting image, an
-# image that contains only the Meergo executable.
-FROM scratch
+# image that contains only the Meergo executable and the Python and JavaScript
+# (node) interpreters, for the transformation functions.
+FROM alpine:latest
+RUN apk add --no-cache python3
+RUN apk add --no-cache nodejs
 COPY --from=0 /meergo/meergo /bin/meergo
 WORKDIR /bin
 ENTRYPOINT ["/bin/meergo"]

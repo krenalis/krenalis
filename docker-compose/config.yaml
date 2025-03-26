@@ -44,13 +44,13 @@ functionProvider:
 
     local:
         # Path to the Node executable, eg. "/usr/bin/node" or simply "node".
-        nodeExecutable:
+        nodeExecutable: /usr/bin/node
         # Path to the Python executable, eg. "/usr/bin/python" or simply "python".
-        pythonExecutable:
+        pythonExecutable: /usr/bin/python
         # Path to the local directory which will contain the ".js" Node source
         # files (if language is "node") or the ".py" Python source files (if
         # language is "python") for the transformation functions.
-        functionsDir:
+        functionsDir: /bin/meergo-files/transformation-functions
 
 telemetry:
     # Set "enable" to "true" to enable telemetry.
