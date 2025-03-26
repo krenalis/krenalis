@@ -2,6 +2,9 @@ main:
     host: 127.0.0.1:9090
     https: true
     terminationDelay: 1s
+    # The URL on which Meergo is externally exposed. If not provided, a default
+    # value is generated based on the host configuration.
+    externalURL:
 
 encryptionKey:
 

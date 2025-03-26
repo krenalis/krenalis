@@ -36,6 +36,7 @@ type Settings struct {
 		Host             string
 		HTTPS            bool
 		TerminationDelay time.Duration `yaml:"terminationDelay"`
+		ExternalURL      string        `yaml:"externalURL"`
 	}
 	EncryptionKey string `yaml:"encryptionKey"`
 	ESBuild       struct {
@@ -227,7 +228,16 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 	}()
 
-	_, _ = fmt.Fprint(os.Stdout, "Meergo is now ready to serve the UI and handle API requests\n")
+	// Determine the external URL and print a message with it.
+	externalURL := settings.Main.ExternalURL
+	if externalURL == "" {
+		protocol := "http"
+		if settings.Main.HTTPS {
+			protocol = "https"
+		}
+		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
+	}
+	_, _ = fmt.Fprintf(os.Stderr, "The Meergo UI is now exposed at: %s\n", strings.TrimLeft(externalURL, "/")+"/ui")
 
 	select {
 	case <-ctx.Done():

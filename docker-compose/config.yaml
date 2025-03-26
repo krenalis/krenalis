@@ -2,6 +2,9 @@ main:
     host: meergo:9090
     https: false
     terminationDelay: 1s
+    # The URL on which Meergo is externally exposed. If not provided, a default
+    # value is generated based on the host configuration.
+    externalURL: http://localhost:9090
 
 encryptionKey: 6uA9ccQxZ+/1PlqXZFR49QZ0fnQDCNZIugyKwHv3WdkqcoIA3iSwuuj1yvM+f2cZFQ7Saqjq695Y0AP+rlZDOg==
 
