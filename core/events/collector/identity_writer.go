@@ -164,8 +164,8 @@ func (iw *identityWriter) transformAndWrite(evs []events.Event) {
 	ctx := context.Background()
 	err := transformer.Transform(ctx, records)
 	if err != nil {
-		if err, ok := err.(transformers.FunctionExecError); ok {
-			iw.metrics.TransformationFailed(iw.action, len(records), err.Error())
+		if err2, ok := err.(transformers.FunctionExecError); ok {
+			iw.metrics.TransformationFailed(iw.action, len(records), err2.Error())
 		} else {
 			iw.metrics.TransformationFailed(iw.action, len(records), "an internal error occurred")
 			slog.Error("core/events/collector: unexpected error occurred transforming event", "err", err)
