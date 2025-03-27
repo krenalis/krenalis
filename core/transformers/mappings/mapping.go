@@ -238,7 +238,7 @@ func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (m
 				case errYearRangeConversion:
 					msg = fmt.Sprintf("year of «%s» is not in range [1,9999] while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errEnumConversion:
-					msg = fmt.Sprintf("«%s» is not among the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
+					msg = fmt.Sprintf("«%s» is not one of the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errRegexpConversion:
 					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Regexp(), code(e.path))
 				case errByteLenConversion:

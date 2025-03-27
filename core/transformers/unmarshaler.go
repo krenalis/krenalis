@@ -14,6 +14,7 @@ import (
 	"io"
 	"math"
 	"net/netip"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -92,24 +93,18 @@ type decoderOptions struct {
 
 type terms struct {
 	Null     string
-	False    string
-	True     string
-	Array    string
 	Elements string
-	Object   string
 	Property string
+	Type     func(t types.Type) string
 }
 
 // javaScriptDecoderOptions are the JavaScript's options used by the decoder.
 var javaScriptDecoderOptions = decoderOptions{
 	terms: terms{
 		Null:     "null",
-		False:    "false",
-		True:     "true",
-		Array:    "array",
 		Elements: "elements",
-		Object:   "object",
 		Property: "property",
+		Type:     toJavascriptType,
 	},
 	int64AsString:  true,
 	datetimeFormat: "2006-01-02T15:04:05.000Z07:00",
@@ -121,12 +116,9 @@ var javaScriptDecoderOptions = decoderOptions{
 var pythonDecoderOptions = decoderOptions{
 	terms: terms{
 		Null:     "None",
-		False:    "False",
-		True:     "True",
-		Array:    "list",
 		Elements: "items",
-		Object:   "dict",
 		Property: "key",
+		Type:     toPythonType,
 	},
 	int64AsString:  false,
 	datetimeFormat: "2006-01-02 15:04:05.999999",
@@ -266,7 +258,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 			return err
 		}
 		if i == len(records) {
-			return fmt.Errorf("transformers/lambda: expected %d results got more", len(records))
+			return fmt.Errorf("core/transformers: expected %d results got more", len(records))
 		}
 		switch tok.String() {
 		case "value":
@@ -276,7 +268,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 					return err
 				}
 				if e, ok := err.(RecordValidationError); ok {
-					e.msg = d.opts.terms.Property + ` "` + e.path + `" ` + e.msg
+					e.msg = d.opts.terms.Property + ` «` + e.path + `» ` + e.msg
 					err = e
 				}
 				records[i].Properties = nil
@@ -316,7 +308,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 		return errSyntaxInvalid
 	}
 	if i < len(records) {
-		return fmt.Errorf("transformers/lambda: expected %d results got %d", len(records), i)
+		return fmt.Errorf("core/transformers: expected %d results got %d", len(records), i)
 	}
 	return nil
 }
@@ -374,7 +366,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			return nil, err
 		}
 		if t.Kind() != types.ArrayKind {
-			return nil, newRecordValidationError("", "cannot be an "+d.opts.terms.Array)
+			return nil, newRecordValidationError("", fmt.Sprintf("has a value that is not of type «%s»", d.opts.terms.Type(t)))
 		}
 		min := t.MinElements()
 		max := t.MaxElements()
@@ -403,7 +395,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			for i, elem := range arr {
 				for _, item2 := range arr[i+1:] {
 					if elem == item2 {
-						return nil, newRecordValidationError("", fmt.Sprintf("contains a duplicated value: %v", elem))
+						return nil, newRecordValidationError("", "contains a duplicated value")
 					}
 				}
 			}
@@ -453,7 +445,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					}
 					if !p.Nullable {
 						if p.Type.Kind() != types.JSONKind || preserveJSON {
-							return nil, newRecordValidationError(p.Name, "cannot be "+d.opts.terms.Null)
+							return nil, newRecordValidationError(p.Name, fmt.Sprintf("cannot be «%s», but it is set to «%s»", d.opts.terms.Null, d.opts.terms.Null))
 						}
 						value = json.Value("null")
 					}
@@ -476,7 +468,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 							continue
 						}
 						if _, ok := o[p.Name]; !ok {
-							return nil, newRecordValidationError(p.Name, "is missing")
+							return nil, newRecordValidationError(p.Name, "is missing but it is required for creation")
 						}
 					}
 				case Update:
@@ -485,7 +477,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 							continue
 						}
 						if _, ok := o[p.Name]; !ok {
-							return nil, newRecordValidationError(p.Name, "is missing")
+							return nil, newRecordValidationError(p.Name, "is missing but it is required for update")
 						}
 					}
 				}
@@ -516,13 +508,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			}
 			return m, nil
 		}
-		msg := "cannot be a"
-		if term := d.opts.terms.Object; term == "object" {
-			msg += "n object"
-		} else {
-			msg += " " + term
-		}
-		return nil, newRecordValidationError("", msg)
+		return nil, newRecordValidationError("", fmt.Sprintf("has a value that is not of type «%s»", d.opts.terms.Type(t)))
 	default:
 		value, err := d.readValue()
 		if err != nil {
@@ -565,8 +551,12 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 		if s != "" {
 			if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-				if min, max := t.IntRange(); n < min || n > max {
-					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n))
+				min, max := t.IntRange()
+				if n < min {
+					return nil, newRecordValidationError("", fmt.Sprintf("is less than %d", min))
+				}
+				if n > max {
+					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %d", max))
 				}
 				return int(n), nil
 			}
@@ -585,8 +575,12 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 		if s != "" {
 			if n, err := strconv.ParseUint(s, 10, 64); err == nil {
-				if min, max := t.UintRange(); n < min || n > max {
-					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n))
+				min, max := t.UintRange()
+				if n < min {
+					return nil, newRecordValidationError("", fmt.Sprintf("is less than %d", min))
+				}
+				if n > max {
+					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %d", max))
 				}
 				return uint(n), nil
 			}
@@ -595,14 +589,18 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		switch v.Kind() {
 		case '0':
 			if n, err := strconv.ParseFloat(string(v), t.BitSize()); err == nil {
-				if min, max := t.FloatRange(); n < min || n > max {
-					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [%g, %g]: %g", min, max, n))
+				min, max := t.FloatRange()
+				if n < min {
+					return nil, newRecordValidationError("", fmt.Sprintf("is less than %g", min))
+				}
+				if n > max {
+					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %g", max))
 				}
 				return n, nil
 			}
 		case '"':
 			if t.IsReal() {
-				return nil, newRecordValidationError("", fmt.Sprintf("is not a real number: %s", string(v)))
+				return nil, newRecordValidationError("", fmt.Sprintf("is %s, which is not a valid real number", string(v)))
 			}
 			if bytes.Equal(v, nan) {
 				return math.NaN(), nil
@@ -617,8 +615,12 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	case types.DecimalKind:
 		if v.Kind() == '"' {
 			if n, err := decimal.Parse(d.unquoteString(v), t.Precision(), t.Scale()); err == nil {
-				if min, max := t.DecimalRange(); n.Less(min) || n.Greater(max) {
-					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [%s, %s]: %s", min, max, n))
+				min, max := t.DecimalRange()
+				if n.Less(min) {
+					return nil, newRecordValidationError("", fmt.Sprintf("is less than %s", min))
+				}
+				if n.Greater(max) {
+					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %s", max))
 				}
 				return n, nil
 			}
@@ -653,7 +655,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			y, err := strconv.ParseInt(string(v), 10, 64)
 			if err == nil {
 				if y < types.MinYear || y > types.MaxYear {
-					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [1, 9999]: %d", y))
+					return nil, newRecordValidationError("", "year is not in range [1,9999]")
 				}
 				return int(y), nil
 			}
@@ -668,7 +670,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if v.Kind() == '"' {
 			data := v.AppendUnquote(nil)
 			if !json.Valid(data) {
-				return nil, newRecordValidationError("", fmt.Sprintf("does not contain valid JSON: %s", v))
+				return nil, newRecordValidationError("", "does not contain valid JSON")
 			}
 			return json.Value(data), nil
 		}
@@ -683,42 +685,26 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			s := d.unquoteString(v)
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
-					return nil, newRecordValidationError("", fmt.Sprintf("has an invalid value: %s; valid values are %s",
-						d.formatString(v), formatValues(values)))
+					return nil, newRecordValidationError("", "is not one of the allowed values")
 				}
 				return s, nil
-			} else if rx := t.Regexp(); rx != nil {
-				if !rx.MatchString(s) {
-					return nil, newRecordValidationError("", fmt.Sprintf("has an invalid value: %s; it does not match the property's regular expression",
-						d.formatString(v)))
+			} else if re := t.Regexp(); re != nil {
+				if !re.MatchString(s) {
+					return nil, newRecordValidationError("", fmt.Sprintf("does not match «/%s/»", quoteRegExpr(re)))
 				}
 				return s, nil
 			} else {
 				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, newRecordValidationError("", fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)))
+					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
 				}
 				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, newRecordValidationError("", fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)))
+					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
 				}
 				return s, nil
 			}
 		}
 	}
-	// Return an invalid value error.
-	var value string
-	switch v.Kind() {
-	case 'f':
-		value = d.opts.terms.False
-	case 't':
-		value = d.opts.terms.True
-	case '"':
-		value = d.formatString(v)
-	case '0':
-		value = v.String()
-	default:
-		return nil, fmt.Errorf("core/tranformations: unxpected kind '%s'", string(v.Kind()))
-	}
-	return nil, newRecordValidationError("", "does not have a valid value: "+value)
+	return nil, newRecordValidationError("", fmt.Sprintf("has a value that is not of type «%s»", d.opts.terms.Type(t)))
 }
 
 // unquoteString unquote a JSON string.
@@ -726,29 +712,78 @@ func (d decoder) unquoteString(v []byte) string {
 	return string(json.Value(v).AppendUnquote(nil))
 }
 
-// formatString formats a JSON string into a formatted string.
-func (d decoder) formatString(v []byte) string {
-	b := json.Value(v).AppendUnquote(nil)
-	return `"` + strings.ReplaceAll(strings.ReplaceAll(string(b), `\`, `\\`), `"`, `\"`) + `"`
+// quoteRegExpr quotes a regular expression between "/" and "/".
+func quoteRegExpr(re *regexp.Regexp) string {
+	return strings.ReplaceAll(strings.ReplaceAll(re.String(), `/`, `\/`), `»`, `≫`)
 }
 
-// formatValues formats values to be used in an error message.
-func formatValues(values []string) string {
-	var b []byte
-	last := len(values) - 1
-	for i, value := range values {
-		if i == 10 {
-			b = append(b, "..."...)
-			break
+// toJavascriptType returns the JavaScript type corresponding to the given type
+// t, to be used in error messages to represent the type in JavaScript.
+func toJavascriptType(t types.Type) string {
+	switch t.Kind() {
+	case types.BooleanKind:
+		return "boolean"
+	case types.IntKind, types.UintKind:
+		if t.BitSize() == 64 {
+			return "bigint"
 		}
-		if i == last {
-			b = append(b, ", and "...)
-		} else if i > 0 {
-			b = append(b, ", "...)
-		}
-		b = append(b, '"')
-		b = append(b, strings.ReplaceAll(strings.ReplaceAll(value, `\`, `\\`), `"`, `\"`)...)
-		b = append(b, '"')
+		return "number"
+	case types.FloatKind:
+		return "number"
+	case types.DecimalKind:
+		return "string"
+	case types.DateTimeKind, types.DateKind, types.TimeKind:
+		return "Date"
+	case types.YearKind:
+		return "number"
+	case types.UUIDKind, types.JSONKind, types.InetKind, types.TextKind:
+		return "string"
+	case types.ArrayKind:
+		et := toJavascriptType(t.Elem())
+		return "array of " + et
+	case types.ObjectKind:
+		return "object"
+	case types.MapKind:
+		et := toJavascriptType(t.Elem())
+		return "object with " + et + " values"
+	default:
+		panic("schema contains unknown property kind " + t.Kind().String())
 	}
-	return string(b)
+}
+
+// toPythonType returns the Python type corresponding to the given type t, to be
+// used in error messages to represent the type in Python.
+func toPythonType(t types.Type) string {
+	switch t.Kind() {
+	case types.BooleanKind:
+		return "bool"
+	case types.IntKind, types.UintKind:
+		return "int"
+	case types.FloatKind:
+		return "float"
+	case types.DecimalKind:
+		return "decimal.Decimal"
+	case types.DateTimeKind:
+		return "datetime.datetime"
+	case types.DateKind:
+		return "datetime.date"
+	case types.TimeKind:
+		return "datetime.time"
+	case types.YearKind:
+		return "int"
+	case types.UUIDKind:
+		return "uuid.UUID"
+	case types.JSONKind, types.InetKind, types.TextKind:
+		return "str"
+	case types.ArrayKind:
+		et := toPythonType(t.Elem())
+		return "list[" + et + "]"
+	case types.ObjectKind:
+		return "dict"
+	case types.MapKind:
+		et := toPythonType(t.Elem())
+		return "dict[str, " + et + "]"
+	default:
+		panic("schema contains unknown property kind " + t.Kind().String())
+	}
 }
