@@ -519,11 +519,12 @@ const ConnectionOverview = () => {
 									}}
 								/>
 								<Legend />
-								<Bar dataKey='passed' fill='#4f46e5' />
-								<Bar dataKey='failed' fill='#cf3a3a' />
+								<Bar dataKey='passed' name='Passed' fill='#4f46e5' />
+								<Bar dataKey='failed' name='Failed' fill='#cf3a3a' />
 								<Line
 									type='monotone'
 									dataKey='total'
+									name='Total'
 									stroke='#a1a1aa'
 									strokeDasharray='7 7'
 									dot={{ stroke: '#3f3f46', fill: '#3f3f46', strokeWidth: 0 }}
