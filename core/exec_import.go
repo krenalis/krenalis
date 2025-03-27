@@ -179,6 +179,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 						this.core.metrics.TransformationPassed(action.ID, 1)
 						this.core.metrics.OutputValidationFailed(action.ID, 1, err.Error())
 					}
+					iw.Keep(user.ID)
 					continue
 				}
 				user.Properties = record.Properties
