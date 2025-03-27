@@ -293,7 +293,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 				return errSyntaxInvalid
 			}
 			records[i].Properties = nil
-			records[i].Err = errors.New(tok.String())
+			records[i].Err = RecordTransformationError{msg: fmt.Sprintf("%s: %s", language, tok.String())}
 		default:
 			return errSyntaxInvalid
 		}
