@@ -492,6 +492,18 @@ func Test_Unmarshal(t *testing.T) {
 			data:     `{"error":"unexpected token ')'"}`,
 			err:      FunctionExecError{"unexpected token ')'"},
 		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `{"records":[{"error":"an error occurred"}]}`,
+			records:  []Record{{Err: RecordTransformationError{msg: "JavaScript: an error occurred"}}},
+		},
+		{
+			language: state.Python,
+			schema:   schema,
+			data:     `{"records":[{"error":"an error occurred"}]}`,
+			records:  []Record{{Err: RecordTransformationError{msg: "Python: an error occurred"}}},
+		},
 	}
 
 	for _, test := range tests {
