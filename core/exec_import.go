@@ -107,11 +107,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 		}
 		return err
 	}
-	// TODO(Gianluca): calling Close may return error in case the warehouse mode
-	// does not allow the closing (that is the flushing of users). However,
-	// before handling that error, we should instead address
-	// https://github.com/meergo/meergo/issues/1224.
-	defer iw.Close(ctx)
+	// Cancel the writer, or does nothing if it is already closed.
+	defer iw.Cancel(ctx)
 
 	users := make([]connectors.Record, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
@@ -219,6 +216,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 		return newActionError(metrics.ReceiveStep, err)
 	}
 
+	// TODO(Gianluca): calling Close may return error in case the warehouse mode
+	// does not allow the closing (that is the flushing of users). However,
+	// before handling that error, we should instead address
+	// https://github.com/meergo/meergo/issues/1224.
 	err = iw.Close(ctx)
 	if err != nil {
 		return newActionError(metrics.FinalizeStep, err)

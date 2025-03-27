@@ -121,7 +121,24 @@ func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack 
 	return &iw, nil
 }
 
-// Close closes the Writer, ensuring the completion of all pending or ongoing
+// Cancel cancels the writer, ensuring that the ongoing write operations are
+// completed, while discarding the pending ones, and skipping the purge
+// operation if was required.
+//
+// If the writer is already closed, it does nothing.
+func (iw *BatchIdentityWriter) Cancel(ctx context.Context) {
+	if iw.close.Swap(true) {
+		return
+	}
+	// Cancel the flushes if the context is cancelled.
+	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
+	defer stop()
+	// Wait for the flushes to terminate.
+	iw.close.Wait()
+	return
+}
+
+// Close closes the writer, ensuring the completion of all pending or ongoing
 // write operations. In the event of a canceled context, it interrupts ongoing
 // writes, discards pending ones, and returns.
 //
