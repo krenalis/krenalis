@@ -2849,6 +2849,53 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.App,
 			err:                     "output schema contains unused properties: x.z",
 		},
+		{
+			name: "BAD: Source/App/Users - with filter but no input schema",
+			action: ActionToSet{
+				Name: "Import users",
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
+						{
+							Property: "email_in",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
+						},
+					},
+				},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			err:                     "input schema is required by the filter",
+		},
+		{
+			name: "BAD: Source/App/Users - with non-nil mapping but no properties mapped",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			err:                     "transformation mapping must have mapped properties",
+		},
 	}
 
 	for _, test := range tests {
