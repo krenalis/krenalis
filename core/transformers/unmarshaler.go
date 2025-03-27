@@ -45,19 +45,24 @@ type RecordValidationError struct {
 	msg  string
 }
 
-func (err RecordValidationError) Error() string {
-	if err.path == "" {
-		return err.msg
+// newRecordValidationError returns a new RecordValidationError.
+func newRecordValidationError(path, msg string) error {
+	return RecordValidationError{
+		path: path,
+		msg:  msg,
 	}
-	return fmt.Sprintf(err.msg, err.path)
 }
 
-func (err RecordValidationError) appendIndexToPath(i int) RecordValidationError {
+func (err RecordValidationError) Error() string {
+	return err.msg
+}
+
+func (err RecordValidationError) addIndexToPath(i int) RecordValidationError {
 	err.path = "[" + strconv.Itoa(i) + "]." + err.path
 	return err
 }
 
-func (err RecordValidationError) appendNameToPath(name string) RecordValidationError {
+func (err RecordValidationError) addNameToPath(name string) RecordValidationError {
 	if err.path == "" {
 		err.path = name
 	} else if err.path[0] == '[' {
@@ -66,33 +71,6 @@ func (err RecordValidationError) appendNameToPath(name string) RecordValidationE
 		err.path = name + "." + err.path
 	}
 	return err
-}
-
-// errPropertyNotExist returns a new RecordValidationError for a nonexistent
-// property.
-func errPropertyNotExist(path string, terms map[string]string) error {
-	return RecordValidationError{
-		path: path,
-		msg:  terms["property"] + " %q does not exist",
-	}
-}
-
-// errMissingProperty returns a new RecordValidationError indicating a missing
-// property.
-func errMissingProperty(path string, terms map[string]string) error {
-	return RecordValidationError{
-		path: path,
-		msg:  "required " + terms["property"] + " %q is missing",
-	}
-}
-
-// errInvalidValue returns a new RecordValidationError indicating an invalid
-// value.
-func errInvalidValue(msg, path string, terms map[string]string) error {
-	return RecordValidationError{
-		path: path,
-		msg:  terms["property"] + " %q " + strings.ReplaceAll(msg, "%", "%%"),
-	}
 }
 
 // decoder implements a decoder for the JSON code returned by JavaScript or
@@ -105,23 +83,33 @@ type decoder struct {
 // decoderOptions are the language-specific options used internally by the
 // decoder.
 type decoderOptions struct {
-	terms          map[string]string
+	terms          terms
 	int64AsString  bool
 	datetimeFormat string
 	dateFormat     string
 	timeFormat     string
 }
 
+type terms struct {
+	Null     string
+	False    string
+	True     string
+	Array    string
+	Elements string
+	Object   string
+	Property string
+}
+
 // javaScriptDecoderOptions are the JavaScript's options used by the decoder.
 var javaScriptDecoderOptions = decoderOptions{
-	terms: map[string]string{
-		"null":     "null",
-		"false":    "false",
-		"true":     "true",
-		"array":    "array",
-		"elements": "elements",
-		"object":   "object",
-		"property": "property",
+	terms: terms{
+		Null:     "null",
+		False:    "false",
+		True:     "true",
+		Array:    "array",
+		Elements: "elements",
+		Object:   "object",
+		Property: "property",
 	},
 	int64AsString:  true,
 	datetimeFormat: "2006-01-02T15:04:05.000Z07:00",
@@ -131,14 +119,14 @@ var javaScriptDecoderOptions = decoderOptions{
 
 // pythonDecoderOptions are the Python's options used by the decoder.
 var pythonDecoderOptions = decoderOptions{
-	terms: map[string]string{
-		"null":     "None",
-		"false":    "False",
-		"true":     "True",
-		"array":    "list",
-		"elements": "items",
-		"object":   "dict",
-		"property": "key",
+	terms: terms{
+		Null:     "None",
+		False:    "False",
+		True:     "True",
+		Array:    "list",
+		Elements: "items",
+		Object:   "dict",
+		Property: "key",
 	},
 	int64AsString:  false,
 	datetimeFormat: "2006-01-02 15:04:05.999999",
@@ -287,6 +275,10 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 				if err == errSyntaxInvalid {
 					return err
 				}
+				if e, ok := err.(RecordValidationError); ok {
+					e.msg = d.opts.terms.Property + ` "` + e.path + `" ` + e.msg
+					err = e
+				}
 				records[i].Properties = nil
 				records[i].Err = err
 			} else {
@@ -382,19 +374,19 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			return nil, err
 		}
 		if t.Kind() != types.ArrayKind {
-			return nil, errInvalidValue("cannot be an "+d.opts.terms["array"], "", d.opts.terms)
+			return nil, newRecordValidationError("", "cannot be an "+d.opts.terms.Array)
 		}
 		min := t.MinElements()
 		max := t.MaxElements()
 		arr := []any{}
 		for i := 0; d.peekKind() != ']'; i++ {
 			if i == max {
-				return nil, errInvalidValue(fmt.Sprintf("contains more than %d %s", max, d.opts.terms["elements"]), "", d.opts.terms)
+				return nil, newRecordValidationError("", fmt.Sprintf("contains more than %d %s", max, d.opts.terms.Elements))
 			}
 			elem, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 			if err != nil {
 				if e, ok := err.(RecordValidationError); ok {
-					err = e.appendIndexToPath(i)
+					err = e.addIndexToPath(i)
 				}
 				return nil, err
 			}
@@ -405,13 +397,13 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			return nil, err
 		}
 		if len(arr) < min {
-			return nil, errInvalidValue(fmt.Sprintf("contains less than %d %s", min, d.opts.terms["elements"]), "", d.opts.terms)
+			return nil, newRecordValidationError("", fmt.Sprintf("contains less than %d %s", min, d.opts.terms.Elements))
 		}
 		if t.Unique() {
 			for i, elem := range arr {
 				for _, item2 := range arr[i+1:] {
 					if elem == item2 {
-						return nil, errInvalidValue(fmt.Sprintf("contains a duplicated value: %v", elem), "", d.opts.terms)
+						return nil, newRecordValidationError("", fmt.Sprintf("contains a duplicated value: %v", elem))
 					}
 				}
 			}
@@ -444,14 +436,14 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				}
 				name := tok.String()
 				if !types.IsValidPropertyName(name) {
-					return nil, errPropertyNotExist(name, d.opts.terms)
+					return nil, newRecordValidationError(name, "does not exist")
 				}
 				if !t.Valid() {
-					return nil, errPropertyNotExist(name, d.opts.terms)
+					return nil, newRecordValidationError(name, "does not exist")
 				}
 				p, ok := t.Property(name)
 				if !ok {
-					return nil, errPropertyNotExist(name, d.opts.terms)
+					return nil, newRecordValidationError(name, "does not exist")
 				}
 				// Read the property's value.
 				var value any
@@ -461,7 +453,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					}
 					if !p.Nullable {
 						if p.Type.Kind() != types.JSONKind || preserveJSON {
-							return nil, errInvalidValue("cannot be "+d.opts.terms["null"], p.Name, d.opts.terms)
+							return nil, newRecordValidationError(p.Name, "cannot be "+d.opts.terms.Null)
 						}
 						value = json.Value("null")
 					}
@@ -469,7 +461,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					value, err = d.unmarshal(p.Type, preserveJSON, purpose)
 					if err != nil {
 						if e, ok := err.(RecordValidationError); ok {
-							err = e.appendNameToPath(name)
+							err = e.addNameToPath(name)
 						}
 						return nil, err
 					}
@@ -484,7 +476,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 							continue
 						}
 						if _, ok := o[p.Name]; !ok {
-							return nil, errMissingProperty(p.Name, d.opts.terms)
+							return nil, newRecordValidationError(p.Name, "is missing")
 						}
 					}
 				case Update:
@@ -493,7 +485,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 							continue
 						}
 						if _, ok := o[p.Name]; !ok {
-							return nil, errMissingProperty(p.Name, d.opts.terms)
+							return nil, newRecordValidationError(p.Name, "is missing")
 						}
 					}
 				}
@@ -525,12 +517,12 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			return m, nil
 		}
 		msg := "cannot be a"
-		if term := d.opts.terms["object"]; term == "object" {
+		if term := d.opts.terms.Object; term == "object" {
 			msg += "n object"
 		} else {
 			msg += " " + term
 		}
-		return nil, errInvalidValue(msg, "", d.opts.terms)
+		return nil, newRecordValidationError("", msg)
 	default:
 		value, err := d.readValue()
 		if err != nil {
@@ -574,7 +566,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if s != "" {
 			if n, err := strconv.ParseInt(s, 10, 64); err == nil {
 				if min, max := t.IntRange(); n < min || n > max {
-					return nil, errInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n))
 				}
 				return int(n), nil
 			}
@@ -594,7 +586,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if s != "" {
 			if n, err := strconv.ParseUint(s, 10, 64); err == nil {
 				if min, max := t.UintRange(); n < min || n > max {
-					return nil, errInvalidValue(fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n))
 				}
 				return uint(n), nil
 			}
@@ -604,13 +596,13 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		case '0':
 			if n, err := strconv.ParseFloat(string(v), t.BitSize()); err == nil {
 				if min, max := t.FloatRange(); n < min || n > max {
-					return nil, errInvalidValue(fmt.Sprintf("is out of range [%g, %g]: %g", min, max, n), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [%g, %g]: %g", min, max, n))
 				}
 				return n, nil
 			}
 		case '"':
 			if t.IsReal() {
-				return nil, errInvalidValue(fmt.Sprintf("is not a real number: %s", string(v)), "", d.opts.terms)
+				return nil, newRecordValidationError("", fmt.Sprintf("is not a real number: %s", string(v)))
 			}
 			if bytes.Equal(v, nan) {
 				return math.NaN(), nil
@@ -626,7 +618,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if v.Kind() == '"' {
 			if n, err := decimal.Parse(d.unquoteString(v), t.Precision(), t.Scale()); err == nil {
 				if min, max := t.DecimalRange(); n.Less(min) || n.Greater(max) {
-					return nil, errInvalidValue(fmt.Sprintf("is out of range [%s, %s]: %s", min, max, n), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [%s, %s]: %s", min, max, n))
 				}
 				return n, nil
 			}
@@ -661,7 +653,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			y, err := strconv.ParseInt(string(v), 10, 64)
 			if err == nil {
 				if y < types.MinYear || y > types.MaxYear {
-					return nil, errInvalidValue(fmt.Sprintf("is out of range [1, 9999]: %d", y), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("is out of range [1, 9999]: %d", y))
 				}
 				return int(y), nil
 			}
@@ -676,7 +668,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		if v.Kind() == '"' {
 			data := v.AppendUnquote(nil)
 			if !json.Valid(data) {
-				return nil, errInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", v), "", d.opts.terms)
+				return nil, newRecordValidationError("", fmt.Sprintf("does not contain valid JSON: %s", v))
 			}
 			return json.Value(data), nil
 		}
@@ -691,22 +683,22 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			s := d.unquoteString(v)
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
-					return nil, errInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",
-						d.formatString(v), formatValues(values)), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("has an invalid value: %s; valid values are %s",
+						d.formatString(v), formatValues(values)))
 				}
 				return s, nil
 			} else if rx := t.Regexp(); rx != nil {
 				if !rx.MatchString(s) {
-					return nil, errInvalidValue(fmt.Sprintf("has an invalid value: %s; it does not match the property's regular expression",
-						d.formatString(v)), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("has an invalid value: %s; it does not match the property's regular expression",
+						d.formatString(v)))
 				}
 				return s, nil
 			} else {
 				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, errInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)))
 				}
 				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, errInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "", d.opts.terms)
+					return nil, newRecordValidationError("", fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)))
 				}
 				return s, nil
 			}
@@ -718,9 +710,9 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	var value string
 	switch v.Kind() {
 	case 'f':
-		value = d.opts.terms["false"]
+		value = d.opts.terms.False
 	case 't':
-		value = d.opts.terms["true"]
+		value = d.opts.terms.True
 	case '"':
 		value = d.formatString(v)
 	case '0':
@@ -728,7 +720,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	default:
 		return nil, fmt.Errorf("core/tranformations: unxpected kind '%s'", string(v.Kind()))
 	}
-	return nil, errInvalidValue("does not have a valid value: "+value, "", d.opts.terms)
+	return nil, newRecordValidationError("", "does not have a valid value: "+value)
 }
 
 // unquoteString unquote a JSON string.

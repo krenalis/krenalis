@@ -222,9 +222,6 @@ func Test_Unmarshal(t *testing.T) {
 		},
 	}
 
-	jsTerms := javaScriptDecoderOptions.terms
-	pyTerms := pythonDecoderOptions.terms
-
 	tests := []struct {
 		language     state.Language
 		schema       types.Type
@@ -352,61 +349,61 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Object":{"e":5}}}]}`,
-			records:  []Record{{Err: errPropertyNotExist("Object.e", pyTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Object.e", `key "Object.e" does not exist`)}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Object":{"a":true}}}]}`,
-			records:  []Record{{Purpose: Create, Err: errMissingProperty("Object.b", pyTerms)}},
+			records:  []Record{{Purpose: Create, Err: newRecordValidationError("Object.b", `key "Object.b" is missing`)}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Object":{"a":true}}}]}`,
-			records:  []Record{{Purpose: Update, Err: errMissingProperty("Object.c", pyTerms)}},
+			records:  []Record{{Purpose: Update, Err: newRecordValidationError("Object.c", `key "Object.c" is missing`)}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Object":{"b":false}}}]}`,
-			records:  []Record{{Err: errInvalidValue(`does not have a valid value: false`, "Object.b", jsTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Object.b", `property "Object.b" does not have a valid value: false`)}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Int8":21}}]}`,
-			records:  []Record{{Err: errInvalidValue(`is out of range [-20, 20]: 21`, "Int8", jsTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Int8", `property "Int8" is out of range [-20, 20]: 21`)}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Int8":-25}}]}`,
-			records:  []Record{{Err: errInvalidValue(`is out of range [-20, 20]: -25`, "Int8", jsTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Int8", `property "Int8" is out of range [-20, 20]: -25`)}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Boolean":"a \" \\ b"}}]}`,
-			records:  []Record{{Err: errInvalidValue(`does not have a valid value: "a \" \\ b"`, "Boolean", pyTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Boolean", `key "Boolean" does not have a valid value: "a \" \\ b"`)}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Boolean":null}}]}`,
-			records:  []Record{{Err: errInvalidValue(`cannot be None`, "Boolean", pyTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Boolean", `key "Boolean" cannot be None`)}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Date":"2023-02-30"}}]}`,
-			records:  []Record{{Err: errInvalidValue(`does not have a valid value: "2023-02-30"`, "Date", pyTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Date", `key "Date" does not have a valid value: "2023-02-30"`)}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Text":"some long text"}}]}`,
-			records:  []Record{{Err: errInvalidValue(`is longer than 10 characters: "some long text"`, "Text", pyTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Text", `key "Text" is longer than 10 characters: "some long text"`)}},
 		},
 		{
 			language: state.Python,
@@ -418,7 +415,7 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Text_values":"foo"}}]}`,
-			records:  []Record{{Err: errInvalidValue(`has an invalid value: "foo"; valid values are "a", "b", and "c"`, "Text_values", pyTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Text_values", `key "Text_values" has an invalid value: "foo"; valid values are "a", "b", and "c"`)}},
 		},
 		{
 			language: state.Python,
@@ -430,7 +427,7 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Text_regexp":"faa"}}]}`,
-			records:  []Record{{Err: errInvalidValue(`has an invalid value: "faa"; it does not match the property's regular expression`, "Text_regexp", pyTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Text_regexp", `key "Text_regexp" has an invalid value: "faa"; it does not match the property's regular expression`)}},
 		},
 		{
 			language: state.Python,
@@ -448,43 +445,46 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"foo":"boo"}},{"value":{"Int32":547}}]}`,
-			records:  []Record{{Err: errPropertyNotExist("foo", jsTerms)}, {Properties: map[string]any{"Int32": 547}}},
+			records:  []Record{{Err: newRecordValidationError("foo", `property "foo" does not exist`)}, {Properties: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Object":{}}},{"value":{"Int32":547}}]}`,
-			records:  []Record{{Purpose: Update, Err: errMissingProperty("Object.c", pyTerms)}, {Properties: map[string]any{"Int32": 547}}},
+			records:  []Record{{Purpose: Update, Err: newRecordValidationError("Object.c", `key "Object.c" is missing`)}, {Properties: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Boolean":3}},{"value":{"Int32":547}}]}`,
-			records:  []Record{{Err: errInvalidValue(`does not have a valid value: 3`, "Boolean", jsTerms)}, {Properties: map[string]any{"Int32": 547}}},
+			records:  []Record{{Err: newRecordValidationError("Boolean", `property "Boolean" does not have a valid value: 3`)}, {Properties: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Boolean":3}},{"value":{"Object":{}}}]}`,
-			records:  []Record{{Err: errInvalidValue(`does not have a valid value: 3`, "Boolean", pyTerms)}, {Purpose: Create, Err: errMissingProperty("Object.b", pyTerms)}},
+			records: []Record{
+				{Err: newRecordValidationError("Boolean", `key "Boolean" does not have a valid value: 3`)},
+				{Purpose: Create, Err: newRecordValidationError("Object.b", `key "Object.b" is missing`)},
+			},
 		},
 		{
 			language: state.JavaScript,
 			schema:   types.Type{},
 			data:     `{"records":[{"value":{}},{"value":{"foo":5}}]}`,
-			records:  []Record{{Properties: map[string]any{}}, {Err: errPropertyNotExist("foo", jsTerms)}},
+			records:  []Record{{Properties: map[string]any{}}, {Err: newRecordValidationError("foo", `property "foo" does not exist`)}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"a.b.c":5}}]}`,
-			records:  []Record{{Err: errPropertyNotExist("a.b.c", jsTerms)}},
+			records:  []Record{{Err: newRecordValidationError("a.b.c", `property "a.b.c" does not exist`)}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Boolean":[true]}}]}`,
-			records:  []Record{{Err: errInvalidValue(`cannot be an array`, "Boolean", jsTerms)}},
+			records:  []Record{{Err: newRecordValidationError("Boolean", `property "Boolean" cannot be an array`)}},
 		},
 		{
 			language: state.JavaScript,
