@@ -2896,6 +2896,136 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.App,
 			err:                     "transformation mapping must have mapped properties",
 		},
+		{
+			name: "BAD: Destination/App/Users - missing input matching property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					Out: "email_out",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+			err:                     "input matching property cannot be empty if output matching property is not empty",
+		},
+		{
+			name: "BAD: Destination/App/Users - missing output matching property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In: "email_in",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+			err:                     "output matching property cannot be empty if input matching property is not empty",
+		},
+		{
+			name: "BAD: Source/Database/Users - identity column is not a valid property name",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Query:                "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:       "id column",
+				LastChangeTimeColumn: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Database,
+			err:                     "identity column is not a valid property name",
+		},
+		{
+			name: "BAD: Source/Database/Users - identity column is too long",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Query:                "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:       strings.Repeat("c", 1025),
+				LastChangeTimeColumn: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Database,
+			err:                     "identity column is longer than 1024 runes",
+		},
+		{
+			name: "BAD: Source/App/Users - table name is not allowed",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName: "users",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			err:                     "table name is not allowed",
+		},
 	}
 
 	for _, test := range tests {
