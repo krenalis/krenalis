@@ -491,7 +491,7 @@ const ConnectionOverview = () => {
 						<div className='connection-overview__chart-heading'>
 							{isUsersSelected
 								? `Users ${c.isSource ? 'imported' : 'exported'}`
-								: `Events ${c.isSource ? 'received' : 'sent'}`}
+								: `Events ${c.isSource ? 'received' : 'sent'}`}{' '}
 							{titleRange}
 						</div>
 						<ResponsiveContainer width='100%' height='100%'>
