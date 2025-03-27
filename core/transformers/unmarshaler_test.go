@@ -504,6 +504,18 @@ func Test_Unmarshal(t *testing.T) {
 			data:     `{"records":[{"error":"an error occurred"}]}`,
 			records:  []Record{{Err: RecordTransformationError{msg: "Python: an error occurred"}}},
 		},
+		{
+			language: state.Python,
+			schema:   schema,
+			data:     `{"records":[{"value":{"Object":true}}]}`,
+			records:  []Record{{Err: newRecordValidationError("Object", `key "Object" does not have a valid value: True`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `{"records":[{"value":{"Array":1}}]}`,
+			records:  []Record{{Err: newRecordValidationError("Array", `property "Array" does not have a valid value: 1`)}},
+		},
 	}
 
 	for _, test := range tests {

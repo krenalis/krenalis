@@ -703,8 +703,6 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				return s, nil
 			}
 		}
-	default:
-		return nil, fmt.Errorf("core/transformers: unexpected %s type", t)
 	}
 	// Return an invalid value error.
 	var value string
