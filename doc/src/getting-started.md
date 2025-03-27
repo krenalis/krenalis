@@ -81,7 +81,15 @@ Steps:
    - Database: `warehouse`
    - Schema: `public`
 
-8. Start using Meergo by configuring the workspace settings, adding source and destination connections, etc...
+8. Optionally, you can add a Filesystem connection whose Root Path is:
+
+   ```plain
+   /bin/meergo-files/sample-filesystem
+   ```
+
+   This directory corresponds to the `docker-compose/sample-filesystem` directory inside the repository, where you can put files to import into Meergo or read and modify files exported from Meergo.
+
+9.  Start using Meergo by configuring the workspace settings, adding source and destination connections, etc...
 
 ### Download a pre-built release
 
