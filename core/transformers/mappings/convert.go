@@ -34,6 +34,8 @@ var (
 	errCharLenConversion   = errors.New("invalid char length")
 	errEnumConversion      = errors.New("not a valid enum value")
 	errInvalidConversion   = errors.New("cannot convert")
+	errMaxConversion       = errors.New("too large")
+	errMinConversion       = errors.New("too small")
 	errParseConversion     = errors.New("cannot parse")
 	errRangeConversion     = errors.New("out of range")
 	errRegexpConversion    = errors.New("regexp mismatch")
@@ -75,6 +77,8 @@ var (
 //   - errCharLenConversion
 //   - errEnumConversion
 //   - errInvalidConversion
+//   - errMaxConversion
+//   - errMinConversion
 //   - errParseConversion
 //   - errRangeConversion
 //   - errRegexpConversion
@@ -182,8 +186,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		if err != nil {
 			return v, errInvalidConversion
 		}
-		if min, max := dt.IntRange(); int64(n) < min || int64(n) > max {
-			return v, errRangeConversion
+		min, max := dt.IntRange()
+		if int64(n) < min {
+			return v, errMinConversion
+		}
+		if int64(n) > max {
+			return v, errMaxConversion
 		}
 		return n, nil
 	case types.UintKind:
@@ -239,8 +247,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return v, errInvalidConversion
 		}
 		min, max := dt.UintRange()
-		if uint64(n) < min || uint64(n) > max {
-			return v, errRangeConversion
+		if uint64(n) < min {
+			return v, errMinConversion
+		}
+		if uint64(n) > max {
+			return v, errMaxConversion
 		}
 		return n, nil
 	case types.FloatKind:
@@ -283,8 +294,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		if err != nil {
 			return v, errInvalidConversion
 		}
-		if min, max := dt.FloatRange(); n < min || n > max {
-			return v, errRangeConversion
+		min, max := dt.FloatRange()
+		if n < min {
+			return v, errMinConversion
+		}
+		if n > max {
+			return v, errMaxConversion
 		}
 		return n, nil
 	case types.DecimalKind:
@@ -326,8 +341,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		if err != nil {
 			return v, errInvalidConversion
 		}
-		if min, max := dt.DecimalRange(); n.Less(min) || n.Greater(max) {
-			return v, errRangeConversion
+		min, max := dt.DecimalRange()
+		if n.Less(min) {
+			return v, errMinConversion
+		}
+		if n.Greater(max) {
+			return v, errMaxConversion
 		}
 		return n, nil
 	case types.DateTimeKind:

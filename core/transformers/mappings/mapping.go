@@ -194,6 +194,32 @@ func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (m
 				switch err {
 				case errRangeConversion:
 					msg = fmt.Sprintf("number «%s» is not a «%s» value while mapping to «%s»", code(e.expr.source), e.dt, code(e.path))
+				case errMinConversion:
+					var n any
+					switch e.dt.Kind() {
+					case types.IntKind:
+						n, _ = e.dt.IntRange()
+					case types.UintKind:
+						n, _ = e.dt.UintRange()
+					case types.FloatKind:
+						n, _ = e.dt.FloatRange()
+					case types.DecimalKind:
+						n, _ = e.dt.DecimalRange()
+					}
+					msg = fmt.Sprintf("number «%s» is less than %v while mapping to «%s»", code(e.expr.source), n, code(e.path))
+				case errMaxConversion:
+					var n any
+					switch e.dt.Kind() {
+					case types.IntKind:
+						_, n = e.dt.IntRange()
+					case types.UintKind:
+						_, n = e.dt.UintRange()
+					case types.FloatKind:
+						_, n = e.dt.FloatRange()
+					case types.DecimalKind:
+						_, n = e.dt.DecimalRange()
+					}
+					msg = fmt.Sprintf("number «%s» is greater than %v while mapping to «%s»", code(e.expr.source), n, code(e.path))
 				case errParseConversion:
 					var to string
 					switch e.dt.Kind() {
