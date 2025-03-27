@@ -314,6 +314,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 				}
 				v = value.String()
 				vt = types.Text()
+				_ = vt // the assignment 'vt = types.Text()' is ineffective, it is done for the future in case we need to use 'vt'; so, the assignment '_ = vt' is to avoid the 'staticcheck' ineffective error.
 			}
 		}
 		if err != nil {
