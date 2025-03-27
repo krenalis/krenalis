@@ -2686,19 +2686,19 @@ function typeToString(type: Type) {
 }
 
 function toJavascriptType(type: Type, nullable?: boolean) {
-	const name = type.kind;
-
 	let t: string;
-	switch (name) {
+
+	const kind = type.kind;
+	switch (kind) {
 		case 'boolean':
 			t = 'boolean';
 			break;
 		case 'int':
 		case 'uint':
-			if (type.bitSize === 8 || type.bitSize === 16 || type.bitSize === 24 || type.bitSize === 32) {
-				t = 'number';
-			} else {
+			if (type.bitSize === 64) {
 				t = 'bigint';
+			} else {
+				t = `number (${kind})`;
 			}
 			break;
 		case 'float':
@@ -2710,14 +2710,16 @@ function toJavascriptType(type: Type, nullable?: boolean) {
 		case 'datetime':
 		case 'date':
 		case 'time':
-		case 'year':
 			t = 'Date';
+			break;
+		case 'year':
+			t = 'number';
 			break;
 		case 'uuid':
 			t = 'string';
 			break;
 		case 'json':
-			t = 'string';
+			t = 'string (JSON)';
 			break;
 		case 'inet':
 			t = 'string';
@@ -2726,19 +2728,18 @@ function toJavascriptType(type: Type, nullable?: boolean) {
 			t = 'string';
 			break;
 		case 'array':
-			let arrayType = toJavascriptType(type.elementType);
-			t = `${arrayType}[]`;
+			const arrayElementType = toJavascriptType(type.elementType);
+			t = `${arrayElementType}[]`;
 			break;
 		case 'object':
-			t = 'Object';
+			t = 'object';
 			break;
 		case 'map':
-			let mapType = toJavascriptType(type.elementType);
-			t = `Record<string, ${mapType}>`;
+			const mapElementType = toJavascriptType(type.elementType);
+			t = `object with ${mapElementType} values`;
 			break;
 		default:
-			console.error(`schema contains unknown property type ${name}`);
-			'unknown property type';
+			throw new Error(`schema contains unknown property kind ${kind}`);
 	}
 
 	if (nullable) {
@@ -2750,7 +2751,9 @@ function toJavascriptType(type: Type, nullable?: boolean) {
 
 function toPythonType(type: Type, nullable?: boolean) {
 	let t: string;
-	switch (type.kind) {
+
+	const kind = type.kind;
+	switch (kind) {
 		case 'boolean':
 			t = 'bool';
 			break;
@@ -2780,7 +2783,7 @@ function toPythonType(type: Type, nullable?: boolean) {
 			t = 'uuid.UUID';
 			break;
 		case 'json':
-			t = 'str';
+			t = 'str (JSON)';
 			break;
 		case 'inet':
 			t = 'str';
@@ -2789,19 +2792,18 @@ function toPythonType(type: Type, nullable?: boolean) {
 			t = 'str';
 			break;
 		case 'array':
-			let arrayType = toPythonType(type.elementType);
-			t = `list[${arrayType}]`;
+			const arrayElementType = toPythonType(type.elementType);
+			t = `list[${arrayElementType}]`;
 			break;
 		case 'object':
 			t = 'dict';
 			break;
 		case 'map':
-			let mapType = toPythonType(type.elementType);
-			t = `dict[str, ${mapType}]`;
+			const mapElementType = toPythonType(type.elementType);
+			t = `dict[str, ${mapElementType}]`;
 			break;
 		default:
-			console.error(`schema contains unknow property type ${type}`);
-			return 'unknown property type';
+			throw new Error(`schema contains unknown property kind ${kind}`);
 	}
 
 	if (nullable) {
