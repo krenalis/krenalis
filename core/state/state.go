@@ -36,7 +36,6 @@ type State struct {
 	id             uuid.UUID
 	db             *db.DB
 	encryptionKey  []byte
-	syncing        bool // reports whether the keeper has started synchronizing the state.
 	changing       *sync.RWMutex
 	connectors     map[string]*Connector
 	warehouseTypes map[string]WarehouseType
