@@ -158,11 +158,11 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	var usedOutPaths []string
 	var mappingInPaths int
 	if tr := action.Transformation; tr != nil {
+		if tr.Mapping != nil && tr.Function != nil {
+			return errors.BadRequest("action cannot have both transformation mapping and function")
+		}
 		switch {
 		case tr.Mapping != nil:
-			if tr.Function != nil {
-				return errors.BadRequest("action cannot have both transformation mapping and function")
-			}
 			// Validate the transformation mapping.
 			if len(tr.Mapping) == 0 {
 				return errors.BadRequest("transformation mapping must have mapped properties")
@@ -184,9 +184,6 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			// Output property paths.
 			usedOutPaths = transformer.OutPaths()
 		case tr.Function != nil:
-			if tr.Mapping != nil {
-				return errors.BadRequest("action cannot have both transformation mapping and function")
-			}
 			// Validate the transformation function.
 			if !inSchema.Valid() && !allowConstantTransformation {
 				return errors.BadRequest("input schema is required by the transformation function")
