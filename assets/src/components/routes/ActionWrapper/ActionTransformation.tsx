@@ -63,6 +63,7 @@ import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
 import JSONbig from 'json-bigint';
 import actionContext from '../../../context/ActionContext';
+import TransformedConnection from '../../../lib/core/connection';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -934,7 +935,22 @@ const TransformationBox = ({
 				</div>,
 			);
 		}
-		body = <div className='action__transformation-mappings'>{mappings}</div>;
+		let [leftHeader, rightHeader] = transformationHeaders(connection, action);
+		body = (
+			<div className='action__transformation-mappings'>
+				{!isCompletelyOpen && (
+					<div className='action__mapping-headers'>
+						<div className='action__mapping-left-header'>
+							{leftHeader[0]} {leftHeader[1]}
+						</div>
+						<div className='action__mapping-right-header'>
+							{rightHeader[0]} {rightHeader[1]}
+						</div>
+					</div>
+				)}
+				{mappings}
+			</div>
+		);
 	} else {
 		const isTransformationLanguageDeprecated = !transformationLanguages.includes(selectedLanguage);
 		body = (
@@ -2061,6 +2077,7 @@ const FullscreenTransformation = ({
 		);
 	}
 
+	let [leftHeader, rightHeader] = transformationHeaders(connection, action);
 	return (
 		<div
 			className={`fullscreen-transformation${isFullscreenTransformationOpen ? ' fullscreen-transformation--open' : ''}`}
@@ -2074,8 +2091,8 @@ const FullscreenTransformation = ({
 						>
 							<div className='fullscreen-transformation__panel-title-wrapper'>
 								<div className='fullscreen-transformation__panel-title'>
-									<div className='fullscreen-transformation__panel-title-text'>Input</div>
-									<div className='fullscreen-transformation__panel-sub-title'>{`from ${connection.isSource ? connection.connector.name : actionType.target === 'Events' ? 'linked sources' : 'warehouse'}`}</div>
+									<div className='fullscreen-transformation__panel-title-text'>{leftHeader[0]}</div>
+									<div className='fullscreen-transformation__panel-sub-title'>{leftHeader[1]}</div>
 								</div>
 								<SlButtonGroup>
 									<SlButton
@@ -2123,8 +2140,8 @@ const FullscreenTransformation = ({
 				>
 					<div className='fullscreen-transformation__panel-title-wrapper'>
 						<div className='fullscreen-transformation__panel-title'>
-							<div className='fullscreen-transformation__panel-title-text'>Output</div>
-							<div className='fullscreen-transformation__panel-sub-title'>{`to ${connection.isDestination ? connection.connector.name : 'warehouse'}`}</div>
+							<div className='fullscreen-transformation__panel-title-text'>{rightHeader[0]}</div>
+							<div className='fullscreen-transformation__panel-sub-title'>{rightHeader[1]}</div>
 						</div>
 						<SlButtonGroup>
 							<SlButton
@@ -2821,6 +2838,42 @@ function removeQuotes(v: any | null) {
 		return v;
 	}
 	return v.replace(/^"|"$/g, '');
+}
+
+// transformationHeaders returns two pairs of values, the two values ​​to use
+// for the left transformation header, and the two values ​​for the right.
+//
+// The two values ​​in each pair form a meaningful header and can, for example,
+// be displayed on two separate lines or concatenated with a space.
+function transformationHeaders(
+	connection: TransformedConnection,
+	action: TransformedAction,
+): [Array<string>, Array<string>] {
+	let leftHeader: Array<string>;
+	let rightHeader: Array<string>;
+	let userTerm = connection.connector.termForUsers;
+	if (connection.isSource) {
+		if (connection.isEventBased) {
+			leftHeader = ['Input event', `from ${connection.connector.name}`];
+		} else if (connection.isFileStorage) {
+			leftHeader = [`Input ${userTerm}`, `from ${action.format}`];
+		} else {
+			leftHeader = [`Input ${userTerm}`, `from ${connection.connector.name}`];
+		}
+		rightHeader = [`Output ${userTerm}`, 'to warehouse'];
+	} else {
+		if (
+			action.target == 'Events' ||
+			action.target == undefined /* TODO: understand why, in certain cases, the target is undefined */
+		) {
+			leftHeader = ['Input event', 'from source connections'];
+			rightHeader = ['Output event', `to ${connection.connector.name}`];
+		} else {
+			leftHeader = ['Input user', 'from warehouse'];
+			rightHeader = ['Output user', `to ${connection.connector.name}`];
+		}
+	}
+	return [leftHeader, rightHeader];
 }
 
 export default ActionTransformation;

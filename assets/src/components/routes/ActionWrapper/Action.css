@@ -1585,3 +1585,27 @@ inherit the disabled style */
 .action__issue:last-child {
 	border-bottom: 0;
 }
+
+.action__mapping-headers {
+	border-bottom-color: #e4e4e7;
+	border-bottom-style: solid;
+	border-bottom-width: 1px;
+	margin-bottom: 16px;
+	margin-top: -10px;
+	padding-bottom: 4px;
+	width: 100%;
+}
+
+.action__mapping-left-header,
+.action__mapping-right-header {
+	display: inline-block;
+	font-size: 14px;
+}
+
+.action__mapping-left-header {
+	width: 50%;
+}
+
+.action__mapping-right-header {
+	padding-left: 34px;
+}
