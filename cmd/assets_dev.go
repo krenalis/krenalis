@@ -128,12 +128,12 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w = brotliResponseWriter{bw, w}
 	}
 	if r.URL.Path == "/javascript-sdk/dist/meergo.min.js" {
-		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		w.Header().Set("Content-Type", "text/javascript")
 		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "meergo.min.js"))
 		return
 	}
 	if r.URL.Path == "/javascript-sdk/dist/meergo.min.js.map" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", "application/json")
 		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "meergo.min.js.map"))
 		return
 	}
@@ -144,7 +144,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasPrefix(r.URL.Path, "/ui/src/") {
 		if icon, ok := strings.CutPrefix(r.URL.Path, "/ui/src/shoelace/dist/assets/icons/"); ok {
-			w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
+			w.Header().Set("Content-Type", "image/svg+xml")
 			http.ServeFile(w, r, filepath.Join(moduleRoot, "assets/node_modules", shoelaceIconsPath, icon))
 			return
 		}
