@@ -166,7 +166,7 @@ func parseCli() cliOptions {
 		" each package separately and prints verbose output; may take a little longer;"+
 		" the tests set is unaltered by this option")
 	flag.BoolVar(&justTestUI, "just-test-ui", false, "just run the go tests on the UI."+
-		" Cannot be used in conjuction with flag '-short'. "+reducedTestSetWarning)
+		" Cannot be used in conjunction with flag '-short'. "+reducedTestSetWarning)
 	flag.BoolVar(&printHelp, "help", false, "print help message and exit")
 	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set. "+reducedTestSetWarning)
 
