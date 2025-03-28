@@ -406,13 +406,13 @@ const ConnectionOverview = () => {
 	const isUsersSelected = selectedTarget === 'Users';
 	let titleRange = '';
 	if (selectedMetricsRange === 'last15Minutes') {
-		titleRange = 'in the last 15 minutes';
+		titleRange = 'Last 15 minutes';
 	} else if (selectedMetricsRange === 'last24Hours') {
-		titleRange = 'in the last 24 hours';
+		titleRange = 'Last 24 hours';
 	} else if (selectedMetricsRange === 'last7Days') {
-		titleRange = 'in the last 7 days';
+		titleRange = 'Last 7 days';
 	} else {
-		titleRange = `between ${customMetricsRange[0].startDate.toLocaleDateString()} and ${customMetricsRange[0].endDate.toLocaleDateString()}`;
+		titleRange = `Between ${customMetricsRange[0].startDate.toLocaleDateString()} and ${customMetricsRange[0].endDate.toLocaleDateString()}`;
 	}
 
 	return (
@@ -492,7 +492,7 @@ const ConnectionOverview = () => {
 							{isUsersSelected
 								? `Users ${c.isSource ? 'imported' : 'exported'}`
 								: `Events ${c.isSource ? 'received' : 'sent'}`}{' '}
-							{titleRange}
+							<span>{titleRange}</span>
 						</div>
 						<ResponsiveContainer width='100%' height='100%'>
 							<ComposedChart
@@ -576,11 +576,13 @@ const ConnectionOverview = () => {
 						{funnelArrows}
 					</div>
 					<div className='connection-overview__errors'>
-						<div className='connection-overview__errors-heading'>Error log {titleRange}</div>
+						<div className='connection-overview__errors-heading'>
+							Error log <span>{titleRange}</span>
+						</div>
 						<Grid
 							columns={ERRORS_COLUMNS}
 							rows={isUsersSelected ? userActionErrorRows : eventActionErrorRows}
-							noRowsMessage={`No errors have occurred ${titleRange}`}
+							noRowsMessage={'no errors have occurred'}
 						/>
 					</div>
 				</>
