@@ -2,6 +2,14 @@
 	"kind": "object",
 	"properties": [
 		{
+			"name": "customer_id",
+			"readOptional": true,
+			"type": {
+				"charLen": 36,
+				"kind": "text"
+			}
+		},
+		{
 			"name": "first_name",
 			"readOptional": true,
 			"type": {
@@ -21,7 +29,7 @@
 			"name": "email",
 			"readOptional": true,
 			"type": {
-				"charLen": 300,
+				"charLen": 254,
 				"kind": "text"
 			}
 		},
@@ -29,15 +37,22 @@
 			"name": "phone_number",
 			"readOptional": true,
 			"type": {
-				"charLen": 15,
+				"charLen": 20,
 				"kind": "text"
 			}
 		},
 		{
-			"name": "date_of_birth",
+			"name": "birth_date",
 			"readOptional": true,
 			"type": {
 				"kind": "date"
+			}
+		},
+		{
+			"name": "gender",
+			"readOptional": true,
+			"type": {
+				"kind": "text"
 			}
 		},
 		{
@@ -50,7 +65,7 @@
 						"name": "street",
 						"readOptional": true,
 						"type": {
-							"charLen": 200,
+							"charLen": 255,
 							"kind": "text"
 						}
 					},
@@ -63,18 +78,10 @@
 						}
 					},
 					{
-						"name": "state",
+						"name": "postal_code",
 						"readOptional": true,
 						"type": {
-							"charLen": 100,
-							"kind": "text"
-						}
-					},
-					{
-						"name": "zip_code",
-						"readOptional": true,
-						"type": {
-							"charLen": 10,
+							"charLen": 20,
 							"kind": "text"
 						}
 					},
@@ -82,7 +89,7 @@
 						"name": "country",
 						"readOptional": true,
 						"type": {
-							"charLen": 100,
+							"charLen": 2,
 							"kind": "text"
 						}
 					}
@@ -90,38 +97,37 @@
 			}
 		},
 		{
-			"name": "gender",
+			"name": "preferences",
 			"readOptional": true,
 			"type": {
-				"kind": "text"
-			}
-		},
-		{
-			"name": "loyalty_program_member",
-			"readOptional": true,
-			"type": {
-				"kind": "boolean"
-			}
-		},
-		{
-			"name": "preferred_contact_method",
-			"readOptional": true,
-			"type": {
-				"kind": "text"
-			}
-		},
-		{
-			"name": "account_creation_date",
-			"readOptional": true,
-			"type": {
-				"kind": "datetime"
-			}
-		},
-		{
-			"name": "last_purchase_date",
-			"readOptional": true,
-			"type": {
-				"kind": "datetime"
+				"kind": "object",
+				"properties": [
+					{
+						"name": "newsletter",
+						"readOptional": true,
+						"type": {
+							"kind": "boolean"
+						}
+					},
+					{
+						"name": "categories",
+						"readOptional": true,
+						"type": {
+							"kind": "array",
+							"elementType": {
+								"kind": "text"
+							}
+						}
+					},
+					{
+						"name": "language",
+						"readOptional": true,
+						"type": {
+							"kind": "text",
+							"charLen": 2
+						}
+					}
+				]
 			}
 		}
 	]

@@ -33,7 +33,7 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Add properties to the user schema.
 	schema := types.Object([]types.Property{
-		{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+		{Name: "email", Type: types.Text().WithCharLen(254), ReadOptional: true},
 		{Name: "name", Type: types.Text(), ReadOptional: true},
 		{Name: "phone_numbers", Type: types.Array(types.Text()), ReadOptional: true},
 		{Name: "total_orders", Type: types.Int(32), ReadOptional: true},
