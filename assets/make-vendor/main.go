@@ -10,11 +10,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"maps"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -24,8 +26,10 @@ import (
 	"github.com/evanw/esbuild/pkg/api"
 )
 
-func main() {
+// Path to the Shoelace icons within the "node_modules" directory.
+const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
 
+func main() {
 	err := makeVendor()
 	if err != nil {
 		log.Fatal(err)
@@ -190,6 +194,24 @@ func makeVendor() error {
 				continue
 			}
 			break
+		}
+	}
+
+	// Copy the Shoelace icons.
+	shoelaceIcons, err := usedShoelaceIconFiles("assets/src")
+	if err != nil {
+		return fmt.Errorf("cannot find Shoelace icons: %s", err)
+	}
+	shoelaceIconsSrc := filepath.Join("assets/node_modules", shoelaceIconsPath)
+	shoelaceIconsDst := filepath.Join("assets/node_modules_vendor", shoelaceIconsPath)
+	err = os.MkdirAll(shoelaceIconsDst, 0755)
+	if err != nil {
+		return fmt.Errorf("cannot create directory %q: %s", shoelaceIconsDst, err)
+	}
+	for _, icon := range shoelaceIcons {
+		err = copyFile(filepath.Join(shoelaceIconsDst, icon), filepath.Join(shoelaceIconsSrc, icon))
+		if err != nil {
+			return fmt.Errorf("cannot copy Shoelace icon file %q: %s", icon, err)
 		}
 	}
 
@@ -358,4 +380,43 @@ func moveToModuleRoot() (string, error) {
 		}
 		cwd = parent
 	}
+}
+
+var shoelaceIconRe = regexp.MustCompile(`<SlIcon\s+name=["']([^"']+)["'][^>]*>`)
+
+// usedShoelaceIcons returns the Shoelace icon files used in the ".tsx" files
+// within the specified directory (dir).
+func usedShoelaceIconFiles(dir string) ([]string, error) {
+
+	iconSet := make(map[string]bool)
+
+	fsys := os.DirFS(dir)
+	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.HasSuffix(path, ".tsx") && !d.IsDir() {
+			content, err := fs.ReadFile(fsys, path)
+			if err != nil {
+				return err
+			}
+			matches := shoelaceIconRe.FindAllSubmatch(content, -1)
+			for _, match := range matches {
+				if len(match) > 1 {
+					iconSet[string(match[1])] = true
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	icons := make([]string, 0, len(iconSet))
+	for icon := range iconSet {
+		icons = append(icons, icon+".svg")
+	}
+
+	return icons, nil
 }

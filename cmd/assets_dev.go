@@ -25,6 +25,9 @@ import (
 // moduleRoot is the root directory of the Go module.
 var moduleRoot string
 
+// Path to the Shoelace icons within the "node_modules" directory.
+const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
+
 func init() {
 	// Set the moduleRoot global variable.
 	dir, err := os.Getwd()
@@ -140,6 +143,11 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/ui/src/") {
+		if icon, ok := strings.CutPrefix(r.URL.Path, "/ui/src/shoelace/dist/assets/icons/"); ok {
+			w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
+			http.ServeFile(w, r, filepath.Join(moduleRoot, "assets/node_modules", shoelaceIconsPath, icon))
+			return
+		}
 		h.fs.ServeHTTP(w, r)
 		return
 	}

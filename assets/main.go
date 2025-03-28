@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,6 +29,12 @@ import (
 
 //go:embed package.json public/index.html all:src tsconfig.json all:node_modules_vendor node_modules_vendor/resolve.json
 var assetsFS embed.FS
+
+// Path to the Shoelace icons within the "node_modules" directory.
+const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
+
+// Destination directory for the Shoelace icons in "meergo-assets".
+const shoelaceIconsDir = "shoelace/dist/assets/icons"
 
 func main() {
 	err := buildAssets()
@@ -118,6 +125,29 @@ func buildAssets() error {
 	err = os.WriteFile(outDir+"index.html", data, 0666)
 	if err != nil {
 		return err
+	}
+
+	// Copy the Shoelace icons.
+	shoelaceIconsFS, err := fs.Sub(assetsFS, path.Join("node_modules_vendor", shoelaceIconsPath))
+	if err != nil {
+		return fmt.Errorf("cannot create an fs.FS for the Shoelace icons directory: %s", err)
+	}
+	err = os.CopyFS(outDir+shoelaceIconsDir, shoelaceIconsFS)
+	if err != nil {
+		return fmt.Errorf("cannot copy Shoelace icons: %s", err)
+	}
+
+	// Read the Shoelace icons names and append them to the generatedFiles slice.
+	shoelaceIconsNames, err := fs.Glob(shoelaceIconsFS, "*")
+	if err != nil {
+		return fmt.Errorf("cannot glob Shoelace icons: %s", err)
+	}
+	for _, name := range shoelaceIconsNames {
+		generatedFiles = append(generatedFiles, path.Join(shoelaceIconsDir, name))
+	}
+	err = os.MkdirAll(path.Join(dstDir, shoelaceIconsDir), 0o777)
+	if err != nil {
+		return fmt.Errorf("cannot create the Shoelace icons directory into the destination dir: %s", err)
 	}
 
 	// Compress the UI's assets.

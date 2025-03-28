@@ -15,7 +15,7 @@ import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './useApp';
 import { UnauthorizedError } from '../../../lib/api/errors';
 
-setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.0/dist/');
+setBasePath('/ui/src/shoelace/dist');
 
 const App = () => {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);

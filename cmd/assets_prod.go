@@ -45,8 +45,11 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "index.css.map":
 			w.Header().Add("Content-Type", "application/json")
 		default:
-			http.NotFound(w, r)
-			return
+			if !strings.HasSuffix(path, ".svg") {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Add("Content-Type", "image/svg+xml")
 		}
 		asset = path + ".br"
 	} else {
@@ -55,7 +58,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	fi, err := h.fsys.Open(asset)
 	if err != nil {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		http.NotFound(w, r)
 		return
 	}
 	defer fi.Close()
