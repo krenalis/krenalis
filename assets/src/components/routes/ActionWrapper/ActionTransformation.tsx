@@ -2870,7 +2870,7 @@ function transformationHeaders(
 			rightHeader = ['Output event', `to ${connection.connector.name}`];
 		} else {
 			leftHeader = ['Input user', 'from warehouse'];
-			rightHeader = ['Output user', `to ${connection.connector.name}`];
+			rightHeader = [`Output ${userTerm}`, `to ${connection.connector.name}`];
 		}
 	}
 	return [leftHeader, rightHeader];
