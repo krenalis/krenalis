@@ -450,7 +450,8 @@ func init() {
 							"It must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n" +
 							"`" + `{"logical":"and","conditions":[{"property":"user","operator":"is","values":["960ae86c-fc6e-438a-ae03-838fa6c94946"]}]}` + "`\n\n" +
 							"must be then be escaped and passed in the query string as:\n\n" +
-							"`" + `filter=%7B%22logical%22%3A%22and%22%2C%22conditions%22%3A%5B%7B%22property%22%3A%22user%22%2C%22operator%22%3A%22is%22%2C%22values%22%3A%5B%22960ae86c-fc6e-438a-ae03-838fa6c94946%22%5D%7D%5D%7D` + "`",
+							"`filter=%7B%22logical%22%3A%22and%22%2C%22conditions\n%22%3A%5B%7B%22property%22%3A%22user%22%2C%22\n" +
+							"operator%22%3A%22is%22%2C%22values%22%3A%5B%22\n960ae86c-fc6e-438a-ae03-838fa6c94946%22%5D%7D%5D%7D`",
 					},
 					{
 						Name:        "order",
