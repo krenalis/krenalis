@@ -2860,7 +2860,7 @@ function transformationHeaders(
 		} else {
 			leftHeader = [`Input ${userTerm}`, `from ${connection.connector.name}`];
 		}
-		rightHeader = [`Output ${userTerm}`, 'to warehouse'];
+		rightHeader = ['Output user', 'to warehouse'];
 	} else {
 		if (
 			action.target == 'Events' ||
