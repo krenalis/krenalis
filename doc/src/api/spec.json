@@ -874,7 +874,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "filter",
@@ -1518,7 +1518,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
+                                "description": "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint."
                             }
                         ]
                     },
@@ -1786,7 +1786,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "tableName",
@@ -2288,7 +2288,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
+                                "description": "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint."
                             }
                         ]
                     },
@@ -2601,7 +2601,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "path",
@@ -3075,7 +3075,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
+                                "description": "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint."
                             }
                         ]
                     },
@@ -3302,7 +3302,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "filter",
@@ -3961,7 +3961,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "filter",
@@ -4531,7 +4531,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
+                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint."
                             }
                         ]
                     },
@@ -4827,7 +4827,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "query",
@@ -5289,7 +5289,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
+                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint."
                             }
                         ]
                     },
@@ -5616,7 +5616,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "filter",
@@ -6559,7 +6559,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "path",
@@ -7184,7 +7184,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
+                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint."
                             }
                         ]
                     },
@@ -7531,7 +7531,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status."
+                            "description": "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status."
                         },
                         {
                             "name": "filter",
@@ -8072,7 +8072,7 @@
         {
             "id": "actions",
             "name": "Actions",
-            "description": "Actions represent the operations that can be performed on [connections](/api/connections), such as importing and exporting users or storing and sending events.\n\nThis section documents the endpoints common to various types of actions. For creating, updating, and retrieving an action, refer to the specific sections for each type of action.",
+            "description": "Actions represent the operations that can be performed on [connections](connections), such as importing and exporting users or storing and sending events.\n\nThis section documents the endpoints common to various types of actions. For creating, updating, and retrieving an action, refer to the specific sections for each type of action.",
             "endpoints": [
                 {
                     "name": "Set status",
@@ -8475,7 +8475,7 @@
             "endpoints": [
                 {
                     "name": "Retrieve app users",
-                    "description": "Retrieves users directly from the app. These are the users as they appear in the app.\n\nFor users that have already been imported into the workspace, refer to the [/users](/api/users) endpoint.",
+                    "description": "Retrieves users directly from the app. These are the users as they appear in the app.\n\nFor users that have already been imported into the workspace, refer to the [Users](users) endpoints.",
                     "method": "GET",
                     "url": "/v1/connections/:id/users",
                     "parameters": [
@@ -8585,7 +8585,7 @@
                                 "kind": "json"
                             },
                             "createRequired": true,
-                            "description": "The event (as it would be received from a website, mobile, or server connection) that is sent to the app. It must adhere to the [event schema](http://localhost:8080/api/events#get-the-event-schema)."
+                            "description": "The event (as it would be received from a website, mobile, or server connection) that is sent to the app. It must adhere to the [event schema](events#get-event-schema)."
                         },
                         {
                             "name": "transformation",
@@ -8764,11 +8764,11 @@
         {
             "id": "connections",
             "name": "Connections",
-            "description": "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n[Actions](/api/actions) then allow you to perform operations on these connections.",
+            "description": "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n[Actions](actions) then allow you to perform operations on these connections.",
             "endpoints": [
                 {
                     "name": "Create connection",
-                    "description": "Creates a connection.\n\nFor connectors that require authorization, follow these steps to create the connection:\n\n1. [Get the auth URL](/api/connections#get-auth-url) and redirect the user to it.\n2. Once the user grants permission, [retrieve the auth token](/api/connections#retrieve-auth-token).\n3. Create the connection by passing the auth token as the `authToken` argument.",
+                    "description": "Creates a connection.\n\nFor connectors that require authorization, follow these steps to create the connection:\n\n1. [Get the auth URL](connections#get-auth-url) and redirect the user to it.\n2. Once the user grants permission, [retrieve the auth token](connections#retrieve-auth-token).\n3. Create the connection by passing the auth token as the `authToken` argument.",
                     "method": "POST",
                     "url": "/v1/connections",
                     "parameters": [
@@ -10388,7 +10388,7 @@
         {
             "id": "event-write-keys",
             "name": "Event write keys",
-            "description": "Event write keys are used for authentication when sending events from websites, mobile apps, and servers through the [Ingest event](events#ingest-event) and [Ingest batch events](events#ingest-batch-events) endpoints.\n\nKeys for website and mobile connections are usually public, as they can be exposed in a website’s source code or on a mobile device. In contrast, keys for server connections should always remain private.",
+            "description": "Event write keys are used for authentication when sending events from websites, mobile apps, and servers through the [Ingest event](events#ingest-event) and [Ingest events](events#ingest-events) endpoints.\n\nKeys for website and mobile connections are usually public, as they can be exposed in a website’s source code or on a mobile device. In contrast, keys for server connections should always remain private.",
             "endpoints": [
                 {
                     "name": "Create event write key",
@@ -10546,7 +10546,7 @@
             "endpoints": [
                 {
                     "name": "Ingest events",
-                    "description": "This endpoint allows to ingest a batch of events.\n### Authentication\nIt supports authentication with both an API key and an event write key:\n* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n* For a server application, using an event write key is recommended if you don’t need access to other endpoints.\n### Alternative payloads\nAlternatively, when using an event write key, you can also pass the array of events directly in the request body.\n\nIf there is a single event to ingest, you can pass the event object directly, similar to the [Ingest event](/api/events#ingest-event) endpoint, but specifying the event type in the request body.",
+                    "description": "This endpoint allows to ingest a batch of events.\n### Authentication\nIt supports authentication with both an [API key](authentication) and an [event write key](authentication#event-write-keys):\n* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n* For a server application, using an event write key is recommended if you don’t need access to other endpoints.\n### Alternative payloads\nAlternatively, when using an event write key, you can also pass the array of events directly in the request body.\n\nIf there is a single event to ingest, you can pass the event object directly, similar to the [Ingest event](events#ingest-event) endpoint, but specifying the event type in the request body.",
                     "method": "POST",
                     "url": "/v1/events",
                     "parameters": [
@@ -11751,7 +11751,7 @@
                 },
                 {
                     "name": "Ingest event",
-                    "description": "Ingests a single event.\n\n This endpoint supports authentication only with an **event write key**. To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
+                    "description": "Ingests a single event.\n\n This endpoint supports authentication only with an [event write key](authentication#event-write-keys). To ingest events with an API key, use the [Ingest events](events#ingest-events) endpoint, which supports both authentication methods.",
                     "method": "POST",
                     "writeKeyAuth": true,
                     "url": "/v1/events/:type",
@@ -15044,7 +15044,7 @@
                 },
                 {
                     "name": "Retrieve user events",
-                    "description": "Retrieves the most recent events for a user given their identifier. The events are read from the workspace's data warehouse and are listed in descending order, starting with the most recent ones.\n\nThis endpoint provides a streamlined, user-focused alternative to the [/events](/api/events#list-all-events) endpoint.\nWhile the [/events](/api/events#list-all-events) endpoint offers advanced filtering and sorting options, this endpoint is designed for simple access to a single user’s event history.",
+                    "description": "Retrieves the most recent events for a user given their identifier. The events are read from the workspace's data warehouse and are listed in descending order, starting with the most recent ones.\n\nThis endpoint provides a streamlined, user-focused alternative to the [Retrieve all events](events#retrieve-all-events) endpoint.",
                     "method": "GET",
                     "url": "/v1/users/:id/events",
                     "parameters": [

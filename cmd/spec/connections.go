@@ -170,14 +170,14 @@ func init() {
 		ID:   "connections",
 		Name: "Connections",
 		Description: "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n" +
-			"[Actions](/api/actions) then allow you to perform operations on these connections.",
+			"[Actions](actions) then allow you to perform operations on these connections.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Create connection",
 				Description: "Creates a connection.\n\n" +
 					"For connectors that require authorization, follow these steps to create the connection:\n\n" +
-					"1. [Get the auth URL](/api/connections#get-auth-url) and redirect the user to it.\n" +
-					"2. Once the user grants permission, [retrieve the auth token](/api/connections#retrieve-auth-token).\n" +
+					"1. [Get the auth URL](connections#get-auth-url) and redirect the user to it.\n" +
+					"2. Once the user grants permission, [retrieve the auth token](connections#retrieve-auth-token).\n" +
 					"3. Create the connection by passing the auth token as the `authToken` argument.",
 				Method: POST,
 				URL:    "/v1/connections",

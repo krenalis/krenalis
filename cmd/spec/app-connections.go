@@ -21,7 +21,7 @@ func init() {
 			{
 				Name: "Retrieve app users",
 				Description: "Retrieves users directly from the app. These are the users as they appear in the app.\n\n" +
-					"For users that have already been imported into the workspace, refer to the [/users](/api/users) endpoint.",
+					"For users that have already been imported into the workspace, refer to the [Users](users) endpoints.",
 				Method: GET,
 				URL:    "/v1/connections/:id/users",
 				Parameters: []types.Property{
@@ -94,7 +94,7 @@ func init() {
 						Placeholder:    `{...}`,
 						CreateRequired: true,
 						Description: "The event (as it would be received from a website, mobile, or server connection) that is sent to the app. " +
-							"It must adhere to the [event schema](http://localhost:8080/api/events#get-the-event-schema).",
+							"It must adhere to the [event schema](events#get-event-schema).",
 					},
 					{
 						Name:        "transformation",

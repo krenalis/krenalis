@@ -33,7 +33,7 @@ var importSchedulePeriodParameter = types.Property{
 	Placeholder: `"1h"`,
 	Nullable:    true,
 	Description: "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\n" +
-		"To change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint.",
+		"To change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint.",
 }
 
 var exportSchedulePeriodParameter = types.Property{
@@ -42,7 +42,7 @@ var exportSchedulePeriodParameter = types.Property{
 	Placeholder: `"1h"`,
 	Nullable:    true,
 	Description: "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\n" +
-		"To change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint.",
+		"To change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint.",
 }
 
 func init() {
@@ -96,7 +96,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions",
 		Name: "Actions",
-		Description: "Actions represent the operations that can be performed on [connections](/api/connections), " +
+		Description: "Actions represent the operations that can be performed on [connections](connections), " +
 			"such as importing and exporting users or storing and sending events.\n\n" +
 			"This section documents the endpoints common to various types of actions. " +
 			"For creating, updating, and retrieving an action, refer to the specific sections for each type of action.",

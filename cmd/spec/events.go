@@ -187,12 +187,12 @@ func init() {
 				Name: "Ingest events",
 				Description: "This endpoint allows to ingest a batch of events.\n" +
 					"### Authentication\n" +
-					"It supports authentication with both an API key and an event write key:\n" +
+					"It supports authentication with both an [API key](authentication) and an [event write key](authentication#event-write-keys):\n" +
 					"* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n" +
 					"* For a server application, using an event write key is recommended if you don’t need access to other endpoints.\n" +
 					"### Alternative payloads\n" +
 					"Alternatively, when using an event write key, you can also pass the array of events directly in the request body.\n\n" +
-					"If there is a single event to ingest, you can pass the event object directly, similar to the [Ingest event](/api/events#ingest-event) endpoint, " +
+					"If there is a single event to ingest, you can pass the event object directly, similar to the [Ingest event](events#ingest-event) endpoint, " +
 					"but specifying the event type in the request body.",
 				Method: POST,
 				URL:    "/v1/events",
@@ -327,8 +327,8 @@ func init() {
 			},
 			{
 				Name: "Ingest event",
-				Description: "Ingests a single event.\n\n This endpoint supports authentication only with an **event write key**. " +
-					"To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
+				Description: "Ingests a single event.\n\n This endpoint supports authentication only with an [event write key](authentication#event-write-keys). " +
+					"To ingest events with an API key, use the [Ingest events](events#ingest-events) endpoint, which supports both authentication methods.",
 				Method:       POST,
 				WriteKeyAuth: true,
 				URL:          "/v1/events/:type",

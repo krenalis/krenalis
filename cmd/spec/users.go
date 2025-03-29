@@ -189,8 +189,7 @@ func init() {
 			{
 				Name: "Retrieve user events",
 				Description: "Retrieves the most recent events for a user given their identifier. The events are read from the workspace's data warehouse and are listed in descending order, starting with the most recent ones.\n\n" +
-					"This endpoint provides a streamlined, user-focused alternative to the [/events](/api/events#list-all-events) endpoint.\n" +
-					"While the [/events](/api/events#list-all-events) endpoint offers advanced filtering and sorting options, this endpoint is designed for simple access to a single user’s event history.",
+					"This endpoint provides a streamlined, user-focused alternative to the [Retrieve all events](events#retrieve-all-events) endpoint.",
 				Method: GET,
 				URL:    "/v1/users/:id/events",
 				Parameters: []types.Property{

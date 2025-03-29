@@ -187,7 +187,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
+						Description: "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
 					incrementalParameter,
