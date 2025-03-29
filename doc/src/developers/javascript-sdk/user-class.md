@@ -25,8 +25,8 @@ To set the user's identifier, call the `id` method with an argument:
 id(id)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 id(id?: string | null): string | null
@@ -70,8 +70,8 @@ To modify the Anonymous ID, call the `anonymous` method with an argument:
 anonymousId(id)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 anonymousId(id?: string | null): string
@@ -115,8 +115,8 @@ To modify the user's traits, call the `traits` method with an argument:
 traits(traits)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 traits(traits?: Record<string, unknown> | null): Record<string, unknown>

@@ -38,8 +38,8 @@ The page call allows you to capture when a user views a page on your website, in
 ```javascript
 page(category, name, properties, options, callback)
 ```
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 page(
@@ -100,8 +100,8 @@ The screen call enables you to capture instances when a user views a screen and 
 screen(category, name, properties, options, callback)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 screen(
@@ -164,8 +164,8 @@ The track call is used to send specific events or actions, and associated proper
 track(name, properties, options, callback)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 track(
@@ -212,8 +212,8 @@ Through an identify call, you can connect previous and upcoming events to a reco
 identify(userId, traits, options, callback)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 identify(
@@ -286,8 +286,8 @@ group()
 group(groupId, traits, options, callback)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 // returns a Group instance
@@ -348,8 +348,8 @@ The `user` method returns an instance of the [`User class`](user-class) to read 
 user()
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 user(): User
@@ -387,8 +387,8 @@ If it is called after `Meergo` is ready, it also returns the Anonymous ID.
 setAnonymousId(id)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 setAnonymousId(id?: string): string | undefined
@@ -420,8 +420,8 @@ The `getSessionId` method returns the current session identifier.
 getSessionId()
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 getSessionId(): number
@@ -449,8 +449,8 @@ The `startSession` method starts a new session using the provided identifier. If
 startSession(id)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 startSession(id?: number): void
@@ -480,8 +480,8 @@ The `endSession` method ends the session.
 endSession()
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 endSession(): void
@@ -509,8 +509,8 @@ The `ready` method calls a callback after the Meergo finishes initializing. If p
 ready(callback)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 ready(callback?: () => void): Promise<void>
@@ -556,8 +556,8 @@ The `reset` method resets the user and group identifiers, and updates or removes
 reset(all)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 reset(all?: boolean): void
@@ -595,8 +595,8 @@ The `debug` method toggles debug mode.
 debug(on)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 debug(on: boolean): void
@@ -627,8 +627,8 @@ The `close` method closes the Meergo instance. It tries to preserve the queue in
 close()
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 close(): void

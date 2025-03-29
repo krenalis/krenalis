@@ -25,8 +25,8 @@ To set the group's identifier, call the `id` method with an argument:
 id(id)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 id(id?: string | null): string | null
@@ -70,8 +70,8 @@ To modify the group's traits, utilize the `traits` method with an argument:
 traits(traits)
 ```
 
-<details>
-<summary>TypeScript syntax</summary>
+<details class="typescript">
+<summary><span>TypeScript</span></summary>
 
 ```typescript
 traits(traits?: Record<string, unknown> | null): Record<string, unknown>
