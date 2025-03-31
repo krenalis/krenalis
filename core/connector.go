@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
@@ -160,6 +161,9 @@ func isValidSendingMode(sm SendingMode) bool {
 //
 // After granting permissions, the provider redirects the user to the URL
 // specified by redirectURI.
+//
+// If the connector is not configured for OAuth (i.e., ClientID or ClientSecret
+// is empty), it returns an errors.UnavailableError error.
 func (this *Connector) AuthCodeURL(role Role, redirectURI string) (string, error) {
 	this.core.mustBeOpen()
 	if this.connector.OAuth == nil {
@@ -168,5 +172,12 @@ func (this *Connector) AuthCodeURL(role Role, redirectURI string) (string, error
 	if role != Source && role != Destination {
 		return "", errors.BadRequest("role %q is not valid", role)
 	}
-	return this.core.connectors.AuthorizationEndpoint(this.connector, state.Role(role), redirectURI)
+	authCodeURL, err := this.core.connectors.AuthorizationEndpoint(this.connector, state.Role(role), redirectURI)
+	if err != nil {
+		if err, ok := err.(*connectors.UnavailableError); ok {
+			return "", errors.Unavailable("%s", err)
+		}
+		return "", err
+	}
+	return authCodeURL, nil
 }

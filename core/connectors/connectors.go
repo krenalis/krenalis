@@ -11,7 +11,6 @@ package connectors
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"iter"
 	"math"
@@ -25,6 +24,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors/httpclient"
 	"github.com/meergo/meergo/core/db"
+	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -195,9 +195,15 @@ func New(db *db.DB, state *state.State) *Connectors {
 // After acquiring the authorization code, call GrantAuthorization to obtain the
 // resulting account code, access token, refresh token, and expiration time.
 //
+// If the connector is not configured for OAuth (i.e., ClientID or ClientSecret
+// is empty), it returns an UnavailableError.
+//
 // Panics if the connector does not support OAuth.
 func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
+	if oauth.ClientID == "" || oauth.ClientSecret == "" {
+		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the 'config.yaml' file", connector.Name)}
+	}
 	var b strings.Builder
 	b.WriteString(oauth.AuthURL)
 	v := url.Values{
