@@ -34,17 +34,17 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "Dummy",
 		AsSource: &meergo.AsAppSource{
-			Description: "Import users from Dummy",
+			Description: "Import customers as users from Dummy",
 			Targets:     meergo.Users,
 			HasSettings: true,
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Export users and send events to Dummy",
+			Description: "Export users as customers and send events to Dummy",
 			Targets:     meergo.Events | meergo.Users,
 			SendingMode: meergo.Combined,
 			HasSettings: true,
 		},
-		TermForUsers:    "users",
+		TermForUsers:    "customers",
 		IdentityIDLabel: "Dummy Unique ID",
 		Icon:            icon,
 	}, New)
@@ -68,13 +68,13 @@ type Dummy struct {
 }
 
 var (
-	allUsers             map[string]map[string]any
-	usersLastChangeTimes map[string]time.Time
-	usersLock            sync.Mutex
+	allCustomers             map[string]map[string]any
+	customersLastChangeTimes map[string]time.Time
+	customersLock            sync.Mutex
 )
 
-//go:embed users.json
-var jsonUsers []byte
+//go:embed customers.json
+var jsonCustomers []byte
 
 func newDummyId() string {
 	b := make([]rune, 12)
@@ -148,65 +148,65 @@ func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTim
 		return nil, "", ctx.Err()
 	default:
 	}
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	users := make([]meergo.Record, 0, len(allUsers))
-	for id, props := range allUsers {
-		if usersLastChangeTimes[id].Before(lastChangeTime) {
+	customersLock.Lock()
+	defer customersLock.Unlock()
+	customers := make([]meergo.Record, 0, len(allCustomers))
+	for id, props := range allCustomers {
+		if customersLastChangeTimes[id].Before(lastChangeTime) {
 			continue
 		}
 		if ids != nil && !slices.Contains(ids, id) {
 			continue
 		}
-		users = append(users, meergo.Record{
+		customers = append(customers, meergo.Record{
 			ID:             id,
 			Properties:     props,
-			LastChangeTime: usersLastChangeTimes[id],
+			LastChangeTime: customersLastChangeTimes[id],
 		})
 	}
-	sort.Slice(users, func(i, j int) bool { return users[i].ID < users[j].ID })
-	return users, "", io.EOF
+	sort.Slice(customers, func(i, j int) bool { return customers[i].ID < customers[j].ID })
+	return customers, "", io.EOF
 }
 
 func init() {
 
-	var rawUsers []struct {
+	var rawCustomers []struct {
 		ID         string
 		Properties map[string]any
 	}
-	err := json.Unmarshal(jsonUsers, &rawUsers)
+	err := json.Unmarshal(jsonCustomers, &rawCustomers)
 	if err != nil {
 		panic(err)
 	}
 
-	// Only the first 10 users are taken. The others, with the current
+	// Only the first 10 customers are taken. The others, with the current
 	// implementation of Dummy, remain defined in the JSON file but are not
 	// used.
-	rawUsers = rawUsers[:10]
+	rawCustomers = rawCustomers[:10]
 
 	now := time.Now().UTC()
 
-	usersLock.Lock()
-	allUsers = make(map[string]map[string]any, len(rawUsers))
-	usersLastChangeTimes = make(map[string]time.Time, len(rawUsers))
-	for _, u := range rawUsers {
+	customersLock.Lock()
+	allCustomers = make(map[string]map[string]any, len(rawCustomers))
+	customersLastChangeTimes = make(map[string]time.Time, len(rawCustomers))
+	for _, u := range rawCustomers {
 		u.Properties["dummyId"] = u.ID
-		allUsers[u.ID] = u.Properties
+		allCustomers[u.ID] = u.Properties
 		// Go back in time by a maximum of 100 milliseconds. This allows
 		// timestamps to be spread over a time frame large enough to maintain
 		// some randomness, but not so large that a timestamp is in the past
 		// since the last import.
 		nanosecDelta := rand.IntN(100e6)
-		usersLastChangeTimes[u.ID] = now.Add(-time.Duration(nanosecDelta)).Truncate(time.Microsecond)
+		customersLastChangeTimes[u.ID] = now.Add(-time.Duration(nanosecDelta)).Truncate(time.Microsecond)
 	}
-	usersLock.Unlock()
+	customersLock.Unlock()
 
 }
 
 type innerSettings struct {
-	UserExportFailPercentage int // in [0, 100]
-	URLForDispatchingEvents  string
-	SimulateHTTPDelay        bool
+	CustomerExportFailPercentage int // in [0, 100]
+	URLForDispatchingEvents      string
+	SimulateHTTPDelay            bool
 }
 
 // Schema returns the schema of the specified target in the specified role.
@@ -287,11 +287,11 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
 			&meergo.Input{
-				Name:            "UserExportFailPercentage",
+				Name:            "CustomerExportFailPercentage",
 				Type:            "number",
-				Label:           "Percentage that the export of every single user may fail",
+				Label:           "Percentage that the export of every single customer may fail",
 				Placeholder:     "10",
-				HelpText:        "0 does not fail any user exports. 100 fails them all.",
+				HelpText:        "0 does not fail any customer exports. 100 fails them all.",
 				OnlyIntegerPart: true,
 				Role:            meergo.Destination,
 			},
@@ -324,29 +324,29 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 
 	recordsError := make(meergo.RecordsError, 0)
 
-	usersLock.Lock()
-	defer usersLock.Unlock()
+	customersLock.Lock()
+	defer customersLock.Unlock()
 
 	for i, record := range records.All() {
 
 		metrics.Increment("Dummy.Upsert.records_read_from_iterator", 1)
 
-		if dummy.userExportRandomlyFails() {
+		if dummy.customerExportRandomlyFails() {
 			metrics.Increment("Dummy.Upsert.export_failed", 1)
-			recordsError[i] = errors.New("writing of user record failed (due to a causal failure probability configured in Dummy)")
+			recordsError[i] = errors.New("writing of customer record failed (due to a causal failure probability configured in Dummy)")
 			continue
 		}
 
 		var id string
 		if record.ID == "" {
-			// Add a new users into the in-memory users.
-			metrics.Increment("Dummy.Upsert.users_created", 1)
-			user := maps.Clone(record.Properties)
+			// Add a new customers into the in-memory customers.
+			metrics.Increment("Dummy.Upsert.customers_created", 1)
+			customer := maps.Clone(record.Properties)
 			id = newDummyId()
-			user["dummyId"] = id
+			customer["dummyId"] = id
 			for _, p := range nonRequiredProperties {
-				if v, ok := user[p]; !ok {
-					user[p] = nil
+				if v, ok := customer[p]; !ok {
+					customer[p] = nil
 				} else if p == "address" {
 					address := v.(map[string]any)
 					if _, ok := address["street"]; !ok {
@@ -360,21 +360,21 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 					}
 				}
 			}
-			allUsers[id] = user
+			allCustomers[id] = customer
 		} else {
-			// Update the in-memory users.
-			user, ok := allUsers[record.ID]
+			// Update the in-memory customers.
+			customer, ok := allCustomers[record.ID]
 			if !ok {
-				metrics.Increment("Dummy.Upsert.updated_users_not_found", 1)
-				recordsError[i] = errors.New("the user to update does not exist in Dummy")
+				metrics.Increment("Dummy.Upsert.updated_customers_not_found", 1)
+				recordsError[i] = errors.New("the customer to update does not exist in Dummy")
 				continue
 			}
-			metrics.Increment("Dummy.Upsert.updated_users", 1)
-			maps.Copy(user, record.Properties)
+			metrics.Increment("Dummy.Upsert.updated_customers", 1)
+			maps.Copy(customer, record.Properties)
 			id = record.ID
 		}
 
-		usersLastChangeTimes[id] = time.Now().UTC().Truncate(time.Microsecond)
+		customersLastChangeTimes[id] = time.Now().UTC().Truncate(time.Microsecond)
 
 	}
 
@@ -403,7 +403,7 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	if err != nil {
 		return err
 	}
-	if s.UserExportFailPercentage < 0 || s.UserExportFailPercentage > 100 {
+	if s.CustomerExportFailPercentage < 0 || s.CustomerExportFailPercentage > 100 {
 		return meergo.NewInvalidsettingsError("percentage must be in range [0, 100]")
 	}
 	b, err := json.Marshal(s)
@@ -418,10 +418,10 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	return nil
 }
 
-// userExportRandomlyFails determines whether exporting (i.e., writing to Dummy)
-// a user should randomly fail, based on the settings.
-func (dummy *Dummy) userExportRandomlyFails() bool {
-	switch failPerc := dummy.settings.UserExportFailPercentage; failPerc {
+// customerExportRandomlyFails determines whether exporting (i.e., writing to
+// Dummy) a customer should randomly fail, based on the settings.
+func (dummy *Dummy) customerExportRandomlyFails() bool {
+	switch failPerc := dummy.settings.CustomerExportFailPercentage; failPerc {
 	case 0:
 		return false
 	case 100:
