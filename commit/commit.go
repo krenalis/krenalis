@@ -86,34 +86,36 @@ func main() {
 	}
 
 	// Run Go tests.
-	if cliOptions.explicit {
-		fmt.Println("Run Go tests")
-	}
-	args := []string{"test", "-count", "1", "-failfast"}
-	if cliOptions.short {
-		args = append(args, "-short")
-	}
-	if cliOptions.explicit {
-		args = append(args, "-v")
-		// It is important to specify a timeout, because otherwise `go test` has
-		// a default timeout of 10 minutes (see 'go help testflag'), which is
-		// not sufficient to run all the tests inside "/test" in cases when, for
-		// example, they are executed in a GitHub Action.
-		args = append(args, "--timeout=30m")
-	} else {
-		// Just to avoid the command running indefinitely without even printing
-		// output. 18 minutes should be more than enough time to run the tests
-		// locally.
-		args = append(args, "-timeout=18m")
-	}
-	if cliOptions.explicit {
-		for _, pkg := range packages {
-			NewCmd("go", args...).InDir(repo, pkg).Run(cliOptions.explicit)
+	if runGoTests := !cliOptions.noGoTest; runGoTests {
+		if cliOptions.explicit {
+			fmt.Println("Run Go tests")
 		}
-	} else {
-		args = append(args, "./...")
-		for _, module := range modules {
-			NewCmd("go", args...).InDir(repo, module).Run(cliOptions.explicit)
+		args := []string{"test", "-count", "1", "-failfast"}
+		if cliOptions.short {
+			args = append(args, "-short")
+		}
+		if cliOptions.explicit {
+			args = append(args, "-v")
+			// It is important to specify a timeout, because otherwise `go test` has
+			// a default timeout of 10 minutes (see 'go help testflag'), which is
+			// not sufficient to run all the tests inside "/test" in cases when, for
+			// example, they are executed in a GitHub Action.
+			args = append(args, "--timeout=30m")
+		} else {
+			// Just to avoid the command running indefinitely without even printing
+			// output. 18 minutes should be more than enough time to run the tests
+			// locally.
+			args = append(args, "-timeout=18m")
+		}
+		if cliOptions.explicit {
+			for _, pkg := range packages {
+				NewCmd("go", args...).InDir(repo, pkg).Run(cliOptions.explicit)
+			}
+		} else {
+			args = append(args, "./...")
+			for _, module := range modules {
+				NewCmd("go", args...).InDir(repo, module).Run(cliOptions.explicit)
+			}
 		}
 	}
 
@@ -148,27 +150,32 @@ func main() {
 
 type cliOptions struct {
 	explicit   bool
-	short      bool
 	justTestUI bool
+	noGoTest   bool
+	short      bool
 }
 
 func parseCli() cliOptions {
 
 	var explicit bool
 	var justTestUI bool
+	var noGoTest bool
 	var printHelp bool
 	var short bool
 
-	const reducedTestSetWarning = "WARNING: This option reduces the set of tests performed," +
+	const reducedTestSetWarning = "WARNING: this option reduces the set of tests performed," +
 		" so it cannot be used to validate the repository before a commit"
 
 	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
 		" each package separately and prints verbose output; may take a little longer;"+
 		" the tests set is unaltered by this option")
-	flag.BoolVar(&justTestUI, "just-test-ui", false, "just run the go tests on the UI."+
-		" Cannot be used in conjunction with flag '-short'. "+reducedTestSetWarning)
-	flag.BoolVar(&printHelp, "help", false, "print help message and exit")
+	flag.BoolVar(&justTestUI, "just-test-ui", false, "just run the go tests on the UI. "+
+		reducedTestSetWarning)
+	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
+		" Useful when you just want to run vendor generation commands, various asset related commands, etc... "+
+		reducedTestSetWarning)
 	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set. "+reducedTestSetWarning)
+	flag.BoolVar(&printHelp, "help", false, "print help message and exit")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of the 'commit' command:\n")
@@ -188,14 +195,19 @@ func parseCli() cliOptions {
 		os.Exit(0)
 	}
 
-	// Incompatible flags.
-	if justTestUI && short {
-		fmt.Fprintf(flag.CommandLine.Output(), "Flag '-just-test-ui' cannot be used in conjunction with flag '-short'\n")
-		flag.Usage()
-		os.Exit(1)
+	// Mutually exclusive flags.
+	mutualExclusive := func(flag1, flag2 bool, name1, name2 string) {
+		if flag1 && flag2 {
+			fmt.Fprintf(flag.CommandLine.Output(), "CLI error: flag '%s' cannot be used in conjunction with flag '%s'\n", name1, name2)
+			flag.Usage()
+			os.Exit(1)
+		}
 	}
+	mutualExclusive(justTestUI, short, "-just-test-ui", "-short")
+	mutualExclusive(justTestUI, noGoTest, "-just-test-ui", "-no-go-test")
+	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
 
-	return cliOptions{explicit: explicit, justTestUI: justTestUI, short: short}
+	return cliOptions{explicit: explicit, justTestUI: justTestUI, noGoTest: noGoTest, short: short}
 }
 
 func checkDenoVersion(explicit bool) {
