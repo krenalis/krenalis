@@ -44,7 +44,10 @@ func init() {
 			SendingMode: meergo.Combined,
 			HasSettings: true,
 		},
-		TermForUsers:    "customers",
+		Terms: meergo.AppTerms{
+			User:  "customer",
+			Users: "customers",
+		},
 		IdentityIDLabel: "Dummy Unique ID",
 		Icon:            icon,
 	}, New)

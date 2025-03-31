@@ -1,4 +1,10 @@
-import { SourceConnector, DestinationConnector, ConnectorType, SendingMode } from '../api/types/connector';
+import {
+	SourceConnector,
+	DestinationConnector,
+	ConnectorType,
+	SendingMode,
+	ConnectorTerms,
+} from '../api/types/connector';
 import * as icons from '../../constants/icons';
 import { Role } from '../api/types/types';
 
@@ -11,8 +17,7 @@ class TransformedConnector {
 	hasSheets: boolean;
 	fileExtension: string;
 	requiresAuth: boolean;
-	termForUsers: string;
-	termForGroups: string;
+	terms: ConnectorTerms;
 	icon: string;
 
 	constructor(
@@ -24,8 +29,7 @@ class TransformedConnector {
 		hasSheets: boolean,
 		fileExtension: string,
 		requiresAuth: boolean,
-		termForUsers: string,
-		termForGroups: string,
+		terms: ConnectorTerms,
 		icon: string,
 	) {
 		this.name = name;
@@ -36,8 +40,7 @@ class TransformedConnector {
 		this.hasSheets = hasSheets;
 		this.fileExtension = fileExtension;
 		this.requiresAuth = requiresAuth;
-		this.termForUsers = termForUsers;
-		this.termForGroups = termForGroups;
+		this.terms = terms;
 		this.icon = icon ? icon : icons.PLUG;
 	}
 

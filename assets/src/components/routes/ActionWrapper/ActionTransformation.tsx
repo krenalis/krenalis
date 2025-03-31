@@ -2851,14 +2851,14 @@ function transformationHeaders(
 ): [Array<string>, Array<string>] {
 	let leftHeader: Array<string>;
 	let rightHeader: Array<string>;
-	let userTerm = connection.connector.termForUsers;
+	let terms = connection.connector.terms;
 	if (connection.isSource) {
 		if (connection.isEventBased) {
 			leftHeader = ['Input event', `from ${connection.connector.name}`];
 		} else if (connection.isFileStorage) {
-			leftHeader = [`Input ${userTerm}`, `from ${action.format}`];
+			leftHeader = [`Input ${terms.Users}`, `from ${action.format}`];
 		} else {
-			leftHeader = [`Input ${userTerm}`, `from ${connection.connector.name}`];
+			leftHeader = [`Input ${terms.Users}`, `from ${connection.connector.name}`];
 		}
 		rightHeader = ['Output user', 'to warehouse'];
 	} else {
@@ -2870,7 +2870,7 @@ function transformationHeaders(
 			rightHeader = ['Output event', `to ${connection.connector.name}`];
 		} else {
 			leftHeader = ['Input user', 'from warehouse'];
-			rightHeader = [`Output ${userTerm}`, `to ${connection.connector.name}`];
+			rightHeader = [`Output ${terms.Users}`, `to ${connection.connector.name}`];
 		}
 	}
 	return [leftHeader, rightHeader];

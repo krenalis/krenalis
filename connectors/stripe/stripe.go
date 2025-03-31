@@ -65,7 +65,10 @@ func init() {
 			Targets:     meergo.Users,
 			HasSettings: true,
 		},
-		TermForUsers: "customers",
+		Terms: meergo.AppTerms{
+			User:  "customer",
+			Users: "customers",
+		},
 		BackoffPolicy: meergo.BackoffPolicy{
 			// https://docs.stripe.com/api/errors
 			"429 500 502 503 504": meergo.ExponentialStrategy(200 * time.Millisecond),

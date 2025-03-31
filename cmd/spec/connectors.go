@@ -99,18 +99,38 @@ func init() {
 			Description: `The characteristics of the connector when it is used as a data destination. This will be null if the connector cannot function as a data destination.`,
 		},
 		{
-			Name:        "termForUsers",
-			Type:        types.Text(),
-			Placeholder: `"contacts"`,
-			Description: `The term used by an app to indicate the users. For example "clients", "customers" or "users". ` +
-				"It will be empty if the connector is not an app or if the app does not handle users.",
-		},
-		{
-			Name:        "termForGroups",
-			Type:        types.Text(),
-			Placeholder: `"companies"`,
-			Description: `The term used by an app to indicate the groups. For example "organizations", "teams", or "groups".` +
-				"\n\nIt will be empty if the connector is not an app or if the app does not handle groups.",
+			Name: "terms",
+			Type: types.Object([]types.Property{
+				{
+					Name:        "user",
+					Type:        types.Text(),
+					Placeholder: `"contact"`,
+					Description: `The term used by an app to indicate a single user. For example "client", "customer" or "user".` +
+						"\n\nIt will be empty if the connector is not an app or if the app does not handle users.",
+				},
+				{
+					Name:        "users",
+					Type:        types.Text(),
+					Placeholder: `"contacts"`,
+					Description: `The term used by an app to indicate the users. For example "clients", "customers" or "users".` +
+						"\n\nIt will be empty if the connector is not an app or if the app does not handle users.",
+				},
+				{
+					Name:        "group",
+					Type:        types.Text(),
+					Placeholder: `"company"`,
+					Description: `The term used by an app to indicate a single group. For example "organization", "team", or "group".` +
+						"\n\nIt will be empty if the connector is not an app or if the app does not handle groups.",
+				},
+				{
+					Name:        "groups",
+					Type:        types.Text(),
+					Placeholder: `"companies"`,
+					Description: `The term used by an app to indicate the groups. For example "organizations", "teams", or "groups".` +
+						"\n\nIt will be empty if the connector is not an app or if the app does not handle groups.",
+				},
+			}),
+			Description: "Specific terms by which the connector refers to various entities, such as users and groups.",
 		},
 		{
 			Name:        "hasSheets",

@@ -15,9 +15,15 @@ interface Connector {
 	hasSheets: boolean;
 	fileExtension: string;
 	requiresAuth: boolean;
-	termForUsers: string;
-	termForGroups: string;
+	terms: ConnectorTerms;
 	icon: string;
+}
+
+interface ConnectorTerms {
+	User: string;
+	Users: string;
+	Group: string;
+	Groups: string;
 }
 
 interface SourceConnector {
@@ -37,6 +43,7 @@ interface DestinationConnector {
 
 export type {
 	Connector,
+	ConnectorTerms,
 	SourceConnector,
 	DestinationConnector,
 	ConnectorType,

@@ -9757,20 +9757,45 @@
                                                 "description": "The characteristics of the connector when it is used as a data destination. This will be null if the connector cannot function as a data destination."
                                             },
                                             {
-                                                "name": "termForUsers",
-                                                "placeholder": "\"contacts\"",
+                                                "name": "terms",
                                                 "type": {
-                                                    "kind": "text"
+                                                    "kind": "object",
+                                                    "properties": [
+                                                        {
+                                                            "name": "user",
+                                                            "placeholder": "\"contact\"",
+                                                            "type": {
+                                                                "kind": "text"
+                                                            },
+                                                            "description": "The term used by an app to indicate a single user. For example \"client\", \"customer\" or \"user\".\n\nIt will be empty if the connector is not an app or if the app does not handle users."
+                                                        },
+                                                        {
+                                                            "name": "users",
+                                                            "placeholder": "\"contacts\"",
+                                                            "type": {
+                                                                "kind": "text"
+                                                            },
+                                                            "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\".\n\nIt will be empty if the connector is not an app or if the app does not handle users."
+                                                        },
+                                                        {
+                                                            "name": "group",
+                                                            "placeholder": "\"company\"",
+                                                            "type": {
+                                                                "kind": "text"
+                                                            },
+                                                            "description": "The term used by an app to indicate a single group. For example \"organization\", \"team\", or \"group\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                                        },
+                                                        {
+                                                            "name": "groups",
+                                                            "placeholder": "\"companies\"",
+                                                            "type": {
+                                                                "kind": "text"
+                                                            },
+                                                            "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                                        }
+                                                    ]
                                                 },
-                                                "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\". It will be empty if the connector is not an app or if the app does not handle users."
-                                            },
-                                            {
-                                                "name": "termForGroups",
-                                                "placeholder": "\"companies\"",
-                                                "type": {
-                                                    "kind": "text"
-                                                },
-                                                "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                                "description": "Specific terms by which the connector refers to various entities, such as users and groups."
                                             },
                                             {
                                                 "name": "hasSheets",
@@ -9990,20 +10015,45 @@
                                 "description": "The characteristics of the connector when it is used as a data destination. This will be null if the connector cannot function as a data destination."
                             },
                             {
-                                "name": "termForUsers",
-                                "placeholder": "\"contacts\"",
+                                "name": "terms",
                                 "type": {
-                                    "kind": "text"
+                                    "kind": "object",
+                                    "properties": [
+                                        {
+                                            "name": "user",
+                                            "placeholder": "\"contact\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "The term used by an app to indicate a single user. For example \"client\", \"customer\" or \"user\".\n\nIt will be empty if the connector is not an app or if the app does not handle users."
+                                        },
+                                        {
+                                            "name": "users",
+                                            "placeholder": "\"contacts\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\".\n\nIt will be empty if the connector is not an app or if the app does not handle users."
+                                        },
+                                        {
+                                            "name": "group",
+                                            "placeholder": "\"company\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "The term used by an app to indicate a single group. For example \"organization\", \"team\", or \"group\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                        },
+                                        {
+                                            "name": "groups",
+                                            "placeholder": "\"companies\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                        }
+                                    ]
                                 },
-                                "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\". It will be empty if the connector is not an app or if the app does not handle users."
-                            },
-                            {
-                                "name": "termForGroups",
-                                "placeholder": "\"companies\"",
-                                "type": {
-                                    "kind": "text"
-                                },
-                                "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                "description": "Specific terms by which the connector refers to various entities, such as users and groups."
                             },
                             {
                                 "name": "hasSheets",

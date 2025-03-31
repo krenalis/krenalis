@@ -348,18 +348,18 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			var name, description string
 			if c.Role == state.Source {
 				// Source/App/Users.
-				name = "Import " + connector.TermForUsers
-				description = "Import the " + connector.TermForUsers
-				if connector.TermForUsers != "users" {
+				name = "Import " + connector.Terms.Users
+				description = "Import the " + connector.Terms.Users
+				if connector.Terms.Users != "users" {
 					description += " as users"
 				}
 				description += " from " + connector.Name
 			} else {
 				// Destination/App/Users.
-				name = "Export " + connector.TermForUsers
+				name = "Export " + connector.Terms.Users
 				description = "Export users from the data warehouse"
-				if connector.TermForUsers != "users" {
-					description += " as " + connector.TermForUsers
+				if connector.Terms.Users != "users" {
+					description += " as " + connector.Terms.Users
 				}
 				description += " to " + connector.Name
 			}
@@ -414,18 +414,18 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			var name, description string
 			if c.Role == state.Source {
 				// Source/App/Groups.
-				name = "Import " + connector.TermForGroups
-				description = "Import the " + connector.TermForGroups
-				if connector.TermForGroups != "groups" {
+				name = "Import " + connector.Terms.Groups
+				description = "Import the " + connector.Terms.Groups
+				if connector.Terms.Groups != "groups" {
 					description += " as groups"
 				}
 				description += " from " + connector.Name
 			} else {
 				// Destination/App/Groups.
-				name = "Export " + connector.TermForGroups
+				name = "Export " + connector.Terms.Groups
 				description = "Export the groups "
-				if connector.TermForGroups != "groups" {
-					description += " as " + connector.TermForGroups
+				if connector.Terms.Groups != "groups" {
+					description += " as " + connector.Terms.Groups
 				}
 				description += " to " + connector.Name
 			}

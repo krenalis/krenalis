@@ -43,8 +43,11 @@ func init() {
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
 		},
-		TermForUsers: "clients",
-		Icon:         icon,
+		Terms: meergo.AppTerms{
+			User:  "client",
+			Users: "clients",
+		},
+		Icon: icon,
 		BackoffPolicy: meergo.BackoffPolicy{
 			// https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling
 			"429":     meergo.RetryAfterStrategy(),

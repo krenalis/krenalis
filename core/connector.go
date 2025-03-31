@@ -28,9 +28,15 @@ type Connector struct {
 	HasSheets       bool                  `json:"hasSheets"`
 	FileExtension   string                `json:"fileExtension"`
 	RequiresAuth    bool                  `json:"requiresAuth"`
-	TermForUsers    string                `json:"termForUsers"`
-	TermForGroups   string                `json:"termForGroups"`
+	Terms           ConnectorTerms        `json:"terms"`
 	Icon            string                `json:"icon"`
+}
+
+type ConnectorTerms struct {
+	User   string `json:"user"`
+	Users  string `json:"users"`
+	Group  string `json:"group"`
+	Groups string `json:"groups"`
 }
 
 type SourceConnector struct {

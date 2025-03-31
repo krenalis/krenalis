@@ -38,8 +38,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				c.DestinationDescription = asDest.Description
 				c.HasDestinationSettings = asDest.HasSettings
 			}
-			c.TermForUsers = connector.TermForUsers
-			c.TermForGroups = connector.TermForGroups
+			c.Terms = ConnectorTerms(connector.Terms)
 			switch connector.AsDestination.SendingMode {
 			case meergo.Cloud:
 				mode := Cloud
@@ -124,8 +123,12 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.Type = Mobile
 			c.SourceDescription = connector.SourceDescription
 			c.DestinationDescription = connector.DestinationDescription
-			c.TermForUsers = "users"
-			c.TermForGroups = "groups"
+			c.Terms = ConnectorTerms{
+				User:   "user",
+				Users:  "users",
+				Group:  "group",
+				Groups: "groups",
+			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
 		case meergo.ServerInfo:
@@ -133,8 +136,12 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.Type = Server
 			c.SourceDescription = connector.SourceDescription
 			c.DestinationDescription = connector.DestinationDescription
-			c.TermForUsers = "users"
-			c.TermForGroups = "groups"
+			c.Terms = ConnectorTerms{
+				User:   "user",
+				Users:  "users",
+				Group:  "group",
+				Groups: "groups",
+			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
 		case meergo.StreamInfo:
@@ -152,8 +159,12 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.Type = Website
 			c.SourceDescription = connector.SourceDescription
 			c.DestinationDescription = connector.DestinationDescription
-			c.TermForUsers = "users"
-			c.TermForGroups = "groups"
+			c.Terms = ConnectorTerms{
+				User:   "user",
+				Users:  "users",
+				Group:  "group",
+				Groups: "groups",
+			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
 		}

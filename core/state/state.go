@@ -608,8 +608,7 @@ type Connector struct {
 	DestinationTargets     ConnectorTargets
 	SourceDescription      string
 	DestinationDescription string
-	TermForUsers           string
-	TermForGroups          string
+	Terms                  ConnectorTerms
 	SendingMode            *SendingMode
 	HasSheets              bool
 	HasSourceSettings      bool
@@ -643,6 +642,15 @@ func (t ConnectorTargets) Contains(target Target) bool {
 		return t&GroupsFlag != 0
 	}
 	panic("invalid target")
+}
+
+// ConnectorTerms represents the terms that a connector uses to refer to various
+// entities, such as users or groups.
+type ConnectorTerms struct {
+	User   string
+	Users  string
+	Group  string
+	Groups string
 }
 
 // ConnectorType represents a connector type.

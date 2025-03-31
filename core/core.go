@@ -338,8 +338,7 @@ func (core *Core) Connector(name string) (*Connector, error) {
 		HasSheets:       c.HasSheets,
 		FileExtension:   c.FileExtension,
 		RequiresAuth:    c.OAuth != nil,
-		TermForUsers:    c.TermForUsers,
-		TermForGroups:   c.TermForGroups,
+		Terms:           ConnectorTerms(c.Terms),
 		Icon:            c.Icon,
 	}
 	if c.SourceTargets != 0 {
@@ -359,11 +358,17 @@ func (core *Core) Connector(name string) (*Connector, error) {
 			SendingMode: (*SendingMode)(c.SendingMode),
 		}
 	}
-	if connector.TermForUsers == "" {
-		connector.TermForUsers = "users"
+	if connector.Terms.User == "" {
+		connector.Terms.User = "user"
 	}
-	if connector.TermForGroups == "" {
-		connector.TermForGroups = "groups"
+	if connector.Terms.Users == "" {
+		connector.Terms.Users = "users"
+	}
+	if connector.Terms.Group == "" {
+		connector.Terms.Group = "group"
+	}
+	if connector.Terms.Groups == "" {
+		connector.Terms.Groups = "groups"
 	}
 	return &connector, nil
 }
@@ -383,8 +388,7 @@ func (core *Core) Connectors() []*Connector {
 			HasSheets:       c.HasSheets,
 			FileExtension:   c.FileExtension,
 			RequiresAuth:    c.OAuth != nil,
-			TermForUsers:    c.TermForUsers,
-			TermForGroups:   c.TermForGroups,
+			Terms:           ConnectorTerms(c.Terms),
 			Icon:            c.Icon,
 		}
 		if c.SourceTargets != 0 {
@@ -404,11 +408,17 @@ func (core *Core) Connectors() []*Connector {
 				SendingMode: (*SendingMode)(c.SendingMode),
 			}
 		}
-		if connector.TermForUsers == "" {
-			connector.TermForUsers = "users"
+		if connector.Terms.User == "" {
+			connector.Terms.User = "user"
 		}
-		if connector.TermForGroups == "" {
-			connector.TermForGroups = "groups"
+		if connector.Terms.Users == "" {
+			connector.Terms.Users = "users"
+		}
+		if connector.Terms.Group == "" {
+			connector.Terms.Group = "group"
+		}
+		if connector.Terms.Groups == "" {
+			connector.Terms.Groups = "groups"
 		}
 		connectors[i] = &connector
 	}

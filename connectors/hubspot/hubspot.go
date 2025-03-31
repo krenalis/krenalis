@@ -51,7 +51,10 @@ func init() {
 			Description: "Export users as contacts to HubSpot",
 			Targets:     meergo.Users,
 		},
-		TermForUsers: "contacts",
+		Terms: meergo.AppTerms{
+			User:  "contact",
+			Users: "contacts",
+		},
 		// TermForGroups:   "companies",
 		IdentityIDLabel: "HubSpot ID",
 		Icon:            icon,

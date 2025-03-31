@@ -50,8 +50,7 @@ type AppInfo struct {
 	Name            string
 	AsSource        *AsAppSource
 	AsDestination   *AsAppDestination
-	TermForUsers    string
-	TermForGroups   string
+	Terms           AppTerms
 	IdentityIDLabel string
 	WebhooksPer     WebhooksPer   // indicates if webhooks are per account, connection, or connector.
 	OAuth           OAuth         // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
@@ -61,6 +60,15 @@ type AppInfo struct {
 
 	newFunc reflect.Value
 	ct      reflect.Type
+}
+
+// AppTerms represents the terms that an app connector uses to refer to various
+// entities, such as users or groups.
+type AppTerms struct {
+	User   string
+	Users  string
+	Group  string
+	Groups string
 }
 
 // AsAppSource represents the specific information of an app connector used as a

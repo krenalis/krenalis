@@ -71,17 +71,19 @@ func validateAppConnector(app AppInfo) {
 		}
 	}
 
-	if app.TermForUsers != "" {
+	if app.Terms.User != "" || app.Terms.Users != "" {
 		if (app.AsSource == nil || app.AsSource.Targets&Users == 0) &&
 			(app.AsDestination == nil || app.AsDestination.Targets&Users == 0) {
-			panic(fmt.Sprintf("connector %s cannot specify a term for users if it does not support the Users target neither as source nor as destination", app.Name))
+			panic(fmt.Sprintf("connector %s cannot specify a term for user and/or users"+
+				" if it does not support the Users target neither as source nor as destination", app.Name))
 		}
 	}
 
-	if app.TermForGroups != "" {
+	if app.Terms.Group != "" || app.Terms.Groups != "" {
 		if (app.AsSource == nil || app.AsSource.Targets&Groups == 0) &&
 			(app.AsDestination == nil || app.AsDestination.Targets&Groups == 0) {
-			panic(fmt.Sprintf("connector %s cannot specify a term for groups if it does not support the Groups target neither as source nor as destination", app.Name))
+			panic(fmt.Sprintf("connector %s cannot specify a term for group and/or groups"+
+				" if it does not support the Groups target neither as source nor as destination", app.Name))
 		}
 	}
 

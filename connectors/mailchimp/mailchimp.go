@@ -52,9 +52,12 @@ func init() {
 			Targets:     meergo.Users,
 			HasSettings: true,
 		},
-		TermForUsers: "contacts",
-		Icon:         icon,
-		WebhooksPer:  meergo.WebhooksPerConnection,
+		Terms: meergo.AppTerms{
+			User:  "contact",
+			Users: "contacts",
+		},
+		Icon:        icon,
+		WebhooksPer: meergo.WebhooksPerConnection,
 		OAuth: meergo.OAuth{
 			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",

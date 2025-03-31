@@ -96,8 +96,7 @@ const useApp = (
 						c.hasSheets,
 						c.fileExtension,
 						c.requiresAuth,
-						c.termForUsers,
-						c.termForGroups,
+						c.terms,
 						c.icon,
 					),
 				);
