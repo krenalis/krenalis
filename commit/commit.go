@@ -190,7 +190,7 @@ func parseCli() cliOptions {
 
 	// Incompatible flags.
 	if justTestUI && short {
-		fmt.Fprintf(flag.CommandLine.Output(), "Flag '-just-test-ui' cannot be used in conjuction with flag '-short'\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Flag '-just-test-ui' cannot be used in conjunction with flag '-short'\n")
 		flag.Usage()
 		os.Exit(1)
 	}
