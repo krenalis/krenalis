@@ -261,13 +261,13 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 		return err
 	}
 	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
-		return meergo.NewInvalidsettingsError("project ID must be a positive number")
+		return meergo.NewInvalidSettingsError("project ID must be a positive number")
 	}
 	if n := len(s.Username); n < 20 || n > 100 {
-		return meergo.NewInvalidsettingsError("username length must be in range [20, 100]")
+		return meergo.NewInvalidSettingsError("username length must be in range [20, 100]")
 	}
 	if n := len(s.Secret); n < 32 || n > 100 {
-		return meergo.NewInvalidsettingsError("secret length must be in range [32, 100]")
+		return meergo.NewInvalidSettingsError("secret length must be in range [32, 100]")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

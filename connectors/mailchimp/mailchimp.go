@@ -573,7 +573,7 @@ func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) erro
 		return err
 	}
 	if audience.Audience == "" || len(audience.Audience) > 100 {
-		return meergo.NewInvalidsettingsError("audience length must be in range [1, 100]")
+		return meergo.NewInvalidSettingsError("audience length must be in range [1, 100]")
 	}
 	// Check if the audience exists.
 	audiences, err := mc.audiences(ctx)
@@ -588,7 +588,7 @@ func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) erro
 		}
 	}
 	if !found {
-		return meergo.NewInvalidsettingsError("audience does not exist")
+		return meergo.NewInvalidSettingsError("audience does not exist")
 	}
 	dataCenter, _, err := mc.metadata()
 	if err != nil {

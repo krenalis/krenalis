@@ -28,7 +28,7 @@ func (err *InvalidSettingsError) Error() string {
 	return err.Msg
 }
 
-func NewInvalidsettingsError(msg string) error {
+func NewInvalidSettingsError(msg string) error {
 	return &InvalidSettingsError{msg}
 }
 

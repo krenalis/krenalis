@@ -463,15 +463,15 @@ func (ky *Klaviyo) saveSettings(ctx context.Context, settings json.Value) error 
 		return err
 	}
 	if n := len(s.PrivateAPIKey); n < 37 {
-		return meergo.NewInvalidsettingsError("private API key must be at least 37 characters long")
+		return meergo.NewInvalidSettingsError("private API key must be at least 37 characters long")
 	}
 	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return meergo.NewInvalidsettingsError("private API key must begin with 'pk_'")
+		return meergo.NewInvalidSettingsError("private API key must begin with 'pk_'")
 	}
 	for i := 3; i < len(s.PrivateAPIKey); i++ {
 		c := s.PrivateAPIKey[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return meergo.NewInvalidsettingsError("private API key after 'pk_' must contain only alphanumeric characters")
+			return meergo.NewInvalidSettingsError("private API key after 'pk_' must contain only alphanumeric characters")
 		}
 	}
 	b, err := json.Marshal(s)

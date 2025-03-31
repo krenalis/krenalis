@@ -168,17 +168,17 @@ func (filesystem *Filesystem) saveSettings(ctx context.Context, settings json.Va
 	// Validate Root.
 	root := s.Root
 	if n := len(root); n == 0 || n > 253 {
-		return meergo.NewInvalidsettingsError("root path length in bytes must be in range [1,253]")
+		return meergo.NewInvalidSettingsError("root path length in bytes must be in range [1,253]")
 	}
 	if !filepath.IsAbs(root) {
-		return meergo.NewInvalidsettingsError(`root path must be absolute`)
+		return meergo.NewInvalidSettingsError(`root path must be absolute`)
 	}
 	st, err := os.Stat(root)
 	if os.IsNotExist(err) {
-		return meergo.NewInvalidsettingsError("root path does not exist")
+		return meergo.NewInvalidSettingsError("root path does not exist")
 	}
 	if !st.IsDir() {
-		return meergo.NewInvalidsettingsError("root path is not a directory")
+		return meergo.NewInvalidSettingsError("root path is not a directory")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

@@ -210,27 +210,27 @@ func (sf *SFTP) saveSettings(ctx context.Context, settings json.Value, role meer
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
+		return meergo.NewInvalidSettingsError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 200 {
-		return meergo.NewInvalidsettingsError("username length must be in range [1,200]")
+		return meergo.NewInvalidSettingsError("username length must be in range [1,200]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return meergo.NewInvalidsettingsError("password length must be in range [1,200]")
+		return meergo.NewInvalidSettingsError("password length must be in range [1,200]")
 	}
 	// Validate TempPath.
 	if role == meergo.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
-			return meergo.NewInvalidsettingsError("length of temporary directory path must be in range [1,1000]")
+			return meergo.NewInvalidSettingsError("length of temporary directory path must be in range [1,1000]")
 		}
 	} else if s.TempPath != "" {
-		return meergo.NewInvalidsettingsError("temporary directory path must be empty for source destinations")
+		return meergo.NewInvalidSettingsError("temporary directory path must be empty for source destinations")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -359,7 +359,7 @@ func testConnection(ctx context.Context, settings *innerSettings) error {
 	defer client.close()
 	if settings.TempPath != "" {
 		if _, ok := client.sftp.HasExtension("posix-rename@openssh.com"); !ok {
-			return meergo.NewInvalidsettingsError("temporary directory path must be empty because the server does not support posix-rename")
+			return meergo.NewInvalidSettingsError("temporary directory path must be empty because the server does not support posix-rename")
 		}
 	}
 	return nil

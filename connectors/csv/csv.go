@@ -233,27 +233,27 @@ func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role meergo
 	}
 	// Validate Comma.
 	if utf8.RuneCountInString(s.Comma) != 1 {
-		return meergo.NewInvalidsettingsError("comma must be a single character")
+		return meergo.NewInvalidSettingsError("comma must be a single character")
 	}
 	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
-		return meergo.NewInvalidsettingsError("comma cannot be \\r, \\n, or the Unicode replacement character")
+		return meergo.NewInvalidSettingsError("comma cannot be \\r, \\n, or the Unicode replacement character")
 	}
 	if role == meergo.Source {
 		// Validate Comment.
 		if c := s.Comment; c != "" {
 			if utf8.RuneCountInString(c) != 1 {
-				return meergo.NewInvalidsettingsError("comment, if provided, must be a single character")
+				return meergo.NewInvalidSettingsError("comment, if provided, must be a single character")
 			}
 			if c == "\n" || c == "\r" || c == "\uFFFD" {
-				return meergo.NewInvalidsettingsError("comment cannot be \\r, \\n, or the Unicode replacement character")
+				return meergo.NewInvalidSettingsError("comment cannot be \\r, \\n, or the Unicode replacement character")
 			}
 			if c == s.Comma {
-				return meergo.NewInvalidsettingsError("comment cannot be equal to the comma")
+				return meergo.NewInvalidSettingsError("comment cannot be equal to the comma")
 			}
 		}
 		// Validate FieldsPerRecord.
 		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-			return meergo.NewInvalidsettingsError("fields per record, if provided, must be in range [0,1000]")
+			return meergo.NewInvalidSettingsError("fields per record, if provided, must be in range [0,1000]")
 		}
 	} else {
 		s.Comment = ""

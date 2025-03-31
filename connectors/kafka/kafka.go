@@ -181,35 +181,35 @@ func (kafka *Kafka) saveSettings(ctx context.Context, settings json.Value, test 
 	case s.Kafka != nil:
 		// Validate Host.
 		if n := len(s.Kafka.Host); n == 0 || n > 253 {
-			return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
+			return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
 		if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
-			return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
+			return meergo.NewInvalidSettingsError("port must be in range [1,65536]")
 		}
 	case s.Confluent != nil:
 		// Validate Server.
 		host, port, err := net.SplitHostPort(s.Confluent.Server)
 		if err != nil {
-			return meergo.NewInvalidsettingsError("server is not a valid host:port")
+			return meergo.NewInvalidSettingsError("server is not a valid host:port")
 		}
 		if n := len(host); n == 0 || n > 253 {
-			return meergo.NewInvalidsettingsError("server host length in bytes must be in range [1,253]")
+			return meergo.NewInvalidSettingsError("server host length in bytes must be in range [1,253]")
 		}
 		if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
-			return meergo.NewInvalidsettingsError("server port must be in range [1,65536]")
+			return meergo.NewInvalidSettingsError("server port must be in range [1,65536]")
 		}
 		// Validate Key.
 		if utf8.RuneCountInString(s.Confluent.Key) != 16 {
-			return meergo.NewInvalidsettingsError("key must be long 16 characters")
+			return meergo.NewInvalidSettingsError("key must be long 16 characters")
 		}
 	}
 	// Validate Topic.
 	if n := len(s.Topic); n == 0 || n > 255 {
-		return meergo.NewInvalidsettingsError("topic length must be in range [1,255]")
+		return meergo.NewInvalidSettingsError("topic length must be in range [1,255]")
 	}
 	if !validTopicName(s.Topic) {
-		return meergo.NewInvalidsettingsError("topic name can contain only [A-Za-z0-9_.-]")
+		return meergo.NewInvalidSettingsError("topic name can contain only [A-Za-z0-9_.-]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

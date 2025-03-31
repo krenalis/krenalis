@@ -217,23 +217,23 @@ func (my *MySQL) saveSettings(ctx context.Context, settings json.Value, test boo
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
+		return meergo.NewInvalidSettingsError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
-		return meergo.NewInvalidsettingsError("username length must be in range [1,16]")
+		return meergo.NewInvalidSettingsError("username length must be in range [1,16]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return meergo.NewInvalidsettingsError("password length must be in range [1,200]")
+		return meergo.NewInvalidSettingsError("password length must be in range [1,200]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-		return meergo.NewInvalidsettingsError("database length must be in range [1,64]")
+		return meergo.NewInvalidSettingsError("database length must be in range [1,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

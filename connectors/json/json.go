@@ -297,22 +297,22 @@ func (j *JSON) saveSettings(ctx context.Context, settings json.Value, role meerg
 	// Validate Properties.
 	if role == meergo.Source {
 		if len(s.Properties) == 0 {
-			return meergo.NewInvalidsettingsError("must have at least one property")
+			return meergo.NewInvalidSettingsError("must have at least one property")
 		}
 		hasName := map[string]struct{}{}
 		for _, property := range s.Properties {
 			if _, ok := hasName[property.Key]; ok {
-				return meergo.NewInvalidsettingsError(fmt.Sprintf("property name %q is repeated", property.Key))
+				return meergo.NewInvalidSettingsError(fmt.Sprintf("property name %q is repeated", property.Key))
 			}
 			if property.Key == "" {
-				return meergo.NewInvalidsettingsError("a property name is empty")
+				return meergo.NewInvalidSettingsError("a property name is empty")
 			}
 			if !types.IsValidPropertyName(property.Key) {
-				return meergo.NewInvalidsettingsError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
+				return meergo.NewInvalidSettingsError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
 					" with a letter or underscore [A-Za-z_] and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", property.Key))
 			}
 			if property.Value != "f" && property.Value != "t" {
-				return meergo.NewInvalidsettingsError("required is not valid")
+				return meergo.NewInvalidSettingsError("required is not valid")
 			}
 			hasName[property.Key] = struct{}{}
 		}

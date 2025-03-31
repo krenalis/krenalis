@@ -216,17 +216,17 @@ func (rmq *RabbitMQ) saveSettings(ctx context.Context, options json.Value, test 
 	}
 	// Validate URL.
 	if n := len(s.URL); n < 7 || n > 2048 {
-		return meergo.NewInvalidsettingsError("URL length in bytes must be in range [7,2048]")
+		return meergo.NewInvalidSettingsError("URL length in bytes must be in range [7,2048]")
 	}
 	if _, err := amqp.ParseURI(s.URL); err != nil {
-		return meergo.NewInvalidsettingsError("URL is not a valid RabbitMQ URI")
+		return meergo.NewInvalidSettingsError("URL is not a valid RabbitMQ URI")
 	}
 	// Validate Queue.
 	if n := len(s.Queue); n == 0 || n > 255 {
-		return meergo.NewInvalidsettingsError("queue length in bytes must be in range [1,255]")
+		return meergo.NewInvalidSettingsError("queue length in bytes must be in range [1,255]")
 	}
 	if strings.HasPrefix(s.Queue, "amq.") {
-		return meergo.NewInvalidsettingsError("queue names starting with 'amq.' are reserved for internal use by the broker")
+		return meergo.NewInvalidSettingsError("queue names starting with 'amq.' are reserved for internal use by the broker")
 	}
 	err = rmq.testConnection(ctx)
 	if err != nil || test {

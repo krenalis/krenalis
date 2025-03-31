@@ -407,7 +407,7 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 		return err
 	}
 	if s.CustomerExportFailPercentage < 0 || s.CustomerExportFailPercentage > 100 {
-		return meergo.NewInvalidsettingsError("percentage must be in range [0, 100]")
+		return meergo.NewInvalidSettingsError("percentage must be in range [0, 100]")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

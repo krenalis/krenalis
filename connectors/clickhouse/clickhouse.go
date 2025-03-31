@@ -201,23 +201,23 @@ func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, tes
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
+		return meergo.NewInvalidSettingsError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n > 64 {
-		return meergo.NewInvalidsettingsError("username length in bytes must be in range [0,64]")
+		return meergo.NewInvalidSettingsError("username length in bytes must be in range [0,64]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n > 100 {
-		return meergo.NewInvalidsettingsError("password length must be in range [0,100]")
+		return meergo.NewInvalidSettingsError("password length must be in range [0,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n > 64 {
-		return meergo.NewInvalidsettingsError("database length in bytes must be in range [0,64]")
+		return meergo.NewInvalidSettingsError("database length in bytes must be in range [0,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

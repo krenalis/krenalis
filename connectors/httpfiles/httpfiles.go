@@ -185,19 +185,19 @@ func (h *HTTPFiles) saveSettings(ctx context.Context, settings json.Value) error
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
+		return meergo.NewInvalidSettingsError("port must be in range [1,65536]")
 	}
 	// Validate Headers.
 	for _, header := range s.Headers {
 		if n := utf8.RuneCountInString(header.Key); n == 0 || n > 100 {
-			return meergo.NewInvalidsettingsError("header key length must be in range [1,100]")
+			return meergo.NewInvalidSettingsError("header key length must be in range [1,100]")
 		}
 		if n := utf8.RuneCountInString(header.Value); n == 0 || n > 10000 {
-			return meergo.NewInvalidsettingsError("header value length must be in range [1,10000]")
+			return meergo.NewInvalidSettingsError("header value length must be in range [1,10000]")
 		}
 	}
 	b, err := json.Marshal(s)

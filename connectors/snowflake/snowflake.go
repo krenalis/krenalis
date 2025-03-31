@@ -237,34 +237,34 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
-		return meergo.NewInvalidsettingsError("account identifier length must be in range [3,255]")
+		return meergo.NewInvalidSettingsError("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return meergo.NewInvalidsettingsError("account identifier must be in the <organization>.<account> or <organization>-<account> format")
+		return meergo.NewInvalidSettingsError("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return meergo.NewInvalidsettingsError("username length must be in range [1,255]")
+		return meergo.NewInvalidSettingsError("username length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return meergo.NewInvalidsettingsError("password length must be in range [1,255]")
+		return meergo.NewInvalidSettingsError("password length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return meergo.NewInvalidsettingsError("warehouse length must be in range [1,255]")
+		return meergo.NewInvalidSettingsError("warehouse length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return meergo.NewInvalidsettingsError("database length must be in range [1,255]")
+		return meergo.NewInvalidSettingsError("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return meergo.NewInvalidsettingsError("schema length must be in range [1,255]")
+		return meergo.NewInvalidSettingsError("schema length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return meergo.NewInvalidsettingsError("role length must be in range [1,255]")
+		return meergo.NewInvalidSettingsError("role length must be in range [1,255]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

@@ -172,18 +172,18 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 		return err
 	}
 	if n := len(s.MeasurementID); n < 2 || n > 20 {
-		return meergo.NewInvalidsettingsError("Measurement ID length must be in [2,20]")
+		return meergo.NewInvalidSettingsError("Measurement ID length must be in [2,20]")
 	}
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
-		return meergo.NewInvalidsettingsError("Measurement ID must begin with 'G-' or 'AW-'")
+		return meergo.NewInvalidSettingsError("Measurement ID must begin with 'G-' or 'AW-'")
 	}
 	if n := len(s.APISecret); n < 1 || n > 40 {
-		return meergo.NewInvalidsettingsError("API secret length must be in [1,40]")
+		return meergo.NewInvalidSettingsError("API secret length must be in [1,40]")
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9' || c == '-') {
-			return meergo.NewInvalidsettingsError("API secret must contain only alphanumeric and '-' characters")
+			return meergo.NewInvalidSettingsError("API secret must contain only alphanumeric and '-' characters")
 		}
 	}
 	b, err := json.Marshal(s)

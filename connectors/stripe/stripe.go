@@ -333,7 +333,7 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 		return err
 	}
 	if s.APIKey == "" {
-		return meergo.NewInvalidsettingsError("API key cannot be empty")
+		return meergo.NewInvalidSettingsError("API key cannot be empty")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
