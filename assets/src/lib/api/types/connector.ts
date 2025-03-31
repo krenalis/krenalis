@@ -20,10 +20,10 @@ interface Connector {
 }
 
 interface ConnectorTerms {
-	User: string;
-	Users: string;
-	Group: string;
-	Groups: string;
+	user: string;
+	users: string;
+	group: string;
+	groups: string;
 }
 
 interface SourceConnector {
