@@ -72,13 +72,15 @@ func validateAppConnector(app AppInfo) {
 	}
 
 	if app.TermForUsers != "" {
-		if app.AsSource.Targets&Users == 0 && app.AsDestination.Targets&Users == 0 {
+		if (app.AsSource == nil || app.AsSource.Targets&Users == 0) &&
+			(app.AsDestination == nil || app.AsDestination.Targets&Users == 0) {
 			panic(fmt.Sprintf("connector %s cannot specify a term for users if it does not support the Users target neither as source nor as destination", app.Name))
 		}
 	}
 
 	if app.TermForGroups != "" {
-		if app.AsSource.Targets&Groups == 0 && app.AsDestination.Targets&Groups == 0 {
+		if (app.AsSource == nil || app.AsSource.Targets&Groups == 0) &&
+			(app.AsDestination == nil || app.AsDestination.Targets&Groups == 0) {
 			panic(fmt.Sprintf("connector %s cannot specify a term for groups if it does not support the Groups target neither as source nor as destination", app.Name))
 		}
 	}
