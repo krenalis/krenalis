@@ -349,7 +349,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			if c.Role == state.Source {
 				// Source/App/Users.
 				name = "Import " + connector.Terms.Users
-				description = "Import the " + connector.Terms.Users
+				description = "Import " + connector.Terms.Users
 				if connector.Terms.Users != "users" {
 					description += " as users"
 				}
@@ -377,12 +377,12 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				// Source/FileStorage/Users.
 				// Source/Database/Users.
 				name = "Import users"
-				description = "Import the users from " + connector.Name
+				description = "Import users from " + connector.Name
 			} else {
 				// Destination/FileStorage/Users.
 				// Destination/Database/Users.
 				name = "Export users"
-				description = "Export the users to " + connector.Name
+				description = "Export users to " + connector.Name
 			}
 			at := ActionType{
 				Name:        name,
@@ -415,7 +415,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			if c.Role == state.Source {
 				// Source/App/Groups.
 				name = "Import " + connector.Terms.Groups
-				description = "Import the " + connector.Terms.Groups
+				description = "Import " + connector.Terms.Groups
 				if connector.Terms.Groups != "groups" {
 					description += " as groups"
 				}
@@ -423,7 +423,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			} else {
 				// Destination/App/Groups.
 				name = "Export " + connector.Terms.Groups
-				description = "Export the groups "
+				description = "Export groups "
 				if connector.Terms.Groups != "groups" {
 					description += " as " + connector.Terms.Groups
 				}
@@ -443,12 +443,12 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				// Source/FileStorage/Groups.
 				// Source/Database/Groups.
 				name = "Import groups"
-				description = "Import the groups from " + connector.Name
+				description = "Import groups from " + connector.Name
 			} else {
 				// Destination/FileStorage/Groups.
 				// Destination/Database/Groups.
 				name = "Export groups"
-				description = "Export the groups to " + connector.Name
+				description = "Export groups to " + connector.Name
 			}
 			at := ActionType{
 				Name:        name,
