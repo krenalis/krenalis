@@ -2,7 +2,6 @@
 {% macro Title string %}Data Values{% end %}
 {% Article %}
 
-<span>Extend Meergo</span>
 # Data values
 
 When representing user, group, and event data in a connector, these are mapped to specific Go types based on the data type. For example, in an export, a `datetime` value is represented in Go as `time.Time`, and a `text` value is represented as a `string`.

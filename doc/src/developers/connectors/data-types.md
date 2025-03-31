@@ -2,7 +2,6 @@
 {% macro Title string %}Data Types{% end %}
 {% Article %}
 
-<span>Extend Meergo</span>
 # Data types
 
 When defining data types and schemas in a connector, use the functions from the `types` package:

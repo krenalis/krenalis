@@ -2,7 +2,6 @@
 {% macro Title string %}Database Connectors{% end %}
 {% Article %}
 
-<span>Extend Meergo</span>
 # Database connectors
 
 Database connectors allow to connect to databases (DBMS), such as PostgreSQL, MySQL, or Snowflake, to execute queries to import and export data.

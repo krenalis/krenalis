@@ -2,7 +2,6 @@
 {% macro Title string %}File Storage Connectors{% end %}
 {% Article %}
 
-<span>Extend Meergo</span>
 # File Storage connectors
 
 File storage connectors allow to read and write file content on a file storage such as SFTP, HTTP and S3.

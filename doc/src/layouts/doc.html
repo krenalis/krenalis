@@ -108,27 +108,22 @@
                         </ul>
                     </li>
                     <li>
-                        <h4>Extend Meergo</h4>
+                        <h4>Building connectors</h4>
                         <ul>
-                            <li>{{ item(`developers/extend/data-types`, `Data types`) }}</li>
-                            <li>{{ item(`developers/extend/connectors/`, `Build a connector`) }}
+                            <li>{{ item(`developers/connectors/data-types`, `Data types`) }}</li>
+                            <li>{{ item(`developers/connectors/data-values`, `Data values`) }}</li>
+                            <li>{{ item(`developers/connectors/settings-and-ui`, `Settings and UI`) }}</li>
+                            <li>{{ item(`developers/connectors/app`, `App connectors`) }}
                                 <ul>
-                                    <li>{{ item(`developers/extend/connectors/app`, `App connectors`) }}
-                                        <ul>
-                                            <li>{{ item(`developers/extend/connectors/app/oauth`, `OAuth`) }}</li>
-                                            <li>{{ item(`developers/extend/connectors/app/backoff`, `Backoff`) }}</li>
-                                            <li>{{ item(`developers/extend/connectors/app/users-and-groups`, `Users and groups`) }}</li>
-                                            <li>{{ item(`developers/extend/connectors/app/dispatch-events`, `Dispatch events`) }}</li>
-                                        </ul>
-                                    </li>
-                                    <li>{{ item(`developers/extend/connectors/database`, `Database connectors`) }}</li>
-                                    <li>{{ item(`developers/extend/connectors/file`, `File connectors`) }}</li>
-                                    <li>{{ item(`developers/extend/connectors/file-storage`, `File Storage connectors`) }}</li>
-                                    <li>{{ item(`developers/extend/connectors/settings-and-ui`, `Settings and UI`) }}</li>
-                                    <li>{{ item(`developers/extend/connectors/data-values`, `Data values`) }}</li>
+                                    <li>{{ item(`developers/connectors/app/oauth`, `OAuth`) }}</li>
+                                    <li>{{ item(`developers/connectors/app/backoff`, `Backoff`) }}</li>
+                                    <li>{{ item(`developers/connectors/app/users-and-groups`, `Users and groups`) }}</li>
+                                    <li>{{ item(`developers/connectors/app/dispatch-events`, `Dispatch events`) }}</li>
                                 </ul>
                             </li>
-                            <li>{{ item(`developers/extend/telemetry`, `Telemetry`) }}</li>
+                            <li>{{ item(`developers/connectors/database`, `Database connectors`) }}</li>
+                            <li>{{ item(`developers/connectors/file`, `File connectors`) }}</li>
+                            <li>{{ item(`developers/connectors/file-storage`, `File Storage connectors`) }}</li>
                         </ul>
                     </li>
                     {% else if hasPrefix(filepath, "api/") %}
@@ -214,6 +209,7 @@
                         </ul>
                     </li>
                     <li>{{ item(`data-warehouse`, `Data Warehouse`) }}</li>
+                    <li>{{ item(`telemetry`, `Telemetry`) }}</li>
                     {% end if %}
                 </ul>
             </nav>

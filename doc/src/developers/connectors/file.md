@@ -2,7 +2,6 @@
 {% macro Title string %}File Connectors{% end %}
 {% Article %}
 
-<span>Extend Meergo</span>
 # File connectors
 
 File connectors allow to read and write specific types of files such as Excel, CSV, or Parquet files.

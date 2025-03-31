@@ -2,7 +2,6 @@
 {% macro Title string %}App Connectors{% end %}
 {% Article %}
 
-<span>Extend Meergo</span>
 # App connectors
 
 App connectors allow to connect to apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and groups and to dispatch events.

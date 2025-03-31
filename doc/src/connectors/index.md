@@ -2,7 +2,7 @@
 {% macro Title string %}Connectors{% end %}
 {% Article %}
 
-<h2>Sources</h2>
+## Sources
 
 <ul class="grid-list">
   <li><a href="sources/mailchimp"> Mailchimp</a></li>
@@ -31,7 +31,7 @@
   <li><a href="sources/python"> Python</a></li>
 </ul>
 
-<h2>Destinations</h2>
+## Destinations
 
 <ul class="grid-list">
   <li><a href="destinations/mailchimp"> Mailchimp</a></li>
@@ -51,3 +51,7 @@
   <li><a href="destinations/snowflake"> Snowflake</a></li>
   <li><a href="destinations/mysql"> MySQL</a></li>
 </ul>
+
+## See also
+
+* See also how to [build connectors](/developers/#building-connectors).

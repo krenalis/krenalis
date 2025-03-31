@@ -6,7 +6,7 @@
 
 Learn how to integrate with Meergo: send events, manage APIs, and create custom connectors with ease. 
 
-### Send events to Meergo:
+### Send events
 
 <ul class="grid-list">
   <li><a href="javascript-sdk"> JavaScript SDK (Browser)</a></li>
@@ -18,9 +18,19 @@ Learn how to integrate with Meergo: send events, manage APIs, and create custom 
   <li><a href="python-sdk"> Python SDK</a></li>
 </ul>
 
-### Create custom connectors:
+### Building connectors
 
-- [App connectors](extend/connectors/app)
-- [Database connectors](extend/connectors/database)
-- [File connectors](extend/connectors/file)
-- [File Storage connectors](./extend/connectors/file-storage)
+Meergo comes with several ready-to-use connectors, but if needed, you can create your own. A connector is basically a Go package that gets compiled along with the Meergo executable.
+
+Creating a new connector involves:
+
+1. Writing the package according to the documentation, based on the type of connector you want to create.
+
+    - [App connectors](connectors/app)
+    - [Database connectors](connectors/database)
+    - [File connectors](connectors/file)
+    - [File Storage connectors](connectors/file-storage)
+
+2. Add the import of the package into the `cmd/meergo/main.go` file.
+3. Build the Meergo executable.
+4. Test the connector.
