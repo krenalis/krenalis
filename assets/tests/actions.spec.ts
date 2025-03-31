@@ -24,11 +24,11 @@ test.afterEach(async ({ page }) => {
 	await logout(page);
 });
 
-test(`Add "Import users" action on Dummy`, async ({ page }) => {
+test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 	const id = await addDummySource(page);
 	await page.goto(`${uiURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
-		hasText: 'Import users',
+		hasText: 'Import customers',
 	});
 
 	await expect(name).toBeVisible();
@@ -57,7 +57,7 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 	{
 		"target": "Users",
 		"eventType": null,
-		"name": "Import users",
+		"name": "Import customers",
 		"enabled": true,
 		"filter": null,
 		"inSchema": {
@@ -112,11 +112,11 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 });
 
-test(`Add "Export users" action on Dummy`, async ({ page }) => {
+test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 	const id = await addDummyDestination(page);
 	await page.goto(`${uiURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
-		hasText: 'Export users',
+		hasText: 'Export customers',
 	});
 
 	await expect(name).toBeVisible();
@@ -164,7 +164,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 	{
 		"target": "Users",
 		"eventType": null,
-		"name": "Export users",
+		"name": "Export customers",
 		"enabled": true,
 		"filter": {
 			"logical": "or",
