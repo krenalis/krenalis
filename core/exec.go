@@ -154,9 +154,9 @@ func (this *Action) exec(ctx context.Context) {
 					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
 					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
 					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
-					" error_step = $5, error_message = $6\n"+
+					" error = $5\n"+
 					"FROM s\n"+
-					"WHERE id = $1", n.ID, this.action.ID, timeSlot, endTime, errorStep, errorMessage)
+					"WHERE id = $1", n.ID, this.action.ID, timeSlot, endTime, errorMessage)
 			if err != nil {
 				return nil, err
 			}

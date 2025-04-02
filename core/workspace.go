@@ -976,7 +976,7 @@ func (this *Workspace) Execution(ctx context.Context, id int) (*Execution, error
 	err := this.core.db.QueryRow(ctx,
 		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
 			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4,"+
-			" e.failed_5, e.error_message\n"+
+			" e.failed_5, e.error\n"+
 			"FROM actions_executions e\n"+
 			"INNER JOIN actions a ON a.id = e.action\n"+
 			"INNER JOIN connections c ON c.id = a.connection\n"+
@@ -1005,7 +1005,7 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 	executions := []*Execution{}
 	err := this.core.db.QueryScan(ctx,
 		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
-			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4, e.failed_5, e.error_message\n"+
+			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4, e.failed_5, e.error\n"+
 			"FROM actions_executions e\n"+
 			"INNER JOIN actions a ON a.id = e.action\n"+
 			"INNER JOIN connections c ON c.id = a.connection\n"+

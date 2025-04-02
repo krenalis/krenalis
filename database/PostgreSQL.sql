@@ -137,8 +137,7 @@ CREATE TABLE actions_executions (
     failed_3 integer NOT NULL DEFAULT 0,
     failed_4 integer NOT NULL DEFAULT 0,
     failed_5 integer NOT NULL DEFAULT 0,
-    error_step smallint,
-    error_message varchar NOT NULL DEFAULT '',
+    error varchar NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 
