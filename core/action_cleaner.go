@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/backoff"
-	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
@@ -42,9 +41,7 @@ const functionDeletionInterval = 10 * time.Minute
 //
 // Action cleaning occurs only when the data warehouse is in Normal mode.
 type actionCleaner struct {
-	db               *db.DB
-	state            *state.State
-	datastore        *datastore.Datastore
+	core             *Core
 	functionProvider transformers.FunctionProvider
 	workspaces       sync.Map // map of workspaces indicating if an operation is in progress
 	actions          sync.Map // map of actions indicating if an operation is in progress
@@ -59,48 +56,46 @@ type actionCleaner struct {
 // newActionCleaner returns a new instance of the action cleaner. There is only
 // one active action cleaner at a time, and it exclusively runs on the leader
 // node.
-func newActionCleaner(db *db.DB, state *state.State, datastore *datastore.Datastore, provider transformers.FunctionProvider) *actionCleaner {
+func newActionCleaner(core *Core, provider transformers.FunctionProvider) *actionCleaner {
 
-	p := &actionCleaner{
-		db:               db,
-		state:            state,
-		datastore:        datastore,
+	c := &actionCleaner{
+		core:             core,
 		functionProvider: provider,
 	}
-	p.close.ctx, p.close.cancel = context.WithCancel(context.Background())
+	c.close.ctx, c.close.cancel = context.WithCancel(context.Background())
 
-	state.Freeze()
-	state.AddListener(p.onDeleteAction)
-	state.AddListener(p.onDeleteConnection)
-	state.AddListener(p.onUpdateAction)
-	state.AddListener(p.onUpdateWarehouse)
-	state.AddListener(p.onUpdateWarehouseMode)
+	core.state.Freeze()
+	core.state.AddListener(c.onDeleteAction)
+	core.state.AddListener(c.onDeleteConnection)
+	core.state.AddListener(c.onUpdateAction)
+	core.state.AddListener(c.onUpdateWarehouse)
+	core.state.AddListener(c.onUpdateWarehouseMode)
 	var workspaces []int
-	for _, ws := range p.state.Workspaces() {
+	for _, ws := range c.core.state.Workspaces() {
 		if ws.NumActionsToPurge() > 0 {
 			workspaces = append(workspaces, ws.ID)
 		}
 	}
 	var actions []int
-	for _, action := range p.state.Actions() {
+	for _, action := range c.core.state.Actions() {
 		if properties := action.PropertiesToUnset(); len(properties) > 0 {
 			actions = append(actions, action.ID)
 		}
 	}
-	state.Unfreeze()
+	core.state.Unfreeze()
 	for _, ws := range workspaces {
-		go p.purgeWorkspace(ws)
+		go c.purgeWorkspace(ws)
 	}
 	for _, action := range actions {
-		go p.unsetIdentityProperties(action)
+		go c.unsetIdentityProperties(action)
 	}
 
 	// Start a goroutine to delete functions that have been discontinued.
 	if provider != nil {
-		go p.deleteDiscontinuedFunctions()
+		go c.deleteDiscontinuedFunctions()
 	}
 
-	return p
+	return c
 }
 
 // Close closes the action cleaner, ensuring the completion of all ongoing
@@ -153,7 +148,7 @@ func (c *actionCleaner) deleteDiscontinuedFunctions() {
 		err := c.complete(func() error {
 			// Read the functions. These are the discontinued ones from over ten
 			// minutes ago, with no actions still using them.
-			rows, err := c.db.Query(c.close.ctx, "SELECT f.id\n"+
+			rows, err := c.core.db.Query(c.close.ctx, "SELECT f.id\n"+
 				"FROM discontinued_functions AS f\n"+
 				"LEFT JOIN actions_executions AS e ON f.id = e.function AND e.end_time IS NULL\n"+
 				"WHERE f.discontinued_at < $1 AND e.id IS NULL",
@@ -191,7 +186,7 @@ func (c *actionCleaner) deleteDiscontinuedFunctions() {
 			bo := backoff.New(1000)
 			bo.SetCap(functionDeletionInterval)
 			for bo.Next(c.close.ctx) {
-				_, err = c.db.Exec(c.close.ctx,
+				_, err = c.core.db.Exec(c.close.ctx,
 					fmt.Sprintf("DELETE FROM discontinued_functions WHERE id IN %s", db.Quote(deleted)))
 				if err == nil {
 					break
@@ -242,7 +237,7 @@ func (c *actionCleaner) onUpdateAction(n state.UpdateAction) {
 	if len(n.PropertiesToUnset) == 0 {
 		return
 	}
-	a, _ := c.state.Action(n.ID)
+	a, _ := c.core.state.Action(n.ID)
 	ws := a.Connection().Workspace()
 	if ws.Warehouse.Mode != state.Normal {
 		return
@@ -255,7 +250,7 @@ func (c *actionCleaner) onUpdateWarehouse(n state.UpdateWarehouse) {
 	if n.Mode != state.Normal {
 		return
 	}
-	if ws, _ := c.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
+	if ws, _ := c.core.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
 		return
 	}
 	go c.purgeWorkspace(n.Workspace)
@@ -266,7 +261,7 @@ func (c *actionCleaner) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	if n.Mode != state.Normal {
 		return
 	}
-	ws, _ := c.state.Workspace(n.Workspace)
+	ws, _ := c.core.state.Workspace(n.Workspace)
 	if ws.NumActionsToPurge() > 0 {
 		go c.purgeWorkspace(n.Workspace)
 	}
@@ -292,7 +287,7 @@ func (c *actionCleaner) purgeWorkspace(id int) {
 	for bo.Next(c.close.ctx) {
 
 		// Purge the workspace.
-		ws, ok := c.state.Workspace(id)
+		ws, ok := c.core.state.Workspace(id)
 		if !ok {
 			return
 		}
@@ -305,7 +300,7 @@ func (c *actionCleaner) purgeWorkspace(id int) {
 		}
 		err := c.complete(func() error {
 
-			store := c.datastore.Store(id)
+			store := c.core.datastore.Store(id)
 			err := store.PurgeActions(c.close.ctx, actions)
 			if err != nil {
 				return err
@@ -330,7 +325,7 @@ func (c *actionCleaner) purgeWorkspace(id int) {
 			b.WriteString("\nWHERE id = $1 AND actions_to_purge IS NOT NULL\nRETURNING actions_to_purge")
 			update := b.String()
 
-			err = c.state.Transaction(c.close.ctx, func(tx *db.Tx) (any, error) {
+			err = c.core.state.Transaction(c.close.ctx, func(tx *db.Tx) (any, error) {
 				var actions []int
 				err := tx.QueryRow(c.close.ctx, update, id).Scan(&actions)
 				if err != nil {
@@ -365,7 +360,7 @@ func (c *actionCleaner) unsetIdentityProperties(id int) {
 	bo := backoff.New(backoffBase)
 	for bo.Next(c.close.ctx) {
 
-		action, ok := c.state.Action(id)
+		action, ok := c.core.state.Action(id)
 		if !ok {
 			return
 		}
@@ -381,7 +376,7 @@ func (c *actionCleaner) unsetIdentityProperties(id int) {
 		// Unset the properties.
 		err := c.complete(func() error {
 
-			store := c.datastore.Store(action.Connection().Workspace().ID)
+			store := c.core.datastore.Store(action.Connection().Workspace().ID)
 			err := store.UnsetIdentityProperties(c.close.ctx, action.ID, paths)
 			if err != nil {
 				return err
@@ -405,7 +400,7 @@ func (c *actionCleaner) unsetIdentityProperties(id int) {
 			b.WriteString("\nWHERE id = $1\nRETURNING properties_to_unset")
 			update := b.String()
 
-			err = c.state.Transaction(c.close.ctx, func(tx *db.Tx) (any, error) {
+			err = c.core.state.Transaction(c.close.ctx, func(tx *db.Tx) (any, error) {
 				err := tx.QueryRow(c.close.ctx, update, id).Scan(&n.Properties)
 				if err != nil {
 					if err == sql.ErrNoRows {

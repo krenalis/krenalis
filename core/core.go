@@ -203,7 +203,7 @@ func New(conf *Config) (*Core, error) {
 	core.events.observer = core.events.collector.Observer()
 
 	// Create the action cleaner.
-	core.actionCleaner = newActionCleaner(core.db, core.state, core.datastore, core.functionProvider)
+	core.actionCleaner = newActionCleaner(core, core.functionProvider)
 
 	// Create the action scheduler.
 	core.actionScheduler = newActionScheduler(core)
