@@ -1565,15 +1565,9 @@ const FullscreenTransformation = ({
 
 		let inSchema = actionToSet.inSchema;
 
-		// Only send the sample's properties that are actually present in the
-		// input schema of the "ActionToSet".
-		let s = {};
-		for (const k in sample) {
-			const isInSchema = actionToSet.inSchema.properties.findIndex((prop) => prop.name === k) !== -1;
-			if (isInSchema) {
-				s[k] = sample[k];
-			}
-		}
+		// Only send the sample's properties that are actually present
+		// in the input schema of the "ActionToSet".
+		let s = buildFilteredSample(flattenSchema(actionToSet.inSchema), sample);
 
 		let purpose: TransformationPurpose =
 			action.exportMode != null && action.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
@@ -2653,6 +2647,48 @@ const TransformationProperty = ({
 		</div>
 	);
 };
+
+function buildFilteredSample(flatSchema: TransformedMapping, sample: Sample): Record<string, any> {
+	const result: Record<string, any> = {};
+	const keys = Object.keys(flatSchema);
+	for (const key of keys) {
+		if (flatSchema[key].type === 'object') {
+			continue;
+		}
+		const value = getValueFromPath(sample, key);
+		if (value !== undefined) {
+			setValueAtPath(result, key, value);
+		}
+	}
+	return result;
+}
+
+function getValueFromPath(obj: any, path: string): any {
+	const keys = path.split('.');
+	let current = obj;
+	for (const key of keys) {
+		if (current == null || typeof current !== 'object') {
+			return undefined;
+		}
+		current = current[key];
+	}
+	return current;
+}
+
+function setValueAtPath(obj: any, path: string, value: any): void {
+	const keys = path.split('.');
+	let current = obj;
+	let i = 0;
+	for (const k of keys) {
+		if (i === keys.length - 1) {
+			current[k] = value;
+		} else {
+			current[k] = current[k] || {};
+			current = current[k];
+		}
+		i++;
+	}
+}
 
 function getSelectedChildrenProperties(
 	parentPath: string,

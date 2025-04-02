@@ -422,11 +422,13 @@ const flattenSchema = (typ: ObjectType | ArrayType | MapType): TransformedMappin
 		return flattenedSubProperties;
 	};
 
+	const clonedTyp = structuredClone(typ);
+
 	let properties: Property[] = [];
-	if (typ.kind === 'object') {
-		properties = typ.properties;
+	if (clonedTyp.kind === 'object') {
+		properties = clonedTyp.properties;
 	} else {
-		const t = typ as ArrayType | MapType;
+		const t = clonedTyp as ArrayType | MapType;
 		const elementTyp = t.elementType as ObjectType;
 		properties = elementTyp.properties;
 	}
