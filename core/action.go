@@ -10,6 +10,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"maps"
 	"slices"
@@ -837,6 +838,66 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 // app returns the app of the action.
 func (this *Action) app() *connectors.App {
 	return this.core.connectors.App(this.action.Connection())
+}
+
+// createExecution creates an execution for the action and returns its
+// identifier.
+//
+// It returns an errors.NotFoundError error if the action does not exist
+// anymore.
+// It returns an errors.UnprocessableError error with code ExecutionInProgress
+// if the action is already in progress.
+func (this *Action) createExecution(ctx context.Context, incremental *bool) (int, error) {
+
+	n := state.ExecuteAction{
+		Action:    this.action.ID,
+		StartTime: time.Now().UTC(),
+	}
+
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var function string
+		var inc, executing bool
+		var cursor time.Time
+		err := tx.QueryRow(ctx, "SELECT a.transformation_id, a.incremental, a.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
+			"FROM actions AS a\n"+
+			"LEFT JOIN actions_executions AS e ON a.id = e.action\n"+
+			"WHERE a.id = $1\n"+
+			"ORDER BY e.id DESC\n"+
+			"LIMIT 1", n.Action).Scan(&function, &inc, &cursor, &executing)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, errors.NotFound("action %d does not exist", n.Action)
+			}
+			return nil, err
+		}
+		if executing {
+			return nil, errors.Unprocessable(ExecutionInProgress, "execution of action %d is in progress", this.action.ID)
+		}
+		if incremental == nil {
+			n.Incremental = inc
+		} else {
+			n.Incremental = *incremental
+		}
+		if n.Incremental {
+			n.Cursor = cursor
+		}
+		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, function, cursor, incremental, start_time)\n"+
+			"VALUES ($1, $2, $3, $4, $5)\nRETURNING id", n.Action, function, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
+		if err != nil {
+			if db.IsForeignKeyViolation(err) {
+				if db.ErrConstraintName(err) == "actions_executions_action_fkey" {
+					err = errors.NotFound("action %d does not exit", n.Action)
+				}
+			}
+			return nil, err
+		}
+		return n, nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return n.ID, nil
 }
 
 // database returns the database of the action.

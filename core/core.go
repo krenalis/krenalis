@@ -39,6 +39,7 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -773,53 +774,225 @@ func (core *Core) onExecuteAction(n state.ExecuteAction) {
 	core.tryStartActionExecution(n.Action)
 }
 
+// actionError represents an action error.
+type actionError struct {
+	step metrics.Step
+	err  error
+}
+
+func newActionError(step metrics.Step, err error) *actionError {
+	return &actionError{step, err}
+}
+
+func (err actionError) Error() string {
+	return err.err.Error()
+}
+
 // tryStartActionExecution attempts to start an action execution.
 // It returns immediately and spawns a new goroutine to handle the execution.
 func (core *Core) tryStartActionExecution(actionID int) {
+
 	core.close.Add(1)
 	go func() {
 		defer core.close.Done()
+
+		ctx := core.close.ctx
+
 		var action *state.Action
-		// Implement exponential backoff in case of a database error.
+		var execution *state.ActionExecution
+
+		var ok bool
+		action, ok = core.state.Action(actionID)
+		if !ok {
+			return
+		}
+		execution, ok = action.Execution()
+		if !ok {
+			return
+		}
+		if _, ok := execution.Node(); ok {
+			return
+		}
+
+		// Attempt to acquire the execution. If already acquired by another node, return early.
 		bo := backoff.New(200)
-		bo.SetCap(5 * time.Second)
-		for bo.Next(core.close.ctx) {
-			var ok bool
-			action, ok = core.state.Action(actionID)
-			if !ok {
-				return
-			}
-			execution, ok := action.Execution()
-			if !ok {
-				return
-			}
-			if _, ok := execution.Node(); ok {
-				return
-			}
-			res, err := core.db.Exec(core.close.ctx,
-				"UPDATE actions_executions\nSET node = $1\nWHERE id = $2 AND node IS NULL",
-				core.state.ID(), execution.ID)
+		for bo.Next(ctx) {
+			var node uuid.UUID
+			err := core.db.QueryRow(core.close.ctx,
+				"UPDATE actions_executions\nSET node = $1\nWHERE id = $2 AND node IS NULL RETURNING node",
+				core.state.ID(), execution.ID).Scan(&node)
 			if err != nil {
-				if err := core.close.ctx.Err(); err != nil {
+				if err == sql.ErrNoRows {
+					// The execution no longer exists.
 					return
 				}
-				slog.Error(fmt.Sprintf("core: failed to start action execution, retrying after %s", bo.WaitTime()), "error", err)
+				if err := ctx.Err(); err != nil {
+					// The context has been canceled.
+					break
+				}
+				slog.Error(fmt.Sprintf("core: cannot start action execution, retrying after %s", bo.WaitTime()), "error", err)
 				continue
 			}
-			if res.RowsAffected() == 0 {
+			if node != core.state.ID() {
+				// Another node acquired the execution.
 				return
 			}
 			break
 		}
-		if err := core.close.ctx.Err(); err != nil {
+		if err := ctx.Err(); err != nil {
+			// The context has been canceled.
+			// TODO(marco): What happens if the node successfully assigns itself the execution, but the context gets canceled?
 			return
 		}
-		// Start the action execution.
+
+		// Prepare the execution metrics.
+		timeSlot := metrics.TimeSlotFromTime(execution.StartTime)
+		bo = backoff.New(200)
+		for bo.Next(ctx) {
+			_, err := core.db.Exec(ctx,
+				// If statistics from previous executions of the same action are available,
+				// they are subtracted from the current execution's statistics. This ensures
+				// that when all slot statistics are merged into those of this execution,
+				// the resulting data will be accurate and consistent.
+				"WITH s AS (\n"+
+					"	SELECT -passed_0 as passed_0, -passed_1 as passed_1, -passed_2 as passed_2, -passed_3 as passed_3,"+
+					" -passed_4 as passed_4, -passed_5 as passed_5, -failed_0 as failed_0, -failed_1 as failed_1,"+
+					" -failed_2 as failed_2, -failed_3 as failed_3, -failed_4 as failed_4, -failed_5 as failed_5\n"+
+					"	FROM actions_metrics\n"+
+					"	WHERE action = $2 AND timeslot = $3\n"+
+					")\n"+
+					"UPDATE actions_executions\n"+
+					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
+					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
+					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
+					"FROM s\n"+
+					"WHERE id = $1", execution.ID, action.ID, timeSlot)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					// The execution no longer exists.
+					return
+				}
+				if err := ctx.Err(); err != nil {
+					// The context has been canceled.
+					break
+				}
+				slog.Error(fmt.Sprintf("core: cannot start action execution, retrying after %s", bo.WaitTime()), "error", err)
+				continue
+			}
+			break
+		}
+		if err := ctx.Err(); err != nil {
+			// The context has been canceled.
+			// TODO(marco): What happens if the node successfully assigns itself the execution, but the context gets canceled?
+			return
+		}
+
+		// Starts the execution.
 		c := action.Connection()
-		store := core.datastore.Store(c.Workspace().ID)
+		ws := c.Workspace()
+		store := core.datastore.Store(ws.ID)
 		connection := &Connection{core: core, store: store, connection: c}
 		a := &Action{core: core, action: action, connection: connection}
-		a.exec(core.close.ctx)
+
+		var err error
+		if c.Role == state.Source {
+			err = a.importUsers(ctx)
+		} else {
+			err = a.exportUsers(ctx)
+		}
+
+		endTime := time.Now().UTC()
+
+		// Handle the execution error, if any.
+		var errorStep = metrics.ReceiveStep
+		var errorMessage string
+		if err != nil {
+			if actionErr, ok := err.(*actionError); ok {
+				errorStep = actionErr.step
+				errorMessage = err.Error()
+			} else {
+				if err = ctx.Err(); err != nil {
+					errorMessage = "execution has been cancelled"
+				} else {
+					errorMessage = "an internal error has occurred"
+					slog.Error("core: cannot execute action", "action", action.ID, "execution", execution.ID, "err", err)
+				}
+			}
+			core.metrics.Failed(errorStep, actionID, 0, errorMessage)
+		}
+
+		// Waits for the metrics to be saved.
+		core.metrics.WaitStore()
+
+		n := state.EndActionExecution{
+			ID:     execution.ID,
+			Action: action.ID,
+			Health: state.Healthy,
+		}
+
+		// Mark the execution as completed, summarise the metrics, and send the end notification.
+		bo = backoff.New(200)
+		for bo.Next(ctx) {
+			err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+				res, err := core.db.Exec(ctx,
+					"WITH s AS (\n"+
+						"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
+						" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
+						" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
+						" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
+						" FROM actions_metrics\n"+
+						"\tWHERE action = $2 AND timeslot >= $3\n"+
+						")\n"+
+						"UPDATE actions_executions AS e\n"+
+						"SET function = '', end_time = $4,"+
+						" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
+						" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
+						" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
+						" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
+						" error = $5\n"+
+						"FROM s\n"+
+						"WHERE id = $1 AND end_time IS NULL", execution.ID, action.ID, timeSlot, endTime, errorMessage)
+				if err != nil {
+					return nil, err
+				}
+				// Do nothing if the execution no longer exists or has already been closed.
+				if res.RowsAffected() == 0 {
+					return nil, nil
+				}
+				// Update the action's cursor.
+				var exists bool
+				err = tx.QueryRow(ctx, "UPDATE actions SET cursor = (SELECT cursor FROM actions_executions WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
+					n.ID, n.Health, action.ID).Scan(&exists)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						// The action does not exist anymore.
+						return nil, nil
+					}
+					return nil, err
+				}
+				return n, nil
+			})
+			if err != nil {
+				if err := ctx.Err(); err != nil {
+					// The context has been canceled.
+					// TODO(marco): What happens if the node successfully assigns itself the execution, but the context gets canceled?
+					return
+				}
+				slog.Error(fmt.Sprintf("core: cannot end action execution, retrying after %s", bo.WaitTime()), "error", err)
+				continue
+			}
+			break
+		}
+
+		// Start the Identity Resolution, if necessary.
+		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {
+			err = store.StartIdentityResolution(ctx)
+			if err != nil {
+				slog.Error("core: cannot start Identity Resolution at the end of import", "action", action.ID, "execution", execution.ID, "err", err)
+				return
+			}
+		}
+
 	}()
 }
 
