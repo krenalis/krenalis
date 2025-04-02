@@ -163,7 +163,7 @@ func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTim
 		}
 		customers = append(customers, meergo.Record{
 			ID:             id,
-			Properties:     props,
+			Properties:     deepClone(props),
 			LastChangeTime: customersLastChangeTimes[id],
 		})
 	}
@@ -432,4 +432,12 @@ func (dummy *Dummy) customerExportRandomlyFails() bool {
 	default:
 		return rand.IntN(100) < failPerc
 	}
+}
+
+// deepClone returns a deep clone of the provided properties.
+func deepClone(properties map[string]interface{}) map[string]interface{} {
+	bytes, _ := json.Marshal(properties)
+	var clone map[string]any
+	_ = json.Unmarshal(bytes, &clone)
+	return clone
 }
