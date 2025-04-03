@@ -40,7 +40,7 @@ const ActionIssues = ({ issues, type, role, show = true, slot }: ActionIssuesPro
 		>
 			<SlButton variant='warning' slot='trigger' caret>
 				<SlIcon slot='prefix' name='exclamation-triangle' />
-				{`${count === 1 ? '1 issue' : count + ' issues'} with this ${labelTarget}`}
+				{`${count === 1 ? '1 issue' : count + ' issues'} with the ${labelTarget}`}
 			</SlButton>
 			<div className='action__issues-list'>
 				{issues.map((issue) => {
