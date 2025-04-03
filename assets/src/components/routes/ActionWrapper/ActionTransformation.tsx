@@ -2489,7 +2489,7 @@ const TransformationProperty = ({
 	hideCheckbox = false,
 }: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
-	const { isImport, actionType } = useContext(ActionContext);
+	const { isImport, actionType, action } = useContext(ActionContext);
 
 	let path = property.name;
 	if (parentName) {
@@ -2570,9 +2570,9 @@ const TransformationProperty = ({
 	if (language === '') {
 		typeName = typeToString(property.type);
 	} else if (language === 'Python') {
-		typeName = toPythonType(property.type, property.nullable);
+		typeName = toPythonType(property.type, action.transformation.function.preserveJSON, property.nullable);
 	} else {
-		typeName = toJavascriptType(property.type, property.nullable);
+		typeName = toJavascriptType(property.type, action.transformation.function.preserveJSON, property.nullable);
 	}
 
 	return (
@@ -2738,7 +2738,7 @@ function typeToString(type: Type) {
 	return type.kind;
 }
 
-function toJavascriptType(type: Type, nullable?: boolean) {
+function toJavascriptType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 	let t: string;
 
 	const kind = type.kind;
@@ -2772,7 +2772,11 @@ function toJavascriptType(type: Type, nullable?: boolean) {
 			t = 'string';
 			break;
 		case 'json':
-			t = 'string (JSON)';
+			if (preserveJSON) {
+				t = 'string (JSON)';
+			} else {
+				t = 'any';
+			}
 			break;
 		case 'inet':
 			t = 'string';
@@ -2781,14 +2785,14 @@ function toJavascriptType(type: Type, nullable?: boolean) {
 			t = 'string';
 			break;
 		case 'array':
-			const arrayElementType = toJavascriptType(type.elementType);
+			const arrayElementType = toJavascriptType(type.elementType, preserveJSON);
 			t = `${arrayElementType}[]`;
 			break;
 		case 'object':
 			t = 'object';
 			break;
 		case 'map':
-			const mapElementType = toJavascriptType(type.elementType);
+			const mapElementType = toJavascriptType(type.elementType, preserveJSON);
 			t = `object with ${mapElementType} values`;
 			break;
 		default:
@@ -2802,7 +2806,7 @@ function toJavascriptType(type: Type, nullable?: boolean) {
 	return t;
 }
 
-function toPythonType(type: Type, nullable?: boolean) {
+function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 	let t: string;
 
 	const kind = type.kind;
@@ -2836,7 +2840,11 @@ function toPythonType(type: Type, nullable?: boolean) {
 			t = 'uuid.UUID';
 			break;
 		case 'json':
-			t = 'str (JSON)';
+			if (preserveJSON) {
+				t = 'str (JSON)';
+			} else {
+				t = 'Any';
+			}
 			break;
 		case 'inet':
 			t = 'str';
@@ -2845,14 +2853,14 @@ function toPythonType(type: Type, nullable?: boolean) {
 			t = 'str';
 			break;
 		case 'array':
-			const arrayElementType = toPythonType(type.elementType);
+			const arrayElementType = toPythonType(type.elementType, preserveJSON);
 			t = `list[${arrayElementType}]`;
 			break;
 		case 'object':
 			t = 'dict';
 			break;
 		case 'map':
-			const mapElementType = toPythonType(type.elementType);
+			const mapElementType = toPythonType(type.elementType, preserveJSON);
 			t = `dict[str, ${mapElementType}]`;
 			break;
 		default:
