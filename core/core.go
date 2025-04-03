@@ -841,9 +841,27 @@ func (core *Core) tryStartActionExecution(actionID int) {
 		}
 		if err := ctx.Err(); err != nil {
 			// The context has been canceled.
-			// TODO(marco): What happens if the node successfully assigns itself the execution, but the context gets canceled?
 			return
 		}
+
+		// Ping the execution.
+		pingCtx, stopPing := context.WithCancel(ctx)
+		go func(id int) {
+			ticker := time.NewTicker(5 * time.Second)
+			for {
+				select {
+				case <-ticker.C:
+					pingTime := time.Now().UTC()
+					_, err := core.db.Exec(pingCtx, "UPDATE actions_executions SET ping_time = $1 WHERE id = $2", pingTime, id)
+					if err != nil && pingCtx.Err() == nil {
+						slog.Error("core: cannot update action execution ping time", "err", err)
+					}
+				case <-pingCtx.Done():
+					break
+				}
+			}
+		}(execution.ID)
+		defer stopPing()
 
 		// Prepare the execution metrics.
 		timeSlot := metrics.TimeSlotFromTime(execution.StartTime)
@@ -901,88 +919,11 @@ func (core *Core) tryStartActionExecution(actionID int) {
 			err = a.exportUsers(ctx)
 		}
 
-		endTime := time.Now().UTC()
+		// Mark the execution as ended.
+		a.endExecution(err)
 
-		// Handle the execution error, if any.
-		var errorStep = metrics.ReceiveStep
-		var errorMessage string
-		if err != nil {
-			if actionErr, ok := err.(*actionError); ok {
-				errorStep = actionErr.step
-				errorMessage = err.Error()
-			} else {
-				if err = ctx.Err(); err != nil {
-					errorMessage = "execution has been cancelled"
-				} else {
-					errorMessage = "an internal error has occurred"
-					slog.Error("core: cannot execute action", "action", action.ID, "execution", execution.ID, "err", err)
-				}
-			}
-			core.metrics.Failed(errorStep, actionID, 0, errorMessage)
-		}
-
-		// Waits for the metrics to be saved.
-		core.metrics.WaitStore()
-
-		n := state.EndActionExecution{
-			ID:     execution.ID,
-			Action: action.ID,
-			Health: state.Healthy,
-		}
-
-		// Mark the execution as completed, summarise the metrics, and send the end notification.
-		bo = backoff.New(200)
-		for bo.Next(ctx) {
-			err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-				res, err := core.db.Exec(ctx,
-					"WITH s AS (\n"+
-						"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
-						" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
-						" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
-						" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
-						" FROM actions_metrics\n"+
-						"\tWHERE action = $2 AND timeslot >= $3\n"+
-						")\n"+
-						"UPDATE actions_executions AS e\n"+
-						"SET function = '', end_time = $4,"+
-						" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
-						" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
-						" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
-						" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
-						" error = $5\n"+
-						"FROM s\n"+
-						"WHERE id = $1 AND end_time IS NULL", execution.ID, action.ID, timeSlot, endTime, errorMessage)
-				if err != nil {
-					return nil, err
-				}
-				// Do nothing if the execution no longer exists or has already been closed.
-				if res.RowsAffected() == 0 {
-					return nil, nil
-				}
-				// Update the action's cursor.
-				var exists bool
-				err = tx.QueryRow(ctx, "UPDATE actions SET cursor = (SELECT cursor FROM actions_executions WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
-					n.ID, n.Health, action.ID).Scan(&exists)
-				if err != nil {
-					if err == sql.ErrNoRows {
-						// The action does not exist anymore.
-						return nil, nil
-					}
-					return nil, err
-				}
-				return n, nil
-			})
-			if err != nil {
-				if err := ctx.Err(); err != nil {
-					// The context has been canceled.
-					// TODO(marco): What happens if the node successfully assigns itself the execution, but the context gets canceled?
-					return
-				}
-				slog.Error(fmt.Sprintf("core: cannot end action execution, retrying after %s", bo.WaitTime()), "error", err)
-				continue
-			}
-			break
-		}
+		// Stop pinning as it is no longer required
+		stopPing()
 
 		// Start the Identity Resolution, if necessary.
 		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {

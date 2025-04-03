@@ -124,6 +124,7 @@ CREATE TABLE actions_executions (
     incremental boolean NOT NULL DEFAULT FALSE,
     cursor timestamp NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     start_time timestamp NOT NULL,
+    ping_time timestamp NOT NULL,
     end_time timestamp,
     passed_0 integer NOT NULL DEFAULT 0,
     passed_1 integer NOT NULL DEFAULT 0,

@@ -12,17 +12,20 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"maps"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/json"
@@ -881,8 +884,8 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 		if n.Incremental {
 			n.Cursor = cursor
 		}
-		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, function, cursor, incremental, start_time)\n"+
-			"VALUES ($1, $2, $3, $4, $5)\nRETURNING id", n.Action, function, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
+		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, function, cursor, incremental, start_time, ping_time)\n"+
+			"VALUES ($1, $2, $3, $4, $5, $5)\nRETURNING id", n.Action, function, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				if db.ErrConstraintName(err) == "actions_executions_action_fkey" {
@@ -906,6 +909,104 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 func (this *Action) database() *connectors.Database {
 	a := this.action
 	return this.core.connectors.Database(a.Connection())
+}
+
+// endExecution marks an action execution as completed, setting the specified
+// error if any.
+func (this *Action) endExecution(err error) {
+
+	ctx := this.core.close.ctx
+
+	execution, ok := this.action.Execution()
+	if !ok {
+		return
+	}
+
+	endTime := time.Now().UTC()
+
+	// Handle the execution error, if any.
+	var errorStep = metrics.ReceiveStep
+	var errorMessage string
+	if err != nil {
+		if actionErr, ok := err.(*actionError); ok {
+			errorStep = actionErr.step
+			errorMessage = err.Error()
+		} else {
+			if ctx.Err() != nil {
+				errorMessage = "execution has been cancelled"
+			} else {
+				errorMessage = "an internal error has occurred"
+				slog.Error("core: cannot execute action", "action", this.action.ID, "execution", execution.ID, "err", err)
+			}
+		}
+		this.core.metrics.Failed(errorStep, this.action.ID, 1, errorMessage)
+	}
+
+	// Waits for the metrics to be saved.
+	this.core.metrics.WaitStore()
+
+	n := state.EndActionExecution{
+		ID:     execution.ID,
+		Action: this.action.ID,
+		Health: state.Healthy,
+	}
+
+	timeSlot := metrics.TimeSlotFromTime(execution.StartTime)
+
+	// Mark the execution as completed, summarise the metrics, and send the end notification.
+	bo := backoff.New(200)
+	for bo.Next(ctx) {
+		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			res, err := this.core.db.Exec(ctx,
+				"WITH s AS (\n"+
+					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
+					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
+					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
+					" FROM actions_metrics\n"+
+					"\tWHERE action = $2 AND timeslot >= $3\n"+
+					")\n"+
+					"UPDATE actions_executions AS e\n"+
+					"SET function = '', end_time = $4,"+
+					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
+					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
+					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
+					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
+					" error = $5\n"+
+					"FROM s\n"+
+					"WHERE id = $1 AND end_time IS NULL", execution.ID, this.action.ID, timeSlot, endTime, errorMessage)
+			if err != nil {
+				return nil, err
+			}
+			// Do nothing if the execution no longer exists or has already been closed.
+			if res.RowsAffected() == 0 {
+				return nil, nil
+			}
+			// Update the action's cursor.
+			var exists bool
+			err = tx.QueryRow(ctx, "UPDATE actions SET cursor = (SELECT cursor FROM actions_executions WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
+				n.ID, n.Health, this.action.ID).Scan(&exists)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					// The action does not exist anymore.
+					return nil, nil
+				}
+				return nil, err
+			}
+			return n, nil
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				// The context has been canceled.
+				return
+			}
+			slog.Error(fmt.Sprintf("core: cannot end action execution, retrying after %s", bo.WaitTime()), "error", err)
+			continue
+		}
+		break
+	}
+
+	return
 }
 
 // file returns the file of the action.

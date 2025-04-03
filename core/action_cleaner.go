@@ -10,6 +10,7 @@ package core
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/db"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 )
@@ -38,6 +40,7 @@ const functionDeletionInterval = 10 * time.Minute
 //   - Unsets identity properties in the data warehouse that are no longer
 //     transformed.
 //   - Deletes discontinued functions from its function provider.
+//   - Terminates orphaned action executions.
 //
 // Action cleaning occurs only when the data warehouse is in Normal mode.
 type actionCleaner struct {
@@ -94,6 +97,9 @@ func newActionCleaner(core *Core, provider transformers.FunctionProvider) *actio
 	if provider != nil {
 		go c.deleteDiscontinuedFunctions()
 	}
+
+	// Start a goroutine to terminate orphaned action executions.
+	go c.terminateOrphanedActionExecutions()
 
 	return c
 }
@@ -346,6 +352,49 @@ func (c *actionCleaner) purgeWorkspace(id int) {
 
 	}
 
+}
+
+// terminateOrphanedActionExecutions starts a termination task for action
+// executions whose node is no longer running or unresponsive.
+// It must be called in its own goroutine.
+//
+// An action execution is considered orphaned if it is not yet terminated, and
+// its last ping time is older than 15 seconds.
+func (c *actionCleaner) terminateOrphanedActionExecutions() {
+	actionErr := newActionError(metrics.ReceiveStep, errors.New("action has been terminated because the node became unresponsive"))
+	ctx := c.close.ctx
+	tick := time.NewTicker(15 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		pingTime := time.Now().UTC().Add(-15 * time.Second)
+		err := c.core.db.QueryScan(ctx, "SELECT action FROM actions_executions WHERE end_time IS NULL AND ping_time < $1",
+			pingTime, func(rows *db.Rows) error {
+				var actionID int
+				for rows.Next() {
+					if err := rows.Scan(&actionID); err != nil {
+						return err
+					}
+					action, ok := c.core.state.Action(actionID)
+					if !ok {
+						continue
+					}
+					c2 := action.Connection()
+					ws := c2.Workspace()
+					store := c.core.datastore.Store(ws.ID)
+					connection := &Connection{core: c.core, store: store, connection: c2}
+					a := &Action{core: c.core, action: action, connection: connection}
+					go a.endExecution(actionErr)
+				}
+				return nil
+			})
+		if err != nil && ctx.Err() == nil {
+			slog.Error("core: cannot terminate orphaned action executions", "err", err)
+		}
+	}
 }
 
 // unsetIdentityProperties unsets the identity properties that are no longer
