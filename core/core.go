@@ -857,7 +857,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 						slog.Error("core: cannot update action execution ping time", "err", err)
 					}
 				case <-pingCtx.Done():
-					break
+					return
 				}
 			}
 		}(execution.ID)
@@ -922,7 +922,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 		// Mark the execution as ended.
 		a.endExecution(err)
 
-		// Stop pinning as it is no longer required
+		// Stop pinging as it is no longer required.
 		stopPing()
 
 		// Start the Identity Resolution, if necessary.
