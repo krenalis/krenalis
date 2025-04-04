@@ -135,7 +135,6 @@ func (iw *BatchIdentityWriter) Cancel(ctx context.Context) {
 	defer stop()
 	// Wait for the flushes to terminate.
 	iw.close.Wait()
-	return
 }
 
 // Close closes the writer, ensuring the completion of all pending or ongoing
