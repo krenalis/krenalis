@@ -699,9 +699,9 @@ const TransformationBox = ({
 
 	useEffect(() => {
 		if (transformationType === 'mappings') {
-			firstValue.current = JSON.parse(JSON.stringify(action.transformation.mapping));
+			firstValue.current = structuredClone(action.transformation.mapping);
 		} else {
-			firstValue.current = JSON.parse(JSON.stringify(action.transformation.function));
+			firstValue.current = structuredClone(action.transformation.function);
 		}
 	}, [transformationType, selectedLanguage]);
 

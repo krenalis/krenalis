@@ -280,8 +280,8 @@ const fillUserActionFilters = async (page: Page): Promise<void> => {
 };
 
 const deepCompareActionSchema = (actual: object, expected: object) => {
-	const actualCopy = JSON.parse(JSON.stringify(actual));
-	const expectedCopy = JSON.parse(JSON.stringify(expected));
+	const actualCopy: any = structuredClone(actual);
+	const expectedCopy: any = structuredClone(expected);
 
 	// sort the properties of the action schemas.
 	if (actualCopy.inSchema && actualCopy.inSchema.properties) {
