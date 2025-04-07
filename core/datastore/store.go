@@ -688,7 +688,7 @@ func (store *Store) mustBeOpen() {
 
 // onCreateAction is called when an action of the store's workspace is created.
 //
-// The notification is propagated by the Store.onCreateAction method.
+// The notification is propagated by the Datastore.onCreateAction method.
 func (store *Store) onCreateAction(n state.CreateAction) {
 	store.mu.Lock()
 	for _, iw := range store.eventIdentityWriters {
@@ -701,7 +701,7 @@ func (store *Store) onCreateAction(n state.CreateAction) {
 
 // onDeleteAction is called when an action of the store's workspace is deleted.
 //
-// The notification is propagated by the Store.onDeleteAction method.
+// The notification is propagated by the Datastore.onDeleteAction method.
 func (store *Store) onDeleteAction(n state.DeleteAction) {
 	connection := n.Action().Connection().ID
 	store.mu.Lock()
@@ -716,7 +716,7 @@ func (store *Store) onDeleteAction(n state.DeleteAction) {
 // onDeleteConnection is called when a connection of the store's workspace is
 // deleted.
 //
-// The notification is propagated by the Store.onDeleteConnection method.
+// The notification is propagated by the Datastore.onDeleteConnection method.
 func (store *Store) onDeleteConnection(n state.DeleteConnection) {
 	connection := n.Connection()
 	store.mu.Lock()
@@ -730,7 +730,7 @@ func (store *Store) onDeleteConnection(n state.DeleteConnection) {
 
 // onUpdateAction is called when an action of the store's workspace is updated.
 //
-// The notification is propagated by the Store.onUpdateAction method.
+// The notification is propagated by the Datastore.onUpdateAction method.
 func (store *Store) onUpdateAction(n state.UpdateAction) {
 	store.mu.Lock()
 	iw, ok := store.eventIdentityWriters[n.ID]
@@ -743,7 +743,7 @@ func (store *Store) onUpdateAction(n state.UpdateAction) {
 
 // onUpdateUserSchema is called when the user schema of the store's is updated.
 //
-// The notification is propagated by the Store.onUpdateUserSchema method.
+// The notification is propagated by the Datastore.onUpdateUserSchema method.
 func (store *Store) onUpdateUserSchema(n state.UpdateUserSchema) {
 
 	// Update the user and the identity columns.
