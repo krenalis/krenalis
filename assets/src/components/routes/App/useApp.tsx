@@ -333,12 +333,12 @@ const useApp = (
 			}
 		}
 
-		let link = `connections/${connection.id}/overview`;
+		let link = `connections/${connection.id}/metrics`;
 		if (execution.error) {
 			link += `?failed-execution-action=${actionID}`;
 		}
-		const overviewLink = (
-			<div className='connection-actions__link-to-overview'>
+		const metricsLink = (
+			<div className='connection-actions__link-to-metrics'>
 				Go to{' '}
 				<Link path={link}>
 					<span className='connection-actions__link'>Metrics</span>
@@ -351,7 +351,7 @@ const useApp = (
 			executeActionButtonRefs.current[actionID]?.current?.error(
 				<>
 					{execution.error}
-					{overviewLink}
+					{metricsLink}
 				</>,
 			);
 			return;
@@ -385,7 +385,7 @@ const useApp = (
 							: `${formatNumber(failed)} not ${connection.isSource ? 'imported' : 'exported'} due to errors`}
 					</li>
 				</ul>
-				{overviewLink}
+				{metricsLink}
 			</div>
 		);
 		executeActionButtonRefs.current[actionID]?.current?.info(infoMessage);

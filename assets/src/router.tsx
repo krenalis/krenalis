@@ -13,7 +13,7 @@ import { Users } from './components/routes/Users/Users';
 import SchemaGrid from './components/routes/SchemaGrid/SchemaGrid';
 import OAuth from './components/routes/OAuth/OAuth';
 import NotFound from './components/routes/NotFound/NotFound';
-import ConnectionOverview from './components/routes/ConnectionOverview/ConnectionOverview';
+import ConnectionMetrics from './components/routes/ConnectionMetrics/ConnectionMetrics';
 import ConnectionEvents from './components/routes/ConnectionEvents/ConnectionEvents';
 import ConnectionActions from './components/routes/ConnectionActions/ConnectionActions';
 import ActionWrapper from './components/routes/ActionWrapper/ActionWrapper';
@@ -80,7 +80,7 @@ const router = createBrowserRouter([
 									{ path: 'add/:actionTarget', element: <ActionWrapper /> },
 								],
 							},
-							{ path: 'overview', element: <ConnectionOverview /> },
+							{ path: 'metrics', element: <ConnectionMetrics /> },
 							{ path: 'events', element: <ConnectionEvents /> },
 							{ path: 'settings', element: <ConnectionSettings /> },
 							{ path: 'identities', element: <ConnectionIdentities /> },

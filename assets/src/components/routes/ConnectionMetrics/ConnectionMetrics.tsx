@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo, useRef, ReactNode } from 'react';
-import './ConnectionOverview.css';
+import './ConnectionMetrics.css';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import Grid from '../../base/Grid/Grid';
@@ -77,7 +77,7 @@ const STEP_NAME_BY_IDENTIFIER: Record<StepIdentifier, string> = {
 	FINALIZE: 'Finalize',
 };
 
-const ConnectionOverview = () => {
+const ConnectionMetrics = () => {
 	const { connection: c } = useContext(ConnectionContext);
 
 	const [userActionsMetrics, setUserActionsMetrics] = useState<ActionMetrics>();
@@ -186,7 +186,7 @@ const ConnectionOverview = () => {
 					showHead={true}
 					label={
 						i === 5 ? null : (
-							<div className='connection-overview__funnel-label connection-overview__funnel-label--passed'>
+							<div className='connection-metrics__funnel-label connection-metrics__funnel-label--passed'>
 								{formatNumber(passedData)}
 							</div>
 						)
@@ -204,7 +204,7 @@ const ConnectionOverview = () => {
 					path='grid'
 					label={
 						<div
-							className={`connection-overview__funnel-label connection-overview__funnel-label--failed${isFilterStep ? ' connection-overview__funnel-label--discarded' : ''}`}
+							className={`connection-metrics__funnel-label connection-metrics__funnel-label--failed${isFilterStep ? ' connection-metrics__funnel-label--discarded' : ''}`}
 						>
 							{formatNumber(failedData)}
 						</div>
@@ -342,9 +342,9 @@ const ConnectionOverview = () => {
 
 	useEffect(() => {
 		const handleCustomRangePickerClick = (e) => {
-			const isInRangePicker = e.target.closest('.connection-overview__tabs-date-range-picker') != null;
+			const isInRangePicker = e.target.closest('.connection-metrics__tabs-date-range-picker') != null;
 			if (!isInRangePicker) {
-				const isInRangePickerSelector = e.target.closest('.connection-overview__tabs-date-range') != null;
+				const isInRangePickerSelector = e.target.closest('.connection-metrics__tabs-date-range') != null;
 				if (!isInRangePickerSelector) {
 					setIsCustomMetricsRangePickerOpen(false);
 				}
@@ -390,7 +390,7 @@ const ConnectionOverview = () => {
 
 	if (isLoading) {
 		return (
-			<div className='connection-overview--loading'>
+			<div className='connection-metrics--loading'>
 				<SlSpinner
 					style={
 						{
@@ -416,11 +416,11 @@ const ConnectionOverview = () => {
 	}
 
 	return (
-		<div className='connection-overview'>
-			<div className='connection-overview__title'>Metrics & Log</div>
+		<div className='connection-metrics'>
+			<div className='connection-metrics__title'>Metrics & Log</div>
 			{supportedTargets.current.length > 0 ? (
 				<>
-					<div className='connection-overview__tabs'>
+					<div className='connection-metrics__tabs'>
 						<SlButtonGroup>
 							<SlButton
 								variant={selectedMetricsRange === 'last15Minutes' ? 'primary' : 'default'}
@@ -443,7 +443,7 @@ const ConnectionOverview = () => {
 							>
 								Last 7 days
 							</SlButton>
-							<div className='connection-overview__tabs-date-range'>
+							<div className='connection-metrics__tabs-date-range'>
 								<SlButton
 									variant={selectedMetricsRange === 'Custom' ? 'primary' : 'default'}
 									onClick={onSelectCustom}
@@ -454,7 +454,7 @@ const ConnectionOverview = () => {
 										: 'Custom range'}
 								</SlButton>
 								<div
-									className={`connection-overview__tabs-date-range-picker${isCustomMetricsRangePickerOpen ? ' connection-overview__tabs-date-range-picker--open' : ''}`}
+									className={`connection-metrics__tabs-date-range-picker${isCustomMetricsRangePickerOpen ? ' connection-metrics__tabs-date-range-picker--open' : ''}`}
 								>
 									<DateRange
 										editableDateInputs={true}
@@ -487,8 +487,8 @@ const ConnectionOverview = () => {
 							</SlButton>
 						</SlButtonGroup>
 					</div>
-					<div className='connection-overview__chart'>
-						<div className='connection-overview__chart-heading'>
+					<div className='connection-metrics__chart'>
+						<div className='connection-metrics__chart-heading'>
 							{isUsersSelected
 								? `Users ${c.isSource ? 'imported' : 'exported'}`
 								: `Events ${c.isSource ? 'received' : 'sent'}`}{' '}
@@ -532,42 +532,42 @@ const ConnectionOverview = () => {
 							</ComposedChart>
 						</ResponsiveContainer>
 					</div>
-					<div className='connection-overview__funnel'>
-						<div className='connection-overview__funnel-heading'>Pipeline</div>
-						<div className='connection-overview__funnel-passed'>
-							<div className='connection-overview__funnel-initial' id={`funnel-circle-initial`}>
+					<div className='connection-metrics__funnel'>
+						<div className='connection-metrics__funnel-heading'>Pipeline</div>
+						<div className='connection-metrics__funnel-passed'>
+							<div className='connection-metrics__funnel-initial' id={`funnel-circle-initial`}>
 								{isUsersSelected
 									? formatNumber(userFunnelData[0].passed + userFunnelData[0].failed)
 									: formatNumber(eventFunnelData[0].passed + eventFunnelData[0].failed)}
 							</div>
 							{Array.from(steps.entries()).map(([i, s]) => {
 								return (
-									<div className='connection-overview__funnel-step' key={`funnel-passed-${i}`}>
-										<div className='connection-overview__funnel-title'>
+									<div className='connection-metrics__funnel-step' key={`funnel-passed-${i}`}>
+										<div className='connection-metrics__funnel-title'>
 											{c.isDestination && c.isApp && !isUsersSelected && s === 'FINALIZE'
 												? 'Delivering'
 												: STEP_NAME_BY_IDENTIFIER[s]}
 										</div>
 										<div
-											className='connection-overview__funnel-circle'
+											className='connection-metrics__funnel-circle'
 											id={`funnel-circle-passed-${i}`}
 										/>
 									</div>
 								);
 							})}
-							<div className='connection-overview__funnel-final' id={`funnel-circle-final`}>
+							<div className='connection-metrics__funnel-final' id={`funnel-circle-final`}>
 								{isUsersSelected
 									? formatNumber(userFunnelData[5].passed)
 									: formatNumber(eventFunnelData[5].passed)}
 							</div>
 						</div>
-						<div className='connection-overview__funnel-failed'>
+						<div className='connection-metrics__funnel-failed'>
 							<div key='funnel-initial-empty' />
 							{Array.from(steps.entries()).map(([i, _]) => {
 								return (
 									<div
 										key={`funnel-failed-${i}`}
-										className='connection-overview__funnel-circle'
+										className='connection-metrics__funnel-circle'
 										id={`funnel-circle-failed-${i}`}
 									/>
 								);
@@ -575,8 +575,8 @@ const ConnectionOverview = () => {
 						</div>
 						{funnelArrows}
 					</div>
-					<div className='connection-overview__errors'>
-						<div className='connection-overview__errors-heading'>
+					<div className='connection-metrics__errors'>
+						<div className='connection-metrics__errors-heading'>
 							Error log <span>{titleRange}</span>
 						</div>
 						<Grid
@@ -587,7 +587,7 @@ const ConnectionOverview = () => {
 					</div>
 				</>
 			) : (
-				<div className='connection-overview__nothing-to-show'>
+				<div className='connection-metrics__nothing-to-show'>
 					Currently there is nothing to show for connection {c.name}
 				</div>
 			)}
@@ -703,4 +703,4 @@ const validateMetricsRangeDates = (start: Date, end: Date): void => {
 	}
 };
 
-export default ConnectionOverview;
+export default ConnectionMetrics;

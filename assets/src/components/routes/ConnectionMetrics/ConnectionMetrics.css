@@ -1,34 +1,34 @@
-.connection-overview--loading {
+.connection-metrics--loading {
 	text-align: center;
 	padding-top: 50px;
 }
 
-.connection-overview__title {
+.connection-metrics__title {
 	font-size: 18px;
 	color: var(--sl-color-gray-700);
 	margin-bottom: 24px;
 }
 
-.connection-overview__tabs {
+.connection-metrics__tabs {
 	display: flex;
 	gap: 30px;
 	align-items: center;
 }
 
-.connection-overview__tabs sl-button::part(base) {
+.connection-metrics__tabs sl-button::part(base) {
 	padding-left: 15px;
 	padding-right: 15px;
 }
 
-.connection-overview__tabs sl-button[variant='default']::part(base) {
+.connection-metrics__tabs sl-button[variant='default']::part(base) {
 	background: var(--bg-primary);
 }
 
-.connection-overview__tabs-date-range {
+.connection-metrics__tabs-date-range {
 	position: relative;
 }
 
-.connection-overview__tabs-date-range-picker {
+.connection-metrics__tabs-date-range-picker {
 	position: absolute;
 	opacity: 0;
 	visibility: hidden;
@@ -39,12 +39,12 @@
 	box-shadow: 0px 0px 18px 1px var(--sl-color-neutral-300);
 }
 
-.connection-overview__tabs-date-range-picker--open {
+.connection-metrics__tabs-date-range-picker--open {
 	visibility: visible;
 	opacity: 1;
 }
 
-.connection-overview__chart {
+.connection-metrics__chart {
 	margin: 20px auto 0 auto;
 	width: 100%;
 	position: relative;
@@ -55,13 +55,13 @@
 	padding: 30px;
 }
 
-.connection-overview__chart .recharts-responsive-container {
+.connection-metrics__chart .recharts-responsive-container {
 	height: 300px !important;
 }
 
-.connection-overview__chart-heading,
-.connection-overview__errors-heading,
-.connection-overview__funnel-heading {
+.connection-metrics__chart-heading,
+.connection-metrics__errors-heading,
+.connection-metrics__funnel-heading {
 	color: var(--sl-color-gray-700);
 	margin-top: -8px;
 	margin-bottom: 30px;
@@ -69,33 +69,33 @@
 	font-weight: 500;
 }
 
-.connection-overview__funnel-heading {
+.connection-metrics__funnel-heading {
 	margin-bottom: 50px;
 }
 
-.connection-overview__chart .recharts-wrapper {
+.connection-metrics__chart .recharts-wrapper {
 	margin: 0 auto;
 	position: relative;
 	left: -20px;
 	margin-bottom: 80px;
 }
 
-.connection-overview__chart .recharts-wrapper text {
+.connection-metrics__chart .recharts-wrapper text {
 	font-size: 12px;
 	font-weight: 500;
 }
 
-.connection-overview__chart .recharts-wrapper .recharts-legend-item {
+.connection-metrics__chart .recharts-wrapper .recharts-legend-item {
 	font-size: 13px;
 }
 
-.connection-overview__errors-heading {
+.connection-metrics__errors-heading {
 	margin: 40px 0 24px 5px;
 	font-size: 16px;
 }
 
-.connection-overview__chart-heading span,
-.connection-overview__errors-heading span {
+.connection-metrics__chart-heading span,
+.connection-metrics__errors-heading span {
 	background: #eef2ff;
 	border-radius: 12px;
 	color: #4f46e5;
@@ -104,17 +104,17 @@
 	padding: 2px 12px 3px 12px;
 }
 
-.connection-overview__errors .grid a {
+.connection-metrics__errors .grid a {
 	color: var(--sl-color-primary-600);
 	text-decoration: underline;
 	font-weight: 500;
 }
 
-.connection-overview__errors .grid .grid__row .grid__cell:last-child .grid__cell-content {
+.connection-metrics__errors .grid .grid__row .grid__cell:last-child .grid__cell-content {
 	font-weight: 500;
 }
 
-.connection-overview__funnel {
+.connection-metrics__funnel {
 	margin: 20px auto 0 auto;
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
@@ -123,55 +123,55 @@
 	padding: 22px;
 }
 
-.connection-overview__funnel-passed,
-.connection-overview__funnel-failed {
+.connection-metrics__funnel-passed,
+.connection-metrics__funnel-failed {
 	display: grid;
 	grid-template-columns: repeat(8, 100px);
 	column-gap: 50px;
 }
 
 @media (max-width: 1460px) {
-	.connection-overview__funnel-passed,
-	.connection-overview__funnel-failed {
+	.connection-metrics__funnel-passed,
+	.connection-metrics__funnel-failed {
 		display: grid;
 		grid-template-columns: repeat(8, 70px);
 	}
 
-	.connection-overview__tabs-date-range-picker {
+	.connection-metrics__tabs-date-range-picker {
 		left: unset;
 		right: 0;
 	}
 }
 
 @media (max-width: 1260px) {
-	.connection-overview__funnel-passed,
-	.connection-overview__funnel-failed {
+	.connection-metrics__funnel-passed,
+	.connection-metrics__funnel-failed {
 		display: grid;
 		grid-template-columns: repeat(8, 50px);
 	}
 
-	.connection-overview__funnel-title {
+	.connection-metrics__funnel-title {
 		font-size: 12px !important;
 	}
 }
 
 @media (max-width: 1080px) {
-	.connection-overview__funnel-passed,
-	.connection-overview__funnel-failed {
+	.connection-metrics__funnel-passed,
+	.connection-metrics__funnel-failed {
 		gap: 35px;
 	}
 
-	.connection-overview__funnel-title {
+	.connection-metrics__funnel-title {
 		left: 0;
 		transform: translate(-33%);
 	}
 }
 
-.connection-overview__funnel-failed {
+.connection-metrics__funnel-failed {
 	margin-top: 60px;
 }
 
-.connection-overview__funnel-title {
+.connection-metrics__funnel-title {
 	color: var(--sl-color-neutral-600);
 	font-size: 14px;
 	margin-bottom: 8px;
@@ -181,7 +181,7 @@
 	left: 5px;
 }
 
-.connection-overview__funnel-circle {
+.connection-metrics__funnel-circle {
 	border-radius: 100%;
 	width: 23px;
 	height: 23px;
@@ -189,26 +189,26 @@
 	background-color: var(--sl-color-neutral-400);
 }
 
-.connection-overview__funnel-label {
+.connection-metrics__funnel-label {
 	background: var(--bg-primary);
 	font-size: 12px;
 	padding: 0px 10px;
 	font-weight: 600;
 }
 
-.connection-overview__funnel-label--passed {
+.connection-metrics__funnel-label--passed {
 	color: var(--sl-color-primary-600);
 }
 
-.connection-overview__funnel-label--failed {
+.connection-metrics__funnel-label--failed {
 	color: var(--sl-color-danger-600);
 }
 
-.connection-overview__funnel-label--discarded {
+.connection-metrics__funnel-label--discarded {
 	color: var(--sl-color-neutral-600) !important;
 }
 
-.connection-overview__funnel-initial {
+.connection-metrics__funnel-initial {
 	font-weight: 600;
 	font-size: 17px;
 	position: relative;
@@ -219,11 +219,11 @@
 	width: max-content;
 }
 
-.connection-overview__funnel-step {
+.connection-metrics__funnel-step {
 	position: relative;
 }
 
-.connection-overview__funnel-final {
+.connection-metrics__funnel-final {
 	font-weight: 600;
 	color: var(--sl-color-primary-600);
 	padding-left: 5px;
@@ -234,7 +234,7 @@
 	width: max-content;
 }
 
-.connection-overview__nothing-to-show {
+.connection-metrics__nothing-to-show {
 	text-align: center;
 	font-size: 17px;
 }

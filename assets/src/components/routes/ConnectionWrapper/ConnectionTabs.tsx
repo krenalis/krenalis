@@ -23,9 +23,9 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 					Actions
 				</div>
 			</Link>
-			<Link path={`connections/${connection.id}/overview`}>
+			<Link path={`connections/${connection.id}/metrics`}>
 				<div
-					className={`connection-wrapper__link${tab === 'overview' ? ' connection-wrapper__link--selected' : ''}`}
+					className={`connection-wrapper__link${tab === 'metrics' ? ' connection-wrapper__link--selected' : ''}`}
 				>
 					<SlIcon name='bar-chart'></SlIcon>
 					Metrics
