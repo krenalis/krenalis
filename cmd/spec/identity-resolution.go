@@ -16,7 +16,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "identity-resolution",
 		Name: "Identity resolution",
-		Description: "Identities are the users obtained from sources like [apps](connection-app), [databases](connection-database), [files](connection-files), or events. " +
+		Description: "Identities are the users obtained from sources like [apps](app-connections), [databases](database-connections), [files](file-storage-connections), or events. " +
 			"These identities are filtered and transformed according to a defined action. " +
 			"Once identity resolution is complete, the collected identities from all [connections](connections) are unified to form the workspace [users](users).",
 		Endpoints: []*Endpoint{
