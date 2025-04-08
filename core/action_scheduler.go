@@ -138,7 +138,7 @@ func (as *actionScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 	}()
 }
 
-// ElectLeader is called when a leader is elected.
+// onElectLeader is called when a leader is elected.
 func (as *actionScheduler) onElectLeader(n state.ElectLeader) {
 	if as.executor != nil {
 		if !as.core.state.IsLeader() {
