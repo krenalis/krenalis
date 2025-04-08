@@ -144,15 +144,12 @@ func (iw *BatchIdentityWriter) Cancel(ctx context.Context) {
 // If purge needs to be done, it purges all identities of the action for which
 // neither the Write method nor the Keep method has been called.
 //
-// In case an error occurs with the data warehouse, a DataWarehouseError error
-// is returned.
-//
 // If the writer is already closed, it does nothing and returns immediately.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// If an error occurs with the data warehouse, it returns a
+// *datastore.UnavailableError error.
 //
 // TODO(Gianluca): if these errors returned from Close seem strange, it's
 // because we still need to discuss the issue

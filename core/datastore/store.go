@@ -138,8 +138,8 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // ErrIdentityResolutionInProgress error.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If an error occurs with the data warehouse, it returns a
-// *DataWarehouseError error.
+// error. If an error occurs with the data warehouse, it returns an
+// *UnavailableError error.
 func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) error {
 	store.mustBeOpen()
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
@@ -160,7 +160,7 @@ func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, oper
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
 func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) error {
 	store.mustBeOpen()
@@ -180,7 +180,7 @@ func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) erro
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
+// returns an *UnavailableError error.
 func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -289,7 +289,7 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
+// returns an *UnavailableError error.
 func (store *Store) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -312,7 +312,7 @@ type DestinationUser struct {
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
 func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users []DestinationUser, idsToDelete []string) error {
 	store.mustBeOpen()
@@ -395,7 +395,7 @@ func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
 // are columns, so there is a mix of different levels of abstraction. This is
 // discussed in the issue https://github.com/meergo/meergo/issues/862.
 //
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
 func (store *Store) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) ([]string, error) {
 	store.mustBeOpen()
@@ -413,7 +413,7 @@ func (store *Store) PreviewUserSchemaUpdate(ctx context.Context, schema types.Ty
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
 func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 	store.mustBeOpen()
@@ -441,8 +441,8 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 // initialized, with the aim of correcting any extraordinary issues (such as
 // accidental table deletions) in an attempt to make Meergo functional again.
 //
-// If an error occurs with the data warehouse during the repair, it returns a
-// *DataWarehouseError error.
+// If an error occurs with the data warehouse during the repair, it returns an
+// *UnavailableError error.
 func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
@@ -526,7 +526,7 @@ func (store *Store) StartIdentityResolution(ctx context.Context) error {
 // store. If an attempt is made to connect a data warehouse which has already
 // been connected to another workspace, the method returns the error
 // ErrDifferentWarehouse. If an error occurs with the data warehouse, it returns
-// a *DataWarehouseError error.
+// an *UnavailableError error.
 func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
@@ -586,7 +586,7 @@ func (store *Store) UnsetIdentityProperties(ctx context.Context, action int, pro
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
+// returns an *UnavailableError error.
 func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -606,9 +606,9 @@ func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[stri
 // query.Properties must be nil.
 //
 // If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If the schema, which must be valid, does not
-// align with the user schema, it returns a *schemas.Error error. If an error
-// occurs with the data warehouse, it returns a *DataWarehouseError error.
+// ErrMaintenanceMode error. If the schema, which must be valid, does not align
+// with the user schema, it returns a *schemas.Error error. If an error occurs
+// with the data warehouse, it returns an *UnavailableError error.
 func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -643,7 +643,7 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
+// returns an *UnavailableError error.
 func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -773,7 +773,7 @@ func (store *Store) onUpdateUserSchema(n state.UpdateUserSchema) {
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
+// returns an *UnavailableError error.
 func (store *Store) query(ctx context.Context, query Query, columnByProperty map[string]meergo.Column, omitNil bool) ([]map[string]any, int, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)

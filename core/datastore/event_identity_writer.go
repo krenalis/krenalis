@@ -122,15 +122,12 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 // write operations. In the event of a canceled context, it interrupts ongoing
 // writes, discards pending ones, and returns.
 //
-// In case an error occurs with the data warehouse, a DataWarehouseError error
-// is returned.
-//
 // If the writer is already closed, it does nothing and returns immediately.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// If an error occurs with the data warehouse, it returns a
+// *datastore.UnavailableError error.
 //
 // TODO(Gianluca): if these errors returned from Close seem strange, it's
 // because we still need to discuss the issue
