@@ -1006,7 +1006,6 @@ func (this *Action) endExecution(err error) {
 		break
 	}
 
-	return
 }
 
 // file returns the file of the action.
