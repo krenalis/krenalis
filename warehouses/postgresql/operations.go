@@ -9,10 +9,7 @@ package postgresql
 
 import (
 	"context"
-	"fmt"
 	"time"
-
-	"github.com/meergo/meergo"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -30,11 +27,6 @@ const (
 //
 // It is then the caller's responsibility to call the 'endOperation' method to
 // mark the operation as completed.
-//
-// In the case that an AlterSchema operation is already in progress, the error
-// ErrWarehouseAlterInProgress is returned; if an IdentityResolution operation
-// is already in progress, the error ErrWarehouseIdentityResolutionInProgress
-// is returned.
 func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation warehouseOperation) (int, error) {
 	var opID int
 	err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
@@ -48,16 +40,7 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 		if err != nil && err != pgx.ErrNoRows {
 			return err
 		}
-		if runningOp != nil {
-			switch *runningOp {
-			case alterUserColumns:
-				return meergo.ErrWarehouseAlterInProgress
-			case identityResolution:
-				return meergo.ErrWarehouseIdentityResolutionInProgress
-			default:
-				return fmt.Errorf("unexpected operation %q", *runningOp)
-			}
-		}
+		_ = runningOp // TODO: this will be removed. See https://github.com/meergo/meergo/issues/1475.
 		err = tx.QueryRow(ctx, `INSERT INTO "_operations" ("operation", "start_time", "end_time") `+
 			`VALUES ($1, (clock_timestamp() at time zone 'utc')::timestamp, NULL) RETURNING "id"`, operation).Scan(&opID)
 		if err != nil {

@@ -10188,18 +10188,8 @@
                         },
                         {
                             "status": 422,
-                            "code": "AlterSchemaInProgress",
-                            "message": "alter schema operation is already in progress"
-                        },
-                        {
-                            "status": 422,
                             "code": "ConnectionNotExist",
                             "message": "primary source does not exist"
-                        },
-                        {
-                            "status": 422,
-                            "code": "IdentityResolutionInProgress",
-                            "message": "identity resolution is currently in progress"
                         },
                         {
                             "status": 422,
@@ -10210,6 +10200,11 @@
                             "status": 422,
                             "code": "InvalidSchemaUpdate",
                             "message": "cannot update the schema as specified"
+                        },
+                        {
+                            "status": 422,
+                            "code": "OperationAlreadyExecuting",
+                            "message": "another operation is already executing"
                         }
                     ]
                 },
@@ -10266,6 +10261,53 @@
                             "status": 422,
                             "code": "InvalidSchemaUpdate",
                             "message": "cannot update the schema as specified"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get information about latest user schema update",
+                    "description": "Returns information about the latest user schema update.\n\nDepending on the returned values:\n- If neither `startTime` nor `endTime` are returned, it means that no user schema update has never been performed for the workspace.\n- If only `startTime` is returned, it means that the workspace is currently running a user schema update.\n- If both `startTime` and `endTime` are returned, it means that a user schema update has been performed and there are no user schema updates currently running.",
+                    "method": "GET",
+                    "url": "/v1/users/schema/latest-update",
+                    "parameters": null,
+                    "moreParameters": null,
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "startTime",
+                                "placeholder": "\"2025-01-12T09:37:22\"",
+                                "type": {
+                                    "kind": "datetime"
+                                },
+                                "nullable": true,
+                                "description": "Start timestamp (UTC) of the latest user schema update, either running or completed.\n\nIf null, no user schema update has never been started for the workspace."
+                            },
+                            {
+                                "name": "endTime",
+                                "placeholder": "\"2025-01-12T09:37:25\"",
+                                "type": {
+                                    "kind": "datetime"
+                                },
+                                "nullable": true,
+                                "description": "End timestamp (UTC) for the latest user schema update.\n\nIf null, it means that the user schema update is still in progress, or that no schema update has never been performed for the workspace."
+                            },
+                            {
+                                "name": "error",
+                                "placeholder": "null",
+                                "type": {
+                                    "kind": "text"
+                                },
+                                "nullable": true,
+                                "description": "A possible error in the execution of the latest update of the user schema.\n\nIf null, it means that no update of the user schema has never been executed, or that one is in progress, or that the last one executed completed without errors."
+                            }
+                        ]
+                    },
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "workspace does not exist"
                         }
                     ]
                 }
@@ -14525,12 +14567,17 @@
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
+                        },
+                        {
+                            "status": 422,
+                            "code": "OperationAlreadyExecuting",
+                            "message": "another operation is already executing"
                         }
                     ]
                 },
                 {
-                    "name": "Retrieve latest identity resolution info",
-                    "description": "Returns the start and end times of the latest identity resolution.",
+                    "name": "Get information about latest identity resolution",
+                    "description": "Returns information about the latest identity resolution.\n\nDepending on the returned values:\n- If neither `startTime` nor `endTime` are returned, it means that no identity resolutions have ever been performed for the workspace.\n- If only `startTime` is returned, it means that the workspace is currently running an identity resolution.\n- If both `startTime` and `endTime` are returned, it means that an identity resolution has been performed and there are no identity resolutions currently running.",
                     "method": "GET",
                     "url": "/v1/identity-resolution/latest",
                     "parameters": null,
@@ -14545,7 +14592,7 @@
                                     "kind": "datetime"
                                 },
                                 "nullable": true,
-                                "description": "The UTC start time of the latest identity resolution. It is null if no identity resolution has been executed yet."
+                                "description": "Start timestamp (UTC) of the latest identity resolution, either running or completed.\n\nIf null, no identity resolutions have never been executed for the workspace."
                             },
                             {
                                 "name": "endTime",
@@ -14554,7 +14601,7 @@
                                     "kind": "datetime"
                                 },
                                 "nullable": true,
-                                "description": "The UTC end time of the latest identity resolution. It is null if an identity resolution is still in progress or if none has been executed yet."
+                                "description": "End timestamp (UTC) for the latest identity resolution.\n\nIf null, it means that the identity resolution is still in progress, or that no identity resolution have never been executed on the workspace."
                             }
                         ]
                     },
@@ -14563,11 +14610,6 @@
                             "status": 404,
                             "code": "NotFound",
                             "message": "workspace does not exist"
-                        },
-                        {
-                            "status": 422,
-                            "code": "MaintenanceMode",
-                            "message": "data warehouse is in maintenance mode"
                         }
                     ]
                 },
@@ -14605,6 +14647,11 @@
                             "status": 404,
                             "code": "NotFound",
                             "message": "workspace does not exist"
+                        },
+                        {
+                            "status": 422,
+                            "code": "IdentityResolutionInExecution",
+                            "message": "identity resolution is in execution so the identifiers cannot be updated"
                         },
                         {
                             "status": 422,

@@ -337,6 +337,35 @@ func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
 	iw.mu.Unlock()
 }
 
+// onEndUpdateUserSchema is called when the update of the user schema of a
+// workspace ends.
+//
+// This notification is propagated by the Store.onEndUpdateUserSchema method.
+func (iw *EventIdentityWriter) onEndUpdateUserSchema(_ state.EndUpdateUserSchema) {
+	action, ok := iw.store.ds.state.Action(iw.action)
+	if !ok {
+		return
+	}
+	var aligned bool
+	var flatter *flatter
+	if action.OutSchema.Valid() {
+		workspace := action.Connection().Workspace()
+		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+		if err == nil {
+			aligned = true
+			flatter = newFlatter(action.OutSchema, iw.store.identityColumnByProperty())
+		}
+	} else {
+		// The action's out schema is invalid when importing identities from
+		// events without any transformation in the action.
+		aligned = true
+	}
+	iw.mu.Lock()
+	iw.aligned = aligned
+	iw.flatter = flatter
+	iw.mu.Unlock()
+}
+
 // onUpdateAction is called when an action of the connection of iw's action is
 // updated.
 //
@@ -353,35 +382,6 @@ func (iw *EventIdentityWriter) onUpdateAction(n state.UpdateAction) {
 		if err == nil {
 			aligned = true
 			flatter = newFlatter(n.OutSchema, iw.store.identityColumnByProperty())
-		}
-	} else {
-		// The action's out schema is invalid when importing identities from
-		// events without any transformation in the action.
-		aligned = true
-	}
-	iw.mu.Lock()
-	iw.aligned = aligned
-	iw.flatter = flatter
-	iw.mu.Unlock()
-}
-
-// onUpdateUserSchema is called when the user schema of the iw's connection is
-// updated.
-//
-// The notification is propagated by the Store.onUpdateUserSchema method.
-func (iw *EventIdentityWriter) onUpdateUserSchema(_ state.UpdateUserSchema) {
-	action, ok := iw.store.ds.state.Action(iw.action)
-	if !ok {
-		return
-	}
-	var aligned bool
-	var flatter *flatter
-	if action.OutSchema.Valid() {
-		workspace := action.Connection().Workspace()
-		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
-		if err == nil {
-			aligned = true
-			flatter = newFlatter(action.OutSchema, iw.store.identityColumnByProperty())
 		}
 	} else {
 		// The action's out schema is invalid when importing identities from

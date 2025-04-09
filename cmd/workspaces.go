@@ -515,6 +515,29 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 	}, nil
 }
 
+// LatestUserSchemaUpdate returns information about the latest update of the
+// user schema of a workspace.
+func (workspace workspace) LatestUserSchemaUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	startTime, endTime, updateError, err := ws.LatestUserSchemaUpdate(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	res := map[string]any{
+		"startTime": startTime,
+		"endTime":   endTime,
+	}
+	if updateError != "" {
+		res["error"] = updateError
+	} else {
+		res["error"] = nil
+	}
+	return res, nil
+}
+
 // ListenedEvents returns the events listen to by a specified listener and the
 // number of omitted events.
 func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request) (any, error) {

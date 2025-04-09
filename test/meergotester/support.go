@@ -313,6 +313,16 @@ func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	return response.StartTime, response.EndTime
 }
 
+func (c *Meergo) LatestUserSchemaUpdate() (startTime, endTime *time.Time, updateError *string) {
+	var response struct {
+		StartTime *time.Time `json:"startTime"`
+		EndTime   *time.Time `json:"endTime"`
+		Error     *string    `json:"error"`
+	}
+	c.MustCall("GET", "/api/v1/users/schema/latest-update", nil, &response)
+	return response.StartTime, response.EndTime, response.Error
+}
+
 func (c *Meergo) PreviewUserSchemaUpdate(schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
 		"schema":  schema,
@@ -459,7 +469,20 @@ func (c *Meergo) UpdateUserSchema(schema types.Type, primarySources map[string]i
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
+	ts := time.Now().UTC()
 	c.MustCall("PUT", "/api/v1/users/schema", req, nil)
+	// Waits for the user schema update that was started following the call to
+	// this method to finish.
+	for {
+		time.Sleep(50 * time.Millisecond)
+		startTime, endTime, updateError := c.LatestUserSchemaUpdate()
+		if updateError != nil {
+			c.t.Fatalf("user schema update failed: %s", *updateError)
+		}
+		if startTime.After(ts) && endTime != nil {
+			break
+		}
+	}
 }
 
 // UpdateUserSchemaErr is like UpdateUserSchema but returns an error instead of

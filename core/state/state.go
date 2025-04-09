@@ -496,7 +496,22 @@ type Workspace struct {
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
 	UIPreferences                  UIPreferences
-	actionsToPurge                 []int
+	IR                             struct {
+		ID        *string    // nil means no IR in execution.
+		StartTime *time.Time // nil means IR was never started.
+		EndTime   *time.Time // nil means IR is running or has never started.
+	}
+	UpdateUserSchema struct {
+		ID             *string    // nil means no user schema update in execution.
+		StartTime      *time.Time // nil means user schema update was never started.
+		EndTime        *time.Time // nil means user schema update is running or has never started.
+		Err            *string    // pointer to empty string if no errors occurred during last execution.
+		Schema         types.Type
+		PrimarySources map[string]int
+		RePaths        map[string]any
+		Operations     []meergo.AlterOperation
+	}
+	actionsToPurge []int
 }
 
 // Account returns the account with identifier id. The boolean return value

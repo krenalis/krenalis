@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -68,6 +69,10 @@ func (state *State) keep() {
 			state.electLeader(n)
 		case "EndActionExecution":
 			state.endActionExecution(n)
+		case "EndIdentityResolution":
+			state.endIdentityResolution(n)
+		case "EndUpdateUserSchema":
+			state.endUpdateUserSchema(n)
 		case "ExecuteAction":
 			state.executeAction(n)
 		case "LinkConnection":
@@ -90,6 +95,10 @@ func (state *State) keep() {
 			state.setActionStatus(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
+		case "StartIdentityResolution":
+			state.startIdentityResolution(n)
+		case "StartUpdateUserSchema":
+			state.startUpdateUserSchema(n)
 		case "UpdateAction":
 			state.updateAction(n)
 		case "UpdateConnection":
@@ -98,8 +107,6 @@ func (state *State) keep() {
 			state.updateIdentityPropertiesToUnset(n)
 		case "UpdateIdentityResolutionSettings":
 			state.updateIdentityResolutionSettings(n)
-		case "UpdateUserSchema":
-			state.updateUserSchema(n)
 		case "UpdateWarehouse":
 			state.updateWarehouse(n)
 		case "UpdateWarehouseMode":
@@ -765,6 +772,63 @@ func (state *State) endActionExecution(n notification) {
 	})
 }
 
+// EndIdentityResolution is the event sent when the execution of the Identity
+// Resolution ends.
+type EndIdentityResolution struct {
+	Workspace int
+	ID        string
+	EndTime   time.Time
+}
+
+// endIdentityResolution ends the Identity Resolution.
+func (state *State) endIdentityResolution(n notification) {
+	e := EndIdentityResolution{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.IR.ID = nil
+		w.IR.EndTime = &e.EndTime
+	})
+	dispatchNotification(state, e)
+}
+
+// EndUpdateUserSchema is the event sent when the execution of a user schema
+// update ends.
+type EndUpdateUserSchema struct {
+	Workspace   int
+	ID          string
+	EndTime     time.Time
+	Err         string
+	Schema      types.Type
+	Identifiers []string
+}
+
+// endUpdateUserSchema ends the update of the user schema.
+func (state *State) endUpdateUserSchema(n notification) {
+	e := EndUpdateUserSchema{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		if e.Err == "" {
+			// These fields should be updated only in case of success,
+			// otherwise, in case of error, the current ones should be left.
+			w.UserSchema = w.UpdateUserSchema.Schema
+			w.UserPrimarySources = w.UpdateUserSchema.PrimarySources
+			w.Identifiers = e.Identifiers
+		}
+		w.UpdateUserSchema.ID = nil
+		w.UpdateUserSchema.EndTime = &e.EndTime
+		w.UpdateUserSchema.Err = &e.Err
+		w.UpdateUserSchema.Schema = types.Type{}
+		w.UpdateUserSchema.PrimarySources = nil
+		w.UpdateUserSchema.RePaths = nil
+		w.UpdateUserSchema.Operations = nil
+	})
+	dispatchNotification(state, e)
+}
+
 // ExecuteAction is the event sent when an action is executed.
 type ExecuteAction struct {
 	ID          int
@@ -985,6 +1049,59 @@ func (state *State) setConnectionSettings(n notification) {
 	dispatchNotification(state, e)
 }
 
+// StartIdentityResolution is the event sent when the execution of the Identity
+// Resolution starts.
+type StartIdentityResolution struct {
+	Workspace int
+	ID        string
+	StartTime time.Time
+}
+
+// startIdentityResolution starts the Identity Resolution.
+func (state *State) startIdentityResolution(n notification) {
+	e := StartIdentityResolution{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.IR.ID = &e.ID
+		w.IR.StartTime = &e.StartTime
+		w.IR.EndTime = nil
+	})
+	dispatchNotification(state, e)
+}
+
+// StartUpdateUserSchema is the event sent when the execution of a user schema
+// update starts.
+type StartUpdateUserSchema struct {
+	Workspace      int
+	ID             string
+	Schema         types.Type
+	PrimarySources map[string]int
+	RePaths        map[string]any
+	Operations     []meergo.AlterOperation
+	StartTime      time.Time
+}
+
+// startUpdateUserSchema starts the update of the user schema.
+func (state *State) startUpdateUserSchema(n notification) {
+	e := StartUpdateUserSchema{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.UpdateUserSchema.ID = &e.ID
+		w.UpdateUserSchema.Schema = e.Schema
+		w.UpdateUserSchema.PrimarySources = e.PrimarySources
+		w.UpdateUserSchema.RePaths = e.RePaths
+		w.UpdateUserSchema.Operations = e.Operations
+		w.UpdateUserSchema.StartTime = &e.StartTime
+		w.UpdateUserSchema.EndTime = nil
+		w.UpdateUserSchema.Err = nil
+	})
+	dispatchNotification(state, e)
+}
+
 // UpdateAction is the event sent when an action is updated.
 type UpdateAction struct {
 	ID                   int
@@ -1115,28 +1232,6 @@ func (state *State) updateIdentityResolutionSettings(n notification) {
 		w.ResolveIdentitiesOnBatchImport = e.ResolveIdentitiesOnBatchImport
 		w.Identifiers = e.Identifiers
 	})
-}
-
-// UpdateUserSchema is the event sent when a user schema is updated.
-type UpdateUserSchema struct {
-	Workspace      int
-	UserSchema     types.Type
-	PrimarySources map[string]int
-	Identifiers    []string
-}
-
-// updateUserSchema updates a user schema.
-func (state *State) updateUserSchema(n notification) {
-	e := UpdateUserSchema{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.UserSchema = e.UserSchema
-		w.UserPrimarySources = e.PrimarySources
-		w.Identifiers = e.Identifiers
-	})
-	dispatchNotification(state, e)
 }
 
 // UpdateWarehouse is the event sent when a warehouse is updated.

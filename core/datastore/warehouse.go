@@ -10,7 +10,6 @@ package datastore
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/meergo/meergo"
 )
@@ -26,12 +25,12 @@ func (err *UnavailableError) Error() string {
 
 // unavailableError wraps err in *UnavailableError if it is an internal error.
 func unavailableError(err error) error {
-	switch err {
-	case nil, meergo.ErrWarehouseAlterInProgress, meergo.ErrWarehouseIdentityResolutionInProgress:
-		return err
+	if err == nil {
+		return nil
 	}
 	switch err.(type) {
 	case
+		*meergo.OperationError,
 		*meergo.WarehouseNonInitializableError,
 		*meergo.WarehouseSettingsError:
 		return err
@@ -59,8 +58,8 @@ type warehouse struct {
 	inner meergo.Warehouse
 }
 
-func (dw warehouse) AlterUserColumns(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
-	return unavailableError(dw.inner.AlterUserColumns(ctx, columns, operations))
+func (dw warehouse) AlterUserColumns(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
+	return unavailableError(dw.inner.AlterUserColumns(ctx, opID, columns, operations))
 }
 
 func (dw warehouse) AlterUserColumnsQueries(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
@@ -85,12 +84,6 @@ func (dw warehouse) Initialize(ctx context.Context, userColumns []meergo.Column)
 	return unavailableError(dw.inner.Initialize(ctx, userColumns))
 }
 
-func (dw warehouse) LatestIdentityResolution(ctx context.Context) (*time.Time, *time.Time, error) {
-	startTime, endTime, err := dw.inner.LatestIdentityResolution(ctx)
-	err = unavailableError(err)
-	return startTime, endTime, err
-}
-
 func (dw warehouse) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
 	return unavailableError(dw.inner.Merge(ctx, table, rows, deleted))
 }
@@ -105,8 +98,8 @@ func (dw warehouse) Query(ctx context.Context, query meergo.RowQuery, withTotal 
 	return rows, total, err
 }
 
-func (dw warehouse) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
-	return unavailableError(dw.inner.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources))
+func (dw warehouse) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+	return unavailableError(dw.inner.ResolveIdentities(ctx, opID, identifiers, userColumns, userPrimarySources))
 }
 
 func (dw warehouse) Repair(ctx context.Context, userColumns []meergo.Column) error {

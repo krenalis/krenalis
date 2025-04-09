@@ -1020,6 +1020,33 @@ func (this *Connection) Delete(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
+		// If there is a schema update in progress, removes the connection from
+		// the primary sources which will take effect when the new user schema
+		// is applied.
+		query := "SELECT update_user_schema_primary_sources FROM workspaces" +
+			" WHERE id = $1 AND update_user_schema_primary_sources IS NOT NULL"
+		var primarySources map[string]int
+		err = tx.QueryRow(ctx, query, workspace.ID).Scan(&primarySources)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+		if primarySources != nil {
+			changed := false
+			for prop, source := range primarySources {
+				if source == n.ID {
+					delete(primarySources, prop)
+					changed = true
+				}
+			}
+			if changed {
+				_, err = tx.Exec(ctx, "UPDATE workspaces SET"+
+					" update_user_schema_primary_sources = $1 WHERE id = $2",
+					primarySources, workspace.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
 		return n, nil
 	})
 	return err

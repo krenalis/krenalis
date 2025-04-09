@@ -17,10 +17,14 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
@@ -39,7 +43,6 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -212,7 +215,10 @@ func New(conf *Config) (*Core, error) {
 
 	// Listen to state changes.
 	core.state.Freeze()
+	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onExecuteAction)
+	core.state.AddListener(core.onStartIdentityResolution)
+	core.state.AddListener(core.onStartUpdateUserSchema)
 	core.state.Unfreeze()
 
 	// Try to start pending action executions.
@@ -927,14 +933,380 @@ func (core *Core) tryStartActionExecution(actionID int) {
 
 		// Start the Identity Resolution, if necessary.
 		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {
-			err = store.StartIdentityResolution(ctx)
+			err := core.startIdentityResolution(ctx, ws.ID)
 			if err != nil {
-				slog.Error("core: cannot start Identity Resolution at the end of import", "action", action.ID, "execution", execution.ID, "err", err)
-				return
+				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
+					// Do nothing.
+				} else {
+					slog.Error("core: cannot start Identity Resolution at the end of import", "action", action.ID, "execution", execution.ID, "err", err)
+				}
 			}
 		}
 
 	}()
+}
+
+// executeIdentityResolution executes the Identity Resolution, not returning
+// until it has completed (with success or with an operation error).
+func (core *Core) executeIdentityResolution(workspace int, opID string) {
+	ctx := core.close.ctx
+	store := core.datastore.Store(workspace)
+	// Keep calling 'ResolveIdentities' until it (1) returns successfully,
+	// (2) returns with a *meergo.OperationError, or (3) the context is
+	// cancelled.
+	bo := backoff.New(200)
+	bo.SetCap(time.Second)
+	for bo.Next(ctx) {
+		err := store.ResolveIdentities(ctx, opID)
+		if err == nil {
+			// Success.
+			break
+		} else if ctx.Err() != nil {
+			// The context has expired, so just return.
+			return
+		} else if err2, ok := err.(*meergo.OperationError); ok {
+			slog.Error("identity resolution ended with an error", "err", err2)
+			// Break the loop and send the 'EndIdentityResolution' notification.
+			break
+		} else {
+			// Unknown error: try again.
+			slog.Error("identity resolution on warehouse returned an unknown error, trying again the operation", "err", err)
+			continue
+		}
+	}
+	nEnd := state.EndIdentityResolution{
+		Workspace: workspace,
+		ID:        opID,
+		EndTime:   time.Now().UTC(),
+	}
+	bo = backoff.New(200)
+	bo.SetCap(time.Second)
+	for bo.Next(ctx) {
+		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
+			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
+			if err != nil {
+				return nil, err
+			}
+			if res.RowsAffected() == 0 {
+				// This happens in cases where the query has been executed
+				// more than once (because an error occurred), but in fact
+				// the database has already been modified, so we don't want
+				// to send the notification more than once.
+				return nil, nil
+			}
+			return nEnd, nil
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			// Try again to do the query and send the notification.
+			continue
+		}
+		// No errors: break the loop.
+		break
+	}
+}
+
+// executeUserSchemaUpdate executes the update of the user schema, not returning
+// until it has completed (with success or with an operation error).
+func (core *Core) executeUserSchemaUpdate(workspace int, opID string, schema types.Type,
+	primarySources map[string]int, rePaths map[string]any, operations []meergo.AlterOperation) {
+	ctx := core.close.ctx
+	store := core.datastore.Store(workspace)
+	ws, ok := core.state.Workspace(workspace)
+	if !ok {
+		return
+	}
+	// Keep calling 'AlterUserSchema' until it (1) returns successfully, (2)
+	// returns with a *meergo.OperationError, or (3) the context is cancelled.
+	var alterSchemaErr *meergo.OperationError
+	bo := backoff.New(200)
+	bo.SetCap(time.Second)
+	for bo.Next(ctx) {
+		err := store.AlterUserSchema(ctx, opID, schema, operations)
+		if err == nil {
+			// Success.
+			break
+		} else if ctx.Err() != nil {
+			// The context has expired, so just return.
+			return
+		} else if err2, ok := err.(*meergo.OperationError); ok {
+			slog.Error("alter schema ended with an error", "err", err2)
+			alterSchemaErr = err2
+			// Break the loop and send the 'EndUpdateUserSchema' notification
+			// with the error.
+			break
+		} else {
+			// Unknown error: try again.
+			slog.Error("alter schema on warehouse returned an unknown error, trying again the operation", "err", err)
+			continue
+		}
+	}
+	nEnd := state.EndUpdateUserSchema{
+		Workspace: workspace,
+		ID:        opID,
+		EndTime:   time.Now().UTC(),
+		Schema:    schema,
+	}
+	if alterSchemaErr != nil {
+		nEnd.Err = alterSchemaErr.Error()
+	}
+	// Build the query to insert the primary paths.
+	var insertPrimarySources string
+	var paths []any
+	if len(primarySources) > 0 {
+		i := 0
+		var b strings.Builder
+		for path, source := range primarySources {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteByte('(')
+			b.WriteString(strconv.Itoa(source))
+			b.WriteString(",$")
+			b.WriteString(strconv.Itoa(i + 1))
+			b.WriteString(")")
+			paths = append(paths, path)
+			i++
+		}
+		insertPrimarySources = "INSERT INTO user_schema_primary_sources (source, path) VALUES " + b.String()
+	}
+	// Update the identifiers.
+	nEnd.Identifiers = make([]string, 0, len(ws.Identifiers))
+Identifiers:
+	for _, identifier := range ws.Identifiers {
+		for _, operation := range operations {
+			if operation.Operation == meergo.OperationAddColumn {
+				continue
+			}
+			if path := strings.ReplaceAll(operation.Column, "_", "."); path != identifier {
+				continue
+			}
+			if operation.Operation == meergo.OperationRenameColumn {
+				nEnd.Identifiers = append(nEnd.Identifiers, strings.ReplaceAll(operation.NewColumn, "_", "."))
+			}
+			continue Identifiers
+		}
+		nEnd.Identifiers = append(nEnd.Identifiers, identifier)
+	}
+	for {
+		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			if nEnd.Err == "" {
+				// These columns should be updated only in case of success,
+				// otherwise, in case of error, the current ones should be left.
+				//
+				// Update the user schema.
+				query := "UPDATE workspaces SET user_schema = update_user_schema_schema," +
+					" identifiers = $1 WHERE id = $2"
+				_, err := tx.Exec(ctx, query, nEnd.Identifiers, nEnd.Workspace)
+				if err != nil {
+					return nil, err
+				}
+				// Update the primary sources.
+				_, err = tx.Exec(ctx, "DELETE FROM user_schema_primary_sources s USING connections c\n"+
+					"WHERE c.workspace = $1 AND s.source = c.id", workspace)
+				if err != nil {
+					return nil, err
+				}
+				if insertPrimarySources != "" {
+					_, err = tx.Exec(ctx, insertPrimarySources, paths...)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+			// Set the alter schema update as completed.
+			query := "UPDATE workspaces SET update_user_schema_id = NULL," +
+				" update_user_schema_schema = 'null', update_user_schema_primary_sources = 'null'," +
+				" update_user_schema_re_paths = 'null', update_user_schema_operations = 'null'," +
+				" update_user_schema_end_time = $1, update_user_schema_error = $2" +
+				" WHERE id = $3 AND update_user_schema_id = $4"
+			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
+			if err != nil {
+				return nil, err
+			}
+			if res.RowsAffected() == 0 {
+				// This happens in cases where the query has been executed
+				// more than once (because an error occurred), but in fact
+				// the database has already been modified, so we don't want
+				// to send the notification more than once.
+				return nil, nil
+			}
+			return nEnd, nil
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			// Try again to do the queries and send the notification.
+			continue
+		}
+		// No errors: break the loop.
+		break
+	}
+}
+
+// onElectLeader is called when a leader is elected.
+func (core *Core) onElectLeader(n state.ElectLeader) {
+	if !core.state.IsLeader() {
+		return
+	}
+	workspaces := core.state.Workspaces()
+	for _, ws := range workspaces {
+		if ws.IR.ID != nil {
+			go core.executeIdentityResolution(ws.ID, *ws.IR.ID)
+			// At most only one operation between Identity Resolution and update
+			// user schema can be started, so continue to the next workspace.
+			continue
+		}
+		if ws.UpdateUserSchema.ID != nil {
+			go core.executeUserSchemaUpdate(ws.ID, *ws.UpdateUserSchema.ID,
+				ws.UpdateUserSchema.Schema, ws.UpdateUserSchema.PrimarySources,
+				ws.UpdateUserSchema.RePaths, ws.UpdateUserSchema.Operations)
+		}
+	}
+}
+
+// onElectLeader is called when the identity resolution is started.
+func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
+	if !core.state.IsLeader() {
+		return
+	}
+	go core.executeIdentityResolution(n.Workspace, n.ID)
+}
+
+// onStartUpdateUserSchema is started when the user schema update is started.
+func (core *Core) onStartUpdateUserSchema(n state.StartUpdateUserSchema) {
+	if !core.state.IsLeader() {
+		return
+	}
+	go core.executeUserSchemaUpdate(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.RePaths, n.Operations)
+}
+
+// startIdentityResolution starts an Identity Resolution.
+//
+// If another operation (identity resolution or user schema update) is already
+// running, this method returns an errors.UnprocessableError error with code
+// OperationAlreadyExecuting.
+func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
+	core.mustBeOpen()
+	opID, err := uuid.NewUUID()
+	if err != nil {
+		return err
+	}
+	n := state.StartIdentityResolution{
+		Workspace: ws,
+		ID:        opID.String(),
+		StartTime: time.Now().UTC(),
+	}
+	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var ongoingOp bool
+		query := `SELECT update_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
+		if err != nil {
+			return nil, err
+		}
+		if ongoingOp {
+			return nil, errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
+		}
+		query = "UPDATE workspaces SET ir_id = $1, ir_start_time = $2, ir_end_time = NULL WHERE id = $3"
+		_, err = tx.Exec(ctx, query, n.ID, n.StartTime, n.Workspace)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// startUpdateUserSchema starts the update of the user schema.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - OperationAlreadyExecuting, if another operation (identity resolution or
+//     user schema update) is already running.
+//   - ConnectionNotExist, if a connection referred in the primary sources does
+//     not exist.
+func (core *Core) startUpdateUserSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, rePaths map[string]any, operations []meergo.AlterOperation) error {
+	core.mustBeOpen()
+	opID, err := uuid.NewUUID()
+	if err != nil {
+		return err
+	}
+	n := state.StartUpdateUserSchema{
+		Workspace:      ws,
+		ID:             opID.String(),
+		StartTime:      time.Now().UTC(),
+		Schema:         schema,
+		PrimarySources: primarySources,
+		RePaths:        rePaths,
+		Operations:     operations,
+	}
+	// Prepare the query to check whether the connections referred within the
+	// primary sources exist or not.
+	connIDs := []int{}
+	var connQuery strings.Builder
+	if len(primarySources) > 0 {
+		for _, connID := range primarySources {
+			if !slices.Contains(connIDs, connID) {
+				connIDs = append(connIDs, connID)
+			}
+		}
+		slices.Sort(connIDs)
+		connQuery.WriteString("SELECT count(*) FROM connections WHERE id IN (")
+		for i, c := range connIDs {
+			if i > 0 {
+				connQuery.WriteByte(',')
+			}
+			connQuery.WriteString(strconv.Itoa(c))
+		}
+		connQuery.WriteByte(')')
+	}
+	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		// Check if primary sources connections exist.
+		if len(primarySources) > 0 {
+			var count int
+			err := tx.QueryRow(ctx, connQuery.String()).Scan(&count)
+			if err != nil {
+				return nil, err
+			}
+			if count < len(connIDs) {
+				return nil, errors.Unprocessable(ConnectionNotExist, "a primary source does not exist")
+			}
+		}
+		// Check that there are no other operations in progress on the
+		// warehouse.
+		var ongoingOp bool
+		query := `SELECT update_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		err = tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
+		if err != nil {
+			return nil, err
+		}
+		if ongoingOp {
+			return nil, errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
+		}
+		// Sets the update user schema operation to running.
+		query = "UPDATE workspaces SET update_user_schema_id = $1," +
+			" update_user_schema_schema = $2, update_user_schema_primary_sources = $3," +
+			" update_user_schema_re_paths = $4, update_user_schema_operations = $5," +
+			" update_user_schema_start_time = $6, update_user_schema_end_time = NULL," +
+			" update_user_schema_error = NULL WHERE id = $7"
+		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.RePaths,
+			n.Operations, n.StartTime, n.Workspace)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func isValidInvitationToken(token string) bool {

@@ -96,27 +96,59 @@ func (op AlterOperationType) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + op.String() + `"`), nil
 }
 
-var (
-	ErrWarehouseAlterInProgress              = errors.New("alter schema currently in progress on the data warehouse")
-	ErrWarehouseIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
-)
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
+	var v any
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+	s, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("json: cannot scan a %T value into a meergo.AlterOperationType value", v)
+	}
+	switch s {
+	case "AddColumn":
+		*op = OperationAddColumn
+	case "DropColumn":
+		*op = OperationDropColumn
+	case "RenameColumn":
+		*op = OperationRenameColumn
+	default:
+		return fmt.Errorf("json: invalid meergo.AlterOperationType: %s", s)
+	}
+	return nil
+}
 
 // Warehouse is the interface implemented by warehouse drivers.
 type Warehouse interface {
 
 	// AlterUserColumns alters the columns of the user tables.
 	//
+	// opID is an identifier that uniquely identifies a specific alter columns
+	// operation; if the method is called again passing the same identifier, whether
+	// the operation ended successfully or with a *meergo.OperationError error, that
+	// result is returned again.
+	//
 	// columns contains the columns of the "users" table to obtain (this parameters
 	// is useful for obtaining type information and for creating views), while
 	// operations is the set of operations to apply in order to migrate the current
 	// columns to the given columns.
 	//
-	// If another alter operation is in progress on the data warehouse, returns an
-	// ErrWarehouseAlterInProgress error.
+	// This method, once called, can then return in four distinct cases:
 	//
-	// If an Identity Resolution is in progress, returns an
-	// ErrWarehouseIdentityResolutionInProgress error.
-	AlterUserColumns(ctx context.Context, columns []Column, operations []AlterOperation) error
+	// (1) the operation was successful and no error was returned;
+	//
+	// (2) the context was cancelled;
+	//
+	// (3) the operation ended with an error of type *meergo.OperationError, and this
+	// means that even if the method is called again with the same ID, this error is
+	// still returned;
+	//
+	// (4) the operation ended with an unexpected and unknown error, and it is
+	// therefore up to the caller to try calling this method again by providing the
+	// same ID.
+	AlterUserColumns(ctx context.Context, opID string, columns []Column, operations []AlterOperation) error
 
 	// AlterUserColumnsQueries returns the queries that alter the columns of the
 	// user tables.
@@ -144,17 +176,6 @@ type Warehouse interface {
 	// The given user schema will be used by the initialization to build the user
 	// tables on the warehouse with the corresponding columns.
 	Initialize(ctx context.Context, userColumns []Column) error
-
-	// LatestIdentityResolution returns information about the latest Identity
-	// Resolution.
-	//
-	// In particular:
-	//
-	// - if the Identity Resolution has been started and completed, returns its
-	//   start time and end time;
-	// - if it is in progress, returns its start time and nil for the end time;
-	// - if no Identity Resolution has ever been executed, returns nil and nil.
-	LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error)
 
 	// Merge performs a table merge operation.
 	// If handles row updates, inserts, and deletions. table specifies the target
@@ -196,6 +217,11 @@ type Warehouse interface {
 
 	// ResolveIdentities resolves the identities.
 	//
+	// opID is an identifier that uniquely identifies a specific resolve identities
+	// operation; if the method is called again passing the same identifier, whether
+	// the operation ended successfully or with a *meergo.OperationError error, that
+	// result is returned again.
+	//
 	// identifiers are the columns corresponding to the Identity Resolution
 	// identifiers, ordered by priority.
 	//
@@ -206,12 +232,20 @@ type Warehouse interface {
 	// primary source connection have been set) and IDs of primary source
 	// connections.
 	//
-	// If an Identity Resolution is already in execution, returns an
-	// ErrWarehouseIdentityResolutionInProgress error.
+	// This method, once called, can then return in four distinct cases:
 	//
-	// If an alter schema operation is in progress on the data warehouse, returns a
-	// ErrWarehouseAlterInProgress error.
-	ResolveIdentities(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
+	// (1) the operation was successful and no error was returned;
+	//
+	// (2) the context was cancelled;
+	//
+	// (3) the operation ended with an error of type *meergo.OperationError, and this
+	// means that even if the method is called again with the same ID, this error is
+	// still returned;
+	//
+	// (4) the operation ended with an unexpected and unknown error, and it is
+	// therefore up to the caller to try calling this method again by providing the
+	// same ID.
+	ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// Repair repairs the database objects on the data warehouse needed by Meergo.
 	// It also takes care of correcting other inconsistent data (such as any tables
@@ -308,6 +342,19 @@ func IsValidIdentifier(name string) bool {
 // IsValidSchemaName reports whether name is a valid schema name.
 func IsValidSchemaName(name string) bool {
 	return IsValidIdentifier(name)
+}
+
+// OperationError represents an error that occurred in the data warehouse during
+// an Identity Resolution or user schema update operation.
+type OperationError struct{ err error }
+
+// NewOperationError returns a new *OperationError.
+func NewOperationError(err error) *OperationError {
+	return &OperationError{err: err}
+}
+
+func (err OperationError) Error() string {
+	return err.err.Error()
 }
 
 // ValidateInt validates an int value.

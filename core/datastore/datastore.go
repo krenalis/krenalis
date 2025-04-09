@@ -54,10 +54,10 @@ func New(st *state.State) *Datastore {
 	ds.state.AddListener(ds.onCreateWorkspace)
 	ds.state.AddListener(ds.onDeleteAction)
 	ds.state.AddListener(ds.onDeleteConnection)
+	ds.state.AddListener(ds.onEndUpdateUserSchema)
 	ds.state.AddListener(ds.onUpdateAction)
 	ds.state.AddListener(ds.onUpdateWarehouse)
 	ds.state.AddListener(ds.onUpdateWarehouseMode)
-	ds.state.AddListener(ds.onUpdateUserSchema)
 	for _, ws := range st.Workspaces() {
 		store, err := newStore(ds, ws)
 		if err != nil {
@@ -215,6 +215,14 @@ func (ds *Datastore) onDeleteConnection(n state.DeleteConnection) {
 	store.onDeleteConnection(n)
 }
 
+// onEndUpdateUserSchema is called when the update of the user schema ends.
+func (ds *Datastore) onEndUpdateUserSchema(n state.EndUpdateUserSchema) {
+	ds.mu.Lock()
+	store := ds.store[n.Workspace]
+	ds.mu.Unlock()
+	store.onEndUpdateUserSchema(n)
+}
+
 // onUpdateAction is called when an action is updated.
 func (ds *Datastore) onUpdateAction(n state.UpdateAction) {
 	action, _ := ds.state.Action(n.ID)
@@ -257,14 +265,6 @@ func (ds *Datastore) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	store := ds.store[n.Workspace]
 	ds.mu.Unlock()
 	store.mc.ChangeMode(n.Mode, n.CancelIncompatibleOperations)
-}
-
-// onUpdateUserSchema is called when a user schema is updated.
-func (ds *Datastore) onUpdateUserSchema(n state.UpdateUserSchema) {
-	ds.mu.Lock()
-	store := ds.store[n.Workspace]
-	ds.mu.Unlock()
-	store.onUpdateUserSchema(n)
 }
 
 // CheckConflictingProperties checks if schema contains conflicting properties

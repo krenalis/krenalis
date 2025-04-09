@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/testimages"
@@ -613,9 +614,17 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					for _, id := range test.identifiers {
 						identifiers = append(identifiers, columnByName[id])
 					}
-					err = wh.ResolveIdentities(ctx, identifiers, columns, test.primarySources)
+					opID, err := uuid.NewUUID()
 					if err != nil {
 						t.Fatal(err)
+					}
+					// Call ResolveIdentities several times, just to do a
+					// minimal idempotency test.
+					for range 5 {
+						err = wh.ResolveIdentities(ctx, opID.String(), identifiers, columns, test.primarySources)
+						if err != nil {
+							t.Fatal(err)
+						}
 					}
 
 					// Read the users from the warehouse and check that they match with

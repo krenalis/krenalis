@@ -17,11 +17,37 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/types"
 )
 
 // AlterUserColumns alters the columns of the user tables.
-func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
+	status, err := warehouse.executeOperation(ctx, opID, alterUserColumns2)
+	if err != nil {
+		return err
+	}
+	if status.alreadyCompleted {
+		return status.executionError
+	}
+	err = warehouse.alterUserColumns(ctx, userColumns, operations)
+	bo := backoff.New(200)
+	bo.SetCap(time.Second)
+	for bo.Next(ctx) {
+		err2 := warehouse.setOperationAsCompleted(ctx, opID, err)
+		if err2 != nil {
+			slog.Error("cannot set alter user columns operation as completed, retrying", "err", err2, "operationError", err)
+			continue
+		}
+		if err != nil {
+			return meergo.NewOperationError(err)
+		}
+		return nil
+	}
+	return ctx.Err()
+}
+
+func (warehouse *Snowflake) alterUserColumns(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
 
 	// Start an AlterSchema operation on the data warehouse, then defer its
 	// ending.

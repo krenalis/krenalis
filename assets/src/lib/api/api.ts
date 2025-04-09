@@ -21,6 +21,7 @@ import Workspace, {
 	CreateWorkspaceResponse,
 	UIPreferences,
 	LatestIdentityResolution,
+	LatestUserSchemaUpdate,
 	PrimarySources,
 } from './types/workspace';
 import {
@@ -918,6 +919,10 @@ class Workspaces {
 
 	latestIdentityResolution = async (): Promise<LatestIdentityResolution> => {
 		return await call(`${this.apiURL}/identity-resolution/latest`, http.GET, this.workspaceID);
+	};
+
+	latestUserSchemaUpdate = async (): Promise<LatestUserSchemaUpdate> => {
+		return await call(`${this.apiURL}/users/schema/latest-update`, http.GET, this.workspaceID);
 	};
 }
 

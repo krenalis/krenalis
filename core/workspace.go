@@ -29,7 +29,6 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jxskiss/base62"
@@ -1088,31 +1087,54 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 	return identities, total, nil
 }
 
-// LatestIdentityResolution returns information about the latest Identity
-// Resolution of the workspace.
+// LatestIdentityResolution return information about the latest identity
+// resolution.
 //
 // In particular:
 //
 //   - if the Identity Resolution has been started and completed, returns its
 //     start time and end time;
 //   - if it is in progress, returns its start time and nil for the end time;
-//   - if no Identity Resolution has ever been executed, returns nil and nil.
+//   - if no Identity Resolution has never been executed, returns nil and nil.
 //
-// It returns an errors.UnprocessableError error with code MaintenanceMode if
-// the data warehouse is in maintenance mode.
+// It returns an errors.NotFoundError error if the workspace does not exist
+// anymore.
 func (this *Workspace) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	this.core.mustBeOpen()
-	startTime, endTime, err = this.store.LatestIdentityResolution(ctx)
-	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
-			return nil, nil, errors.Unavailable("%s", err)
-		}
-		if err == datastore.ErrMaintenanceMode {
-			return nil, nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		return nil, nil, err
+	ws, ok := this.core.state.Workspace(this.workspace.ID)
+	if !ok {
+		return nil, nil, errors.NotFound("workspace %d does not exist", this.workspace.ID)
 	}
-	return startTime, endTime, nil
+	return ws.IR.StartTime, ws.IR.EndTime, nil
+}
+
+// LatestUserSchemaUpdate return information about the latest schema update.
+//
+// In particular:
+//
+//   - startTime is the start timestamp (UTC) of the latest user schema update,
+//     either running or completed; if null, no user schema update has never
+//     been started for the workspace.
+//   - endTime is the end timestamp (UTC) for the latest user schema update; if
+//     null, it means that the user schema update is still in progress, or that
+//     no schema update has never been performed for the workspace.
+//   - updateErr is a possible error in the execution of the latest update of
+//     the user schema; if null, it means that no update of the user schema has
+//     never been executed, or that one is in progress, or that the last one
+//     executed completed without errors.
+//
+// It returns an errors.NotFoundError error if the workspace does not exist
+// anymore.
+func (this *Workspace) LatestUserSchemaUpdate(ctx context.Context) (startTime, endTime *time.Time, updateError string, err error) {
+	this.core.mustBeOpen()
+	ws, ok := this.core.state.Workspace(this.workspace.ID)
+	if !ok {
+		return nil, nil, "", errors.NotFound("workspace %d does not exist", this.workspace.ID)
+	}
+	if ws.UpdateUserSchema.Err != nil {
+		updateError = *ws.UpdateUserSchema.Err
+	}
+	return ws.UpdateUserSchema.StartTime, ws.UpdateUserSchema.EndTime, updateError, nil
 }
 
 // ListenedEvents returns the events listened to the specified listener and the
@@ -1264,22 +1286,16 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 //
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - OperationAlreadyExecuting, if another operation (identity resolution or
+//     user schema update) is already running.
 func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
-	this.core.mustBeOpen()
-	ctx, span := telemetry.TraceSpan(ctx, "Workspace.StartIdentityResolution", "workspace_id", this.workspace.ID)
-	defer span.End()
-	telemetry.IncrementCounter(ctx, "IdentityResolutionExecutions", 1)
-	err := this.store.StartIdentityResolution(ctx)
-	if err != nil {
-		if err == datastore.ErrInspectionMode {
-			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
-		}
-		if err == datastore.ErrMaintenanceMode {
-			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		return err
+	switch this.store.Mode() {
+	case state.Inspection:
+		return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+	case state.Maintenance:
+		return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 	}
-	return nil
+	return this.core.startIdentityResolution(ctx, this.workspace.ID)
 }
 
 // TestWarehouseUpdate tests the update of the workspace's warehouse.
@@ -1402,6 +1418,8 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - IdentityResolutionInExecution, if an identity resolution operation is
+//     currently running on the workspace.
 //   - PropertyNotExist, if an identifier path does not exist in the user
 //     schema.
 //   - TypeNotAllowed, if an identifier path's type, as defined in the user
@@ -1430,6 +1448,14 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 	}
 
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var irOpID *string
+		err := tx.QueryRow(ctx, "SELECT ir_id FROM workspaces WHERE id = $1", n.Workspace).Scan(&irOpID)
+		if err != nil {
+			return nil, err
+		}
+		if irOpID != nil {
+			return nil, errors.Unprocessable(IdentityResolutionInExecution, "identity resolution is in execution so the identifiers cannot be updated")
+		}
 		if len(identifiers) > 0 {
 			var s []byte
 			err := tx.QueryRow(ctx, "SELECT user_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
@@ -1454,7 +1480,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 				}
 			}
 		}
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET resolve_identities_on_batch_import = $1,\n"+
+		_, err = tx.Exec(ctx, "UPDATE workspaces SET resolve_identities_on_batch_import = $1,\n"+
 			"identifiers = $2 WHERE id = $3", n.ResolveIdentitiesOnBatchImport, n.Identifiers, n.Workspace)
 		if err != nil {
 			return nil, err

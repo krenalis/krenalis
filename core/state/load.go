@@ -224,16 +224,20 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 	// Read all workspaces.
 	state.workspaces = map[int]*Workspace{}
-	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
-		" warehouse_settings, user_schema, resolve_identities_on_batch_import,"+
-		" identifiers, ui_user_profile_image, ui_user_profile_first_name,"+
-		" ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
+	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_type,"+
+		" warehouse_mode, warehouse_settings, update_user_schema_id, update_user_schema_schema,"+
+		" update_user_schema_primary_sources, update_user_schema_re_paths,"+
+		" update_user_schema_operations, update_user_schema_start_time, update_user_schema_end_time,"+
+		" update_user_schema_error, user_schema, resolve_identities_on_batch_import,"+
+		" identifiers, ir_id, ir_start_time, ir_end_time, ui_user_profile_image,"+
+		" ui_user_profile_first_name, ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
 		"FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID int
 			var warehouseType string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
+			var updateUserSchema []byte
 			var warehouseSettings []byte
 			for rows.Next() {
 				ws := &Workspace{
@@ -243,8 +247,12 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					accounts:    map[int]*Account{},
 				}
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
-					&warehouseMode, &warehouseSettings, &userSchema,
-					&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers,
+					&warehouseMode, &warehouseSettings, &ws.UpdateUserSchema.ID,
+					&updateUserSchema, &ws.UpdateUserSchema.PrimarySources,
+					&ws.UpdateUserSchema.RePaths, &ws.UpdateUserSchema.Operations,
+					&ws.UpdateUserSchema.StartTime, &ws.UpdateUserSchema.EndTime,
+					&ws.UpdateUserSchema.Err, &userSchema, &ws.ResolveIdentitiesOnBatchImport,
+					&ws.Identifiers, &ws.IR.ID, &ws.IR.StartTime, &ws.IR.EndTime,
 					&ws.UIPreferences.UserProfile.Image, &ws.UIPreferences.UserProfile.FirstName,
 					&ws.UIPreferences.UserProfile.LastName, &ws.UIPreferences.UserProfile.Extra,
 					&ws.actionsToPurge); err != nil {
@@ -258,6 +266,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.Settings = warehouseSettings
 				err = json.Unmarshal(userSchema, &ws.UserSchema)
+				if err != nil {
+					return err
+				}
+				err = json.Unmarshal(updateUserSchema, &ws.UpdateUserSchema.Schema)
 				if err != nil {
 					return err
 				}

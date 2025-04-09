@@ -39,6 +39,8 @@ var (
 	createEventsTable string
 	//go:embed tables/operations.sql
 	createOperationsTable string
+	//go:embed tables/operations2.sql
+	createOperations2Table string
 )
 
 var _ meergo.Warehouse = &PostgreSQL{}

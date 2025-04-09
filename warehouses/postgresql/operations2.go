@@ -1,0 +1,107 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2025 Open2b
+//
+
+package postgresql
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/meergo/meergo"
+)
+
+type warehouseOp2 string
+
+const (
+	alterUserColumns2   warehouseOp2 = "AlterUserColumns"
+	identityResolution2 warehouseOp2 = "IdentityResolution"
+)
+
+type opStatus struct {
+	canBeStarted     bool
+	alreadyCompleted bool
+	// executionError is significant only if 'alreadyCompleted' is true.
+	// If executionError is not nil, it has type meergo.OperationError.
+	executionError error
+}
+
+// executeOperation starts an operation, identified by an ID.
+//
+// The returned status indicates whether the operation can be started, or
+// returns the status of a current executing or previous execution.
+func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, opType warehouseOp2) (status *opStatus, err error) {
+	var completedAt *time.Time
+	var opError string
+	for {
+		err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
+			_, err = tx.Exec(ctx, "LOCK _operations2")
+			if err != nil {
+				return err
+			}
+			err = tx.QueryRow(ctx, "SELECT completed_at, error FROM _operations2 WHERE id = $1", opID).Scan(&completedAt, &opError)
+			if err != nil {
+				if err != pgx.ErrNoRows {
+					// Generic database error.
+					return err
+				}
+				// ErrNoRows, so the operation can be started.
+				_, err = tx.Exec(ctx, "INSERT INTO _operations2 (id, operation_type) VALUES ($1, $2)", opID, opType)
+				if err != nil {
+					return err
+				}
+				status = &opStatus{canBeStarted: true}
+				return nil
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		if status != nil {
+			return status, nil
+		}
+		// Operation is still running, so wait 500ms then try again to check if
+		// it has completed.
+		if completedAt == nil {
+			time.Sleep(500 * time.Millisecond)
+			if err := ctx.Err(); err != nil {
+				return nil, ctx.Err()
+			}
+			continue
+		}
+		// Operation is completed with an error.
+		if opError != "" {
+			return &opStatus{alreadyCompleted: true, executionError: meergo.NewOperationError(errors.New(opError))}, nil
+		}
+		// Operations is completed without errors.
+		return &opStatus{alreadyCompleted: true}, nil
+	}
+}
+
+// setOperationAsCompleted sets the given operation as completed. opError is the
+// possible error in the execution of the operation, which will be stored in the
+// database; nil means operation ended successfully.
+// If an operation has already been set as completed, this method does
+// nothing.
+func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, opID string, opError error) error {
+	pool, err := warehouse.connectionPool(ctx)
+	if err != nil {
+		return err
+	}
+	var opErrorStr string
+	if opError != nil {
+		opErrorStr = opError.Error()
+	}
+	_, err = pool.Exec(ctx, "UPDATE _operations2 SET completed_at = $1, error = $2"+
+		" WHERE id = $3 AND completed_at IS NULL", time.Now().UTC(), opErrorStr, opID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

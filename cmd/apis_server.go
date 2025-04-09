@@ -127,6 +127,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /transformation-languages":                       api.TransformationLanguages,
 		"GET    /users":                                          workspace.Users,
 		"GET    /users/schema":                                   workspace.UserSchema,
+		"GET    /users/schema/latest-update":                     workspace.LatestUserSchemaUpdate,
 		"GET    /users/{id}/events":                              workspace.UserEvents,
 		"GET    /users/{id}/identities":                          workspace.Identities,
 		"GET    /users/{id}/traits":                              workspace.Traits,

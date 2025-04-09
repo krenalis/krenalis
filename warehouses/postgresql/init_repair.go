@@ -121,6 +121,7 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, user
 		createDestinationUsersTable,
 		createEventsTable,
 		createOperationsTable,
+		createOperations2Table,
 		userIdentitiesSQLSchema(userColumns),
 		usersSQLSchema("_users_0", userColumns),
 	}

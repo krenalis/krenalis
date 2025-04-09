@@ -29,13 +29,18 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
+					{422, OperationAlreadyExecuting, "another operation is already executing"},
 				},
 			},
 			{
-				Name:        "Retrieve latest identity resolution info",
-				Description: "Returns the start and end times of the latest identity resolution.",
-				Method:      GET,
-				URL:         "/v1/identity-resolution/latest",
+				Name: "Get information about latest identity resolution",
+				Description: "Returns information about the latest identity resolution.\n\n" +
+					"Depending on the returned values:\n" +
+					"- If neither `startTime` nor `endTime` are returned, it means that no identity resolutions have ever been performed for the workspace.\n" +
+					"- If only `startTime` is returned, it means that the workspace is currently running an identity resolution.\n" +
+					"- If both `startTime` and `endTime` are returned, it means that an identity resolution has been performed and there are no identity resolutions currently running.",
+				Method: GET,
+				URL:    "/v1/identity-resolution/latest",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -43,20 +48,21 @@ func init() {
 							Type:        types.DateTime(),
 							Placeholder: `"2025-01-12T09:37:22"`,
 							Nullable:    true,
-							Description: "The UTC start time of the latest identity resolution. It is null if no identity resolution has been executed yet.",
+							Description: "Start timestamp (UTC) of the latest identity resolution, either running or completed.\n\n" +
+								"If null, no identity resolutions have never been executed for the workspace.",
 						},
 						{
 							Name:        "endTime",
 							Type:        types.DateTime(),
 							Placeholder: `"2025-01-12T09:42:51"`,
 							Nullable:    true,
-							Description: "The UTC end time of the latest identity resolution. It is null if an identity resolution is still in progress or if none has been executed yet.",
+							Description: "End timestamp (UTC) for the latest identity resolution.\n\n" +
+								"If null, it means that the identity resolution is still in progress, or that no identity resolution have never been executed on the workspace.",
 						},
 					},
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
-					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
 				},
 			},
 			{
@@ -84,6 +90,7 @@ func init() {
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
+					{422, IdentityResolutionInExecution, "identity resolution is in execution so the identifiers cannot be updated"},
 					{422, PropertyNotExist, "property does not exist in the user schema"},
 					{422, TypeNotAllowed, "a property has a type which is not allowed for identifiers"},
 				},

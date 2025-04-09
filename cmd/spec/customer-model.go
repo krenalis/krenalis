@@ -71,11 +71,10 @@ func init() {
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
-					{422, AlterSchemaInProgress, "alter schema operation is already in progress"},
 					{422, ConnectionNotExist, "primary source does not exist"},
-					{422, IdentityResolutionInProgress, "identity resolution is currently in progress"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
 					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
+					{422, OperationAlreadyExecuting, "another operation is already executing"},
 				},
 			},
 			{
@@ -111,6 +110,47 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
+				},
+			},
+			{
+				Name: "Get information about latest user schema update",
+				Description: "Returns information about the latest user schema update.\n\n" +
+					"Depending on the returned values:\n" +
+					"- If neither `startTime` nor `endTime` are returned, it means that no user schema update has never been performed for the workspace.\n" +
+					"- If only `startTime` is returned, it means that the workspace is currently running a user schema update.\n" +
+					"- If both `startTime` and `endTime` are returned, it means that a user schema update has been performed and there are no user schema updates currently running.",
+				Method: GET,
+				URL:    "/v1/users/schema/latest-update",
+				Response: &Response{
+					Parameters: []types.Property{
+						{
+							Name:        "startTime",
+							Type:        types.DateTime(),
+							Placeholder: `"2025-01-12T09:37:22"`,
+							Nullable:    true,
+							Description: "Start timestamp (UTC) of the latest user schema update, either running or completed.\n\n" +
+								"If null, no user schema update has never been started for the workspace.",
+						},
+						{
+							Name:        "endTime",
+							Type:        types.DateTime(),
+							Placeholder: `"2025-01-12T09:37:25"`,
+							Nullable:    true,
+							Description: "End timestamp (UTC) for the latest user schema update.\n\n" +
+								"If null, it means that the user schema update is still in progress, or that no schema update has never been performed for the workspace.",
+						},
+						{
+							Name:        "error",
+							Type:        types.Text(),
+							Placeholder: "null",
+							Nullable:    true,
+							Description: "A possible error in the execution of the latest update of the user schema.\n\n" +
+								"If null, it means that no update of the user schema has never been executed, or that one is in progress, or that the last one executed completed without errors.",
+						},
+					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 				},
 			},
 		},

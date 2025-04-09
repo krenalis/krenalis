@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
@@ -27,8 +28,32 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+	status, err := warehouse.executeOperation(ctx, opID, identityResolution2)
+	if err != nil {
+		return err
+	}
+	if status.alreadyCompleted {
+		return status.executionError
+	}
+	err = warehouse.resolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
+	bo := backoff.New(200)
+	bo.SetCap(time.Second)
+	for bo.Next(ctx) {
+		err2 := warehouse.setOperationAsCompleted(ctx, opID, err)
+		if err2 != nil {
+			slog.Error("cannot set identity resolution operation as completed, retrying", "err", err2, "operationError", err)
+			continue
+		}
+		if err != nil {
+			return meergo.NewOperationError(err)
+		}
+		return nil
+	}
+	return ctx.Err()
+}
 
+func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
 	_, span := telemetry.TraceSpan(ctx, "PostgreSQL.ResolveIdentities")
 	defer span.End()
 
@@ -234,20 +259,4 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	}
 
 	return nil
-}
-
-// LatestIdentityResolution returns information about the latest Identity
-// Resolution.
-func (warehouse *PostgreSQL) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
-	pool, err := warehouse.connectionPool(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	query := `SELECT "start_time", "end_time" FROM "_operations" WHERE ` +
-		`"operation" = 'IdentityResolution' ORDER BY "id" DESC LIMIT 1`
-	err = pool.QueryRow(ctx, query).Scan(&startTime, &endTime)
-	if err != nil && err != pgx.ErrNoRows {
-		return nil, nil, err
-	}
-	return startTime, endTime, nil
 }

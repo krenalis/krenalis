@@ -11,16 +11,12 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/datastore/diffschemas"
-	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -95,14 +91,11 @@ func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - AlterSchemaInProgress, if an alter schema operation is already in
-//     progress on the warehouse.
 //   - ConnectionNotExist, if a connection used as primary source does not
 //     exist.
-//   - IdentityResolutionInProgress, if an Identity Resolution is currently in
-//     progress on the warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidSchemaUpdate, if the schema update is invalid.
+//   - OperationAlreadyExecuting, if another operation is already executing.
 func (this *Workspace) UpdateUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	this.core.mustBeOpen()
 	if primarySources == nil {
@@ -120,20 +113,19 @@ func (this *Workspace) UpdateUserSchema(ctx context.Context, schema types.Type, 
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
 	}
-
 	if err := checkAllowedPropertyUserSchema(schema); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-
 	if err := datastore.CheckConflictingProperties("users", schema); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-
+	if this.store.Mode() == state.Inspection {
+		return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+	}
 	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
 		return errors.Unprocessable(InvalidSchemaUpdate, "cannot update the schema as specified: %s", err)
 	}
-
 	for _, s := range primarySources {
 		source, ok := this.workspace.Connection(s)
 		if !ok {
@@ -146,116 +138,11 @@ func (this *Workspace) UpdateUserSchema(ctx context.Context, schema types.Type, 
 			return errors.BadRequest("primary source %d does not support Users target", s)
 		}
 	}
-
-	// Update the identifiers.
-	identifiers := make([]string, 0, len(this.workspace.Identifiers))
-Identifiers:
-	for _, identifier := range this.workspace.Identifiers {
-		for _, operation := range operations {
-			if operation.Operation == meergo.OperationAddColumn {
-				continue
-			}
-			if path := strings.ReplaceAll(operation.Column, "_", "."); path != identifier {
-				continue
-			}
-			if operation.Operation == meergo.OperationRenameColumn {
-				identifiers = append(identifiers, strings.ReplaceAll(operation.NewColumn, "_", "."))
-			}
-			continue Identifiers
-		}
-		identifiers = append(identifiers, identifier)
+	if this.workspace.IR.ID != nil || this.workspace.UpdateUserSchema.ID != nil {
+		return errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 	}
-
-	// Update the database and send the notification.
-	n := state.UpdateUserSchema{
-		Workspace:      this.ID,
-		UserSchema:     schema,
-		PrimarySources: primarySources,
-		Identifiers:    identifiers,
-	}
-	schemaJSON, err := json.Marshal(n.UserSchema)
-	if err != nil {
-		return err
-	}
-
-	// Build the query to insert the primary paths.
-	var insertPrimarySources string
-	var paths []any
-	if len(primarySources) > 0 {
-		i := 0
-		var b strings.Builder
-		for path, source := range primarySources {
-			if i > 0 {
-				b.WriteByte(',')
-			}
-			b.WriteByte('(')
-			b.WriteString(strconv.Itoa(source))
-			b.WriteString(",$")
-			b.WriteString(strconv.Itoa(i + 1))
-			b.WriteString(")")
-			paths = append(paths, path)
-			i++
-		}
-		insertPrimarySources = "INSERT INTO user_schema_primary_sources (source, path) VALUES " + b.String()
-	}
-
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-
-		// TODO(Gianluca): the altering of the columns of the users table is
-		// done within the transaction to avoid updating the state when in
-		// reality the alter schema ends with an error, thus preventing the
-		// creation of an inconsistent state that would require resetting the
-		// databases.
-		//
-		// This is just a temporary workaround.
-		//
-		// The topic is discussed in the issue
-		// https://github.com/meergo/meergo/issues/692.
-		err = this.store.AlterUserSchema(ctx, schema, operations)
-		if err != nil {
-			if err == datastore.ErrAlterInProgress {
-				return nil, errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is already in progress on the warehouse")
-			}
-			if err == datastore.ErrIdentityResolutionInProgress {
-				return nil, errors.Unprocessable(IdentityResolutionInProgress, "an Identity Resolution is currently in progress on the warehouse")
-			}
-			if err == datastore.ErrInspectionMode {
-				return nil, errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
-			}
-			if err, ok := err.(*datastore.UnavailableError); ok {
-				return nil, errors.Unavailable("%s", err)
-			}
-			return nil, err
-		}
-
-		// Update the schema.
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET user_schema = $1, identifiers = $2 WHERE id = $3", schemaJSON, n.Identifiers, n.Workspace)
-		if err != nil {
-			return nil, err
-		}
-		// Update the primary sources.
-		_, err = tx.Exec(ctx, "DELETE FROM user_schema_primary_sources s USING connections c\n"+
-			"WHERE c.workspace = $1 AND s.source = c.id", n.Workspace)
-		if err != nil {
-			return nil, err
-		}
-		if insertPrimarySources != "" {
-			_, err = tx.Exec(ctx, insertPrimarySources, paths...)
-			if err != nil {
-				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "user_schema_primary_sources_source_fkey" {
-					err = errors.Unprocessable(ConnectionNotExist, "a primary source does not exist")
-				}
-				return nil, err
-			}
-		}
-
-		return n, nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	err = this.core.startUpdateUserSchema(ctx, this.workspace.ID, schema, primarySources, rePaths, operations)
+	return err
 }
 
 // checkAllowedPropertyUserSchema checks the given user schema and returns

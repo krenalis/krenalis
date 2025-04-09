@@ -33,5 +33,18 @@ interface LatestIdentityResolution {
 	endTime: string;
 }
 
+interface LatestUserSchemaUpdate {
+	startTime: string;
+	endTime: string;
+	error: string;
+}
+
 export default Workspace;
-export type { CreateWorkspaceResponse, UIPreferences, UserProfile, PrimarySources, LatestIdentityResolution };
+export type {
+	CreateWorkspaceResponse,
+	UIPreferences,
+	UserProfile,
+	PrimarySources,
+	LatestIdentityResolution,
+	LatestUserSchemaUpdate,
+};

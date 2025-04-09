@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -45,14 +44,6 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // ErrMaintenanceMode is returned by Store methods when they cannot execute due
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
-
-// ErrAlterInProgress is a error indicating that an operation that alter the
-// columns of the user tables is currently in progress on the data warehouse.
-var ErrAlterInProgress = meergo.ErrWarehouseAlterInProgress
-
-// ErrIdentityResolutionInProgress is a error indicating that the Identity
-// Resolution is currently in progress on the data warehouse.
-var ErrIdentityResolutionInProgress = meergo.ErrWarehouseIdentityResolutionInProgress
 
 // AckEvent represents an ack event.
 type AckEvent struct {
@@ -121,6 +112,11 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 
 // AlterUserSchema alters the user schema.
 //
+// opID is an identifier that uniquely identifies a specific alter columns
+// operation; if the method is called again passing the same identifier, whether
+// the operation ended successfully or with a *meergo.OperationError error, that
+// result is returned again.
+//
 // schema is the user schema without meta properties (this parameter is useful
 // for obtaining type information and for creating views), while operations is
 // the set of operations to apply in order to migrate the current schema to the
@@ -131,29 +127,23 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // are columns, so there is a mix of different levels of abstraction. This is
 // discussed in the issue https://github.com/meergo/meergo/issues/862.
 //
-// If another alter schema operation is in progress on the data warehouse,
-// returns a ErrAlterInProgress error.
+// This method, once called, can then return in four distinct cases:
 //
-// If an Identity Resolution is in progress, returns an
-// ErrIdentityResolutionInProgress error.
+// (1) the operation was successful and no error was returned;
 //
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If an error occurs with the data warehouse, it returns an
-// *UnavailableError error.
-func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) error {
+// (2) the context was cancelled;
+//
+// (3) the operation ended with an error of type *meergo.OperationError, and this
+// means that even if the method is called again with the same ID, this error is
+// still returned;
+//
+// (4) the operation ended with an unexpected and unknown error, and it is
+// therefore up to the caller to try calling this method again by providing the
+// same ID.
+func (store *Store) AlterUserSchema(ctx context.Context, opID string, schema types.Type, operations []meergo.AlterOperation) error {
 	store.mustBeOpen()
-	// TODO(Gianluca): the context here is discarded, rather than passed to the
-	// actual IR execution. See issue
-	// https://github.com/meergo/meergo/issues/1224.
-	_, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
-	if err != nil {
-		return err
-	}
-	defer done()
 	columns := util.PropertiesToColumns(schema)
-	// TODO(Gianluca): The Background context is used here, since the store does
-	// not provide any. See issue https://github.com/meergo/meergo/issues/1224.
-	return store.warehouse().AlterUserColumns(context.Background(), columns, operations)
+	return store.warehouse().AlterUserColumns(ctx, opID, columns, operations)
 }
 
 // DeleteDestinationUsers deletes the destination users of the provided action.
@@ -275,29 +265,6 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 		}
 	}
 	return records, nil
-}
-
-// LatestIdentityResolution returns information about the latest Identity
-// Resolution.
-//
-// In particular:
-//
-//   - if the Identity Resolution has been started and completed, returns its
-//     start time and end time;
-//   - if it is in progress, returns its start time and nil for the end time;
-//   - if no Identity Resolution has ever been executed, returns nil and nil.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns an *UnavailableError error.
-func (store *Store) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer done()
-	return store.warehouse().LatestIdentityResolution(ctx)
 }
 
 // DestinationUser represents a user to be merged.
@@ -454,12 +421,27 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 	return store.warehouse().Repair(ctx, userColumns)
 }
 
-// StartIdentityResolution starts an Identity Resolution on the store's
-// workspace.
+// ResolveIdentities resolves the identities on the store's workspace.
 //
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-func (store *Store) StartIdentityResolution(ctx context.Context) error {
+// opID is an identifier that uniquely identifies a specific resolve identities
+// operation; if the method is called again passing the same identifier, whether
+// the operation ended successfully or with a *meergo.OperationError error, that
+// result is returned again.
+//
+// This method, once called, can then return in four distinct cases:
+//
+// (1) the operation was successful and no error was returned;
+//
+// (2) the context was cancelled;
+//
+// (3) the operation ended with an error of type *meergo.OperationError, and this
+// means that even if the method is called again with the same ID, this error is
+// still returned;
+//
+// (4) the operation ended with an unexpected and unknown error, and it is
+// therefore up to the caller to try calling this method again by providing the
+// same ID.
+func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	store.mustBeOpen()
 
 	ctx, span := telemetry.TraceSpan(ctx, "Store.StartIdentityResolution")
@@ -504,20 +486,11 @@ func (store *Store) StartIdentityResolution(ctx context.Context) error {
 		userPrimarySources[c] = s
 	}
 
-	// Resolve the identities in a separate goroutine.
-	go func() {
-		// TODO(Gianluca): The Background context is used here, since the store
-		// does not provide any. See issue
-		// https://github.com/meergo/meergo/issues/1224.
-		err := store.warehouse().ResolveIdentities(context.Background(), identifiers, userColumns, userPrimarySources)
-		if err != nil {
-			switch err {
-			case meergo.ErrWarehouseAlterInProgress, meergo.ErrWarehouseIdentityResolutionInProgress:
-			default:
-				slog.Error("core/datastore: the execution of the Identity Resolution failed", "workspace", store.workspace, "err", err)
-			}
-		}
-	}()
+	// Resolve the identities.
+	err = store.warehouse().ResolveIdentities(ctx, opID, identifiers, userColumns, userPrimarySources)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -728,6 +701,30 @@ func (store *Store) onDeleteConnection(n state.DeleteConnection) {
 	store.mu.Unlock()
 }
 
+// onEndUpdateUserSchema is called when the update of the user schema of a
+// workspace ends.
+//
+// This notification is propagated by the Datastore.onEndUpdateUserSchema
+// method.
+func (store *Store) onEndUpdateUserSchema(n state.EndUpdateUserSchema) {
+
+	// Update the user and the identity columns.
+	store.columnByProperty.mu.Lock()
+	store.columnByProperty.user = userColumnByProperty(n.Schema)
+	store.columnByProperty.user["__id__"] = meergo.Column{Name: "__id__", Type: types.UUID()}
+	store.columnByProperty.user["__last_change_time__"] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
+	store.columnByProperty.mu.Unlock()
+
+	// Propagate the notification to the EventIdentityWriters.
+	store.mu.Lock()
+	for _, iw := range store.eventIdentityWriters {
+		iw.onEndUpdateUserSchema(n)
+	}
+	store.mu.Unlock()
+
+}
+
 // onUpdateAction is called when an action of the store's workspace is updated.
 //
 // The notification is propagated by the Datastore.onUpdateAction method.
@@ -739,28 +736,6 @@ func (store *Store) onUpdateAction(n state.UpdateAction) {
 		return
 	}
 	iw.onUpdateAction(n)
-}
-
-// onUpdateUserSchema is called when the user schema of the store's is updated.
-//
-// The notification is propagated by the Datastore.onUpdateUserSchema method.
-func (store *Store) onUpdateUserSchema(n state.UpdateUserSchema) {
-
-	// Update the user and the identity columns.
-	store.columnByProperty.mu.Lock()
-	store.columnByProperty.user = userColumnByProperty(n.UserSchema)
-	store.columnByProperty.user["__id__"] = meergo.Column{Name: "__id__", Type: types.UUID()}
-	store.columnByProperty.user["__last_change_time__"] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
-	store.columnByProperty.mu.Unlock()
-
-	// Propagate the notification to the EventIdentityWriters.
-	store.mu.Lock()
-	for _, iw := range store.eventIdentityWriters {
-		iw.onUpdateUserSchema(n)
-	}
-	store.mu.Unlock()
-
 }
 
 // query executes the provided query on the data warehouse and returns an
