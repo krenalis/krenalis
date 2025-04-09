@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/backoff"
 )
 
 type warehouseOp2 string
@@ -38,7 +39,9 @@ type opStatus struct {
 func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, opType warehouseOp2) (status *opStatus, err error) {
 	var completedAt *time.Time
 	var opError string
-	for {
+	bo := backoff.New(200)
+	bo.SetCap(500 * time.Millisecond)
+	for bo.Next(ctx) {
 		err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 			_, err = tx.Exec(ctx, "LOCK _operations2")
 			if err != nil {
@@ -69,10 +72,6 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 		// Operation is still running, so wait 500ms then try again to check if
 		// it has completed.
 		if completedAt == nil {
-			time.Sleep(500 * time.Millisecond)
-			if err := ctx.Err(); err != nil {
-				return nil, ctx.Err()
-			}
 			continue
 		}
 		// Operation is completed with an error.
@@ -82,6 +81,7 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 		// Operations is completed without errors.
 		return &opStatus{alreadyCompleted: true}, nil
 	}
+	return nil, ctx.Err()
 }
 
 // setOperationAsCompleted sets the given operation as completed. opError is the

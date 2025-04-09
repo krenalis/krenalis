@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/backoff"
 )
 
 type warehouseOp2 string
@@ -39,7 +40,9 @@ type opStatus struct {
 func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, opType warehouseOp2) (status *opStatus, err error) {
 	var completedAt *time.Time
 	var opError string
-	for {
+	bo := backoff.New(200)
+	bo.SetCap(500 * time.Millisecond)
+	for bo.Next(ctx) {
 		err := warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 			err = tx.QueryRow(`SELECT "COMPLETED_AT", "ERROR" FROM "_OPERATIONS2" WHERE "ID" = ?`, opID).Scan(&completedAt, &opError)
 			if err != nil {
@@ -66,10 +69,6 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 		// Operation is still running, so wait 500ms then try again to check if
 		// it has completed.
 		if completedAt == nil {
-			time.Sleep(500 * time.Millisecond)
-			if err := ctx.Err(); err != nil {
-				return nil, ctx.Err()
-			}
 			continue
 		}
 		// Operation is completed with an error.
@@ -79,6 +78,7 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 		// Operations is completed without errors.
 		return &opStatus{alreadyCompleted: true}, nil
 	}
+	return nil, ctx.Err()
 }
 
 // setOperationAsCompleted sets the given operation as completed. opError is the
