@@ -30,7 +30,7 @@ var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
 func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
-	status, err := warehouse.executeOperation(ctx, opID, identityResolution2)
+	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
 		return err
 	}

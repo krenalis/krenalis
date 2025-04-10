@@ -17,11 +17,11 @@ import (
 	"github.com/meergo/meergo/backoff"
 )
 
-type warehouseOp2 string
+type warehouseOp string
 
 const (
-	alterUserColumns2   warehouseOp2 = "AlterUserColumns"
-	identityResolution2 warehouseOp2 = "IdentityResolution"
+	alterUserColumns   warehouseOp = "AlterUserColumns"
+	identityResolution warehouseOp = "IdentityResolution"
 )
 
 type opStatus struct {
@@ -36,7 +36,7 @@ type opStatus struct {
 //
 // The returned status indicates whether the operation can be started, or
 // returns the status of a current executing or previous execution.
-func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, opType warehouseOp2) (status *opStatus, err error) {
+func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, opType warehouseOp) (status *opStatus, err error) {
 	var completedAt *time.Time
 	var opError string
 	bo := backoff.New(200)

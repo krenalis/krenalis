@@ -24,7 +24,7 @@ import (
 
 // AlterUserColumns alters the columns of the user tables.
 func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, opID string, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
-	status, err := warehouse.executeOperation(ctx, opID, alterUserColumns2)
+	status, err := warehouse.executeOperation(ctx, opID, alterUserColumns)
 	if err != nil {
 		return err
 	}
