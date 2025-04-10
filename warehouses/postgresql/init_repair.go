@@ -103,7 +103,7 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, user
 	queries := []string{
 		createDestinationUsersTable,
 		createEventsTable,
-		createOperations2Table,
+		createOperationsTable,
 		createUserSchemaVersionTable,
 		userIdentitiesSQLSchema(userColumns),
 		usersSQLSchema("_users_0", userColumns),

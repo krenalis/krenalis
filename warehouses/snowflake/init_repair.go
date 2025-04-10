@@ -79,7 +79,7 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, userC
 	queries := []string{
 		createDestinationUsersTable,
 		createEventsTable,
-		createOperations2Table,
+		createOperationsTable,
 		createUserSchemaVersionTable,
 		userIdentitiesSQLSchema(userColumns),
 		usersSQLSchema("_users_0", userColumns),

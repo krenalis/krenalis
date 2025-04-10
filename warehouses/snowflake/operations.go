@@ -5,10 +5,11 @@
 // Copyright (c) 2025 Open2b
 //
 
-package postgresql
+package snowflake
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -36,25 +37,21 @@ type opStatus struct {
 //
 // The returned status indicates whether the operation can be started, or
 // returns the status of a current executing or previous execution.
-func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, opType warehouseOp2) (status *opStatus, err error) {
+func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, opType warehouseOp2) (status *opStatus, err error) {
 	var completedAt *time.Time
 	var opError string
 	bo := backoff.New(200)
 	bo.SetCap(500 * time.Millisecond)
 	for bo.Next(ctx) {
-		err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
-			_, err = tx.Exec(ctx, "LOCK _operations2")
-			if err != nil {
-				return err
-			}
-			err = tx.QueryRow(ctx, "SELECT completed_at, error FROM _operations2 WHERE id = $1", opID).Scan(&completedAt, &opError)
+		err := warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
+			err = tx.QueryRow(`SELECT "COMPLETED_AT", "ERROR" FROM "_OPERATIONS" WHERE "ID" = ?`, opID).Scan(&completedAt, &opError)
 			if err != nil {
 				if err != pgx.ErrNoRows {
 					// Generic database error.
 					return err
 				}
 				// ErrNoRows, so the operation can be started.
-				_, err = tx.Exec(ctx, "INSERT INTO _operations2 (id, operation_type) VALUES ($1, $2)", opID, opType)
+				_, err = tx.Exec(`INSERT INTO "_OPERATIONS" ("ID", "OPERATION_TYPE") VALUES (?, ?)`, opID, opType)
 				if err != nil {
 					return err
 				}
@@ -89,17 +86,14 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 // database; nil means operation ended successfully.
 // If an operation has already been set as completed, this method does
 // nothing.
-func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, opID string, opError error) error {
-	pool, err := warehouse.connectionPool(ctx)
-	if err != nil {
-		return err
-	}
+func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, opID string, opError error) error {
+	db := warehouse.openDB()
 	var opErrorStr string
 	if opError != nil {
 		opErrorStr = opError.Error()
 	}
-	_, err = pool.Exec(ctx, "UPDATE _operations2 SET completed_at = $1, error = $2"+
-		" WHERE id = $3 AND completed_at IS NULL", time.Now().UTC(), opErrorStr, opID)
+	_, err := db.ExecContext(ctx, `UPDATE "_OPERATIONS" SET "COMPLETED_AT" = ?, "ERROR" = ?`+
+		` WHERE "ID" = ? AND "COMPLETED_AT" IS NULL`, time.Now().UTC(), opErrorStr, opID)
 	if err != nil {
 		return err
 	}

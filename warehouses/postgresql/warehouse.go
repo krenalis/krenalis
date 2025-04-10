@@ -37,8 +37,8 @@ var (
 	createDestinationUsersTable string
 	//go:embed tables/events.sql
 	createEventsTable string
-	//go:embed tables/operations2.sql
-	createOperations2Table string
+	//go:embed tables/operations.sql
+	createOperationsTable string
 	//go:embed tables/user_schema_versions.sql
 	createUserSchemaVersionTable string
 )
