@@ -43,18 +43,18 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 	bo.SetCap(500 * time.Millisecond)
 	for bo.Next(ctx) {
 		err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
-			_, err = tx.Exec(ctx, "LOCK _operations")
+			_, err = tx.Exec(ctx, `LOCK "_operations"`)
 			if err != nil {
 				return err
 			}
-			err = tx.QueryRow(ctx, "SELECT completed_at, error FROM _operations WHERE id = $1", opID).Scan(&completedAt, &opError)
+			err = tx.QueryRow(ctx, `SELECT "completed_at", "error" FROM "_operations" WHERE "id" = $1`, opID).Scan(&completedAt, &opError)
 			if err != nil {
 				if err != pgx.ErrNoRows {
 					// Generic database error.
 					return err
 				}
 				// ErrNoRows, so the operation can be started.
-				_, err = tx.Exec(ctx, "INSERT INTO _operations (id, operation_type) VALUES ($1, $2)", opID, opType)
+				_, err = tx.Exec(ctx, `INSERT INTO "_operations" ("id", "operation_type") VALUES ($1, $2)`, opID, opType)
 				if err != nil {
 					return err
 				}
@@ -98,8 +98,8 @@ func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, opID s
 	if opError != nil {
 		opErrorStr = opError.Error()
 	}
-	_, err = pool.Exec(ctx, "UPDATE _operations SET completed_at = $1, error = $2"+
-		" WHERE id = $3 AND completed_at IS NULL", time.Now().UTC(), opErrorStr, opID)
+	_, err = pool.Exec(ctx, `UPDATE "_operations" SET "completed_at" = $1, "error" = $2`+
+		` WHERE "id" = $3 AND "completed_at" IS NULL`, time.Now().UTC(), opErrorStr, opID)
 	if err != nil {
 		return err
 	}

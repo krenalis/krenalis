@@ -79,7 +79,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 		if err != nil {
 			return fmt.Errorf("cannot create users table (with name %s): %s", quoteIdent(newUsersName), err)
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO "_user_schema_versions" (version, operation, timestamp)`+
+		_, err = tx.Exec(ctx, `INSERT INTO "_user_schema_versions" ("version", "operation", "timestamp")`+
 			` VALUES ($1, $2, $3)`, newUsersVersion, opID, time.Now().UTC())
 		if err != nil {
 			return err
