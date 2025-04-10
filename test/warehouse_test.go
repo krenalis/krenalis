@@ -37,7 +37,7 @@ func TestWarehouse(t *testing.T) {
 	if err != nil {
 		gotErr = err.Error()
 	}
-	const expectedErr = `unexpected HTTP status code 422: {"error":{"code":"WarehouseNonInitializable","message":"data warehouse is not initializable: database is not empty (it contains 1 view, 3 sequences, 6 indexes, 7 tables)","cause":"database is not empty (it contains 1 view, 3 sequences, 6 indexes, 7 tables)"}}`
+	const expectedErr = `unexpected HTTP status code 422: {"error":{"code":"WarehouseNonInitializable","message":"data warehouse is not initializable: database is not empty (it contains 1 view, 2 sequences, 5 indexes, 6 tables)","cause":"database is not empty (it contains 1 view, 2 sequences, 5 indexes, 6 tables)"}}`
 	if expectedErr != gotErr {
 		t.Fatalf("expected error '%s', got '%s'", expectedErr, gotErr)
 	}

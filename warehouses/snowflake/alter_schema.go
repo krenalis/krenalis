@@ -49,21 +49,6 @@ func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, u
 
 func (warehouse *Snowflake) alterUserColumns(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
 
-	// Start an AlterSchema operation on the data warehouse, then defer its
-	// ending.
-	opID, err := warehouse.startOperation(ctx, alterUserColumns)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := warehouse.endOperation(ctx, opID, time.Now().UTC())
-		if err != nil {
-			go func() {
-				slog.Error("warehouses/snowflake: cannot end data warehouse operation", "id", opID, "err", err)
-			}()
-		}
-	}()
-
 	// Retrieve the current version of the "users" table.
 	usersVersion, err := warehouse.usersVersion(ctx)
 	if err != nil {

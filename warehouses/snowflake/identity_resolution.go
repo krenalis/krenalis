@@ -58,27 +58,6 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	_, span := telemetry.TraceSpan(ctx, "Snowflake.ResolveIdentities")
 	defer span.End()
 
-	// Start an IdentityResolution operation on the data warehouse, then defer
-	// its ending.
-	// TODO(Gianluca): this will be removed, see https://github.com/meergo/meergo/issues/1475.
-	obsoleteOpID, err := warehouse.startOperation(ctx, identityResolution)
-	if err != nil {
-		return err
-	}
-	span.AddEvent("data warehouse operation started", "operationID", opID)
-	defer func() {
-		// In case there are no errors, the 'endOperation' has already been
-		// called in the normal execution flow, further down in the
-		// ResolveIdentities method. This call is intended to handle error
-		// cases, where the IdentityResolution is aborted prematurely.
-		err := warehouse.endOperation(ctx, obsoleteOpID, time.Now().UTC())
-		if err != nil {
-			go func() {
-				slog.Error("warehouses/snowflake: cannot end data warehouse operation", "id", opID, "err", err)
-			}()
-		}
-	}()
-
 	// Determine the current version of the "users" table and create a copy of
 	// it with the incremented version.
 	usersVersion, err := warehouse.usersVersion(ctx)
@@ -230,12 +209,6 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	span.End()
 	if err != nil {
 		return snowflake(err)
-	}
-
-	// End the IdentityResolution operation.
-	err = warehouse.endOperation(ctx, obsoleteOpID, time.Now().UTC())
-	if err != nil {
-		return err
 	}
 
 	// Replace the current "users" view with a new one using the "CREATE OR

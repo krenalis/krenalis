@@ -90,24 +90,7 @@ func (warehouse *PostgreSQL) Initialize(ctx context.Context, userColumns []meerg
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
 func (warehouse *PostgreSQL) Repair(ctx context.Context, userColumns []meergo.Column) error {
-	err := warehouse.initRepairDatabaseObjects(ctx, userColumns, true)
-	if err != nil {
-		return err
-	}
-	// Repair the rows of the "_operations" table, setting an end timestamp for
-	// all those rows that do not have one, which were produced by abrupt
-	// interruptions of the Meergo process.
-	//
-	// This clearly requires that the repair is executed only when it is certain
-	// that no operations are ongoing.
-	pool, err := warehouse.connectionPool(ctx)
-	if err != nil {
-		return err
-	}
-	_, err = pool.Exec(ctx, `UPDATE "_operations"`+
-		` SET "end_time" = (clock_timestamp() at time zone 'utc')::timestamp`+
-		` WHERE "end_time" IS NULL`)
-	return err
+	return warehouse.initRepairDatabaseObjects(ctx, userColumns, true)
 }
 
 // initRepairDatabaseObjects initializes (or repairs) the database objects (as
@@ -120,7 +103,6 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, user
 	queries := []string{
 		createDestinationUsersTable,
 		createEventsTable,
-		createOperationsTable,
 		createOperations2Table,
 		createUserSchemaVersionTable,
 		userIdentitiesSQLSchema(userColumns),
