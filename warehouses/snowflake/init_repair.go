@@ -95,6 +95,7 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, userC
 		createEventsTable,
 		createOperationsTable,
 		createOperations2Table,
+		createUserSchemaVersionTable,
 		userIdentitiesSQLSchema(userColumns),
 		usersSQLSchema("_users_0", userColumns),
 	}

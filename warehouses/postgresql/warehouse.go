@@ -41,6 +41,8 @@ var (
 	createOperationsTable string
 	//go:embed tables/operations2.sql
 	createOperations2Table string
+	//go:embed tables/user_schema_versions.sql
+	createUserSchemaVersionTable string
 )
 
 var _ meergo.Warehouse = &PostgreSQL{}
@@ -377,7 +379,7 @@ func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	var v int
-	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("users_version"), 0) FROM "_operations"`).Scan(&v)
+	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("version"), 0) FROM "_user_schema_versions"`).Scan(&v)
 	if err != nil {
 		return 0, err
 	}

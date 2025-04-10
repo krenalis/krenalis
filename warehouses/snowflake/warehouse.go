@@ -41,6 +41,8 @@ var (
 	createOperationsTable string
 	//go:embed tables/operations2.sql
 	createOperations2Table string
+	//go:embed tables/user_schema_versions.sql
+	createUserSchemaVersionTable string
 )
 
 var _ meergo.Warehouse = &Snowflake{}

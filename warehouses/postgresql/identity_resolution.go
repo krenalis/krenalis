@@ -36,7 +36,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.resolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
+	err = warehouse.resolveIdentities(ctx, opID, identifiers, userColumns, userPrimarySources)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
@@ -53,7 +53,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	return ctx.Err()
 }
 
-func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
 	_, span := telemetry.TraceSpan(ctx, "PostgreSQL.ResolveIdentities")
 	defer span.End()
 
@@ -64,20 +64,21 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, identifiers,
 
 	// Start an IdentityResolution operation on the data warehouse, then defer
 	// its ending.
-	opID, err := warehouse.startOperation(ctx, identityResolution)
+	// TODO(Gianluca): this will be removed, see https://github.com/meergo/meergo/issues/1475.
+	obsoleteOpID, err := warehouse.startOperation(ctx, identityResolution)
 	if err != nil {
 		return err
 	}
-	span.AddEvent("data warehouse operation started", "operationID", opID)
+	span.AddEvent("data warehouse operation started", "operationID", obsoleteOpID)
 	defer func() {
 		// In case there are no errors, the 'endOperation' has already been
 		// called in the normal execution flow, further down in the
 		// ResolveIdentities method. This call is intended to handle error
 		// cases, where the IdentityResolution is aborted prematurely.
-		err := warehouse.endOperation(ctx, opID, time.Now().UTC())
+		err := warehouse.endOperation(ctx, obsoleteOpID, time.Now().UTC())
 		if err != nil {
 			go func() {
-				slog.Error("warehouses/postgresql: cannot end data warehouse operation", "id", opID, "err", err)
+				slog.Error("warehouses/postgresql: cannot end data warehouse operation", "id", obsoleteOpID, "err", err)
 			}()
 		}
 	}()
@@ -91,15 +92,16 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, identifiers,
 	newUsersVersion := usersVersion + 1
 	newUsersName := fmt.Sprintf("_users_%d", newUsersVersion)
 
-	// Create a copy of the current users table and set the related index in the
-	// operations table.
+	// Create a copy of the current users table and set its new version in
+	// '_user_schema_versions'.
 	_, span = telemetry.TraceSpan(ctx, "Switching user table", "current version", usersVersion, "next version", newUsersVersion)
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
-		_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, quoteIdent(newUsersName), usersVersion))
+		_, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, quoteIdent(newUsersName), usersVersion))
 		if err != nil {
 			return fmt.Errorf("cannot create users table (with name %s): %s", quoteIdent(newUsersName), err)
 		}
-		_, err = tx.Exec(ctx, `UPDATE "_operations" SET "users_version" = $1 WHERE "operation" = 'IdentityResolution' AND "end_time" IS NULL`, newUsersVersion)
+		_, err = tx.Exec(ctx, `INSERT INTO "_user_schema_versions" (version, operation, timestamp)`+
+			` VALUES ($1, $2, $3)`, newUsersVersion, opID, time.Now().UTC())
 		if err != nil {
 			return err
 		}
@@ -238,7 +240,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, identifiers,
 	}
 
 	// End the IdentityResolution operation.
-	err = warehouse.endOperation(ctx, opID, time.Now().UTC())
+	err = warehouse.endOperation(ctx, obsoleteOpID, time.Now().UTC())
 	if err != nil {
 		return err
 	}
