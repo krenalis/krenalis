@@ -92,7 +92,7 @@ func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, opID st
 	if opError != nil {
 		opErrorStr = opError.Error()
 	}
-	_, err := db.Exec(`UPDATE "_OPERATIONS2" SET "COMPLETED_AT" = ?, "ERROR" = ?`+
+	_, err := db.ExecContext(ctx, `UPDATE "_OPERATIONS2" SET "COMPLETED_AT" = ?, "ERROR" = ?`+
 		` WHERE "ID" = ? AND "COMPLETED_AT" IS NULL`, time.Now().UTC(), opErrorStr, opID)
 	if err != nil {
 		return err
