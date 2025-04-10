@@ -34,7 +34,7 @@ func init() {
 		Name:           "format",
 		Type:           types.Text().WithValues("CVS", "Excel", "Parquet", "JSON"),
 		CreateRequired: true,
-		Placeholder:    `"Excel"`,
+		Placeholder:    `format=Excel`,
 		Description:    "The file format. Note that it corresponds to the name of the file connector used to read the file.",
 	}
 	compressionParameter := types.Property{
@@ -70,7 +70,7 @@ func init() {
 					{
 						Name:           "sheet",
 						Type:           types.Text(),
-						Placeholder:    `"Sheet1"`,
+						Placeholder:    `sheet=Sheet1`,
 						UpdateRequired: true,
 						Description: "The sheet name. It can only be used with the Excel format, where it is required.\n\n" +
 							"When provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",

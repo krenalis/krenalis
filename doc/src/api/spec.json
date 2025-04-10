@@ -14249,7 +14249,7 @@
                         },
                         {
                             "name": "format",
-                            "placeholder": "\"Excel\"",
+                            "placeholder": "format=Excel",
                             "type": {
                                 "kind": "text",
                                 "values": [
@@ -14264,7 +14264,7 @@
                         },
                         {
                             "name": "sheet",
-                            "placeholder": "\"Sheet1\"",
+                            "placeholder": "sheet=Sheet1",
                             "type": {
                                 "kind": "text"
                             },
@@ -14392,7 +14392,7 @@
                         },
                         {
                             "name": "format",
-                            "placeholder": "\"Excel\"",
+                            "placeholder": "format=Excel",
                             "type": {
                                 "kind": "text",
                                 "values": [
