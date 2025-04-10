@@ -370,7 +370,7 @@ func (warehouse *Snowflake) openDB() *sql.DB {
 func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 	db := warehouse.openDB()
 	var v int
-	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("USERS_VERSION"), 0) FROM "_OPERATIONS"`).Scan(&v)
+	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "_USER_SCHEMA_VERSIONS"`).Scan(&v)
 	if err != nil {
 		return 0, snowflake(err)
 	}
