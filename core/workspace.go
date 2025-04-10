@@ -1036,14 +1036,14 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 	return executions, nil
 }
 
-// IdentifiersSchema returns the properties of the "users" schema that can be
-// used as identifiers in the Identity Resolution.
+// UserPropertiesSuitableAsIdentifiers returns the properties of the "users"
+// schema that can be used as identifiers in the Identity Resolution.
 // If none of the properties can be an identifier, this method returns the
 // invalid schema.
-func (this *Workspace) IdentifiersSchema() types.Type {
+func (this *Workspace) UserPropertiesSuitableAsIdentifiers() types.Type {
 	this.core.mustBeOpen()
 	return types.SubsetFunc(this.workspace.UserSchema, func(p types.Property) bool {
-		return canBeIdentifier(p.Type)
+		return suitableAsIdentifier(p.Type)
 	})
 }
 
@@ -1475,7 +1475,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 				if err != nil {
 					return nil, errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
 				}
-				if !canBeIdentifier(p.Type) {
+				if !suitableAsIdentifier(p.Type) {
 					return nil, errors.Unprocessable(TypeNotAllowed, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
 				}
 			}
@@ -1939,9 +1939,9 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// canBeIdentifier reports whether a property with type t can be used as
+// suitableAsIdentifier reports whether a property with type t can be used as
 // identifier.
-func canBeIdentifier(t types.Type) bool {
+func suitableAsIdentifier(t types.Type) bool {
 	switch t.Kind() {
 	case types.IntKind,
 		types.UintKind,

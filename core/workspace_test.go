@@ -14,7 +14,7 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-func Test_canBeIdentifier(t *testing.T) {
+func Test_suitableAsIdentifier(t *testing.T) {
 	tests := []struct {
 		t        types.Type
 		expected bool
@@ -45,7 +45,7 @@ func Test_canBeIdentifier(t *testing.T) {
 		{types.Map(types.Text()), false},
 	}
 	for _, test := range tests {
-		got := canBeIdentifier(test.t)
+		got := suitableAsIdentifier(test.t)
 		if got != test.expected {
 			t.Errorf("type %v: expected %t, got %t", test.t, test.expected, got)
 		}

@@ -117,7 +117,6 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /events":                                         workspace.Events,
 		"GET    /events/schema":                                  api.EventSchema,
 		"GET    /events/settings/{write_key}":                    api.EventsSettings,
-		"GET    /identifiers-schema":                             workspace.IdentifiersSchema,
 		"GET    /identity-resolution/latest":                     workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":                   workspace.IdentityResolutionSettings,
 		"GET    /keys":                                           organization.APIKeys, /* only UI */
@@ -128,6 +127,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /users":                                          workspace.Users,
 		"GET    /users/schema":                                   workspace.UserSchema,
 		"GET    /users/schema/latest-update":                     workspace.LatestUserSchemaUpdate,
+		"GET    /users/schema/suitable-as-identifiers":           workspace.UserPropertiesSuitableAsIdentifiers, /* only UI */
 		"GET    /users/{id}/events":                              workspace.UserEvents,
 		"GET    /users/{id}/identities":                          workspace.Identities,
 		"GET    /users/{id}/traits":                              workspace.Traits,

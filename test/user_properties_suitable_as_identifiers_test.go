@@ -14,7 +14,7 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-func TestIdentifiersSchema(t *testing.T) {
+func TestUserPropertiesSuitableAsIdentifiers(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
@@ -23,12 +23,12 @@ func TestIdentifiersSchema(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	// Retrieve the identifiers schema and ensure it has the correct number of
-	// properties.
-	schema := c.IdentifiersSchema()
+	// Retrieve the user properties that are suitable as identifiers and ensure
+	// it has the correct number of properties.
+	schema := c.UserPropertiesSuitableAsIdentifiers()
 	const expectedLen = 5
 	if n := types.NumProperties(schema); expectedLen != n {
-		t.Fatalf("expected %d properties in the identifiers schema, got %d", expectedLen, n)
+		t.Fatalf("expected %d properties suitable as identifiers, got %d", expectedLen, n)
 	}
 
 }

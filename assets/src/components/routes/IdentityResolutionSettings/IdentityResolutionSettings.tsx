@@ -21,7 +21,7 @@ import { Combobox } from '../../base/Combobox/Combobox';
 const IdentityResolutionSettings = () => {
 	const [runOnBatchImport, setRunOnBatchImport] = useState<boolean>(false);
 	const [identifiers, setIdentifiers] = useState<Identifiers>();
-	const [identifiersSchema, setIdentifiersSchema] = useState<ObjectType>();
+	const [suitableAsIdentifiers, setSuitableAsIdentifiers] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -35,14 +35,14 @@ const IdentityResolutionSettings = () => {
 			const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 			setRunOnBatchImport(workspace.resolveIdentitiesOnBatchImport);
 			setIdentifiers(workspace.identifiers);
-			let identifiersSchema: ObjectType;
+			let suitableAsIdentifiers: ObjectType;
 			try {
-				identifiersSchema = await api.workspaces.identifiersSchema();
+				suitableAsIdentifiers = await api.workspaces.userPropertiesSuitableAsIdentifiers();
 			} catch (err) {
 				handleError(err);
 				return;
 			}
-			setIdentifiersSchema(identifiersSchema);
+			setSuitableAsIdentifiers(suitableAsIdentifiers);
 			setTimeout(() => setIsLoading(false), 150);
 		};
 		fetchData();
@@ -119,7 +119,7 @@ const IdentityResolutionSettings = () => {
 		}, 500);
 	};
 
-	const items = getSchemaComboboxItems(identifiersSchema);
+	const items = getSchemaComboboxItems(suitableAsIdentifiers);
 	const identifiersComboboxItems = [];
 	for (const it of items) {
 		const isAlreadyUsed = identifiers.includes(it.term);
@@ -140,7 +140,7 @@ const IdentityResolutionSettings = () => {
 						} as React.CSSProperties
 					}
 				></SlSpinner>
-			) : identifiersSchema == null ? (
+			) : suitableAsIdentifiers == null ? (
 				<div className='identifiers__no-schema'>
 					<IconWrapper name='person-exclamation' size={40} />
 					<div className='identifiers__no-schema-description'>

@@ -478,14 +478,14 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	}, nil
 }
 
-// IdentifiersSchema returns the properties of the "users" schema that can be
-// used as identifiers in the Identity Resolution.
-func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UserPropertiesSuitableAsIdentifiers returns the properties of the "users"
+// schema that can be used as identifiers in the Identity Resolution.
+func (workspace workspace) UserPropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	return ws.IdentifiersSchema(), nil
+	return ws.UserPropertiesSuitableAsIdentifiers(), nil
 }
 
 // IngestEvents ingests a batch of events.

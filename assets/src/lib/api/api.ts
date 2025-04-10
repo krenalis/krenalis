@@ -737,8 +737,8 @@ class Workspaces {
 		return await call(`${this.apiURL}/users/schema`, http.GET, this.workspaceID);
 	};
 
-	identifiersSchema = async (): Promise<ObjectType> => {
-		return await call(`${this.apiURL}/identifiers-schema`, http.GET, this.workspaceID);
+	userPropertiesSuitableAsIdentifiers = async (): Promise<ObjectType> => {
+		return await call(`${this.apiURL}/users/schema/suitable-as-identifiers`, http.GET, this.workspaceID);
 	};
 
 	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<number> => {

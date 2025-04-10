@@ -298,12 +298,6 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 	return response.Records, response.Schema
 }
 
-func (c *Meergo) IdentifiersSchema() types.Type {
-	var schema types.Type
-	c.MustCall("GET", "/api/v1/identifiers-schema", nil, &schema)
-	return schema
-}
-
 func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
@@ -540,6 +534,12 @@ func (c *Meergo) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentit
 	path := fmt.Sprintf("/api/v1/users/%s/identities?first=%d&limit=%d", user, first, limit)
 	c.MustCall("GET", path, nil, &response)
 	return response.Identities, response.Total
+}
+
+func (c *Meergo) UserPropertiesSuitableAsIdentifiers() types.Type {
+	var schema types.Type
+	c.MustCall("GET", "/api/v1/users/schema/suitable-as-identifiers", nil, &schema)
+	return schema
 }
 
 func (c *Meergo) Users(properties []string, order string, orderDesc bool, first, limit int) (users []User, schema types.Type, total int) {
