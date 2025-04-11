@@ -35,6 +35,8 @@ import { SchemaEditWrapper } from './components/routes/SchemaEdit/SchemaEditWrap
 import { WorkspaceCreate } from './components/routes/WorkspaceCreate/WorkspaceCreate';
 import { WorkspacesWrapper } from './components/routes/WorkspacesWrapper/WorkspacesWrapper';
 import { APIKeys } from './components/routes/APIKeys/APIKeys';
+import { ResetPassword } from './components/routes/ResetPassword/ResetPassword';
+import { ResetPasswordToken } from './components/routes/ResetPasswordToken/ResetPasswordToken';
 
 const router = createBrowserRouter([
 	{
@@ -44,6 +46,8 @@ const router = createBrowserRouter([
 		children: [
 			{ path: '', element: <Login /> },
 			{ path: 'sign-up/:token', element: <SignUp /> },
+			{ path: 'reset-password', element: <ResetPassword /> },
+			{ path: 'reset-password/:token', element: <ResetPasswordToken /> },
 			{
 				path: 'workspaces',
 				element: <WorkspacesWrapper />,

@@ -8,6 +8,7 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/meergo/meergo/core"
@@ -107,6 +108,52 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 		return nil, err
 	}
 	return map[string]any{"email": email, "organization": organization}, nil
+}
+
+// SendMemberPasswordReset sends a reset password email.
+//
+// Login is not required to call SendMemberPasswordReset.
+func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (any, error) {
+	var body struct {
+		Email string `json:"email"`
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	organization, err := api.core.Organization(r.Context(), 1)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read organization: %s", err)
+	}
+	err = organization.SendMemberPasswordReset(r.Context(), body.Email, resetPasswordEmail)
+	return nil, err
+}
+
+// ValidateMemberPasswordResetToken validates the given password reset token.
+//
+// Login is not required to call ValidateMemberPasswordResetToken.
+func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
+	err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// ChangeMemberPasswordByToken changes the password of a member with the given
+// reset password token.
+//
+// Login is not required to call ChangeMemberPasswordByToken.
+func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Request) (any, error) {
+	var body struct {
+		Password string `json:"password"`
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = api.core.ChangeMemberPasswordByToken(r.Context(), r.PathValue("token"), body.Password)
+	return nil, err
 }
 
 // TransformData transforms data using a mapping or a function transformation

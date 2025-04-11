@@ -33,6 +33,16 @@ const validateMemberEmail = (email: string): string => {
 	return '';
 };
 
+const validateMemberPassword = (password: string): string => {
+	if (password.length < 8) {
+		return 'password must be at least 8 characters long';
+	}
+	if (password.length > 72) {
+		return 'password must be shorter than 72 characters';
+	}
+	return '';
+};
+
 const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean): string => {
 	if (member.name === '') {
 		return 'name must not be empty';
@@ -48,14 +58,9 @@ const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean): 
 		return 'password must not be empty';
 	}
 	if (member.password != null) {
-		if (member.password.length < 8) {
-			return 'password must be at least 8 characters long';
-		}
-		if (member.password.length > 72) {
-			return 'password must be shorter than 72 characters';
-		}
+		return validateMemberPassword(member.password);
 	}
 	return '';
 };
 
-export { transformMember, TransformedMember, validateMemberToSet, validateMemberEmail };
+export { transformMember, TransformedMember, validateMemberToSet, validateMemberEmail, validateMemberPassword };

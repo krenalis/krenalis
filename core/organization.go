@@ -44,6 +44,11 @@ var emailRegExp = regexp.MustCompile(`^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.
 // invitationTokenMaxAge represents the max age of an invitation token (3 days).
 const invitationTokenMaxAge = 3 * 24 * 60 * 60
 
+// resetPasswordTokenMaxAge represents the max age of a password token (1 hour).
+const resetPasswordTokenMaxAge = 1 * 60 * 60
+
+var errResetPasswordTokenNotExist = errors.New("The reset password token doesn't exist")
+
 // Organization represents an organization.
 type Organization struct {
 	core         *Core
@@ -359,7 +364,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	if err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	invitationToken, err := generateInvitationToken()
+	invitationToken, err := generateMemberToken()
 	if err != nil {
 		return err
 	}
@@ -387,6 +392,62 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	emailToSend := &emailToSend{
 		From:     this.core.smtp.User,
 		Subject:  "You have been invited to Meergo",
+		To:       email,
+		BodyHTML: []byte(t),
+	}
+	err = sendMail(emailToSend, this.core.smtp)
+	return err
+}
+
+// SendMemberPasswordReset sends a reset password email to the given email
+// address using the given template.
+//
+// It returns an errors.UnprocessableError error with code
+//   - EmailSendFailed, if emails cannot be sent.
+func (this *Organization) SendMemberPasswordReset(ctx context.Context, email string, emailTemplate string) error {
+	this.core.mustBeOpen()
+	err := validateMemberEmail(email)
+	if err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	resetToken, err := generateMemberToken()
+	if err != nil {
+		return err
+	}
+	if this.core.smtp == nil {
+		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
+	}
+	now := time.Now().UTC()
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, errResetPasswordTokenNotExist
+		}
+		_, err = tx.Exec(
+			ctx,
+			`UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2 WHERE organization = $3 AND email = $4`,
+			resetToken,
+			now,
+			this.organization.ID,
+			email,
+		)
+		return nil, err
+	})
+	if err != nil {
+		if err == errResetPasswordTokenNotExist {
+			// Do not return errors so that non-logged in users cannot
+			// tell if the email exists or not.
+			return nil
+		}
+		return err
+	}
+	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
+	emailToSend := &emailToSend{
+		From:     this.core.smtp.User,
+		Subject:  "Your Meergo password reset",
 		To:       email,
 		BodyHTML: []byte(t),
 	}
@@ -515,7 +576,7 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("identifier %d is not a valid member identifier", id)
 	}
-	err := validateMemberToSet(member, true, false)
+	err := validateMemberToSet(member, true, true, false)
 	if err != nil {
 		return errors.BadRequest("%s", err)
 	}
@@ -699,8 +760,9 @@ func generateAPIKeyToken() string {
 	return string(src)
 }
 
-// generateInvitationToken generates an invitation token.
-func generateInvitationToken() (string, error) {
+// generateMemberToken generates a token that can be used for the
+// invitation and for the password reset of a member.
+func generateMemberToken() (string, error) {
 	bytes := make([]byte, 32)
 	_, err := rand.Read(bytes)
 	if err != nil {
@@ -725,6 +787,14 @@ func generateRandomID() (int, error) {
 func isInvitationTokenExpired(createdAt time.Time) bool {
 	tokenExpiration := createdAt.Add(time.Duration(invitationTokenMaxAge) * time.Second)
 	now := time.Now()
+	return now.After(tokenExpiration)
+}
+
+// isResetPasswordTokenExpired checks if the reset password token of a
+// member is expired, given the token's creation time.
+func isResetPasswordTokenExpired(createdAt time.Time) bool {
+	tokenExpiration := createdAt.Add(time.Duration(resetPasswordTokenMaxAge) * time.Second)
+	now := time.Now().UTC()
 	return now.After(tokenExpiration)
 }
 
@@ -787,10 +857,12 @@ func validateMemberEmail(email string) error {
 
 // validateMemberToSet validates a member to add or set and returns an error
 // if the member is not valid.
-func validateMemberToSet(member MemberToSet, validateEmail bool, validatePassword bool) error {
+func validateMemberToSet(member MemberToSet, validateName bool, validateEmail bool, validatePassword bool) error {
 	// Validate name.
-	if err := util.ValidateStringField("name", member.Name, 45); err != nil {
-		return err
+	if validateName {
+		if err := util.ValidateStringField("name", member.Name, 45); err != nil {
+			return err
+		}
 	}
 	// Validate avatar.
 	if member.Avatar != nil {

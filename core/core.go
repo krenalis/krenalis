@@ -242,14 +242,14 @@ func New(conf *Config) (*Core, error) {
 // error.UnprocessableError error with code InvitationTokenExpired.
 func (core *Core) AcceptInvitation(ctx context.Context, token string, name string, password string) error {
 	core.mustBeOpen()
-	if !isValidInvitationToken(token) {
+	if !isValidMemberToken(token) {
 		return errors.NotFound("invitation token %q does not exist", token)
 	}
 	m := MemberToSet{
 		Name:     name,
 		Password: password,
 	}
-	err := validateMemberToSet(m, false, true)
+	err := validateMemberToSet(m, true, false, true)
 	if err != nil {
 		return errors.BadRequest("%s", err)
 	}
@@ -272,6 +272,47 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 		}
 		_, err = core.db.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3",
 			name, string(pass), id)
+		return nil, err
+	})
+	return err
+}
+
+// ChangeMemberPasswordByToken changes the password of a member with the given
+// reset password token. password's length must be at least 8 character long.
+//
+// If a reset password request with the given token does not exist or if the
+// token is expired, it returns a NotFoundError error.
+func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string, password string) error {
+	core.mustBeOpen()
+	if !isValidMemberToken(token) {
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
+	}
+	m := MemberToSet{
+		Password: password,
+	}
+	err := validateMemberToSet(m, false, false, true)
+	if err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	pass, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var id int
+		var createdAt time.Time
+		err := core.db.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+			}
+			return nil, err
+		}
+		if isResetPasswordTokenExpired(createdAt) {
+			return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
+		}
+		_, err = core.db.Exec(ctx, "UPDATE members SET password = $1, reset_password_token = '', reset_password_token_created_at = NULL WHERE id = $2",
+			string(pass), id)
 		return nil, err
 	})
 	return err
@@ -484,7 +525,7 @@ func (core *Core) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 // InvitationTokenExpired.
 func (core *Core) MemberInvitation(ctx context.Context, token string) (string, string, error) {
 	core.mustBeOpen()
-	if !isValidInvitationToken(token) {
+	if !isValidMemberToken(token) {
 		return "", "", errors.NotFound("invitation token %q does not exist", token)
 	}
 	var organizationID int
@@ -505,6 +546,34 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 		return "", "", errors.NotFound("invitation token %q does not exist", token)
 	}
 	return organization.Name, email, nil
+}
+
+// ValidateMemberPasswordResetToken validates the given password reset token.
+//
+// If a password reset request with the the given password reset token does not
+// exist or if the token is expired, it returns a NotFoundError error.
+func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) error {
+	core.mustBeOpen()
+	if !isValidMemberToken(token) {
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
+	}
+	var organizationID int
+	var createdAt time.Time
+	err := core.db.QueryRow(ctx, "SELECT organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&organizationID, &createdAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.NotFound("reset password token %q does not exist or is expired", token)
+		}
+		return err
+	}
+	if isResetPasswordTokenExpired(createdAt) {
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
+	}
+	_, ok := core.state.Organization(organizationID)
+	if !ok {
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
+	}
+	return nil
 }
 
 // Organization returns the organization with identifier id.
@@ -1309,7 +1378,7 @@ func (core *Core) startUpdateUserSchema(ctx context.Context, ws int, schema type
 	return nil
 }
 
-func isValidInvitationToken(token string) bool {
+func isValidMemberToken(token string) bool {
 	if len(token) != 44 {
 		return false
 	}

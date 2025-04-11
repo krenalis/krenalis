@@ -252,6 +252,7 @@ sl-drawer::part(body)::-webkit-scrollbar-track {
 	background: transparent;
 }
 
+input::placeholder,
 sl-input::part(input)::placeholder,
 sl-textarea::part(textarea)::placeholder {
 	color: var(--sl-color-neutral-400);

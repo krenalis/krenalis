@@ -79,6 +79,20 @@ class API {
 		return await call(`${this.apiURL}/members/logout`, http.POST, this.workspaceID);
 	};
 
+	sendMemberPasswordReset = async (email: string): Promise<void> => {
+		return await call(`${this.apiURL}/members/reset-password`, http.PUT, this.workspaceID, { email });
+	};
+
+	validateMemberPasswordResetToken = async (token: string): Promise<void> => {
+		return await call(`${this.apiURL}/members/reset-password/${token}`, http.GET, this.workspaceID);
+	};
+
+	changeMemberPasswordByToken = async (token: string, password: string): Promise<void> => {
+		return await call(`${this.apiURL}/members/reset-password/${token}`, http.PUT, this.workspaceID, {
+			password,
+		});
+	};
+
 	eventsSchema = async (): Promise<ObjectType> => {
 		return await call(`${this.apiURL}/events/schema`, http.GET, this.workspaceID);
 	};

@@ -3,7 +3,7 @@ import './App.css';
 import Toast from '../../base/Toast/Toast';
 import * as icons from '../../../constants/icons';
 import { Status } from './App.types';
-import { FULLSCREEN_PATHS } from '../../../constants/paths';
+import { FULLSCREEN_PATHS, RESET_PASSWORD_PATH } from '../../../constants/paths';
 import { UI_BASE_PATH, SIGN_UP_PATH } from '../../../constants/paths';
 import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
@@ -93,7 +93,12 @@ const App = () => {
 	} = useApp(handleError, redirect, logout, location);
 
 	useEffect(() => {
-		if (!isLoggedIn && location.pathname !== UI_BASE_PATH && !location.pathname.startsWith(SIGN_UP_PATH)) {
+		if (
+			!isLoggedIn &&
+			location.pathname !== UI_BASE_PATH &&
+			!location.pathname.startsWith(SIGN_UP_PATH) &&
+			!location.pathname.startsWith(RESET_PASSWORD_PATH)
+		) {
 			redirect('');
 		}
 	}, [isLoggedIn, location]);
@@ -119,7 +124,10 @@ const App = () => {
 	let content: ReactNode;
 	if (
 		isLoadingState ||
-		(!isLoggedIn && location.pathname !== UI_BASE_PATH && !location.pathname.startsWith(SIGN_UP_PATH))
+		(!isLoggedIn &&
+			location.pathname !== UI_BASE_PATH &&
+			!location.pathname.startsWith(SIGN_UP_PATH) &&
+			!location.pathname.startsWith(RESET_PASSWORD_PATH))
 	) {
 		content = (
 			<SlSpinner

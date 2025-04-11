@@ -32,6 +32,9 @@ const maxRequestSize = 500 * 1024
 //go:embed invite-member-email.html
 var inviteMemberEmail string
 
+//go:embed reset-password-email.html
+var resetPasswordEmail string
+
 // sessionMaxAge contains the max age property for the session cookie (6 hours).
 const sessionMaxAge = 6 * 60 * 60
 
@@ -113,16 +116,17 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /connections/{id}/users":                         connection.AppUsers,
 		"GET    /connectors":                                     api.Connectors,
 		"GET    /connectors/{name}":                              api.Connector,
-		"GET    /events/listeners/{id}":                          workspace.ListenedEvents,
 		"GET    /events":                                         workspace.Events,
+		"GET    /events/listeners/{id}":                          workspace.ListenedEvents,
 		"GET    /events/schema":                                  api.EventSchema,
 		"GET    /events/settings/{write_key}":                    api.EventsSettings,
 		"GET    /identity-resolution/latest":                     workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":                   workspace.IdentityResolutionSettings,
-		"GET    /keys":                                           organization.APIKeys, /* only UI */
-		"GET    /members":                                        organization.Members, /* only UI */
-		"GET    /members/current":                                api.Member,           /* only UI */
-		"GET    /members/invitations/{token}":                    api.MemberInvitation, /* only UI */
+		"GET    /keys":                                           organization.APIKeys,                 /* only UI */
+		"GET    /members":                                        organization.Members,                 /* only UI */
+		"GET    /members/current":                                api.Member,                           /* only UI */
+		"GET    /members/invitations/{token}":                    api.MemberInvitation,                 /* only UI */
+		"GET    /members/reset-password/{token}":                 api.ValidateMemberPasswordResetToken, /* only UI */
 		"GET    /transformation-languages":                       api.TransformationLanguages,
 		"GET    /users":                                          workspace.Users,
 		"GET    /users/schema":                                   workspace.UserSchema,
@@ -166,9 +170,11 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"PUT    /actions/{id}/status":                            action.SetStatus,
 		"PUT    /connections/{id}":                               connection.Update,
 		"PUT    /identity-resolution/settings":                   workspace.UpdateIdentityResolutionSettings,
-		"PUT    /keys/{key}":                                     organization.UpdateAPIKey, /* only UI */
-		"PUT    /members/current":                                organization.UpdateMember, /* only UI */
-		"PUT    /members/invitations/{token}":                    api.AcceptInvitation,      /* only UI */
+		"PUT    /keys/{key}":                                     organization.UpdateAPIKey,       /* only UI */
+		"PUT    /members/current":                                organization.UpdateMember,       /* only UI */
+		"PUT    /members/invitations/{token}":                    api.AcceptInvitation,            /* only UI */
+		"PUT    /members/reset-password":                         api.SendMemberPasswordReset,     /* only UI */
+		"PUT    /members/reset-password/{token}":                 api.ChangeMemberPasswordByToken, /* only UI */
 		"PUT    /users/schema":                                   workspace.UpdateUserSchema,
 		"PUT    /users/schema/preview":                           workspace.PreviewUserSchemaUpdate,
 		"PUT    /warehouse":                                      workspace.UpdateWarehouse,

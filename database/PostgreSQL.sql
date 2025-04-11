@@ -235,12 +235,15 @@ CREATE TABLE members (
     email varchar(120) NOT NULL COLLATE case_insensitive,
     password varchar(72) NOT NULL DEFAULT '',
     invitation_token varchar(44) NOT NULL DEFAULT '',
+    reset_password_token varchar(44) NOT NULL DEFAULT '',
+    reset_password_token_created_at timestamp,
     created_at timestamp,
     UNIQUE (organization, email),
     PRIMARY KEY (id)
 );
 
 CREATE UNIQUE INDEX invitation_token_index ON members (invitation_token) WHERE invitation_token <> '';
+CREATE UNIQUE INDEX reset_password_token_index ON members (reset_password_token) WHERE reset_password_token <> '';
 
 INSERT INTO members (organization, name, avatar, email, password, created_at) VALUES (1, 'ACME inc', NULL, 'acme@open2b.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC', '2024-01-01 00:00:00.000000'); -- Password: foopass2
 

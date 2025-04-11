@@ -9,7 +9,7 @@ import TransformedConnection, {
 	getFileStorageConnections,
 } from '../../../lib/core/connection';
 import { Location } from 'react-router-dom';
-import { UI_BASE_PATH } from '../../../constants/paths';
+import { RESET_PASSWORD_PATH, UI_BASE_PATH } from '../../../constants/paths';
 import { Connection } from '../../../lib/api/types/connection';
 import Workspace from '../../../lib/api/types/workspace';
 import { Warehouse } from './App.types';
@@ -120,11 +120,14 @@ const useApp = (
 			}
 			setMember(transformMember(member));
 
-			// if the user is logged in and has a selected workspace, but they
-			// are currently on the login route, redirect to the connections map
-			// path.
-			let isOnLogin = location.pathname === UI_BASE_PATH || location.pathname == UI_BASE_PATH.replace(/\/$/, '');
-			if (isOnLogin) {
+			// if the user is logged in and has a selected workspace,
+			// but they are currently on the login or reset password
+			// routes, redirect to the connections route.
+			let isOutside =
+				location.pathname === UI_BASE_PATH ||
+				location.pathname == UI_BASE_PATH.replace(/\/$/, '') ||
+				location.pathname.startsWith(RESET_PASSWORD_PATH);
+			if (isOutside) {
 				redirect('connections');
 			}
 

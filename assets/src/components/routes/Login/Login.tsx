@@ -1,14 +1,28 @@
 import React, { FormEvent, useState, useContext, useEffect } from 'react';
 import './Login.css';
-import { SlButton } from '@shoelace-style/shoelace/dist/react/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import AppContext from '../../../context/AppContext';
+import { Link } from '../../base/Link/Link';
+import { useSearchParams } from 'react-router-dom';
+import * as icons from '../../../constants/icons';
 
 const Login = () => {
 	const [email, setEmail] = useState<string>('');
 	const [password, setPassword] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 
-	const { api, handleError, setIsLoadingState, setIsLoggedIn, logout } = useContext(AppContext);
+	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, logout } = useContext(AppContext);
+
+	const [searchParms, setSearchParams] = useSearchParams();
+
+	useEffect(() => {
+		const status = searchParms.get('status');
+		if (status == null) {
+			return;
+		}
+		showStatus({ variant: 'success', icon: icons.OK, text: 'You can now log in with your new password' });
+		setSearchParams(new URLSearchParams()); // reset the search params.
+	}, []);
 
 	useEffect(() => {
 		const removeCookieAndLogout = async () => {
@@ -86,6 +100,9 @@ const Login = () => {
 						minLength={8}
 						required
 					/>
+					<Link path='reset-password' className='login__reset-password'>
+						Forgot your password?
+					</Link>
 					<SlButton className='login__button' type='submit' variant='primary' loading={isLoading}>
 						Login
 					</SlButton>

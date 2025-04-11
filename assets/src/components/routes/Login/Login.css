@@ -66,6 +66,14 @@
 	border-top-right-radius: 0 !important;
 }
 
+.login__reset-password {
+	color: var(--sl-color-primary-500);
+	font-size: 14px;
+	width: fit-content;
+	margin-left: auto;
+	margin-top: 5px;
+}
+
 .login__button {
-	margin-top: 30px;
+	margin-top: 25px;
 }
