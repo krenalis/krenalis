@@ -17,7 +17,7 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-func Test_alterSchemaQueries(t *testing.T) {
+func Test_alterUserSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
@@ -267,7 +267,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "__id__", Type: types.Int(32)},
 				{Name: "__last_change_time__", Type: types.DateTime()},
 			}, userColumns...)
-			got := alterUserColumnsQueries("_users_0", userColumns, test.ops)
+			got := alterUserSchemaQueries("_users_0", userColumns, test.ops)
 			// Exclude from the test the queries that drop or create views.
 			got = slices.DeleteFunc(got, func(query string) bool {
 				return strings.HasPrefix(query, "DROP VIEW") ||
