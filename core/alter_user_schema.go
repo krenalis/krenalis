@@ -47,7 +47,7 @@ import (
 //   - ConnectionNotExist, if a connection used as primary source does not
 //     exist.
 //   - InspectionMode, if the data warehouse is in inspection mode.
-//   - InvalidSchemaUpdate, if the schema update is invalid.
+//   - InvalidAlterSchema, if the alter schema is invalid.
 //   - OperationAlreadyExecuting, if another operation is already executing.
 func (this *Workspace) AlterUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	this.core.mustBeOpen()
@@ -77,7 +77,7 @@ func (this *Workspace) AlterUserSchema(ctx context.Context, schema types.Type, p
 	}
 	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
-		return errors.Unprocessable(InvalidSchemaUpdate, "cannot update the schema as specified: %s", err)
+		return errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
 	for _, s := range primarySources {
 		source, ok := this.workspace.Connection(s)
@@ -112,8 +112,8 @@ func (this *Workspace) IdentityResolutionSettings() (bool, []string) {
 //
 // See the documentation of UpdateUserSchema for more details about this method.
 //
-// It returns an errors.UnprocessableError error with code InvalidSchemaUpdate
-// if the schema update is invalid.
+// It returns an errors.UnprocessableError error with code InvalidAlterSchema if
+// the alter schema is invalid.
 func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
 	this.core.mustBeOpen()
 	if !schema.Valid() {
@@ -133,7 +133,7 @@ func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types
 	}
 	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
-		return nil, errors.Unprocessable(InvalidSchemaUpdate, "cannot update the schema as specified: %s", err)
+		return nil, errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
 	queries, err := this.store.PreviewUserSchemaUpdate(ctx, schema, operations)
 	if err != nil {

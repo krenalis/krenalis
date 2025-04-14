@@ -27,7 +27,7 @@ const (
 	InspectionMode                errors.Code = "InspectionMode"
 	InvalidPath                   errors.Code = "InvalidPath"
 	InvalidPlaceholder            errors.Code = "InvalidPlaceholder"
-	InvalidSchemaUpdate           errors.Code = "InvalidSchemaUpdate"
+	InvalidAlterSchema            errors.Code = "InvalidAlterSchema"
 	InvalidSettings               errors.Code = "InvalidSettings"
 	InvalidWarehouseSettings      errors.Code = "InvalidWarehouseSettings"
 	InvitationTokenExpired        errors.Code = "InvitationTokenExpired"

@@ -73,7 +73,7 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{422, ConnectionNotExist, "primary source does not exist"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
-					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
+					{422, InvalidAlterSchema, "cannot alter the schema as specified"},
 					{422, OperationAlreadyExecuting, "another operation is already executing"},
 				},
 			},
@@ -109,7 +109,7 @@ func init() {
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
-					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
+					{422, InvalidAlterSchema, "cannot alter the schema as specified"},
 				},
 			},
 			{

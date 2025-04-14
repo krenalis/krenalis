@@ -10198,8 +10198,8 @@
                         },
                         {
                             "status": 422,
-                            "code": "InvalidSchemaUpdate",
-                            "message": "cannot update the schema as specified"
+                            "code": "InvalidAlterSchema",
+                            "message": "cannot alter the schema as specified"
                         },
                         {
                             "status": 422,
@@ -10259,8 +10259,8 @@
                         },
                         {
                             "status": 422,
-                            "code": "InvalidSchemaUpdate",
-                            "message": "cannot update the schema as specified"
+                            "code": "InvalidAlterSchema",
+                            "message": "cannot alter the schema as specified"
                         }
                     ]
                 },
