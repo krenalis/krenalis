@@ -1246,7 +1246,7 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 	go core.executeIdentityResolution(n.Workspace, n.ID)
 }
 
-// onStartUpdateUserSchema is started when the user schema update is started.
+// onStartUpdateUserSchema is called when the user schema update is started.
 func (core *Core) onStartUpdateUserSchema(n state.StartUpdateUserSchema) {
 	if !core.state.IsLeader() {
 		return
