@@ -10141,8 +10141,8 @@
                     ]
                 },
                 {
-                    "name": "Update schema",
-                    "description": "Updates the user schema of the workspace.",
+                    "name": "Alter schema",
+                    "description": "Alters the user schema of the workspace.",
                     "method": "PUT",
                     "url": "/v1/users/schema",
                     "parameters": [
@@ -10209,8 +10209,8 @@
                     ]
                 },
                 {
-                    "name": "Preview schema update",
-                    "description": "Returns the SQL queries that would be executed on the warehouse to update the current user schema to the specified one.\n\nCalling this method has no side effects and does not make any changes to the schema.",
+                    "name": "Preview alter schema",
+                    "description": "Returns the SQL queries that would be executed on the warehouse to alter the current user schema to the specified one.\n\nCalling this method has no side effects and does not make any changes to the schema.",
                     "method": "PUT",
                     "url": "/v1/users/schema/preview",
                     "parameters": [
@@ -10247,7 +10247,7 @@
                                         "kind": "text"
                                     }
                                 },
-                                "description": "The SQL queries that would be executed on the warehouse to modify the user schema."
+                                "description": "The SQL queries that would be executed on the warehouse to alter the user schema."
                             }
                         ]
                     },

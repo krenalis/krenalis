@@ -43,8 +43,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Update schema",
-				Description: "Updates the user schema of the workspace.",
+				Name:        "Alter schema",
+				Description: "Alters the user schema of the workspace.",
 				Method:      PUT,
 				URL:         "/v1/users/schema",
 				Parameters: []types.Property{
@@ -78,8 +78,8 @@ func init() {
 				},
 			},
 			{
-				Name: "Preview schema update",
-				Description: "Returns the SQL queries that would be executed on the warehouse to update the current user schema to the specified one.\n\n" +
+				Name: "Preview alter schema",
+				Description: "Returns the SQL queries that would be executed on the warehouse to alter the current user schema to the specified one.\n\n" +
 					"Calling this method has no side effects and does not make any changes to the schema.",
 				Method: PUT,
 				URL:    "/v1/users/schema/preview",
@@ -103,7 +103,7 @@ func init() {
 							Name:        "queries",
 							Type:        types.Array(types.Text()),
 							Placeholder: `[ "ALTER TABLE ..." ]`,
-							Description: "The SQL queries that would be executed on the warehouse to modify the user schema.",
+							Description: "The SQL queries that would be executed on the warehouse to alter the user schema.",
 						},
 					},
 				},
