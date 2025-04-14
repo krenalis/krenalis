@@ -1131,10 +1131,10 @@ func (this *Workspace) LatestUserSchemaUpdate(ctx context.Context) (startTime, e
 	if !ok {
 		return nil, nil, "", errors.NotFound("workspace %d does not exist", this.workspace.ID)
 	}
-	if ws.UpdateUserSchema.Err != nil {
-		updateError = *ws.UpdateUserSchema.Err
+	if ws.AlterUserSchema.Err != nil {
+		updateError = *ws.AlterUserSchema.Err
 	}
-	return ws.UpdateUserSchema.StartTime, ws.UpdateUserSchema.EndTime, updateError, nil
+	return ws.AlterUserSchema.StartTime, ws.AlterUserSchema.EndTime, updateError, nil
 }
 
 // ListenedEvents returns the events listened to the specified listener and the

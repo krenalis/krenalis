@@ -91,7 +91,7 @@ func (this *Workspace) AlterUserSchema(ctx context.Context, schema types.Type, p
 			return errors.BadRequest("primary source %d does not support Users target", s)
 		}
 	}
-	if this.workspace.IR.ID != nil || this.workspace.UpdateUserSchema.ID != nil {
+	if this.workspace.IR.ID != nil || this.workspace.AlterUserSchema.ID != nil {
 		return errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 	}
 	err = this.core.startAlterUserSchema(ctx, this.workspace.ID, schema, primarySources, rePaths, operations)

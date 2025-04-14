@@ -501,11 +501,11 @@ type Workspace struct {
 		StartTime *time.Time // nil means IR was never started.
 		EndTime   *time.Time // nil means IR is running or has never started.
 	}
-	UpdateUserSchema struct {
-		ID             *string    // nil means no user schema update in execution.
-		StartTime      *time.Time // nil means user schema update was never started.
-		EndTime        *time.Time // nil means user schema update is running or has never started.
-		Err            *string    // pointer to empty string if no errors occurred during last execution.
+	AlterUserSchema struct {
+		ID             *string    // nil means no user schema alterations in execution.
+		StartTime      *time.Time // nil means user schema alteration was never started.
+		EndTime        *time.Time // nil means user schema alteration is running or has never started.
+		Err            *string    // pointer to empty string if no errors occurred during last execution of alter user schema.
 		Schema         types.Type
 		PrimarySources map[string]int
 		RePaths        map[string]any

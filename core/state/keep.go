@@ -792,17 +792,17 @@ func (state *State) endAlterUserSchema(n notification) {
 		if e.Err == "" {
 			// These fields should be updated only in case of success,
 			// otherwise, in case of error, the current ones should be left.
-			w.UserSchema = w.UpdateUserSchema.Schema
-			w.UserPrimarySources = w.UpdateUserSchema.PrimarySources
+			w.UserSchema = w.AlterUserSchema.Schema
+			w.UserPrimarySources = w.AlterUserSchema.PrimarySources
 			w.Identifiers = e.Identifiers
 		}
-		w.UpdateUserSchema.ID = nil
-		w.UpdateUserSchema.EndTime = &e.EndTime
-		w.UpdateUserSchema.Err = &e.Err
-		w.UpdateUserSchema.Schema = types.Type{}
-		w.UpdateUserSchema.PrimarySources = nil
-		w.UpdateUserSchema.RePaths = nil
-		w.UpdateUserSchema.Operations = nil
+		w.AlterUserSchema.ID = nil
+		w.AlterUserSchema.EndTime = &e.EndTime
+		w.AlterUserSchema.Err = &e.Err
+		w.AlterUserSchema.Schema = types.Type{}
+		w.AlterUserSchema.PrimarySources = nil
+		w.AlterUserSchema.RePaths = nil
+		w.AlterUserSchema.Operations = nil
 	})
 	dispatchNotification(state, e)
 }
@@ -1067,14 +1067,14 @@ func (state *State) startAlterUserSchema(n notification) {
 		return
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.UpdateUserSchema.ID = &e.ID
-		w.UpdateUserSchema.Schema = e.Schema
-		w.UpdateUserSchema.PrimarySources = e.PrimarySources
-		w.UpdateUserSchema.RePaths = e.RePaths
-		w.UpdateUserSchema.Operations = e.Operations
-		w.UpdateUserSchema.StartTime = &e.StartTime
-		w.UpdateUserSchema.EndTime = nil
-		w.UpdateUserSchema.Err = nil
+		w.AlterUserSchema.ID = &e.ID
+		w.AlterUserSchema.Schema = e.Schema
+		w.AlterUserSchema.PrimarySources = e.PrimarySources
+		w.AlterUserSchema.RePaths = e.RePaths
+		w.AlterUserSchema.Operations = e.Operations
+		w.AlterUserSchema.StartTime = &e.StartTime
+		w.AlterUserSchema.EndTime = nil
+		w.AlterUserSchema.Err = nil
 	})
 	dispatchNotification(state, e)
 }

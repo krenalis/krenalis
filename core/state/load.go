@@ -237,7 +237,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			var warehouseType string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
-			var updateUserSchema []byte
+			var alterUserSchemaSchema []byte
 			var warehouseSettings []byte
 			for rows.Next() {
 				ws := &Workspace{
@@ -247,11 +247,11 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					accounts:    map[int]*Account{},
 				}
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
-					&warehouseMode, &warehouseSettings, &ws.UpdateUserSchema.ID,
-					&updateUserSchema, &ws.UpdateUserSchema.PrimarySources,
-					&ws.UpdateUserSchema.RePaths, &ws.UpdateUserSchema.Operations,
-					&ws.UpdateUserSchema.StartTime, &ws.UpdateUserSchema.EndTime,
-					&ws.UpdateUserSchema.Err, &userSchema, &ws.ResolveIdentitiesOnBatchImport,
+					&warehouseMode, &warehouseSettings, &ws.AlterUserSchema.ID,
+					&alterUserSchemaSchema, &ws.AlterUserSchema.PrimarySources,
+					&ws.AlterUserSchema.RePaths, &ws.AlterUserSchema.Operations,
+					&ws.AlterUserSchema.StartTime, &ws.AlterUserSchema.EndTime,
+					&ws.AlterUserSchema.Err, &userSchema, &ws.ResolveIdentitiesOnBatchImport,
 					&ws.Identifiers, &ws.IR.ID, &ws.IR.StartTime, &ws.IR.EndTime,
 					&ws.UIPreferences.UserProfile.Image, &ws.UIPreferences.UserProfile.FirstName,
 					&ws.UIPreferences.UserProfile.LastName, &ws.UIPreferences.UserProfile.Extra,
@@ -269,7 +269,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				if err != nil {
 					return err
 				}
-				err = json.Unmarshal(updateUserSchema, &ws.UpdateUserSchema.Schema)
+				err = json.Unmarshal(alterUserSchemaSchema, &ws.AlterUserSchema.Schema)
 				if err != nil {
 					return err
 				}

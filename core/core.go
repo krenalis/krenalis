@@ -1230,10 +1230,10 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 			// user schema can be started, so continue to the next workspace.
 			continue
 		}
-		if ws.UpdateUserSchema.ID != nil {
-			go core.executeUserSchemaUpdate(ws.ID, *ws.UpdateUserSchema.ID,
-				ws.UpdateUserSchema.Schema, ws.UpdateUserSchema.PrimarySources,
-				ws.UpdateUserSchema.RePaths, ws.UpdateUserSchema.Operations)
+		if ws.AlterUserSchema.ID != nil {
+			go core.executeUserSchemaUpdate(ws.ID, *ws.AlterUserSchema.ID,
+				ws.AlterUserSchema.Schema, ws.AlterUserSchema.PrimarySources,
+				ws.AlterUserSchema.RePaths, ws.AlterUserSchema.Operations)
 		}
 	}
 }
