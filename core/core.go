@@ -1255,46 +1255,7 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 	go core.executeIdentityResolution(n.Workspace, n.ID)
 }
 
-// startIdentityResolution starts an Identity Resolution.
-//
-// If another operation (identity resolution or user schema update) is already
-// running, this method returns an errors.UnprocessableError error with code
-// OperationAlreadyExecuting.
-func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
-	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
-	n := state.StartIdentityResolution{
-		Workspace: ws,
-		ID:        opID.String(),
-		StartTime: time.Now().UTC(),
-	}
-	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		var ongoingOp bool
-		query := `SELECT update_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
-		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
-		if err != nil {
-			return nil, err
-		}
-		if ongoingOp {
-			return nil, errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
-		}
-		query = "UPDATE workspaces SET ir_id = $1, ir_start_time = $2, ir_end_time = NULL WHERE id = $3"
-		_, err = tx.Exec(ctx, query, n.ID, n.StartTime, n.Workspace)
-		if err != nil {
-			return nil, err
-		}
-		return n, nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// startUpdateUserSchema starts the update of the user schema.
+// startAlterUserSchema starts the alter of the user schema.
 //
 // It returns an errors.UnprocessableError error with code
 //
@@ -1302,7 +1263,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 //     user schema update) is already running.
 //   - ConnectionNotExist, if a connection referred in the primary sources does
 //     not exist.
-func (core *Core) startUpdateUserSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, rePaths map[string]any, operations []meergo.AlterOperation) error {
+func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, rePaths map[string]any, operations []meergo.AlterOperation) error {
 	core.mustBeOpen()
 	opID, err := uuid.NewUUID()
 	if err != nil {
@@ -1368,6 +1329,45 @@ func (core *Core) startUpdateUserSchema(ctx context.Context, ws int, schema type
 			" update_user_schema_error = NULL WHERE id = $7"
 		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.RePaths,
 			n.Operations, n.StartTime, n.Workspace)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// startIdentityResolution starts an Identity Resolution.
+//
+// If another operation (identity resolution or user schema update) is already
+// running, this method returns an errors.UnprocessableError error with code
+// OperationAlreadyExecuting.
+func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
+	core.mustBeOpen()
+	opID, err := uuid.NewUUID()
+	if err != nil {
+		return err
+	}
+	n := state.StartIdentityResolution{
+		Workspace: ws,
+		ID:        opID.String(),
+		StartTime: time.Now().UTC(),
+	}
+	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		var ongoingOp bool
+		query := `SELECT update_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
+		if err != nil {
+			return nil, err
+		}
+		if ongoingOp {
+			return nil, errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
+		}
+		query = "UPDATE workspaces SET ir_id = $1, ir_start_time = $2, ir_end_time = NULL WHERE id = $3"
+		_, err = tx.Exec(ctx, query, n.ID, n.StartTime, n.Workspace)
 		if err != nil {
 			return nil, err
 		}

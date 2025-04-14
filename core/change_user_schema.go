@@ -94,7 +94,7 @@ func (this *Workspace) AlterUserSchema(ctx context.Context, schema types.Type, p
 	if this.workspace.IR.ID != nil || this.workspace.UpdateUserSchema.ID != nil {
 		return errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 	}
-	err = this.core.startUpdateUserSchema(ctx, this.workspace.ID, schema, primarySources, rePaths, operations)
+	err = this.core.startAlterUserSchema(ctx, this.workspace.ID, schema, primarySources, rePaths, operations)
 	return err
 }
 
