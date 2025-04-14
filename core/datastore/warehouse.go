@@ -58,12 +58,6 @@ type warehouse struct {
 	inner meergo.Warehouse
 }
 
-func (dw warehouse) AlterUserColumnsQueries(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
-	queries, err := dw.inner.AlterUserColumnsQueries(ctx, columns, operations)
-	err = unavailableError(err)
-	return queries, err
-}
-
 func (dw warehouse) AlterUserSchema(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
 	return unavailableError(dw.inner.AlterUserSchema(ctx, opID, columns, operations))
 }
@@ -90,6 +84,12 @@ func (dw warehouse) Merge(ctx context.Context, table meergo.Table, rows [][]any,
 
 func (dw warehouse) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
 	return unavailableError(dw.inner.MergeIdentities(ctx, columns, rows))
+}
+
+func (dw warehouse) PreviewAlterUserSchema(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
+	queries, err := dw.inner.PreviewAlterUserSchema(ctx, columns, operations)
+	err = unavailableError(err)
+	return queries, err
 }
 
 func (dw warehouse) Query(ctx context.Context, query meergo.RowQuery, withTotal bool) (meergo.Rows, int, error) {

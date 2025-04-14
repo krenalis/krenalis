@@ -150,15 +150,6 @@ type Warehouse interface {
 	// same ID.
 	AlterUserSchema(ctx context.Context, opID string, columns []Column, operations []AlterOperation) error
 
-	// AlterUserColumnsQueries returns the queries that alter the columns of the
-	// user tables.
-	//
-	// columns contains the columns of the users tables to obtain (this parameters
-	// is useful for obtaining type information and for creating views), while
-	// operations is the set of operations to apply in order to migrate the current
-	// columns to the given columns.
-	AlterUserColumnsQueries(ctx context.Context, columns []Column, operations []AlterOperation) ([]string, error)
-
 	// CanInitialize checks whether the data warehouse can be initialized.
 	// It returns a *WarehouseNonInitializableError error if the data warehouse
 	// cannot be initialized.
@@ -205,6 +196,16 @@ type Warehouse interface {
 	// If the value is false, only the __execution__ column is updated to indicate
 	// that the row should not be purged.
 	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
+
+	// PreviewAlterUserSchema provides a preview of an alter user schema operation
+	// by returning the queries that would be executed on the warehouse to perform a
+	// given alter schema.
+	//
+	// columns contains the columns of the users tables to obtain (this parameters
+	// is useful for obtaining type information and for creating views), while
+	// operations is the set of operations to apply in order to migrate the current
+	// columns to the given columns.
+	PreviewAlterUserSchema(ctx context.Context, columns []Column, operations []AlterOperation) ([]string, error)
 
 	// Query executes a query and returns the results as Rows. If withTotal is true,
 	// it also returns an estimated total number of the records that would be

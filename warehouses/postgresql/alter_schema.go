@@ -73,9 +73,10 @@ func (warehouse *PostgreSQL) alterUserSchema(ctx context.Context, columns []meer
 	return err
 }
 
-// AlterUserColumnsQueries returns the queries that alter the columns of the
-// user tables.
-func (warehouse *PostgreSQL) AlterUserColumnsQueries(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
+// PreviewAlterUserSchema provides a preview of an alter user schema operation
+// by returning the queries that would be executed on the warehouse to perform a
+// given alter schema.
+func (warehouse *PostgreSQL) PreviewAlterUserSchema(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
 	usersVersion, err := warehouse.usersVersion(ctx)
 	if err != nil {
 		return nil, err

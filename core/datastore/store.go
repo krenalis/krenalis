@@ -372,7 +372,7 @@ func (store *Store) PreviewUserSchemaUpdate(ctx context.Context, schema types.Ty
 	}
 	defer done()
 	userColumns := util.PropertiesToColumns(schema)
-	return store.warehouse().AlterUserColumnsQueries(ctx, userColumns, operations)
+	return store.warehouse().PreviewAlterUserSchema(ctx, userColumns, operations)
 }
 
 // PurgeActions purges the provided actions from the data warehouse, deleting
