@@ -306,6 +306,25 @@ func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http
 		"failed": metrics.Failed}, nil
 }
 
+// AlterUserSchema alters the user schema of a workspace.
+func (workspace workspace) AlterUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Schema         types.Type     `json:"schema"`
+		PrimarySources map[string]int `json:"primarySources"`
+		RePaths        map[string]any `json:"rePaths"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.AlterUserSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
+	return nil, err
+}
+
 // Connection returns a connection of a workspace.
 func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
@@ -760,25 +779,6 @@ func (workspace workspace) UpdateIdentityResolutionSettings(_ http.ResponseWrite
 		return nil, errors.BadRequest("%s", err)
 	}
 	err = ws.UpdateIdentityResolutionSettings(r.Context(), body.RunOnBatchImport, body.Identifiers)
-	return nil, err
-}
-
-// UpdateUserSchema updates the user schema of a workspace.
-func (workspace workspace) UpdateUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Schema         types.Type     `json:"schema"`
-		PrimarySources map[string]int `json:"primarySources"`
-		RePaths        map[string]any `json:"rePaths"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.UpdateUserSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
 	return nil, err
 }
 

@@ -175,7 +175,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"PUT    /members/invitations/{token}":                    api.AcceptInvitation,            /* only UI */
 		"PUT    /members/reset-password":                         api.SendMemberPasswordReset,     /* only UI */
 		"PUT    /members/reset-password/{token}":                 api.ChangeMemberPasswordByToken, /* only UI */
-		"PUT    /users/schema":                                   workspace.UpdateUserSchema,
+		"PUT    /users/schema":                                   workspace.AlterUserSchema,
 		"PUT    /users/schema/preview":                           workspace.PreviewUserSchemaUpdate,
 		"PUT    /warehouse":                                      workspace.UpdateWarehouse,
 		"PUT    /warehouse/mode":                                 workspace.UpdateWarehouseMode,
