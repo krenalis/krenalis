@@ -701,12 +701,11 @@ func (store *Store) onDeleteConnection(n state.DeleteConnection) {
 	store.mu.Unlock()
 }
 
-// onEndUpdateUserSchema is called when the update of the user schema of a
+// onEndAlterUserSchema is called when the alter of the user schema of a
 // workspace ends.
 //
-// This notification is propagated by the Datastore.onEndUpdateUserSchema
-// method.
-func (store *Store) onEndUpdateUserSchema(n state.EndUpdateUserSchema) {
+// This notification is propagated by the Datastore.onEndAlterUserSchema method.
+func (store *Store) onEndAlterUserSchema(n state.EndAlterUserSchema) {
 
 	// Update the user and the identity columns.
 	store.columnByProperty.mu.Lock()
@@ -719,7 +718,7 @@ func (store *Store) onEndUpdateUserSchema(n state.EndUpdateUserSchema) {
 	// Propagate the notification to the EventIdentityWriters.
 	store.mu.Lock()
 	for _, iw := range store.eventIdentityWriters {
-		iw.onEndUpdateUserSchema(n)
+		iw.onEndAlterUserSchema(n)
 	}
 	store.mu.Unlock()
 

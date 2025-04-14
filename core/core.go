@@ -1104,7 +1104,7 @@ func (core *Core) executeUserSchemaUpdate(workspace int, opID string, schema typ
 		} else if err2, ok := err.(*meergo.OperationError); ok {
 			slog.Error("alter schema ended with an error", "err", err2)
 			alterSchemaErr = err2
-			// Break the loop and send the 'EndUpdateUserSchema' notification
+			// Break the loop and send the 'EndAlterUserSchema' notification
 			// with the error.
 			break
 		} else {
@@ -1113,7 +1113,7 @@ func (core *Core) executeUserSchemaUpdate(workspace int, opID string, schema typ
 			continue
 		}
 	}
-	nEnd := state.EndUpdateUserSchema{
+	nEnd := state.EndAlterUserSchema{
 		Workspace: workspace,
 		ID:        opID,
 		EndTime:   time.Now().UTC(),

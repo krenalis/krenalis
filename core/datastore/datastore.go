@@ -54,7 +54,7 @@ func New(st *state.State) *Datastore {
 	ds.state.AddListener(ds.onCreateWorkspace)
 	ds.state.AddListener(ds.onDeleteAction)
 	ds.state.AddListener(ds.onDeleteConnection)
-	ds.state.AddListener(ds.onEndUpdateUserSchema)
+	ds.state.AddListener(ds.onEndAlterUserSchema)
 	ds.state.AddListener(ds.onUpdateAction)
 	ds.state.AddListener(ds.onUpdateWarehouse)
 	ds.state.AddListener(ds.onUpdateWarehouseMode)
@@ -215,12 +215,12 @@ func (ds *Datastore) onDeleteConnection(n state.DeleteConnection) {
 	store.onDeleteConnection(n)
 }
 
-// onEndUpdateUserSchema is called when the update of the user schema ends.
-func (ds *Datastore) onEndUpdateUserSchema(n state.EndUpdateUserSchema) {
+// onEndAlterUserSchema is called when the alter of the user schema ends.
+func (ds *Datastore) onEndAlterUserSchema(n state.EndAlterUserSchema) {
 	ds.mu.Lock()
 	store := ds.store[n.Workspace]
 	ds.mu.Unlock()
-	store.onEndUpdateUserSchema(n)
+	store.onEndAlterUserSchema(n)
 }
 
 // onUpdateAction is called when an action is updated.

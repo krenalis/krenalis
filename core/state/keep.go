@@ -69,10 +69,10 @@ func (state *State) keep() {
 			state.electLeader(n)
 		case "EndActionExecution":
 			state.endActionExecution(n)
+		case "EndAlterUserSchema":
+			state.endAlterUserSchema(n)
 		case "EndIdentityResolution":
 			state.endIdentityResolution(n)
-		case "EndUpdateUserSchema":
-			state.endUpdateUserSchema(n)
 		case "ExecuteAction":
 			state.executeAction(n)
 		case "LinkConnection":
@@ -772,30 +772,8 @@ func (state *State) endActionExecution(n notification) {
 	})
 }
 
-// EndIdentityResolution is the event sent when the execution of the Identity
-// Resolution ends.
-type EndIdentityResolution struct {
-	Workspace int
-	ID        string
-	EndTime   time.Time
-}
-
-// endIdentityResolution ends the Identity Resolution.
-func (state *State) endIdentityResolution(n notification) {
-	e := EndIdentityResolution{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.IR.ID = nil
-		w.IR.EndTime = &e.EndTime
-	})
-	dispatchNotification(state, e)
-}
-
-// EndUpdateUserSchema is the event sent when the execution of a user schema
-// update ends.
-type EndUpdateUserSchema struct {
+// EndAlterUserSchema is the event sent when the alter of a user schema ends.
+type EndAlterUserSchema struct {
 	Workspace   int
 	ID          string
 	EndTime     time.Time
@@ -804,9 +782,9 @@ type EndUpdateUserSchema struct {
 	Identifiers []string
 }
 
-// endUpdateUserSchema ends the update of the user schema.
-func (state *State) endUpdateUserSchema(n notification) {
-	e := EndUpdateUserSchema{}
+// endAlterUserSchema ends the alter of the user schema.
+func (state *State) endAlterUserSchema(n notification) {
+	e := EndAlterUserSchema{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -825,6 +803,27 @@ func (state *State) endUpdateUserSchema(n notification) {
 		w.UpdateUserSchema.PrimarySources = nil
 		w.UpdateUserSchema.RePaths = nil
 		w.UpdateUserSchema.Operations = nil
+	})
+	dispatchNotification(state, e)
+}
+
+// EndIdentityResolution is the event sent when the execution of the Identity
+// Resolution ends.
+type EndIdentityResolution struct {
+	Workspace int
+	ID        string
+	EndTime   time.Time
+}
+
+// endIdentityResolution ends the Identity Resolution.
+func (state *State) endIdentityResolution(n notification) {
+	e := EndIdentityResolution{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.IR.ID = nil
+		w.IR.EndTime = &e.EndTime
 	})
 	dispatchNotification(state, e)
 }

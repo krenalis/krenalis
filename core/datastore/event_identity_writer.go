@@ -337,11 +337,11 @@ func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
 	iw.mu.Unlock()
 }
 
-// onEndUpdateUserSchema is called when the update of the user schema of a
+// onEndAlterUserSchema is called when the alter of the user schema of a
 // workspace ends.
 //
-// This notification is propagated by the Store.onEndUpdateUserSchema method.
-func (iw *EventIdentityWriter) onEndUpdateUserSchema(_ state.EndUpdateUserSchema) {
+// This notification is propagated by the Store.onEndAlterUserSchema method.
+func (iw *EventIdentityWriter) onEndAlterUserSchema(_ state.EndAlterUserSchema) {
 	action, ok := iw.store.ds.state.Action(iw.action)
 	if !ok {
 		return
