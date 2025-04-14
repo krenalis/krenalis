@@ -33,7 +33,7 @@ interface LatestIdentityResolution {
 	endTime: string | null;
 }
 
-interface LatestUserSchemaUpdate {
+interface LatestAlterUserSchema {
 	startTime: string | null;
 	endTime: string | null;
 	error: string | null;
@@ -46,5 +46,5 @@ export type {
 	UserProfile,
 	PrimarySources,
 	LatestIdentityResolution,
-	LatestUserSchemaUpdate,
+	LatestAlterUserSchema,
 };

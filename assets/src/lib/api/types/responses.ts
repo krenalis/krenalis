@@ -165,7 +165,7 @@ interface CreateAPIKeyResponse {
 
 type RePaths = Record<string, string | null>;
 
-interface PreviewUserSchemaUpdateResponse {
+interface PreviewAlterUserSchemaResponse {
 	queries: string[];
 }
 
@@ -198,7 +198,7 @@ export type {
 	APIKeyResponse,
 	CreateAPIKeyResponse,
 	PreviewSendEventResponse,
-	PreviewUserSchemaUpdateResponse,
+	PreviewAlterUserSchemaResponse,
 	RePaths,
 	RecordsResponse,
 	ResponseUser,

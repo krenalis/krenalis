@@ -1,21 +1,21 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import AppContext from '../../../context/AppContext';
 import { ObjectType } from '../../../lib/api/types/types';
-import { LatestUserSchemaUpdate } from '../../../lib/api/types/workspace';
+import { LatestAlterUserSchema } from '../../../lib/api/types/workspace';
 
 const useSchema = () => {
 	const [isLoadingSchema, setIsLoadingSchema] = useState<boolean>(true);
 	const [schema, setSchema] = useState<ObjectType>();
-	const [isUpdating, setIsUpdating] = useState<boolean>(false);
-	const [latestUpdateError, setLatestUpdateError] = useState<string>();
+	const [isAltering, setIsAltering] = useState<boolean>(false);
+	const [latestAlterError, setLatestAlterError] = useState<string>();
 
 	const { api, handleError, selectedWorkspace } = useContext(AppContext);
 
 	const isUpdatingRef = useRef<boolean>();
 
 	useEffect(() => {
-		isUpdatingRef.current = isUpdating;
-	}, [isUpdating]);
+		isUpdatingRef.current = isAltering;
+	}, [isAltering]);
 
 	useEffect(() => {
 		const fetchSchema = async () => {
@@ -34,20 +34,20 @@ const useSchema = () => {
 
 	useEffect(() => {
 		const intervalID = setInterval(() => {
-			handleSchemaUpdate();
+			handleSchemaAltering();
 		}, 3000);
 
-		handleSchemaUpdate();
+		handleSchemaAltering();
 
 		return () => {
 			clearInterval(intervalID);
 		};
 	}, []);
 
-	const handleSchemaUpdate = async () => {
-		let res: LatestUserSchemaUpdate;
+	const handleSchemaAltering = async () => {
+		let res: LatestAlterUserSchema;
 		try {
-			res = await api.workspaces.latestUserSchemaUpdate();
+			res = await api.workspaces.LatestAlterUserSchema();
 		} catch (err) {
 			handleError(err);
 			return;
@@ -55,23 +55,23 @@ const useSchema = () => {
 		const startTime = res.startTime;
 		const endTime = res.endTime;
 		if (startTime != null && endTime == null) {
-			// the schema is being updated.
-			setIsUpdating(true);
+			// the schema is being altered.
+			setIsAltering(true);
 		} else if (isUpdatingRef.current && endTime != null) {
-			// schema update is concluded.
+			// schema altering is concluded.
 			setIsLoadingSchema(true);
-			setIsUpdating(false);
+			setIsAltering(false);
 		}
-		setLatestUpdateError(res.error);
+		setLatestAlterError(res.error);
 	};
 
 	return {
 		isLoadingSchema,
 		setIsLoadingSchema,
 		schema,
-		isUpdating,
-		setIsUpdating,
-		latestUpdateError,
+		isUpdating: isAltering,
+		setIsUpdating: setIsAltering,
+		latestUpdateError: latestAlterError,
 	};
 };
 

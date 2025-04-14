@@ -21,7 +21,7 @@ import Workspace, {
 	CreateWorkspaceResponse,
 	UIPreferences,
 	LatestIdentityResolution,
-	LatestUserSchemaUpdate,
+	LatestAlterUserSchema,
 	PrimarySources,
 } from './types/workspace';
 import {
@@ -44,7 +44,7 @@ import {
 	MemberInvitationResponse,
 	MemberToSet,
 	PreviewSendEventResponse,
-	PreviewUserSchemaUpdateResponse,
+	PreviewAlterUserSchemaResponse,
 	RePaths,
 	RecordsResponse,
 	SheetsResponse,
@@ -821,10 +821,7 @@ class Workspaces {
 		});
 	};
 
-	previewUserSchemaUpdate = async (
-		schema: ObjectType,
-		rePaths: RePaths,
-	): Promise<PreviewUserSchemaUpdateResponse> => {
+	previewAlterUserSchema = async (schema: ObjectType, rePaths: RePaths): Promise<PreviewAlterUserSchemaResponse> => {
 		return await call(`${this.apiURL}/users/schema/preview`, http.PUT, this.workspaceID, {
 			schema,
 			rePaths,
@@ -935,7 +932,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/identity-resolution/latest`, http.GET, this.workspaceID);
 	};
 
-	latestUserSchemaUpdate = async (): Promise<LatestUserSchemaUpdate> => {
+	LatestAlterUserSchema = async (): Promise<LatestAlterUserSchema> => {
 		return await call(`${this.apiURL}/users/schema/latest-update`, http.GET, this.workspaceID);
 	};
 }
