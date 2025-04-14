@@ -217,8 +217,8 @@ func New(conf *Config) (*Core, error) {
 	core.state.Freeze()
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onExecuteAction)
+	core.state.AddListener(core.onStartAlterUserSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
-	core.state.AddListener(core.onStartUpdateUserSchema)
 	core.state.Unfreeze()
 
 	// Try to start pending action executions.
@@ -1238,20 +1238,21 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 	}
 }
 
+// onStartAlterUserSchema is called when the alter of the user schema is
+// started.
+func (core *Core) onStartAlterUserSchema(n state.StartAlterUserSchema) {
+	if !core.state.IsLeader() {
+		return
+	}
+	go core.executeUserSchemaUpdate(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.RePaths, n.Operations)
+}
+
 // onElectLeader is called when the identity resolution is started.
 func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 	if !core.state.IsLeader() {
 		return
 	}
 	go core.executeIdentityResolution(n.Workspace, n.ID)
-}
-
-// onStartUpdateUserSchema is called when the user schema update is started.
-func (core *Core) onStartUpdateUserSchema(n state.StartUpdateUserSchema) {
-	if !core.state.IsLeader() {
-		return
-	}
-	go core.executeUserSchemaUpdate(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.RePaths, n.Operations)
 }
 
 // startIdentityResolution starts an Identity Resolution.
@@ -1307,7 +1308,7 @@ func (core *Core) startUpdateUserSchema(ctx context.Context, ws int, schema type
 	if err != nil {
 		return err
 	}
-	n := state.StartUpdateUserSchema{
+	n := state.StartAlterUserSchema{
 		Workspace:      ws,
 		ID:             opID.String(),
 		StartTime:      time.Now().UTC(),

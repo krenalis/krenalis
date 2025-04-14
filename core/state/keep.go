@@ -95,10 +95,10 @@ func (state *State) keep() {
 			state.setActionStatus(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
+		case "StartAlterUserSchema":
+			state.startAlterUserSchema(n)
 		case "StartIdentityResolution":
 			state.startIdentityResolution(n)
-		case "StartUpdateUserSchema":
-			state.startUpdateUserSchema(n)
 		case "UpdateAction":
 			state.updateAction(n)
 		case "UpdateConnection":
@@ -1048,6 +1048,37 @@ func (state *State) setConnectionSettings(n notification) {
 	dispatchNotification(state, e)
 }
 
+// StartAlterUserSchema is the event sent when the alter of the user schema
+// starts.
+type StartAlterUserSchema struct {
+	Workspace      int
+	ID             string
+	Schema         types.Type
+	PrimarySources map[string]int
+	RePaths        map[string]any
+	Operations     []meergo.AlterOperation
+	StartTime      time.Time
+}
+
+// startAlterUserSchema starts the alter of the user schema.
+func (state *State) startAlterUserSchema(n notification) {
+	e := StartAlterUserSchema{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.UpdateUserSchema.ID = &e.ID
+		w.UpdateUserSchema.Schema = e.Schema
+		w.UpdateUserSchema.PrimarySources = e.PrimarySources
+		w.UpdateUserSchema.RePaths = e.RePaths
+		w.UpdateUserSchema.Operations = e.Operations
+		w.UpdateUserSchema.StartTime = &e.StartTime
+		w.UpdateUserSchema.EndTime = nil
+		w.UpdateUserSchema.Err = nil
+	})
+	dispatchNotification(state, e)
+}
+
 // StartIdentityResolution is the event sent when the execution of the Identity
 // Resolution starts.
 type StartIdentityResolution struct {
@@ -1066,37 +1097,6 @@ func (state *State) startIdentityResolution(n notification) {
 		w.IR.ID = &e.ID
 		w.IR.StartTime = &e.StartTime
 		w.IR.EndTime = nil
-	})
-	dispatchNotification(state, e)
-}
-
-// StartUpdateUserSchema is the event sent when the execution of a user schema
-// update starts.
-type StartUpdateUserSchema struct {
-	Workspace      int
-	ID             string
-	Schema         types.Type
-	PrimarySources map[string]int
-	RePaths        map[string]any
-	Operations     []meergo.AlterOperation
-	StartTime      time.Time
-}
-
-// startUpdateUserSchema starts the update of the user schema.
-func (state *State) startUpdateUserSchema(n notification) {
-	e := StartUpdateUserSchema{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.UpdateUserSchema.ID = &e.ID
-		w.UpdateUserSchema.Schema = e.Schema
-		w.UpdateUserSchema.PrimarySources = e.PrimarySources
-		w.UpdateUserSchema.RePaths = e.RePaths
-		w.UpdateUserSchema.Operations = e.Operations
-		w.UpdateUserSchema.StartTime = &e.StartTime
-		w.UpdateUserSchema.EndTime = nil
-		w.UpdateUserSchema.Err = nil
 	})
 	dispatchNotification(state, e)
 }
