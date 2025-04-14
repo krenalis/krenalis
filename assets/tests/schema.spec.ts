@@ -12,7 +12,7 @@ test.afterEach(async ({ page }) => {
 test(`Add schema property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
-	await page.click('.schema-grid__edit-button');
+	await page.click('.schema-grid__alter-button');
 	await page.click('.schema-edit__add-property');
 
 	await page.locator('sl-input >> input[name="name"]').fill('foo');
@@ -40,7 +40,7 @@ test(`Add schema property`, async ({ page }) => {
 test(`Edit schema property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
-	await page.click('.schema-grid__edit-button');
+	await page.click('.schema-grid__alter-button');
 
 	await page.click('.grid__row[data-id="foo"] .schema-edit__property-buttons-edit');
 	await page.locator('sl-input >> input[name="name"]').fill('bar');
@@ -72,7 +72,7 @@ test(`Edit schema property`, async ({ page }) => {
 test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
-	await page.click('.schema-grid__edit-button');
+	await page.click('.schema-grid__alter-button');
 
 	await page.click('.grid__row[data-id="bar"] .schema-edit__property-buttons-edit');
 	await page.locator('sl-input >> input[name="name"]').fill('foo');
@@ -106,7 +106,7 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 test(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
-	await page.click('.schema-grid__edit-button');
+	await page.click('.schema-grid__alter-button');
 	await page.click('.schema-edit__add-property');
 
 	await page.locator('sl-input >> input[name="name"]').fill('test_obj');
@@ -133,7 +133,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 		}),
 	).toBeVisible();
 
-	await page.waitForTimeout(1000);
+	await page.waitForTimeout(8000); // Ensures that the UI has had enough time to poll the server to know if the update is completed (polling happens every 3 seconds) and to refetch the schema.
 	await page.click('.schema-grid__expand-all-button');
 	await expect(
 		page.locator('.grid__row--children > .grid__cell:first-child > .grid__cell-content', {
@@ -160,7 +160,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 test(`Remove schema properties`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
-	await page.click('.schema-grid__edit-button');
+	await page.click('.schema-grid__alter-button');
 
 	await page.click('.grid__row[data-id="foo"] .schema-edit__property-buttons-remove');
 	await page.click('.schema-edit__confirm-remove-property');
@@ -203,7 +203,7 @@ test(`Remove schema properties`, async ({ page }) => {
 test(`Check that the property name is correctly validated`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
-	await page.click('.schema-grid__edit-button');
+	await page.click('.schema-grid__alter-button');
 	await page.click('.schema-edit__add-property');
 
 	let error = page.locator('.property-dialog__control--name .property-dialog__control-error');

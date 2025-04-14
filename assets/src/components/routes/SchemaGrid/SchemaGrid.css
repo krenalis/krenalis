@@ -16,8 +16,22 @@
 	font-size: 16px;
 }
 
-.schema-grid__edit-button::part(base) {
+.schema-grid__alter-button::part(base) {
 	min-width: 150px;
+}
+
+.schema-grid__alter-error {
+	font-size: 14px;
+	text-align: center;
+	color: var(--sl-color-danger-500);
+	font-weight: 500;
+	margin-bottom: 15px;
+}
+
+.schema-grid__alter-error sl-icon {
+	margin-right: 5px;
+	position: relative;
+	top: 3px;
 }
 
 .schema-grid__primary-source {

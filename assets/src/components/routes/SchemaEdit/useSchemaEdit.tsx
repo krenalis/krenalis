@@ -12,6 +12,7 @@ import { isMetaProperty } from '../../../lib/core/schema';
 import TransformedConnection from '../../../lib/core/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { PrimarySources } from '../../../lib/api/types/workspace';
+import { SchemaContext } from '../../../context/SchemaContext';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -60,6 +61,8 @@ const useSchemaEdit = (
 
 	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
 		useContext(AppContext);
+
+	const { setIsUpdating } = useContext(SchemaContext);
 
 	const primarySources = useRef<PrimarySources>(
 		workspaces.find((w) => w.id === selectedWorkspace).userPrimarySources,
@@ -376,6 +379,7 @@ const useSchemaEdit = (
 			setQueries(null);
 			setIsConfirmChangesLoading(false);
 			setIsLoadingWorkspaces(true);
+			setIsUpdating(true);
 			onClose();
 		}, 300);
 	};

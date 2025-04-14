@@ -11,7 +11,7 @@ import Toolbar from '../../base/Toolbar/Toolbar';
 
 const SchemaGrid = () => {
 	const { redirect } = useContext(AppContext);
-	const { schema, isLoadingSchema } = useContext(SchemaContext);
+	const { schema, isLoadingSchema, latestUpdateError, isUpdating } = useContext(SchemaContext);
 
 	const gridRef = useRef<any>();
 
@@ -35,6 +35,12 @@ const SchemaGrid = () => {
 
 	return (
 		<div className='schema-grid'>
+			{!isUpdating && latestUpdateError && (
+				<div className='schema-grid__alter-error'>
+					<SlIcon name='exclamation-circle' />
+					{latestUpdateError}
+				</div>
+			)}
 			<Toolbar className='schema-grid__toolbar'>
 				<div className='schema-grid__expansion-buttons'>
 					<SlButton className='schema-grid__expand-all-button' onClick={onExpandClick}>
@@ -46,11 +52,25 @@ const SchemaGrid = () => {
 						Collapse all
 					</SlButton>
 				</div>
-				<SlButton className='schema-grid__edit-button' variant='primary' onClick={onEditClick}>
-					Alter schema...
-				</SlButton>
+				<div className='schema-grid__alter'>
+					<SlButton
+						className='schema-grid__alter-button'
+						variant='primary'
+						onClick={isUpdating ? null : onEditClick}
+						disabled={isUpdating}
+						loading={isUpdating}
+					>
+						Alter schema...
+					</SlButton>
+				</div>
 			</Toolbar>
-			<Grid ref={gridRef} columns={columns} rows={rows} isLoading={isLoadingSchema} />
+			<Grid
+				ref={gridRef}
+				columns={columns}
+				rows={rows}
+				isLoading={isLoadingSchema || isUpdating}
+				loadingText={isUpdating ? 'Schema is being updated' : 'Loading schema'}
+			/>
 			<Outlet />
 		</div>
 	);

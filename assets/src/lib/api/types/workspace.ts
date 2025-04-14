@@ -29,14 +29,14 @@ interface CreateWorkspaceResponse {
 }
 
 interface LatestIdentityResolution {
-	startTime: string;
-	endTime: string;
+	startTime: string | null;
+	endTime: string | null;
 }
 
 interface LatestUserSchemaUpdate {
-	startTime: string;
-	endTime: string;
-	error: string;
+	startTime: string | null;
+	endTime: string | null;
+	error: string | null;
 }
 
 export default Workspace;

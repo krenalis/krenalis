@@ -8,7 +8,7 @@ import { useSchema } from './useSchema';
 const Schema = () => {
 	const { setTitle } = useContext(AppContext);
 
-	const { isLoadingSchema, setIsLoadingSchema, schema } = useSchema();
+	const { isLoadingSchema, setIsLoadingSchema, schema, isUpdating, setIsUpdating, latestUpdateError } = useSchema();
 
 	const location = useLocation();
 
@@ -19,7 +19,16 @@ const Schema = () => {
 	return (
 		<div className='schema'>
 			<div className='route-content'>
-				<SchemaContext.Provider value={{ schema, isLoadingSchema, setIsLoadingSchema }}>
+				<SchemaContext.Provider
+					value={{
+						schema,
+						isLoadingSchema,
+						setIsLoadingSchema,
+						latestUpdateError,
+						isUpdating,
+						setIsUpdating,
+					}}
+				>
 					<Outlet />
 				</SchemaContext.Provider>
 			</div>

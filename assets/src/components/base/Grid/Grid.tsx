@@ -21,6 +21,7 @@ interface GridProps {
 	// used to recompute the table if at first rendering it wasn't in the
 	// viewport (for instance, because it was inside a tab panel group).
 	isShown?: boolean;
+	loadingText?: string;
 }
 
 interface gridMethods {
@@ -32,7 +33,17 @@ type GridRef = gridMethods & any;
 
 const Grid = forwardRef<GridRef, GridProps>(
 	(
-		{ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, className, isShown }: GridProps,
+		{
+			columns,
+			rows,
+			showColumnBorder,
+			showRowBorder,
+			isLoading,
+			noRowsMessage,
+			className,
+			isShown,
+			loadingText,
+		}: GridProps,
 		ref,
 	) => {
 		const gridRef = useRef<any>();
@@ -121,6 +132,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 								} as React.CSSProperties
 							}
 						/>
+						{loadingText != null && <div className='grid__loading-text'>{loadingText}</div>}
 					</div>
 				) : (
 					<>

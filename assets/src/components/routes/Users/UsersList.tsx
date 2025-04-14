@@ -64,8 +64,8 @@ const UsersList = () => {
 		const startTime = res.startTime;
 		const endTime = res.endTime;
 
-		let sinceStart: number | undefined;
-		let end: string | undefined;
+		let sinceStart: number | null;
+		let end: string | null;
 		if (startTime != null && endTime == null) {
 			const st = new Date(startTime);
 			const now = new Date();
