@@ -22,7 +22,7 @@ import (
 )
 
 // AlterUserColumns alters the columns of the user tables.
-func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
 	status, err := warehouse.executeOperation(ctx, opID, alterUserColumns)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, u
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.alterUserColumns(ctx, userColumns, operations)
+	err = warehouse.alterUserColumns(ctx, columns, operations)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
@@ -47,7 +47,7 @@ func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, u
 	return ctx.Err()
 }
 
-func (warehouse *Snowflake) alterUserColumns(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *Snowflake) alterUserColumns(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
 
 	// Retrieve the current version of the "users" table.
 	usersVersion, err := warehouse.usersVersion(ctx)
@@ -56,7 +56,7 @@ func (warehouse *Snowflake) alterUserColumns(ctx context.Context, userColumns []
 	}
 
 	// Determine the alter schema queries.
-	queries := alterUserColumnsQueries("_USERS_"+strconv.Itoa(usersVersion), userColumns, operations)
+	queries := alterUserColumnsQueries("_USERS_"+strconv.Itoa(usersVersion), columns, operations)
 
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {

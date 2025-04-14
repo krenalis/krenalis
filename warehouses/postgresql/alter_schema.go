@@ -23,7 +23,7 @@ import (
 )
 
 // AlterUserColumns alters the columns of the user tables.
-func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, opID string, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
 	status, err := warehouse.executeOperation(ctx, opID, alterUserColumns)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, opID string, 
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.alterUserColumns(ctx, userColumns, operations)
+	err = warehouse.alterUserColumns(ctx, columns, operations)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
@@ -48,7 +48,7 @@ func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, opID string, 
 	return ctx.Err()
 }
 
-func (warehouse *PostgreSQL) alterUserColumns(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *PostgreSQL) alterUserColumns(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
 
 	// Retrieve the current version of the "users" table.
 	usersVersion, err := warehouse.usersVersion(ctx)
@@ -57,7 +57,7 @@ func (warehouse *PostgreSQL) alterUserColumns(ctx context.Context, userColumns [
 	}
 
 	// Determine the alter schema queries.
-	queries := alterUserColumnsQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
+	queries := alterUserColumnsQueries("_users_"+strconv.Itoa(usersVersion), columns, operations)
 
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
