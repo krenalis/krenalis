@@ -113,14 +113,14 @@ func init() {
 				},
 			},
 			{
-				Name: "Get information about latest user schema update",
-				Description: "Returns information about the latest user schema update.\n\n" +
+				Name: "Get information about latest alter user schema",
+				Description: "Returns information about the latest altering of the user schema.\n\n" +
 					"Depending on the returned values:\n" +
-					"- If neither `startTime` nor `endTime` are returned, it means that no user schema update has never been performed for the workspace.\n" +
-					"- If only `startTime` is returned, it means that the workspace is currently running a user schema update.\n" +
-					"- If both `startTime` and `endTime` are returned, it means that a user schema update has been performed and there are no user schema updates currently running.",
+					"- If neither `startTime` nor `endTime` are returned, it means that no altering of user schema has never been performed for the workspace.\n" +
+					"- If only `startTime` is returned, it means that the workspace is currently running a user schema altering.\n" +
+					"- If both `startTime` and `endTime` are returned, it means that a user schema altering has been performed and there are no user schema altering currently running.",
 				Method: GET,
-				URL:    "/v1/users/schema/latest-update",
+				URL:    "/v1/users/schema/latest-alter",
 				Response: &Response{
 					Parameters: []types.Property{
 						{

@@ -933,7 +933,7 @@ class Workspaces {
 	};
 
 	LatestAlterUserSchema = async (): Promise<LatestAlterUserSchema> => {
-		return await call(`${this.apiURL}/users/schema/latest-update`, http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/users/schema/latest-alter`, http.GET, this.workspaceID);
 	};
 }
 

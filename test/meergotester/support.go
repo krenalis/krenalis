@@ -298,13 +298,13 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 	return response.Records, response.Schema
 }
 
-func (c *Meergo) LatestAlterUserSchema() (startTime, endTime *time.Time, updateError *string) {
+func (c *Meergo) LatestAlterUserSchema() (startTime, endTime *time.Time, alterError *string) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
 		Error     *string    `json:"error"`
 	}
-	c.MustCall("GET", "/api/v1/users/schema/latest-update", nil, &response)
+	c.MustCall("GET", "/api/v1/users/schema/latest-alter", nil, &response)
 	return response.StartTime, response.EndTime, response.Error
 }
 
