@@ -23,7 +23,7 @@ Segment is a customer data platform that collects, unifies, and integrates custo
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **Segment** source; you can use the search bar at the top to help you.
 4. Next to the **Segment** source, click the **+** icon. The source addition page will open.
-5. Optional: In the **Name** field, enter a name for the source to easily recognize it later.
+5. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
 6. Click **Add**.
 
 Once the Segment data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.

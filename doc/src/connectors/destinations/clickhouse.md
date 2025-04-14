@@ -11,6 +11,7 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 ### On this page
 
 * [Add a ClickHouse data destination](#add-a-clickhouse-data-destination)
+* [Export users to ClickHouse](#export-users-to-clickhouse)
 
 ### Add a ClickHouse data destination
 
@@ -25,7 +26,18 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
     * **Username**: A username with read and write access to the table.
     * **Password**: The password for the user.
     * **Database name**: The name of the database.
-7. Optional: Click **Test connection** to check if the inserted data is correct.
+7. (Optional) Click **Test connection** to check if the inserted data is correct.
 8. Click **Add**.
 
 Once the ClickHouse data destination is added, the **Actions** page will be displayed, indicating the actions required to update the table.
+
+### Export users to ClickHouse
+
+1. From the Meergo admin, go to **Connections > Destinations**.
+2. Click on the ClickHouse data destination where you want to export the users.
+3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
+4. Enter the name of the ClickHouse table where users should be added or updated.
+5. Click **Confirm** to proceed.
+6. Specify the key column. This column will be used to identify and update existing rows.
+7. Define the mapping or use a transformation function to convert the users in your workspace's data warehouse into ClickHouse rows.
+8. Click **Add**.

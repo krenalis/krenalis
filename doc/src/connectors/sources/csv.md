@@ -19,7 +19,7 @@ The CSV data source allows you to import user data from a CSV (Comma-Separated V
 3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
 4. From the **Format** menu, select **CSV**.
 5. In the **Path** field, enter the path of the CSV file, relative to the storage root path. Note that when you enter the relative path, the absolute path of the file will be displayed, so you can check that the path that you have entered is correct.
-6. Optionally proceed with the other fields:
+6. (Optional) Proceed with the other fields:
    * **Compression**: Format of compression. If the CSV file is compressed, select the compression format; Meergo automatically decompresses the file upon reading. 
    * **Comma**: Character used to separate fields. By default, this is a comma. Specify another character if different.
    * **Comment**: Character that starts a comment. Lines beginning with the **Comment** character without preceding whitespace are ignored.

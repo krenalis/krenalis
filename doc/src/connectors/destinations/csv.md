@@ -19,7 +19,7 @@ The CSV data destination allows you to export unified users (i.e., users consoli
 3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
 4. From the **Format** menu, select **CSV**.
 5. In the **Path** field, enter the path of the CSV file to create, relative to the storage root path. Note that when you enter the relative path, the absolute path of the file will be displayed, so you can check that the path that you have entered is correct.
-6. Optionally proceed with the other fields:
+6. (Optional) Proceed with the other fields:
     * **Compression**: Select a compression format if you want the file to be compressed.
     * **Order users by**: Choose the property you want to use to sort the users in the file.
     * **Comma**: Character used to separate fields. By default, this is a comma. Specify another character if you want a different delimiter.

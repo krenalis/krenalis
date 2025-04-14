@@ -35,7 +35,7 @@ Now proceed to add a Google Analytics data destination:
 2. On the **Destinations** page, click **Add new destination**.
 3. Search for the **Google Analytics** destination; you can use the search bar at the top to assist you.
 4. Next to the **Google Analytics** destination, click the **+** icon. The destination addition page will open.
-5. Optional: In the **Name** field, enter a name for the destination to easily recognize it later.
+5. (Optional) In the **Name** field, enter a name for the destination to easily recognize it later.
 6. In the **API Secret** field, enter the previously copied API secret.
 7. Click **Add**.
 

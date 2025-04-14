@@ -11,6 +11,7 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
 ### On this page
 
 * [Add a Snowflake data destination](#add-a-snowflake-data-destination)
+* [Export users to Snowflake](#export-users-to-snowflake)
 
 ### Add a Snowflake data destination
 
@@ -27,7 +28,18 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
     * **Schema**: The name of the schema.
     * **Warehouse**: The name of the warehouse.
     * **Role**: The role to be assigned to the user.
-7. Optional: Click **Test connection** to check if the inserted data is correct.
+7. (Optional) Click **Test connection** to check if the inserted data is correct.
 8. Click **Add**.
 
 Once the Snowflake data destination is added, the **Actions** page will be displayed, indicating the actions required to update the table.
+
+### Export users to Snowflake
+
+1. From the Meergo admin, go to **Connections > Destinations**.
+2. Click on the Snowflake data destination where you want to export the users.
+3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
+4. Enter the name of the Snowflake table where users should be added or updated.
+5. Click **Confirm** to proceed.
+6. Specify the key column. This column will be used to identify and update existing rows.
+7. Define the mapping or use a transformation function to convert the users in your workspace's data warehouse into Snowflake rows.
+8. Click **Add**.

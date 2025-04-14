@@ -11,6 +11,7 @@ Klaviyo is an email marketing and automation platform that enables businesses to
 ### On this page
 
 * [Add a Klaviyo data source](#add-a-klaviyo-data-source)
+* [Import profiles into the workspace's data warehouse](#import-profiles-into-the-workspaces-data-warehouse)
 
 ### Add a Klaviyo data source
 
@@ -31,8 +32,18 @@ Now proceed to add a Klaviyo data source:
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **Klaviyo** source; you can use the search bar at the top to assist you.
 4. Next to the **Klaviyo** source, click the **+** icon. The source addition page will open.
-5. Optional: In the **Name** field, enter a name for the source to easily recognize it later.
+5. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
 6. In the **Your Private Key** field, enter the previously copied private key.
 7. Click **Add**.
 
 Once the Klaviyo data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the profiles read from Klaviyo.
+
+### Import profiles into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the Klaviyo data source from which you want to import the profiles.
+3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
+4. (Optional) To import only specific profiles, apply a [filter](/filters) to refine your selection.
+5. (Optional) To import only updated profiles (i.e., those modified since the last import), select the **Run incremental import** option.
+6. Define the mapping or use a transformation function to convert the profiles from Klaviyo into users in your workspace's data warehouse.
+7. Click **Add**.

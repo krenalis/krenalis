@@ -11,6 +11,7 @@ PostgreSQL is an advanced open-source relational database system known for its r
 ### On this page
 
 * [Add a PostgreSQL data destination](#add-a-postgresql-data-destination)
+* [Export users to PostgreSQL](#export-users-to-postgresql)
 
 ### Add a PostgreSQL data destination
 
@@ -25,7 +26,18 @@ PostgreSQL is an advanced open-source relational database system known for its r
     * **Username**: A username with read and write access to the table.
     * **Password**: The password for the user.
     * **Database name**: The name of the database.
-7. Optional: Click **Test connection** to check if the inserted data is correct.
+7. (Optional) Click **Test connection** to check if the inserted data is correct.
 8. Click **Add**.
 
 Once the PostgreSQL data destination is added, the **Actions** page will be displayed, indicating the actions required to update the table.
+
+### Export users to PostgreSQL
+
+1. From the Meergo admin, go to **Connections > Destinations**.
+2. Click on the PostgreSQL data destination where you want to export the users.
+3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
+4. Enter the name of the PostgreSQL table where users should be added or updated.
+5. Click **Confirm** to proceed.
+6. Specify the key column. This column will be used to identify and update existing rows.
+7. Define the mapping or use a transformation function to convert the users in your workspace's data warehouse into PostgreSQL rows.
+8. Click **Add**.

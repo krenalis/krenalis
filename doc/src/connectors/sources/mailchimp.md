@@ -11,6 +11,7 @@ Mailchimp is an email marketing platform that helps businesses design and send m
 ### On this page
 
 * [Add a Mailchimp data source](#add-a-mailchimp-data-source)
+* [Import contacts into the workspace's data warehouse](#import-contacts-into-the-workspaces-data-warehouse)
 
 ### Add a Mailchimp data source
 
@@ -38,8 +39,18 @@ Now proceed to add a Mailchimp data source:
 3. Search for the **Mailchimp** source; you can use the search bar at the top to assist you.
 4. Next to the **Mailchimp** source, click the **+** icon.  A page will open on the Mailchimp site.
 5. Follow the instructions provided by Mailchimp to authorize access to your account to read contacts. Once finished, you will return to the Meergo admin.
-6. Optional: In the **Name** field, enter a name for the source to easily recognize it later.
+6. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
 7. In the **Audience** field, select the Mailchimp audience from which to read the contacts. You can change it later.
 8. Click **Add**.
 
 Once the Mailchimp data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the contacts read from Mailchimp.
+
+### Import contacts into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the Mailchimp data source from which you want to import the contacts.
+3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
+4. (Optional) To import only specific contacts, apply a [filter](/filters) to refine your selection.
+5. (Optional) To import only updated contacts (i.e., those modified since the last import), select the **Run incremental import** option. 
+6. Define the mapping or use a transformation function to convert the contacts from Mailchimp into users in your workspace's data warehouse.
+7. Click **Add**.

@@ -83,7 +83,7 @@ nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
 .article h3 { color: #0a1922; margin-top: 40px; }
 .article h4 { color: #0a1922 }
 .article pre { background: #f4f4fb; border-radius: 3px; padding: 1rem; overflow-x: auto; }
-.article code { background: #f4f4fb; border-radius: 2px; color: #454567; display: inline-block; font-size: 0.9rem; padding: .2rem .5rem; position: relative; white-space: pre-wrap; }
+.article code { background: #f4f4fb; border-radius: 2px; color: #454567; display: inline-block; font-size: 85%; padding: .2rem .5rem; position: relative; white-space: pre-wrap; }
 .article code::before { background-color: transparent; bottom: 0; content: ""; left: 0; position: absolute; top: 0; width: .5rem; }
 .article a code { color: #5f943d; }
 .article pre code { padding: 0; }

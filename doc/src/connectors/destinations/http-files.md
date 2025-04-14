@@ -21,7 +21,7 @@ Once the HTTP Files data destination is configured, you can easily customize the
 5. On the `Add HTTP Files destination connection` page, in the **Name** field, enter a name for the destination to easily recognize it later.
 6. In the `Host` field, enter the host where the file or files you wish to write are located.
 7. In the `Port` field, enter the port.
-8. Optional: In the `Headers` fields,  specify any headers that should be included in the request for writing the files.
+8. (Optional) In the `Headers` fields,  specify any headers that should be included in the request for writing the files.
 9. Click **Add**.
 
 Once the HTTP Files data destination is added, the **Actions** page will be displayed. Here, you can add an action for each file you want to generate using the newly added HTTP Files data destination. Configure each action with the desired settings for file format, user filters, endpoint, and scheduling.

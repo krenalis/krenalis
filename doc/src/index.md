@@ -1,18 +1,46 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Meergo{% end %}
+{% macro Title string %}Meergo documentation{% end %}
 {% Article %}
 
-# Introduction
+# Documentation
 
-**Meergo** is a Customer Data Platform (CDP) designed for efficient data management. Its data pipelines enable the seamless collection of information from applications, websites, mobile apps, databases, files, and SaaS platforms. This data can be easily activated within your data warehouse and integrated into various business tools. Meergo focuses on providing practical solutions for streamlined data handling within your organization.
+**Meergo** is a Customer Data Platform (CDP) designed for efficient data management. Its data pipelines enable the seamless collection of information from applications, websites, mobile apps, databases, files, and SaaS platforms. [More about how Meergo work](how-meergo-work)
 
-* Collect customer data and events from websites, mobile apps, Sass platforms, databases and files.
-* Validate and transform data using mappings or function transformations (JavaScript and Python).
-* Store the data directly in your organization data warehouse with near real time syncs.
-* Create a complete view of your customers by unifying data with identity resolution. 
-* Send customer data and events to Sass platforms and export data to databases and files.
-* Fully compatible with the Segment and RudderStack API, ensuring seamless integration.
+## Installing
 
-This guide provides a comprehensive overview of Meergo, encompassing a detailed exploration of its functions, covering aspects ranging from installation and configuration to ongoing maintenance.
+There are several ways to get started with Meergo:
 
-![](images/meergo-model.png)
+* [Docker](install-meergo#docker). This method is ideal for local development, testing, and prototyping.
+* [Pre-packaged binaries](install-meergo#pre-packaged-binaries). A convenient method for quickly setting up Meergo without the need to compile from source.
+* [Source code](install-meergo#source-code). Recommended if you wish to customize the executable or contribute to the project by building Meergo directly from the source.
+
+## Connect a warehouse
+
+Meergo stores user data and events, seamlessly unifying them directly within your data warehouse. You can have a data warehouse for each workspace.
+
+<ul class="grid-list">
+  <li><a href="connect-a-warehouse#postgresql"> PostgreSQL</a></li>
+  <li><a href="connect-a-warehouse#snowflake"> Snowflake</a></li>
+</ul>
+
+## Collect, unify, and activate users
+
+Meergo [connectors](connectors/) allows to import and export users from and to apps, databases, storages, and files:
+
+* [Collect users](collect-users)
+* Unify users
+* Activate users
+
+## Collect and send events
+ 
+Use the following SDKs to collect and send events to Meergo. Events can be stored in your data warehouse or sent to applications for activation in real-time.   
+
+<ul class="grid-list">
+  <li><a href="javascript-sdk"> JavaScript SDK (Browser)</a></li>
+  <li><a href="csharp-sdk"> C# SDK</a></li>
+  <li><a href="android-sdk"> Android SDK</a></li>
+  <li><a href="go-sdk"> Go SDK</a></li>
+  <li><a href="java-sdk"> Java SDK</a></li>
+  <li><a href="node-sdk"> Node SDK</a></li>
+  <li><a href="python-sdk"> Python SDK</a></li>
+</ul>

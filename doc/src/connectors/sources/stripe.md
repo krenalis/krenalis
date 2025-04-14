@@ -11,6 +11,7 @@ Stripe is a payment processing platform that enables businesses to accept online
 ### On this page
 
 * [Add a Stripe data source](#add-a-stripe-data-source)
+* [Import customers into the workspace's data warehouse](#import-customers-into-the-workspaces-data-warehouse)
 
 ### Add a Stripe data source
 
@@ -32,8 +33,18 @@ Now proceed to add a Stripe data source:
 2. On the **Sources** page, click **Add new destination**.
 3. Search for the **Stripe** source; you can use the search bar at the top to assist you.
 4. Next to the **Stripe** source, click the **+** icon. The source addition page will open.
-5. Optional: In the **Name** field, enter a name for the source to easily recognize it later.
+5. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
 6. In the **API Key** field, enter the previously copied key.
 7. Click **Add**.
 
 Once the Stripe data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the customers read from Stripe.
+
+### Import customers into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the Stripe data source from which you want to import the customers.
+3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
+4. (Optional) To import only specific customers, apply a [filter](/filters) to refine your selection.
+5. (Optional) To import only updated customers (i.e., those modified since the last import), select the **Run incremental import** option.
+6. Define the mapping or use a transformation function to convert the customers from Stripe into users in your workspace's data warehouse.
+7. Click **Add**.

@@ -23,7 +23,7 @@ RudderStack is an open-source customer data platform that helps businesses colle
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **RudderStack** source; you can use the search bar at the top to help you.
 4. Next to the **RudderStack** source, click the **+** icon. The source addition page will open.
-5. Optional: In the **Name** field, enter a name for the source to easily recognize it later.
+5. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
 6. Click **Add**.
 
 Once the RudderStack data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
