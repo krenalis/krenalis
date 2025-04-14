@@ -1015,72 +1015,9 @@ func (core *Core) tryStartActionExecution(actionID int) {
 	}()
 }
 
-// executeIdentityResolution executes the Identity Resolution, not returning
+// executeAlterUserSchema executes the alter of the user schema, not returning
 // until it has completed (with success or with an operation error).
-func (core *Core) executeIdentityResolution(workspace int, opID string) {
-	ctx := core.close.ctx
-	store := core.datastore.Store(workspace)
-	// Keep calling 'ResolveIdentities' until it (1) returns successfully,
-	// (2) returns with a *meergo.OperationError, or (3) the context is
-	// cancelled.
-	bo := backoff.New(200)
-	bo.SetCap(time.Second)
-	for bo.Next(ctx) {
-		err := store.ResolveIdentities(ctx, opID)
-		if err == nil {
-			// Success.
-			break
-		} else if ctx.Err() != nil {
-			// The context has expired, so just return.
-			return
-		} else if err2, ok := err.(*meergo.OperationError); ok {
-			slog.Error("identity resolution ended with an error", "err", err2)
-			// Break the loop and send the 'EndIdentityResolution' notification.
-			break
-		} else {
-			// Unknown error: try again.
-			slog.Error("identity resolution on warehouse returned an unknown error, trying again the operation", "err", err)
-			continue
-		}
-	}
-	nEnd := state.EndIdentityResolution{
-		Workspace: workspace,
-		ID:        opID,
-		EndTime:   time.Now().UTC(),
-	}
-	bo = backoff.New(200)
-	bo.SetCap(time.Second)
-	for bo.Next(ctx) {
-		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
-			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
-			if err != nil {
-				return nil, err
-			}
-			if res.RowsAffected() == 0 {
-				// This happens in cases where the query has been executed
-				// more than once (because an error occurred), but in fact
-				// the database has already been modified, so we don't want
-				// to send the notification more than once.
-				return nil, nil
-			}
-			return nEnd, nil
-		})
-		if err != nil {
-			if ctx.Err() != nil {
-				return
-			}
-			// Try again to do the query and send the notification.
-			continue
-		}
-		// No errors: break the loop.
-		break
-	}
-}
-
-// executeUserSchemaUpdate executes the update of the user schema, not returning
-// until it has completed (with success or with an operation error).
-func (core *Core) executeUserSchemaUpdate(workspace int, opID string, schema types.Type,
+func (core *Core) executeAlterUserSchema(workspace int, opID string, schema types.Type,
 	primarySources map[string]int, rePaths map[string]any, operations []meergo.AlterOperation) {
 	ctx := core.close.ctx
 	store := core.datastore.Store(workspace)
@@ -1217,6 +1154,69 @@ Identifiers:
 	}
 }
 
+// executeIdentityResolution executes the Identity Resolution, not returning
+// until it has completed (with success or with an operation error).
+func (core *Core) executeIdentityResolution(workspace int, opID string) {
+	ctx := core.close.ctx
+	store := core.datastore.Store(workspace)
+	// Keep calling 'ResolveIdentities' until it (1) returns successfully,
+	// (2) returns with a *meergo.OperationError, or (3) the context is
+	// cancelled.
+	bo := backoff.New(200)
+	bo.SetCap(time.Second)
+	for bo.Next(ctx) {
+		err := store.ResolveIdentities(ctx, opID)
+		if err == nil {
+			// Success.
+			break
+		} else if ctx.Err() != nil {
+			// The context has expired, so just return.
+			return
+		} else if err2, ok := err.(*meergo.OperationError); ok {
+			slog.Error("identity resolution ended with an error", "err", err2)
+			// Break the loop and send the 'EndIdentityResolution' notification.
+			break
+		} else {
+			// Unknown error: try again.
+			slog.Error("identity resolution on warehouse returned an unknown error, trying again the operation", "err", err)
+			continue
+		}
+	}
+	nEnd := state.EndIdentityResolution{
+		Workspace: workspace,
+		ID:        opID,
+		EndTime:   time.Now().UTC(),
+	}
+	bo = backoff.New(200)
+	bo.SetCap(time.Second)
+	for bo.Next(ctx) {
+		err := core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
+			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
+			if err != nil {
+				return nil, err
+			}
+			if res.RowsAffected() == 0 {
+				// This happens in cases where the query has been executed
+				// more than once (because an error occurred), but in fact
+				// the database has already been modified, so we don't want
+				// to send the notification more than once.
+				return nil, nil
+			}
+			return nEnd, nil
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			// Try again to do the query and send the notification.
+			continue
+		}
+		// No errors: break the loop.
+		break
+	}
+}
+
 // onElectLeader is called when a leader is elected.
 func (core *Core) onElectLeader(n state.ElectLeader) {
 	if !core.state.IsLeader() {
@@ -1231,7 +1231,7 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 			continue
 		}
 		if ws.AlterUserSchema.ID != nil {
-			go core.executeUserSchemaUpdate(ws.ID, *ws.AlterUserSchema.ID,
+			go core.executeAlterUserSchema(ws.ID, *ws.AlterUserSchema.ID,
 				ws.AlterUserSchema.Schema, ws.AlterUserSchema.PrimarySources,
 				ws.AlterUserSchema.RePaths, ws.AlterUserSchema.Operations)
 		}
@@ -1244,7 +1244,7 @@ func (core *Core) onStartAlterUserSchema(n state.StartAlterUserSchema) {
 	if !core.state.IsLeader() {
 		return
 	}
-	go core.executeUserSchemaUpdate(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.RePaths, n.Operations)
+	go core.executeAlterUserSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.RePaths, n.Operations)
 }
 
 // onElectLeader is called when the identity resolution is started.
