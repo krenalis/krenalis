@@ -79,8 +79,8 @@ func init() {
 			},
 			{
 				Name: "Preview schema update",
-				Description: "Returns the SQL queries that would be executed on the warehouse to update the user schema.\n\n" +
-					"It does not make any changes to the schema or execute any queries on the warehouse.",
+				Description: "Returns the SQL queries that would be executed on the warehouse to update the current user schema to the specified one.\n\n" +
+					"Calling this method has no side effects and does not make any changes to the schema.",
 				Method: PUT,
 				URL:    "/v1/users/schema/preview",
 				Parameters: []types.Property{

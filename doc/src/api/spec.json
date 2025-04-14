@@ -10210,7 +10210,7 @@
                 },
                 {
                     "name": "Preview schema update",
-                    "description": "Returns the SQL queries that would be executed on the warehouse to update the user schema.\n\nIt does not make any changes to the schema or execute any queries on the warehouse.",
+                    "description": "Returns the SQL queries that would be executed on the warehouse to update the current user schema to the specified one.\n\nCalling this method has no side effects and does not make any changes to the schema.",
                     "method": "PUT",
                     "url": "/v1/users/schema/preview",
                     "parameters": [
