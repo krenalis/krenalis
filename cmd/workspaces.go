@@ -534,14 +534,14 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 	}, nil
 }
 
-// LatestUserSchemaUpdate returns information about the latest update of the
+// LatestAlterUserSchema returns information about the latest altering of the
 // user schema of a workspace.
-func (workspace workspace) LatestUserSchemaUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) LatestAlterUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	startTime, endTime, updateError, err := ws.LatestUserSchemaUpdate(r.Context())
+	startTime, endTime, alterError, err := ws.LatestAlterUserSchema(r.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -549,8 +549,8 @@ func (workspace workspace) LatestUserSchemaUpdate(_ http.ResponseWriter, r *http
 		"startTime": startTime,
 		"endTime":   endTime,
 	}
-	if updateError != "" {
-		res["error"] = updateError
+	if alterError != "" {
+		res["error"] = alterError
 	} else {
 		res["error"] = nil
 	}

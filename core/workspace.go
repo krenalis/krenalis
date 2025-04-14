@@ -1108,33 +1108,35 @@ func (this *Workspace) LatestIdentityResolution(ctx context.Context) (startTime,
 	return ws.IR.StartTime, ws.IR.EndTime, nil
 }
 
-// LatestUserSchemaUpdate return information about the latest schema update.
+// LatestAlterUserSchema return information about the latest altering of the
+// user schema.
 //
 // In particular:
 //
-//   - startTime is the start timestamp (UTC) of the latest user schema update,
-//     either running or completed; if null, no user schema update has never
-//     been started for the workspace.
-//   - endTime is the end timestamp (UTC) for the latest user schema update; if
-//     null, it means that the user schema update is still in progress, or that
-//     no schema update has never been performed for the workspace.
-//   - updateErr is a possible error in the execution of the latest update of
-//     the user schema; if null, it means that no update of the user schema has
-//     never been executed, or that one is in progress, or that the last one
-//     executed completed without errors.
+//   - startTime is the start timestamp (UTC) of the latest altering of the
+//     user schema, either running or completed; if null, no user schema update
+//     has never been started for the workspace.
+//   - endTime is the end timestamp (UTC) for the latest altering of the user
+//     schema; if null, it means that the user schema altering is still in
+//     progress, or that no schema altering has never been performed for the
+//     workspace.
+//   - updateErr is a possible error in the execution of the latest altering
+//     of the user schema; if null, it means that no altering of the user
+//     schema has never been executed, or that one is in progress, or that the
+//     last one executed completed without errors.
 //
 // It returns an errors.NotFoundError error if the workspace does not exist
 // anymore.
-func (this *Workspace) LatestUserSchemaUpdate(ctx context.Context) (startTime, endTime *time.Time, updateError string, err error) {
+func (this *Workspace) LatestAlterUserSchema(ctx context.Context) (startTime, endTime *time.Time, alterError string, err error) {
 	this.core.mustBeOpen()
 	ws, ok := this.core.state.Workspace(this.workspace.ID)
 	if !ok {
 		return nil, nil, "", errors.NotFound("workspace %d does not exist", this.workspace.ID)
 	}
 	if ws.AlterUserSchema.Err != nil {
-		updateError = *ws.AlterUserSchema.Err
+		alterError = *ws.AlterUserSchema.Err
 	}
-	return ws.AlterUserSchema.StartTime, ws.AlterUserSchema.EndTime, updateError, nil
+	return ws.AlterUserSchema.StartTime, ws.AlterUserSchema.EndTime, alterError, nil
 }
 
 // ListenedEvents returns the events listened to the specified listener and the
