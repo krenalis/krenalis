@@ -637,9 +637,10 @@ func (workspace workspace) IdentityResolutionSettings(_ http.ResponseWriter, r *
 	}, nil
 }
 
-// PreviewUserSchemaUpdate previews a user schema update and returns the queries
-// that would be executed.
-func (workspace workspace) PreviewUserSchemaUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
+// PreviewAlterUserSchema provides a preview of an alter user schema operation
+// by returning the queries that would be executed on the warehouse to perform a
+// given alter schema.
+func (workspace workspace) PreviewAlterUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -652,7 +653,7 @@ func (workspace workspace) PreviewUserSchemaUpdate(_ http.ResponseWriter, r *htt
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	queries, err := ws.PreviewUserSchemaUpdate(r.Context(), body.Schema, body.RePaths)
+	queries, err := ws.PreviewAlterUserSchema(r.Context(), body.Schema, body.RePaths)
 	if err != nil {
 		return nil, err
 	}

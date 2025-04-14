@@ -56,8 +56,8 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Update the user schema.
-	queries := c.PreviewUserSchemaUpdate(file.Schema, file.RePaths)
+	// Alter the user schema.
+	queries := c.PreviewAlterUserSchema(file.Schema, file.RePaths)
 	if len(queries) != 4 {
 		t.Fatalf("expected 4 queries, got %d", len(queries))
 	}
@@ -78,7 +78,7 @@ func TestChangeUserSchema(t *testing.T) {
 	schema := types.Object(append(types.Properties(file.Schema), types.Property{
 		Name: "new_prop", Type: types.Text(), ReadOptional: true,
 	}))
-	queries = c.PreviewUserSchemaUpdate(schema, nil)
+	queries = c.PreviewAlterUserSchema(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"users\";",
 		"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"new_prop\" character varying;",
@@ -122,7 +122,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 	schema = types.Object(properties)
 	rePaths := map[string]any{"android.identifier": "android.id"}
-	queries = c.PreviewUserSchemaUpdate(schema, rePaths)
+	queries = c.PreviewAlterUserSchema(schema, rePaths)
 	expectedQueries = []string{
 		"BEGIN;",
 		"DROP VIEW \"users\";", "ALTER TABLE \"_users_0\"\n\tDROP COLUMN \"email\";",
@@ -178,7 +178,7 @@ func TestChangeUserSchema(t *testing.T) {
 		properties = append(properties, p)
 	}
 	schema = types.Object(properties)
-	queries = c.PreviewUserSchemaUpdate(schema, nil)
+	queries = c.PreviewAlterUserSchema(schema, nil)
 	expectedQueries = []string{
 		"BEGIN;",
 		"DROP VIEW \"users\";",
@@ -220,7 +220,7 @@ func TestChangeUserSchema(t *testing.T) {
 			{Name: "b", Type: types.Text(), ReadOptional: true},
 		}), ReadOptional: true},
 	))
-	_, err = c.PreviewUserSchemaUpdateErr(schema, nil)
+	_, err = c.PreviewAlterUserSchemaErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -242,7 +242,7 @@ func TestChangeUserSchema(t *testing.T) {
 			{Name: "b", Type: types.Text(), ReadOptional: true, Nullable: true},
 		}), ReadOptional: true},
 	))
-	_, err = c.PreviewUserSchemaUpdateErr(schema, nil)
+	_, err = c.PreviewAlterUserSchemaErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}

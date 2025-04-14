@@ -349,8 +349,9 @@ func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
 	return newEventWriter(store, ack)
 }
 
-// PreviewUserSchemaUpdate previews a user schema update returning the queries
-// that would be executed updating the user schema of the store.
+// PreviewAlterUserSchema provides a preview of an alter user schema operation
+// by returning the queries that would be executed on the warehouse to perform a
+// given alter schema.
 //
 // schema is the user schema without meta properties (this parameter is useful
 // for obtaining type information and for creating views), while operations is
@@ -364,7 +365,7 @@ func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
 //
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) ([]string, error) {
+func (store *Store) PreviewAlterUserSchema(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) ([]string, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
 	if err != nil {

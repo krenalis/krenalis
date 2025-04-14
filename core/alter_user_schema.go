@@ -106,15 +106,15 @@ func (this *Workspace) IdentityResolutionSettings() (bool, []string) {
 	return ws.ResolveIdentitiesOnBatchImport, ws.Identifiers
 }
 
-// PreviewUserSchemaUpdate previews a user schema update and returns the queries
-// that would be executed to update the user schema of the workspace, without
-// making any actual changes to the data or the schema.
+// PreviewAlterUserSchema provides a preview of an alter user schema operation
+// by returning the queries that would be executed on the warehouse to perform a
+// given alter schema.
 //
 // See the documentation of UpdateUserSchema for more details about this method.
 //
 // It returns an errors.UnprocessableError error with code InvalidAlterSchema if
 // the alter schema is invalid.
-func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
+func (this *Workspace) PreviewAlterUserSchema(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
 	this.core.mustBeOpen()
 	if !schema.Valid() {
 		return nil, errors.BadRequest("schema must be valid")
@@ -135,7 +135,7 @@ func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
-	queries, err := this.store.PreviewUserSchemaUpdate(ctx, schema, operations)
+	queries, err := this.store.PreviewAlterUserSchema(ctx, schema, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return nil, errors.Unavailable("%s", err)

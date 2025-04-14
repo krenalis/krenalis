@@ -317,7 +317,7 @@ func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	return response.StartTime, response.EndTime
 }
 
-func (c *Meergo) PreviewUserSchemaUpdate(schema types.Type, rePaths map[string]any) []string {
+func (c *Meergo) PreviewAlterUserSchema(schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -329,9 +329,9 @@ func (c *Meergo) PreviewUserSchemaUpdate(schema types.Type, rePaths map[string]a
 	return response.Queries
 }
 
-// PreviewUserSchemaUpdateErr is like PreviewUserSchemaUpdate but returns an
+// PreviewAlterUserSchemaErr is like PreviewAlterUserSchema but returns an
 // error instead of panicking.
-func (c *Meergo) PreviewUserSchemaUpdateErr(schema types.Type, rePaths map[string]any) ([]string, error) {
+func (c *Meergo) PreviewAlterUserSchemaErr(schema types.Type, rePaths map[string]any) ([]string, error) {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
