@@ -1,16 +1,16 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Changing User Schema{% end %}
+{% macro Title string %}Altering User Schema{% end %}
 {% Article %}
 
-# Changing user schema
+# Altering User Schema
 
-Once the user model is created, it can be modified with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Meergo.
+Once the user model is created, it can be altered with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Meergo.
 
-The user schema can be modified with the UI.
+The user schema can be altered with the UI.
 
 ## Supported operations
 
-When changing the users schema, these operations are supported:
+When altering the user schema, these operations are supported:
 
 * **adding** properties **at any level**
 * **dropping** properties **at any level**
