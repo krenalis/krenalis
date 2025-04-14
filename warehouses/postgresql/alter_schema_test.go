@@ -21,14 +21,14 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		userColumns     []meergo.Column // without "__id__" and "__last_change_time__", which are added by the test
+		columns         []meergo.Column // without "__id__" and "__last_change_time__", which are added by the test
 		ops             []meergo.AlterOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     error
 	}{
 		{
 			name: "Add a first level text property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
 			ops: []meergo.AlterOperation{
@@ -41,7 +41,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Float64 property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "f", Type: types.Float(64), Nullable: true},
 			},
 			ops: []meergo.AlterOperation{
@@ -54,7 +54,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Float64 (non-real) property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "f", Type: types.Float(64), Nullable: true},
 			},
 			ops: []meergo.AlterOperation{
@@ -67,7 +67,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a second level property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
@@ -84,7 +84,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level array property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Array(types.Text()), Nullable: true},
 			},
@@ -98,7 +98,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level text property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
@@ -112,7 +112,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level object property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 				{Name: "x_b", Type: types.Int(32), Nullable: true},
@@ -128,7 +128,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add two first level text properties",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Int(32), Nullable: true},
@@ -144,7 +144,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Drop a first level property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
 			ops: []meergo.AlterOperation{
@@ -157,7 +157,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Drop two first level properties",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "z", Type: types.Int(32), Nullable: true},
 			},
 			ops: []meergo.AlterOperation{
@@ -171,7 +171,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Rename a first level property",
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
 			ops: []meergo.AlterOperation{
@@ -183,7 +183,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 			},
 		},
 		{
-			userColumns: []meergo.Column{
+			columns: []meergo.Column{
 				{Name: "b", Type: types.Boolean(), Nullable: true},
 				{Name: "i16", Type: types.Int(16), Nullable: true},
 				{Name: "i32", Type: types.Int(32), Nullable: true},
@@ -257,17 +257,17 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			userColumns := test.userColumns
-			for _, c := range userColumns {
+			columns := test.columns
+			for _, c := range columns {
 				if !c.Nullable {
-					t.Fatalf("test %q is wrong: every column within 'userColumns' must be nullable, but column %q is not nullable", test.name, c.Name)
+					t.Fatalf("test %q is wrong: every column within 'columns' must be nullable, but column %q is not nullable", test.name, c.Name)
 				}
 			}
-			userColumns = append([]meergo.Column{
+			columns = append([]meergo.Column{
 				{Name: "__id__", Type: types.Int(32)},
 				{Name: "__last_change_time__", Type: types.DateTime()},
-			}, userColumns...)
-			got := alterUserSchemaQueries("_users_0", userColumns, test.ops)
+			}, columns...)
+			got := alterUserSchemaQueries("_users_0", columns, test.ops)
 			// Exclude from the test the queries that drop or create views.
 			got = slices.DeleteFunc(got, func(query string) bool {
 				return strings.HasPrefix(query, "DROP VIEW") ||

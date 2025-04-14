@@ -20,7 +20,7 @@ import (
 type warehouseOp string
 
 const (
-	alterUserColumns   warehouseOp = "AlterUserSchema"
+	alterUserSchema    warehouseOp = "AlterUserSchema"
 	identityResolution warehouseOp = "IdentityResolution"
 )
 

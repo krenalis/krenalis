@@ -23,7 +23,7 @@ import (
 
 // AlterUserSchema alters the user schema.
 func (warehouse *Snowflake) AlterUserSchema(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
-	status, err := warehouse.executeOperation(ctx, opID, alterUserColumns)
+	status, err := warehouse.executeOperation(ctx, opID, alterUserSchema)
 	if err != nil {
 		return err
 	}
@@ -75,12 +75,12 @@ func (warehouse *Snowflake) alterUserSchema(ctx context.Context, columns []meerg
 // PreviewAlterUserSchema provides a preview of an alter user schema operation
 // by returning the queries that would be executed on the warehouse to perform a
 // given alter schema.
-func (warehouse *Snowflake) PreviewAlterUserSchema(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
+func (warehouse *Snowflake) PreviewAlterUserSchema(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
 	usersVersion, err := warehouse.usersVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
-	queries := alterUserSchemaQueries("_USERS_"+strconv.Itoa(usersVersion), userColumns, operations)
+	queries := alterUserSchemaQueries("_USERS_"+strconv.Itoa(usersVersion), columns, operations)
 	queries = append([]string{"BEGIN"}, queries...)
 	queries = append(queries, "COMMIT")
 	for i, q := range queries {
@@ -92,7 +92,7 @@ func (warehouse *Snowflake) PreviewAlterUserSchema(ctx context.Context, userColu
 // alterUserSchemaQueries returns the queries that perform the given operations.
 // usersTableName is the current name of the users table, for example
 // "_users_42". operations must contain at least one operation.
-func alterUserSchemaQueries(usersTableName string, userColumns []meergo.Column, operations []meergo.AlterOperation) []string {
+func alterUserSchemaQueries(usersTableName string, columns []meergo.Column, operations []meergo.AlterOperation) []string {
 
 	// The operations are performed in this order:
 	//
@@ -171,7 +171,7 @@ func alterUserSchemaQueries(usersTableName string, userColumns []meergo.Column, 
 	}
 
 	// CREATE VIEW "USERS".
-	queries = append(queries, createViewQuery(usersTableName, userColumns, false))
+	queries = append(queries, createViewQuery(usersTableName, columns, false))
 
 	return queries
 }
