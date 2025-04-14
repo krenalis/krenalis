@@ -1167,7 +1167,7 @@ Identifiers:
 				// otherwise, in case of error, the current ones should be left.
 				//
 				// Update the user schema.
-				query := "UPDATE workspaces SET user_schema = update_user_schema_schema," +
+				query := "UPDATE workspaces SET user_schema = alter_user_schema_schema," +
 					" identifiers = $1 WHERE id = $2"
 				_, err := tx.Exec(ctx, query, nEnd.Identifiers, nEnd.Workspace)
 				if err != nil {
@@ -1187,11 +1187,11 @@ Identifiers:
 				}
 			}
 			// Set the alter schema update as completed.
-			query := "UPDATE workspaces SET update_user_schema_id = NULL," +
-				" update_user_schema_schema = 'null', update_user_schema_primary_sources = 'null'," +
-				" update_user_schema_re_paths = 'null', update_user_schema_operations = 'null'," +
-				" update_user_schema_end_time = $1, update_user_schema_error = $2" +
-				" WHERE id = $3 AND update_user_schema_id = $4"
+			query := "UPDATE workspaces SET alter_user_schema_id = NULL," +
+				" alter_user_schema_schema = 'null', alter_user_schema_primary_sources = 'null'," +
+				" alter_user_schema_re_paths = 'null', alter_user_schema_operations = 'null'," +
+				" alter_user_schema_end_time = $1, alter_user_schema_error = $2" +
+				" WHERE id = $3 AND alter_user_schema_id = $4"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
 			if err != nil {
 				return nil, err
@@ -1313,7 +1313,7 @@ func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types
 		// Check that there are no other operations in progress on the
 		// warehouse.
 		var ongoingOp bool
-		query := `SELECT update_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		query := `SELECT alter_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err = tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			return nil, err
@@ -1322,11 +1322,11 @@ func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types
 			return nil, errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 		}
 		// Sets the update user schema operation to running.
-		query = "UPDATE workspaces SET update_user_schema_id = $1," +
-			" update_user_schema_schema = $2, update_user_schema_primary_sources = $3," +
-			" update_user_schema_re_paths = $4, update_user_schema_operations = $5," +
-			" update_user_schema_start_time = $6, update_user_schema_end_time = NULL," +
-			" update_user_schema_error = NULL WHERE id = $7"
+		query = "UPDATE workspaces SET alter_user_schema_id = $1," +
+			" alter_user_schema_schema = $2, alter_user_schema_primary_sources = $3," +
+			" alter_user_schema_re_paths = $4, alter_user_schema_operations = $5," +
+			" alter_user_schema_start_time = $6, alter_user_schema_end_time = NULL," +
+			" alter_user_schema_error = NULL WHERE id = $7"
 		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.RePaths,
 			n.Operations, n.StartTime, n.Workspace)
 		if err != nil {
@@ -1358,7 +1358,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 	}
 	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var ongoingOp bool
-		query := `SELECT update_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		query := `SELECT alter_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			return nil, err

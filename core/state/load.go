@@ -225,10 +225,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 	// Read all workspaces.
 	state.workspaces = map[int]*Workspace{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_type,"+
-		" warehouse_mode, warehouse_settings, update_user_schema_id, update_user_schema_schema,"+
-		" update_user_schema_primary_sources, update_user_schema_re_paths,"+
-		" update_user_schema_operations, update_user_schema_start_time, update_user_schema_end_time,"+
-		" update_user_schema_error, user_schema, resolve_identities_on_batch_import,"+
+		" warehouse_mode, warehouse_settings, alter_user_schema_id, alter_user_schema_schema,"+
+		" alter_user_schema_primary_sources, alter_user_schema_re_paths,"+
+		" alter_user_schema_operations, alter_user_schema_start_time, alter_user_schema_end_time,"+
+		" alter_user_schema_error, user_schema, resolve_identities_on_batch_import,"+
 		" identifiers, ir_id, ir_start_time, ir_end_time, ui_user_profile_image,"+
 		" ui_user_profile_first_name, ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
 		"FROM workspaces",
