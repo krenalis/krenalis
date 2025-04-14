@@ -123,9 +123,9 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 // Warehouse is the interface implemented by warehouse drivers.
 type Warehouse interface {
 
-	// AlterUserColumns alters the columns of the user tables.
+	// AlterUserSchema alters the user schema.
 	//
-	// opID is an identifier that uniquely identifies a specific alter columns
+	// opID is an identifier that uniquely identifies a specific alter schema
 	// operation; if the method is called again passing the same identifier, whether
 	// the operation ended successfully or with a *meergo.OperationError error, that
 	// result is returned again.
@@ -148,7 +148,7 @@ type Warehouse interface {
 	// (4) the operation ended with an unexpected and unknown error, and it is
 	// therefore up to the caller to try calling this method again by providing the
 	// same ID.
-	AlterUserColumns(ctx context.Context, opID string, columns []Column, operations []AlterOperation) error
+	AlterUserSchema(ctx context.Context, opID string, columns []Column, operations []AlterOperation) error
 
 	// AlterUserColumnsQueries returns the queries that alter the columns of the
 	// user tables.

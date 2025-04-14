@@ -143,7 +143,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 func (store *Store) AlterUserSchema(ctx context.Context, opID string, schema types.Type, operations []meergo.AlterOperation) error {
 	store.mustBeOpen()
 	columns := util.PropertiesToColumns(schema)
-	return store.warehouse().AlterUserColumns(ctx, opID, columns, operations)
+	return store.warehouse().AlterUserSchema(ctx, opID, columns, operations)
 }
 
 // DeleteDestinationUsers deletes the destination users of the provided action.

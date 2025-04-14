@@ -21,8 +21,8 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// AlterUserColumns alters the columns of the user tables.
-func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
+// AlterUserSchema alters the user schema.
+func (warehouse *Snowflake) AlterUserSchema(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
 	status, err := warehouse.executeOperation(ctx, opID, alterUserColumns)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, c
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.alterUserColumns(ctx, columns, operations)
+	err = warehouse.alterUserSchema(ctx, columns, operations)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
@@ -47,7 +47,7 @@ func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, opID string, c
 	return ctx.Err()
 }
 
-func (warehouse *Snowflake) alterUserColumns(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *Snowflake) alterUserSchema(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
 
 	// Retrieve the current version of the "users" table.
 	usersVersion, err := warehouse.usersVersion(ctx)

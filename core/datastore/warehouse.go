@@ -58,14 +58,14 @@ type warehouse struct {
 	inner meergo.Warehouse
 }
 
-func (dw warehouse) AlterUserColumns(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
-	return unavailableError(dw.inner.AlterUserColumns(ctx, opID, columns, operations))
-}
-
 func (dw warehouse) AlterUserColumnsQueries(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
 	queries, err := dw.inner.AlterUserColumnsQueries(ctx, columns, operations)
 	err = unavailableError(err)
 	return queries, err
+}
+
+func (dw warehouse) AlterUserSchema(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
+	return unavailableError(dw.inner.AlterUserSchema(ctx, opID, columns, operations))
 }
 
 func (dw warehouse) CanInitialize(ctx context.Context) error {

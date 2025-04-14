@@ -22,8 +22,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// AlterUserColumns alters the columns of the user tables.
-func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
+// AlterUserSchema alters the user schema.
+func (warehouse *PostgreSQL) AlterUserSchema(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
 	status, err := warehouse.executeOperation(ctx, opID, alterUserColumns)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, opID string, 
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.alterUserColumns(ctx, columns, operations)
+	err = warehouse.alterUserSchema(ctx, columns, operations)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
@@ -48,7 +48,7 @@ func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, opID string, 
 	return ctx.Err()
 }
 
-func (warehouse *PostgreSQL) alterUserColumns(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *PostgreSQL) alterUserSchema(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
 
 	// Retrieve the current version of the "users" table.
 	usersVersion, err := warehouse.usersVersion(ctx)
