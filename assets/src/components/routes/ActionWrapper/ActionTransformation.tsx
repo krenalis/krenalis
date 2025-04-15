@@ -2906,10 +2906,7 @@ function transformationHeaders(
 		}
 		rightHeader = ['Output user', 'to warehouse'];
 	} else {
-		if (
-			action.target == 'Events' ||
-			action.target == undefined /* TODO: understand why, in certain cases, the target is undefined */
-		) {
+		if (action.target == 'Events') {
 			leftHeader = ['Input event', 'from source connections'];
 			rightHeader = ['Output event', `to ${connection.connector.name}`];
 		} else {

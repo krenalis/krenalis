@@ -189,7 +189,7 @@ interface TransformedActionType {
 interface TransformedAction {
 	id?: number;
 	connection?: number;
-	target?: ActionTarget;
+	target: ActionTarget;
 	name: string;
 	enabled: boolean;
 	eventType?: string | null;
@@ -1136,6 +1136,7 @@ const computeDefaultAction = (
 	fields: ActionTypeField[],
 ): TransformedAction => {
 	const action: TransformedAction = {
+		target: actionType.target,
 		name: actionType.name,
 		// The action is enabled by default only for batch operations importing or exporting users.
 		enabled:
