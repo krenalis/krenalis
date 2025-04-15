@@ -621,6 +621,8 @@ func (state *State) deleteConnection(n notification) {
 	}
 	ws.mu.Lock()
 	delete(ws.connections, e.ID)
+	// Mark whether the connection is found between the current primary sources
+	// or between the pending ones.
 	var found bool
 	for _, source := range ws.UserPrimarySources {
 		if source == e.ID {
@@ -628,8 +630,16 @@ func (state *State) deleteConnection(n notification) {
 			break
 		}
 	}
+	for _, source := range ws.AlterUserSchema.PrimarySources {
+		if source == e.ID {
+			found = true
+			break
+		}
+	}
 	ws.actionsToPurge = actionsToPurge
 	ws.mu.Unlock()
+	// Update the current and pending primary sources, removing the deleted
+	// connection.
 	if found {
 		sources := map[string]int{}
 		for path, source := range ws.UserPrimarySources {
@@ -637,8 +647,18 @@ func (state *State) deleteConnection(n notification) {
 				sources[path] = source
 			}
 		}
+		var pendingSources map[string]int
+		if ws.AlterUserSchema.ID != nil {
+			var pendingSources = map[string]int{}
+			for path, source := range ws.AlterUserSchema.PrimarySources {
+				if source != e.ID {
+					pendingSources[path] = source
+				}
+			}
+		}
 		state.replaceWorkspace(ws.ID, func(ws *Workspace) {
 			ws.UserPrimarySources = sources
+			ws.AlterUserSchema.PrimarySources = pendingSources
 		})
 	}
 	// Update the actions.
