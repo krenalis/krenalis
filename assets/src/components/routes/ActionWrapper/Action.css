@@ -1587,25 +1587,16 @@ inherit the disabled style */
 }
 
 .action__mapping-headers {
-	border-bottom-color: #e4e4e7;
-	border-bottom-style: solid;
-	border-bottom-width: 1px;
 	margin-bottom: 16px;
 	margin-top: -10px;
-	padding-bottom: 4px;
-	width: 100%;
+	display: flex;
+	gap: 70px;
 }
 
 .action__mapping-left-header,
 .action__mapping-right-header {
-	display: inline-block;
 	font-size: 14px;
-}
-
-.action__mapping-left-header {
-	width: 50%;
-}
-
-.action__mapping-right-header {
-	padding-left: 34px;
+	border-bottom: 1px solid #e4e4e7;
+	padding-bottom: 4px;
+	width: 100%;
 }
