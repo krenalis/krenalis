@@ -110,7 +110,7 @@ func (this *Workspace) IdentityResolutionSettings() (bool, []string) {
 // by returning the queries that would be executed on the warehouse to perform a
 // given alter schema.
 //
-// See the documentation of UpdateUserSchema for more details about this method.
+// See the documentation of AlterUserSchema for more details about this method.
 //
 // It returns an errors.UnprocessableError error with code InvalidAlterSchema if
 // the alter schema is invalid.
