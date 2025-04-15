@@ -4,7 +4,7 @@
 
 # Collect users
 
-Meergo allows you to collect users in batch from apps, databases, and files, as well as in real time from events from your websites and applications.
+Meergo allows you to collect users in **batch** from apps, databases, and files, as well as in **real time** from events from your websites and applications.
 
 - Import users in batch
 - Import users in real time from events
@@ -20,7 +20,7 @@ Unlike batch imports, real-time imports from events require integration with the
 
 A source connection enables you to retrieve customer and event data from an external location, then transform and consolidate it within your data warehouse. Meergo allows you to add multiple data sources to receive data and events.
 
-You can create a source connection from the UI on the **Connections** page of a workspace by clicking the **Add new source ⊕** button. See the [documentation for a specific source connector](/connectors/) for detailed instructions.
+You can create a source connection from the admin on the **Connections** page of a workspace by clicking the **Add new source ⊕** button. See the [documentation for a specific source connector](/connectors/) for detailed instructions.
 
 You can also create a connection via the [Create connection endpoint](/api/connections#create-connection) of the API.
 

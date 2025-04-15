@@ -30,7 +30,7 @@ For this installation method you need to have [Git](https://git-scm.com/download
    docker compose up
    ```
 
-3. Open the login page of Meergo UI at
+3. Open the login page of Meergo admin at
 
    [http://localhost:9090/ui/](http://localhost:9090/ui/)
 
@@ -51,40 +51,13 @@ Then you can proceed with the [configuration](#configuration).
 
 There are two ways to install Meergo from the source:
 
-* [Clone the repository and build](#build-from-repository): If you want to clone the repository locally and compile the source directly.
+* [Build using Go modules](#build-using-go-modules): Let Go download and compile the main module.
 
-* [Build using Go modules](#build-using-go-modules): If you don’t want to clone the repository but prefer to let Go download and compile the main module.
-
-### Build from repository
-
-For this installation method you need to have [Git](https://git-scm.com/downloads), [Go v1.23](https://go.dev/doc/install), and [PostgreSQL](https://www.postgresql.org/download/) 13 or higher.
-
-1. **Clone the repository and change into the _meergo/cmd/meergo_ directory**
-
-   > Since the repository of Meergo is private, you may need to configure your local `GOPRIVATE` variable in order to test and develop some of the installation methods listed below.
-   > It may be enough to add `github.com/meergo/meergo` to the paths listed in the `GOPRIVATE` values (which are separated by a comma `,`).
-
-   ```sh
-   git clone https://github.com/meergo/meergo
-   cd meergo/cmd/meergo
-   ```
-
-2. **Generate the UI assets and build the executable**
-
-   Use the following commands to generate the UI assets and to build the executable:
-
-   ```sh
-   go generate
-   go build
-   ```
-
-   Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
-
-Then you can proceed with the [configuration](#configuration).
+* [Build from repository](#build-from-repository): Clone the repository locally and compile the source.
 
 ### Build using Go modules
 
-For this installation method you need to have [Go v1.23](https://go.dev/doc/install) and [PostgreSQL](https://www.postgresql.org/download/).
+For this installation method you need to have [Go](https://go.dev/doc/install) 1.23 and [PostgreSQL](https://www.postgresql.org/download/) 13 or higher.
 
 1. **Create a new directory**
 
@@ -104,9 +77,9 @@ For this installation method you need to have [Go v1.23](https://go.dev/doc/inst
    go mod tidy
    ```
 
-4. **Generate the UI assets and build the executable**
+4. **Generate the admin assets and build the executable**
 
-   Use the following commands to generate the UI assets and to build the executable:
+   Use the following commands to generate the admin assets and to build the executable:
 
    ```sh
    go generate
@@ -116,6 +89,33 @@ For this installation method you need to have [Go v1.23](https://go.dev/doc/inst
    Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
 
 Proceed with the [configuration](#configuration) after completing these steps.
+
+### Build from repository
+
+For this installation method you need to have [Git](https://git-scm.com/downloads), [Go](https://go.dev/doc/install) 1.23, and [PostgreSQL](https://www.postgresql.org/download/) 13 or higher.
+
+1. **Clone the repository and change into the _meergo/cmd/meergo_ directory**
+
+   > Since the repository of Meergo is private, you may need to configure your local `GOPRIVATE` variable in order to test and develop some of the installation methods listed below.
+   > It may be enough to add `github.com/meergo/meergo` to the paths listed in the `GOPRIVATE` values (which are separated by a comma `,`).
+
+   ```sh
+   git clone https://github.com/meergo/meergo
+   cd meergo/cmd/meergo
+   ```
+
+2. **Generate the admin assets and build the executable**
+
+   Use the following commands to generate the admin assets and to build the executable:
+
+   ```sh
+   go generate
+   go build
+   ```
+
+   Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
+
+Then you can proceed with the [configuration](#configuration).
 
 ## Configuration
 
@@ -155,7 +155,7 @@ Meergo will start using the provided configuration and be ready for use.
 
 ## First login
 
-When you start **Meergo** for the first time, you can access the UI using the default credentials:
+When you start **Meergo** for the first time, you can access the admin using the default credentials:
 
 - **Email:** `acme@open2b.com`
 - **Password:** `foopass2`

@@ -8,7 +8,7 @@
 <div class="spec">
 <div>
 
-The Meergo API uses API keys for authenticating requests. You can manage these keys through the Meergo UI. The API keys utilize HTTP Bearer Authentication.
+The Meergo API uses API keys for authenticating requests. You can manage these keys through the Meergo admin. The API keys utilize HTTP Bearer Authentication.
 
 When accessing resources within a workspace, you can specify the workspace ID by passing the `Meergo-Workspace` header.
 
@@ -48,7 +48,7 @@ API keys can be optionally restricted to a specific workspace during their creat
 
 For event ingestion, it is recommended to use an **event write key**. An event write key is a more limited form of an API key, granting access only for event ingestion and specific to a particular connection type (e.g., **Website**, **Mobile**, or **Server**). Event write keys provide better security and focus for these operations.
 
-Event write keys are managed through the Meergo UI for each relevant source connection type.
+Event write keys are managed through the Meergo admin for each relevant source connection type.
 
 Using an event write key allows authentication exclusively for the following endpoints:
 

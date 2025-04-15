@@ -8,7 +8,7 @@ The Meergo API follows REST principles, providing a simple and intuitive design.
 
 The API employs standard HTTP status codes to represent errors. These errors are easy for developers to interpret and simple to handle programmatically.
 
-[Authentication](/api/authentication) is done through API keys, which can be managed through the Meergo UI.
+[Authentication](/api/authentication) is done through API keys, which can be managed through the Meergo admin.
 
 For testing purposes, you can create a dedicated workspace without affecting others, as workspaces are fully isolated. Additionally, API keys can be restricted to a specific workspace, eliminating the risk of unintended changes to production environments.
 

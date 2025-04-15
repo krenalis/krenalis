@@ -13,9 +13,9 @@ In particular, it performs these operations (not necessarily in this order):
 
 ## When it is executed
 
-The Identity Resolution can be executed manually by the user through a button in the UI.
+The Identity Resolution can be executed manually by the user through a button in the admin.
 
-It is also possible to configure Meergo to automatically perform Identity Resolution at the end of every user import from apps, files, or databases. This can be configured through the Identity Resolution settings in the UI.
+It is also possible to configure Meergo to automatically perform Identity Resolution at the end of every user import from apps, files, or databases. This can be configured through the Identity Resolution settings in the admin.
 
 ## Same user criterion
 

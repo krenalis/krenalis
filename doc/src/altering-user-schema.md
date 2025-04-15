@@ -6,7 +6,7 @@
 
 Once the user model is created, it can be altered with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Meergo.
 
-The user schema can be altered with the UI.
+The user schema can be altered with the admin.
 
 ## Supported operations
 
