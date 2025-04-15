@@ -69,7 +69,7 @@ const SchemaGrid = () => {
 				columns={columns}
 				rows={rows}
 				isLoading={isLoadingSchema || isAltering}
-				loadingText={isAltering ? 'Schema is being updated' : 'Loading schema'}
+				loadingText={isAltering ? 'Schema is being altered' : 'Loading schema'}
 			/>
 			<Outlet />
 		</div>
