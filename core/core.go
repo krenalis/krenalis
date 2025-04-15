@@ -1321,7 +1321,7 @@ func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types
 		if ongoingOp {
 			return nil, errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 		}
-		// Sets the update user schema operation to running.
+		// Sets the alter user schema operation to running.
 		query = "UPDATE workspaces SET alter_user_schema_id = $1," +
 			" alter_user_schema_schema = $2, alter_user_schema_primary_sources = $3," +
 			" alter_user_schema_re_paths = $4, alter_user_schema_operations = $5," +
