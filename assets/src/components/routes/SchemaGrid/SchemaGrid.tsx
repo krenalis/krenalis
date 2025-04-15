@@ -11,7 +11,7 @@ import Toolbar from '../../base/Toolbar/Toolbar';
 
 const SchemaGrid = () => {
 	const { redirect } = useContext(AppContext);
-	const { schema, isLoadingSchema, latestUpdateError, isUpdating } = useContext(SchemaContext);
+	const { schema, isLoadingSchema, latestAlterError, isAltering } = useContext(SchemaContext);
 
 	const gridRef = useRef<any>();
 
@@ -35,10 +35,10 @@ const SchemaGrid = () => {
 
 	return (
 		<div className='schema-grid'>
-			{!isUpdating && latestUpdateError && (
+			{!isAltering && latestAlterError && (
 				<div className='schema-grid__alter-error'>
 					<SlIcon name='exclamation-circle' />
-					{latestUpdateError}
+					{latestAlterError}
 				</div>
 			)}
 			<Toolbar className='schema-grid__toolbar'>
@@ -56,9 +56,9 @@ const SchemaGrid = () => {
 					<SlButton
 						className='schema-grid__alter-button'
 						variant='primary'
-						onClick={isUpdating ? null : onEditClick}
-						disabled={isUpdating}
-						loading={isUpdating}
+						onClick={isAltering ? null : onEditClick}
+						disabled={isAltering}
+						loading={isAltering}
 					>
 						Alter schema...
 					</SlButton>
@@ -68,8 +68,8 @@ const SchemaGrid = () => {
 				ref={gridRef}
 				columns={columns}
 				rows={rows}
-				isLoading={isLoadingSchema || isUpdating}
-				loadingText={isUpdating ? 'Schema is being updated' : 'Loading schema'}
+				isLoading={isLoadingSchema || isAltering}
+				loadingText={isAltering ? 'Schema is being updated' : 'Loading schema'}
 			/>
 			<Outlet />
 		</div>

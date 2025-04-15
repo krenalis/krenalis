@@ -8,7 +8,7 @@ import { useSchema } from './useSchema';
 const Schema = () => {
 	const { setTitle } = useContext(AppContext);
 
-	const { isLoadingSchema, setIsLoadingSchema, schema, isUpdating, setIsUpdating, latestUpdateError } = useSchema();
+	const { isLoadingSchema, setIsLoadingSchema, schema, isAltering, setIsAltering, latestAlterError } = useSchema();
 
 	const location = useLocation();
 
@@ -24,9 +24,9 @@ const Schema = () => {
 						schema,
 						isLoadingSchema,
 						setIsLoadingSchema,
-						latestUpdateError,
-						isUpdating,
-						setIsUpdating,
+						latestAlterError,
+						isAltering,
+						setIsAltering,
 					}}
 				>
 					<Outlet />

@@ -813,7 +813,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/identity-resolution/start`, http.POST, this.workspaceID);
 	};
 
-	updateUserSchema = async (schema: ObjectType, primarySources: PrimarySources, rePaths: RePaths): Promise<void> => {
+	alterUserSchema = async (schema: ObjectType, primarySources: PrimarySources, rePaths: RePaths): Promise<void> => {
 		return await call(`${this.apiURL}/users/schema`, http.PUT, this.workspaceID, {
 			schema,
 			primarySources,

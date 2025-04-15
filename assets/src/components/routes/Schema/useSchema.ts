@@ -11,10 +11,10 @@ const useSchema = () => {
 
 	const { api, handleError, selectedWorkspace } = useContext(AppContext);
 
-	const isUpdatingRef = useRef<boolean>();
+	const isAlteringRef = useRef<boolean>();
 
 	useEffect(() => {
-		isUpdatingRef.current = isAltering;
+		isAlteringRef.current = isAltering;
 	}, [isAltering]);
 
 	useEffect(() => {
@@ -57,7 +57,7 @@ const useSchema = () => {
 		if (startTime != null && endTime == null) {
 			// the schema is being altered.
 			setIsAltering(true);
-		} else if (isUpdatingRef.current && endTime != null) {
+		} else if (isAlteringRef.current && endTime != null) {
 			// schema altering is concluded.
 			setIsLoadingSchema(true);
 			setIsAltering(false);
@@ -69,9 +69,9 @@ const useSchema = () => {
 		isLoadingSchema,
 		setIsLoadingSchema,
 		schema,
-		isUpdating: isAltering,
-		setIsUpdating: setIsAltering,
-		latestUpdateError: latestAlterError,
+		isAltering,
+		setIsAltering,
+		latestAlterError,
 	};
 };
 

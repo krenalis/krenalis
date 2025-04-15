@@ -62,7 +62,7 @@ const useSchemaEdit = (
 	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
 		useContext(AppContext);
 
-	const { setIsUpdating } = useContext(SchemaContext);
+	const { setIsAltering } = useContext(SchemaContext);
 
 	const primarySources = useRef<PrimarySources>(
 		workspaces.find((w) => w.id === selectedWorkspace).userPrimarySources,
@@ -366,7 +366,7 @@ const useSchemaEdit = (
 		setIsConfirmChangesLoading(true);
 		const s = normalizeSchema(editableSchema);
 		try {
-			await api.workspaces.updateUserSchema(s, sources, rePaths.current);
+			await api.workspaces.alterUserSchema(s, sources, rePaths.current);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);
@@ -379,7 +379,7 @@ const useSchemaEdit = (
 			setQueries(null);
 			setIsConfirmChangesLoading(false);
 			setIsLoadingWorkspaces(true);
-			setIsUpdating(true);
+			setIsAltering(true);
 			onClose();
 		}, 300);
 	};
