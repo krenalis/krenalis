@@ -508,7 +508,6 @@ type Workspace struct {
 		Err            *string    // pointer to empty string if no errors occurred during last execution of alter user schema.
 		Schema         types.Type
 		PrimarySources map[string]int
-		RePaths        map[string]any
 		Operations     []meergo.AlterOperation
 	}
 	actionsToPurge []int

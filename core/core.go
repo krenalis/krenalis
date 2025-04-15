@@ -1018,7 +1018,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 // executeAlterUserSchema executes the alter of the user schema, not returning
 // until it has completed (with success or with an operation error).
 func (core *Core) executeAlterUserSchema(workspace int, opID string, schema types.Type,
-	primarySources map[string]int, rePaths map[string]any, operations []meergo.AlterOperation) {
+	primarySources map[string]int, operations []meergo.AlterOperation) {
 	ctx := core.close.ctx
 	store := core.datastore.Store(workspace)
 	ws, ok := core.state.Workspace(workspace)
@@ -1126,9 +1126,8 @@ Identifiers:
 			// Set the alter schema update as completed.
 			query := "UPDATE workspaces SET alter_user_schema_id = NULL," +
 				" alter_user_schema_schema = 'null', alter_user_schema_primary_sources = 'null'," +
-				" alter_user_schema_re_paths = 'null', alter_user_schema_operations = 'null'," +
-				" alter_user_schema_end_time = $1, alter_user_schema_error = $2" +
-				" WHERE id = $3 AND alter_user_schema_id = $4"
+				" alter_user_schema_operations = 'null', alter_user_schema_end_time = $1," +
+				" alter_user_schema_error = $2 WHERE id = $3 AND alter_user_schema_id = $4"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
 			if err != nil {
 				return nil, err
@@ -1233,7 +1232,7 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 		if ws.AlterUserSchema.ID != nil {
 			go core.executeAlterUserSchema(ws.ID, *ws.AlterUserSchema.ID,
 				ws.AlterUserSchema.Schema, ws.AlterUserSchema.PrimarySources,
-				ws.AlterUserSchema.RePaths, ws.AlterUserSchema.Operations)
+				ws.AlterUserSchema.Operations)
 		}
 	}
 }
@@ -1244,7 +1243,7 @@ func (core *Core) onStartAlterUserSchema(n state.StartAlterUserSchema) {
 	if !core.state.IsLeader() {
 		return
 	}
-	go core.executeAlterUserSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.RePaths, n.Operations)
+	go core.executeAlterUserSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.Operations)
 }
 
 // onElectLeader is called when the identity resolution is started.
@@ -1263,7 +1262,7 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 //     user schema update) is already running.
 //   - ConnectionNotExist, if a connection referred in the primary sources does
 //     not exist.
-func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, rePaths map[string]any, operations []meergo.AlterOperation) error {
+func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, operations []meergo.AlterOperation) error {
 	core.mustBeOpen()
 	opID, err := uuid.NewUUID()
 	if err != nil {
@@ -1275,7 +1274,6 @@ func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types
 		StartTime:      time.Now().UTC(),
 		Schema:         schema,
 		PrimarySources: primarySources,
-		RePaths:        rePaths,
 		Operations:     operations,
 	}
 	// Prepare the query to check whether the connections referred within the
@@ -1324,11 +1322,10 @@ func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types
 		// Sets the alter user schema operation to running.
 		query = "UPDATE workspaces SET alter_user_schema_id = $1," +
 			" alter_user_schema_schema = $2, alter_user_schema_primary_sources = $3," +
-			" alter_user_schema_re_paths = $4, alter_user_schema_operations = $5," +
-			" alter_user_schema_start_time = $6, alter_user_schema_end_time = NULL," +
-			" alter_user_schema_error = NULL WHERE id = $7"
-		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.RePaths,
-			n.Operations, n.StartTime, n.Workspace)
+			" alter_user_schema_operations = $4, alter_user_schema_start_time = $5," +
+			" alter_user_schema_end_time = NULL, alter_user_schema_error = NULL WHERE id = $6"
+		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.Operations,
+			n.StartTime, n.Workspace)
 		if err != nil {
 			return nil, err
 		}

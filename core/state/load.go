@@ -226,8 +226,8 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 	state.workspaces = map[int]*Workspace{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_type,"+
 		" warehouse_mode, warehouse_settings, alter_user_schema_id, alter_user_schema_schema,"+
-		" alter_user_schema_primary_sources, alter_user_schema_re_paths,"+
-		" alter_user_schema_operations, alter_user_schema_start_time, alter_user_schema_end_time,"+
+		" alter_user_schema_primary_sources, alter_user_schema_operations,"+
+		" alter_user_schema_start_time, alter_user_schema_end_time,"+
 		" alter_user_schema_error, user_schema, resolve_identities_on_batch_import,"+
 		" identifiers, ir_id, ir_start_time, ir_end_time, ui_user_profile_image,"+
 		" ui_user_profile_first_name, ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
@@ -249,13 +249,12 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
 					&warehouseMode, &warehouseSettings, &ws.AlterUserSchema.ID,
 					&alterUserSchemaSchema, &ws.AlterUserSchema.PrimarySources,
-					&ws.AlterUserSchema.RePaths, &ws.AlterUserSchema.Operations,
-					&ws.AlterUserSchema.StartTime, &ws.AlterUserSchema.EndTime,
-					&ws.AlterUserSchema.Err, &userSchema, &ws.ResolveIdentitiesOnBatchImport,
-					&ws.Identifiers, &ws.IR.ID, &ws.IR.StartTime, &ws.IR.EndTime,
-					&ws.UIPreferences.UserProfile.Image, &ws.UIPreferences.UserProfile.FirstName,
-					&ws.UIPreferences.UserProfile.LastName, &ws.UIPreferences.UserProfile.Extra,
-					&ws.actionsToPurge); err != nil {
+					&ws.AlterUserSchema.Operations, &ws.AlterUserSchema.StartTime,
+					&ws.AlterUserSchema.EndTime, &ws.AlterUserSchema.Err, &userSchema,
+					&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers, &ws.IR.ID,
+					&ws.IR.StartTime, &ws.IR.EndTime, &ws.UIPreferences.UserProfile.Image,
+					&ws.UIPreferences.UserProfile.FirstName, &ws.UIPreferences.UserProfile.LastName,
+					&ws.UIPreferences.UserProfile.Extra, &ws.actionsToPurge); err != nil {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]

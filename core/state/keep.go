@@ -801,7 +801,6 @@ func (state *State) endAlterUserSchema(n notification) {
 		w.AlterUserSchema.Err = &e.Err
 		w.AlterUserSchema.Schema = types.Type{}
 		w.AlterUserSchema.PrimarySources = nil
-		w.AlterUserSchema.RePaths = nil
 		w.AlterUserSchema.Operations = nil
 	})
 	dispatchNotification(state, e)
@@ -1055,7 +1054,6 @@ type StartAlterUserSchema struct {
 	ID             string
 	Schema         types.Type
 	PrimarySources map[string]int
-	RePaths        map[string]any
 	Operations     []meergo.AlterOperation
 	StartTime      time.Time
 }
@@ -1070,7 +1068,6 @@ func (state *State) startAlterUserSchema(n notification) {
 		w.AlterUserSchema.ID = &e.ID
 		w.AlterUserSchema.Schema = e.Schema
 		w.AlterUserSchema.PrimarySources = e.PrimarySources
-		w.AlterUserSchema.RePaths = e.RePaths
 		w.AlterUserSchema.Operations = e.Operations
 		w.AlterUserSchema.StartTime = &e.StartTime
 		w.AlterUserSchema.EndTime = nil

@@ -24,7 +24,6 @@ CREATE TABLE workspaces (
     alter_user_schema_id uuid,
     alter_user_schema_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     alter_user_schema_primary_sources jsonb,
-    alter_user_schema_re_paths jsonb,
     alter_user_schema_operations jsonb,
     alter_user_schema_start_time timestamp(3),
     alter_user_schema_end_time timestamp(3),
