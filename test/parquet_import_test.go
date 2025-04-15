@@ -40,7 +40,7 @@ func TestParquetImport(t *testing.T) {
 		Type:         types.JSON(),
 		ReadOptional: true,
 	})
-	c.UpdateUserSchema(types.Object(userSchemaProperties), nil, nil)
+	c.AlterUserSchema(types.Object(userSchemaProperties), nil, nil)
 
 	// Retrieve the storage directory that contains the Parquet file to import.
 	storageDir, err := filepath.Abs("./testdata/parquet_import_test")

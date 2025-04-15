@@ -45,6 +45,6 @@ func TestUIInitialUserSchema(t *testing.T) {
 	if len(queries) != expectedQueriesCount {
 		t.Fatalf("expected %d queries, got %d", expectedQueriesCount, len(queries))
 	}
-	c.UpdateUserSchema(schema, nil, nil)
+	c.AlterUserSchema(schema, nil, nil)
 
 }

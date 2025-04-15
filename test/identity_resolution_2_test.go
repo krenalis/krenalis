@@ -38,7 +38,7 @@ func TestIdentityResolution2(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.Text()), ReadOptional: true},
 		{Name: "total_orders", Type: types.Int(32), ReadOptional: true},
 	})
-	c.UpdateUserSchema(schema, nil, nil)
+	c.AlterUserSchema(schema, nil, nil)
 
 	// Set the email as the only identifier, as the 3 identities, imported from
 	// the 3 connections, will all be put together in a single user as they
@@ -201,7 +201,7 @@ func TestIdentityResolution2(t *testing.T) {
 	primarySources := map[string]int{
 		"total_orders": sourceB,
 	}
-	c.UpdateUserSchema(schema, primarySources, nil)
+	c.AlterUserSchema(schema, primarySources, nil)
 
 	c.RunIdentityResolution()
 

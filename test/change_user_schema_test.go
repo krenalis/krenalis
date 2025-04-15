@@ -61,7 +61,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if len(queries) != 4 {
 		t.Fatalf("expected 4 queries, got %d", len(queries))
 	}
-	c.UpdateUserSchema(file.Schema, file.PrimarySources, file.RePaths)
+	c.AlterUserSchema(file.Schema, file.PrimarySources, file.RePaths)
 
 	ws = c.Workspace()
 	if n := types.NumProperties(ws.UserSchema); n != 10 {
@@ -89,7 +89,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.UpdateUserSchema(schema, nil, nil)
+	c.AlterUserSchema(schema, nil, nil)
 
 	ws = c.Workspace()
 	if n := types.NumProperties(ws.UserSchema); n != 11 {
@@ -135,7 +135,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.UpdateUserSchema(schema, nil, rePaths)
+	c.AlterUserSchema(schema, nil, rePaths)
 	identifiers = []string{"android.identifier"}
 
 	ws = c.Workspace()
@@ -190,7 +190,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.UpdateUserSchema(schema, nil, rePaths)
+	c.AlterUserSchema(schema, nil, rePaths)
 
 	ws = c.Workspace()
 	if n := types.NumProperties(ws.UserSchema); n != 10 {
@@ -228,7 +228,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.UpdateUserSchemaErr(schema, nil, nil)
+	err = c.AlterUserSchemaErr(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -250,7 +250,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.UpdateUserSchemaErr(schema, nil, nil)
+	err = c.AlterUserSchemaErr(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -262,7 +262,7 @@ func TestChangeUserSchema(t *testing.T) {
 	firstProperty := types.PropertyNames(file.Schema)[0]
 	primarySource := c.CreateDummy("Primary Source", meergotester.Source)
 	primarySources := map[string]int{firstProperty: primarySource}
-	c.UpdateUserSchema(file.Schema, primarySources, nil)
+	c.AlterUserSchema(file.Schema, primarySources, nil)
 	ws = c.Workspace()
 	if !maps.Equal(primarySources, ws.UserPrimarySources) {
 		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.UserPrimarySources)
@@ -273,7 +273,7 @@ func TestChangeUserSchema(t *testing.T) {
 
 	// Set a primary source for a not existent property.
 	primarySources = map[string]int{"not_existent_property": primarySource}
-	err = c.UpdateUserSchemaErr(file.Schema, primarySources, nil)
+	err = c.AlterUserSchemaErr(file.Schema, primarySources, nil)
 	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
@@ -285,7 +285,7 @@ func TestChangeUserSchema(t *testing.T) {
 		notExistentSource = 2
 	}
 	primarySources = map[string]int{firstProperty: notExistentSource}
-	err = c.UpdateUserSchemaErr(file.Schema, primarySources, nil)
+	err = c.AlterUserSchemaErr(file.Schema, primarySources, nil)
 	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %d does not exist"}}`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())

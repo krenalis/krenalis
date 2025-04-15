@@ -30,6 +30,39 @@ var defaultStrategy Strategy = "Conversion"
 
 // This file contains support methods which reduce verbosity of tests.
 
+func (c *Meergo) AlterUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
+	req := map[string]any{
+		"schema":         schema,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
+	}
+	ts := time.Now().UTC()
+	c.MustCall("PUT", "/api/v1/users/schema", req, nil)
+	// Waits for the alter schema that was started following the call to this
+	// method to finish.
+	for {
+		time.Sleep(50 * time.Millisecond)
+		startTime, endTime, alterError := c.LatestAlterUserSchema()
+		if alterError != nil {
+			c.t.Fatalf("user schema altering failed: %s", *alterError)
+		}
+		if startTime.After(ts) && endTime != nil {
+			break
+		}
+	}
+}
+
+// AlterUserSchemaErr is like AlterUserSchema but returns an error instead of
+// panicking.
+func (c *Meergo) AlterUserSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
+	req := map[string]any{
+		"schema":         schema,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
+	}
+	return c.Call("PUT", "/api/v1/users/schema", req, nil)
+}
+
 func (c *Meergo) AbsolutePath(storage int, path string) string {
 	var response struct {
 		Path string `json:"path"`
@@ -455,39 +488,6 @@ func (c *Meergo) UpdateIdentityResolutionErr(identifiers []string) error {
 		"identifiers": identifiers,
 	}
 	return c.Call("PUT", "/api/v1/identity-resolution/settings", body, nil)
-}
-
-func (c *Meergo) UpdateUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
-	req := map[string]any{
-		"schema":         schema,
-		"primarySources": primarySources,
-		"rePaths":        rePaths,
-	}
-	ts := time.Now().UTC()
-	c.MustCall("PUT", "/api/v1/users/schema", req, nil)
-	// Waits for the alter schema that was started following the call to this
-	// method to finish.
-	for {
-		time.Sleep(50 * time.Millisecond)
-		startTime, endTime, updateError := c.LatestAlterUserSchema()
-		if updateError != nil {
-			c.t.Fatalf("user schema update failed: %s", *updateError)
-		}
-		if startTime.After(ts) && endTime != nil {
-			break
-		}
-	}
-}
-
-// UpdateUserSchemaErr is like UpdateUserSchema but returns an error instead of
-// panicking.
-func (c *Meergo) UpdateUserSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
-	req := map[string]any{
-		"schema":         schema,
-		"primarySources": primarySources,
-		"rePaths":        rePaths,
-	}
-	return c.Call("PUT", "/api/v1/users/schema", req, nil)
 }
 
 func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
