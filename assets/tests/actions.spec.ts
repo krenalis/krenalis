@@ -11,7 +11,7 @@ import {
 	fillUserActionFilters,
 	login,
 	logout,
-	uiURL,
+	adminURL,
 } from './utils';
 import { join } from 'path';
 import { writeFile } from 'fs';
@@ -26,7 +26,7 @@ test.afterEach(async ({ page }) => {
 
 test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 	const id = await addDummySource(page);
-	await page.goto(`${uiURL}connections/${id}/actions`);
+	await page.goto(`${adminURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
 		hasText: 'Import customers',
 	});
@@ -114,7 +114,7 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 
 test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 	const id = await addDummyDestination(page);
-	await page.goto(`${uiURL}connections/${id}/actions`);
+	await page.goto(`${adminURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
 		hasText: 'Export customers',
 	});
@@ -295,7 +295,7 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 
 test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 	const id = await addDummyDestination(page);
-	await page.goto(`${uiURL}connections/${id}/actions`);
+	await page.goto(`${adminURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
 		hasText: 'Send Add to Cart',
 	});
@@ -365,7 +365,7 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 
 test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	const id = await addPostgreSQLSource(page);
-	await page.goto(`${uiURL}connections/${id}/actions`);
+	await page.goto(`${adminURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
 		hasText: 'Import users',
 	});
@@ -501,7 +501,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 
 test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	const id = await addPostgreSQLDestination(page);
-	await page.goto(`${uiURL}connections/${id}/actions`);
+	await page.goto(`${adminURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
 		hasText: 'Export users',
 	});
@@ -683,8 +683,8 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			if (err) throw err;
 		});
 
-		await page.goto(`${uiURL}connectors?role=Source`);
-		await page.click('a[href="/ui/connectors/file/CSV?role=Source"]');
+		await page.goto(`${adminURL}connectors?role=Source`);
+		await page.click('a[href="/admin/connectors/file/CSV?role=Source"]');
 
 		await page.click('.file-connector__storage sl-select');
 		await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
@@ -863,8 +863,8 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			if (err) throw err;
 		});
 
-		await page.goto(`${uiURL}connectors?role=Destination`);
-		await page.click('a[href="/ui/connectors/file/CSV?role=Destination"]');
+		await page.goto(`${adminURL}connectors?role=Destination`);
+		await page.click('a[href="/admin/connectors/file/CSV?role=Destination"]');
 
 		await page.click('.file-connector__storage sl-select');
 		await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
@@ -1185,7 +1185,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 
 test(`Add "Import events" action on Javascript`, async ({ page }) => {
 	const id = await addJavascriptSource(page);
-	await page.goto(`${uiURL}connections/${id}/actions`);
+	await page.goto(`${adminURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
 		hasText: 'Import events',
 	});
@@ -1259,7 +1259,7 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 
 test(`Add "Import users" action on Javascript`, async ({ page }) => {
 	const id = await addJavascriptSource(page);
-	await page.goto(`${uiURL}connections/${id}/actions`);
+	await page.goto(`${adminURL}connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
 		hasText: 'Import users',
 	});

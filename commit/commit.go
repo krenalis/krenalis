@@ -30,8 +30,8 @@ func main() {
 
 	cliOptions := parseCli()
 
-	if cliOptions.justTestUI {
-		runGoTestUI(cliOptions.explicit)
+	if cliOptions.justTestAdmin {
+		runGoTestAdmin(cliOptions.explicit)
 		os.Exit(0)
 	}
 
@@ -122,9 +122,9 @@ func main() {
 	// Update the Go vendor.
 	NewCmd("go", "mod", "vendor").InDir(repo).Run(cliOptions.explicit)
 
-	// Run checks and do operations on the UI assets.
+	// Run checks and do operations on the admin assets.
 	if cliOptions.explicit {
-		fmt.Println("Run checks and do operations on the UI assets")
+		fmt.Println("Run checks and do operations on the admin assets")
 	}
 	NewCmd("npm", "install").InDir(repo, "assets").Run(cliOptions.explicit)
 	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run(cliOptions.explicit)
@@ -149,16 +149,16 @@ func main() {
 }
 
 type cliOptions struct {
-	explicit   bool
-	justTestUI bool
-	noGoTest   bool
-	short      bool
+	explicit      bool
+	justTestAdmin bool
+	noGoTest      bool
+	short         bool
 }
 
 func parseCli() cliOptions {
 
 	var explicit bool
-	var justTestUI bool
+	var justTestAdmin bool
 	var noGoTest bool
 	var printHelp bool
 	var short bool
@@ -169,7 +169,7 @@ func parseCli() cliOptions {
 	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
 		" each package separately and prints verbose output; may take a little longer;"+
 		" the tests set is unaltered by this option")
-	flag.BoolVar(&justTestUI, "just-test-ui", false, "just run the go tests on the UI. "+
+	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the go tests on the admin. "+
 		reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
 		" Useful when you just want to run vendor generation commands, various asset related commands, etc... "+
@@ -203,11 +203,11 @@ func parseCli() cliOptions {
 			os.Exit(1)
 		}
 	}
-	mutualExclusive(justTestUI, short, "-just-test-ui", "-short")
-	mutualExclusive(justTestUI, noGoTest, "-just-test-ui", "-no-go-test")
+	mutualExclusive(justTestAdmin, short, "-just-test-admin", "-short")
+	mutualExclusive(justTestAdmin, noGoTest, "-just-test-admin", "-no-go-test")
 	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
 
-	return cliOptions{explicit: explicit, justTestUI: justTestUI, noGoTest: noGoTest, short: short}
+	return cliOptions{explicit: explicit, justTestAdmin: justTestAdmin, noGoTest: noGoTest, short: short}
 }
 
 func checkDenoVersion(explicit bool) {
@@ -342,17 +342,17 @@ func removeGoSum(repo, module string, explicit bool) {
 	}
 }
 
-// runGoTestUI runs UI tests via go test.
-func runGoTestUI(explicit bool) {
+// runGoTestAdmin runs admin tests via go test.
+func runGoTestAdmin(explicit bool) {
 	start := time.Now()
-	args := []string{"test", "-run", "^TestUI$", "github.com/meergo/meergo/test", "-count", "1"}
+	args := []string{"test", "-run", "^TestAdmin$", "github.com/meergo/meergo/test", "-count", "1"}
 	if explicit {
 		args = append(args, "-v")
 	}
 	NewCmd("go", args...).Run(explicit)
 	elapsed := time.Since(start)
 	if elapsed < 2*time.Second {
-		fatal("UI test took too little time (< 2 seconds). There is probably a problem" +
+		fatal("admin test took too little time (< 2 seconds). There is probably a problem" +
 			" with its execution, try running it with the '-x' option or check" +
 			" the implementation of the commit command")
 	}

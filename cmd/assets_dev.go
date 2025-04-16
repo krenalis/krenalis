@@ -76,7 +76,7 @@ func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 
 	h = &assetsHandler{
 		outDir: outDir,
-		fs:     http.StripPrefix("/ui/src/", http.FileServer(http.Dir(outDir))),
+		fs:     http.StripPrefix("/admin/src/", http.FileServer(http.Dir(outDir))),
 	}
 
 	entryPoint := filepath.Join(moduleRoot, "assets", "src", "index.jsx")
@@ -142,8 +142,8 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "mywebsite", "index.html"))
 		return
 	}
-	if strings.HasPrefix(r.URL.Path, "/ui/src/") {
-		if icon, ok := strings.CutPrefix(r.URL.Path, "/ui/src/shoelace/dist/assets/icons/"); ok {
+	if strings.HasPrefix(r.URL.Path, "/admin/src/") {
+		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/shoelace/dist/assets/icons/"); ok {
 			w.Header().Set("Content-Type", "image/svg+xml")
 			http.ServeFile(w, r, filepath.Join(moduleRoot, "assets/node_modules", shoelaceIconsPath, icon))
 			return

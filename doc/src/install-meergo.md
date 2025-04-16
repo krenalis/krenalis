@@ -32,7 +32,7 @@ For this installation method you need to have [Git](https://git-scm.com/download
 
 3. Open the login page of Meergo admin at
 
-   [http://localhost:9090/ui/](http://localhost:9090/ui/)
+   [http://localhost:9090/admin/](http://localhost:9090/admin/)
 
 
 Continue with the [first login](#first-login).

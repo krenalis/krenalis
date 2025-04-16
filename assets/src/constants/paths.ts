@@ -1,4 +1,4 @@
-const UI_BASE_PATH = '/ui/';
+const UI_BASE_PATH = '/admin/';
 const SIGN_UP_PATH = `${UI_BASE_PATH}sign-up`;
 const RESET_PASSWORD_PATH = `${UI_BASE_PATH}reset-password`;
 const FULLSCREEN_PATHS = [

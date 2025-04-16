@@ -117,7 +117,7 @@ Within the root of this repository execute:
 go generate ./cmd/meergo
 ```
 
-Note that the assets will be embedded into the executable. However, in development mode, the assets are rebuilt for each invocation of the UI.
+Note that the assets will be embedded into the executable. However, in development mode, the assets are rebuilt for each invocation of the admin.
 
 ### 4. Compile the server command in dev mode
 
@@ -133,7 +133,7 @@ Populate the Meergo's database with the queries in [database/PostgreSQL.sql](dat
 
 ### 7. Run and open the browser
 
-Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) and visit https://localhost:9090/ui/.
+Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) and visit https://localhost:9090/admin/.
 
 ## Expose on the Internet (optional)
 
@@ -195,7 +195,7 @@ Only more technical information is kept here.
 
 ### Running Meergo within a Container
 
-**Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the admin UI.
+**Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the admin.
 
 1. Cd the root of this repository
 2. Run this command, replacing the paths on the left of `:` as needed (and leaving the paths on the right, `/bin/config.yaml`, etc... as they are):
@@ -209,4 +209,4 @@ Only more technical information is kept here.
         meergo:dev
     ```
 
-3. Visit Meergo at the address specified in `config.yaml` (for example [https://localhost:9090/ui/](https://localhost:9090/ui/))
+3. Visit Meergo at the address specified in `config.yaml` (for example [https://localhost:9090/admin/](https://localhost:9090/admin/))

@@ -35,7 +35,7 @@ import (
 // other useful information for debugging.
 const showUI = false
 
-func TestUI(t *testing.T) {
+func TestAdmin(t *testing.T) {
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()

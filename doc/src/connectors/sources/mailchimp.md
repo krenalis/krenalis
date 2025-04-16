@@ -22,7 +22,7 @@ Before you can add a Mailchimp data source, you need to create a private key in 
 3. On the **Profile** page, click **Extra > Registered apps**.
 4. On the **Registered apps** page, click **Register An App**.
 5. In the **App name** field, enter a name for the new app, for example, "Meergo data source."
-6. In the **Redirect URI** field, enter “https://your-meergo-domain/ui/oauth/authorize” where “your-meergo-domain” is the domain, and port if present, of your Meergo domain.
+6. In the **Redirect URI** field, enter “https://your-meergo-domain/admin/oauth/authorize” where “your-meergo-domain” is the domain, and port if present, of your Meergo domain.
 7. Fill in the remaining fields as desired.
 8. Click **Create**.
 9. Copy the **Client ID** and **Client Secret** field values.

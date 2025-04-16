@@ -17,10 +17,10 @@ interface Config {
 }
 
 const config: Config = JSON.parse(readFileSync(resolve(__dirname, './test-config.json'), 'utf-8'));
-const uiURL = `${config.baseURL}/ui/`;
+const adminURL = `${config.baseURL}/admin/`;
 
 const login = async (page: Page) => {
-	await page.goto(uiURL);
+	await page.goto(adminURL);
 	await page.evaluate(
 		async ({ url, workspace }) => {
 			localStorage.setItem('meergo_ui_workspace_id', String(workspace));
@@ -32,7 +32,7 @@ const login = async (page: Page) => {
 };
 
 const logout = async (page: Page) => {
-	await page.goto(uiURL);
+	await page.goto(adminURL);
 	await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
@@ -331,7 +331,7 @@ const createTempDirectory = async (func: (tempDir: string) => Promise<void>) => 
 
 export {
 	config,
-	uiURL,
+	adminURL,
 	login,
 	logout,
 	addDummySource,

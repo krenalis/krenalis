@@ -19,9 +19,9 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
-// assetsHandler implements a http.Handler to serve UI assets. It serves bundle
-// files that are embedded in the executable, compressed with Brotli if the
-// client supports it.
+// assetsHandler implements a http.Handler to serve the admin assets. It serves
+// bundle files that are embedded in the executable, compressed with Brotli if
+// the client supports it.
 type assetsHandler struct {
 	fsys fs.FS
 }
@@ -34,7 +34,7 @@ func (h *assetsHandler) Close() {}
 
 func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var asset string
-	if path, ok := strings.CutPrefix(r.URL.Path, "/ui/src/"); ok {
+	if path, ok := strings.CutPrefix(r.URL.Path, "/admin/src/"); ok {
 		switch path {
 		case "index.js":
 			w.Header().Add("Content-Type", "text/javascript")

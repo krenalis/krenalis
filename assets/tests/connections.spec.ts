@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createTempDirectory, login, logout, config, uiURL } from './utils';
+import { createTempDirectory, login, logout, config, adminURL } from './utils';
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
@@ -10,44 +10,44 @@ test.afterEach(async ({ page }) => {
 });
 
 test(`Add Dummy source`, async ({ page }) => {
-	await page.goto(`${uiURL}connectors?role=Source`);
-	await page.click('a[href="/ui/connectors/Dummy?role=Source"]');
+	await page.goto(`${adminURL}connectors?role=Source`);
+	await page.click('a[href="/admin/connectors/Dummy?role=Source"]');
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Dummy');
 	const url = page.url();
 	const fragments = url.split('/');
 	const id = fragments[fragments.length - 2];
-	await page.goto(`${uiURL}connections/sources`);
+	await page.goto(`${adminURL}connections/sources`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Dummy' }),
 	).toBeVisible();
-	await page.goto(`${uiURL}connections`);
+	await page.goto(`${adminURL}connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Dummy' }),
 	).toBeVisible();
 });
 
 test(`Add Dummy destination`, async ({ page }) => {
-	await page.goto(`${uiURL}connectors?role=Destination`);
-	await page.click('a[href="/ui/connectors/Dummy?role=Destination"]');
+	await page.goto(`${adminURL}connectors?role=Destination`);
+	await page.click('a[href="/admin/connectors/Dummy?role=Destination"]');
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Dummy');
 	const url = page.url();
 	const fragments = url.split('/');
 	const id = fragments[fragments.length - 2];
-	await page.goto(`${uiURL}connections/destinations`);
+	await page.goto(`${adminURL}connections/destinations`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Dummy' }),
 	).toBeVisible();
-	await page.goto(`${uiURL}connections`);
+	await page.goto(`${adminURL}connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Dummy' }),
 	).toBeVisible();
 });
 
 test(`Add PostgreSQL source`, async ({ page }) => {
-	await page.goto(`${uiURL}connectors?role=Source`);
-	await page.click('a[href="/ui/connectors/PostgreSQL?role=Source"]');
+	await page.goto(`${adminURL}connectors?role=Source`);
+	await page.click('a[href="/admin/connectors/PostgreSQL?role=Source"]');
 
 	await page.locator('sl-input >> input[name="Host"]').fill(config.dbHost);
 	await page.locator('sl-input >> input[name="Port"]').fill(String(config.dbPort));
@@ -66,20 +66,20 @@ test(`Add PostgreSQL source`, async ({ page }) => {
 	const fragments = url.split('/');
 	const id = fragments[fragments.length - 2];
 
-	await page.goto(`${uiURL}connections/sources`);
+	await page.goto(`${adminURL}connections/sources`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'PostgreSQL' }),
 	).toBeVisible();
 
-	await page.goto(`${uiURL}connections`);
+	await page.goto(`${adminURL}connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'PostgreSQL' }),
 	).toBeVisible();
 });
 
 test(`Add PostgreSQL destination`, async ({ page }) => {
-	await page.goto(`${uiURL}connectors?role=Destination`);
-	await page.click('a[href="/ui/connectors/PostgreSQL?role=Destination"]');
+	await page.goto(`${adminURL}connectors?role=Destination`);
+	await page.click('a[href="/admin/connectors/PostgreSQL?role=Destination"]');
 
 	await page.locator('sl-input >> input[name="Host"]').fill(config.dbHost);
 	await page.locator('sl-input >> input[name="Port"]').fill(String(config.dbPort));
@@ -98,20 +98,20 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 	const fragments = url.split('/');
 	const id = fragments[fragments.length - 2];
 
-	await page.goto(`${uiURL}connections/destinations`);
+	await page.goto(`${adminURL}connections/destinations`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'PostgreSQL' }),
 	).toBeVisible();
 
-	await page.goto(`${uiURL}connections`);
+	await page.goto(`${adminURL}connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'PostgreSQL' }),
 	).toBeVisible();
 });
 
 test(`Add Filesystem source`, async ({ page }) => {
-	await page.goto(`${uiURL}connectors?role=Source`);
-	await page.click('a[href="/ui/connectors/Filesystem?role=Source"]');
+	await page.goto(`${adminURL}connectors?role=Source`);
+	await page.click('a[href="/admin/connectors/Filesystem?role=Source"]');
 
 	await createTempDirectory(async (tempDir: string) => {
 		await page.locator('sl-input >> input[name="Root"]').fill(tempDir);
@@ -124,12 +124,12 @@ test(`Add Filesystem source`, async ({ page }) => {
 		const fragments = url.split('/');
 		const id = fragments[fragments.length - 2];
 
-		await page.goto(`${uiURL}connections/sources`);
+		await page.goto(`${adminURL}connections/sources`);
 		await expect(
 			page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
 		).toBeVisible();
 
-		await page.goto(`${uiURL}connections`);
+		await page.goto(`${adminURL}connections`);
 		await expect(
 			page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
 		).toBeVisible();
@@ -137,8 +137,8 @@ test(`Add Filesystem source`, async ({ page }) => {
 });
 
 test(`Add Filesystem destination`, async ({ page }) => {
-	await page.goto(`${uiURL}connectors?role=Destination`);
-	await page.click('a[href="/ui/connectors/Filesystem?role=Destination"]');
+	await page.goto(`${adminURL}connectors?role=Destination`);
+	await page.click('a[href="/admin/connectors/Filesystem?role=Destination"]');
 
 	await createTempDirectory(async (tempDir: string) => {
 		await page.locator('sl-input >> input[name="Root"]').fill(tempDir);
@@ -151,12 +151,12 @@ test(`Add Filesystem destination`, async ({ page }) => {
 		const fragments = url.split('/');
 		const id = fragments[fragments.length - 2];
 
-		await page.goto(`${uiURL}connections/destinations`);
+		await page.goto(`${adminURL}connections/destinations`);
 		await expect(
 			page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
 		).toBeVisible();
 
-		await page.goto(`${uiURL}connections`);
+		await page.goto(`${adminURL}connections`);
 		await expect(
 			page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
 		).toBeVisible();
@@ -164,18 +164,18 @@ test(`Add Filesystem destination`, async ({ page }) => {
 });
 
 test(`Add Javascript source`, async ({ page }) => {
-	await page.goto(`${uiURL}connectors?role=Source`);
-	await page.click('a[href="/ui/connectors/JavaScript?role=Source"]');
+	await page.goto(`${adminURL}connectors?role=Source`);
+	await page.click('a[href="/admin/connectors/JavaScript?role=Source"]');
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('JavaScript');
 	const url = page.url();
 	const fragments = url.split('/');
 	const id = fragments[fragments.length - 2];
-	await page.goto(`${uiURL}connections/sources`);
+	await page.goto(`${adminURL}connections/sources`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Javascript' }),
 	).toBeVisible();
-	await page.goto(`${uiURL}connections`);
+	await page.goto(`${adminURL}connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Javascript' }),
 	).toBeVisible();
