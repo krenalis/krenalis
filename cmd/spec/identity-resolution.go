@@ -90,6 +90,7 @@ func init() {
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
+					{422, AlterSchemaInExecution, "alter schema is in execution so the identifiers cannot be updated"},
 					{422, IdentityResolutionInExecution, "identity resolution is in execution so the identifiers cannot be updated"},
 					{422, PropertyNotExist, "property does not exist in the user schema"},
 					{422, TypeNotAllowed, "a property has a type which is not allowed for identifiers"},

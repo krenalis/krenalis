@@ -1420,6 +1420,8 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - AlterSchemaInExecution, if an alter schema operation is currently running
+//     on the workspace.
 //   - IdentityResolutionInExecution, if an identity resolution operation is
 //     currently running on the workspace.
 //   - PropertyNotExist, if an identifier path does not exist in the user
@@ -1450,10 +1452,14 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 	}
 
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		var irOpID *string
-		err := tx.QueryRow(ctx, "SELECT ir_id FROM workspaces WHERE id = $1", n.Workspace).Scan(&irOpID)
+		var irOpID, alterSchemaOpID *string
+		err := tx.QueryRow(ctx, "SELECT alter_user_schema_id, ir_id FROM workspaces WHERE id = $1",
+			n.Workspace).Scan(&alterSchemaOpID, &irOpID)
 		if err != nil {
 			return nil, err
+		}
+		if alterSchemaOpID != nil {
+			return nil, errors.Unprocessable(AlterSchemaInExecution, "alter schema is in execution so the identifiers cannot be updated")
 		}
 		if irOpID != nil {
 			return nil, errors.Unprocessable(IdentityResolutionInExecution, "identity resolution is in execution so the identifiers cannot be updated")

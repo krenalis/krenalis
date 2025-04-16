@@ -14650,6 +14650,11 @@
                         },
                         {
                             "status": 422,
+                            "code": "AlterSchemaInExecution",
+                            "message": "alter schema is in execution so the identifiers cannot be updated"
+                        },
+                        {
+                            "status": 422,
                             "code": "IdentityResolutionInExecution",
                             "message": "identity resolution is in execution so the identifiers cannot be updated"
                         },

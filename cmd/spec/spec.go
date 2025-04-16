@@ -103,6 +103,7 @@ const (
 	NotFound = "NotFound"
 
 	ActionDisabled                = "ActionDisabled"
+	AlterSchemaInExecution        = "AlterSchemaInExecution"
 	AuthenticationFailed          = "AuthenticationFailed"
 	CannotExecuteIncrementally    = "CannotExecuteIncrementally"
 	ConnectionNotExist            = "ConnectionNotExist"
