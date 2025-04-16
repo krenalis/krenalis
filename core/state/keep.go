@@ -1073,7 +1073,7 @@ type StartAlterUserSchema struct {
 	Workspace      int
 	ID             string
 	Schema         types.Type
-	PrimarySources map[string]int
+	PrimarySources map[string]int // always != nil.
 	Operations     []meergo.AlterOperation
 	StartTime      time.Time
 }

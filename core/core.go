@@ -1017,6 +1017,8 @@ func (core *Core) tryStartActionExecution(actionID int) {
 
 // executeAlterUserSchema executes the alter of the user schema, not returning
 // until it has completed (with success or with an operation error).
+//
+// primarySources cannot be nil.
 func (core *Core) executeAlterUserSchema(workspace int, opID string, schema types.Type,
 	primarySources map[string]int, operations []meergo.AlterOperation) {
 	ctx := core.close.ctx
@@ -1255,6 +1257,8 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 }
 
 // startAlterUserSchema starts the alter of the user schema.
+//
+// primarySources cannot be nil.
 //
 // It returns an errors.UnprocessableError error with code
 //

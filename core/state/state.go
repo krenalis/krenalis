@@ -507,7 +507,7 @@ type Workspace struct {
 		EndTime        *time.Time // nil means user schema alteration is running or has never started.
 		Err            *string    // pointer to empty string if no errors occurred during last execution of alter user schema.
 		Schema         types.Type
-		PrimarySources map[string]int
+		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
 		Operations     []meergo.AlterOperation
 	}
 	actionsToPurge []int
