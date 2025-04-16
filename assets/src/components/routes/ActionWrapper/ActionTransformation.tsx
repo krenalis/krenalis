@@ -1557,7 +1557,7 @@ const FullscreenTransformation = ({
 			);
 		} catch (err) {
 			setTimeout(() => {
-				setOutputError(err.message);
+				handleError(err);
 				setIsExecuting(false);
 			}, 300);
 			return;
@@ -1636,7 +1636,7 @@ const FullscreenTransformation = ({
 			);
 		} catch (err) {
 			setTimeout(() => {
-				setOutputError(err.message);
+				handleError(err);
 				setIsExecuting(false);
 			}, 300);
 			return;
@@ -1706,7 +1706,7 @@ const FullscreenTransformation = ({
 			);
 		} catch (err) {
 			setTimeout(() => {
-				setOutputError(err.message);
+				handleError(err);
 				setIsExecuting(false);
 			}, 300);
 			return;
