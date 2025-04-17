@@ -132,7 +132,7 @@ func makeVendor() error {
 		Write:             true,
 	})
 	if result.Errors != nil {
-		msg := "cannot generate UI assets when making vendor:"
+		msg := "cannot generate admin assets when making vendor:"
 		for _, err := range result.Errors {
 			if len(result.Errors) == 1 {
 				msg += " "
@@ -147,7 +147,7 @@ func makeVendor() error {
 		return errors.New(msg)
 	}
 	if result.Warnings != nil {
-		msg := "cannot generate UI assets when making vendor:"
+		msg := "cannot generate admin assets when making vendor:"
 		for _, err := range result.Warnings {
 			if len(result.Warnings) == 1 {
 				msg += " "
