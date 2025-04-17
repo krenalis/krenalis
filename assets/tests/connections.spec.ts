@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createTempDirectory, login, logout, config, adminURL } from './utils';
+import { createTempDirectory, login, logout, config, adminPath, adminURL } from './utils';
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
@@ -11,7 +11,7 @@ test.afterEach(async ({ page }) => {
 
 test(`Add Dummy source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click('a[href="/admin/connectors/Dummy?role=Source"]');
+	await page.click(`a[href="/${adminPath}/connectors/Dummy?role=Source"]`);
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Dummy');
 	const url = page.url();
@@ -29,7 +29,7 @@ test(`Add Dummy source`, async ({ page }) => {
 
 test(`Add Dummy destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
-	await page.click('a[href="/admin/connectors/Dummy?role=Destination"]');
+	await page.click(`a[href="/${adminPath}/connectors/Dummy?role=Destination"]`);
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Dummy');
 	const url = page.url();
@@ -47,7 +47,7 @@ test(`Add Dummy destination`, async ({ page }) => {
 
 test(`Add PostgreSQL source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click('a[href="/admin/connectors/PostgreSQL?role=Source"]');
+	await page.click(`a[href="/${adminPath}/connectors/PostgreSQL?role=Source"]`);
 
 	await page.locator('sl-input >> input[name="Host"]').fill(config.dbHost);
 	await page.locator('sl-input >> input[name="Port"]').fill(String(config.dbPort));
@@ -79,7 +79,7 @@ test(`Add PostgreSQL source`, async ({ page }) => {
 
 test(`Add PostgreSQL destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
-	await page.click('a[href="/admin/connectors/PostgreSQL?role=Destination"]');
+	await page.click(`a[href="/${adminPath}/connectors/PostgreSQL?role=Destination"]`);
 
 	await page.locator('sl-input >> input[name="Host"]').fill(config.dbHost);
 	await page.locator('sl-input >> input[name="Port"]').fill(String(config.dbPort));
@@ -111,7 +111,7 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 
 test(`Add Filesystem source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click('a[href="/admin/connectors/Filesystem?role=Source"]');
+	await page.click(`a[href="/${adminPath}/connectors/Filesystem?role=Source"]`);
 
 	await createTempDirectory(async (tempDir: string) => {
 		await page.locator('sl-input >> input[name="Root"]').fill(tempDir);
@@ -138,7 +138,7 @@ test(`Add Filesystem source`, async ({ page }) => {
 
 test(`Add Filesystem destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
-	await page.click('a[href="/admin/connectors/Filesystem?role=Destination"]');
+	await page.click(`a[href="/${adminPath}/connectors/Filesystem?role=Destination"]`);
 
 	await createTempDirectory(async (tempDir: string) => {
 		await page.locator('sl-input >> input[name="Root"]').fill(tempDir);
@@ -165,7 +165,7 @@ test(`Add Filesystem destination`, async ({ page }) => {
 
 test(`Add Javascript source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click('a[href="/admin/connectors/JavaScript?role=Source"]');
+	await page.click(`a[href="/${adminPath}/connectors/JavaScript?role=Source"]`);
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('JavaScript');
 	const url = page.url();

@@ -17,7 +17,8 @@ interface Config {
 }
 
 const config: Config = JSON.parse(readFileSync(resolve(__dirname, './test-config.json'), 'utf-8'));
-const adminURL = `${config.baseURL}/admin`;
+const adminPath = 'admin';
+const adminURL = `${config.baseURL}/${adminPath}`;
 
 const login = async (page: Page) => {
 	await page.goto(`${adminURL}/`);
@@ -331,6 +332,7 @@ const createTempDirectory = async (func: (tempDir: string) => Promise<void>) => 
 
 export {
 	config,
+	adminPath,
 	adminURL,
 	login,
 	logout,
