@@ -1967,7 +1967,7 @@ func suitableAsIdentifier(t types.Type) bool {
 // UserIdentity represents a user identity.
 type UserIdentity struct {
 	// TODO(Gianluca): the Connection field is kept here redundantly (the action
-	// is already there) because the UI does not currently have the Action =>
+	// is already there) because the admin does not currently have the Action =>
 	// Connection mapping available, and it would be very inconvenient to
 	// retrieve this information where it is needed. When it will have it in the
 	// future, we will remove this field.

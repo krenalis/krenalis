@@ -133,7 +133,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 		}),
 	).toBeVisible();
 
-	await page.waitForTimeout(8000); // Ensures that the UI has had enough time to poll the server to know if the update is completed (polling happens every 3 seconds) and to refetch the schema.
+	await page.waitForTimeout(8000); // Ensures that the admin has had enough time to poll the server to know if the update is completed (polling happens every 3 seconds) and to refetch the schema.
 	await page.click('.schema-grid__expand-all-button');
 	await expect(
 		page.locator('.grid__row--children > .grid__cell:first-child > .grid__cell-content', {

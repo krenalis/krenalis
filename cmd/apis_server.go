@@ -87,8 +87,8 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"DELETE /connections/{id}/event-write-keys/{key}":        connection.DeleteEventWriteKey,
 		"DELETE /connections/{src}/links/{dst}":                  connection.UnlinkConnection,
 		"DELETE /events/listeners/{id}":                          workspace.DeleteEventListener,
-		"DELETE /keys/{key}":                                     organization.DeleteAPIKey, /* only UI */
-		"DELETE /members/{id}":                                   organization.DeleteMember, /* only UI */
+		"DELETE /keys/{key}":                                     organization.DeleteAPIKey, /* only admin */
+		"DELETE /members/{id}":                                   organization.DeleteMember, /* only admin */
 		"DELETE /workspaces/current":                             workspace.Delete,
 		"GET    /actions/errors/{start}/{end}":                   workspace.ActionErrors,
 		"GET    /actions/executions":                             workspace.Executions,
@@ -102,9 +102,9 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /connections/auth-token":                         workspace.AuthToken,
 		"GET    /connections/auth-url":                           connector.AuthCodeURL,
 		"GET    /connections/{id}":                               workspace.Connection,
-		"GET    /connections/{id}/action-types":                  connection.ActionTypes,   /* only UI */
-		"GET    /connections/{id}/actions/schemas/Events/{type}": connection.ActionSchemas, /* only UI */
-		"GET    /connections/{id}/actions/schemas/{target}":      connection.ActionSchemas, /* only UI */
+		"GET    /connections/{id}/action-types":                  connection.ActionTypes,   /* only admin */
+		"GET    /connections/{id}/actions/schemas/Events/{type}": connection.ActionSchemas, /* only admin */
+		"GET    /connections/{id}/actions/schemas/{target}":      connection.ActionSchemas, /* only admin */
 		"GET    /connections/{id}/event-write-keys":              connection.EventWriteKeys,
 		"GET    /connections/{id}/files/{path}":                  connection.File,
 		"GET    /connections/{id}/files/{path}/absolute":         connection.AbsolutePath,
@@ -112,7 +112,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /connections/{id}/schemas/event/{type}":          connection.AppEventSchema,
 		"GET    /connections/{id}/schemas/user":                  connection.AppUserSchemas,
 		"GET    /connections/{id}/tables/{name}":                 connection.TableSchema,
-		"GET    /connections/{id}/ui":                            connection.ServeUI, /* only UI */
+		"GET    /connections/{id}/ui":                            connection.ServeUI, /* only admin */
 		"GET    /connections/{id}/users":                         connection.AppUsers,
 		"GET    /connectors":                                     api.Connectors,
 		"GET    /connectors/{name}":                              api.Connector,
@@ -122,16 +122,16 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /events/settings/{write_key}":                    api.EventsSettings,
 		"GET    /identity-resolution/latest":                     workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":                   workspace.IdentityResolutionSettings,
-		"GET    /keys":                                           organization.APIKeys,                 /* only UI */
-		"GET    /members":                                        organization.Members,                 /* only UI */
-		"GET    /members/current":                                api.Member,                           /* only UI */
-		"GET    /members/invitations/{token}":                    api.MemberInvitation,                 /* only UI */
-		"GET    /members/reset-password/{token}":                 api.ValidateMemberPasswordResetToken, /* only UI */
+		"GET    /keys":                                           organization.APIKeys,                 /* only admin */
+		"GET    /members":                                        organization.Members,                 /* only admin */
+		"GET    /members/current":                                api.Member,                           /* only admin */
+		"GET    /members/invitations/{token}":                    api.MemberInvitation,                 /* only admin */
+		"GET    /members/reset-password/{token}":                 api.ValidateMemberPasswordResetToken, /* only admin */
 		"GET    /transformation-languages":                       api.TransformationLanguages,
 		"GET    /users":                                          workspace.Users,
 		"GET    /users/schema":                                   workspace.UserSchema,
 		"GET    /users/schema/latest-alter":                      workspace.LatestAlterUserSchema,
-		"GET    /users/schema/suitable-as-identifiers":           workspace.UserPropertiesSuitableAsIdentifiers, /* only UI */
+		"GET    /users/schema/suitable-as-identifiers":           workspace.UserPropertiesSuitableAsIdentifiers, /* only admin */
 		"GET    /users/{id}/events":                              workspace.UserEvents,
 		"GET    /users/{id}/identities":                          workspace.Identities,
 		"GET    /users/{id}/traits":                              workspace.Traits,
@@ -141,27 +141,27 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /workspaces/current":                             organization.Workspace,
 		"POST   /actions":                                        connection.CreateAction,
 		"POST   /actions/{id}/exec":                              action.Execute,
-		"POST   /actions/{id}/ui-event":                          action.ServeUI, /* only UI */
+		"POST   /actions/{id}/ui-event":                          action.ServeUI, /* only admin */
 		"POST   /connections":                                    workspace.CreateConnection,
 		"POST   /connections/{id}/event-write-keys":              connection.CreateEventWriteKey,
 		"POST   /connections/{id}/identities":                    connection.Identities,
 		"POST   /connections/{id}/preview-send-event":            connection.PreviewSendEvent,
 		"POST   /connections/{id}/query":                         connection.ExecQuery,
-		"POST   /connections/{id}/ui-event":                      connection.ServeUI, /* only UI */
+		"POST   /connections/{id}/ui-event":                      connection.ServeUI, /* only admin */
 		"POST   /connections/{src}/links/{dst}":                  connection.LinkConnection,
 		"POST   /events":                                         workspace.IngestEvents,
 		"POST   /events/listeners":                               workspace.CreateEventListener,
 		"POST   /events/{type}":                                  workspace.IngestEvents,
-		"POST   /expressions-properties":                         api.ExpressionsProperties, /* only UI */
+		"POST   /expressions-properties":                         api.ExpressionsProperties, /* only admin */
 		"POST   /identity-resolution/start":                      workspace.StartIdentityResolution,
-		"POST   /keys":                                           organization.CreateAPIKey, /* only UI */
-		"POST   /members/invitations":                            organization.InviteMember, /* only UI */
-		"POST   /members/login":                                  s.login,                   /* only UI */
-		"POST   /members/logout":                                 s.logout,                  /* only UI */
-		"POST   /transformations":                                api.TransformData,         /* only UI */
-		"POST   /ui":                                             workspace.ServeUI,         /* only UI */
-		"POST   /ui-event":                                       workspace.ServeUI,         /* only UI */
-		"POST   /validate-expression":                            api.ValidateExpression,    /* only UI */
+		"POST   /keys":                                           organization.CreateAPIKey, /* only admin */
+		"POST   /members/invitations":                            organization.InviteMember, /* only admin */
+		"POST   /members/login":                                  s.login,                   /* only admin */
+		"POST   /members/logout":                                 s.logout,                  /* only admin */
+		"POST   /transformations":                                api.TransformData,         /* only admin */
+		"POST   /ui":                                             workspace.ServeUI,         /* only admin */
+		"POST   /ui-event":                                       workspace.ServeUI,         /* only admin */
+		"POST   /validate-expression":                            api.ValidateExpression,    /* only admin */
 		"POST   /warehouse/repair":                               workspace.RepairWarehouse,
 		"POST   /workspaces":                                     organization.CreateWorkspace,
 		"POST   /workspaces/test":                                organization.TestWorkspaceCreation,
@@ -170,11 +170,11 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"PUT    /actions/{id}/status":                            action.SetStatus,
 		"PUT    /connections/{id}":                               connection.Update,
 		"PUT    /identity-resolution/settings":                   workspace.UpdateIdentityResolutionSettings,
-		"PUT    /keys/{key}":                                     organization.UpdateAPIKey,       /* only UI */
-		"PUT    /members/current":                                organization.UpdateMember,       /* only UI */
-		"PUT    /members/invitations/{token}":                    api.AcceptInvitation,            /* only UI */
-		"PUT    /members/reset-password":                         api.SendMemberPasswordReset,     /* only UI */
-		"PUT    /members/reset-password/{token}":                 api.ChangeMemberPasswordByToken, /* only UI */
+		"PUT    /keys/{key}":                                     organization.UpdateAPIKey,       /* only admin */
+		"PUT    /members/current":                                organization.UpdateMember,       /* only admin */
+		"PUT    /members/invitations/{token}":                    api.AcceptInvitation,            /* only admin */
+		"PUT    /members/reset-password":                         api.SendMemberPasswordReset,     /* only admin */
+		"PUT    /members/reset-password/{token}":                 api.ChangeMemberPasswordByToken, /* only admin */
 		"PUT    /users/schema":                                   workspace.AlterUserSchema,
 		"PUT    /users/schema/preview":                           workspace.PreviewAlterUserSchema,
 		"PUT    /warehouse":                                      workspace.UpdateWarehouse,

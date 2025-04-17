@@ -150,7 +150,7 @@ func TestAdmin(t *testing.T) {
 	f.Close()
 	t.Logf("configuration file %q created", testConfigJSONPath)
 
-	// Prepare and run the UI tests.
+	// Prepare and run the admin tests.
 	assetsDir := filepath.Join("..", "assets")
 	run(t, "npm", []string{"install"}, assetsDir)
 	run(t, "npx", []string{"playwright", "install", "chromium"}, assetsDir)
