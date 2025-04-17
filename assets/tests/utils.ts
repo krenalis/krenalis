@@ -17,10 +17,10 @@ interface Config {
 }
 
 const config: Config = JSON.parse(readFileSync(resolve(__dirname, './test-config.json'), 'utf-8'));
-const adminURL = `${config.baseURL}/admin/`;
+const adminURL = `${config.baseURL}/admin`;
 
 const login = async (page: Page) => {
-	await page.goto(adminURL);
+	await page.goto(`${adminURL}/`);
 	await page.evaluate(
 		async ({ url, workspace }) => {
 			localStorage.setItem('meergo_ui_workspace_id', String(workspace));
@@ -32,7 +32,7 @@ const login = async (page: Page) => {
 };
 
 const logout = async (page: Page) => {
-	await page.goto(adminURL);
+	await page.goto(`${adminURL}/`);
 	await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;

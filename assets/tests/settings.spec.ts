@@ -10,7 +10,7 @@ test.afterEach(async ({ page }) => {
 });
 
 test(`Change the workspace name`, async ({ page }) => {
-	await page.goto(`${adminURL}settings/general`);
+	await page.goto(`${adminURL}/settings/general`);
 	await page.locator('.general-settings__name >> input').fill('Test workspace');
 	await page.click('.general-settings__save-workspace-button');
 	await page.reload();
@@ -25,7 +25,7 @@ test(`Change the workspace name`, async ({ page }) => {
 });
 
 test(`Change the UI user profile properties`, async ({ page }) => {
-	await page.goto(`${adminURL}settings/general`);
+	await page.goto(`${adminURL}/settings/general`);
 
 	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name sl-input >> input');
 	const userProfileLastName = page.locator('.general-settings__user-profile-last-name sl-input >> input');
@@ -54,7 +54,7 @@ test(`Change the UI user profile properties`, async ({ page }) => {
 });
 
 test(`Change the automatic execution of the identity resolution`, async ({ page }) => {
-	await page.goto(`${adminURL}settings/identity-resolution`);
+	await page.goto(`${adminURL}/settings/identity-resolution`);
 
 	const automaticExecution = page.locator('.identifiers__automatic-execution');
 	const automaticExecutionLabel = page.locator('.identifiers__automatic-execution >> label');
@@ -85,7 +85,7 @@ test(`Change the automatic execution of the identity resolution`, async ({ page 
 });
 
 test(`Change the identifiers`, async ({ page }) => {
-	await page.goto(`${adminURL}settings/identity-resolution`);
+	await page.goto(`${adminURL}/settings/identity-resolution`);
 
 	expect(await page.locator('.identifiers__identifier').count()).toBe(0);
 
@@ -112,7 +112,7 @@ test(`Change the identifiers`, async ({ page }) => {
 });
 
 test(`Sort the identifiers`, async ({ page }) => {
-	await page.goto(`${adminURL}settings/identity-resolution`);
+	await page.goto(`${adminURL}/settings/identity-resolution`);
 
 	const identifiers = page.locator('.identifiers__identifier');
 	await identifiers.nth(0).locator('.identifiers__identifier-menu').click();
@@ -129,7 +129,7 @@ test(`Sort the identifiers`, async ({ page }) => {
 });
 
 test(`Remove the identifiers`, async ({ page }) => {
-	await page.goto(`${adminURL}settings/identity-resolution`);
+	await page.goto(`${adminURL}/settings/identity-resolution`);
 
 	let identifiers = page.locator('.identifiers__identifier');
 

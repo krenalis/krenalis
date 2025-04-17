@@ -7,16 +7,16 @@ const LOGOUT_BUTTON_CLASS = '.sidebar__item-text-logout';
 test('Try to access a page that requires authentication and check that it redirects to the login page', async ({
 	page,
 }) => {
-	await page.goto(`${adminURL}`);
+	await page.goto(`${adminURL}/`);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
-	await page.goto(`${adminURL}connections`);
+	await page.goto(`${adminURL}/connections`);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
-	await page.goto(`${adminURL}users`);
+	await page.goto(`${adminURL}/users`);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
 });
 
 test('Login', async ({ page }) => {
-	await page.goto(`${adminURL}`);
+	await page.goto(`${adminURL}/`);
 	await page.getByRole('textbox', { name: 'email' }).fill('acme@open2b.com');
 	await page.getByRole('textbox', { name: 'password' }).fill('foopass2');
 	await page.click('sl-button');
@@ -37,12 +37,12 @@ test('Login', async ({ page }) => {
 
 test('Logout', async ({ page }) => {
 	await login(page);
-	await page.goto(`${adminURL}`);
+	await page.goto(`${adminURL}/`);
 	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeVisible();
 	await page.click(LOGOUT_BUTTON_CLASS);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
-	await page.goto(`${adminURL}connections`);
+	await page.goto(`${adminURL}/connections`);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
-	await page.goto(`${adminURL}users`);
+	await page.goto(`${adminURL}/users`);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
 });
