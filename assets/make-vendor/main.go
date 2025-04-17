@@ -382,7 +382,7 @@ func moveToModuleRoot() (string, error) {
 	}
 }
 
-var shoelaceIconRe = regexp.MustCompile(`<SlIcon\s+name=["']([^"']+)["'][^>]*>`)
+var shoelaceIconRe = regexp.MustCompile(`<(?:SlIcon|SlIconButton|IconWrapper)\b[^>]*\bname\s*=\s*['"]([^'"]+)['"][^>]*\s*\/?>`)
 
 // usedShoelaceIcons returns the Shoelace icon files used in the ".tsx" files
 // within the specified directory (dir).
