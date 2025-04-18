@@ -7,15 +7,15 @@
 
 <h2>Table of contents</h2>
 
+- [Install dependencies](#install-dependencies)
 - [Format files](#format-files)
 - [Build `dist/meergo.min.js`](#build-distmeergominjs)
-- [Minimum Supported Browsers](#minimum-supported-browsers)
 - [ES6 Module](#es6-module)
   - [ES6 Module Compatibility](#es6-module-compatibility)
 - [CJS Module](#cjs-module)
 - [Execute Tests](#execute-tests)
 
-### Install dependencies
+## Install dependencies
 
 The following dependencies are required:
 
@@ -56,16 +56,10 @@ deno task minify
 * `deno task transpile` transpiles the `build/meergo.bundle.js` file to ES5 and creates the `build/meergo.es5.js` file.
 * `deno task minify` minifies the `build/meergo.es5.js` file and creates the `dist/meergo.min.js` file.
 
-## Minimum Supported Browsers
-
-* Chrome 23
-* Edge 80
-* Safari 7
-* Firefox 21
-* Opera 14
-* IE 11
-
 ## ES6 Module
+
+> [!IMPORTANT]
+> This section should be revised when the SDK is released. Eventually, some (or all) of this section should be moved to the [SDK usage documentation](http://localhost:8080/developers/javascript-sdk/getting-started).
 
 To import the JavaScript SDK into an application as an ES6 module:
 
@@ -98,6 +92,9 @@ To import the JavaScript SDK into a browser as an ES6 module, follow these steps
 Check the browser compatibility for ES6 module usage and dynamic import: https://caniuse.com/es6-module-dynamic-import
 
 ## CJS Module
+
+> [!IMPORTANT]
+> This section should be revised when the SDK is released. Eventually, some (or all) of this section should be moved to the [SDK usage documentation](http://localhost:8080/developers/javascript-sdk/getting-started).
 
 To import the JavaScript SDK into an application using CommonJS (CJS) using the `require` function, follow these steps:
 

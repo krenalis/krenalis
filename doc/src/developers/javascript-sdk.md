@@ -26,5 +26,16 @@ This streamlined approach simplifies the development process, enabling teams to 
 | [Options](javascript-sdk/options)                          | The available options when installing the SDK.                            |
 | [Methods&nbsp;of&nbsp;SDK](javascript-sdk/methods)         | The methods of the SDK, including the methods to send events.             |
 | [Storage&nbsp;locations](javascript-sdk/storage-locations) | Where the users' data is stored and how to manage its storage location.   |
-| [Querystring&nbsp;API](javascript-sdk/querystring-api)     | How to activate `identify` and `track` events using the URL query string. | 
+| [Querystring&nbsp;API](javascript-sdk/querystring-api)     | How to activate `identify` and `track` events using the URL query string. |
 | [FAQ](javascript-sdk/faq)                                  | How to activate `identify` and `track` events using the URL query string. |
+
+## Minimum Supported Browsers
+
+Here is a list of the minimum browser versions required to run the JavaScript SDK:
+
+* Chrome 23
+* Edge 80
+* Safari 7
+* Firefox 21
+* Opera 14
+* IE 11
