@@ -1,5 +1,12 @@
 # Meergo JavaScript SDK
 
+> [!NOTE]
+> This documentation is for the developers of the Meergo JavaScript SDK.
+> 
+> If you are looking for documentation for using the SDK, [you can find it here](http://localhost:8080/developers/javascript-sdk).
+
+<h2>Table of contents</h2>
+
 - [Format files](#format-files)
 - [Build `dist/meergo.min.js`](#build-distmeergominjs)
 - [Minimum Supported Browsers](#minimum-supported-browsers)
