@@ -74,6 +74,9 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		asset = after + ".br"
 	} else {
+		// Set Content-Security-Policy header.
+		// The hash refers to the inline import map in the index.html file.
+		w.Header().Set("Content-Security-Policy", "script-src 'self' 'sha256-Eggv/sxfau5R7DCyaPw6OwmcQOlrO9oX7GhT3aozILU='")
 		w.Header().Add("Content-Type", "text/html; charset=utf-8")
 		asset = "index.html.br"
 	}

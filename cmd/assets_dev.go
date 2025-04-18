@@ -245,6 +245,9 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// Set Content-Security-Policy header.
+	// The hash refers to the inline import map in the index.html file.
+	w.Header().Set("Content-Security-Policy", "script-src 'self' 'sha256-Eggv/sxfau5R7DCyaPw6OwmcQOlrO9oX7GhT3aozILU='")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	index := filepath.Join(moduleRoot, "assets", "public", "index.html")
 	http.ServeFile(w, r, index)

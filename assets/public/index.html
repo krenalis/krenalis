@@ -19,13 +19,8 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <script type="importmap">
-      {
-        "imports": {
-          "monaco-editor": "/admin/src/monaco/vs/editor/editor.main.js"
-        }
-      }
-    </script>
+    <!-- In order for the following import map to work, make sure to include the Content-Security-Policy header: script-src 'self' 'sha256-Eggv/sxfau5R7DCyaPw6OwmcQOlrO9oX7GhT3aozILU=' -->
+    <script type="importmap">{"imports":{"monaco-editor":"/admin/src/monaco/vs/editor/editor.main.js"}}</script>
     <div id="root"></div>
     <!--
       This HTML file is a template.
