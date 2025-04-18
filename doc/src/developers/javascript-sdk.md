@@ -27,7 +27,7 @@ This streamlined approach simplifies the development process, enabling teams to 
 | [Methods&nbsp;of&nbsp;SDK](javascript-sdk/methods)         | The methods of the SDK, including the methods to send events.             |
 | [Storage&nbsp;locations](javascript-sdk/storage-locations) | Where the users' data is stored and how to manage its storage location.   |
 | [Querystring&nbsp;API](javascript-sdk/querystring-api)     | How to activate `identify` and `track` events using the URL query string. |
-| [FAQ](javascript-sdk/faq)                                  | How to activate `identify` and `track` events using the URL query string. |
+| [FAQ](javascript-sdk/faq)                                  | Frequently Asked Questions about the JavaScript SDK.                      |
 
 ## Minimum Supported Browsers
 
