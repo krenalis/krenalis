@@ -875,6 +875,8 @@ const TransformationBox = ({
 				enumValues = ['true', 'false'];
 			}
 
+			const typeName = toMeergoStringType(property.full.type);
+
 			mappings.push(
 				<div
 					key={k}
@@ -924,10 +926,10 @@ const TransformationBox = ({
 							property?.indentation! > 0 ? ' action__transformation-output-property--indented' : ''
 						}`}
 					>
-						<span className='action__transformation-output-property-key'>{k}</span>
-						<span className='action__transformation-output-property-type'>
-							{typeToString(property.full.type)}
-						</span>
+						<PropertyTooltip propertyName={k} typeName={typeName} type={property.full.type}>
+							<span className='action__transformation-output-property-key'>{k}</span>
+							<span className='action__transformation-output-property-type'>{typeName}</span>
+						</PropertyTooltip>
 						{showRequired && (
 							<span className='action__transformation-output-property-required'>required</span>
 						)}
@@ -2568,7 +2570,7 @@ const TransformationProperty = ({
 
 	let typeName = '';
 	if (language === '') {
-		typeName = typeToString(property.type);
+		typeName = toMeergoStringType(property.type);
 	} else if (language === 'Python') {
 		typeName = toPythonType(property.type, action.transformation.function.preserveJSON, property.nullable);
 	} else {
@@ -2616,12 +2618,16 @@ const TransformationProperty = ({
 							/>
 						</SlTooltip>
 					)}
-					<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
-					<span className='fullscreen-transformation__property-type'>
-						<span>{typeName}</span>
-						{side === 'input' && property.readOptional && <span>- optional</span>}
-						{showRequired && <span className='fullscreen-transformation__property-required'>required</span>}
-					</span>
+					<PropertyTooltip propertyName={property.name} typeName={typeName} type={property.type}>
+						<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
+						<span className='fullscreen-transformation__property-type'>
+							<span>{typeName}</span>
+							{side === 'input' && property.readOptional && <span>- optional</span>}
+							{showRequired && (
+								<span className='fullscreen-transformation__property-required'>required</span>
+							)}
+						</span>
+					</PropertyTooltip>
 					{!isOutMatchingProperty && (
 						<SlCopyButton
 							className='fullscreen-transformation__property-copy'
@@ -2645,6 +2651,28 @@ const TransformationProperty = ({
 				</div>
 			</div>
 		</div>
+	);
+};
+
+interface TypeTooltipProps {
+	propertyName: string;
+	typeName: string;
+	type: Type;
+	children: ReactNode;
+}
+
+const PropertyTooltip = ({ propertyName, typeName, type, children }: TypeTooltipProps) => {
+	return (
+		<SlTooltip className='type-tooltip' placement='top-start' distance={5}>
+			<div slot='content'>
+				<div className='type-tooltip__title'>
+					<span className='type-tooltip__property-name'>{propertyName}</span>{' '}
+					<span className='type-tooltip__type-name'>{typeName}</span>
+				</div>
+				{typeDescription(type)}
+			</div>
+			{children}
+		</SlTooltip>
 	);
 };
 
@@ -2731,7 +2759,81 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 	return isVerticallyVisible;
 }
 
-function typeToString(type: Type) {
+function typeDescription(type: Type): ReactNode[] {
+	let elements: ReactNode[] = [
+		<div>
+			A Meergo {meergoTypeDescription(type)}
+			{type.kind !== 'decimal' && type.kind !== 'object' && type.kind !== 'array' && type.kind !== 'map'
+				? ' ' + 'type'
+				: ''}
+			.
+		</div>,
+	];
+	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
+		if (type.minimum != null) {
+			elements.push(<div>Minimum: {type.minimum}</div>);
+		}
+		if (type.maximum != null) {
+			elements.push(<div>Maximum: {type.maximum}</div>);
+		}
+		if (type.kind === 'float' && type.real != null) {
+			elements.push(<div>Real: {type.real}</div>);
+		}
+	} else if (type.kind === 'decimal') {
+		if (type.minimum != null) {
+			elements.push(<div>Minimum: {type.minimum}</div>);
+		}
+		if (type.maximum != null) {
+			elements.push(<div>Maximum: {type.maximum}</div>);
+		}
+	} else if (type.kind === 'year') {
+		elements.push(<div>Minimum: 1</div>);
+		elements.push(<div>Maximum: 9999</div>);
+	} else if (type.kind === 'text') {
+		if (type.values != null) {
+			elements.push(<div>Values: {type.values.join(', ')}</div>);
+		}
+		if (type.regexp != null) {
+			elements.push(<div>Regular expression: {type.regexp}</div>);
+		}
+		if (type.byteLen != null) {
+			elements.push(<div>Max bytes: {type.byteLen}</div>);
+		}
+		if (type.charLen != null) {
+			elements.push(<div>Max characters: {type.charLen}</div>);
+		}
+	} else if (type.kind === 'array' || type.kind === 'map') {
+		const elementTypeDescription = typeDescription(type.elementType);
+		elements = [...elements, ...elementTypeDescription.slice(1)];
+	}
+	return elements;
+}
+
+function meergoTypeDescription(type: Type): ReactNode {
+	let description = <code>{type.kind}</code>;
+	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
+		description = (
+			<>
+				{type.bitSize}-bit <code>{type.kind}</code>
+			</>
+		);
+	} else if (type.kind === 'decimal') {
+		description = (
+			<>
+				<code>{type.kind}</code> type with precision {type.precision} and scale {type.scale}
+			</>
+		);
+	} else if (type.kind === 'array' || type.kind === 'map') {
+		description = (
+			<code>
+				{type.kind} of {meergoTypeDescription(type.elementType)}
+			</code>
+		);
+	}
+	return description;
+}
+
+function toMeergoStringType(type: Type) {
 	if (type.kind === 'array' || type.kind === 'map') {
 		return `${type.kind} of ${type.elementType.kind}`;
 	}
