@@ -161,7 +161,7 @@ const ActionQuery = () => {
 					name='actionQueryEditor'
 					value={action.query!}
 					onChange={onUpdateQuery}
-				></EditorWrapper>
+				/>
 				<div className='action__query-buttons'>
 					<SlButton className='action__query-preview' variant='neutral' size='small' onClick={onQueryPreview}>
 						Preview

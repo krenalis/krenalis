@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/andybalholm/brotli"
@@ -32,26 +33,46 @@ func newAssetsHandler(fsys fs.FS) (*assetsHandler, error) {
 
 func (h *assetsHandler) Close() {}
 
+var contentType = map[string]string{
+	".css": "text/css",
+	".js":  "application/x-javascript",
+	".map": "application/json",
+	".ttf": "font/ttf",
+}
+
 func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var asset string
-	if path, ok := strings.CutPrefix(r.URL.Path, "/admin/src/"); ok {
-		switch path {
-		case "index.js":
-			w.Header().Add("Content-Type", "text/javascript")
-		case "index.js.map":
-			w.Header().Add("Content-Type", "application/json")
-		case "index.css":
-			w.Header().Add("Content-Type", "text/css")
-		case "index.css.map":
-			w.Header().Add("Content-Type", "application/json")
+	if after, ok := strings.CutPrefix(r.URL.Path, "/admin/src/"); ok {
+		switch after {
+		case
+			"index.css",
+			"index.css.map",
+			"index.js",
+			"index.js.map",
+			"monaco/vs/editor/codicon-37A3DWZT.ttf",
+			"monaco/vs/editor/editor.main.css",
+			"monaco/vs/editor/editor.main.css.map",
+			"monaco/vs/editor/editor.main.js",
+			"monaco/vs/editor/editor.main.js.map",
+			"monaco/vs/editor/editor.worker.js",
+			"monaco/vs/editor/editor.worker.js.map",
+			"monaco/vs/language/typescript/ts.worker.js",
+			"monaco/vs/language/typescript/ts.worker.js.map":
+			if ct, ok := contentType[path.Ext(after)]; ok {
+				w.Header().Add("Content-Type", ct)
+			}
+		case "codicon-37A3DWZT.ttf":
+			// See issue https://github.com/meergo/meergo/issues/1497
+			after = "monaco/vs/editor/codicon-37A3DWZT.ttf"
+			w.Header().Add("Content-Type", "font/ttf")
 		default:
-			if !strings.HasSuffix(path, ".svg") {
+			if !strings.HasSuffix(after, ".svg") {
 				http.NotFound(w, r)
 				return
 			}
 			w.Header().Add("Content-Type", "image/svg+xml")
 		}
-		asset = path + ".br"
+		asset = after + ".br"
 	} else {
 		w.Header().Add("Content-Type", "text/html; charset=utf-8")
 		asset = "index.html.br"

@@ -24,13 +24,16 @@ func Test_Build(t *testing.T) {
 	}
 
 	nodeOutDir := t.TempDir()
-	err = build(nodeOutDir, ".", nil)
+	vendorDir := filepath.Join(".", "node_modules_vendor")
+	entryPoint := filepath.Join(".", "src", "index.tsx")
+
+	err = build(nodeOutDir, vendorDir, entryPoint, nil, nil)
 	if err != nil {
 		t.Fatalf("cannot build from node_modules: %s", err)
 	}
 
 	vendorOutDir := t.TempDir()
-	err = build(vendorOutDir, ".", resolve)
+	err = build(vendorOutDir, vendorDir, entryPoint, nil, resolve)
 	if err != nil {
 		t.Fatalf("cannot build from vendor: %s", err)
 	}

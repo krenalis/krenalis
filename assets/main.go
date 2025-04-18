@@ -45,9 +45,24 @@ func main() {
 	fmt.Println(" ✔ The asset files have been generated.")
 }
 
-var generatedFiles = []string{"index.html", "index.js", "index.js.map", "index.css", "index.css.map"}
+var generatedFiles = []string{
+	"index.css",
+	"index.css.map",
+	"index.html",
+	"index.js",
+	"index.js.map",
+	"monaco/vs/editor/codicon-37A3DWZT.ttf",
+	"monaco/vs/editor/editor.main.css",
+	"monaco/vs/editor/editor.main.css.map",
+	"monaco/vs/editor/editor.main.js",
+	"monaco/vs/editor/editor.main.js.map",
+	"monaco/vs/editor/editor.worker.js",
+	"monaco/vs/editor/editor.worker.js.map",
+	"monaco/vs/language/typescript/ts.worker.js",
+	"monaco/vs/language/typescript/ts.worker.js.map",
+}
 
-// buildAssets builds and the assets.
+// buildAssets builds the assets.
 func buildAssets() error {
 
 	// Create the directory used to build the assets.
@@ -80,9 +95,9 @@ func buildAssets() error {
 	}
 	buildDir += string(os.PathSeparator)
 
-	uiDir := buildDir + "ui" + string(os.PathSeparator)
-	outDir := buildDir + "out" + string(os.PathSeparator)
-	dstDir := buildDir + "dst" + string(os.PathSeparator)
+	adminDir := filepath.Join(buildDir, "admin") + string(os.PathSeparator)
+	outDir := filepath.Join(buildDir, "out") + string(os.PathSeparator)
+	dstDir := filepath.Join(buildDir, "dst") + string(os.PathSeparator)
 
 	for _, dir := range []string{outDir, dstDir} {
 		err = os.Mkdir(dir, 0755)
@@ -91,8 +106,8 @@ func buildAssets() error {
 		}
 	}
 
-	// Copy the UI's assets into the uiDir directory.
-	err = os.CopyFS(uiDir, assetsFS)
+	// Copy the admin's assets into the adminDir directory.
+	err = os.CopyFS(adminDir, assetsFS)
 	if err != nil {
 		return fmt.Errorf("cannot copy assets: %s", err)
 	}
@@ -103,16 +118,74 @@ func buildAssets() error {
 		return fmt.Errorf("cannot read the resolve file: %s", err)
 	}
 
-	// Bundle the UI's assets.
-	err = build(outDir, uiDir, resolve)
+	vendorDir := filepath.Join(adminDir, "node_modules_vendor")
+
+	// Bundle the admin's assets.
+	entryPoint := filepath.Join(adminDir, "src", "index.tsx")
+	externals := []string{"monaco-editor"}
+	err = build(outDir, vendorDir, entryPoint, externals, resolve)
 	if err != nil {
 		return err
 	}
 
+	// Bundle Monaco editor.
+	monacoOutDir := filepath.Join(outDir, "monaco", "vs", "editor")
+	entryPoint = filepath.Join(vendorDir, "monaco-editor", "esm", "vs", "editor", "editor.main.js")
+	externals = []string{
+		"vs/language/json/json.worker.js",
+		"vs/language/css/css.worker.js",
+		"vs/language/html/html.worker.js",
+		"vs/language/typescript/ts.worker.js",
+		"vs/editor/editor.worker.js",
+	}
+	err = build(monacoOutDir, vendorDir, entryPoint, externals, resolve)
+	if err != nil {
+		return err
+	}
+
+	// Bundle Monaco workers.
+	entryPoint = filepath.Join(vendorDir, "monaco-editor", "esm", "vs", "language", "typescript", "ts.worker.js")
+	tsWorkerOutDir := filepath.Join(outDir, "monaco", "vs", "language", "typescript")
+	err = build(tsWorkerOutDir, vendorDir, entryPoint, nil, resolve)
+	if err != nil {
+		return err
+	}
+	entryPoint = filepath.Join(vendorDir, "monaco-editor", "esm", "vs", "editor", "editor.worker.js")
+	err = build(monacoOutDir, vendorDir, entryPoint, nil, resolve)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(path.Join(dstDir, "monaco", "vs", "editor"), 0o777)
+	if err != nil {
+		return fmt.Errorf("cannot create the 'monaco' directory into the destination dir: %s", err)
+	}
+	err = os.MkdirAll(path.Join(dstDir, "monaco", "vs", "language", "typescript"), 0o777)
+	if err != nil {
+		return fmt.Errorf("cannot create the 'monaco' directory into the destination dir: %s", err)
+	}
+
 	// Verify that all assets are been generated.
-	for _, file := range []string{"index.js", "index.js.map", "index.css", "index.css.map"} {
+	expectedFiles := []string{
+		"index.css",
+		"index.css.map",
+		"index.js",
+		"index.js.map",
+		"monaco/vs/editor/codicon-37A3DWZT.ttf",
+		"monaco/vs/editor/editor.main.css",
+		"monaco/vs/editor/editor.main.css.map",
+		"monaco/vs/editor/editor.main.js",
+		"monaco/vs/editor/editor.main.js.map",
+		"monaco/vs/editor/editor.worker.js",
+		"monaco/vs/editor/editor.worker.js.map",
+		"monaco/vs/language/typescript/ts.worker.js",
+		"monaco/vs/language/typescript/ts.worker.js.map",
+	}
+	for _, file := range expectedFiles {
 		st, err := os.Stat(outDir + file)
 		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return fmt.Errorf("expected file %q (in %q), but no file was found", file, outDir)
+			}
 			return fmt.Errorf("cannot stat file %q: %s", outDir+file, err)
 		}
 		if st.Size() == 0 {
@@ -150,7 +223,7 @@ func buildAssets() error {
 		return fmt.Errorf("cannot create the Shoelace icons directory into the destination dir: %s", err)
 	}
 
-	// Compress the UI's assets.
+	// Compress the admin's assets.
 	var in, out *os.File
 	var bw *brotli.Writer
 	defer func() {
@@ -177,7 +250,7 @@ func buildAssets() error {
 
 		out, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 		if err != nil {
-			return fmt.Errorf("cannot create file %q: %s", srcPath+".br", err)
+			return fmt.Errorf("cannot open file %q: %s", dstPath, err)
 		}
 
 		bw := brotli.NewWriter(out)
@@ -232,19 +305,12 @@ func buildAssets() error {
 	return nil
 }
 
-// build builds the assets located in the assetsDir directory and saves them
-// into the outDir directory. If resolve is not nil, it will be used to resolve
-// the paths.
-func build(outDir, assetsDir string, resolve map[string]string) error {
+// build builds the asset at entryPoint, using the provided vendor directory and
+// saves them into the outDir directory. If resolve is not nil, it will be used
+// to resolve the paths.
+func build(outDir, vendorDir, entryPoint string, external []string, resolve map[string]string) error {
 
-	var err error
-	assetsDir, err = filepath.Abs(assetsDir)
-	if err != nil {
-		return err
-	}
-
-	entryPoint := filepath.Join(assetsDir, "src", "index.tsx")
-	vendorDir := filepath.Join(assetsDir, "node_modules_vendor") + string(os.PathSeparator)
+	vendorDir += string(os.PathSeparator)
 
 	var plugins []api.Plugin
 	if resolve != nil {
@@ -306,7 +372,11 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 		Sourcemap:         api.SourceMapLinked,
 		Target:            api.ES2018,
 		TreeShaking:       api.TreeShakingTrue,
-		Write:             true,
+		Loader: map[string]api.Loader{
+			".ttf": api.LoaderFile,
+		},
+		External: external,
+		Write:    true,
 	})
 	if result.Errors != nil {
 		var msg string

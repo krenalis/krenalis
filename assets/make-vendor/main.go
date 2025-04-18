@@ -43,11 +43,10 @@ func makeVendor() error {
 		return err
 	}
 
-	entryPoint := filepath.Join(root, "assets", "src", "index.jsx")
 	nodeModulesDir := filepath.Join(root, "assets", "node_modules") + string(os.PathSeparator)
 
 	// Create the out directory used by esbuild.
-	outDir, err := os.MkdirTemp("", "meergo-ui-make-vendor-*")
+	outDir, err := os.MkdirTemp("", "meergo-admin-make-vendor-*")
 	if err != nil {
 		panic(err)
 	}
@@ -115,51 +114,23 @@ func makeVendor() error {
 		},
 	}
 
-	// Run esbuild.
-	result := api.Build(api.BuildOptions{
-		Bundle:            true,
-		EntryPoints:       []string{entryPoint},
-		Format:            api.FormatESModule,
-		JSX:               api.JSXAutomatic,
-		LegalComments:     api.LegalCommentsNone,
-		MinifyIdentifiers: true,
-		MinifySyntax:      true,
-		MinifyWhitespace:  true,
-		Outdir:            outDir,
-		Plugins:           []api.Plugin{plugin},
-		Target:            api.ES2018,
-		TreeShaking:       api.TreeShakingTrue,
-		Write:             true,
-	})
-	if result.Errors != nil {
-		msg := "cannot generate admin assets when making vendor:"
-		for _, err := range result.Errors {
-			if len(result.Errors) == 1 {
-				msg += " "
-			} else {
-				msg += "\n  - "
-			}
-			msg += err.Text
-			if loc := err.Location; loc != nil {
-				msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
-			}
-		}
-		return errors.New(msg)
+	// Run esbuild for the admin.
+	entryPoint := filepath.Join(root, "assets", "src", "index.jsx")
+	err = build(outDir, entryPoint, plugin)
+	if err != nil {
+		return err
 	}
-	if result.Warnings != nil {
-		msg := "cannot generate admin assets when making vendor:"
-		for _, err := range result.Warnings {
-			if len(result.Warnings) == 1 {
-				msg += " "
-			} else {
-				msg += "\n  - "
-			}
-			msg += err.Text
-			if loc := err.Location; loc != nil {
-				msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
-			}
-		}
-		return errors.New(msg)
+
+	// Run esbuild for Monaco workers.
+	tsWorker := filepath.Join(root, "assets", "node_modules", "monaco-editor", "esm", "vs", "language", "typescript", "ts.worker.js")
+	err = build(outDir, tsWorker, plugin)
+	if err != nil {
+		return err
+	}
+	editorWorker := filepath.Join(root, "assets", "node_modules", "monaco-editor", "esm", "vs", "editor", "editor.worker.js")
+	err = build(outDir, editorWorker, plugin)
+	if err != nil {
+		return err
 	}
 
 	// Copy the resolved files from the "node_modules" directory to "node_modules_vendor".
@@ -195,6 +166,16 @@ func makeVendor() error {
 			}
 			break
 		}
+	}
+
+	// Copy the Monaco workers.
+	err = copyFile(filepath.Clean("assets/node_modules_vendor/monaco-editor/esm/vs/language/typescript/ts.worker.js"), tsWorker)
+	if err != nil {
+		return err
+	}
+	err = copyFile(filepath.Clean("assets/node_modules_vendor/monaco-editor/esm/vs/editor/editor.worker.js"), editorWorker)
+	if err != nil {
+		return err
 	}
 
 	// Copy the Shoelace icons.
@@ -297,6 +278,60 @@ func (f *resolveFile) MarshalJSON() ([]byte, error) {
 	b.WriteString("\n}")
 	f.mu.Unlock()
 	return b.Bytes(), nil
+}
+
+// build builds the assets at the provided entry point and writes them into the
+// outDir directory.
+func build(outDir, entryPoint string, plugin api.Plugin) error {
+	result := api.Build(api.BuildOptions{
+		Bundle:            true,
+		EntryPoints:       []string{entryPoint},
+		Format:            api.FormatESModule,
+		JSX:               api.JSXAutomatic,
+		LegalComments:     api.LegalCommentsNone,
+		MinifyIdentifiers: true,
+		MinifySyntax:      true,
+		MinifyWhitespace:  true,
+		Outdir:            outDir,
+		Plugins:           []api.Plugin{plugin},
+		Target:            api.ES2018,
+		TreeShaking:       api.TreeShakingTrue,
+		Loader: map[string]api.Loader{
+			".ttf": api.LoaderFile,
+		},
+		Write: true,
+	})
+	if result.Errors != nil {
+		msg := "cannot generate admin assets when making vendor:"
+		for _, err := range result.Errors {
+			if len(result.Errors) == 1 {
+				msg += " "
+			} else {
+				msg += "\n  - "
+			}
+			msg += err.Text
+			if loc := err.Location; loc != nil {
+				msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
+			}
+		}
+		return errors.New(msg)
+	}
+	if result.Warnings != nil {
+		msg := "cannot generate admin assets when making vendor:"
+		for _, err := range result.Warnings {
+			if len(result.Warnings) == 1 {
+				msg += " "
+			} else {
+				msg += "\n  - "
+			}
+			msg += err.Text
+			if loc := err.Location; loc != nil {
+				msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
+			}
+		}
+		return errors.New(msg)
+	}
+	return nil
 }
 
 func pathKey(dir, name string) string {
