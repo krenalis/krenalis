@@ -1,1 +1,2 @@
-./assets/node_modules_vendor/* linguist-vendored
+vendor/** linguist-vendored
+assets/node_modules_vendor/** linguist-vendored
