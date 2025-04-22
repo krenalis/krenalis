@@ -8,9 +8,6 @@ main:
 
 encryptionKey: 6uA9ccQxZ+/1PlqXZFR49QZ0fnQDCNZIugyKwHv3WdkqcoIA3iSwuuj1yvM+f2cZFQ7Saqjq695Y0AP+rlZDOg==
 
-esbuild:
-    printWarningsOnStderr: false
-
 postgreSQL:
     host: db
     port: 5432

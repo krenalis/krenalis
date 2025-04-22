@@ -38,12 +38,9 @@ type Settings struct {
 		TerminationDelay time.Duration `yaml:"terminationDelay"`
 		ExternalURL      string        `yaml:"externalURL"`
 	}
-	EncryptionKey string `yaml:"encryptionKey"`
-	ESBuild       struct {
-		PrintWarningsOnStderr bool `yaml:"printWarningsOnStderr"`
-	}
-	PostgreSQL core.PostgreSQLConfig `yaml:"postgreSQL"`
-	SMTP       struct {
+	EncryptionKey string                `yaml:"encryptionKey"`
+	PostgreSQL    core.PostgreSQLConfig `yaml:"postgreSQL"`
+	SMTP          struct {
 		Host string
 		Port int
 		User string
