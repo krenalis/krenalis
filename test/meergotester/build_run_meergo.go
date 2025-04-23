@@ -51,7 +51,7 @@ func generateAssets(ctx context.Context, repo string) error {
 }
 
 func writeConfigYAMLFile(meergoDir string, setts *cmd.Settings) error {
-	err := validDatabaseNameForTests(setts.PostgreSQL.Database)
+	err := validDatabaseNameForTests(setts.DB.Database)
 	if err != nil {
 		return err
 	}

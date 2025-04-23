@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,26 +33,31 @@ import (
 )
 
 type Settings struct {
-	Main struct {
-		Host             string
-		HTTPS            bool
-		TerminationDelay time.Duration `yaml:"terminationDelay"`
-		ExternalURL      string        `yaml:"externalURL"`
+	EncryptionKey    string        `yaml:"encryptionKey"`
+	TerminationDelay time.Duration `yaml:"terminationDelay"`
+	HTTP             struct {
+		Host string
+		Port int
+		TLS  struct {
+			Enabled  bool
+			CertFile string `yaml:"certFile"`
+			KeyFile  string `yaml:"keyFile"`
+		}
+		ExternalURL string `yaml:"externalURL"`
 	}
-	EncryptionKey string                `yaml:"encryptionKey"`
-	PostgreSQL    core.PostgreSQLConfig `yaml:"postgreSQL"`
-	SMTP          struct {
+	DB   core.DBConfig
+	SMTP struct {
 		Host string
 		Port int
 		User string
 		Pass string
 	}
-	FunctionProvider struct {
+	Transformations struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
-	} `yaml:"functionProvider"`
-	ConnectorsOAuth map[string]*state.ConnectorOAuth `yaml:"connectorsOAuth"`
-	Telemetry       struct {
+	}
+	OAuth     map[string]*state.ConnectorOAuth `yaml:"oauth"`
+	Telemetry struct {
 		Enable bool
 	}
 }
@@ -90,33 +96,33 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 
 	config := core.Config{
-		PostgreSQL: settings.PostgreSQL,
-		SMTP:       settings.SMTP,
+		DB:   settings.DB,
+		SMTP: settings.SMTP,
 	}
 
-	// Choose the function provider setting.
-	if settings.FunctionProvider.Lambda.Node.Runtime != "" || settings.FunctionProvider.Lambda.Python.Runtime != "" {
-		config.FunctionProvider = core.LambdaConfig(settings.FunctionProvider.Lambda)
+	// Choose the transformation function provider setting.
+	if settings.Transformations.Lambda.Node.Runtime != "" || settings.Transformations.Lambda.Python.Runtime != "" {
+		config.FunctionProvider = core.LambdaConfig(settings.Transformations.Lambda)
 	}
-	if settings.FunctionProvider.Local.NodeExecutable != "" || settings.FunctionProvider.Local.PythonExecutable != "" {
+	if settings.Transformations.Local.NodeExecutable != "" || settings.Transformations.Local.PythonExecutable != "" {
 		if config.FunctionProvider != nil {
-			return errors.New("cannot specify both the Lambda and the local function provider in the configuration (hint: check your 'config.yaml' file)")
+			return errors.New("cannot specify both the Lambda and the local transformation provider in the configuration (hint: check your 'config.yaml' file)")
 		}
-		config.FunctionProvider = core.LocalConfig(settings.FunctionProvider.Local)
+		config.FunctionProvider = core.LocalConfig(settings.Transformations.Local)
 	}
 
 	// Validate the settings of the connectors.
-	if settings.ConnectorsOAuth != nil {
-		for name, setting := range settings.ConnectorsOAuth {
+	if settings.OAuth != nil {
+		for name, setting := range settings.OAuth {
 			if (setting.ClientID == "") == (setting.ClientSecret == "") {
 				continue
 			}
 			if setting.ClientID == "" {
-				return fmt.Errorf("oAuthClientID value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
+				return fmt.Errorf("OAuth clientID value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
 			}
-			return fmt.Errorf("ClientSecret value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
+			return fmt.Errorf("OAuth clientSecret value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
 		}
-		config.ConnectorsOAuth = maps.Clone(settings.ConnectorsOAuth)
+		config.ConnectorsOAuth = maps.Clone(settings.OAuth)
 	}
 
 	// Decode the encryption key.
@@ -141,7 +147,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer core.Close()
 
-	apisServer := newAPIsServer(core, config.EncryptionKey, settings.Main.HTTPS)
+	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {
@@ -149,8 +155,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer assets.Close()
 
-	addr := settings.Main.Host
-	if addr == "" {
+	addr := settings.HTTP.Host + ":" + strconv.Itoa(settings.HTTP.Port)
+	if addr == ":" {
 		addr = "127.0.0.1:9090"
 	}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -205,12 +211,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		ErrorLog: log.New(&httpLogger{}, "", 0),
 	}
 	var certPem, keyPem string
-	if settings.Main.HTTPS {
-		certPem, err = filepath.Abs("cert.pem")
+	if settings.HTTP.TLS.Enabled {
+		certPem, err = filepath.Abs(settings.HTTP.TLS.CertFile)
 		if err != nil {
 			return err
 		}
-		keyPem, err = filepath.Abs("key.pem")
+		keyPem, err = filepath.Abs(settings.HTTP.TLS.KeyFile)
 		if err != nil {
 			return err
 		}
@@ -218,7 +224,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	exited := make(chan error)
 	go func() {
-		if settings.Main.HTTPS {
+		if settings.HTTP.TLS.Enabled {
 			exited <- httpServer.ListenAndServeTLS(certPem, keyPem)
 		} else {
 			exited <- httpServer.ListenAndServe()
@@ -226,10 +232,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}()
 
 	// Determine the external URL and print a message with it.
-	externalURL := settings.Main.ExternalURL
+	externalURL := settings.HTTP.ExternalURL
 	if externalURL == "" {
 		protocol := "http"
-		if settings.Main.HTTPS {
+		if settings.HTTP.TLS.Enabled {
 			protocol = "https"
 		}
 		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
@@ -238,7 +244,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	select {
 	case <-ctx.Done():
-		if delay := settings.Main.TerminationDelay; delay == 0 {
+		if delay := settings.TerminationDelay; delay == 0 {
 			slog.Info("cmd: received termination signal, shutting down")
 		} else {
 			slog.Info(fmt.Sprintf("cmd: received termination signal. Waiting for %s before proceeding...", delay))

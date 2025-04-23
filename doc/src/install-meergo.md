@@ -129,12 +129,12 @@ Next, you’ll need to set up certificates (if using HTTPS), configure the datab
 
 ### Certificates
 
-If you have set the `https` parameter to `true` in your `config.yaml`, you must provide SSL certificates.
+If you have enabled HTTPS by setting the `http.tls.enabled` parameter to `true` in your `config.yaml`, you must also specify the TLS certificate and private key files. To do this, set the following parameters:
 
-Place the following files in the same directory where you will run Meergo:
+- `http.tls.certFile`: Path to the TLS certificate file.
+- `http.tls.keyFile`: Path to the corresponding private key file.
 
-- `cert.pem` – the SSL certificate for your domain
-- `key.pem` – the corresponding private key
+Make sure both files are accessible.
 
 ### Database setup
 
@@ -146,12 +146,9 @@ Make sure the database connection settings in `config.yaml` match your PostgreSQ
 
 ### Starting Meergo
 
-Once everything is set up, run the `meergo` executable from the directory containing:
+Once the setup is complete, run the `meergo` executable from the directory where your `config.yaml` file is located.
 
-- `config.yaml`
-- (Optional) `cert.pem` and `key.pem` if using HTTPS
-
-Meergo will start using the provided configuration and be ready for use.
+Meergo will launch using the specified configuration and will be ready for use.
 
 ## First login
 

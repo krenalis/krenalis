@@ -400,7 +400,7 @@ func (c *Meergo) RunIdentityResolution() {
 }
 
 func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
-	endpoint := "http://" + testsSettings.MeergoHost + "/api/v1/events"
+	endpoint := "http://" + c.Addr() + "/api/v1/events"
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}

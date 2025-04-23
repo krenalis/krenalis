@@ -9,18 +9,25 @@ package meergotester
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 )
 
 type TestsSettings struct {
-	MeergoHost       string
+	HTTP             *HTTPSettings
 	Database         *DBSettings
 	PythonExecutable string
 	WarehouseType    string
 	Warehouse        *DBSettings
+}
+
+type HTTPSettings struct {
+	Host string
+	Port int
 }
 
 type DBSettings struct {
@@ -50,7 +57,10 @@ var testsSettingsMu sync.Mutex
 
 func init() {
 	testsSettings = &TestsSettings{
-		MeergoHost: "127.0.0.1:9091",
+		HTTP: &HTTPSettings{
+			Host: "127.0.0.1",
+			Port: 9091,
+		},
 		Database: &DBSettings{
 			// Host and Port will be set when PostgreSQL container starts.
 			Database: "test_postgres",
@@ -72,8 +82,16 @@ func init() {
 		panic(err)
 	}
 	testsSettings.PythonExecutable = pyExecutable
-	if host := os.Getenv("MEERGO_TESTS_HOST"); host != "" {
-		testsSettings.MeergoHost = host
+	if addr := os.Getenv("MEERGO_TESTS_ADDR"); addr != "" {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			panic("MEERGO_TESTS_ADDR must be in the format host:port")
+		}
+		testsSettings.HTTP.Host = host
+		testsSettings.HTTP.Port, err = strconv.Atoi(port)
+		if err != nil {
+			panic("MEERGO_TESTS_ADDR must be in the format host:port")
+		}
 	}
 	if pythonPath := os.Getenv("MEERGO_TESTS_PYTHON_PATH"); pythonPath != "" {
 		testsSettings.PythonExecutable = pythonPath

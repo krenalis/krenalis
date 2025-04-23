@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -83,6 +84,12 @@ const (
 	// with testing properties.
 	DoNotPopulateUserSchema TestingOption = iota + 1
 )
+
+// Addr returns the host (along with the port) on which the Meergo instance
+// runs.
+func (c *Meergo) Addr() string {
+	return testsSettings.HTTP.Host + ":" + strconv.Itoa(testsSettings.HTTP.Port)
+}
 
 // InitAndLaunch initializes and launches an instance of Meergo in a separate
 // goroutine.
@@ -285,17 +292,17 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	}
 
 	setts := cmd.Settings{}
-	setts.Main.Host = testsSettings.MeergoHost
-	setts.Main.HTTPS = false
 	setts.EncryptionKey = encryptionKey
-	setts.PostgreSQL.Host = testsSettings.Database.Host
-	setts.PostgreSQL.Port = testsSettings.Database.Port
-	setts.PostgreSQL.Username = testsSettings.Database.Username
-	setts.PostgreSQL.Password = testsSettings.Database.Password
-	setts.PostgreSQL.Database = testsSettings.Database.Database
-	setts.PostgreSQL.Schema = testsSettings.Database.Schema
-	setts.FunctionProvider.Local.PythonExecutable = testsSettings.PythonExecutable
-	setts.FunctionProvider.Local.FunctionsDir = transformationsTempDir
+	setts.HTTP.Host = testsSettings.HTTP.Host
+	setts.HTTP.Port = testsSettings.HTTP.Port
+	setts.DB.Host = testsSettings.Database.Host
+	setts.DB.Port = testsSettings.Database.Port
+	setts.DB.Username = testsSettings.Database.Username
+	setts.DB.Password = testsSettings.Database.Password
+	setts.DB.Database = testsSettings.Database.Database
+	setts.DB.Schema = testsSettings.Database.Schema
+	setts.Transformations.Local.PythonExecutable = testsSettings.PythonExecutable
+	setts.Transformations.Local.FunctionsDir = transformationsTempDir
 
 	// Wait for the assets to be generated.
 	<-assetsGenerated
@@ -340,7 +347,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			}
 		}()
 	} else {
-		err = validDatabaseNameForTests(setts.PostgreSQL.Database)
+		err = validDatabaseNameForTests(setts.DB.Database)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -371,6 +378,8 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	// Wait a second for Meergo to load.
 	time.Sleep(1 * time.Second)
 
+	addr := testsSettings.HTTP.Host + ":" + strconv.Itoa(testsSettings.HTTP.Port)
+
 	// Wait until Meergo starts listening.
 	attempts := 0
 	for {
@@ -379,11 +388,11 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			t.Fatalf("Meergo has exited")
 		default:
 		}
-		conn, err := net.DialTimeout("tcp", testsSettings.MeergoHost, 500*time.Millisecond)
+		conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
 		if err != nil {
 			attempts++
 			if attempts >= 30 {
-				t.Fatalf("cannot connect to Meergo on %q. No response after %d connections attempts, aborting test", testsSettings.MeergoHost, attempts)
+				t.Fatalf("cannot connect to Meergo on %q. No response after %d connections attempts, aborting test", addr, attempts)
 			}
 			// Use an exponential backoff timeout.
 			timeout := time.Duration(math.Exp(float64(attempts-1))*5) * time.Millisecond
@@ -448,12 +457,6 @@ func (c *Meergo) CountEventsInWarehouse(ctx context.Context) int {
 		c.t.Fatalf("cannot execute count query: %s", err)
 	}
 	return count
-}
-
-// Host returns the host (along with the port) on which the Meergo instance
-// runs.
-func (c *Meergo) Host() string {
-	return testsSettings.MeergoHost
 }
 
 // Stop stops the execution of Meergo.

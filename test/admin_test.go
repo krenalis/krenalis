@@ -126,7 +126,7 @@ func TestAdmin(t *testing.T) {
 
 	// Write the "test-config.json" file.
 	testConfig := map[string]any{
-		"baseURL":     "http://" + c.Host(),
+		"baseURL":     "http://" + c.Addr(),
 		"workspaceID": c.WorkspaceID(),
 		"dbHost":      dbHost,
 		"dbPort":      dbPort,

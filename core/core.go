@@ -73,14 +73,14 @@ type Core struct {
 var hasBeenCalled bool
 
 type Config struct {
-	PostgreSQL       PostgreSQLConfig
 	EncryptionKey    []byte // encryption key shared by all nodes
-	FunctionProvider any    // must be a LambdaConfig or LocalConfig value
+	DB               DBConfig
+	FunctionProvider any // must be a LambdaConfig or LocalConfig value
 	SMTP             SMTPConfig
 	ConnectorsOAuth  map[string]*state.ConnectorOAuth
 }
 
-type PostgreSQLConfig struct {
+type DBConfig struct {
 	Host     string
 	Port     int
 	Username string
@@ -131,7 +131,7 @@ func New(conf *Config) (*Core, error) {
 	hasBeenCalled = true
 
 	// Open connection to PostgreSQL.
-	ps := conf.PostgreSQL
+	ps := conf.DB
 	db, err := db.Open(&db.Options{
 		Host:     ps.Host,
 		Port:     ps.Port,
