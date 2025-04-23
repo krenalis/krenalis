@@ -26,7 +26,7 @@ Before you can add a HubSpot data destination, you need to create an app in HubS
 7. Click **Create app** and confirm the creation.
 8. Copy the client ID and the client secret.
 9. Open the **config.yaml** configuration file in Meergo.
-10. Under **connectorsOAuth > HubSpot**, enter the client ID and client secret you copied earlier.
+10. Under **oauth > HubSpot**, enter the client ID and client secret you copied earlier.
 11. Restart the Meergo server.
 
 Now proceed to add a HubSpot data destination:
