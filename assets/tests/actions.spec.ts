@@ -91,22 +91,25 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 	}
 	`;
 
-	let isRequestDone = false;
-	page.on('request', async (request) => {
-		if (request.url().includes('/actions') && request.method() === 'POST') {
-			isRequestDone = true;
-			const got = JSON.parse(request.postData());
-			let expected = JSON.parse(expectedBody);
-			expected.connection = id;
-			deepCompareActionSchema(got, expected);
-		}
-	});
-
 	let saveButton = page.locator('.action__header-save >> button');
-	await saveButton.click();
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
+
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
+
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = id;
+	deepCompareActionSchema(got, expected);
 
 	await expect(page.locator('.connection-actions__grid')).toBeVisible();
-	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
@@ -272,22 +275,25 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 	}
 	`;
 
-	let isRequestDone = false;
-	page.on('request', async (request) => {
-		if (request.url().includes('/actions') && request.method() === 'POST') {
-			isRequestDone = true;
-			const got = JSON.parse(request.postData());
-			let expected = JSON.parse(expectedBody);
-			expected.connection = id;
-			deepCompareActionSchema(got, expected);
-		}
-	});
-
 	let saveButton = page.locator('.action__header-save >> button');
-	await saveButton.click();
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
+
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
+
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = id;
+	deepCompareActionSchema(got, expected);
 
 	await expect(page.locator('.connection-actions__grid')).toBeVisible();
-	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
@@ -342,22 +348,25 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 	}
 	`;
 
-	let isRequestDone = false;
-	page.on('request', async (request) => {
-		if (request.url().includes('/actions') && request.method() === 'POST') {
-			isRequestDone = true;
-			const got = JSON.parse(request.postData());
-			let expected = JSON.parse(expectedBody);
-			expected.connection = id;
-			deepCompareActionSchema(got, expected);
-		}
-	});
-
 	let saveButton = page.locator('.action__header-save >> button');
-	await saveButton.click();
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
+
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
+
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = id;
+	deepCompareActionSchema(got, expected);
 
 	await expect(page.locator('.connection-actions__grid')).toBeVisible();
-	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
@@ -478,22 +487,25 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	}
 	`;
 
-	let isRequestDone = false;
-	page.on('request', async (request) => {
-		if (request.url().includes('/actions') && request.method() === 'POST') {
-			isRequestDone = true;
-			const got = JSON.parse(request.postData());
-			let expected = JSON.parse(expectedBody);
-			expected.connection = id;
-			deepCompareActionSchema(got, expected);
-		}
-	});
-
 	let saveButton = page.locator('.action__header-save >> button');
-	await saveButton.click();
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
+
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
+
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = id;
+	deepCompareActionSchema(got, expected);
 
 	await expect(page.locator('.connection-actions__grid')).toBeVisible();
-	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
@@ -653,22 +665,25 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	}
 	`;
 
-	let isRequestDone = false;
-	page.on('request', async (request) => {
-		if (request.url().includes('/actions') && request.method() === 'POST') {
-			isRequestDone = true;
-			const got = JSON.parse(request.postData());
-			let expected = JSON.parse(expectedBody);
-			expected.connection = id;
-			deepCompareActionSchema(got, expected);
-		}
-	});
-
 	let saveButton = page.locator('.action__header-save >> button');
-	await saveButton.click();
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
+
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
+
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = id;
+	deepCompareActionSchema(got, expected);
 
 	await expect(page.locator('.connection-actions__grid')).toBeVisible();
-	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
@@ -831,22 +846,25 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			}
 		}`;
 
-		let isRequestDone = false;
-		page.on('request', async (request) => {
-			if (request.url().includes('/actions') && request.method() === 'POST') {
-				isRequestDone = true;
-				const body = JSON.parse(request.postData());
-				let expected = JSON.parse(expectedBody);
-				expected.connection = connectionID;
-				deepCompareActionSchema(body, expected);
-			}
-		});
-
 		let saveButton = page.locator('.action__header-save >> button');
-		await saveButton.click();
+		const [response] = await Promise.all([
+			page.waitForResponse((response) => {
+				return response.url().includes('/actions') && response.request().method() === 'POST';
+			}),
+			saveButton.click(),
+		]);
+
+		const status = response.status();
+		if (status !== 200) {
+			throw new Error(`Unexpected response status while adding the action: ${status}`);
+		}
+
+		const got = JSON.parse(response.request().postData());
+		let expected = JSON.parse(expectedBody);
+		expected.connection = connectionID;
+		deepCompareActionSchema(got, expected);
 
 		await expect(page.locator('.connection-actions__grid')).toBeVisible();
-		expect(isRequestDone).toBe(true);
 
 		await page.reload();
 
@@ -1161,22 +1179,25 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			}
 		}`;
 
-		let isRequestDone = false;
-		page.on('request', async (request) => {
-			if (request.url().includes('/actions') && request.method() === 'POST') {
-				isRequestDone = true;
-				const body = JSON.parse(request.postData());
-				let expected = JSON.parse(expectedBody);
-				expected.connection = connectionID;
-				deepCompareActionSchema(body, expected);
-			}
-		});
-
 		let saveButton = page.locator('.action__header-save >> button');
-		await saveButton.click();
+		const [response] = await Promise.all([
+			page.waitForResponse((response) => {
+				return response.url().includes('/actions') && response.request().method() === 'POST';
+			}),
+			saveButton.click(),
+		]);
+
+		const status = response.status();
+		if (status !== 200) {
+			throw new Error(`Unexpected response status while adding the action: ${status}`);
+		}
+
+		const got = JSON.parse(response.request().postData());
+		let expected = JSON.parse(expectedBody);
+		expected.connection = connectionID;
+		deepCompareActionSchema(got, expected);
 
 		await expect(page.locator('.connection-actions__grid')).toBeVisible();
-		expect(isRequestDone).toBe(true);
 
 		await page.reload();
 
@@ -1236,22 +1257,25 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 	}
 	`;
 
-	let isRequestDone = false;
-	page.on('request', async (request) => {
-		if (request.url().includes('/actions') && request.method() === 'POST') {
-			isRequestDone = true;
-			const body = JSON.parse(request.postData());
-			let expected = JSON.parse(expectedBody);
-			expected.connection = id;
-			deepCompareActionSchema(body, expected);
-		}
-	});
-
 	let saveButton = page.locator('.action__header-save >> button');
-	await saveButton.click();
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
+
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
+
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = id;
+	deepCompareActionSchema(got, expected);
 
 	await expect(page.locator('.connection-actions__grid')).toBeVisible();
-	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
@@ -1310,22 +1334,25 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 	}
 	`;
 
-	let isRequestDone = false;
-	page.on('request', async (request) => {
-		if (request.url().includes('/actions') && request.method() === 'POST') {
-			isRequestDone = true;
-			const body = JSON.parse(request.postData());
-			let expected = JSON.parse(expectedBody);
-			expected.connection = id;
-			deepCompareActionSchema(body, expected);
-		}
-	});
-
 	let saveButton = page.locator('.action__header-save >> button');
-	await saveButton.click();
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
+
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
+
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = id;
+	deepCompareActionSchema(got, expected);
 
 	await expect(page.locator('.connection-actions__grid')).toBeVisible();
-	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
