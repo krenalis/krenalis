@@ -240,7 +240,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
 	}
-	_, _ = fmt.Fprintf(os.Stderr, "The Meergo admin is now available at: %s\n", strings.TrimLeft(externalURL, "/")+"/admin")
+	_, _ = fmt.Fprintf(os.Stderr, "The Meergo admin is now available at: %s\n", strings.TrimRight(externalURL, "/")+"/admin")
 
 	select {
 	case <-ctx.Done():
