@@ -1,8 +1,8 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Connect a data warehouse{% end %}
+{% macro Title string %}Create a workspace{% end %}
 {% Article %}
 
-# Connect a warehouse
+# Create a workspace
 
 Meergo is a **warehouse-native Customer Data Platform (CDP)**. This means that your customer data remains stored directly in **your own data warehouse** — not within the application itself.
 
