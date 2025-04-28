@@ -1,65 +1,42 @@
-main:
-    host: meergo:9090
-    https: false
-    terminationDelay: 1s
-    # The URL on which Meergo is externally exposed. If not provided, a default
-    # value is generated based on the host configuration.
-    externalURL: http://localhost:9090
+encryptionKey: 6uA9ccQxZ+/1PlqXZFR49QZ0fnQDCNZIugyKwHv3WdkqcoIA3iSwuuj1yvM+f2cZFQ7Saqjq695Y0AP+rlZDOg== # Key for encryption (ensure it's securely stored)
+terminationDelay: 1s  # Delay before terminating the server or process
 
-encryptionKey: 6uA9ccQxZ+/1PlqXZFR49QZ0fnQDCNZIugyKwHv3WdkqcoIA3iSwuuj1yvM+f2cZFQ7Saqjq695Y0AP+rlZDOg==
+http:
+    host: meergo  # Server address
+    port: 9090 # Port on which the server will listen
+    tls:
+        enabled: false  # Whether TLS (HTTPS) is enabled
+        certFile: /path/to/your/certificate.crt # Path to the TLS certificate
+        keyFile: /path/to/your/private.key # Path to the TLS private key
+    externalURL: http://127.0.0.1:9090/ # External URL exposed to the outside world
 
-postgreSQL:
-    host: db
-    port: 5432
-    username: meergo
-    password: meergo
-    database: meergo
-    schema:
+db:
+    host: db  # PostgreSQL host address
+    port: 5432  # PostgreSQL port
+    username: meergo  # PostgreSQL username
+    password: meergo  # PostgreSQL password
+    database: meergo  # PostgreSQL database
+    schema:  # PostgreSQL schema
 
 smtp:
-    host:
-    port:
-    user:
-    pass:
+    host:  # SMTP server host
+    port:  # SMTP server port
+    user:  # SMTP username
+    pass:  # SMTP password
 
-functionProvider:
-    # Configure just one between "lambda" and "local".
+transformations:
+    local:  # Local execution
+        nodeExecutable: /usr/bin/node  # Path to the Node.js executable
+        pythonExecutable: /usr/bin/python  # Path to the Python executable
+        functionsDir: /bin/meergo-files/transformation-functions  # Directory for local function source files
 
-    # lambda:
-    #     accessKeyID:
-    #     secretAccessKey:
-    #     region:
-    #     role:
-    #     # Every Node and Python 3 runtime is supported.
-    #     # See the list at https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html.
-    #     node:
-    #         runtime: nodejs18.x
-    #         layer:
-    #     python:
-    #         runtime: python3.11
-    #         layer:
-
-    local:
-        # Path to the Node executable, eg. "/usr/bin/node" or simply "node".
-        nodeExecutable: /usr/bin/node
-        # Path to the Python executable, eg. "/usr/bin/python" or simply "python".
-        pythonExecutable: /usr/bin/python
-        # Path to the local directory which will contain the ".js" Node source
-        # files (if language is "node") or the ".py" Python source files (if
-        # language is "python") for the transformation functions.
-        functionsDir: /bin/meergo-files/transformation-functions
+oauth:
+    HubSpot:
+        clientID:  # OAuth client ID for HubSpot
+        clientSecret:  # OAuth client secret for HubSpot
+    Mailchimp:
+        clientID:  # OAuth client ID for Mailchimp
+        clientSecret:  # OAuth client secret for Mailchimp
 
 telemetry:
-    # Set "enable" to "true" to enable telemetry.
-    #
-    # See the documentation within 'doc/src/developers/telemetry.md' for more
-    # details.
-    enable: false
-
-connectorsOAuth:
-    HubSpot:
-        clientID:
-        clientSecret:
-    Mailchimp:
-        clientID:
-        clientSecret:
+    enable: false  # Enable telemetry for usage data collection
