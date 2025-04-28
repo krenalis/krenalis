@@ -31,10 +31,10 @@ transformations:
         region: # AWS region for Lambda
         role: # AWS Lambda role ARN
         node:
-            runtime: nodejs18.x # Node.js runtime version for Lambda
+            runtime: nodejs22.x # Node.js runtime version for Lambda
             layer: # Optional Lambda layer for Node.js
         python:
-            runtime: python3.11 # Python runtime version for Lambda
+            runtime: python3.13 # Python runtime version for Lambda
             layer: # Optional Lambda layer for Python
     local: # Local execution
         nodeExecutable: /usr/bin/node # Path to the Node.js executable
