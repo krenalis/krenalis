@@ -1,6 +1,10 @@
 .workspace-add__title {
 	font-size: 23px;
 	font-weight: 600;
+	margin-bottom: 20px;
+}
+
+.workspace-add__name {
 	margin-bottom: 30px;
 }
 
@@ -8,14 +12,19 @@
 	margin-top: 30px;
 }
 
-.workspace-add__warehouse-settings > * {
+.workspace-add__warehouse-settings > sl-input {
 	margin-bottom: 30px;
+}
+
+.workspace-add__warehouse-settings > sl-input:last-child {
+	margin-bottom: 0;
 }
 
 .workspace-add__buttons {
 	display: flex;
 	justify-content: center;
 	gap: 30px;
+	margin-top: 40px;
 }
 
 .workspace-add__add-button {
