@@ -20,12 +20,15 @@ const WorkspaceCreate = () => {
 	const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
 	const [isAddingWorkspace, setIsAddingWorkspace] = useState<boolean>(false);
 
-	const { handleError, api, setSelectedWorkspace, setIsLoadingState, redirect, showStatus } = useContext(appContext);
+	const { handleError, api, setSelectedWorkspace, setIsLoadingState, redirect, showStatus, workspaces } =
+		useContext(appContext);
 
 	const onNameInput = (e) => setName(e.target.value);
 
 	const onChangeWarehouse = (e) => {
 		setSelectedWarehouse(e.target.value);
+		// reset the settings.
+		setWarehouseSettings(undefined);
 	};
 
 	const onCancel = () => {
@@ -112,9 +115,18 @@ const WorkspaceCreate = () => {
 		redirect('settings');
 	};
 
+	const hasWorkspaces = workspaces.length > 0;
+
 	return (
 		<div className='workspace-add'>
-			<div className='workspace-add__title'>Add workspace</div>
+			<div className='workspace-add__heading'>
+				<div className='workspace-add__title'>Add workspace</div>
+				{!hasWorkspaces && (
+					<div className='workspace-add__description'>
+						Currently you don't have any workspace. Add a workspace to continue.
+					</div>
+				)}
+			</div>
 			<SlInput
 				className='workspace-add__name'
 				maxlength={100}
@@ -134,9 +146,11 @@ const WorkspaceCreate = () => {
 				)}
 			</div>
 			<div className='workspace-add__buttons'>
-				<SlButton className='workspace-add__cancel-button' onClick={onCancel}>
-					Cancel
-				</SlButton>
+				{hasWorkspaces && (
+					<SlButton className='workspace-add__cancel-button' onClick={onCancel}>
+						Cancel
+					</SlButton>
+				)}
 				<SlButton
 					className='workspace-add__check-button'
 					onClick={onTestWorkspaceCreation}

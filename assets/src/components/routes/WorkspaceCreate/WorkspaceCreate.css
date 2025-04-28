@@ -1,7 +1,10 @@
+.workspace-add__heading {
+	margin-bottom: 20px;
+}
+
 .workspace-add__title {
 	font-size: 23px;
 	font-weight: 600;
-	margin-bottom: 20px;
 }
 
 .workspace-add__name {

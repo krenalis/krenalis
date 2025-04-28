@@ -66,11 +66,18 @@ const useApp = (
 			const isDeleted = workspaces != null && ws.length < workspaces.length;
 			if (selectedWorkspace === 0) {
 				if (ws.length === 1 && !isDeleted) {
+					// the user has only one workspace, so it can be
+					// automatically selected.
 					setSelectedWorkspace(ws[0].id);
 					api = new API(window.location.origin, ws[0].id);
 				} else {
-					// the user must choose a workspace.
-					redirect('workspaces');
+					if (ws.length === 0) {
+						// the user must add a workspace.
+						redirect('workspaces/add');
+					} else {
+						// the user must choose a workspace.
+						redirect('workspaces');
+					}
 					setIsLoadingState(false);
 					return;
 				}

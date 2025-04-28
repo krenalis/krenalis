@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './PostgreSQLSettings.css';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -9,6 +9,16 @@ interface settingsProps {
 }
 
 const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
+	useEffect(() => {
+		if (settings === undefined) {
+			// Precompile port and schema.
+			setSettings({
+				port: 5432,
+				schema: 'public',
+			});
+		}
+	}, []);
+
 	const onSettingInput = (e) => {
 		const name = e.currentTarget.name;
 		let value = e.currentTarget.value;
