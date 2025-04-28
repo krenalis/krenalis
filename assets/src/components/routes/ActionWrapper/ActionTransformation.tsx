@@ -2835,8 +2835,12 @@ function meergoTypeDescription(type: Type): ReactNode {
 }
 
 function toMeergoStringType(type: Type) {
-	if (type.kind === 'array' || type.kind === 'map') {
-		return `${type.kind} of ${type.elementType.kind}`;
+	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
+		return `${type.kind}(${type.bitSize})`;
+	} else if (type.kind === 'decimal') {
+		return `decimal(${type.precision}, ${type.scale})`;
+	} else if (type.kind === 'array' || type.kind === 'map') {
+		return `${type.kind} of ${toMeergoStringType(type.elementType)}`;
 	}
 	return type.kind;
 }
