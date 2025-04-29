@@ -98,6 +98,12 @@ func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) m
 	return schemas
 }
 
+func (c *Meergo) CDNURL() string {
+	var url string
+	c.MustCall("GET", "/api/v1/cdn-url", nil, &url)
+	return url
+}
+
 func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, int) {
 	req := map[string]any{
 		"first": first,
@@ -297,6 +303,12 @@ func (c *Meergo) ExecuteAction(action int) int {
 	path := fmt.Sprintf("/api/v1/actions/%d/exec", action)
 	c.MustCall("POST", path, nil, &response)
 	return response.ID
+}
+
+func (c *Meergo) EventURL() string {
+	var url string
+	c.MustCall("GET", "/api/v1/event-url", nil, &url)
+	return url
 }
 
 func (c *Meergo) Execution(id int) Execution {

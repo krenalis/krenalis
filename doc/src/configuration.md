@@ -38,6 +38,20 @@ This document describes the available configuration options for the [`config.yam
   The publicly accessible URL of the server. If not provided, it is determined by the combination of `http.tls.enabled`, `http.host`, and `http.port`.  
   Example: `https://meergo.example.com:8080/`
 
+- **`cdnURL`**  
+  The URL of the CDN that serves the admin files and the Meergo JavaScript SDK.
+  
+  Example `https://my.cdn.meergo.example.com`.
+  
+  If not provided, it is assumed that these files are served from the same server that Meergo runs on.
+
+- **`eventURL`**  
+  The URL of the endpoint that receives the events.
+
+  Example: `https://meergo.example.com:8080/api/v1/events`
+
+  If not provided, the event endpoint is assumed to be on the same server as Meergo at `/api/v1/events`.
+
 ## Database configuration (`db`)
 
 Configuration used to access the PostgreSQL server used by Meergo.

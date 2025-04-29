@@ -87,6 +87,10 @@ class API {
 		return await call(`${this.apiURL}/members/reset-password/${token}`, http.GET, this.workspaceID);
 	};
 
+	cdnURL = async (): Promise<string> => {
+		return await call(`${this.apiURL}/cdn-url`, http.GET);
+	};
+
 	changeMemberPasswordByToken = async (token: string, password: string): Promise<void> => {
 		return await call(`${this.apiURL}/members/reset-password/${token}`, http.PUT, this.workspaceID, {
 			password,
@@ -95,6 +99,10 @@ class API {
 
 	eventsSchema = async (): Promise<ObjectType> => {
 		return await call(`${this.apiURL}/events/schema`, http.GET, this.workspaceID);
+	};
+
+	eventURL = async (): Promise<string> => {
+		return await call(`${this.apiURL}/event-url`, http.GET);
 	};
 
 	validateExpression = async (

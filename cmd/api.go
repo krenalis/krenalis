@@ -38,6 +38,12 @@ func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 	return nil, err
 }
 
+// CDNURL returns the URL of the CDN that serves the admin files and the
+// JavaScript SDK. It never ends with "/".
+func (api api) CDNURL(w http.ResponseWriter, r *http.Request) (any, error) {
+	return api.core.CDNURL(), nil
+}
+
 // Connector returns a connector.
 func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
@@ -60,6 +66,12 @@ func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) 
 		return nil, err
 	}
 	return events.Schema, nil
+}
+
+// EventURL returns the URL that receives the events, for example
+// "https://my.meergo.example.com/api/v1/events".
+func (api api) EventURL(w http.ResponseWriter, r *http.Request) (any, error) {
+	return api.core.EventURL(), nil
 }
 
 // EventsSettings returns the events settings.

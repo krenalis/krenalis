@@ -44,6 +44,8 @@ type Settings struct {
 			KeyFile  string `yaml:"keyFile"`
 		}
 		ExternalURL string `yaml:"externalURL"`
+		CDNURL      string `yaml:"cdnURL"`
+		EventURL    string `yaml:"eventURL"`
 	}
 	DB   core.DBConfig
 	SMTP struct {
@@ -95,9 +97,34 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 	}
 
+	// Determine the address, the external URL, the CDN URL and the event URL.
+	addr := settings.HTTP.Host + ":" + strconv.Itoa(settings.HTTP.Port)
+	if addr == ":" {
+		addr = "127.0.0.1:9090"
+	}
+	externalURL := settings.HTTP.ExternalURL
+	if externalURL == "" {
+		protocol := "http"
+		if settings.HTTP.TLS.Enabled {
+			protocol = "https"
+		}
+		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
+	}
+	cdnURL := settings.HTTP.CDNURL
+	if cdnURL == "" {
+		cdnURL = externalURL
+	}
+	cdnURL = strings.TrimRight(cdnURL, "/")
+	eventURL := settings.HTTP.EventURL
+	if eventURL == "" {
+		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
+	}
+
 	config := core.Config{
-		DB:   settings.DB,
-		SMTP: settings.SMTP,
+		DB:       settings.DB,
+		SMTP:     settings.SMTP,
+		CDNURL:   cdnURL,
+		EventURL: eventURL,
 	}
 
 	// Choose the transformation function provider setting.
@@ -155,10 +182,6 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer assets.Close()
 
-	addr := settings.HTTP.Host + ":" + strconv.Itoa(settings.HTTP.Port)
-	if addr == ":" {
-		addr = "127.0.0.1:9090"
-	}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Handle panics.
@@ -231,15 +254,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 	}()
 
-	// Determine the external URL and print a message with it.
-	externalURL := settings.HTTP.ExternalURL
-	if externalURL == "" {
-		protocol := "http"
-		if settings.HTTP.TLS.Enabled {
-			protocol = "https"
-		}
-		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
-	}
+	// Print a message with the external URL.
 	_, _ = fmt.Fprintf(os.Stderr, "The Meergo admin is now available at: %s\n", strings.TrimRight(externalURL, "/")+"/admin")
 
 	select {

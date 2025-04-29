@@ -62,6 +62,8 @@ type Core struct {
 	actionCleaner    *actionCleaner
 	actionScheduler  *actionScheduler
 	smtp             *SMTPConfig
+	cdnURL           string
+	eventURL         string
 	close            struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
@@ -78,6 +80,8 @@ type Config struct {
 	FunctionProvider any // must be a LambdaConfig or LocalConfig value
 	SMTP             SMTPConfig
 	ConnectorsOAuth  map[string]*state.ConnectorOAuth
+	CDNURL           string
+	EventURL         string
 }
 
 type DBConfig struct {
@@ -157,7 +161,12 @@ func New(conf *Config) (*Core, error) {
 		smtp = &conf.SMTP
 	}
 
-	core := &Core{db: db, smtp: smtp}
+	core := &Core{
+		db:       db,
+		smtp:     smtp,
+		cdnURL:   conf.CDNURL,
+		eventURL: conf.EventURL,
+	}
 
 	// Create a function provider.
 	switch p := conf.FunctionProvider.(type) {
@@ -345,6 +354,12 @@ func (core *Core) APIKey(token string) (int, int, bool) {
 	return key.Organization, key.Workspace, true
 }
 
+// CDNURL returns the URL of the CDN that serves the admin files and the
+// JavaScript SDK. It never ends with "/".
+func (core *Core) CDNURL() string {
+	return core.cdnURL
+}
+
 // Close closes the Core. When Close is called, no other calls to Core's methods
 // should be in progress and no other shall be made.
 // It panics if it has already been called.
@@ -483,6 +498,12 @@ func (core *Core) Connectors() []*Connector {
 func (core *Core) CountOrganizations(ctx context.Context) int {
 	core.mustBeOpen()
 	return len(core.state.Organizations())
+}
+
+// EventURL returns the URL that receives the events, for example
+// "https://my.meergo.example.com/api/v1/events".
+func (core *Core) EventURL() string {
+	return core.eventURL
 }
 
 // ExpressionsProperties returns all the unique properties contained inside a

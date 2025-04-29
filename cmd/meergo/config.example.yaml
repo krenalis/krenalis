@@ -9,6 +9,8 @@ http:
         certFile: /path/to/your/certificate.crt # Path to the TLS certificate
         keyFile: /path/to/your/private.key # Path to the TLS private key
     externalURL: https://127.0.0.1:9090/ # External URL exposed to the outside world
+    cdnURL: # The address of the CDN serving the admin files and the JavaScript SDK. Can be left empty
+    eventURL: # The address that receives the events, for example "https://my.meergo.example.com/api/v1/events". Can be left empty
 
 db:
     host: 127.0.0.1 # PostgreSQL host address
