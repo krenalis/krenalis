@@ -35,6 +35,7 @@ import (
 type Settings struct {
 	EncryptionKey    string        `yaml:"encryptionKey"`
 	TerminationDelay time.Duration `yaml:"terminationDelay"`
+	JavaScriptSDKURL string        `yaml:"javaScriptSDKURL"`
 	HTTP             struct {
 		Host string
 		Port int
@@ -44,7 +45,6 @@ type Settings struct {
 			KeyFile  string `yaml:"keyFile"`
 		}
 		ExternalURL string `yaml:"externalURL"`
-		CDNURL      string `yaml:"cdnURL"`
 		EventURL    string `yaml:"eventURL"`
 	}
 	DB   core.DBConfig
@@ -97,7 +97,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 	}
 
-	// Determine the address, the external URL, the CDN URL and the event URL.
+	// Determine the address, the external URL, the JavaScript SDK URL and the
+	// event URL.
 	addr := settings.HTTP.Host + ":" + strconv.Itoa(settings.HTTP.Port)
 	if addr == ":" {
 		addr = "127.0.0.1:9090"
@@ -110,21 +111,20 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
 	}
-	cdnURL := settings.HTTP.CDNURL
-	if cdnURL == "" {
-		cdnURL = externalURL
+	javaScriptSDKURL := settings.JavaScriptSDKURL
+	if javaScriptSDKURL == "" {
+		javaScriptSDKURL = strings.TrimRight(externalURL, "/") + "/javascript-sdk/dist/meergo.min.js"
 	}
-	cdnURL = strings.TrimRight(cdnURL, "/")
 	eventURL := settings.HTTP.EventURL
 	if eventURL == "" {
 		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
 	}
 
 	config := core.Config{
-		DB:       settings.DB,
-		SMTP:     settings.SMTP,
-		CDNURL:   cdnURL,
-		EventURL: eventURL,
+		DB:               settings.DB,
+		SMTP:             settings.SMTP,
+		JavaScriptSDKURL: javaScriptSDKURL,
+		EventURL:         eventURL,
 	}
 
 	// Choose the transformation function provider setting.

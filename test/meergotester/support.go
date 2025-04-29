@@ -98,12 +98,6 @@ func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) m
 	return schemas
 }
 
-func (c *Meergo) CDNURL() string {
-	var url string
-	c.MustCall("GET", "/api/v1/cdn-url", nil, &url)
-	return url
-}
-
 func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, int) {
 	req := map[string]any{
 		"first": first,
@@ -341,6 +335,12 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/%s", storage, url.PathEscape(path))
 	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, &response)
 	return response.Records, response.Schema
+}
+
+func (c *Meergo) JavaScriptSDKURL() string {
+	var url string
+	c.MustCall("GET", "/api/v1/javascript-sdk-url", nil, &url)
+	return url
 }
 
 func (c *Meergo) LatestAlterUserSchema() (startTime, endTime *time.Time, alterError *string) {

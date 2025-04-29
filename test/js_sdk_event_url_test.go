@@ -13,7 +13,7 @@ import (
 	"github.com/meergo/meergo/test/meergotester"
 )
 
-func TestCDNEventURL(t *testing.T) {
+func TestJavaScriptSDKEventURL(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
@@ -22,10 +22,10 @@ func TestCDNEventURL(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	const expectedCDNURL = "http://127.0.0.1:9091"
-	gotCDNURL := c.CDNURL()
-	if gotCDNURL != expectedCDNURL {
-		t.Fatalf("expected CDN URL: %q, got: %q", expectedCDNURL, gotCDNURL)
+	const expectedJavaScriptSDKURL = "http://127.0.0.1:9091"
+	gotJavaScriptSDKURL := c.JavaScriptSDKURL()
+	if gotJavaScriptSDKURL != expectedJavaScriptSDKURL {
+		t.Fatalf("expected JavaScript SDK URL: %q, got: %q", expectedJavaScriptSDKURL, gotJavaScriptSDKURL)
 	}
 
 	const expectedEventURL = "http://127.0.0.1:9091/api/v1/events"

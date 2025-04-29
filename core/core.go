@@ -62,7 +62,7 @@ type Core struct {
 	actionCleaner    *actionCleaner
 	actionScheduler  *actionScheduler
 	smtp             *SMTPConfig
-	cdnURL           string
+	javaScriptSDKURL string
 	eventURL         string
 	close            struct {
 		ctx       context.Context
@@ -80,7 +80,7 @@ type Config struct {
 	FunctionProvider any // must be a LambdaConfig or LocalConfig value
 	SMTP             SMTPConfig
 	ConnectorsOAuth  map[string]*state.ConnectorOAuth
-	CDNURL           string
+	JavaScriptSDKURL string
 	EventURL         string
 }
 
@@ -162,10 +162,10 @@ func New(conf *Config) (*Core, error) {
 	}
 
 	core := &Core{
-		db:       db,
-		smtp:     smtp,
-		cdnURL:   conf.CDNURL,
-		eventURL: conf.EventURL,
+		db:               db,
+		smtp:             smtp,
+		javaScriptSDKURL: conf.JavaScriptSDKURL,
+		eventURL:         conf.EventURL,
 	}
 
 	// Create a function provider.
@@ -354,10 +354,9 @@ func (core *Core) APIKey(token string) (int, int, bool) {
 	return key.Organization, key.Workspace, true
 }
 
-// CDNURL returns the URL of the CDN that serves the admin files and the
-// JavaScript SDK. It never ends with "/".
-func (core *Core) CDNURL() string {
-	return core.cdnURL
+// JavaScriptSDKURL returns the URL that serves the JavaScript SDK.
+func (core *Core) JavaScriptSDKURL() string {
+	return core.javaScriptSDKURL
 }
 
 // Close closes the Core. When Close is called, no other calls to Core's methods

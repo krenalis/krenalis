@@ -71,6 +71,10 @@ class API {
 		this.connectors = new Connectors(origin, apiURL);
 	}
 
+	javaScriptSDKURL = async (): Promise<string> => {
+		return await call(`${this.apiURL}/javascript-sdk-url`, http.GET);
+	};
+
 	login = async (email: string, password: string): Promise<[number, string]> => {
 		return await call(`${this.apiURL}/members/login`, http.POST, this.workspaceID, { email, password });
 	};
@@ -85,10 +89,6 @@ class API {
 
 	validateMemberPasswordResetToken = async (token: string): Promise<void> => {
 		return await call(`${this.apiURL}/members/reset-password/${token}`, http.GET, this.workspaceID);
-	};
-
-	cdnURL = async (): Promise<string> => {
-		return await call(`${this.apiURL}/cdn-url`, http.GET);
 	};
 
 	changeMemberPasswordByToken = async (token: string, password: string): Promise<void> => {

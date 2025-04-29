@@ -38,12 +38,6 @@ func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 	return nil, err
 }
 
-// CDNURL returns the URL of the CDN that serves the admin files and the
-// JavaScript SDK. It never ends with "/".
-func (api api) CDNURL(w http.ResponseWriter, r *http.Request) (any, error) {
-	return api.core.CDNURL(), nil
-}
-
 // Connector returns a connector.
 func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
@@ -166,6 +160,11 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 	}
 	err = api.core.ChangeMemberPasswordByToken(r.Context(), r.PathValue("token"), body.Password)
 	return nil, err
+}
+
+// JavaScriptSDKURL returns the URL that serves the JavaScript SDK.
+func (api api) JavaScriptSDKURL(w http.ResponseWriter, r *http.Request) (any, error) {
+	return api.core.JavaScriptSDKURL(), nil
 }
 
 // TransformData transforms data using a mapping or a function transformation

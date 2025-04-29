@@ -16,6 +16,13 @@ This document describes the available configuration options for the [`config.yam
   Delay time before gracefully shutting down the server. If left empty, the server will initiate a graceful shutdown immediately after receiving the termination signal, without waiting for the specified delay. \
   Example: `1s` (1 second), `200ms` (200 milliseconds) 
 
+- **`javaScriptSDKURL`** \
+  The URL that serves the JavaScript SDK.
+
+  Example `https://my.cdn.meergo.example.com/javascript-sdk/dist/meergo.min.js`.
+
+  If not provided, it is assumed that the JavaScript SDK is served by the same server that Meergo runs on, at the path `/javascript-sdk/dist/meergo.min.js`.
+
 ## HTTP server configuration (`http`)
 
 - **`host`** \
@@ -37,13 +44,6 @@ This document describes the available configuration options for the [`config.yam
 - **`externalURL`** \
   The publicly accessible URL of the server. If not provided, it is determined by the combination of `http.tls.enabled`, `http.host`, and `http.port`. \
   Example: `https://meergo.example.com:8080/`
-
-- **`cdnURL`** \
-  The URL of the CDN that serves the admin files and the Meergo JavaScript SDK.
-
-  Example `https://my.cdn.meergo.example.com`.
-
-  If not provided, it is assumed that these files are served from the same server that Meergo runs on.
 
 - **`eventURL`** \
   The URL of the endpoint that receives the events.

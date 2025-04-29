@@ -13,27 +13,9 @@ interface SnippetProps {
 const Snippet = ({ connectionID }: SnippetProps) => {
 	const [keys, setKeys] = useState<string[]>([]);
 	const [eventURL, setEventURL] = useState<string>();
-	const [cdnURL, setCDNURL] = useState<string>();
+	const [javaScriptSDKURL, setJavaScriptSDKURL] = useState<string>();
 
 	const { api, handleError, redirect } = useContext(AppContext);
-
-	// Retrieve the CDN URL.
-	useEffect(() => {
-		const fetchCDNURL = async () => {
-			let cdnURL: string;
-			try {
-				cdnURL = await api.cdnURL();
-			} catch (err) {
-				setTimeout(() => {
-					handleError(err);
-				}, 300);
-				return;
-			}
-			setCDNURL(cdnURL);
-			return;
-		};
-		fetchCDNURL();
-	}, []);
 
 	// Retrieve the event URL.
 	useEffect(() => {
@@ -51,6 +33,24 @@ const Snippet = ({ connectionID }: SnippetProps) => {
 			return;
 		};
 		fetchEventURL();
+	}, []);
+
+	// Retrieve the JavaScript SDK URL.
+	useEffect(() => {
+		const fetchJavaScriptSDKURL = async () => {
+			let javaScriptSDKURL: string;
+			try {
+				javaScriptSDKURL = await api.javaScriptSDKURL();
+			} catch (err) {
+				setTimeout(() => {
+					handleError(err);
+				}, 300);
+				return;
+			}
+			setJavaScriptSDKURL(javaScriptSDKURL);
+			return;
+		};
+		fetchJavaScriptSDKURL();
 	}, []);
 
 	useEffect(() => {
@@ -76,7 +76,7 @@ const Snippet = ({ connectionID }: SnippetProps) => {
 	const snippet = useMemo<string>(() => {
 		const r1 = SNIPPET.replace('"writekey"', `"${keys[0]}"`);
 		const r2 = r1.replace('"endpoint"', `"${eventURL}"`);
-		const r3 = r2.replace('"/javascript-sdk/dist/meergo.min.js"', `"${cdnURL}/javascript-sdk/dist/meergo.min.js"`);
+		const r3 = r2.replace('"/javascript-sdk/dist/meergo.min.js"', `"${javaScriptSDKURL}"`);
 		return r3;
 	}, [SNIPPET, keys, eventURL]);
 

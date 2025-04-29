@@ -98,7 +98,6 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /actions/metrics/days/{days}":                    workspace.ActionMetricsPerDay,
 		"GET    /actions/metrics/hours/{hours}":                  workspace.ActionMetricsPerHour,
 		"GET    /actions/metrics/minutes/{minutes}":              workspace.ActionMetricsPerMinute,
-		"GET    /cdn-url":                                        api.CDNURL, /* only admin */
 		"GET    /connections":                                    workspace.Connections,
 		"GET    /connections/{id}":                               workspace.Connection,
 		"GET    /connections/{id}/action-types":                  connection.ActionTypes,   /* only admin */
@@ -124,6 +123,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *api
 		"GET    /events/settings/{write_key}":                    api.EventsSettings,
 		"GET    /identity-resolution/latest":                     workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":                   workspace.IdentityResolutionSettings,
+		"GET    /javascript-sdk-url":                             api.JavaScriptSDKURL,                 /* only admin */
 		"GET    /keys":                                           organization.APIKeys,                 /* only admin */
 		"GET    /members":                                        organization.Members,                 /* only admin */
 		"GET    /members/current":                                api.Member,                           /* only admin */
