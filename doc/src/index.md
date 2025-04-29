@@ -1,10 +1,10 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Meergo documentation{% end %}
+{% macro Title string %}Meergo CDP overview{% end %}
 {% Article %}
 
-# Documentation
+# Overview
 
-**Meergo** is a Customer Data Platform (CDP) designed for efficient data management. Its data pipelines enable the seamless collection of information from applications, websites, mobile apps, databases, files, and SaaS platforms. [More about how Meergo work](how-meergo-work)
+**Meergo** is a Customer Data Platform (CDP) designed to help teams collect, unify, and activate customer data efficiently and securely. Built with a developer-first approach and native data warehouse compatibility, Meergo empowers you to create flexible data pipelines that fit seamlessly into your existing tech stack. [More about what is Meergo CDP](what-is-meergo).
 
 ## Installing
 
