@@ -211,11 +211,12 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 	const onInviteMember = async () => {
 		setError('');
 		setIsSaving(true);
-		const err = validateMemberEmail(email);
-		if (err !== '') {
+		try {
+			validateMemberEmail(email);
+		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);
-				setError(err);
+				setError(err.message);
 			}, 300);
 			return;
 		}

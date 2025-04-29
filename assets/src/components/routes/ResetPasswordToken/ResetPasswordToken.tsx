@@ -51,25 +51,32 @@ const ResetPasswordToken = () => {
 	const onPasswordInput = (e: any) => {
 		const v = e.target.value;
 		setPassword(v);
-		const error = validatePassword(v, password2, false);
-		setPasswordError(error);
+		try {
+			validatePassword(v, password2, false);
+		} catch (err) {
+			setPasswordError(err.message);
+		}
 	};
 
 	const onPassword2Input = (e: any) => {
 		const v = e.target.value;
 		setPassword2(v);
-		const error = validatePassword(password, v, false);
-		setPasswordError(error);
+		try {
+			validatePassword(password, v, false);
+		} catch (err) {
+			setPasswordError(err.message);
+		}
 	};
 
 	const onChangePassword = async (e: FormEvent) => {
 		e.preventDefault();
 		setIsLoading(true);
 		setPasswordError('');
-		const error = validatePassword(password, password2, true);
-		if (error !== '') {
+		try {
+			validatePassword(password, password2, true);
+		} catch (err) {
 			setTimeout(() => {
-				setPasswordError(error);
+				setPasswordError(err.message);
 				setIsLoading(false);
 			}, 300);
 			return;
@@ -140,16 +147,16 @@ const ResetPasswordToken = () => {
 };
 
 const validatePassword = (password: string, password2: string, forcePasswordMatch: boolean) => {
-	let error = validateMemberPassword(password);
-	if (error !== '') {
-		return error;
+	try {
+		validateMemberPassword(password);
+	} catch (err) {
+		throw err;
 	}
 	if (password2 !== '' || forcePasswordMatch) {
 		if (password !== password2) {
-			return 'Passwords must match';
+			throw new Error('Passwords must match');
 		}
 	}
-	return '';
 };
 
 export { ResetPasswordToken };

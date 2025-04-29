@@ -93,11 +93,12 @@ const Member = () => {
 		if (password != null) {
 			memberToSet.password = password;
 		}
-		const err = validateMemberToSet(memberToSet, false);
-		if (err !== '') {
+		try {
+			validateMemberToSet(memberToSet, false);
+		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);
-				setError(err);
+				setError(err.message);
 			}, 300);
 			return;
 		}

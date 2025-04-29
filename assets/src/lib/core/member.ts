@@ -23,44 +23,46 @@ const transformMember = (member: Member): TransformedMember => {
 	return transformed;
 };
 
-const validateMemberEmail = (email: string): string => {
+const validateMemberEmail = (email: string) => {
 	if (email === '') {
-		return 'email must not be empty';
+		throw new Error('email must not be empty');
 	}
 	if (email.length > 120) {
-		return 'email must be shorter than 120 characters';
+		throw new Error('email must be shorter than 120 characters');
 	}
-	return '';
 };
 
-const validateMemberPassword = (password: string): string => {
+const validateMemberPassword = (password: string) => {
 	if (password.length < 8) {
-		return 'password must be at least 8 characters long';
+		throw new Error('password must be at least 8 characters long');
 	}
 	if (password.length > 72) {
-		return 'password must be shorter than 72 characters';
+		throw new Error('password must be shorter than 72 characters');
 	}
-	return '';
 };
 
-const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean): string => {
+const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean) => {
 	if (member.name === '') {
-		return 'name must not be empty';
+		throw new Error('name must not be empty');
 	}
 	if (member.name.length > 45) {
-		return 'name must be shorter than 45 characters';
+		throw new Error('name must be shorter than 45 characters');
 	}
-	const error = validateMemberEmail(member.email);
-	if (error !== '') {
-		return error;
+	try {
+		validateMemberEmail(member.email);
+	} catch (err) {
+		throw err;
 	}
 	if (isPasswordRequired && member.password === '') {
-		return 'password must not be empty';
+		throw new Error('password must not be empty');
 	}
 	if (member.password != null) {
-		return validateMemberPassword(member.password);
+		try {
+			validateMemberPassword(member.password);
+		} catch (err) {
+			throw err;
+		}
 	}
-	return '';
 };
 
 export { transformMember, TransformedMember, validateMemberToSet, validateMemberEmail, validateMemberPassword };
