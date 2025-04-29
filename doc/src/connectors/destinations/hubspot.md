@@ -10,8 +10,8 @@ HubSpot is a cloud application that offers tools for customer relationship manag
 
 ### On this page
 
-* [Add a HubSpot data destination](#add-a-hubspot-data-destination)
-* [Export users asHubSpot contacts](#export-users-as-hubspot-contacts)
+- [Add a HubSpot data destination](#add-a-hubspot-data-destination)
+- [Export users as HubSpot contacts](#export-users-as-hubspot-contacts)
 
 ### Add a HubSpot data destination
 
@@ -48,7 +48,7 @@ Once the HubSpot data destination is added, the **Actions** page will be display
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To export only specific users, apply a [filter](/filters) to refine your selection.
 5. Select the matching properties that define how users in your workspace correspond to HubSpot contacts.
-6. Choose what can be done with the users: **Create and update**, **Create only**, or **Update only**.  
+6. Choose what can be done with the users: **Create and update**, **Create only**, or **Update only**.
 7. (Optional) If multiple HubSpot contacts match a single user in Meergo, choose whether to update them anyway or skip the update.
 8. Define the mapping or use a transformation function to convert the users in your workspace's data warehouse to HubSpot contacts.
 9. Click **Add**.

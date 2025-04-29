@@ -138,7 +138,7 @@ Make sure both files are accessible.
 
 ### Database setup
 
-Meergo relies on PostgreSQL for its internal database. Note that this is not the same as the data warehouse you will configure later — this database is used exclusively for Meergo's own operational data and internal management.  
+Meergo relies on PostgreSQL for its internal database. Note that this is not the same as the data warehouse you will configure later — this database is used exclusively for Meergo's own operational data and internal management.
 
 To initialize it, execute the SQL script [`database/PostgreSQL.sql`](https://github.com/meergo/meergo/blob/main/database/PostgreSQL.sql), which will create the required schema and tables based on your configuration.
 

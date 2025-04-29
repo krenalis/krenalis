@@ -44,7 +44,7 @@ The table below provides the types that can appears in a schema:
 
 [^2]: `float(n)` can be limited to finite values, excluding `NaN` and `±Infinity` from the allowed values.
 
-[^3]: `decimal(p,s)` has precision `p` in range [1, 76], scale `s` in range [0, 37], and `s` is less or equal to `p`.   
+[^3]: `decimal(p,s)` has precision `p` in range [1, 76], scale `s` in range [0, 37], and `s` is less or equal to `p`.
 
 [^4]: `datetime` and `time` have nanosecond precision and no time zone.
 

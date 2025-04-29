@@ -30,7 +30,7 @@ The `meergo.OAuth` type contains this information:
 - `DestinationScopes`: required scopes when used as a destination. Leave empty if there are no destination scopes.
 - `ExpiresIn`: lifetime of the access token in seconds. If the value is zero or negative, the lifetime is provided by the `TokenURL` endpoint.
 
-If `AuthURL` and `TokenURL` contain query string arguments, they will be preserved.  
+If `AuthURL` and `TokenURL` contain query string arguments, they will be preserved.
 
 ## OAuthAccount method
 

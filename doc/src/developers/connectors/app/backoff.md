@@ -50,7 +50,7 @@ meergo.ExponentialStrategy(100 * time.Millisecond)
 
 ### RetryAfter strategy
 
-This strategy uses the "Retry-After" header from the response. The header can specify either the number of seconds to wait or a specific date and time (as specified in [RFC 9110](https://httpwg.org/specs/rfc9110.html#field.retry-after)). The strategy returned by the `RetryAfter` function handles both:  
+This strategy uses the "Retry-After" header from the response. The header can specify either the number of seconds to wait or a specific date and time (as specified in [RFC 9110](https://httpwg.org/specs/rfc9110.html#field.retry-after)). The strategy returned by the `RetryAfter` function handles both:
 
 ```go
 meergo.RetryAfterStrategy()

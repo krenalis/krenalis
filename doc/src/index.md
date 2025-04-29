@@ -33,7 +33,7 @@ Meergo [connectors](connectors/) allows to import and export users from and to a
 
 ## Collect and send events
  
-Use the following SDKs to collect and send events to Meergo. Events can be stored in your data warehouse or sent to applications for activation in real-time.   
+Use the following SDKs to collect and send events to Meergo. Events can be stored in your data warehouse or sent to applications for activation in real-time.
 
 <ul class="grid-list">
   <li><a href="javascript-sdk"> JavaScript SDK (Browser)</a></li>

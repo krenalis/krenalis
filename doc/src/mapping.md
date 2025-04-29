@@ -18,13 +18,13 @@ As an example, the following mapping maps the `firstName` and `lastName` propert
 
 ```
 ┌─────────────────────────────────┐
-│ firstName                       │ ->  first_name  
+│ firstName                       │ ->  first_name
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
-│ lastName                        │ ->  last_name  
+│ lastName                        │ ->  last_name
 └─────────────────────────────────┘
 ┌─────────────────────────────────┐
-│                                 │ ->  email  
+│                                 │ ->  email
 └─────────────────────────────────┘
 ```
 

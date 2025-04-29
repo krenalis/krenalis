@@ -12,7 +12,7 @@ You can add sources or update existing ones from the **Sources** page of your ad
 
 ## Add a source
 
-Choose the source you want to add:  
+Choose the source you want to add:
 
 * **Website**
     * [JavaScript](javascript)

@@ -12,7 +12,7 @@ Customer Data Platform around your data warehouse, with real-time customer segme
 
 ---
 
-<img src="README-screenshot.png">    
+<img src="README-screenshot.png">
 
 ## About Meergo
 

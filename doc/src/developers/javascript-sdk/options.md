@@ -24,7 +24,7 @@ Where `<options>` represent one or more of the options shown below.
 
 ### Using `import` or `require`
 
-When importing the package using `import` or `require`, pass an additional argument to the `Meergo` constructor.  
+When importing the package using `import` or `require`, pass an additional argument to the `Meergo` constructor.
 
 ```javascript
 const meergo = new Meergo('<write key>', '<endpoint>', { <options> });
@@ -38,7 +38,7 @@ Below are the options that control various aspects of the JavaScript SDK.
 
 | Option                                     | Type                                 | Default | Description                                                                                                                                                      |
 |--------------------------------------------|--------------------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                                          | 
+| [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                                          |
 | `debug`                                    | `Boolean`                            | `false` | **debug mode**: when enabled status messages will appear on the console. You can also enable/disable debug mode later using the [`debug`](methods#debug) method. |
 | [`group`](#group-option)                   | `Object`                             |         | Customize the storage priority for group data.                                                                                                                   |
 | [`session`](#session-option)               | `Object`                             |         | Controls whether the [session tracking](../../events/session-tracking) is automatic or not, and sets its timeout.                                                |
@@ -104,10 +104,10 @@ meergo.load('<write key>', '<endpoint>', {
 
 The `session` option has the following sub-options:
 
-| Option      | Type      | Default    | Description                                                                                        |
-|-------------|-----------|------------|----------------------------------------------------------------------------------------------------|
-| `autoTrack` | `Boolean` | `true`     | Indicates if the auto tracking is enabled. See [session tracking](../../events/session-tracking).  |
-| `timeout`   | `Number`  | 30 minutes | Timeout in milliseconds for session expiration due to inactivity.                                  |
+| Option      | Type      | Default    | Description                                                                                       |
+|-------------|-----------|------------|---------------------------------------------------------------------------------------------------|
+| `autoTrack` | `Boolean` | `true`     | Indicates if the auto tracking is enabled. See [session tracking](../../events/session-tracking). |
+| `timeout`   | `Number`  | 30 minutes | Timeout in milliseconds for session expiration due to inactivity.                                 |
 
 #### Example:
 
@@ -126,10 +126,10 @@ The `useQueryString` option provides control over how query parameters are handl
 
 Alternatively, you can keep it active but validate the Anonymous ID and User ID using regular expressions. To do this, set `useQueryString` to an object, instead of a boolean, with the following properties:
 
-| Option | Type     | Default    | Description                                             |
-|--------|----------|------------|---------------------------------------------------------|
-| `aid`  | `RegExp` | `/\s\S/`   | Regular expression to validate the `ajs_aid` parameter. |
-| `uid`  | `RegExp` | `/\s\S/`   | Regular expression to validate the `ajs_uid` parameter. |
+| Option | Type     | Default  | Description                                             |
+|--------|----------|----------|---------------------------------------------------------|
+| `aid`  | `RegExp` | `/\s\S/` | Regular expression to validate the `ajs_aid` parameter. |
+| `uid`  | `RegExp` | `/\s\S/` | Regular expression to validate the `ajs_uid` parameter. |
 
 
 #### Examples
@@ -168,9 +168,9 @@ The JavaScript SDK enables configuration of the preferred storage location. By d
 
 The `storage` option has the following sub-option:
 
-| Option    | Type    | Default                     | Description                           |
-|-----------|---------|-----------------------------|---------------------------------------|
-| `stores`  | `Array` | `['localStorage','cookie']` | Storage locations used to store data. |
+| Option   | Type    | Default                     | Description                           |
+|----------|---------|-----------------------------|---------------------------------------|
+| `stores` | `Array` | `['localStorage','cookie']` | Storage locations used to store data. |
 
 The `storage.stores` option specifies the preferred storage locations in order of priority: localStorage, sessionStorage, cookie, and memory. If `storage.stores` is empty, no data will be stored. 
 

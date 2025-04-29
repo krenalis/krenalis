@@ -18,7 +18,7 @@ Common use cases for filters include:
 
 ## Operators
 
-In a filter, select the boolean operator `any` if you want an event or user to match any of the conditions to be processed. Select `all` if you want an event or user to match all conditions.    
+In a filter, select the boolean operator `any` if you want an event or user to match any of the conditions to be processed. Select `all` if you want an event or user to match all conditions.
 
 Here are all the operators you can use in filters. The operators you can use for a property depend on the type of property and whether it can be null or not. Texts are compared in a case-sensitive manner.
 

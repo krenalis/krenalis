@@ -268,7 +268,7 @@ For the previous example, we can have three scenarios:
 * If the user is currently non-anonymous but has a different User ID, their User ID is changed, and all traits are replaced with the provided ones.
 * If the user is currently non-anonymous and has the same User ID as the provided one, the provided traits are added to the current traits. If a provided trait has the value `undefined`, the corresponding trait is removed.
 
-> To completely replace the current user's traits, regardless of whether the user is anonymous or non-anonymous, and without making an [`identify`](../../events/identify) call, use the [`user().traits`](user-class#traits) method.  
+> To completely replace the current user's traits, regardless of whether the user is anonymous or non-anonymous, and without making an [`identify`](../../events/identify) call, use the [`user().traits`](user-class#traits) method.
 
 ## group
 
@@ -398,9 +398,9 @@ setAnonymousId(id?: string): string | undefined
 
 #### Parameters
 
-| Name | Type       | Required | Description                                            |
-|------|------------|----------|--------------------------------------------------------|
-| `id` | `String`   |          | Anonymous ID to set. If it is missing it does nothing. |
+| Name | Type     | Required | Description                                            |
+|------|----------|----------|--------------------------------------------------------|
+| `id` | `String` |          | Anonymous ID to set. If it is missing it does nothing. |
 
 It returns the Anonymous ID, if called after `Meergo` is ready.
 
@@ -431,7 +431,7 @@ getSessionId(): number
 
 #### Parameters
 
-There are no parameters. Returns a `Number` representing the current session identifier, or `null` if there is no session.  
+There are no parameters. Returns a `Number` representing the current session identifier, or `null` if there is no session.
 
 #### Example
 
@@ -524,7 +524,7 @@ ready(callback?: () => void): Promise<void>
 |------------|------------|----------|-----------------------------------------------------|
 | `callback` | `Function` |          | Callback to call when Meergo finishes initializing. |
 
-It returns a `Promise` that resolves or rejects when Meergo finishes initializing. If the browser does not support promises and no polyfill has been installed, it returns `undefined`.       
+It returns a `Promise` that resolves or rejects when Meergo finishes initializing. If the browser does not support promises and no polyfill has been installed, it returns `undefined`.
 
 #### Example
 

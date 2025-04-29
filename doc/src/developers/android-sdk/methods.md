@@ -109,10 +109,10 @@ identify(userId: String, traits: JsonObject = emptyJsonObject): Unit
 ```
 #### Parameters
 
-| Name         | Type         | Required                               | Description                         |
-|--------------|--------------|----------------------------------------|-------------------------------------|
-| `userId`     | `String`     | <div style="text-align:center">✓</div> | Identifier of the user.             |
-| `traits`     | `JsonObject` |                                        | Traits to add to the user's traits. |
+| Name     | Type         | Required                               | Description                         |
+|----------|--------------|----------------------------------------|-------------------------------------|
+| `userId` | `String`     | <div style="text-align:center">✓</div> | Identifier of the user.             |
+| `traits` | `JsonObject` |                                        | Traits to add to the user's traits. |
 
 #### Example
 
@@ -148,10 +148,10 @@ group(groupId: String, traits: JsonObject = emptyJsonObject): Unit
 
 #### Parameters
 
-| Name         | Type         | Required                               | Description              |
-|--------------|--------------|----------------------------------------|--------------------------|
-| `groupId`    | `String`     | <div style="text-align:center">✓</div> | Identifier of the group. |
-| `traits`     | `JsonObject` |                                        | Traits of the group.     |
+| Name      | Type         | Required                               | Description              |
+|-----------|--------------|----------------------------------------|--------------------------|
+| `groupId` | `String`     | <div style="text-align:center">✓</div> | Identifier of the group. |
+| `traits`  | `JsonObject` |                                        | Traits of the group.     |
 
 #### Example
 
@@ -231,7 +231,7 @@ JsonObject traits = analytics.traits();
 
 ## alias
 
-The `alias` method is used to merge two user identities, effectively connecting two sets of user data as one. This method is applicable when the event is dispatched to a destination, such as Mixpanel.  
+The `alias` method is used to merge two user identities, effectively connecting two sets of user data as one. This method is applicable when the event is dispatched to a destination, such as Mixpanel.
 
 > In Meergo, user merging is handled by Meergo's Identity Resolution. Therefore this method is not utilized in this process. 
 
@@ -243,9 +243,9 @@ alias(newId: String): Unit
 
 #### Parameters
 
-| Name         | Type     | Required                               | Description                                      |
-|--------------|----------|----------------------------------------|--------------------------------------------------|
-| `newId`      | `String` | <div style="text-align:center">✓</div> | The new ID you want to alias the existing ID to. |
+| Name    | Type     | Required                               | Description                                      |
+|---------|----------|----------------------------------------|--------------------------------------------------|
+| `newId` | `String` | <div style="text-align:center">✓</div> | The new ID you want to alias the existing ID to. |
 
 #### Example
 
@@ -307,9 +307,9 @@ reset(all: Boolean = false): Unit
 
 #### Parameters
 
-| Name       | Type      | Required | Description                                                                              |
-|------------|-----------|----------|------------------------------------------------------------------------------------------|
-| `all`      | `Boolean` |          | Indicates if the Anonymous ID and the session must be reset, regardless of the strategy. |
+| Name  | Type      | Required | Description                                                                              |
+|-------|-----------|----------|------------------------------------------------------------------------------------------|
+| `all` | `Boolean` |          | Indicates if the Anonymous ID and the session must be reset, regardless of the strategy. |
 
 #### Example
 
