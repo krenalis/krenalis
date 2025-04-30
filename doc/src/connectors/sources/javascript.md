@@ -10,9 +10,9 @@ The **JavaScript** data source allows you to receive real-time events, including
 * Stored in the workspace's data warehouse.
 * Extracted to identify users, both recognized and anonymous, for unification in the workspace's data warehouse.
 
-The JavaScript data source requires the use of the [JavaScript SDK](../../developers/javascript-sdk) from Meergo to send events such as page views, clicks, and information about anonymous and authenticated users (for example, users who have logged in). In most cases, you only need to include the snippet in your site's pages. You can copy the snippet from the **Settings > Snippet** page of the JavaScript data source.
+The JavaScript data source requires the use of the [JavaScript SDK](/developers/javascript-sdk) from Meergo to send events such as page views, clicks, and information about anonymous and authenticated users (for example, users who have logged in). In most cases, you only need to include the snippet in your site's pages. You can copy the snippet from the **Settings > Snippet** page of the JavaScript data source.
 
-> The [JavaScript SDK](../../developers/javascript-sdk) is an open-source JavaScript library licensed under MIT, compatible with both Segment's Analytics.js and RudderStack's JavaScript SDK.
+> The [JavaScript SDK](/developers/javascript-sdk) is an open-source JavaScript library licensed under MIT, compatible with both Segment's Analytics.js and RudderStack's JavaScript SDK.
 
 ### On this page
 
@@ -42,7 +42,7 @@ Once the JavaScript data source is added, the **Actions** page will be displayed
 4. Click **Copy** to copy the snippet.
 5. Add the snippet to your site's pages between the **<head>** and **</head>** tags.
 
-> Refer to the [JavaScript SDK](../javascript-sdk/getting-started) documentation for more details and other ways to use the SDK.
+> Refer to the [JavaScript SDK](/developers/javascript-sdk) documentation for more details and other ways to use the SDK.
 
 ### Import events into the workspace's data warehouse
 

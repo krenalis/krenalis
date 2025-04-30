@@ -16,7 +16,7 @@ The **Identity Resolution** procedure will then evaluate whether or not these us
 When a user identity is imported from a connection's action, the identities are updated like this:
 
 * If it is **imported for the first time**, a new identity is created
-* If it **has already been imported** previously, the properties of the already imported identity are overwritten with those of the new one (including overwriting values which are null)
+* If it **has already been imported** previously, the properties of the already imported identity are overwritten with those of the new one (including overwriting values which are null)
 
 ## How identities are identified
 
@@ -26,7 +26,7 @@ Identifying a user identity and understanding how this identification occurs is 
 * when importing from a **file** or **database**, the [user identifier](#user-identifier) specified in the action's editing page is compared;
 * when importing from an **event**, the `userId` (for non-anonymous user identities) or the `anonymousId` (for anonymous user identities) is compared
 
-> The behavior for the users imported from events allows the implementation of [strategies](identity-resolution/anonymous-users-strategies) by controlling how `userId` and `anonymousId` are sent by the client (eg. the [JavaScript SDK](javascript-sdk) in the browser).
+> The behavior for the users imported from events allows the implementation of [strategies](identity-resolution/anonymous-users-strategies) by controlling how `userId` and `anonymousId` are sent by the client (eg. the [JavaScript SDK](/developers/javascript-sdk) in the browser).
 
 ### User identifier
 

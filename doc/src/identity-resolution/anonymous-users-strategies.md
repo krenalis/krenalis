@@ -28,7 +28,7 @@ The Preservation strategy unifies the anonymous user data before login and after
 
 ## Implement a strategy
 
-To implement a specific strategy, you need to set the strategy option when loading a Meergo SDK. For example, with the [JavaScript SDK](../developers/javascript-sdk) in the browser:
+To implement a specific strategy, you need to set the strategy option when loading a Meergo SDK. For example, with the [JavaScript SDK](/developers/javascript-sdk) in the browser:
 
 ```javascript
 meergo.load(writeKey, endpoint, { strategy: 'Conversion' });

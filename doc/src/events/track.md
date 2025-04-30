@@ -22,7 +22,7 @@ Here are some common scenarios when you might want to use a track call:
 
 ## How to make a track call
 
-To make a track call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you can make a track call in the following way:
+To make a track call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](/developers/javascript-sdk) in the browser, you can make a track call in the following way:
 
 ```javascript
 meergo.track('Product Viewed', {

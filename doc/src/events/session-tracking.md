@@ -32,7 +32,7 @@ When a Meergo SDK sends an event, it includes two session fields. Here's an exam
 
 `sessionId` denotes the Session ID, and `sessionStart` indicates whether the session started with this event.
 
-> The Session ID is a 64-bit integer, meaning it can be represented within the range of [-9223372036854775808, 9223372036854775807]. However, certain SDKs may restrict the generated Session IDs for sessions to a smaller interval. For example, the [JavaScript SDK](../javascript-sdk) generates Session IDs within the range [1, 9007199254740991]. 
+> The Session ID is a 64-bit integer, meaning it can be represented within the range of [-9223372036854775808, 9223372036854775807]. However, certain SDKs may restrict the generated Session IDs for sessions to a smaller interval. For example, the [JavaScript SDK](/developers/javascript-sdk) generates Session IDs within the range [1, 9007199254740991]. 
 
 ### Use sessions in transformations
 
@@ -47,9 +47,9 @@ In your data warehouse, Session ID and Session Start are stored respectively in 
 
 ## Website sessions
 
-The session management functions depend on the specific SDK. The example below uses the [JavaScript SDK](../javascript-sdk), but consult the SDK documentation for comprehensive details.
+The session management functions depend on the specific SDK. The example below uses the [JavaScript SDK](/developers/javascript-sdk), but consult the SDK documentation for comprehensive details.
 
-The Meergo [JavaScript SDK](../javascript-sdk) automatically manages sessions unless specified otherwise. When a user visits your website for the first time, a session starts with a default timeout of 30 minutes.
+The Meergo [JavaScript SDK](/developers/javascript-sdk) automatically manages sessions unless specified otherwise. When a user visits your website for the first time, a session starts with a default timeout of 30 minutes.
 
 Every time an event is recorded, the timeout resets, defaulting back to 30 minutes. However, if the timeout elapses, the current session expires. Upon the next event, a new session with a new Session ID will be created.
 
@@ -83,7 +83,7 @@ let sessionId = meergo.getSessionId();
 
 With automatic session tracking, a session expires when the timeout period concludes, and a new session starts with the subsequent event.
 
-This behavior is the default setting. To disable it, set the `autoTrack` option to `false` when loading the [JavaScript SDK](../javascript-sdk):
+This behavior is the default setting. To disable it, set the `autoTrack` option to `false` when loading the [JavaScript SDK](/developers/javascript-sdk):
 
 ```javascript
 meergo.load(writeKey, endpoint, {
@@ -96,7 +96,7 @@ When automatic session tracking is disabled, you can still use the `startSession
 
 ### Change the session timeout
 
-The default session timeout is 30 minutes. If you wish to set a different timeout, specify the `timeout` option with a value in milliseconds when loading the [JavaScript SDK](../javascript-sdk):
+The default session timeout is 30 minutes. If you wish to set a different timeout, specify the `timeout` option with a value in milliseconds when loading the [JavaScript SDK](/developers/javascript-sdk):
 
 ```javascript
 meergo.load(writeKey, endpoint, {
