@@ -14,10 +14,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-
-	"github.com/meergo/meergo/cmd"
-
-	"gopkg.in/yaml.v3"
 )
 
 // buildMeergo builds Meergo.
@@ -50,21 +46,7 @@ func generateAssets(ctx context.Context, repo string) error {
 	return nil
 }
 
-func writeConfigYAMLFile(meergoDir string, setts *cmd.Settings) error {
-	err := validDatabaseNameForTests(setts.DB.Database)
-	if err != nil {
-		return err
-	}
-	conf, err := yaml.Marshal(setts)
-	if err != nil {
-		return err
-	}
-	configYamlPath := filepath.Join(meergoDir, "config.yaml")
-	err = os.WriteFile(configYamlPath, conf, 0644)
-	return err
-}
-
-func launchMeergo(ctx context.Context) error {
+func launchMeergo(ctx context.Context, env []string) error {
 	repo, err := filepath.Abs("../")
 	if err != nil {
 		return err
@@ -74,6 +56,7 @@ func launchMeergo(ctx context.Context) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	cmd.Dir = meergoDir
+	cmd.Env = env
 	return cmd.Run()
 }
 

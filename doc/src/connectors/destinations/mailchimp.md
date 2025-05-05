@@ -26,9 +26,8 @@ Before you can add a Mailchimp data destination, you need to create a private ke
 7. Fill in the remaining fields as desired.
 8. Click **Create**.
 9. Copy the **Client ID** and **Client Secret** field values.
-10. Open the **config.yaml** configuration file of Meergo.
-11. Under **oauth > Mailchimp**, enter the client ID and client secret you copied earlier.
-12. Restart the Meergo server.
+10. Set the `MEERGO_OAUTH_MAILCHIMP_CLIENT_ID` and `MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET` environment variables  with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the `.env` file in the same directory of the Meergo executable.
+11. Restart the Meergo server.
 
 > Mailchimp does not allow authentication via the "localhost" domain, so if you are using "localhost" as the Meergo domain, you should use "127.0.0.1" instead, at least when adding a Mailchimp data destination.
 

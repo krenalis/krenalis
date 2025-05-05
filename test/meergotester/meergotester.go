@@ -291,19 +291,6 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		encryptionKey = base64.StdEncoding.EncodeToString(key)
 	}
 
-	setts := cmd.Settings{}
-	setts.EncryptionKey = encryptionKey
-	setts.HTTP.Host = testsSettings.HTTP.Host
-	setts.HTTP.Port = testsSettings.HTTP.Port
-	setts.DB.Host = testsSettings.Database.Host
-	setts.DB.Port = testsSettings.Database.Port
-	setts.DB.Username = testsSettings.Database.Username
-	setts.DB.Password = testsSettings.Database.Password
-	setts.DB.Database = testsSettings.Database.Database
-	setts.DB.Schema = testsSettings.Database.Schema
-	setts.Transformations.Local.PythonExecutable = testsSettings.PythonExecutable
-	setts.Transformations.Local.FunctionsDir = transformationsTempDir
-
 	// Wait for the assets to be generated.
 	<-assetsGenerated
 
@@ -313,17 +300,26 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 
 	if launchMeergoExternally {
 		// Create, if necessary, the directory that will hold the Meergo
-		// executable (as well as the other files, eg. config.yaml, needed for
-		// the execution).
+		// executable (as well as the other files needed for the execution).
 		meergoDir := filepath.Join(repo, "test", "meergo-executable-for-tests")
 		err = os.Mkdir(meergoDir, 0755)
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			t.Fatal(err)
 		}
-		// Write the config YAML file.
-		err = writeConfigYAMLFile(meergoDir, &setts)
-		if err != nil {
-			t.Fatalf("cannot write the YAML config file: %s", err)
+		// Prepare the environment variables containing the Meergo settings.
+		// Keep these in sync with the settings set below.
+		env := []string{
+			"MEERGO_ENCRYPTION_KEY=" + encryptionKey,
+			"MEERGO_HTTP_HOST=" + testsSettings.HTTP.Host,
+			"MEERGO_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
+			"MEERGO_DB_HOST=" + testsSettings.Database.Host,
+			"MEERGO_DB_PORT=" + strconv.Itoa(testsSettings.Database.Port),
+			"MEERGO_DB_USERNAME=" + testsSettings.Database.Username,
+			"MEERGO_DB_PASSWORD=" + testsSettings.Database.Password,
+			"MEERGO_DB_DATABASE=" + testsSettings.Database.Database,
+			"MEERGO_DB_SCHEMA=" + testsSettings.Database.Schema,
+			"MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
+			"MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR=" + transformationsTempDir,
 		}
 		if !meergoAlreadyBuilt {
 			err := buildMeergo(ctx, repo, meergoDir)
@@ -337,7 +333,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			defer func() {
 				close(c.meergoRunning)
 			}()
-			err := launchMeergo(ctxWithCancel)
+			err := launchMeergo(ctxWithCancel, env)
 			if err != nil {
 				select {
 				case <-ctxWithCancel.Done():
@@ -347,6 +343,20 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			}
 		}()
 	} else {
+		// Meergo settings.
+		// Keep these in sync with the environment variables set above.
+		setts := cmd.Settings{}
+		setts.EncryptionKey = encryptionKey
+		setts.HTTP.Host = testsSettings.HTTP.Host
+		setts.HTTP.Port = testsSettings.HTTP.Port
+		setts.DB.Host = testsSettings.Database.Host
+		setts.DB.Port = testsSettings.Database.Port
+		setts.DB.Username = testsSettings.Database.Username
+		setts.DB.Password = testsSettings.Database.Password
+		setts.DB.Database = testsSettings.Database.Database
+		setts.DB.Schema = testsSettings.Database.Schema
+		setts.Transformations.Local.PythonExecutable = testsSettings.PythonExecutable
+		setts.Transformations.Local.FunctionsDir = transformationsTempDir
 		err = validDatabaseNameForTests(setts.DB.Database)
 		if err != nil {
 			t.Fatal(err)

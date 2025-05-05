@@ -123,17 +123,19 @@ Then you can proceed with the [configuration](#configuration).
 Once you have obtained the `meergo` executable, follow these steps to configure the application:
 
 1. **Choose a directory** on your filesystem — this will be the working directory where you will run Meergo.
-2. Download the example configuration file [`config.example.yaml`](https://github.com/meergo/meergo/blob/main/cmd/meergo/config.example.yaml) and copy it into the chosen directory as `config.yaml`.
-3. Edit `config.yaml` to match your environment and requirements.
+2. Download the example configuration file [`meergo.example.env`](https://github.com/meergo/meergo/blob/experiment-with-env/cmd/meergo/meergo.example.env) and copy it into the chosen directory as `.env`.
+3. Edit `.env` to match your environment and requirements.
+
+> The `.env` file contains the definition of environment variables and is sourced by Meergo at startup. It is therefore possible, alternatively and according to the needs of the environment in which Meergo is to be run, to define the environment variables before starting Meergo, without using the `.env` file.
 
 Next, you’ll need to set up certificates (if using HTTPS), configure the database, and launch the application.
 
 ### Certificates
 
-If you have enabled HTTPS by setting the `http.tls.enabled` parameter to `true` in your `config.yaml`, you must also specify the TLS certificate and private key files. To do this, set the following parameters:
+If you have enabled HTTPS by setting the `MEERGO_HTTP_TLS_ENABLED` environment variable to `true`, you must also specify the TLS certificate and private key files. To do this, set the following environment variables:
 
-- `http.tls.certFile`: Path to the TLS certificate file.
-- `http.tls.keyFile`: Path to the corresponding private key file.
+- `MEERGO_HTTP_TLS_CERT_FILE`: Path to the TLS certificate file.
+- `MEERGO_HTTP_TLS_KEY_FILE`: Path to the corresponding private key file.
 
 Make sure both files are accessible.
 
@@ -143,13 +145,13 @@ Meergo relies on PostgreSQL for its internal database. Note that this is not the
 
 To initialize it, execute the SQL script [`database/PostgreSQL.sql`](https://github.com/meergo/meergo/blob/main/database/PostgreSQL.sql), which will create the required schema and tables based on your configuration.
 
-Make sure the database connection settings in `config.yaml` match your PostgreSQL instance.
+Make sure the database connection settings in specified with the environment variables match your PostgreSQL instance.
 
 ### Starting Meergo
 
-Once the setup is complete, run the `meergo` executable from the directory where your `config.yaml` file is located.
+Once the setup is complete, run the `meergo` executable (if you have a `.env` file, it must be in the same directory where Meergo is executed).
 
-Meergo will launch using the specified configuration and will be ready for use.
+Meergo will launch using the configuration specified by the environment variables and will be ready for use.
 
 ## First login
 

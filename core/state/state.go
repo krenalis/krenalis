@@ -65,8 +65,8 @@ type State struct {
 
 // ConnectorOAuth represents the OAuth client credentials for a connector.
 type ConnectorOAuth struct {
-	ClientID     string `yaml:"clientID"`
-	ClientSecret string `yaml:"clientSecret"`
+	ClientID     string
+	ClientSecret string
 }
 
 // New returns a state given the database, the encryption key, and the OAuth

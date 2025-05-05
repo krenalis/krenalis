@@ -202,7 +202,7 @@ func New(db *db.DB, state *state.State) *Connectors {
 func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
 	if oauth.ClientID == "" || oauth.ClientSecret == "" {
-		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the 'config.yaml' file", connector.Name)}
+		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Meergo", connector.Name)}
 	}
 	var b strings.Builder
 	b.WriteString(oauth.AuthURL)

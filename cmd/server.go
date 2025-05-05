@@ -33,19 +33,19 @@ import (
 )
 
 type Settings struct {
-	EncryptionKey    string        `yaml:"encryptionKey"`
-	TerminationDelay time.Duration `yaml:"terminationDelay"`
-	JavaScriptSDKURL string        `yaml:"javaScriptSDKURL"`
+	EncryptionKey    string
+	TerminationDelay time.Duration
+	JavaScriptSDKURL string
 	HTTP             struct {
 		Host string
 		Port int
 		TLS  struct {
 			Enabled  bool
-			CertFile string `yaml:"certFile"`
-			KeyFile  string `yaml:"keyFile"`
+			CertFile string
+			KeyFile  string
 		}
-		ExternalURL string `yaml:"externalURL"`
-		EventURL    string `yaml:"eventURL"`
+		ExternalURL string
+		EventURL    string
 	}
 	DB   core.DBConfig
 	SMTP struct {
@@ -58,15 +58,15 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	OAuth     map[string]*state.ConnectorOAuth `yaml:"oauth"`
+	OAuth     map[string]*state.ConnectorOAuth
 	Telemetry struct {
 		Enable bool
 	}
 }
 
 type LambdaConfig struct {
-	AccessKeyID     string `yaml:"accessKeyID"`
-	SecretAccessKey string `yaml:"secretAccessKey"`
+	AccessKeyID     string
+	SecretAccessKey string
 	Region          string
 	Role            string
 	Node            struct {
@@ -80,9 +80,9 @@ type LambdaConfig struct {
 }
 
 type LocalConfig struct {
-	NodeExecutable   string `yaml:"nodeExecutable"`
-	PythonExecutable string `yaml:"pythonExecutable"`
-	FunctionsDir     string `yaml:"functionsDir"`
+	NodeExecutable   string
+	PythonExecutable string
+	FunctionsDir     string
 }
 
 // Run runs the server.
@@ -123,7 +123,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	if settings.Transformations.Local.NodeExecutable != "" || settings.Transformations.Local.PythonExecutable != "" {
 		if config.FunctionProvider != nil {
-			return errors.New("cannot specify both the Lambda and the local transformation provider in the configuration (hint: check your 'config.yaml' file)")
+			return errors.New("cannot specify both the Lambda and the local transformation provider in the configuration (hint: check the environment variables passed to Meergo)")
 		}
 		config.FunctionProvider = core.LocalConfig(settings.Transformations.Local)
 	}
@@ -135,9 +135,9 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 				continue
 			}
 			if setting.ClientID == "" {
-				return fmt.Errorf("OAuth clientID value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
+				return fmt.Errorf("OAuth clientID value for connector %q cannot be empty (hint: check the environment variables passed to Meergo)", name)
 			}
-			return fmt.Errorf("OAuth clientSecret value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
+			return fmt.Errorf("OAuth clientSecret value for connector %q cannot be empty (hint: check the environment variables passed to Meergo)", name)
 		}
 		config.ConnectorsOAuth = maps.Clone(settings.OAuth)
 	}

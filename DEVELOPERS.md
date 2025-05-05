@@ -110,8 +110,7 @@ npm install
 
 ### 2. Configure and add certificates
 
-Add a configuration file `config.yaml` (see `config.example.yaml`) in the same directory of
-the `meergo` executable, as well as a `cert.pem` and `key.pem` certificate files.
+Set environment variables necessary to run Meergo (you can add a configuration file `.env` (see `meergo.example.env`) in the same directory of the `meergo` executable), as well as a `cert.pem` and `key.pem` certificate files.
 
 ### 3. Build the assets
 
@@ -202,15 +201,15 @@ Only more technical information is kept here.
 **Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the admin.
 
 1. Cd the root of this repository
-2. Run this command, replacing the paths on the left of `:` as needed (and leaving the paths on the right, `/bin/config.yaml`, etc... as they are):
+2. Run this command, replacing the paths for `--env-file` and on the left of `:` as needed (and leaving the paths on the right, `./cmd/meergo/cert.pem`, etc... as they are):
 
     ```bash
     docker run -it \
-        -v ./cmd/meergo/config.yaml:/bin/config.yaml \
+        --env-file ./cmd/meergo/.env \
         -v ./cmd/meergo/cert.pem:/bin/cert.pem \
         -v ./cmd/meergo/key.pem:/bin/key.pem \
         --net host \
         meergo:dev
     ```
 
-3. Visit Meergo at the address specified in `config.yaml` (for example [https://localhost:9090/admin/](https://localhost:9090/admin/))
+3. Visit Meergo at the address shown on the console

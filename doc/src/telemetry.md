@@ -8,12 +8,7 @@ Meergo supports the transmission of telemetry data to an **OpenTelemetry collect
 
 ## Enabling telemetry
 
-By default, telemetry is disabled in Meergo to ensure that applications can run without the overhead of data collection unless explicitly configured. To enable telemetry, you need to modify the configuration file named `config.yaml`. Locate the `telemetry` section and set the `enable` value to `true` as shown below:
-
-```yaml
-telemetry:
-    enable: true
-```
+By default, telemetry is disabled in Meergo to ensure that applications can run without the overhead of data collection unless explicitly configured. To enable telemetry, you need to set the environment variable `MEERGO_TELEMETRY_ENABLE` to `true`.
 
 After enabling telemetry, it is crucial to configure the system to send the collected data to an OpenTelemetry collector. This step is necessary to ensure that the telemetry data is properly processed and stored for analysis.
 

@@ -1,9 +1,21 @@
 services:
   meergo:
     image: meergo:dev
-    command: /bin/meergo-files/config.yaml
     ports:
       - 9090:9090
+    environment:
+      MEERGO_ENCRYPTION_KEY: 6uA9ccQxZ+/1PlqXZFR49QZ0fnQDCNZIugyKwHv3WdkqcoIA3iSwuuj1yvM+f2cZFQ7Saqjq695Y0AP+rlZDOg==
+      MEERGO_HTTP_HOST: meergo
+      MEERGO_HTTP_PORT: 9090
+      MEERGO_HTTP_EXTERNAL_URL: http://127.0.0.1:9090/
+      MEERGO_DB_HOST: db
+      MEERGO_DB_PORT: 5432
+      MEERGO_DB_USERNAME: meergo
+      MEERGO_DB_PASSWORD: meergo
+      MEERGO_DB_DATABASE: meergo
+      MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE: /usr/bin/node
+      MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
+      MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR: /bin/meergo-files/transformation-functions
     volumes:
       - ./docker-compose:/bin/meergo-files
     depends_on:
