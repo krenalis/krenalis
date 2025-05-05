@@ -10,6 +10,10 @@
 	animation: fade-in-entrance 0.5s;
 }
 
+.member sl-input::part(form-control-label):after {
+	color: var(--sl-color-danger-500);
+}
+
 .member__avatar,
 .member__name,
 .member__email,

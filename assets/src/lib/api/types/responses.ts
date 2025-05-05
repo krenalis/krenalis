@@ -136,7 +136,7 @@ interface Member {
 
 interface MemberToSet {
 	name: string;
-	image: string;
+	image?: string | null;
 	email: string;
 	password?: string;
 }

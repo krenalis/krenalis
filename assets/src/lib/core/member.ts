@@ -41,22 +41,24 @@ const validateMemberPassword = (password: string) => {
 	}
 };
 
-const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean) => {
+const validateMemberToSet = (member: MemberToSet, validateEmail: boolean, validatePassword: boolean) => {
 	if (member.name === '') {
 		throw new Error('name must not be empty');
 	}
 	if (member.name.length > 45) {
 		throw new Error('name must be shorter than 45 characters');
 	}
-	try {
-		validateMemberEmail(member.email);
-	} catch (err) {
-		throw err;
+	if (validateEmail) {
+		try {
+			validateMemberEmail(member.email);
+		} catch (err) {
+			throw err;
+		}
 	}
-	if (isPasswordRequired && member.password === '') {
-		throw new Error('password must not be empty');
-	}
-	if (member.password != null) {
+	if (validatePassword) {
+		if (member.password === '') {
+			throw new Error('password must not be empty');
+		}
 		try {
 			validateMemberPassword(member.password);
 		} catch (err) {

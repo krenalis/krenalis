@@ -26,13 +26,30 @@
 	font-size: 24px;
 }
 
+.signup sl-input::part(form-control-label):after {
+	color: var(--sl-color-danger-500);
+}
+
 .signup__name,
 .signup__email,
 .signup__password {
 	margin-bottom: 30px;
 }
 
-.sign-up__button {
+.signup__error {
+	color: var(--sl-color-danger-600);
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	margin-bottom: 30px;
+}
+
+.signup__error sl-icon {
+	color: var(--sl-color-danger-600);
+	position: relative;
+	top: 2px;
+}
+
+.signup__button {
 	display: block;
-	margin-top: 50px;
 }

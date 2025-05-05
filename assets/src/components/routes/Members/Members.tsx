@@ -212,7 +212,8 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 		setEmail(value);
 	};
 
-	const onInviteMember = async () => {
+	const onInviteMember = async (e: any) => {
+		e.preventDefault();
 		setError('');
 		setIsSaving(true);
 		try {
@@ -264,16 +265,18 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 			<div className='members__invite-dialog-description'>
 				An invitation to create a new member account will be sent to the email address provided.
 			</div>
-			<SlInput ref={inputRef} label='Email' value={email} onSlInput={onUpdateEmail} />
-			{error && (
-				<div className='members__invite-dialog-error'>
-					<SlIcon slot='icon' name='exclamation-octagon' />
-					{error}
-				</div>
-			)}
-			<SlButton loading={isSaving} className='members__invite' variant='primary' onClick={onInviteMember}>
-				Invite
-			</SlButton>
+			<form onSubmit={onInviteMember}>
+				<SlInput ref={inputRef} label='Email' type='email' value={email} onSlInput={onUpdateEmail} required />
+				{error && (
+					<div className='members__invite-dialog-error'>
+						<SlIcon slot='icon' name='exclamation-octagon' />
+						{error}
+					</div>
+				)}
+				<SlButton loading={isSaving} className='members__invite' type='submit' variant='primary'>
+					Invite
+				</SlButton>
+			</form>
 		</SlDialog>
 	);
 };

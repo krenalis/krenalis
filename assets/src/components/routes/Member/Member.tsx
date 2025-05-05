@@ -92,7 +92,8 @@ const Member = () => {
 		setPassword(value);
 	};
 
-	const onSave = async () => {
+	const onSave = async (e: any) => {
+		e.preventDefault();
 		setError('');
 		setIsSaving(true);
 		const memberToSet: MemberToSet = {
@@ -104,7 +105,7 @@ const Member = () => {
 			memberToSet.password = password;
 		}
 		try {
-			validateMemberToSet(memberToSet, false);
+			validateMemberToSet(memberToSet, true, password != null ? true : false);
 		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);
@@ -149,58 +150,68 @@ const Member = () => {
 	return (
 		<div className='member'>
 			<div className='member__content'>
-				<div className='member__name'>
-					<SlInput label='Name' name='name' value={name} onSlInput={onUpdateName} />
-				</div>
-				<div className='member__email'>
-					<SlInput label='Email' name='email' value={email} onSlInput={onUpdateEmail} />
-				</div>
-				<div className='member__password'>
-					<SlInput
-						type='password'
-						label='Password'
-						name='password'
-						disabled={password === null}
-						onSlInput={onUpdatePassword}
-						value={password === null ? '••••••••••••••••' : password}
-						password-toggle
-					/>
-					{password === null && <SlButton onClick={onPasswordEnable}>Change</SlButton>}
-				</div>
-				<label className='member__avatar'>
-					<div className='member__avatar-label'>Avatar</div>
-					<div className='member__avatar-box'>
-						<div className='member__avatar-buttons'>
-							<div className='member__add-avatar'>Upload</div>
-							{avatar && (
-								<div className='member__remove-avatar' onClick={onDeleteAvatar}>
-									Delete
-								</div>
-							)}
-						</div>
-						<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
-						<input
-							ref={fileInputRef}
-							type='file'
-							accept='image/jpeg, image/png'
-							onChange={onUpdateAvatar}
+				<form onSubmit={onSave}>
+					<div className='member__name'>
+						<SlInput label='Name' name='name' value={name} onSlInput={onUpdateName} required />
+					</div>
+					<div className='member__email'>
+						<SlInput
+							label='Email'
+							type='email'
+							name='email'
+							value={email}
+							onSlInput={onUpdateEmail}
+							required
 						/>
 					</div>
-				</label>
-				{error && (
-					<div className='member__error'>
-						<SlIcon slot='icon' name='exclamation-octagon' />
-						{error}
+					<div className='member__password'>
+						<SlInput
+							type='password'
+							label='Password'
+							name='password'
+							disabled={password === null}
+							required={password !== null}
+							onSlInput={onUpdatePassword}
+							value={password === null ? '••••••••••••••••' : password}
+							password-toggle
+						/>
+						{password === null && <SlButton onClick={onPasswordEnable}>Change</SlButton>}
 					</div>
-				)}
-				<div className='member__buttons'>
-					<Link path='organization/members'>
-						<SlButton className='member__cancel-button'>Cancel</SlButton>
-					</Link>
-					<SlButton className='member__save-button' variant='primary' loading={isSaving} onClick={onSave}>
-						Save
-					</SlButton>
-				</div>
+					<label className='member__avatar'>
+						<div className='member__avatar-label'>Avatar</div>
+						<div className='member__avatar-box'>
+							<div className='member__avatar-buttons'>
+								<div className='member__add-avatar'>Upload</div>
+								{avatar && (
+									<div className='member__remove-avatar' onClick={onDeleteAvatar}>
+										Delete
+									</div>
+								)}
+							</div>
+							<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
+							<input
+								ref={fileInputRef}
+								type='file'
+								accept='image/jpeg, image/png'
+								onChange={onUpdateAvatar}
+							/>
+						</div>
+					</label>
+					{error && (
+						<div className='member__error'>
+							<SlIcon slot='icon' name='exclamation-octagon' />
+							{error}
+						</div>
+					)}
+					<div className='member__buttons'>
+						<Link path='organization/members'>
+							<SlButton className='member__cancel-button'>Cancel</SlButton>
+						</Link>
+						<SlButton className='member__save-button' variant='primary' loading={isSaving} type='submit'>
+							Save
+						</SlButton>
+					</div>
+				</form>
 			</div>
 		</div>
 	);
