@@ -111,10 +111,10 @@ type LocalConfig struct {
 }
 
 type SMTPConfig struct {
-	Host string
-	Port int
-	User string
-	Pass string
+	Host     string
+	Port     int
+	Username string
+	Password string
 }
 
 type ExpressionToBeExtracted struct {

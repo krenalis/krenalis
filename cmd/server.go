@@ -49,10 +49,10 @@ type Settings struct {
 	}
 	DB   core.DBConfig
 	SMTP struct {
-		Host string
-		Port int
-		User string
-		Pass string
+		Host     string
+		Port     int
+		Username string
+		Password string
 	}
 	Transformations struct {
 		Lambda LambdaConfig

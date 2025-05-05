@@ -390,7 +390,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	}
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
 	emailToSend := &emailToSend{
-		From:     this.core.smtp.User,
+		From:     this.core.smtp.Username,
 		Subject:  "You have been invited to Meergo",
 		To:       email,
 		BodyHTML: []byte(t),
@@ -446,7 +446,7 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	}
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
 	emailToSend := &emailToSend{
-		From:     this.core.smtp.User,
+		From:     this.core.smtp.Username,
 		Subject:  "Your Meergo password reset",
 		To:       email,
 		BodyHTML: []byte(t),
@@ -821,8 +821,8 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 	}
 	e.Headers = textproto.MIMEHeader{"X-Mailer": []string{"Open2b"}}
 	var auth smtp.Auth
-	if config.User != "" {
-		auth = smtp.PlainAuth("", config.User, config.Pass, config.Host)
+	if config.Username != "" {
+		auth = smtp.PlainAuth("", config.Username, config.Password, config.Host)
 	}
 	conf := &tls.Config{
 		InsecureSkipVerify: true,

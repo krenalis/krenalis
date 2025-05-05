@@ -89,10 +89,10 @@ These settings are used to send transactional emails.
 - **`MEERGO_SMTP_PORT`** \
   SMTP server port number.
 
-- **`MEERGO_SMTP_USER`** \
+- **`MEERGO_SMTP_USERNAME`** \
   Username for SMTP authentication.
 
-- **`MEERGO_SMTP_PASS`** \
+- **`MEERGO_SMTP_PASSWORD`** \
   Password for SMTP authentication.
 
 ## Transformations

@@ -148,8 +148,8 @@ func settingsFromEnv() (*Settings, error) {
 			return nil, fmt.Errorf("invalid integer value specified for MEERGO_SMTP_PORT: %s", err)
 		}
 	}
-	settings.SMTP.User = os.Getenv("MEERGO_SMTP_USER")
-	settings.SMTP.Pass = os.Getenv("MEERGO_SMTP_PASS")
+	settings.SMTP.Username = os.Getenv("MEERGO_SMTP_USERNAME")
+	settings.SMTP.Password = os.Getenv("MEERGO_SMTP_PASSWORD")
 
 	// Transformations - Lambda.
 	settings.Transformations.Lambda.AccessKeyID = os.Getenv("MEERGO_TRANSFORMATIONS_LAMBDA_ACCESS_KEY_ID")
