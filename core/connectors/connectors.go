@@ -125,7 +125,7 @@ type Records interface {
 	Last() bool
 }
 
-type Event = meergo.Event
+type RawEvent = meergo.RawEvent
 type EventType = meergo.EventType
 
 // Record represents a record. If an error occurs during the reading or

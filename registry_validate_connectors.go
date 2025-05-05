@@ -58,7 +58,7 @@ func validateAppConnector(app AppInfo) {
 		}
 		if app.AsDestination.Targets&EventsTarget != 0 {
 			iface := reflect.TypeFor[interface {
-				EventRequest(ctx context.Context, event Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
+				EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
 				EventTypes(ctx context.Context) ([]*EventType, error)
 				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 			}]()

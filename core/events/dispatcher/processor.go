@@ -113,7 +113,7 @@ func (processor *processor) worker() {
 			// Make the event request.
 			app := processor.connectors.App(event.action.Connection())
 			var err error
-			event.request, err = app.EventRequest(ctx, events.NewConnectorEvent(event.properties), event.action.EventType, event.action.OutSchema, properties, false)
+			event.request, err = app.EventRequest(ctx, events.RawEvent(event.properties), event.action.EventType, event.action.OutSchema, properties, false)
 			if err != nil {
 				processor.metrics.FinalizeFailed(action.ID, 1, err.Error())
 				continue

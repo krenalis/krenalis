@@ -166,400 +166,399 @@ var Schema = types.Object([]types.Property{
 	{Name: "userId", Type: types.Text(), Nullable: true},
 })
 
-// ConnectorEvent implements the meergo.Event interface. A ConnectorEvent is
-// passed as an argument to the SendEvent and PreviewSendEvent methods of an app
-// connector.
-type ConnectorEvent struct {
+// rawEvent implements the meergo.RawEvent interface. A RawEvent is passed to
+// the EventRequest method of an app connector.
+type rawEvent struct {
 	event Event
 }
 
-func NewConnectorEvent(event Event) ConnectorEvent {
-	return ConnectorEvent{event}
+func RawEvent(event Event) meergo.RawEvent {
+	return rawEvent{event}
 }
 
-func (c ConnectorEvent) AnonymousId() string {
-	return c.event["anonymousId"].(string)
+func (e rawEvent) AnonymousId() string {
+	return e.event["anonymousId"].(string)
 }
 
-func (c ConnectorEvent) Channel() string {
-	return c.event["channel"].(string)
+func (e rawEvent) Channel() string {
+	return e.event["channel"].(string)
 }
 
-func (c ConnectorEvent) Category() string {
-	return c.event["category"].(string)
+func (e rawEvent) Category() string {
+	return e.event["category"].(string)
 }
 
-func (c ConnectorEvent) Context() meergo.EventContext {
-	return connectorEventContext{c.event["context"].(map[string]any)}
+func (e rawEvent) Context() meergo.RawEventContext {
+	return rawEventContext{e.event["context"].(map[string]any)}
 }
 
-func (c ConnectorEvent) Event() string {
-	return c.event["event"].(string)
+func (e rawEvent) Event() string {
+	return e.event["event"].(string)
 }
 
-func (c ConnectorEvent) GroupId() string {
-	groupId, _ := c.event["groupId"].(string)
+func (e rawEvent) GroupId() string {
+	groupId, _ := e.event["groupId"].(string)
 	return groupId
 }
 
-func (c ConnectorEvent) MessageId() string {
-	return c.event["messageId"].(string)
+func (e rawEvent) MessageId() string {
+	return e.event["messageId"].(string)
 }
 
-func (c ConnectorEvent) Name() string {
-	return c.event["name"].(string)
+func (e rawEvent) Name() string {
+	return e.event["name"].(string)
 }
 
-func (c ConnectorEvent) ReceivedAt() time.Time {
-	return c.event["receivedAt"].(time.Time)
+func (e rawEvent) ReceivedAt() time.Time {
+	return e.event["receivedAt"].(time.Time)
 }
 
-func (c ConnectorEvent) SentAt() time.Time {
-	return c.event["sentAt"].(time.Time)
+func (e rawEvent) SentAt() time.Time {
+	return e.event["sentAt"].(time.Time)
 }
 
-func (c ConnectorEvent) Timestamp() time.Time {
-	return c.event["timestamp"].(time.Time)
+func (e rawEvent) Timestamp() time.Time {
+	return e.event["timestamp"].(time.Time)
 }
 
-func (c ConnectorEvent) Type() string {
-	return c.event["type"].(string)
+func (e rawEvent) Type() string {
+	return e.event["type"].(string)
 }
 
-func (c ConnectorEvent) UserId() string {
-	userId, _ := c.event["userId"].(string)
+func (e rawEvent) UserId() string {
+	userId, _ := e.event["userId"].(string)
 	return userId
 }
 
-type connectorEventContext struct {
+type rawEventContext struct {
 	context map[string]any
 }
 
-func (c connectorEventContext) App() (meergo.EventContextApp, bool) {
+func (c rawEventContext) App() (meergo.RawEventContextApp, bool) {
 	if app, ok := c.context["app"].(map[string]any); ok {
-		return connectorEventContextApp{app}, true
+		return rawEventContextApp{app}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Browser() (meergo.EventContextBrowser, bool) {
+func (c rawEventContext) Browser() (meergo.RawEventContextBrowser, bool) {
 	if browser, ok := c.context["browser"].(map[string]any); ok {
-		return connectorEventContextBrowser{browser}, true
+		return rawEventContextBrowser{browser}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Campaign() (meergo.EventContextCampaign, bool) {
+func (c rawEventContext) Campaign() (meergo.RawEventContextCampaign, bool) {
 	if campaign, ok := c.context["campaign"].(map[string]any); ok {
-		return connectorEventContextCampaign{campaign}, true
+		return rawEventContextCampaign{campaign}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Device() (meergo.EventContextDevice, bool) {
+func (c rawEventContext) Device() (meergo.RawEventContextDevice, bool) {
 	if campaign, ok := c.context["device"].(map[string]any); ok {
-		return connectorEventContextDevice{campaign}, true
+		return rawEventContextDevice{campaign}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) IP() string {
+func (c rawEventContext) IP() string {
 	return c.context["ip"].(string)
 }
 
-func (c connectorEventContext) Library() (meergo.EventContextLibrary, bool) {
+func (c rawEventContext) Library() (meergo.RawEventContextLibrary, bool) {
 	if library, ok := c.context["library"].(map[string]any); ok {
-		return connectorEventContextLibrary{library}, true
+		return rawEventContextLibrary{library}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Locale() string {
+func (c rawEventContext) Locale() string {
 	return c.context["locale"].(string)
 }
 
-func (c connectorEventContext) Location() (meergo.EventContextLocation, bool) {
+func (c rawEventContext) Location() (meergo.RawEventContextLocation, bool) {
 	if location, ok := c.context["location"].(map[string]any); ok {
-		return connectorEventContextLocation{location}, true
+		return rawEventContextLocation{location}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Network() (meergo.EventContextNetwork, bool) {
+func (c rawEventContext) Network() (meergo.RawEventContextNetwork, bool) {
 	if network, ok := c.context["network"].(map[string]any); ok {
-		return connectorEventContextNetwork{network}, true
+		return rawEventContextNetwork{network}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) OS() (meergo.EventContextOS, bool) {
+func (c rawEventContext) OS() (meergo.RawEventContextOS, bool) {
 	if os, ok := c.context["os"].(map[string]any); ok {
-		return connectorEventContextOS{os}, true
+		return rawEventContextOS{os}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Page() (meergo.EventContextPage, bool) {
+func (c rawEventContext) Page() (meergo.RawEventContextPage, bool) {
 	if page, ok := c.context["page"].(map[string]any); ok {
-		return connectorEventContextPage{page}, true
+		return rawEventContextPage{page}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Referrer() (meergo.EventContextReferrer, bool) {
+func (c rawEventContext) Referrer() (meergo.RawEventContextReferrer, bool) {
 	if referrer, ok := c.context["referrer"].(map[string]any); ok {
-		return connectorEventContextReferrer{referrer}, true
+		return rawEventContextReferrer{referrer}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Screen() (meergo.EventContextScreen, bool) {
+func (c rawEventContext) Screen() (meergo.RawEventContextScreen, bool) {
 	if screen, ok := c.context["screen"].(map[string]any); ok {
-		return connectorEventContextScreen{screen}, true
+		return rawEventContextScreen{screen}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Session() (meergo.EventContextSession, bool) {
+func (c rawEventContext) Session() (meergo.RawEventContextSession, bool) {
 	if session, ok := c.context["Session"].(map[string]any); ok {
-		return connectorEventContextSession{session}, true
+		return rawEventContextSession{session}, true
 	}
 	return nil, false
 }
 
-func (c connectorEventContext) Timezone() string {
+func (c rawEventContext) Timezone() string {
 	return c.context["timezone"].(string)
 }
 
-func (c connectorEventContext) UserAgent() string {
+func (c rawEventContext) UserAgent() string {
 	return c.context["userAgent"].(string)
 }
 
-type connectorEventContextApp struct {
+type rawEventContextApp struct {
 	app map[string]any
 }
 
-func (c connectorEventContextApp) Name() string {
+func (c rawEventContextApp) Name() string {
 	return c.app["name"].(string)
 }
 
-func (c connectorEventContextApp) Version() string {
+func (c rawEventContextApp) Version() string {
 	return c.app["version"].(string)
 }
 
-func (c connectorEventContextApp) Build() string {
+func (c rawEventContextApp) Build() string {
 	return c.app["build"].(string)
 }
 
-func (c connectorEventContextApp) Namespace() string {
+func (c rawEventContextApp) Namespace() string {
 	return c.app["namespace"].(string)
 }
 
-type connectorEventContextBrowser struct {
+type rawEventContextBrowser struct {
 	browser map[string]any
 }
 
-func (c connectorEventContextBrowser) Name() string {
+func (c rawEventContextBrowser) Name() string {
 	return c.browser["name"].(string)
 }
 
-func (c connectorEventContextBrowser) Other() string {
+func (c rawEventContextBrowser) Other() string {
 	return c.browser["other"].(string)
 }
 
-func (c connectorEventContextBrowser) Version() string {
+func (c rawEventContextBrowser) Version() string {
 	return c.browser["version"].(string)
 }
 
-type connectorEventContextCampaign struct {
+type rawEventContextCampaign struct {
 	campaign map[string]any
 }
 
-func (c connectorEventContextCampaign) Name() string {
+func (c rawEventContextCampaign) Name() string {
 	return c.campaign["name"].(string)
 }
 
-func (c connectorEventContextCampaign) Source() string {
+func (c rawEventContextCampaign) Source() string {
 	return c.campaign["source"].(string)
 }
 
-func (c connectorEventContextCampaign) Medium() string {
+func (c rawEventContextCampaign) Medium() string {
 	return c.campaign["medium"].(string)
 }
 
-func (c connectorEventContextCampaign) Term() string {
+func (c rawEventContextCampaign) Term() string {
 	return c.campaign["term"].(string)
 }
 
-func (c connectorEventContextCampaign) Content() string {
+func (c rawEventContextCampaign) Content() string {
 	return c.campaign["content"].(string)
 }
 
-type connectorEventContextDevice struct {
+type rawEventContextDevice struct {
 	device map[string]any
 }
 
-func (c connectorEventContextDevice) Id() string {
+func (c rawEventContextDevice) Id() string {
 	return c.device["id"].(string)
 }
 
-func (c connectorEventContextDevice) AdvertisingId() string {
+func (c rawEventContextDevice) AdvertisingId() string {
 	return c.device["advertisingId"].(string)
 }
 
-func (c connectorEventContextDevice) AdTrackingEnabled() bool {
+func (c rawEventContextDevice) AdTrackingEnabled() bool {
 	return c.device["adTrackingEnabled"].(bool)
 }
 
-func (c connectorEventContextDevice) Manufacturer() string {
+func (c rawEventContextDevice) Manufacturer() string {
 	return c.device["manufacturer"].(string)
 }
 
-func (c connectorEventContextDevice) Model() string {
+func (c rawEventContextDevice) Model() string {
 	return c.device["model"].(string)
 }
 
-func (c connectorEventContextDevice) Name() string {
+func (c rawEventContextDevice) Name() string {
 	return c.device["name"].(string)
 }
 
-func (c connectorEventContextDevice) Type() string {
+func (c rawEventContextDevice) Type() string {
 	return c.device["type"].(string)
 }
 
-func (c connectorEventContextDevice) Token() string {
+func (c rawEventContextDevice) Token() string {
 	return c.device["token"].(string)
 }
 
-type connectorEventContextLibrary struct {
+type rawEventContextLibrary struct {
 	library map[string]any
 }
 
-func (c connectorEventContextLibrary) Name() string {
+func (c rawEventContextLibrary) Name() string {
 	return c.library["id"].(string)
 }
 
-func (c connectorEventContextLibrary) Version() string {
+func (c rawEventContextLibrary) Version() string {
 	return c.library["version"].(string)
 }
 
-type connectorEventContextLocation struct {
+type rawEventContextLocation struct {
 	location map[string]any
 }
 
-func (c connectorEventContextLocation) City() string {
+func (c rawEventContextLocation) City() string {
 	return c.location["city"].(string)
 }
 
-func (c connectorEventContextLocation) Country() string {
+func (c rawEventContextLocation) Country() string {
 	return c.location["country"].(string)
 }
 
-func (c connectorEventContextLocation) Latitude() float64 {
+func (c rawEventContextLocation) Latitude() float64 {
 	return c.location["latitude"].(float64)
 }
 
-func (c connectorEventContextLocation) Longitude() float64 {
+func (c rawEventContextLocation) Longitude() float64 {
 	return c.location["longitude"].(float64)
 }
 
-func (c connectorEventContextLocation) Speed() float64 {
+func (c rawEventContextLocation) Speed() float64 {
 	return c.location["speed"].(float64)
 }
 
-type connectorEventContextNetwork struct {
+type rawEventContextNetwork struct {
 	network map[string]any
 }
 
-func (c connectorEventContextNetwork) Bluetooth() bool {
+func (c rawEventContextNetwork) Bluetooth() bool {
 	return c.network["bluetooth"].(bool)
 }
 
-func (c connectorEventContextNetwork) Carrier() string {
+func (c rawEventContextNetwork) Carrier() string {
 	return c.network["carrier"].(string)
 }
 
-func (c connectorEventContextNetwork) Cellular() bool {
+func (c rawEventContextNetwork) Cellular() bool {
 	return c.network["cellular"].(bool)
 }
 
-func (c connectorEventContextNetwork) WiFi() bool {
+func (c rawEventContextNetwork) WiFi() bool {
 	return c.network["wifi"].(bool)
 }
 
-type connectorEventContextOS struct {
+type rawEventContextOS struct {
 	os map[string]any
 }
 
-func (c connectorEventContextOS) Name() string {
+func (c rawEventContextOS) Name() string {
 	return c.os["name"].(string)
 }
 
-func (c connectorEventContextOS) Version() string {
+func (c rawEventContextOS) Version() string {
 	return c.os["version"].(string)
 }
 
-type connectorEventContextPage struct {
+type rawEventContextPage struct {
 	page map[string]any
 }
 
-func (c connectorEventContextPage) Path() string {
+func (c rawEventContextPage) Path() string {
 	return c.page["path"].(string)
 }
 
-func (c connectorEventContextPage) Referrer() string {
+func (c rawEventContextPage) Referrer() string {
 	return c.page["referrer"].(string)
 }
 
-func (c connectorEventContextPage) Search() string {
+func (c rawEventContextPage) Search() string {
 	return c.page["search"].(string)
 }
 
-func (c connectorEventContextPage) Title() string {
+func (c rawEventContextPage) Title() string {
 	return c.page["title"].(string)
 }
 
-func (c connectorEventContextPage) URL() string {
+func (c rawEventContextPage) URL() string {
 	return c.page["url"].(string)
 }
 
-type connectorEventContextReferrer struct {
+type rawEventContextReferrer struct {
 	referrer map[string]any
 }
 
-func (c connectorEventContextReferrer) Id() string {
+func (c rawEventContextReferrer) Id() string {
 	return c.referrer["id"].(string)
 }
 
-func (c connectorEventContextReferrer) Type() string {
+func (c rawEventContextReferrer) Type() string {
 	return c.referrer["type"].(string)
 }
 
-type connectorEventContextScreen struct {
+type rawEventContextScreen struct {
 	screen map[string]any
 }
 
-func (c connectorEventContextScreen) Width() int {
+func (c rawEventContextScreen) Width() int {
 	return c.screen["id"].(int)
 }
 
-func (c connectorEventContextScreen) Height() int {
+func (c rawEventContextScreen) Height() int {
 	return c.screen["height"].(int)
 }
 
-func (c connectorEventContextScreen) Density() decimal.Decimal {
+func (c rawEventContextScreen) Density() decimal.Decimal {
 	return c.screen["density"].(decimal.Decimal)
 }
 
-type connectorEventContextSession struct {
+type rawEventContextSession struct {
 	session map[string]any
 }
 
-func (c connectorEventContextSession) Id() int {
+func (c rawEventContextSession) Id() int {
 	return c.session["id"].(int)
 }
 
-func (c connectorEventContextSession) Start() bool {
+func (c rawEventContextSession) Start() bool {
 	start, _ := c.session["start"].(bool)
 	return start
 }

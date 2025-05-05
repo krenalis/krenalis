@@ -101,7 +101,7 @@ Now, let's move on to dispatching events to the app using the `EventRequest` met
 Finally, to actually dispatch an event to the app, the `EventRequest` method prepares an HTTP request with all the needed details:
 
 ```go
-EventRequest(ctx context.Context, event *Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
+EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
 ```
 
 Given the event, `EventRequest` returns an HTTP request used to dispatch the event to the destination. The parameters are:

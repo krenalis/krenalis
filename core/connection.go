@@ -1566,8 +1566,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 
 	}
 
-	// Convert data into a meergo.Event value.
-	ev := events.NewConnectorEvent(properties)
+	// Convert data into a meergo.RawEvent value.
+	ev := events.RawEvent(properties)
 
 	req, err := this.app().EventRequest(ctx, ev, typ, outSchema, transformedProperties, true)
 	if err != nil {

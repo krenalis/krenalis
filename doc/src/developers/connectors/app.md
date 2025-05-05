@@ -54,7 +54,7 @@ func New(conf *meergo.AppConfig) (*Klaviyo, error) {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ky *Klaviyo) EventRequest(ctx context.Context, typ string, event *meergo.Event, extra map[string]any, schema types.Type, redacted bool) (*meergo.EventRequest, error) {
+func (ky *Klaviyo) EventRequest(ctx context.Context, event meergo.RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
     // ...
 }
 

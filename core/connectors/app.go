@@ -102,7 +102,7 @@ type appEventsConnector interface {
 	// This method is safe for concurrent use by multiple goroutines. If the
 	// specified event type does not exist, it returns the ErrEventTypeNotExist
 	// error.
-	EventRequest(ctx context.Context, event Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error)
+	EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error)
 
 	// EventTypes returns the event types of the connector's instance.
 	EventTypes(ctx context.Context) ([]*EventType, error)
@@ -177,7 +177,7 @@ func (app *App) Connector() string {
 //
 // It panics if the app does not support the Events target, or if schema is
 // valid but not an object.
-func (app *App) EventRequest(ctx context.Context, event Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+func (app *App) EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 	if app.err != nil {
 		return nil, app.err
 	}

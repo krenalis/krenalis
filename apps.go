@@ -225,12 +225,12 @@ type Records interface {
 	Skip()
 }
 
-// Event represents an event.
-type Event interface {
+// RawEvent represents a raw event as received from a source connector.
+type RawEvent interface {
 	AnonymousId() string
 	Channel() string
 	Category() string
-	Context() EventContext
+	Context() RawEventContext
 	Event() string
 	GroupId() string
 	MessageId() string
@@ -242,39 +242,39 @@ type Event interface {
 	UserId() string
 }
 
-type EventContext interface {
-	App() (EventContextApp, bool)
-	Browser() (EventContextBrowser, bool)
-	Campaign() (EventContextCampaign, bool)
-	Device() (EventContextDevice, bool)
+type RawEventContext interface {
+	App() (RawEventContextApp, bool)
+	Browser() (RawEventContextBrowser, bool)
+	Campaign() (RawEventContextCampaign, bool)
+	Device() (RawEventContextDevice, bool)
 	IP() string
-	Library() (EventContextLibrary, bool)
+	Library() (RawEventContextLibrary, bool)
 	Locale() string
-	Location() (EventContextLocation, bool)
-	Network() (EventContextNetwork, bool)
-	OS() (EventContextOS, bool)
-	Page() (EventContextPage, bool)
-	Referrer() (EventContextReferrer, bool)
-	Screen() (EventContextScreen, bool)
-	Session() (EventContextSession, bool)
+	Location() (RawEventContextLocation, bool)
+	Network() (RawEventContextNetwork, bool)
+	OS() (RawEventContextOS, bool)
+	Page() (RawEventContextPage, bool)
+	Referrer() (RawEventContextReferrer, bool)
+	Screen() (RawEventContextScreen, bool)
+	Session() (RawEventContextSession, bool)
 	Timezone() string
 	UserAgent() string
 }
 
-type EventContextApp interface {
+type RawEventContextApp interface {
 	Name() string
 	Version() string
 	Build() string
 	Namespace() string
 }
 
-type EventContextBrowser interface {
+type RawEventContextBrowser interface {
 	Name() string
 	Other() string
 	Version() string
 }
 
-type EventContextCampaign interface {
+type RawEventContextCampaign interface {
 	Name() string
 	Source() string
 	Medium() string
@@ -282,7 +282,7 @@ type EventContextCampaign interface {
 	Content() string
 }
 
-type EventContextDevice interface {
+type RawEventContextDevice interface {
 	Id() string
 	AdvertisingId() string
 	AdTrackingEnabled() bool
@@ -293,29 +293,29 @@ type EventContextDevice interface {
 	Token() string
 }
 
-type EventContextLibrary interface {
+type RawEventContextLibrary interface {
 	Name() string
 	Version() string
 }
-type EventContextLocation interface {
+type RawEventContextLocation interface {
 	City() string
 	Country() string
 	Latitude() float64
 	Longitude() float64
 	Speed() float64
 }
-type EventContextNetwork interface {
+type RawEventContextNetwork interface {
 	Bluetooth() bool
 	Carrier() string
 	Cellular() bool
 	WiFi() bool
 }
-type EventContextOS interface {
+type RawEventContextOS interface {
 	Name() string
 	Version() string
 }
 
-type EventContextPage interface {
+type RawEventContextPage interface {
 	Path() string
 	Referrer() string
 	Search() string
@@ -323,17 +323,18 @@ type EventContextPage interface {
 	URL() string
 }
 
-type EventContextReferrer interface {
+type RawEventContextReferrer interface {
 	Id() string
 	Type() string
 }
 
-type EventContextScreen interface {
+type RawEventContextScreen interface {
 	Width() int
 	Height() int
 	Density() decimal.Decimal
 }
-type EventContextSession interface {
+
+type RawEventContextSession interface {
 	Id() int
 	Start() bool
 }

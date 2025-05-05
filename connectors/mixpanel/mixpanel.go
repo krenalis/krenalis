@@ -69,7 +69,7 @@ func New(conf *meergo.AppConfig) (*Mixpanel, error) {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (mp *Mixpanel) EventRequest(ctx context.Context, event meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+func (mp *Mixpanel) EventRequest(ctx context.Context, event meergo.RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 
 	if properties["event"].(string) == "" {
 		return nil, errors.New("event cannot be empty")
