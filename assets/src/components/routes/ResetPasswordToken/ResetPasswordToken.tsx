@@ -49,6 +49,7 @@ const ResetPasswordToken = () => {
 	}, []);
 
 	const onPasswordInput = (e: any) => {
+		setPasswordError('');
 		const v = e.target.value;
 		setPassword(v);
 		try {
@@ -59,6 +60,7 @@ const ResetPasswordToken = () => {
 	};
 
 	const onPassword2Input = (e: any) => {
+		setPasswordError('');
 		const v = e.target.value;
 		setPassword2(v);
 		try {
