@@ -20,8 +20,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/meergo/meergo/core/state"
+
+	"github.com/joho/godotenv"
 )
 
 // Main is the function that executes Meergo. It is designed to be used in
@@ -167,12 +168,18 @@ func settingsFromEnv() (*Settings, error) {
 
 	// OAuth.
 	if clientID := os.Getenv("MEERGO_OAUTH_HUBSPOT_CLIENT_ID"); clientID != "" {
+		if settings.OAuth == nil {
+			settings.OAuth = make(map[string]*state.ConnectorOAuth)
+		}
 		settings.OAuth["HubSpot"] = &state.ConnectorOAuth{
 			ClientID:     clientID,
 			ClientSecret: os.Getenv("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET"),
 		}
 	}
 	if clientID := os.Getenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID"); clientID != "" {
+		if settings.OAuth == nil {
+			settings.OAuth = make(map[string]*state.ConnectorOAuth)
+		}
 		settings.OAuth["MailChimp"] = &state.ConnectorOAuth{
 			ClientID:     clientID,
 			ClientSecret: os.Getenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET"),
