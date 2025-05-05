@@ -231,7 +231,7 @@ JsonObject traits = analytics.traits();
 
 ## alias
 
-The `alias` method is used to merge two user identities, effectively connecting two sets of user data as one. This method is applicable when the event is dispatched to a destination, such as Mixpanel.
+The `alias` method is used to merge two user identities, effectively connecting two sets of user data as one. This method is applicable when the event is sent to a destination, such as Mixpanel.
 
 > In Meergo, user merging is handled by Meergo's Identity Resolution. Therefore this method is not utilized in this process. 
 

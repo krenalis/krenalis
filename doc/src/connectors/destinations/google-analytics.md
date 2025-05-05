@@ -8,7 +8,7 @@ The **Google Analytics** data destination allows you to send the received events
 
 Google Analytics is a web analytics service that provides insights into website traffic and user behavior. It helps track and analyze data on visitor interactions, traffic sources, and conversion rates, enabling informed decision-making to improve online performance.
 
-In Meergo, it is possible to send events to Google Analytics using the [Measurement Protocol](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference?client_type=gtag). Once this data destination is configured, the events ingested by Meergo (e.g., from a website or server) are dispatched to Google Analytics.
+In Meergo, it is possible to send events to Google Analytics using the [Measurement Protocol](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference?client_type=gtag). Once this data destination is configured, the events ingested by Meergo (e.g., from a website or server) are sent to Google Analytics.
 
 ## On this page
 

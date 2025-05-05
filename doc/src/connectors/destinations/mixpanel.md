@@ -4,7 +4,7 @@
 
 # Mixpanel data destination
 
-The **Mixpanel** data destination allows you to dispatch events to Mixpanel.
+The **Mixpanel** data destination allows you to send events to Mixpanel.
 
 Mixpanel is an analytics platform that tracks user interactions across digital platforms. It provides tools for event tracking, funnel analysis, retention monitoring, and cohort analysis, helping businesses optimize user experiences and make data-driven decisions.
 

@@ -80,7 +80,7 @@ When one of these layouts is used, the values returned as `string` or `float64` 
 
 During an export, when a connector (whether app, database, or file) receives data to export, such as user information, it receives Go types specific to the data types. This involves methods such as:
 
-- [`EventRequest`](app/dispatch-events#dispatching-an-event) method of apps takes extra event information.
+- [`EventRequest`](app/send-events#sending-an-event) method of apps takes extra event information.
 - [`Upsert`](app/users-and-groups#update-and-create-records) method of apps takes properties of a user or group.
 - [`Upsert`](database#upsert-method) method of databases takes rows to be added or updated.
 - [`Write`](file#write-method) method of files takes a `RecordReader` whose `Record` method returns the next record to write.

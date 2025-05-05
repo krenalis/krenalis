@@ -90,11 +90,11 @@ type appRecordsConnector interface {
 }
 
 type appEventsConnector interface {
-	// EventRequest returns a request to dispatch an event to the app. event is the
-	// event to dispatch, eventType is the type of event to dispatch, schema is its
-	// schema, properties are the property values conforming to the schema, and
-	// redacted indicates whether authentication data must be redacted in the
-	// returned request.
+	// EventRequest returns a request to send an event to the app. event is the
+	// event to send, eventType is the type of event to send, schema is its schema,
+	// properties are the property values conforming to the schema, and redacted
+	// indicates whether authentication data must be redacted in the returned
+	// request.
 	//
 	// If the event type does not have a schema, schema is the invalid schema and
 	// properties is nil.
@@ -161,11 +161,11 @@ func (app *App) Connector() string {
 	return app.connector
 }
 
-// EventRequest returns a request to dispatch an event to the app. event is the
-// event to dispatch, eventType is the type of event to dispatch, schema is its
-// schema, properties are the property values conforming to the schema, and
-// redacted indicates whether authentication data must be redacted in the
-// returned request.
+// EventRequest returns a request to send an event to the app. event is the
+// event to send, eventType is the type of event to send, schema is its schema,
+// properties are the property values conforming to the schema, and redacted
+// indicates whether authentication data must be redacted in the returned
+// request.
 //
 // If the event type does not have a schema, schema is the invalid schema and
 // properties is nil.

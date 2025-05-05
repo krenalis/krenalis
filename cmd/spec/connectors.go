@@ -91,7 +91,7 @@ func init() {
 					Type:        types.Text().WithValues("Cloud", "Device", "Combined"),
 					Nullable:    true,
 					Placeholder: `null`,
-					Description: "The mode used by app connectors to dispatch the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events.",
+					Description: "The mode used by app connectors to send the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events.",
 				},
 			}),
 			Placeholder: `...`,

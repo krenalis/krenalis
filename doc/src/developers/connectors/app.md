@@ -4,11 +4,11 @@
 
 # App connectors
 
-App connectors allow to connect to apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and groups and to dispatch events.
+App connectors allow to connect to apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and groups and to send events.
 
 App connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
 
-Note that it is possible to implement an app connector that supports only reading or only writing of records, or only dispatching of events, as it is not necessary that an app connector supports all of them. It is sufficient to specify the functionalities that the connector implements through the `AppInfo`, described below, then implement the required methods for those functionalities.
+Note that it is possible to implement an app connector that supports only reading or only writing of records, or only sending of events, as it is not necessary that an app connector supports all of them. It is sufficient to specify the functionalities that the connector implements through the `AppInfo`, described below, then implement the required methods for those functionalities.
 
 ## Quick start
 
@@ -53,7 +53,7 @@ func New(conf *meergo.AppConfig) (*Klaviyo, error) {
     // ...
 }
 
-// EventRequest returns a request to dispatch an event to the app.
+// EventRequest returns a request to send an event to the app.
 func (ky *Klaviyo) EventRequest(ctx context.Context, event meergo.RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
     // ...
 }
@@ -113,7 +113,7 @@ The `AppInfo` type describes information about the app connector:
   - `Description`: brief description of the connector when it is used as a destination.
   - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `EventsTarget`, `UsersTarget`, and `GroupsTarget`.
   - `HasSettings`: indicates whether the connection has settings when used as destination
-  - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
+  - `SendingMode`: mode used to send the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
@@ -179,4 +179,4 @@ type AppConfig struct {
 - [OAuth](app/oauth)
 - [Backoff](app/backoff)
 - [Users and groups](app/users-and-groups)
-- [Dispatch events](app/dispatch-events)
+- [Send events](app/send-events)
