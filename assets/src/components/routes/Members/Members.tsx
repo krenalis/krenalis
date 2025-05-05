@@ -140,13 +140,15 @@ const Members = () => {
 													<SlButton size='small'>Edit</SlButton>
 												</Link>
 											)}
-											<SlButton
-												size='small'
-												variant='danger'
-												onClick={() => onDeleteMember(member.id)}
-											>
-												Delete
-											</SlButton>
+											{members.length > 1 && (
+												<SlButton
+													size='small'
+													variant='danger'
+													onClick={() => onDeleteMember(member.id)}
+												>
+													Delete
+												</SlButton>
+											)}
 										</div>
 									}
 								/>
