@@ -296,7 +296,7 @@ func (app *App) SendEvent(ctx context.Context, req *meergo.EventRequest) (*http.
 		return nil, err
 	}
 	r.Header = req.Header.Clone()
-	return app.httpClient.DoIdempotent(r, req.Idempotent)
+	return app.httpClient.DoIdempotent(r, false)
 }
 
 // Users returns an iterator to iterate over the app's users. Each returned

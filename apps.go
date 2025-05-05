@@ -137,12 +137,11 @@ type AppNewFunc[T any] func(*AppConfig) (T, error)
 
 // EventRequest represents an event request.
 type EventRequest struct {
-	Endpoint   string      // Destination identifier, e.g., "us", "europe", or leave empty.
-	Method     string      // HTTP method (e.g., "POST").
-	URL        string      // URL to which the request will be sent.
-	Idempotent bool        // Indicates whether the request is idempotent.
-	Header     http.Header // Header fields to be included with the request.
-	Body       []byte      // The body of the request.
+	Endpoint string      // Destination identifier, e.g., "us", "europe", or leave empty.
+	Method   string      // HTTP method (e.g., "POST").
+	URL      string      // URL to which the request will be sent.
+	Header   http.Header // Header fields to be included with the request.
+	Body     []byte      // The body of the request.
 }
 
 // EventType represents a type of event that the app can receive.
