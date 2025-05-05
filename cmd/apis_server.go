@@ -52,23 +52,30 @@ const (
 )
 
 type apisServer struct {
-	core         *core.Core
-	secureCookie *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
-	mux          *http.ServeMux
-	runsOnHTTPS  bool
+	core             *core.Core
+	secureCookie     *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
+	mux              *http.ServeMux
+	runsOnHTTPS      bool
+	javaScriptSDKURL string
+	eventURL         string
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
 // Core. encryptionKey is the key used to encrypt the session cookie.
 // runsOnHTTPs indicates if the server runs on HTTPS.
 // It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool) *apisServer {
+func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, javaScriptSDKURL, eventURL string) *apisServer {
 
 	if len(encryptionKey) != 64 {
 		panic("encryptionKey is not 64 bytes long")
 	}
 
-	s := &apisServer{core: core, runsOnHTTPS: runsOnHTTPS}
+	s := &apisServer{
+		core:             core,
+		runsOnHTTPS:      runsOnHTTPS,
+		javaScriptSDKURL: javaScriptSDKURL,
+		eventURL:         eventURL,
+	}
 
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
 	s.secureCookie = securecookie.New(hashKey, blockKey)

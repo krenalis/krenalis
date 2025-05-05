@@ -65,7 +65,7 @@ func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) 
 // EventURL returns the URL that receives the events, for example
 // "https://my.meergo.example.com/api/v1/events".
 func (api api) EventURL(w http.ResponseWriter, r *http.Request) (any, error) {
-	return api.core.EventURL(), nil
+	return api.eventURL, nil
 }
 
 // EventsSettings returns the events settings.
@@ -164,7 +164,7 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 
 // JavaScriptSDKURL returns the URL that serves the JavaScript SDK.
 func (api api) JavaScriptSDKURL(w http.ResponseWriter, r *http.Request) (any, error) {
-	return api.core.JavaScriptSDKURL(), nil
+	return api.javaScriptSDKURL, nil
 }
 
 // TransformData transforms data using a mapping or a function transformation

@@ -111,20 +111,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
 	}
-	javaScriptSDKURL := settings.JavaScriptSDKURL
-	if javaScriptSDKURL == "" {
-		javaScriptSDKURL = strings.TrimRight(externalURL, "/") + "/javascript-sdk/dist/meergo.min.js"
-	}
-	eventURL := settings.HTTP.EventURL
-	if eventURL == "" {
-		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
-	}
 
 	config := core.Config{
-		DB:               settings.DB,
-		SMTP:             settings.SMTP,
-		JavaScriptSDKURL: javaScriptSDKURL,
-		EventURL:         eventURL,
+		DB:   settings.DB,
+		SMTP: settings.SMTP,
 	}
 
 	// Choose the transformation function provider setting.
@@ -174,7 +164,16 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer core.Close()
 
-	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled)
+	javaScriptSDKURL := settings.JavaScriptSDKURL
+	if javaScriptSDKURL == "" {
+		javaScriptSDKURL = strings.TrimRight(externalURL, "/") + "/javascript-sdk/dist/meergo.min.js"
+	}
+	eventURL := settings.HTTP.EventURL
+	if eventURL == "" {
+		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
+	}
+
+	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled, javaScriptSDKURL, eventURL)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {

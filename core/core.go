@@ -23,7 +23,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/connectors"
@@ -43,6 +42,7 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -62,8 +62,6 @@ type Core struct {
 	actionCleaner    *actionCleaner
 	actionScheduler  *actionScheduler
 	smtp             *SMTPConfig
-	javaScriptSDKURL string
-	eventURL         string
 	close            struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
@@ -80,8 +78,6 @@ type Config struct {
 	FunctionProvider any // must be a LambdaConfig or LocalConfig value
 	SMTP             SMTPConfig
 	ConnectorsOAuth  map[string]*state.ConnectorOAuth
-	JavaScriptSDKURL string
-	EventURL         string
 }
 
 type DBConfig struct {
@@ -162,10 +158,8 @@ func New(conf *Config) (*Core, error) {
 	}
 
 	core := &Core{
-		db:               db,
-		smtp:             smtp,
-		javaScriptSDKURL: conf.JavaScriptSDKURL,
-		eventURL:         conf.EventURL,
+		db:   db,
+		smtp: smtp,
 	}
 
 	// Create a function provider.
@@ -354,11 +348,6 @@ func (core *Core) APIKey(token string) (int, int, bool) {
 	return key.Organization, key.Workspace, true
 }
 
-// JavaScriptSDKURL returns the URL that serves the JavaScript SDK.
-func (core *Core) JavaScriptSDKURL() string {
-	return core.javaScriptSDKURL
-}
-
 // Close closes the Core. When Close is called, no other calls to Core's methods
 // should be in progress and no other shall be made.
 // It panics if it has already been called.
@@ -497,12 +486,6 @@ func (core *Core) Connectors() []*Connector {
 func (core *Core) CountOrganizations(ctx context.Context) int {
 	core.mustBeOpen()
 	return len(core.state.Organizations())
-}
-
-// EventURL returns the URL that receives the events, for example
-// "https://my.meergo.example.com/api/v1/events".
-func (core *Core) EventURL() string {
-	return core.eventURL
 }
 
 // ExpressionsProperties returns all the unique properties contained inside a
