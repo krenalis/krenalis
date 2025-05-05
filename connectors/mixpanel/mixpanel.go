@@ -32,7 +32,7 @@ func init() {
 		Name: "Mixpanel",
 		AsDestination: &meergo.AsAppDestination{
 			Description: "Send events to Mixpanel",
-			Targets:     meergo.Events,
+			Targets:     meergo.EventsTarget,
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
 		},

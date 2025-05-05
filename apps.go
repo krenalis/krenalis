@@ -40,9 +40,9 @@ const (
 type Targets int
 
 const (
-	Events Targets = 1 << iota
-	Users
-	Groups
+	EventsTarget Targets = 1 << iota
+	UsersTarget
+	GroupsTarget
 )
 
 // AppInfo represents an app connector info.

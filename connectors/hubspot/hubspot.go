@@ -44,12 +44,12 @@ func init() {
 		AsSource: &meergo.AsAppSource{
 			// Description: "Import contacts as users and companies as groups from HubSpot",
 			Description: "Import contacts as users from HubSpot",
-			Targets:     meergo.Users,
+			Targets:     meergo.UsersTarget,
 		},
 		AsDestination: &meergo.AsAppDestination{
 			// Description: "Export users as contacts and groups as companies to HubSpot",
 			Description: "Export users as contacts to HubSpot",
-			Targets:     meergo.Users,
+			Targets:     meergo.UsersTarget,
 		},
 		Terms: meergo.AppTerms{
 			User:  "contact",
@@ -107,7 +107,7 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
 	path := "/crm/v3/objects/"
-	if target == meergo.Users {
+	if target == meergo.UsersTarget {
 		path += "contacts/"
 	} else {
 		path += "companies/"
@@ -145,7 +145,7 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		path += "batch/read"
 	} else {
 		propertyName := "lastmodifieddate"
-		if target == meergo.Groups {
+		if target == meergo.GroupsTarget {
 			propertyName = "hs_lastmodifieddate"
 		}
 		unix := lastChangeTime.UnixMilli()
@@ -194,7 +194,7 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		records[i].LastChangeTime = updatedAt.UTC()
 	}
 
-	if target == meergo.Groups {
+	if target == meergo.GroupsTarget {
 		for _, object := range records {
 			contacts, err := hs.companyContacts(ctx, object.ID)
 			if err != nil {
@@ -372,7 +372,7 @@ func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, role meergo.Rol
 // Upsert updates or creates records in the app for the specified target.
 func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
-	if target == meergo.Groups {
+	if target == meergo.GroupsTarget {
 		return errors.New("groups are not supported")
 	}
 

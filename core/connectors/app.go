@@ -181,7 +181,7 @@ func (app *App) EventRequest(ctx context.Context, event Event, eventType string,
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypeSchema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Events, meergo.Destination, eventType)
+	eventTypeSchema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.EventsTarget, meergo.Destination, eventType)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -263,7 +263,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Events, meergo.Destination, eventType)
+		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.EventsTarget, meergo.Destination, eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -278,7 +278,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		}
 		return schema, nil
 	case state.Groups:
-		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Groups, meergo.Role(role), "")
+		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.GroupsTarget, meergo.Role(role), "")
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -395,7 +395,7 @@ func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	if schema := app.users.schemas[role-1]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Users, meergo.Role(role), "")
+	schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.UsersTarget, meergo.Role(role), "")
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
@@ -509,7 +509,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []meergo.Record
 			var err error
-			users, cursor, err = r.inner.(appRecordsConnector).Records(ctx, meergo.Users, r.lastChangeTime, nil, names, cursor, r.appSchema)
+			users, cursor, err = r.inner.(appRecordsConnector).Records(ctx, meergo.UsersTarget, r.lastChangeTime, nil, names, cursor, r.appSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

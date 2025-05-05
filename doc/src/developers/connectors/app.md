@@ -31,12 +31,12 @@ func init() {
         Name: "Klaviyo",
         AsSource: &meergo.AsAppSource{
             Description: "Import profiles as users from Klaviyo",
-            Targets:     meergo.Users,
+            Targets:     meergo.UsersTarget,
             HasSettings: true,
         },
         AsDestination: &meergo.AsAppDestination{
             Description: "Export users as profiles and send events to Klaviyo",
-            Targets:     meergo.Events | meergo.Users,
+            Targets:     meergo.EventsTarget | meergo.UsersTarget,
             HasSettings: true,
             SendingMode: meergo.Cloud,
         },
@@ -111,7 +111,7 @@ The `AppInfo` type describes information about the app connector:
   - `HasSettings`: indicates whether the connection has settings when used as a source
 - `AsDestination`: information about the app connector when it used as destination. This should be set only when the app connector can be used as a destination, otherwise should be nil.
   - `Description`: brief description of the connector when it is used as a destination.
-  - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `Events`, `Users`, and `Groups`.
+  - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `EventsTarget`, `UsersTarget`, and `GroupsTarget`.
   - `HasSettings`: indicates whether the connection has settings when used as destination
   - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
@@ -136,7 +136,7 @@ func init() {
         },
         AsDestination: &meergo.AsAppDestination{
             Description: "Export users as profiles and send events to Klaviyo",
-            Targets:     meergo.Events | meergo.Users,
+            Targets:     meergo.EventsTarget | meergo.UsersTarget,
             HasSettings: true,
             SendingMode: meergo.Cloud,
         },

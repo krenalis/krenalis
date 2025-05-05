@@ -57,12 +57,12 @@ func init() {
 		Name: "Stripe",
 		AsSource: &meergo.AsAppSource{
 			Description: "Import customers as users",
-			Targets:     meergo.Users,
+			Targets:     meergo.UsersTarget,
 			HasSettings: true,
 		},
 		AsDestination: &meergo.AsAppDestination{
 			Description: "Export users as customers",
-			Targets:     meergo.Users,
+			Targets:     meergo.UsersTarget,
 			HasSettings: true,
 		},
 		Terms: meergo.AppTerms{

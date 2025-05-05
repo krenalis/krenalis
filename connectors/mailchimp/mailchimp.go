@@ -44,12 +44,12 @@ func init() {
 		Name: "Mailchimp",
 		AsSource: &meergo.AsAppSource{
 			Description: "Import contacts as users from Mailchimp",
-			Targets:     meergo.Users,
+			Targets:     meergo.UsersTarget,
 			HasSettings: true,
 		},
 		AsDestination: &meergo.AsAppDestination{
 			Description: "Export users as contacts to Mailchimp",
-			Targets:     meergo.Users,
+			Targets:     meergo.UsersTarget,
 			HasSettings: true,
 		},
 		Terms: meergo.AppTerms{

@@ -35,12 +35,12 @@ func init() {
 		Name: "Dummy",
 		AsSource: &meergo.AsAppSource{
 			Description: "Import customers as users from Dummy",
-			Targets:     meergo.Users,
+			Targets:     meergo.UsersTarget,
 			HasSettings: true,
 		},
 		AsDestination: &meergo.AsAppDestination{
 			Description: "Export users as customers and send events to Dummy",
-			Targets:     meergo.Events | meergo.Users,
+			Targets:     meergo.EventsTarget | meergo.UsersTarget,
 			SendingMode: meergo.Combined,
 			HasSettings: true,
 		},
@@ -215,7 +215,7 @@ type innerSettings struct {
 // Schema returns the schema of the specified target in the specified role.
 func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	dummy.simulateHTTPDelay()
-	if target == meergo.Users {
+	if target == meergo.UsersTarget {
 		var properties []types.Property
 		if role == meergo.Source {
 			properties = append(properties, types.Property{Name: "dummyId", Type: types.Text()})

@@ -34,12 +34,12 @@ func init() {
 		Name: "Klaviyo",
 		AsSource: &meergo.AsAppSource{
 			Description: "Import profiles as users from Klaviyo",
-			Targets:     meergo.Users,
+			Targets:     meergo.UsersTarget,
 			HasSettings: true,
 		},
 		AsDestination: &meergo.AsAppDestination{
 			Description: "Export users as profiles and send events to Klaviyo",
-			Targets:     meergo.Events | meergo.Users,
+			Targets:     meergo.EventsTarget | meergo.UsersTarget,
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
 		},
@@ -236,7 +236,7 @@ func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 // Schema returns the schema of the specified target in the specified role.
 func (ky *Klaviyo) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 
-	if target == meergo.Events {
+	if target == meergo.EventsTarget {
 		if eventType != "create_event" {
 			return types.Type{}, meergo.ErrUIEventNotExist
 		}

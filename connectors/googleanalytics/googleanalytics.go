@@ -37,7 +37,7 @@ func init() {
 		Name: "Google Analytics",
 		AsDestination: &meergo.AsAppDestination{
 			Description: "Send events to Google Analytics",
-			Targets:     meergo.Events,
+			Targets:     meergo.EventsTarget,
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
 		},
