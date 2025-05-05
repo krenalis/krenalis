@@ -54,7 +54,7 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 	return map[string]any{"connectors": api.core.Connectors()}, nil
 }
 
-// EventSchema returns the events schema.
+// EventSchema returns the event schema.
 func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
