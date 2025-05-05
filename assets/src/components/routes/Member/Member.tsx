@@ -20,7 +20,17 @@ const Member = () => {
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [error, setError] = useState<string>('');
 
-	const { api, member, handleError, showStatus, setIsLoadingMember, setTitle, redirect } = useContext(appContext);
+	const {
+		api,
+		member,
+		handleError,
+		showStatus,
+		setIsLoadingMember,
+		setTitle,
+		redirect,
+		isPasswordless,
+		setIsPasswordless,
+	} = useContext(appContext);
 
 	const fileInputRef = useRef<any>();
 
@@ -122,6 +132,12 @@ const Member = () => {
 			}
 			return;
 		}
+		if (password != null && isPasswordless) {
+			// The user has updated their password, so they are no
+			// longer in passwordless mode.
+			localStorage.removeItem('meergo_ui_is_passwordless');
+			setIsPasswordless(false);
+		}
 		setTimeout(() => {
 			setIsSaving(false);
 			setIsLoadingMember(true);
@@ -134,15 +150,16 @@ const Member = () => {
 		<div className='member'>
 			<div className='member__content'>
 				<div className='member__name'>
-					<SlInput label='Name' value={name} onSlInput={onUpdateName} />
+					<SlInput label='Name' name='name' value={name} onSlInput={onUpdateName} />
 				</div>
 				<div className='member__email'>
-					<SlInput label='Email' value={email} onSlInput={onUpdateEmail} />
+					<SlInput label='Email' name='email' value={email} onSlInput={onUpdateEmail} />
 				</div>
 				<div className='member__password'>
 					<SlInput
 						type='password'
 						label='Password'
+						name='password'
 						disabled={password === null}
 						onSlInput={onUpdatePassword}
 						value={password === null ? '••••••••••••••••' : password}

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import './WorkspaceCreate.css';
 import { ObjectType } from '../../../lib/api/types/types';
 import { UIPreferences } from '../../../lib/api/types/workspace';
@@ -15,13 +15,24 @@ import * as icons from '../../../constants/icons';
 
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
-	const [selectedWarehouse, setSelectedWarehouse] = useState<string>('PostgreSQL');
+	const [selectedWarehouse, setSelectedWarehouse] = useState<string>(
+		localStorage.getItem('meergo_ui_is_docker') != null ? 'PostgreSQL-Docker' : 'PostgreSQL',
+	);
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
 	const [isAddingWorkspace, setIsAddingWorkspace] = useState<boolean>(false);
 
+	const nameInputRef = useRef<any>();
+
 	const { handleError, api, setSelectedWorkspace, setIsLoadingState, redirect, showStatus, workspaces } =
 		useContext(appContext);
+
+	useEffect(() => {
+		// automatically focus the name input.
+		setTimeout(() => {
+			nameInputRef.current?.focus();
+		}, 50);
+	}, []);
 
 	const onNameInput = (e) => setName(e.target.value);
 
@@ -35,14 +46,34 @@ const WorkspaceCreate = () => {
 		redirect('workspaces');
 	};
 
-	const onTestWorkspaceCreation = async () => {
+	const onWarehouseAction = async (action: 'test' | 'create') => {
 		try {
 			validateWorkspaceName(name);
 		} catch (err) {
 			handleError(err);
 			return;
 		}
-		setIsCheckingWarehouse(true);
+
+		if (action === 'test') {
+			setIsCheckingWarehouse(true);
+		} else {
+			setIsAddingWorkspace(true);
+		}
+
+		let warehouse = selectedWarehouse;
+		let settings = warehouseSettings;
+		if (selectedWarehouse === 'PostgreSQL-Docker') {
+			warehouse = 'PostgreSQL';
+			settings = {
+				host: 'warehouse',
+				port: 5432,
+				username: 'warehouse',
+				password: 'warehouse',
+				database: 'warehouse',
+				schema: 'public',
+			};
+		}
+
 		let uiProperties: UIPreferences = {
 			userProfile: {
 				image: '',
@@ -51,71 +82,61 @@ const WorkspaceCreate = () => {
 				extra: 'email',
 			},
 		};
-		try {
-			await api.workspaces.testCreation(
-				name,
-				InitialSchema as ObjectType,
-				selectedWarehouse,
-				'Normal',
-				warehouseSettings,
-				uiProperties,
-			);
-		} catch (err) {
+
+		if (action == 'test') {
+			try {
+				await api.workspaces.testCreation(
+					name,
+					InitialSchema as ObjectType,
+					warehouse,
+					'Normal',
+					settings,
+					uiProperties,
+				);
+			} catch (err) {
+				setTimeout(() => {
+					setIsCheckingWarehouse(false);
+					handleError(err);
+				}, 300);
+				return;
+			}
 			setTimeout(() => {
 				setIsCheckingWarehouse(false);
-				handleError(err);
+				showStatus({
+					variant: 'success',
+					icon: icons.OK,
+					text: `${selectedWarehouse} responded successfully`,
+				});
 			}, 300);
-			return;
-		}
-		setTimeout(() => {
-			setIsCheckingWarehouse(false);
-			showStatus({
-				variant: 'success',
-				icon: icons.OK,
-				text: `${selectedWarehouse} responded successfully`,
-			});
-		}, 300);
-	};
-
-	const onCreateWorkspace = async () => {
-		try {
-			validateWorkspaceName(name);
-		} catch (err) {
-			handleError(err);
-			return;
-		}
-		setIsAddingWorkspace(true);
-		let id: number;
-		let uiPreferences: UIPreferences = {
-			userProfile: {
-				image: '',
-				firstName: 'first_name',
-				lastName: 'last_name',
-				extra: 'email',
-			},
-		};
-		try {
-			const res = await api.workspaces.create(
-				name,
-				InitialSchema as ObjectType,
-				selectedWarehouse,
-				'Normal',
-				warehouseSettings,
-				uiPreferences,
-			);
-			id = res.id;
-		} catch (err) {
+		} else {
+			let id: number;
+			try {
+				const res = await api.workspaces.create(
+					name,
+					InitialSchema as ObjectType,
+					warehouse,
+					'Normal',
+					settings,
+					uiProperties,
+				);
+				id = res.id;
+			} catch (err) {
+				setIsAddingWorkspace(false);
+				handleError(err);
+				return;
+			}
 			setIsAddingWorkspace(false);
-			handleError(err);
-			return;
+			setSelectedWorkspace(id);
+			setIsLoadingState(true);
+			redirect('settings');
+			if (localStorage.getItem('meergo_ui_is_docker') != null) {
+				localStorage.removeItem('meergo_ui_is_docker');
+			}
 		}
-		setIsAddingWorkspace(false);
-		setSelectedWorkspace(id);
-		setIsLoadingState(true);
-		redirect('settings');
 	};
 
 	const hasWorkspaces = workspaces.length > 0;
+	const isDocker = localStorage.getItem('meergo_ui_is_docker') != null;
 
 	return (
 		<div className='workspace-add'>
@@ -133,18 +154,27 @@ const WorkspaceCreate = () => {
 				label='Name'
 				value={name}
 				onSlInput={onNameInput}
+				ref={nameInputRef}
 			/>
 			<SlSelect value={selectedWarehouse} onSlChange={onChangeWarehouse} label='Warehouse'>
 				<SlOption value='PostgreSQL'>PostgreSQL</SlOption>
 				<SlOption value='Snowflake'>Snowflake</SlOption>
+				{isDocker && <SlOption value='PostgreSQL-Docker'>PostgreSQL via Docker</SlOption>}
 			</SlSelect>
-			<div className='workspace-add__warehouse-settings'>
-				{selectedWarehouse === 'PostgreSQL' ? (
-					<PostgreSQLSettings settings={warehouseSettings} setSettings={setWarehouseSettings} />
-				) : (
-					<SnowflakeSettings settings={warehouseSettings} setSettings={setWarehouseSettings} />
-				)}
-			</div>
+			{selectedWarehouse === 'PostgreSQL-Docker' ? (
+				<div className='workspace-add__docker-description'>
+					Since you are using Meergo with Docker you can easily create a new workspace by connecting it to the
+					PostgreSQL warehouse provided directly by our image.
+				</div>
+			) : (
+				<div className='workspace-add__warehouse-settings'>
+					{selectedWarehouse === 'PostgreSQL' ? (
+						<PostgreSQLSettings settings={warehouseSettings} setSettings={setWarehouseSettings} />
+					) : (
+						<SnowflakeSettings settings={warehouseSettings} setSettings={setWarehouseSettings} />
+					)}
+				</div>
+			)}
 			<div className='workspace-add__buttons'>
 				{hasWorkspaces && (
 					<SlButton className='workspace-add__cancel-button' onClick={onCancel}>
@@ -153,7 +183,7 @@ const WorkspaceCreate = () => {
 				)}
 				<SlButton
 					className='workspace-add__check-button'
-					onClick={onTestWorkspaceCreation}
+					onClick={() => onWarehouseAction('test')}
 					loading={isCheckingWarehouse}
 				>
 					Check warehouse
@@ -161,7 +191,7 @@ const WorkspaceCreate = () => {
 				<SlButton
 					className='workspace-add__add-button'
 					variant='primary'
-					onClick={onCreateWorkspace}
+					onClick={() => onWarehouseAction('create')}
 					loading={isAddingWorkspace}
 				>
 					Add workspace

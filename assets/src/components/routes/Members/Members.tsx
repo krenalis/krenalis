@@ -137,7 +137,9 @@ const Members = () => {
 										<div className='members__member-actions'>
 											{member.id === loggedMember.id && (
 												<Link path={'organization/members/current'}>
-													<SlButton size='small'>Edit</SlButton>
+													<SlButton className='members__member-edit' size='small'>
+														Edit
+													</SlButton>
 												</Link>
 											)}
 											{members.length > 1 && (

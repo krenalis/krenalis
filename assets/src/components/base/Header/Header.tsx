@@ -1,9 +1,11 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useContext, useEffect, useState } from 'react';
 import './Header.css';
 import IconWrapper from '../IconWrapper/IconWrapper';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { TransformedMember } from '../../../lib/core/member';
 import { Link } from '..//Link/Link';
+import appContext from '../../../context/AppContext';
 
 interface HeaderProps {
 	title: ReactNode;
@@ -11,17 +13,48 @@ interface HeaderProps {
 }
 
 const Header = ({ title, member }: HeaderProps) => {
+	const [isTooltipOpen, setIsTooltipOpen] = useState<boolean>(false);
+
+	const { isPasswordless } = useContext(appContext);
+
+	useEffect(() => {
+		if (isPasswordless) {
+			setTimeout(() => {
+				setIsTooltipOpen(true);
+			}, 1000);
+		}
+	}, []);
+
+	const onAddMemberClick = () => {
+		setIsTooltipOpen(false);
+	};
+
 	return (
 		<div className='header'>
 			<div className='header__title'>
 				<span>{title}</span>
 			</div>
 			<div className='header__account'>
-				<IconWrapper name='bell' moat={true}></IconWrapper>
-				<IconWrapper name='question-lg' moat={true}></IconWrapper>
-				<Link path='organization'>
-					<IconWrapper name='building' moat={true}></IconWrapper>
-				</Link>
+				<IconWrapper name='bell' moat={true} />
+				<IconWrapper name='question-lg' moat={true} />
+				<SlTooltip
+					className='header__passwordless-tooltip'
+					open={isTooltipOpen}
+					trigger='manual'
+					placement='bottom-end'
+				>
+					<div className='header__passwordless-tooltip-body' slot='content'>
+						<div className='header__passwordless-tooltip-title'>Signed in with default credentials</div>
+						If you prefer, you can{' '}
+						<Link path='organization/members' onClick={onAddMemberClick}>
+							create a new member
+						</Link>{' '}
+						with your personal credentials instead of using the default ones.
+					</div>
+					<Link path='organization'>
+						<IconWrapper name='building' moat={true} />
+					</Link>
+				</SlTooltip>
 				<Link path='organization/members/current'>
 					<SlAvatar
 						className='header__account-avatar'

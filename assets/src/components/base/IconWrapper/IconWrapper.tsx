@@ -6,7 +6,7 @@ interface IconWrapperProps {
 	name: string;
 	size?: number;
 	moat?: boolean;
-	onClick?: () => void;
+	onClick?: (e: any) => void;
 }
 
 const IconWrapper = ({ name, size, moat, onClick }: IconWrapperProps) => {

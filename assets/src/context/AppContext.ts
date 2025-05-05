@@ -36,6 +36,8 @@ interface AppContext {
 	executeActionButtonRefs: React.MutableRefObject<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>;
+	isPasswordless: boolean;
+	setIsPasswordless: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);

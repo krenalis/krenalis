@@ -75,8 +75,12 @@ class API {
 		return await call(`${this.apiURL}/javascript-sdk-url`, http.GET);
 	};
 
-	login = async (email: string, password: string): Promise<[number, string]> => {
-		return await call(`${this.apiURL}/members/login`, http.POST, this.workspaceID, { email, password });
+	login = async (email: string, password: string, isUnique?: boolean): Promise<[number, string]> => {
+		return await call(`${this.apiURL}/members/login`, http.POST, this.workspaceID, {
+			email,
+			password,
+			isUnique: isUnique == null ? false : isUnique,
+		});
 	};
 
 	logout = async (): Promise<void> => {

@@ -1,6 +1,7 @@
 import React, { FormEvent, useState, useContext, useEffect } from 'react';
 import './Login.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import AppContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 import { useSearchParams } from 'react-router-dom';
@@ -10,8 +11,10 @@ const Login = () => {
 	const [email, setEmail] = useState<string>('');
 	const [password, setPassword] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(false);
+	const [isTryingPasswordlessLogin, setIsTryingPasswordlessLogin] = useState<boolean>(true);
 
-	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, logout } = useContext(AppContext);
+	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, logout, setIsPasswordless } =
+		useContext(AppContext);
 
 	const [searchParms, setSearchParams] = useSearchParams();
 
@@ -25,6 +28,44 @@ const Login = () => {
 	}, []);
 
 	useEffect(() => {
+		const tryPasswordlessLogin = async () => {
+			let authError: string;
+			try {
+				[, authError] = await api.login('docker@open2b.com', 'foopass2', true);
+			} catch (err) {
+				// Do nothing.
+				setIsTryingPasswordlessLogin(false);
+				return;
+			}
+			if (authError == null) {
+				// Automatically login the user in passwordless mode.
+				setIsLoggedIn(true);
+				setIsLoadingState(true);
+				localStorage.setItem('meergo_ui_is_passwordless', '1');
+				// Give the user the ability to have the warehouse based
+				// on the PostgreSQL instance provided by Docker.
+				localStorage.setItem('meergo_ui_is_docker', '1');
+				setIsPasswordless(true);
+				setIsTryingPasswordlessLogin(false);
+				return;
+			}
+			try {
+				[, authError] = await api.login('acme@open2b.com', 'foopass2', true);
+			} catch (err) {
+				// Do nothing.
+				setIsTryingPasswordlessLogin(false);
+				return;
+			}
+			if (authError == null) {
+				// Automatically login the user in passwordless mode.
+				setIsLoggedIn(true);
+				setIsLoadingState(true);
+				localStorage.setItem('meergo_ui_is_passwordless', '1');
+				setIsPasswordless(true);
+			}
+			setIsTryingPasswordlessLogin(false);
+		};
+
 		const removeCookieAndLogout = async () => {
 			try {
 				// remove the session cookie.
@@ -38,6 +79,7 @@ const Login = () => {
 			logout();
 		};
 		removeCookieAndLogout();
+		tryPasswordlessLogin();
 	}, []);
 
 	const onLogin = async (e: FormEvent) => {
@@ -71,6 +113,23 @@ const Login = () => {
 	const onPaswordChange = (e) => {
 		setPassword(e.currentTarget.value);
 	};
+
+	if (isTryingPasswordlessLogin) {
+		return (
+			<SlSpinner
+				style={
+					{
+						display: 'block',
+						position: 'relative',
+						top: '50px',
+						margin: 'auto',
+						fontSize: '3rem',
+						'--track-width': '6px',
+					} as React.CSSProperties
+				}
+			></SlSpinner>
+		);
+	}
 
 	return (
 		<div className='login'>

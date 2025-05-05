@@ -71,7 +71,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
-	const { redirect, connections, setIsLoadingState, logout } = useContext(AppContext);
+	const { redirect, connections, setIsLoadingState, logout, isPasswordless } = useContext(AppContext);
 
 	const onLogout = async () => {
 		logout();
@@ -128,7 +128,9 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 		<div className='sidebar'>
 			<div className='sidebar__items'>
 				<div className='sidebar__top'>
-					<div className='sidebar__logo'>Meergo</div>
+					<div className='sidebar__logo-wrapper'>
+						<div className='sidebar__logo'>Meergo</div>
+					</div>
 					<WorkspaceSelector
 						setSelectedWorkspace={setSelectedWorkspace}
 						workspaces={workspaces}
@@ -138,12 +140,14 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 					/>
 					{items}
 				</div>
-				<div className='sidebar__bottom'>
-					<div className='sidebar__item' onClick={onLogout}>
-						<SlIcon name='box-arrow-left' />
-						<div className='sidebar__item-text sidebar__item-text-logout'>Logout</div>
+				{!isPasswordless && (
+					<div className='sidebar__bottom'>
+						<div className='sidebar__item' onClick={onLogout}>
+							<SlIcon name='box-arrow-left' />
+							<div className='sidebar__item-text sidebar__item-text-logout'>Logout</div>
+						</div>
 					</div>
-				</div>
+				)}
 			</div>
 		</div>
 	);

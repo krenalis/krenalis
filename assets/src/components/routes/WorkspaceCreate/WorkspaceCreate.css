@@ -23,6 +23,12 @@
 	margin-bottom: 0;
 }
 
+.workspace-add__docker-description {
+	margin-top: 3px;
+	font-size: 14px;
+	color: var(--sl-color-neutral-500);
+}
+
 .workspace-add__buttons {
 	display: flex;
 	justify-content: center;

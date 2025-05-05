@@ -38,6 +38,28 @@
 	font-size: 18px;
 }
 
+.header__passwordless-tooltip::part(body) {
+	padding: 15px 20px;
+	background-color: var(--sl-color-primary-200);
+	color: #051925;
+	pointer-events: all;
+	width: 100%;
+}
+
+.header__passwordless-tooltip::part(base__arrow) {
+	background-color: var(--sl-color-primary-200);
+}
+
+.header__passwordless-tooltip-title {
+	font-weight: 600;
+	font-size: 17px;
+	margin-bottom: 3px;
+}
+
+.header__passwordless-tooltip a {
+	text-decoration: underline;
+}
+
 .status-dot {
 	display: none;
 }

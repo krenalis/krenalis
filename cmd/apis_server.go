@@ -389,6 +389,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	var body struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		IsUnique bool   `json:"isUnique"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
@@ -406,6 +407,16 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 			return []any{0, "AuthenticationFailed"}, nil
 		}
 		return nil, err
+	}
+
+	if body.IsUnique {
+		members, err := organization.Members(r.Context())
+		if err != nil {
+			return nil, err
+		}
+		if len(members) > 1 {
+			return []any{0, "AuthenticationFailed"}, nil
+		}
 	}
 
 	// Store the session.

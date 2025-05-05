@@ -26,22 +26,23 @@ const login = async (page: Page) => {
 		async ({ url, workspace }) => {
 			localStorage.setItem('meergo_ui_workspace_id', String(workspace));
 			const api = new (window as any).API(url, workspace) as API;
-			await api.login('acme@open2b.com', 'foopass2');
+			await api.login('test@open2b.com', 'foopass2');
 		},
 		{ url: config.baseURL, workspace: config.workspaceID },
 	);
 };
 
 const logout = async (page: Page) => {
-	await page.goto(`${adminURL}/`);
 	await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
 			await api.logout();
 			localStorage.removeItem('meergo_ui_workspace_id');
+			localStorage.removeItem('meergo_ui_is_passwordless');
 		},
 		{ url: config.baseURL, workspace: config.workspaceID },
 	);
+	await page.goto(`${adminURL}/`);
 };
 
 const addDummySource = async (page: Page): Promise<number> => {

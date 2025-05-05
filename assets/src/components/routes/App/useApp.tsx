@@ -40,6 +40,9 @@ const useApp = (
 	const [warehouse, setWarehouse] = useState<Warehouse | null>(null);
 	const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
 	const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState<boolean>(false);
+	const [isPasswordless, setIsPasswordless] = useState<boolean>(
+		localStorage.getItem('meergo_ui_is_passwordless') != null,
+	);
 	const [selectedWorkspace, setSelectedWorkspace] = useState<number>(
 		Number(localStorage.getItem('meergo_ui_workspace_id')),
 	);
@@ -417,6 +420,8 @@ const useApp = (
 		api,
 		executeAction,
 		executeActionButtonRefs,
+		isPasswordless,
+		setIsPasswordless,
 	};
 };
 

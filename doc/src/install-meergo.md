@@ -32,12 +32,11 @@ For this installation method you need to have [Git](https://git-scm.com/download
 
 > If you have previously started Meergo using Docker Compose and want to reset it, perhaps for a clean installation or because you are running a new version of Meergo, you just need to clear the Meergo Docker data by running `docker compose down -v` before starting Meergo with `docker compose up`.
 
-3. Open the login page of Meergo admin at
+3. Open the admin at
 
    [http://localhost:9090/admin/](http://localhost:9090/admin/)
 
-
-Continue with the [first login](#first-login).
+Initially, login is not required with the Docker installation. To enable login, create a new member with their email and password. 
 
 ## Pre-packaged binaries
 

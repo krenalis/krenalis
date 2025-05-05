@@ -9,12 +9,14 @@ interface LinkProps {
 	path: string | null;
 	className?: string;
 	onRedirect?: (...args: any) => void | Promise<void>;
+	onClick?: () => void;
 }
 
-const Link = ({ children, path, className, onRedirect }: LinkProps) => {
+const Link = ({ children, path, className, onRedirect, onClick }: LinkProps) => {
 	const { setIsLoadingState, toastRef } = useContext(AppContext);
 
-	const onClick = async (e) => {
+	const onLinkClick = async (e) => {
+		onClick();
 		if (onRedirect) {
 			await onRedirect();
 		}
@@ -38,7 +40,7 @@ const Link = ({ children, path, className, onRedirect }: LinkProps) => {
 	}
 
 	return (
-		<RouterLink to={`${UI_BASE_PATH}${path}`} onClick={onClick} className={className ? className : ''}>
+		<RouterLink to={`${UI_BASE_PATH}${path}`} onClick={onLinkClick} className={className ? className : ''}>
 			{children}
 		</RouterLink>
 	);

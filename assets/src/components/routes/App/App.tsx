@@ -37,6 +37,8 @@ const App = () => {
 	};
 
 	const logout = () => {
+		localStorage.removeItem('meergo_ui_is_passwordless');
+		setIsPasswordless(false);
 		setSelectedWorkspace(0);
 		setIsLoggedIn(false);
 	};
@@ -90,6 +92,8 @@ const App = () => {
 		api,
 		executeAction,
 		executeActionButtonRefs,
+		isPasswordless,
+		setIsPasswordless,
 	} = useApp(handleError, redirect, logout, location);
 
 	useEffect(() => {
@@ -168,6 +172,8 @@ const App = () => {
 					toastRef,
 					executeAction,
 					executeActionButtonRefs,
+					isPasswordless,
+					setIsPasswordless,
 				}}
 			>
 				<Outlet />
