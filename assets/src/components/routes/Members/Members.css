@@ -57,6 +57,15 @@
 	gap: 15px;
 }
 
+.members__invite-dialog::part(title) {
+	padding-bottom: 10px;
+}
+
+.members__invite-dialog-description {
+	font-size: 15px;
+	margin-bottom: 10px;
+}
+
 .members__invite-dialog sl-input {
 	margin-bottom: 15px;
 }

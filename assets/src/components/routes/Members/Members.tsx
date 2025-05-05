@@ -261,6 +261,9 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 			open={isOpen}
 			onSlAfterHide={() => setIsOpen(false)}
 		>
+			<div className='members__invite-dialog-description'>
+				An invitation to create a new member account will be sent to the email address provided.
+			</div>
 			<SlInput ref={inputRef} label='Email' value={email} onSlInput={onUpdateEmail} />
 			{error && (
 				<div className='members__invite-dialog-error'>
