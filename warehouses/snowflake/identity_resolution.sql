@@ -32,7 +32,26 @@ BEGIN
             )
             OR {{ same_user }} -- This placeholder will be replaced by Meergo.
         )';
-    
+
+    -- Reset the user identity clusters, as they may have been modified by a
+    -- previous execution of Identity Resolution. If they are not reset, user
+    -- identities that were previously considered to belong to the same cluster
+    -- will continue to be regarded as such, even though they should not be
+    -- according to the parameters of the current execution of identity
+    -- resolution.
+    DROP TABLE IF EXISTS "NUMBERED_USERS";
+    CREATE TEMPORARY TABLE "NUMBERED_USERS" AS
+        SELECT 
+            "__PK__",
+            ROW_NUMBER() OVER (ORDER BY "__PK__") AS "CLUSTER_VALUE"
+        FROM 
+            "_USER_IDENTITIES";
+    UPDATE "_USER_IDENTITIES" 
+    SET "__CLUSTER__" = "NUMBERED_USERS"."CLUSTER_VALUE"
+    FROM "NUMBERED_USERS"
+    WHERE "_USER_IDENTITIES"."__PK__" = "NUMBERED_USERS"."__PK__";
+    DROP TABLE IF EXISTS "NUMBERED_USERS";
+
     -- Do the clustering.
     DECLARE
         has_clusters_to_merge boolean;
