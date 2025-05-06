@@ -155,6 +155,8 @@ const WorkspaceCreate = () => {
 				value={name}
 				onSlInput={onNameInput}
 				ref={nameInputRef}
+				placeholder='My workspace'
+				helpText='A name for the workspace, so it can be easily recognized among other workspaces. It can be changed later.'
 			/>
 			<SlSelect value={selectedWarehouse} onSlChange={onChangeWarehouse} label='Warehouse'>
 				<SlOption value='PostgreSQL'>PostgreSQL</SlOption>
