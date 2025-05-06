@@ -13,7 +13,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/backoff"
 )
@@ -44,13 +43,23 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 	bo.SetCap(500 * time.Millisecond)
 	for bo.Next(ctx) {
 		err := warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-			err = tx.QueryRow(`SELECT "COMPLETED_AT", "ERROR" FROM "_OPERATIONS" WHERE "ID" = ?`, opID).Scan(&completedAt, &opError)
+			var readID *string
+			rows, err := tx.Query(`SELECT "ID", "COMPLETED_AT", "ERROR" FROM "_OPERATIONS" WHERE "ID" = ?`, opID)
 			if err != nil {
-				if err != pgx.ErrNoRows {
-					// Generic database error.
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				err := rows.Scan(&readID, &completedAt, &opError)
+				if err != nil {
 					return err
 				}
-				// ErrNoRows, so the operation can be started.
+			}
+			if err := rows.Err(); err != nil {
+				return err
+			}
+			if readID == nil {
+				// No rows in DB, so the operation can be started.
 				_, err = tx.Exec(`INSERT INTO "_OPERATIONS" ("ID", "OPERATION_TYPE") VALUES (?, ?)`, opID, opType)
 				if err != nil {
 					return err
