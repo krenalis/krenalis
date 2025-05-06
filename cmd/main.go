@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -74,11 +75,17 @@ func Main(assets fs.FS) {
 		os.Exit(1)
 	}
 
-	// Clear all the environment variables.
-	// This, in addition to cleanliness, prevents the content of such variables
-	// (especially those with sensitive data) from being accessible to all the
-	// code, third-party packages and any started processes.
-	os.Clearenv()
+	// Clear all the Meergo environment variables, that are the environment
+	// variables that start with "MEERGO_".
+	for _, v := range os.Environ() {
+		if key, _, ok := strings.Cut(v, "="); ok && strings.HasPrefix(key, "MEERGO_") {
+			err := os.Unsetenv(key)
+			if err != nil {
+				slog.Error("cmd: cannot unset environment variable %q: %s", key, err)
+				os.Exit(1)
+			}
+		}
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	sigs := make(chan os.Signal, 1)
