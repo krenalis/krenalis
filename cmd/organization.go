@@ -138,6 +138,7 @@ func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Req
 	}
 	emailTemplate := strings.ReplaceAll(inviteMemberEmail, "${invitationFrom}", html.EscapeString(member.Email))
 	emailTemplate = strings.ReplaceAll(emailTemplate, "${organization}", html.EscapeString(org.Name))
+	emailTemplate = strings.ReplaceAll(emailTemplate, "${externalURL}", html.EscapeString(organization.externalURL))
 	err = org.InviteMember(r.Context(), body.Email, emailTemplate)
 	return nil, err
 }

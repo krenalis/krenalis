@@ -9,7 +9,9 @@ package cmd
 
 import (
 	"fmt"
+	"html"
 	"net/http"
+	"strings"
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
@@ -131,7 +133,8 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, fmt.Errorf("cannot read organization: %s", err)
 	}
-	err = organization.SendMemberPasswordReset(r.Context(), body.Email, resetPasswordEmail)
+	emailTemplate := strings.ReplaceAll(resetPasswordEmail, "${externalURL}", html.EscapeString(api.externalURL))
+	err = organization.SendMemberPasswordReset(r.Context(), body.Email, emailTemplate)
 	return nil, err
 }
 

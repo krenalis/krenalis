@@ -58,13 +58,14 @@ type apisServer struct {
 	runsOnHTTPS      bool
 	javaScriptSDKURL string
 	eventURL         string
+	externalURL      string
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
 // Core. encryptionKey is the key used to encrypt the session cookie.
 // runsOnHTTPs indicates if the server runs on HTTPS.
 // It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, javaScriptSDKURL, eventURL string) *apisServer {
+func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, javaScriptSDKURL, eventURL string, externalURL string) *apisServer {
 
 	if len(encryptionKey) != 64 {
 		panic("encryptionKey is not 64 bytes long")
@@ -75,6 +76,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, java
 		runsOnHTTPS:      runsOnHTTPS,
 		javaScriptSDKURL: javaScriptSDKURL,
 		eventURL:         eventURL,
+		externalURL:      externalURL,
 	}
 
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
