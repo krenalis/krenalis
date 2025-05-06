@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './SnowflakeSettings.css';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -9,6 +9,16 @@ interface settingsProps {
 }
 
 const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
+	useEffect(() => {
+		if (settings === undefined) {
+			// Precompile schema and role.
+			setSettings({
+				schema: 'public',
+				role: 'SYSADMIN',
+			});
+		}
+	}, []);
+
 	const onSettingInput = (e) => {
 		const name = e.currentTarget.name;
 		const value = e.currentTarget.value;
@@ -34,7 +44,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 			<SlInput
 				name='username'
 				label='Username'
-				placeholder=''
+				placeholder='username'
 				type='text'
 				minlength={1}
 				maxlength={255}
@@ -44,7 +54,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 			<SlInput
 				name='password'
 				label='Password'
-				placeholder=''
+				placeholder='password'
 				type='password'
 				minlength={1}
 				maxlength={255}
@@ -55,7 +65,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 			<SlInput
 				name='database'
 				label='Database'
-				placeholder=''
+				placeholder='MY_DATABASE'
 				type='text'
 				minlength={1}
 				maxlength={255}
@@ -65,7 +75,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 			<SlInput
 				name='schema'
 				label='Schema'
-				placeholder=''
+				placeholder='public'
 				type='text'
 				minlength={1}
 				maxlength={255}
@@ -75,7 +85,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 			<SlInput
 				name='warehouse'
 				label='Warehouse'
-				placeholder=''
+				placeholder='MY_WAREHOUSE'
 				type='text'
 				minlength={1}
 				maxlength={255}
@@ -85,7 +95,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 			<SlInput
 				name='role'
 				label='Role'
-				placeholder=''
+				placeholder='SYSADMIN'
 				type='text'
 				minlength={1}
 				maxlength={255}
