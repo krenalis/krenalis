@@ -6,7 +6,7 @@ import { Status } from '../components/routes/App/App.types';
 import { Warehouse } from '../components/routes/App/App.types';
 import Workspace from '../lib/api/types/workspace';
 import { TransformedMember } from '../lib/core/member';
-import { SlAlert } from '@shoelace-style/shoelace';
+import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import { FeedbackButtonRef } from '../components/base/FeedbackButton/FeedbackButton';
 
 interface AppContext {
