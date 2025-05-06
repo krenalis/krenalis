@@ -119,7 +119,7 @@ func userIdentitiesSQLSchema(userColumns []meergo.Column) string {
 		b.WriteByte(' ')
 		b.WriteString(typeToSnowflakeType(c.Type))
 	}
-	b.WriteString(",\n" + `PRIMARY KEY ("__pk__"))`)
+	b.WriteString(",\n" + `PRIMARY KEY ("__PK__"))`)
 	return b.String()
 }
 
