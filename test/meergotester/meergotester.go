@@ -306,9 +306,16 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			t.Fatal(err)
 		}
-		// Prepare the environment variables containing the Meergo settings.
-		// Keep these in sync with the settings set below.
-		env := []string{
+		// In addition to the environment variables already present for the
+		// process, add those needed to run Meergo.
+		//
+		// It is important to preserve the environment variables already present
+		// because (1) it is the same thing we do when we test Meergo not as an
+		// external process but "embedded" inside the current process, so this
+		// makes the two test modes more consistent and (2) problems can occur
+		// in running Meergo if certain system environment variables are not
+		// provided (this for example gives errors on Windows).
+		env := append(os.Environ(), []string{
 			"MEERGO_ENCRYPTION_KEY=" + encryptionKey,
 			"MEERGO_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"MEERGO_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
@@ -320,7 +327,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			"MEERGO_DB_SCHEMA=" + testsSettings.Database.Schema,
 			"MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR=" + transformationsTempDir,
-		}
+		}...)
 		if !meergoAlreadyBuilt {
 			err := buildMeergo(ctx, repo, meergoDir)
 			if err != nil {
