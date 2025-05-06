@@ -98,17 +98,26 @@ The following connection parameters are supported:
 
   - To use the internal Snowflake authenticator, specify snowflake (Default). If you want to cache your MFA logins, use AuthTypeUsernamePasswordMFA authenticator.
 
+  - To use programmatic access tokens, specify programmatic_access_token.
+
   - To authenticate through Okta, specify https://<okta_account_name>.okta.com (URL prefix for Okta).
 
   - To authenticate using your IDP via a browser, specify externalbrowser.
 
-  - To authenticate via OAuth, specify oauth and provide an OAuth Access Token (see the token parameter below).
+  - To authenticate via OAuth with token, specify oauth and provide an OAuth Access Token (see the token parameter below).
+
+  - To authenticate via full OAuth flow, specify oauth_authorization_code or oauth_client_credentials and fill relevant parameters (oauthClientId, oauthClientSecret, oauthAuthorizationUrl, oauthTokenRequestUrl, oauthRedirectUri, oauthScope).
+    Specify URLs if you want to use external OAuth2 IdP, otherwise Snowflake will be used as a default IdP.
+    If oauthScope is not configured, the role is used (giving session:role:<roleName> scope).
+    For more information, please reach to official Snowflake documentation.
 
   - application: Identifies your application to Snowflake Support.
 
-  - insecureMode: false by default. Set to true to bypass the Online
+  - disableOCSPChecks: false by default. Set to true to bypass the Online
     Certificate Status Protocol (OCSP) certificate revocation check.
     IMPORTANT: Change the default value for testing or emergency situations only.
+
+  - insecureMode: deprecated. Use disableOCSPChecks instead.
 
   - token: a token that can be used to authenticate. Should be used in conjunction with the "oauth" authenticator.
 
@@ -150,6 +159,7 @@ Session-level parameters can also be set by using the SQL command "ALTER SESSION
 Alternatively, use OpenWithConfig() function to create a database handle with the specified Config.
 
 # Connection Config
+
 You can also connect to your warehouse using the connection config. The dbSql library states that when you want to take advantage of driver-specific connection features that aren’t
 available in a connection string. Each driver supports its own set of connection properties, often providing ways to customize the connection request specific to the DBMS
 For example:
@@ -165,12 +175,12 @@ you are looking to connect. Since the driver name is not needed, you can optiona
 on startup. To do this, set `GOSNOWFLAKE_SKIP_REGISTERATION` in your environment. This is useful you wish to
 register multiple verions of the driver.
 
-Note: GOSNOWFLAKE_SKIP_REGISTERATION should not be used if sql.Open() is used as the method
+Note: `GOSNOWFLAKE_SKIP_REGISTERATION` should not be used if sql.Open() is used as the method
 to connect to the server, as sql.Open will require registration so it can map the driver name
 to the driver type, which in this case is "snowflake" and SnowflakeDriver{}.
 
 You can load the connnection configuration with .toml file format.
-With two environment variables SNOWFLAKE_HOME(connections.toml file directory) SNOWFLAKE_DEFAULT_CONNECTION_NAME(DSN name),
+With two environment variables, `SNOWFLAKE_HOME` (`connections.toml` file directory) and `SNOWFLAKE_DEFAULT_CONNECTION_NAME` (DSN name),
 the driver will search the config file and load the connection. You can find how to use this connection way at ./cmd/tomlfileconnection
 or Snowflake doc: https://docs.snowflake.com/en/developer-guide/snowflake-cli-v2/connecting/specify-credentials
 
@@ -197,6 +207,18 @@ Users can use SetLogger in driver.go to set a customized logger for gosnowflake 
 
 In order to enable debug logging for the driver, user could use SetLogLevel("debug") in SFLogger interface
 as shown in demo code at cmd/logger.go. To redirect the logs SFlogger.SetOutput method could do the work.
+
+If you want to define S3 client logging, override S3LoggingMode variable using configuration: https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/aws#ClientLogMode
+Example:
+
+	    import (
+	      sf "github.com/snowflakedb/gosnowflake"
+	      "github.com/aws/aws-sdk-go-v2/aws"
+	    )
+
+	    ...
+
+		sf.S3LoggingMode = aws.LogRequest | aws.LogResponseWithBody | aws.LogRetries
 
 # Query tag
 
@@ -687,7 +709,7 @@ the underlying data has already been loaded, and downloads it if not.
 
 Limitations:
 
- 1. For some queries Snowflake may decide to return data in JSON format (examples: `SHOW PARAMETERS` or `ls @stage`). You cannot use JSON with Arrow batches context.
+ 1. For some queries Snowflake may decide to return data in JSON format (examples: `SHOW PARAMETERS` or `ls @stage`). You cannot use JSON with Arrow batches context. See alternative below.
  2. Snowflake handles timestamps in a range which is broader than available space in Arrow timestamp type. Because of that special treatment should be used (see below).
  3. When using numbers, Snowflake chooses the smallest type that covers all values in a batch. So even when your column is NUMBER(38, 0), if all values are 8bits, array.Int8 is used.
 
@@ -722,6 +744,20 @@ To preserve BigDecimal values within Arrow batches, use WithHigherPrecision.
 This offers two main benefits: it helps avoid precision loss and defers the conversion to upstream services.
 Alternatively, without this setting, all non-zero scale numbers will be converted to float64, potentially resulting in loss of precision.
 Zero-scale numbers (DECIMAL256, DECIMAL128) will be converted to int64, which could lead to overflow.
+WHen using NUMBERs with non zero scale, the value is returned as an integer type and a scale is provided in record metadata.
+Example. When we have a 123.45 value that comes from NUMBER(9, 4), it will be represented as 1234500 with scale equal to 4. It is a client responsibility to interpret it correctly.
+Also - see limitations section above.
+
+How to handle JSON responses in Arrow batches:
+
+Due to technical limitations Snowflake backend may return JSON even if client expects Arrow.
+In that case Arrow batches are not available and the error with code ErrNonArrowResponseInArrowBatches is returned.
+The response is parsed to regular rows.
+You can read rows in a way described in transform_batches_to_rows.go example.
+This has a very strong limitation though - this is a very low level API (Go driver API), so there are no conversions ready.
+All values are returned as strings.
+Alternative approach is to rerun a query, but without enabling Arrow batches and use a general Go SQL API instead of driver API.
+It can be optimized by using `WithRequestID`, so backend returns results from cache.
 
 # Binding Parameters
 
@@ -1285,5 +1321,16 @@ Using custom configuration for PUT/GET:
 
 If you want to override some default configuration options, you can use `WithFileTransferOptions` context.
 There are multiple config parameters including progress bars or compression.
+
+# Surfacing errors originating from PUT and GET commands
+
+Default behaviour is to propagate the potential underlying errors encountered during executing calls associated with the PUT or GET commands to the caller, for increased awareness and easier handling or troubleshooting them.
+
+The behaviour is governed by the `RaisePutGetError` flag on `SnowflakeFileTransferOptions` (default: `true`)
+
+If you wish to ignore those errors instead, you can set `RaisePutGetError: false`. Example snippet:
+
+	ctx := WithFileTransferOptions(context.Background(), &SnowflakeFileTransferOptions{RaisePutGetError: false})
+	db.ExecContext(ctx, "PUT ...")
 */
 package gosnowflake

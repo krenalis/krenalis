@@ -89,35 +89,36 @@ github.com/Microsoft/go-winio/pkg/guid
 ## explicit; go 1.13
 github.com/andybalholm/brotli
 github.com/andybalholm/brotli/matchfinder
-# github.com/apache/arrow/go/v15 v15.0.0
-## explicit; go 1.20
-github.com/apache/arrow/go/v15/arrow
-github.com/apache/arrow/go/v15/arrow/array
-github.com/apache/arrow/go/v15/arrow/arrio
-github.com/apache/arrow/go/v15/arrow/bitutil
-github.com/apache/arrow/go/v15/arrow/compute
-github.com/apache/arrow/go/v15/arrow/compute/exec
-github.com/apache/arrow/go/v15/arrow/compute/internal/kernels
-github.com/apache/arrow/go/v15/arrow/decimal128
-github.com/apache/arrow/go/v15/arrow/decimal256
-github.com/apache/arrow/go/v15/arrow/encoded
-github.com/apache/arrow/go/v15/arrow/endian
-github.com/apache/arrow/go/v15/arrow/float16
-github.com/apache/arrow/go/v15/arrow/internal
-github.com/apache/arrow/go/v15/arrow/internal/debug
-github.com/apache/arrow/go/v15/arrow/internal/dictutils
-github.com/apache/arrow/go/v15/arrow/internal/flatbuf
-github.com/apache/arrow/go/v15/arrow/ipc
-github.com/apache/arrow/go/v15/arrow/memory
-github.com/apache/arrow/go/v15/arrow/memory/internal/cgoalloc
-github.com/apache/arrow/go/v15/arrow/memory/mallocator
-github.com/apache/arrow/go/v15/arrow/scalar
-github.com/apache/arrow/go/v15/internal/bitutils
-github.com/apache/arrow/go/v15/internal/hashing
-github.com/apache/arrow/go/v15/internal/json
-github.com/apache/arrow/go/v15/internal/utils
-# github.com/apache/thrift v0.17.0
-## explicit; go 1.18
+# github.com/apache/arrow-go/v18 v18.0.0
+## explicit; go 1.22.0
+github.com/apache/arrow-go/v18/arrow
+github.com/apache/arrow-go/v18/arrow/array
+github.com/apache/arrow-go/v18/arrow/arrio
+github.com/apache/arrow-go/v18/arrow/bitutil
+github.com/apache/arrow-go/v18/arrow/compute
+github.com/apache/arrow-go/v18/arrow/compute/exec
+github.com/apache/arrow-go/v18/arrow/compute/internal/kernels
+github.com/apache/arrow-go/v18/arrow/decimal
+github.com/apache/arrow-go/v18/arrow/decimal128
+github.com/apache/arrow-go/v18/arrow/decimal256
+github.com/apache/arrow-go/v18/arrow/encoded
+github.com/apache/arrow-go/v18/arrow/endian
+github.com/apache/arrow-go/v18/arrow/float16
+github.com/apache/arrow-go/v18/arrow/internal
+github.com/apache/arrow-go/v18/arrow/internal/debug
+github.com/apache/arrow-go/v18/arrow/internal/dictutils
+github.com/apache/arrow-go/v18/arrow/internal/flatbuf
+github.com/apache/arrow-go/v18/arrow/ipc
+github.com/apache/arrow-go/v18/arrow/memory
+github.com/apache/arrow-go/v18/arrow/memory/internal/cgoalloc
+github.com/apache/arrow-go/v18/arrow/memory/mallocator
+github.com/apache/arrow-go/v18/arrow/scalar
+github.com/apache/arrow-go/v18/internal/bitutils
+github.com/apache/arrow-go/v18/internal/hashing
+github.com/apache/arrow-go/v18/internal/json
+github.com/apache/arrow-go/v18/internal/utils
+# github.com/apache/thrift v0.21.0
+## explicit; go 1.22.0
 github.com/apache/thrift/lib/go/thrift
 # github.com/avct/uasurfer v0.0.0-20250320214457-f1f6afeb74db
 ## explicit; go 1.19
@@ -269,8 +270,8 @@ github.com/containerd/platforms
 # github.com/cpuguy83/dockercfg v0.3.2
 ## explicit; go 1.13
 github.com/cpuguy83/dockercfg
-# github.com/danieljoos/wincred v1.1.2
-## explicit; go 1.13
+# github.com/danieljoos/wincred v1.2.2
+## explicit; go 1.18
 github.com/danieljoos/wincred
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
@@ -372,7 +373,7 @@ github.com/felixge/httpsnoop
 github.com/fraugster/parquet-go
 github.com/fraugster/parquet-go/parquet
 github.com/fraugster/parquet-go/parquetschema
-# github.com/gabriel-vasile/mimetype v1.4.2
+# github.com/gabriel-vasile/mimetype v1.4.7
 ## explicit; go 1.20
 github.com/gabriel-vasile/mimetype
 github.com/gabriel-vasile/mimetype/internal/charset
@@ -398,8 +399,8 @@ github.com/go-ole/go-ole/oleutil
 # github.com/go-sql-driver/mysql v1.9.1
 ## explicit; go 1.21.0
 github.com/go-sql-driver/mysql
-# github.com/goccy/go-json v0.10.2
-## explicit; go 1.12
+# github.com/goccy/go-json v0.10.4
+## explicit; go 1.19
 github.com/goccy/go-json
 github.com/goccy/go-json/internal/decoder
 github.com/goccy/go-json/internal/encoder
@@ -415,13 +416,13 @@ github.com/godbus/dbus
 # github.com/gogo/protobuf v1.3.2
 ## explicit; go 1.15
 github.com/gogo/protobuf/proto
-# github.com/golang-jwt/jwt/v5 v5.2.1
+# github.com/golang-jwt/jwt/v5 v5.2.2
 ## explicit; go 1.18
 github.com/golang-jwt/jwt/v5
 # github.com/golang/snappy v0.0.4
 ## explicit
 github.com/golang/snappy
-# github.com/google/flatbuffers v23.5.26+incompatible
+# github.com/google/flatbuffers v24.12.23+incompatible
 ## explicit
 github.com/google/flatbuffers/go
 # github.com/google/go-cmp v0.7.0
@@ -494,8 +495,8 @@ github.com/klauspost/compress/s2
 github.com/klauspost/compress/snappy
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
-# github.com/klauspost/cpuid/v2 v2.2.5
-## explicit; go 1.15
+# github.com/klauspost/cpuid/v2 v2.2.9
+## explicit; go 1.20
 github.com/klauspost/cpuid/v2
 # github.com/kr/fs v0.1.0
 ## explicit
@@ -609,8 +610,8 @@ github.com/shopspring/decimal
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/snowflakedb/gosnowflake v1.12.0
-## explicit; go 1.21
+# github.com/snowflakedb/gosnowflake v1.14.0
+## explicit; go 1.22.0
 github.com/snowflakedb/gosnowflake
 # github.com/stretchr/testify v1.10.0
 ## explicit; go 1.17
@@ -758,8 +759,8 @@ golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ripemd160
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
-## explicit; go 1.20
+# golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
+## explicit; go 1.22.0
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
 golang.org/x/exp/slices
@@ -780,6 +781,11 @@ golang.org/x/net/idna
 golang.org/x/net/internal/httpcommon
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
+# golang.org/x/oauth2 v0.26.0
+## explicit; go 1.18
+golang.org/x/oauth2
+golang.org/x/oauth2/clientcredentials
+golang.org/x/oauth2/internal
 # golang.org/x/sync v0.12.0
 ## explicit; go 1.23.0
 golang.org/x/sync/errgroup
@@ -854,7 +860,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028
+# golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 ## explicit; go 1.18
 golang.org/x/xerrors
 golang.org/x/xerrors/internal

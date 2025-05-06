@@ -12,6 +12,7 @@ package snowflake
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -156,7 +157,7 @@ type innerSettings struct {
 }
 
 // connector returns a driver.Connector from the settings.
-func (s *innerSettings) connector() gosnowflake.Connector {
+func (s *innerSettings) connector() driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]

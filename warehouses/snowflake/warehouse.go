@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	_ "embed"
 	jsonstd "encoding/json"
 	"errors"
@@ -334,8 +335,8 @@ func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, action int
 	return err
 }
 
-// connector returns a gosnowflake.Connector from the settings.
-func (s *sfSettings) connector() gosnowflake.Connector {
+// connector returns a driver.Connector from the settings.
+func (s *sfSettings) connector() driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
