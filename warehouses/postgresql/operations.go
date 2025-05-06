@@ -47,13 +47,23 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 			if err != nil {
 				return err
 			}
-			err = tx.QueryRow(ctx, `SELECT "completed_at", "error" FROM "_operations" WHERE "id" = $1`, opID).Scan(&completedAt, &opError)
+			var readID *string
+			rows, err := tx.Query(ctx, `SELECT "id", "completed_at", "error" FROM "_operations" WHERE "id" = $1`, opID)
 			if err != nil {
-				if err != pgx.ErrNoRows {
-					// Generic database error.
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				err := rows.Scan(&readID, &completedAt, &opError)
+				if err != nil {
 					return err
 				}
-				// ErrNoRows, so the operation can be started.
+			}
+			if err := rows.Err(); err != nil {
+				return err
+			}
+			if readID == nil {
+				// No rows in DB, so the operation can be started.
 				_, err = tx.Exec(ctx, `INSERT INTO "_operations" ("id", "operation_type") VALUES ($1, $2)`, opID, opType)
 				if err != nil {
 					return err
