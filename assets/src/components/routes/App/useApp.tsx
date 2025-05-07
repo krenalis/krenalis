@@ -53,6 +53,10 @@ const useApp = (
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>({});
 
+	const executeActionDropdownButtonRefs = useRef<{
+		[key: number]: React.RefObject<FeedbackButtonRef>;
+	}>({});
+
 	useEffect(() => {
 		const loadAppState = async () => {
 			// get the workspaces list.
@@ -319,15 +323,18 @@ const useApp = (
 
 	const executeAction = async (connection: TransformedConnection, actionID: number) => {
 		executeActionButtonRefs.current[actionID]?.current?.load();
+		executeActionDropdownButtonRefs.current[actionID]?.current?.load();
 		let executionID: number;
 		try {
 			executionID = await api.workspaces.connections.executeAction(actionID);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				executeActionButtonRefs.current[actionID]?.current?.error(err.message);
+				executeActionDropdownButtonRefs.current[actionID]?.current?.error(err.message);
 				return;
 			}
 			executeActionButtonRefs.current[actionID]?.current?.stop();
+			executeActionDropdownButtonRefs.current[actionID]?.current?.error(err.message);
 			handleError(err);
 			return;
 		}
@@ -362,6 +369,12 @@ const useApp = (
 
 		if (execution.error !== '') {
 			executeActionButtonRefs.current[actionID]?.current?.error(
+				<>
+					{execution.error}
+					{metricsLink}
+				</>,
+			);
+			executeActionDropdownButtonRefs.current[actionID]?.current?.error(
 				<>
 					{execution.error}
 					{metricsLink}
@@ -402,6 +415,7 @@ const useApp = (
 			</div>
 		);
 		executeActionButtonRefs.current[actionID]?.current?.info(infoMessage);
+		executeActionDropdownButtonRefs.current[actionID]?.current?.info(infoMessage);
 	};
 
 	return {
@@ -420,6 +434,7 @@ const useApp = (
 		api,
 		executeAction,
 		executeActionButtonRefs,
+		executeActionDropdownButtonRefs,
 		isPasswordless,
 		setIsPasswordless,
 	};

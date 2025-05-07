@@ -5,6 +5,7 @@ const useGrid = (
 	gridRef: React.MutableRefObject<any>,
 	rows: GridRowType[],
 	columns: GridColumn[],
+	gridColumns?: string,
 	isLoading?: boolean,
 	isShown?: boolean,
 ) => {
@@ -41,6 +42,9 @@ const useGrid = (
 			}
 			setColumnsWidths(widths);
 		};
+		if (gridColumns != null) {
+			return;
+		}
 		if (isLoading || (isShown != null && !isShown)) {
 			return;
 		}

@@ -16,6 +16,19 @@ interface FeedbackButtonProps {
 	variant?: Variant;
 	onClick?: () => void;
 	disabled?: boolean;
+	placement?:
+		| 'bottom'
+		| 'top'
+		| 'top-start'
+		| 'top-end'
+		| 'right'
+		| 'right-start'
+		| 'right-end'
+		| 'bottom-start'
+		| 'bottom-end'
+		| 'left'
+		| 'left-start'
+		| 'left-end';
 }
 
 interface FeedbackButtonRef {
@@ -39,6 +52,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			size = 'medium',
 			hoist = false,
 			disabled,
+			placement,
 			...delegated
 		},
 		ref,
@@ -154,11 +168,11 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 
 		return (
 			<SlTooltip
-				className='feedback-button__tooltip'
+				className={`feedback-button__tooltip${className != null ? ' ' + className + '-tooltip' : ''}`}
 				open={error !== null || info !== null ? true : false}
 				trigger='manual'
 				style={{ '--max-width': '400px' } as React.CSSProperties}
-				placement='bottom'
+				placement={placement == null ? 'bottom' : placement}
 				hoist={hoist}
 			>
 				{(error !== null || info !== null) && (

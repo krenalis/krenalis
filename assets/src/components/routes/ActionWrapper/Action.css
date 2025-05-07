@@ -1061,7 +1061,7 @@ inherit the disabled style */
 
 .fullscreen-transformation__panel-content {
 	height: calc(100% - 60px);
-	overflow-y: scroll;
+	overflow-y: auto;
 }
 
 .fullscreen-transformation__samples-loading {

@@ -63,10 +63,16 @@
 	color: #777;
 }
 
+.connection-actions__action-filter > div:first-child {
+	margin-top: 0;
+}
+
 .connection-actions__action-filter > div {
 	font-size: 12px;
 	opacity: 0.7;
 	font-family: var(--monospace-fonts);
+	word-break: break-word;
+	margin-top: 5px;
 }
 
 .connection-actions__buttons {
@@ -181,4 +187,65 @@
 .connection-actions__action-type--users + .connection-actions__action-type--events {
 	border-top-left-radius: var(--radius) !important;
 	border-top-right-radius: var(--radius) !important;
+}
+
+.connection-actions__menu .connection-actions__run-button::part(base) {
+	border: 0;
+	background-color: transparent;
+}
+
+.connection-actions__delete::part(base):hover {
+	transition:
+		background-color 0.3s,
+		color 0.3s;
+	background-color: var(--sl-color-danger-600);
+	color: var(--text-onaccent);
+}
+
+.connection-actions__buttons-dropdown .connection-actions__run-button::part(base) {
+	padding: 0;
+	border-radius: 0;
+	font-size: 16px;
+	font-weight: 400;
+}
+
+.connection-actions__buttons-dropdown .connection-actions__run-button::part(base):hover {
+	transition:
+		background-color 0.3s,
+		color 0.3s;
+	background-color: var(--sl-color-primary-500);
+	color: var(--text-onaccent);
+}
+
+.connection-actions__buttons-dropdown .connection-actions__run-button-tooltip,
+.connection-actions__buttons-dropdown .connection-actions__manage-button {
+	display: none;
+}
+
+.connection-actions__buttons-dropdown .connection-actions__run-button-tooltip::part(base__arrow) {
+	background-color: var(--bg-gray);
+	border: 1px solid var(--sl-color-neutral-300);
+	z-index: 10;
+	border-bottom: 0;
+	border-left: 0;
+}
+
+@media screen and (max-width: 1440px) {
+	.connection-actions__buttons > .connection-actions__manage-button {
+		display: none;
+	}
+
+	.connection-actions__buttons-dropdown .connection-actions__manage-button {
+		display: block;
+	}
+}
+
+@media screen and (max-width: 1320px) {
+	.connection-actions__buttons > .connection-actions__run-button-tooltip {
+		display: none;
+	}
+
+	.connection-actions__buttons-dropdown .connection-actions__run-button-tooltip {
+		display: block;
+	}
 }

@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, ReactNode } from 'react';
+import React, { useContext, useState, useEffect, useLayoutEffect, ReactNode } from 'react';
 import Grid from '../../base/Grid/Grid';
 import { SCHEDULE_PERIODS } from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
@@ -8,6 +8,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import { Action } from '../../../lib/api/types/action';
@@ -27,15 +28,46 @@ interface ActionsGridProps {
 
 const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps) => {
 	const [actionToDelete, setActionToDelete] = useState<number>();
+	const [windowWidth, setWindowWidth] = useState<number>(window.innerWidth);
+	const [gridColumnsWidths, setGridColumnsWidths] = useState<string>();
 
-	const { api, handleError, setIsLoadingConnections, connectors, executeActionButtonRefs, executeAction } =
-		useContext(AppContext);
+	const {
+		api,
+		handleError,
+		setIsLoadingConnections,
+		connectors,
+		executeActionButtonRefs,
+		executeActionDropdownButtonRefs,
+		executeAction,
+	} = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
+
+	useLayoutEffect(() => {
+		const handleResize = () => {
+			setWindowWidth(window.innerWidth);
+		};
+		handleResize();
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	}, []);
+
+	useLayoutEffect(() => {
+		if (windowWidth > 1700) {
+			setGridColumnsWidths('280px 280px 80px auto');
+		} else if (windowWidth > 800) {
+			setGridColumnsWidths('180px 180px 80px auto');
+		} else {
+			setGridColumnsWidths('150px 150px 80px auto');
+		}
+	}, [windowWidth]);
 
 	useEffect(() => {
 		for (const a of actions) {
 			if (executeActionButtonRefs?.current[a.id]?.current == null) {
 				executeActionButtonRefs.current[a.id] = React.createRef();
+			}
+			if (executeActionDropdownButtonRefs?.current[a.id]?.current == null) {
+				executeActionDropdownButtonRefs.current[a.id] = React.createRef();
 			}
 		}
 	}, [actions]);
@@ -87,7 +119,18 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				button.hideTooltip();
 			}
 		}
+		for (const key in executeActionDropdownButtonRefs.current) {
+			const button = executeActionDropdownButtonRefs.current[key].current;
+			if (button != null) {
+				button.hideTooltip();
+			}
+		}
 		onSelectAction(action);
+	};
+
+	const onDropdownHide = (actionID: number) => {
+		executeActionButtonRefs.current[actionID].current.hideTooltip();
+		executeActionDropdownButtonRefs.current[actionID].current.hideTooltip();
 	};
 
 	const isActionExecutionSupported =
@@ -210,17 +253,43 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 						</SlDropdown>
 					</>
 				)}
-				<SlButton variant='default' size='small' onClick={() => onManageClick(action)}>
+				<SlButton
+					className='connection-actions__manage-button'
+					variant='default'
+					size='small'
+					onClick={() => onManageClick(action)}
+				>
 					Manage...
 				</SlButton>
-				<SlButton
-					className='connection-actions__delete-action'
-					variant='danger'
-					size='small'
-					onClick={() => onDeleteAction(action.id)}
+				<SlDropdown
+					className='connection-actions__buttons-dropdown'
+					hoist={true}
+					placement='bottom-end'
+					onSlHide={() => onDropdownHide(action.id)}
 				>
-					Delete
-				</SlButton>
+					<SlButton slot='trigger' variant='default' size='small' className='connection-actions__menu-button'>
+						<SlIcon slot='prefix' name='three-dots-vertical' />
+					</SlButton>
+					<SlMenu className='connection-actions__menu'>
+						<FeedbackButton
+							ref={executeActionDropdownButtonRefs.current[action.id]}
+							className='connection-actions__run-button'
+							size='small'
+							onClick={() => executeAction(connection, action.id)}
+							disabled={!action.enabled}
+							hoist={true}
+							placement='left'
+						>
+							Run now
+						</FeedbackButton>
+						<SlMenuItem className='connection-actions__manage-button' onClick={() => onManageClick(action)}>
+							Manage...
+						</SlMenuItem>
+						<SlMenuItem className='connection-actions__delete' onClick={() => onDeleteAction(action.id)}>
+							Delete
+						</SlMenuItem>
+					</SlMenu>
+				</SlDropdown>
 			</div>
 		);
 
@@ -238,6 +307,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				className='connection-actions__grid'
 				rows={rows}
 				columns={GRID_COLUMNS}
+				gridColumnsWidths={gridColumnsWidths}
 				noRowsMessage='No actions to show'
 			/>
 			<AlertDialog

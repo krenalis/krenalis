@@ -14,6 +14,7 @@ interface GridProps {
 	rows: GridRowType[];
 	showColumnBorder?: boolean;
 	showRowBorder?: boolean;
+	gridColumnsWidths?: string; // the widths of the columns in the 'grid-template-columns' CSS rule format.
 	isLoading?: boolean;
 	noRowsMessage?: string;
 	className?: string;
@@ -38,6 +39,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			rows,
 			showColumnBorder,
 			showRowBorder,
+			gridColumnsWidths,
 			isLoading,
 			noRowsMessage,
 			className,
@@ -48,7 +50,14 @@ const Grid = forwardRef<GridRef, GridProps>(
 	) => {
 		const gridRef = useRef<any>();
 
-		const { columnsWidths, reloadColumnsWidths } = useGrid(gridRef, rows, columns, isLoading, isShown);
+		const { columnsWidths, reloadColumnsWidths } = useGrid(
+			gridRef,
+			rows,
+			columns,
+			gridColumnsWidths,
+			isLoading,
+			isShown,
+		);
 
 		useImperativeHandle(
 			ref,
@@ -116,11 +125,16 @@ const Grid = forwardRef<GridRef, GridProps>(
 			return rowComponents;
 		}, [rows]);
 
+		let widths = columnsWidths;
+		if (gridColumnsWidths != null) {
+			widths = gridColumnsWidths;
+		}
+
 		return (
 			<div
 				ref={gridRef}
-				className={`grid${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${columnsWidths == null ? ' grid--hide-content' : ''}`}
-				style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
+				className={`grid${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${widths == null ? ' grid--hide-content' : ''}`}
+				style={{ '--grid-columns': widths } as React.CSSProperties}
 			>
 				{isLoading ? (
 					<div className='grid__loading'>

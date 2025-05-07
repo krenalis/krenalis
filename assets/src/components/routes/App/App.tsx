@@ -92,6 +92,7 @@ const App = () => {
 		api,
 		executeAction,
 		executeActionButtonRefs,
+		executeActionDropdownButtonRefs,
 		isPasswordless,
 		setIsPasswordless,
 	} = useApp(handleError, redirect, logout, location);
@@ -172,6 +173,7 @@ const App = () => {
 					toastRef,
 					executeAction,
 					executeActionButtonRefs,
+					executeActionDropdownButtonRefs,
 					isPasswordless,
 					setIsPasswordless,
 				}}
