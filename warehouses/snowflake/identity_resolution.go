@@ -79,7 +79,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		_, err = tx.Exec(`INSERT INTO "_USER_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
 			` VALUES (?, ?, ?)`, newUsersVersion, opID, time.Now().UTC())
 		if err != nil {
-			return err
+			return snowflake(err)
 		}
 		return nil
 	})
@@ -193,7 +193,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	_, span = telemetry.TraceSpan(ctx, "Creation of support objects and stored procedures")
 	ctxMulti, err := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	db := warehouse.openDB()
 	_, err = db.ExecContext(ctxMulti, query)

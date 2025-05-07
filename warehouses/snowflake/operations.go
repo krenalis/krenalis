@@ -46,23 +46,23 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 			var readID *string
 			rows, err := tx.Query(`SELECT "ID", "COMPLETED_AT", "ERROR" FROM "_OPERATIONS" WHERE "ID" = ?`, opID)
 			if err != nil {
-				return err
+				return snowflake(err)
 			}
 			defer rows.Close()
 			for rows.Next() {
 				err := rows.Scan(&readID, &completedAt, &opError)
 				if err != nil {
-					return err
+					return snowflake(err)
 				}
 			}
 			if err := rows.Err(); err != nil {
-				return err
+				return snowflake(err)
 			}
 			if readID == nil {
 				// No rows in DB, so the operation can be started.
 				_, err = tx.Exec(`INSERT INTO "_OPERATIONS" ("ID", "OPERATION_TYPE") VALUES (?, ?)`, opID, opType)
 				if err != nil {
-					return err
+					return snowflake(err)
 				}
 				status = &opStatus{canBeStarted: true}
 				return nil
@@ -104,7 +104,7 @@ func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, opID st
 	_, err := db.ExecContext(ctx, `UPDATE "_OPERATIONS" SET "COMPLETED_AT" = ?, "ERROR" = ?`+
 		` WHERE "ID" = ? AND "COMPLETED_AT" IS NULL`, time.Now().UTC(), opErrorStr, opID)
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	return nil
 }
