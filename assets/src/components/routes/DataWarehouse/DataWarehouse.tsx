@@ -96,10 +96,10 @@ interface WarehouseInfoProps {
 
 const warehouseInfoColumns: GridColumn[] = [
 	{
-		name: 'field',
+		name: 'Field',
 	},
 	{
-		name: 'value',
+		name: 'Value',
 	},
 ];
 
