@@ -60,7 +60,6 @@ type Writer struct {
 	mu        sync.Mutex // mutex for iterator, records, index, and available fields
 	iterator  *iterator  // current iterator, if any; protected by mu
 	records   []record   // records in the queue; protected by mu
-	index     int        // read index in records for the current iterator; protected by mu
 	available int        // number of available (non-read) records; protected by mu
 
 	close struct {
@@ -204,7 +203,9 @@ func (w *Writer) compact() {
 		i++
 	}
 	w.records = append(w.records[:0], w.records[i:]...)
-	w.index = max(0, w.index-i)
+	if w.iterator != nil {
+		w.iterator.index = max(0, w.iterator.index-i)
+	}
 	if trace {
 		fmt.Printf("Writer.compact: %d records compacted, %d available\n", i, w.available)
 	}
@@ -222,7 +223,6 @@ func (w *Writer) complete() {
 		fmt.Printf("Writer.complete: iteration of iterator %p is completed\n", w.iterator)
 	}
 	w.iterator = nil
-	w.index = 0
 	if w.available >= maxAvailable {
 		w.timer.Reset(time.Nanosecond)
 	}
@@ -239,7 +239,7 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 	var record meergo.Record
 	w.mu.Lock()
 	var i int
-	for i = w.index; i < len(w.records); i++ {
+	for i = w.iterator.index; i < len(w.records); i++ {
 		r := w.records[i]
 		if r.iterator != nil || r.properties == nil {
 			continue
@@ -251,12 +251,12 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 			break
 		}
 	}
-	w.index = i
+	w.iterator.index = i
 	if ok && index != dontConsume {
 		w.available--
 		w.records[i].iterator = w.iterator
 		w.records[i].index = index
-		w.index++
+		w.iterator.index++
 		if assert {
 			w._assertAvailable(w.available)
 		}
@@ -285,7 +285,7 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 // be called after a successful read operation.
 func (w *Writer) skip() {
 	w.mu.Lock()
-	i := w.index - 1
+	i := w.iterator.index - 1
 	for w.records[i].iterator != w.iterator {
 		i--
 	}
@@ -293,7 +293,7 @@ func (w *Writer) skip() {
 	w.records[i].index = 0
 	w.available++
 	if trace {
-		fmt.Printf("Writer.skip: iterator %p; skip index %d, current %d\n", w.iterator, i, w.index)
+		fmt.Printf("Writer.skip: iterator %p; skip index %d, current %d\n", w.iterator, i, w.iterator.index)
 	}
 	if assert {
 		w._assertAvailable(w.available)
@@ -323,7 +323,7 @@ func (w *Writer) consume(iter *iterator) {
 			fmt.Printf("Writer.consume: Upsert of iterator %p has returned without starting an iteration, with error %#v\n", iter, err)
 		}
 		w.iterator = nil
-		w.index = 0
+		w.iterator.index = 0
 		w.close.completed.Signal()
 	} else {
 		// Upsert has completed the iteration.

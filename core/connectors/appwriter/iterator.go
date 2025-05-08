@@ -18,6 +18,7 @@ import (
 // of records.
 type iterator struct {
 	writer    *Writer
+	index     int // read index in writer.records, set by the writer.
 	consumed  bool
 	iterating bool
 	skipped   bool
