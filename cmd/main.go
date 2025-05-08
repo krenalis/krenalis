@@ -23,6 +23,8 @@ import (
 
 	"github.com/meergo/meergo/core/state"
 
+	"github.com/getsentry/sentry-go"
+	sentryslog "github.com/getsentry/sentry-go/slog"
 	"github.com/joho/godotenv"
 )
 
@@ -54,8 +56,12 @@ func Main(assets fs.FS) {
 		os.Exit(1)
 	}
 	defer logFile.Close()
-	logger := slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stderr), nil))
-	slog.SetDefault(logger)
+
+	// Here slog is set to write to stderr and the 'error.log' file. Later, if
+	// reading the settings determines that telemetry should be also sent to
+	// Sentry, slog will be set up again in that way.
+	fileLogger := slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stderr), nil))
+	slog.SetDefault(fileLogger)
 
 	// Read environment variables from the '.env' file, if exists.
 	// It is important to call Overload instead of Load because we want any
@@ -85,6 +91,25 @@ func Main(assets fs.FS) {
 				os.Exit(1)
 			}
 		}
+	}
+
+	// Configure Sentry, if necessary.
+	if settings.SentryTelemetryEnabled {
+		// Configure Sentry.
+		err = sentry.Init(sentry.ClientOptions{
+			Dsn:              "https://83b8a272533bd2db6b535547c6517d0e@o4509282180136960.ingest.de.sentry.io/4509282208514128",
+			Debug:            true,
+			AttachStacktrace: true,
+		})
+		if err != nil {
+			slog.Error("cmd: cannot init Sentry", "err", err)
+			os.Exit(1)
+		}
+		defer sentry.Flush(2 * time.Second)
+		// Log on stderr, 'error.log' and Sentry.
+		sentryLogger := slog.New(sentryslog.Option{Level: slog.LevelDebug}.NewSentryHandler())
+		logger := slog.New(NewCopyHandler(fileLogger.Handler(), sentryLogger.Handler()))
+		slog.SetDefault(logger)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -119,6 +144,10 @@ func settingsFromEnv() (*Settings, error) {
 		}
 	}
 	settings.JavaScriptSDKURL = os.Getenv("MEERGO_JAVASCRIPT_SDK_URL")
+	settings.SentryTelemetryEnabled = true // Enabled by default.
+	if os.Getenv("MEERGO_DISABLE_TELEMETRY") == "true" {
+		settings.SentryTelemetryEnabled = false
+	}
 
 	// HTTP.
 	settings.HTTP.Host = os.Getenv("MEERGO_HTTP_HOST")

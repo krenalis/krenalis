@@ -16,6 +16,9 @@ services:
       MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
       MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR: /bin/meergo-files/transformation-functions
+      # Telemetry (for collecting errors, crash reports, etc...) is enabled by default.
+      # Uncomment the following line to disable it:
+      # MEERGO_DISABLE_TELEMETRY="true"
     volumes:
       - ./docker-compose:/bin/meergo-files
     depends_on:

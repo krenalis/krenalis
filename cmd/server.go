@@ -30,13 +30,16 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/telemetry"
+
+	"github.com/getsentry/sentry-go"
 )
 
 type Settings struct {
-	EncryptionKey    string
-	TerminationDelay time.Duration
-	JavaScriptSDKURL string
-	HTTP             struct {
+	EncryptionKey          string
+	TerminationDelay       time.Duration
+	JavaScriptSDKURL       string
+	SentryTelemetryEnabled bool
+	HTTP                   struct {
 		Host string
 		Port int
 		TLS  struct {
@@ -186,6 +189,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		// Handle panics.
 		defer func() {
 			if r := recover(); r != nil {
+
+				// Log the panic to panics.log.
 				panicsFilename, err := filepath.Abs("panics.log")
 				if err != nil {
 					slog.Error("cmd: cannot get absolute filepath of 'panics.log'", "err", err)
@@ -204,7 +209,15 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 					slog.Error("cmd: cannot write on panic file", "err", err)
 					return
 				}
+
+				// Send the panic to Sentry.
+				if settings.SentryTelemetryEnabled {
+					sentry.CurrentHub().Recover(r)
+					sentry.Flush(time.Second * 5)
+				}
+
 				os.Exit(1)
+
 			}
 		}()
 
