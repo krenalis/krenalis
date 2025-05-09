@@ -144,11 +144,15 @@ func settingsFromEnv() (*Settings, error) {
 		}
 	}
 	settings.JavaScriptSDKURL = os.Getenv("MEERGO_JAVASCRIPT_SDK_URL")
-	settings.SentryTelemetryEnabled = true // Enabled by default.
-	if os.Getenv("MEERGO_DISABLE_TELEMETRY") == "true" {
-		settings.SentryTelemetryEnabled = false
+	disableTelemetry, err := boolEnvVar(os.Getenv("MEERGO_DISABLE_TELEMETRY"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid value specified for MEERGO_DISABLE_TELEMETRY: %s", err)
 	}
-	settings.SkipMemberEmailVerification = os.Getenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION") == "true"
+	settings.SentryTelemetryEnabled = !disableTelemetry
+	settings.SkipMemberEmailVerification, err = boolEnvVar(os.Getenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid value specified for MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION: %s", err)
+	}
 
 	// HTTP.
 	settings.HTTP.Host = os.Getenv("MEERGO_HTTP_HOST")
@@ -158,7 +162,10 @@ func settingsFromEnv() (*Settings, error) {
 			return nil, fmt.Errorf("invalid integer value specified for MEERGO_HTTP_PORT: %s", err)
 		}
 	}
-	settings.HTTP.TLS.Enabled = os.Getenv("MEERGO_HTTP_TLS_ENABLED") == "true"
+	settings.HTTP.TLS.Enabled, err = boolEnvVar(os.Getenv("MEERGO_HTTP_TLS_ENABLED"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid value specified for MEERGO_HTTP_TLS_ENABLED: %s", err)
+	}
 	settings.HTTP.TLS.CertFile = os.Getenv("MEERGO_HTTP_TLS_CERT_FILE")
 	settings.HTTP.TLS.KeyFile = os.Getenv("MEERGO_HTTP_TLS_KEY_FILE")
 	settings.HTTP.ExternalURL = os.Getenv("MEERGO_HTTP_EXTERNAL_URL")
@@ -230,7 +237,23 @@ func settingsFromEnv() (*Settings, error) {
 	//
 	// The actual errors telemetry is sent to Sentry. This is just an
 	// experimental and partial feature.
-	settings.OpenTelemetry.Enable = os.Getenv("MEERGO_OPEN_TELEMETRY_ENABLE") == "true"
+	settings.OpenTelemetry.Enable, err = boolEnvVar(os.Getenv("MEERGO_OPEN_TELEMETRY_ENABLE"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid value specified for MEERGO_OPEN_TELEMETRY_ENABLE: %s", err)
+	}
 
 	return settings, nil
+}
+
+// boolEnvVar parses the value read from an environment variable as a boolean,
+// returning either the value read (if valid) or an error.
+func boolEnvVar(v string) (bool, error) {
+	switch v {
+	case "true":
+		return true, nil
+	case "false", "":
+		return false, nil
+	default:
+		return false, fmt.Errorf("value %q is not a valid boolean value (expected \"true\", \"false\" or empty string)", v)
+	}
 }
