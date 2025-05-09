@@ -177,6 +177,9 @@ func settingsFromEnv() (*Settings, error) {
 	settings.DB.Database = os.Getenv("MEERGO_DB_DATABASE")
 	settings.DB.Schema = os.Getenv("MEERGO_DB_SCHEMA")
 
+	// Member emails.
+	settings.MemberEmailFrom = os.Getenv("MEERGO_MEMBER_EMAIL_FROM")
+
 	// SMTP.
 	settings.SMTP.Host = os.Getenv("MEERGO_SMTP_HOST")
 	if smtpPort := os.Getenv("MEERGO_SMTP_PORT"); smtpPort != "" {

@@ -421,7 +421,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	if err != nil {
 		return err
 	}
-	if this.core.smtp == nil {
+	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
 		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
 	now := time.Now().UTC()
@@ -443,7 +443,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	}
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
 	emailToSend := &emailToSend{
-		From:     this.core.smtp.Username,
+		From:     this.core.memberEmailFrom,
 		Subject:  "You have been invited to Meergo",
 		To:       email,
 		BodyHTML: []byte(t),
@@ -467,7 +467,7 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	if err != nil {
 		return err
 	}
-	if this.core.smtp == nil {
+	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
 		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
 	now := time.Now().UTC()
@@ -499,7 +499,7 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	}
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
 	emailToSend := &emailToSend{
-		From:     this.core.smtp.Username,
+		From:     this.core.memberEmailFrom,
 		Subject:  "Your Meergo password reset",
 		To:       email,
 		BodyHTML: []byte(t),

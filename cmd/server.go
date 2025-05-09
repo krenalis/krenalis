@@ -51,8 +51,9 @@ type Settings struct {
 		ExternalURL string
 		EventURL    string
 	}
-	DB   core.DBConfig
-	SMTP struct {
+	DB              core.DBConfig
+	MemberEmailFrom string
+	SMTP            struct {
 		Host     string
 		Port     int
 		Username string
@@ -117,8 +118,9 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 
 	config := core.Config{
-		DB:   settings.DB,
-		SMTP: settings.SMTP,
+		DB:              settings.DB,
+		MemberEmailFrom: settings.MemberEmailFrom,
+		SMTP:            settings.SMTP,
 	}
 
 	// Choose the transformation function provider setting.

@@ -89,6 +89,13 @@ Configuration used to access the PostgreSQL server used by Meergo.
 - **`MEERGO_DB_SCHEMA`** \
   Specific schema within the PostgreSQL database to use.
 
+## Member emails
+
+- **`MEERGO_MEMBER_EMAIL_FROM`** \
+  Specifies the "from" address from which member emails are sent. \
+  This is mandatory to send emails to members. \
+  Example: `My Organization <organization@example.com>` or `organization@example.com`.
+
 ## SMTP configuration
 
 These settings are used to send transactional emails.

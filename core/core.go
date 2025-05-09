@@ -61,6 +61,7 @@ type Core struct {
 	functionProvider transformers.FunctionProvider
 	actionCleaner    *actionCleaner
 	actionScheduler  *actionScheduler
+	memberEmailFrom  string
 	smtp             *SMTPConfig
 	close            struct {
 		ctx       context.Context
@@ -76,6 +77,7 @@ type Config struct {
 	EncryptionKey    []byte // encryption key shared by all nodes
 	DB               DBConfig
 	FunctionProvider any // must be a LambdaConfig or LocalConfig value
+	MemberEmailFrom  string
 	SMTP             SMTPConfig
 	ConnectorsOAuth  map[string]*state.ConnectorOAuth
 }
@@ -158,8 +160,9 @@ func New(conf *Config) (*Core, error) {
 	}
 
 	core := &Core{
-		db:   db,
-		smtp: smtp,
+		db:              db,
+		memberEmailFrom: conf.MemberEmailFrom,
+		smtp:            smtp,
 	}
 
 	// Create a function provider.
