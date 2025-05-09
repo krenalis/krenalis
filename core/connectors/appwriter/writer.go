@@ -74,7 +74,6 @@ type Writer struct {
 // record represents a single user or group to be written and sent to the app.
 type record struct {
 	iterator   *iterator      // iterator that has consumed the record, if any
-	index      int            // range index of the iterator; it is 0 if iterator is nil
 	id         string         // user or group identifier
 	properties map[string]any // user or group properties
 }
@@ -255,7 +254,6 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 	if ok && index != dontConsume {
 		w.available--
 		w.records[i].iterator = w.iterator
-		w.records[i].index = index
 		w.iterator.index++
 		if assert {
 			w._assertAvailable(w.available)
@@ -290,7 +288,6 @@ func (w *Writer) skip() {
 		i--
 	}
 	w.records[i].iterator = nil
-	w.records[i].index = 0
 	w.available++
 	if trace {
 		fmt.Printf("Writer.skip: iterator %p; skip index %d, current %d\n", w.iterator, i, w.iterator.index)
