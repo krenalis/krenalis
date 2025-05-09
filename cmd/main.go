@@ -100,6 +100,11 @@ func Main(assets fs.FS) {
 			Dsn:              "https://83b8a272533bd2db6b535547c6517d0e@o4509282180136960.ingest.de.sentry.io/4509282208514128",
 			Debug:            true,
 			AttachStacktrace: true,
+			// The default integrations provided by the Sentry SDK are preserved
+			// here. We may consider enabling them selectively in the future,
+			// but for now they seem reasonable. The list of integrations loaded
+			// by the Sentry SDK is available here:
+			// https://github.com/getsentry/sentry-go/blob/master/integrations.go.
 		})
 		if err != nil {
 			slog.Error("cmd: cannot init Sentry", "err", err)
