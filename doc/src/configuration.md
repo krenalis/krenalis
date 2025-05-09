@@ -30,11 +30,6 @@ These variables can be provided to Meergo when it starts, or they can be declare
 
   By default, telemetry is enabled.
 
-- **`MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION`** \
-  Enable or disable the ability to add new members without requiring email verification.
-
-  By default, the email verification is required.
-
 ## HTTP server configuration
 
 - **`MEERGO_HTTP_HOST`** \
@@ -90,6 +85,13 @@ Configuration used to access the PostgreSQL server used by Meergo.
   Specific schema within the PostgreSQL database to use.
 
 ## Member emails
+
+Configuration for emails that are sent to members.
+
+- **`MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION`** \
+  Enable or disable the ability to add new members without requiring email verification.
+
+  By default, the email verification is required.
 
 - **`MEERGO_MEMBER_EMAIL_FROM`** \
   Specifies the "from" address from which member emails are sent. \

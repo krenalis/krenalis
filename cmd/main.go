@@ -149,10 +149,6 @@ func settingsFromEnv() (*Settings, error) {
 		return nil, fmt.Errorf("invalid value specified for MEERGO_DISABLE_TELEMETRY: %s", err)
 	}
 	settings.SentryTelemetryEnabled = !disableTelemetry
-	settings.SkipMemberEmailVerification, err = boolEnvVar(os.Getenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION"))
-	if err != nil {
-		return nil, fmt.Errorf("invalid value specified for MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION: %s", err)
-	}
 
 	// HTTP.
 	settings.HTTP.Host = os.Getenv("MEERGO_HTTP_HOST")
@@ -185,6 +181,10 @@ func settingsFromEnv() (*Settings, error) {
 	settings.DB.Schema = os.Getenv("MEERGO_DB_SCHEMA")
 
 	// Member emails.
+	settings.SkipMemberEmailVerification, err = boolEnvVar(os.Getenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid value specified for MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION: %s", err)
+	}
 	settings.MemberEmailFrom = os.Getenv("MEERGO_MEMBER_EMAIL_FROM")
 
 	// SMTP.
