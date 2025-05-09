@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -76,13 +75,6 @@ func TestAdmin(t *testing.T) {
 		postgresHost, err := container.Host(ctx)
 		if err != nil {
 			t.Fatal(err)
-		}
-		{
-			// TODO(Gianluca): this is a workaround for
-			// https://github.com/meergo/meergo/issues/1172.
-			if runtime.GOOS == "windows" && postgresHost == "localhost" {
-				postgresHost = "127.0.0.1"
-			}
 		}
 		dbHost = postgresHost
 		postgresPort, err := container.MappedPort(ctx, "5432/tcp")
