@@ -20,7 +20,6 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/types"
 )
 
 func Test_Writer(t *testing.T) {
@@ -121,15 +120,6 @@ type app struct {
 func newApp(t *testing.T, seed int64) *app {
 	return &app{t: t, rng: rand.New(rand.NewSource(seed))}
 }
-
-func (app *app) Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
-	return nil, "", nil
-}
-
-func (app *app) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-	return types.Type{}, nil
-}
-
 func (app *app) validateRecord(r meergo.Record) {
 	if r.Properties == nil {
 		app.t.Fatal("Upsert: expected properties, got nil")
