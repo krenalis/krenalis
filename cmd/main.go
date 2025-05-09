@@ -98,7 +98,7 @@ func Main(assets fs.FS) {
 		// Configure Sentry.
 		err = sentry.Init(sentry.ClientOptions{
 			Dsn:              "https://83b8a272533bd2db6b535547c6517d0e@o4509282180136960.ingest.de.sentry.io/4509282208514128",
-			Debug:            true,
+			Debug:            false, // set to "true" to get information about telemetry sent to Sentry.
 			AttachStacktrace: true,
 			// The default integrations provided by the Sentry SDK are preserved
 			// here. We may consider enabling them selectively in the future,
