@@ -30,6 +30,11 @@ These variables can be provided to Meergo when it starts, or they can be declare
 
   By default, telemetry is enabled.
 
+- **`MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION`** \
+  Enable or disable the ability to add new members without requiring email verification.
+
+  By default, the email verification is required.
+
 ## HTTP server configuration
 
 - **`MEERGO_HTTP_HOST`** \

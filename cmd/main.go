@@ -148,6 +148,7 @@ func settingsFromEnv() (*Settings, error) {
 	if os.Getenv("MEERGO_DISABLE_TELEMETRY") == "true" {
 		settings.SentryTelemetryEnabled = false
 	}
+	settings.SkipMemberEmailVerification = os.Getenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION") == "true"
 
 	// HTTP.
 	settings.HTTP.Host = os.Getenv("MEERGO_HTTP_HOST")

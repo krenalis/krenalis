@@ -52,31 +52,33 @@ const (
 )
 
 type apisServer struct {
-	core             *core.Core
-	secureCookie     *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
-	mux              *http.ServeMux
-	runsOnHTTPS      bool
-	javaScriptSDKURL string
-	eventURL         string
-	externalURL      string
+	core                        *core.Core
+	secureCookie                *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
+	mux                         *http.ServeMux
+	runsOnHTTPS                 bool
+	javaScriptSDKURL            string
+	eventURL                    string
+	externalURL                 string
+	skipMemberEmailVerification bool
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
 // Core. encryptionKey is the key used to encrypt the session cookie.
 // runsOnHTTPs indicates if the server runs on HTTPS.
 // It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, javaScriptSDKURL, eventURL string, externalURL string) *apisServer {
+func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool) *apisServer {
 
 	if len(encryptionKey) != 64 {
 		panic("encryptionKey is not 64 bytes long")
 	}
 
 	s := &apisServer{
-		core:             core,
-		runsOnHTTPS:      runsOnHTTPS,
-		javaScriptSDKURL: javaScriptSDKURL,
-		eventURL:         eventURL,
-		externalURL:      externalURL,
+		core:                        core,
+		runsOnHTTPS:                 runsOnHTTPS,
+		javaScriptSDKURL:            javaScriptSDKURL,
+		eventURL:                    eventURL,
+		externalURL:                 externalURL,
+		skipMemberEmailVerification: skipMemberEmailVerification,
 	}
 
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
@@ -138,6 +140,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, java
 		"GET    /members/current":                                api.Member,                           /* only admin */
 		"GET    /members/invitations/{token}":                    api.MemberInvitation,                 /* only admin */
 		"GET    /members/reset-password/{token}":                 api.ValidateMemberPasswordResetToken, /* only admin */
+		"GET    /skip-member-email-verification":                 api.SkipMemberEmailVerification,      /* only admin */
 		"GET    /transformation-languages":                       api.TransformationLanguages,
 		"GET    /users":                                          workspace.Users,
 		"GET    /users/schema":                                   workspace.UserSchema,
@@ -166,6 +169,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, java
 		"POST   /expressions-properties":                         api.ExpressionsProperties, /* only admin */
 		"POST   /identity-resolution/start":                      workspace.StartIdentityResolution,
 		"POST   /keys":                                           organization.CreateAPIKey, /* only admin */
+		"POST   /members":                                        organization.AddMember,    /* only admin */
 		"POST   /members/invitations":                            organization.InviteMember, /* only admin */
 		"POST   /members/login":                                  s.login,                   /* only admin */
 		"POST   /members/logout":                                 s.logout,                  /* only admin */

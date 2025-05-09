@@ -136,6 +136,10 @@ const router = createBrowserRouter([
 								element: <Member />,
 							},
 							{
+								path: 'members/add',
+								element: <Member />,
+							},
+							{
 								path: 'members',
 								element: <Members />,
 							},

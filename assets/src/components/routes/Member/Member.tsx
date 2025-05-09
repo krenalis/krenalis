@@ -1,7 +1,8 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import './Member.css';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -11,14 +12,19 @@ import { toBase64 } from '../../../utils/toBase64';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberToSet } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
+import { useLocation } from 'react-router-dom';
 
 const Member = () => {
 	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);
 	const [name, setName] = useState<string>('');
 	const [email, setEmail] = useState<string>('');
 	const [password, setPassword] = useState<string | null>(null);
+	const [password2, setPassword2] = useState<string | null>(null);
+	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [error, setError] = useState<string>('');
+
+	const location = useLocation();
 
 	const {
 		api,
@@ -32,14 +38,51 @@ const Member = () => {
 		setIsPasswordless,
 	} = useContext(appContext);
 
+	const nameInputRef = useRef<any>();
 	const fileInputRef = useRef<any>();
 
-	useEffect(() => {
-		setTitle(member.name);
-		setAvatar(member.avatar);
-		setName(member.name);
-		setEmail(member.email);
+	const isUpdate = useMemo(() => {
+		return location.pathname.endsWith('current');
+	}, [location]);
+
+	useLayoutEffect(() => {
+		if (!isUpdate) {
+			setIsLoading(true);
+		}
 	}, []);
+
+	useEffect(() => {
+		const fetchData = async () => {
+			let skipEmailVerification: boolean;
+			try {
+				skipEmailVerification = await api.skipMemberEmailVerification();
+			} catch (err) {
+				handleError(err);
+				setTimeout(() => setIsLoading(false), 300);
+				return;
+			}
+			if (!skipEmailVerification) {
+				handleError('Email verification is required');
+				redirect('organization/members');
+				return;
+			}
+			setTimeout(() => {
+				setIsLoading(false);
+				setTimeout(() => {
+					nameInputRef.current?.focus();
+				}, 100);
+			}, 300);
+		};
+
+		if (isUpdate) {
+			setTitle(member.name);
+			setAvatar(member.avatar);
+			setName(member.name);
+			setEmail(member.email);
+		} else {
+			fetchData();
+		}
+	}, [isUpdate]);
 
 	const onUpdateAvatar = async (e) => {
 		setError('');
@@ -92,6 +135,11 @@ const Member = () => {
 		setPassword(value);
 	};
 
+	const onUpdatePassword2 = (e) => {
+		const value = e.target.value;
+		setPassword2(value);
+	};
+
 	const onSave = async (e: any) => {
 		e.preventDefault();
 		setError('');
@@ -105,7 +153,7 @@ const Member = () => {
 			memberToSet.password = password;
 		}
 		try {
-			validateMemberToSet(memberToSet, true, password != null ? true : false);
+			validateMemberToSet(memberToSet, true, password != null ? true : false, isUpdate ? null : password2);
 		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);
@@ -114,9 +162,18 @@ const Member = () => {
 			return;
 		}
 		try {
-			await api.updateMember(memberToSet);
+			if (isUpdate) {
+				await api.updateMember(memberToSet);
+			} else {
+				await api.addMember(memberToSet);
+			}
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
+				if (err.code === 'EmailVerificationRequired') {
+					handleError('Email verification is required');
+					redirect('organization/members');
+					return;
+				}
 				setTimeout(() => {
 					setIsSaving(false);
 					setError(err.message);
@@ -149,69 +206,110 @@ const Member = () => {
 
 	return (
 		<div className='member'>
-			<div className='member__content'>
-				<form onSubmit={onSave}>
-					<div className='member__name'>
-						<SlInput label='Name' name='name' value={name} onSlInput={onUpdateName} required />
-					</div>
-					<div className='member__email'>
-						<SlInput
-							label='Email'
-							type='email'
-							name='email'
-							value={email}
-							onSlInput={onUpdateEmail}
-							required
-						/>
-					</div>
-					<div className='member__password'>
-						<SlInput
-							type='password'
-							label='Password'
-							name='password'
-							disabled={password === null}
-							required={password !== null}
-							onSlInput={onUpdatePassword}
-							value={password === null ? '••••••••••••••••' : password}
-							password-toggle
-						/>
-						{password === null && <SlButton onClick={onPasswordEnable}>Change</SlButton>}
-					</div>
-					<label className='member__avatar'>
-						<div className='member__avatar-label'>Avatar</div>
-						<div className='member__avatar-box'>
-							<div className='member__avatar-buttons'>
-								<div className='member__add-avatar'>Upload</div>
-								{avatar && (
-									<div className='member__remove-avatar' onClick={onDeleteAvatar}>
-										Delete
-									</div>
+			<div className={`member__content${isUpdate ? ' member__content--update' : ''}`}>
+				{isLoading ? (
+					<SlSpinner
+						style={
+							{
+								fontSize: '3rem',
+								'--track-width': '6px',
+							} as React.CSSProperties
+						}
+					/>
+				) : (
+					<>
+						<div className='member__title'>{isUpdate ? 'Edit the member' : 'Add a new member'}</div>
+						<form onSubmit={onSave}>
+							<div className='member__name'>
+								<SlInput
+									ref={nameInputRef}
+									label='Name'
+									name='name'
+									value={name}
+									onSlInput={onUpdateName}
+									required
+								/>
+							</div>
+							<div className='member__email'>
+								<SlInput
+									label='Email'
+									type='email'
+									name='email'
+									value={email}
+									onSlInput={onUpdateEmail}
+									required
+								/>
+							</div>
+							<div className='member__password'>
+								<SlInput
+									type='password'
+									label='Password'
+									name='password'
+									disabled={isUpdate && password === null}
+									required={!isUpdate || password !== null}
+									onSlInput={onUpdatePassword}
+									value={isUpdate && password === null ? '••••••••••••••••' : password}
+									password-toggle
+								/>
+								{isUpdate && password === null && (
+									<SlButton onClick={onPasswordEnable}>Change</SlButton>
 								)}
 							</div>
-							<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
-							<input
-								ref={fileInputRef}
-								type='file'
-								accept='image/jpeg, image/png'
-								onChange={onUpdateAvatar}
-							/>
-						</div>
-					</label>
-					{error && (
-						<div className='member__error'>
-							<SlIcon slot='icon' name='exclamation-octagon' />
-							{error}
-						</div>
-					)}
-					<div className='member__buttons'>
-						<Link path='organization/members'>
-							<SlButton className='member__cancel-button'>Cancel</SlButton>
-						</Link>
-						<SlButton className='member__save-button' variant='primary' loading={isSaving} type='submit'>
-							Save
-						</SlButton>
-					</div>
-				</form>
+							{!isUpdate && (
+								<div className='member__confirm-password'>
+									<SlInput
+										type='password'
+										label='Confirm password'
+										name='confirm-password'
+										required={true}
+										onSlInput={onUpdatePassword2}
+										value={password2}
+										password-toggle
+									/>
+								</div>
+							)}
+							<label className='member__avatar'>
+								<div className='member__avatar-label'>Avatar</div>
+								<div className='member__avatar-box'>
+									<div className='member__avatar-buttons'>
+										<div className='member__add-avatar'>Upload</div>
+										{avatar && (
+											<div className='member__remove-avatar' onClick={onDeleteAvatar}>
+												Delete
+											</div>
+										)}
+									</div>
+									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
+									<input
+										ref={fileInputRef}
+										type='file'
+										accept='image/jpeg, image/png'
+										onChange={onUpdateAvatar}
+									/>
+								</div>
+							</label>
+							{error && (
+								<div className='member__error'>
+									<SlIcon slot='icon' name='exclamation-octagon' />
+									{error}
+								</div>
+							)}
+							<div className='member__buttons'>
+								<Link path='organization/members'>
+									<SlButton className='member__cancel-button'>Cancel</SlButton>
+								</Link>
+								<SlButton
+									className='member__save-button'
+									variant='primary'
+									loading={isSaving}
+									type='submit'
+								>
+									{isUpdate ? 'Save' : 'Add'}
+								</SlButton>
+							</div>
+						</form>
+					</>
+				)}
 			</div>
 		</div>
 	);

@@ -41,7 +41,12 @@ const validateMemberPassword = (password: string) => {
 	}
 };
 
-const validateMemberToSet = (member: MemberToSet, validateEmail: boolean, validatePassword: boolean) => {
+const validateMemberToSet = (
+	member: MemberToSet,
+	validateEmail: boolean,
+	validatePassword: boolean,
+	password2?: string,
+) => {
 	if (member.name === '') {
 		throw new Error('name must not be empty');
 	}
@@ -63,6 +68,9 @@ const validateMemberToSet = (member: MemberToSet, validateEmail: boolean, valida
 			validateMemberPassword(member.password);
 		} catch (err) {
 			throw err;
+		}
+		if (password2 != null && member.password !== password2) {
+			throw new Error('Passwords must match');
 		}
 	}
 };

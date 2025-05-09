@@ -101,6 +101,10 @@ class API {
 		});
 	};
 
+	skipMemberEmailVerification = async (): Promise<boolean> => {
+		return await call(`${this.apiURL}/skip-member-email-verification`, http.GET);
+	};
+
 	eventsSchema = async (): Promise<ObjectType> => {
 		return await call(`${this.apiURL}/events/schema`, http.GET, this.workspaceID);
 	};
@@ -182,6 +186,12 @@ class API {
 
 	updateMember = async (memberToSet: MemberToSet): Promise<void> => {
 		return await call(`${this.apiURL}/members/current`, http.PUT, this.workspaceID, {
+			memberToSet,
+		});
+	};
+
+	addMember = async (memberToSet: MemberToSet): Promise<void> => {
+		return await call(`${this.apiURL}/members`, http.POST, this.workspaceID, {
 			memberToSet,
 		});
 	};

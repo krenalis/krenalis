@@ -102,6 +102,59 @@ type APIKey struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+// AddMember adds a new member of the organization.
+//
+// If the member to add has an email that is already used by another
+// member, it returns an errors.UnprocessableError error with code
+// MemberEmailExists.
+func (this *Organization) AddMember(ctx context.Context, member MemberToSet) error {
+	this.core.mustBeOpen()
+	err := validateMemberToSet(member, true, true, true)
+	if err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	password, err := bcrypt.GenerateFromPassword([]byte(member.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+		}
+		if member.Avatar != nil {
+			_, err = this.core.db.Exec(
+				ctx,
+				"INSERT INTO members (name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+				member.Name,
+				member.Email,
+				password,
+				member.Avatar.Image,
+				member.Avatar.MimeType,
+				this.organization.ID,
+				now,
+			)
+		} else {
+			_, err = this.core.db.Exec(
+				ctx,
+				"INSERT INTO members (name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+				member.Name,
+				member.Email,
+				password,
+				nil,
+				this.organization.ID,
+				now,
+			)
+		}
+		return nil, err
+	})
+	return err
+}
+
 // APIKeys returns the API keys of the organization ordered by creation time.
 func (this *Organization) APIKeys(ctx context.Context) ([]*APIKey, error) {
 	this.core.mustBeOpen()

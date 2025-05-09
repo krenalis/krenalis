@@ -23,6 +23,48 @@ type organization struct {
 	*apisServer
 }
 
+// AddMember adds a new member of an organization.
+//
+// If the ability to add new members without requiring email
+// verification has not been enabled, it returns an
+// errors.UnprocessableError error with code EmailVerificationRequired.
+func (organization organization) AddMember(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if !organization.skipMemberEmailVerification {
+		return nil, errors.Unprocessable(core.EmailVerificationRequired, "Email verification is required")
+	}
+	org, _, err := organization.memberCredentials(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		MemberToSet struct {
+			Name     string `json:"name"`
+			Image    []byte `json:"image"`
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		} `json:"memberToSet"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	memberToSet := core.MemberToSet{
+		Name:     body.MemberToSet.Name,
+		Email:    body.MemberToSet.Email,
+		Password: body.MemberToSet.Password,
+	}
+	if body.MemberToSet.Image != nil {
+		fileType := http.DetectContentType(body.MemberToSet.Image)
+		avatar := &core.Avatar{
+			Image:    body.MemberToSet.Image,
+			MimeType: fileType,
+		}
+		memberToSet.Avatar = avatar
+	}
+	err = org.AddMember(r.Context(), memberToSet)
+	return nil, err
+}
+
 // APIKeys returns the API keys of an organization.
 func (organization organization) APIKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
 	org, _, err := organization.memberCredentials(r)

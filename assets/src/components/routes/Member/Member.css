@@ -3,11 +3,23 @@
 	background-color: var(--bg-gray);
 }
 
+.member__title {
+	font-size: 23px;
+	font-weight: 600;
+	margin-bottom: 15px;
+}
+
 .member__content {
-	max-width: 900px;
 	margin: 0px auto;
-	padding: 30px;
+}
+
+.member__content--update {
 	animation: fade-in-entrance 0.5s;
+}
+
+.member__content sl-spinner {
+	display: block;
+	margin: 20px auto;
 }
 
 .member sl-input::part(form-control-label):after {
@@ -17,12 +29,14 @@
 .member__avatar,
 .member__name,
 .member__email,
-.member__password {
+.member__password,
+.member__confirm-password {
 	margin-bottom: 30px;
 }
 
 .member__name > sl-input,
-.member__email > sl-input {
+.member__email > sl-input,
+.member__confirm-password > sl-input {
 	max-width: 400px;
 }
 

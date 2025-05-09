@@ -20,6 +20,7 @@ const (
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
 	DifferentWarehouse            errors.Code = "DifferentWarehouse"
 	EmailSendFailed               errors.Code = "EmailSendFailed"
+	EmailVerificationRequired     errors.Code = "EmailVerificationRequired" // Returned by apisServer.
 	EventNotExist                 errors.Code = "EventNotExist"
 	EventTypeNotExist             errors.Code = "EventTypeNotExist"
 	ExecutionInProgress           errors.Code = "ExecutionInProgress"

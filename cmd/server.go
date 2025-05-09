@@ -35,11 +35,12 @@ import (
 )
 
 type Settings struct {
-	EncryptionKey          string
-	TerminationDelay       time.Duration
-	JavaScriptSDKURL       string
-	SentryTelemetryEnabled bool
-	HTTP                   struct {
+	EncryptionKey               string
+	TerminationDelay            time.Duration
+	JavaScriptSDKURL            string
+	SentryTelemetryEnabled      bool
+	SkipMemberEmailVerification bool
+	HTTP                        struct {
 		Host string
 		Port int
 		TLS  struct {
@@ -176,7 +177,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
 	}
 
-	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled, javaScriptSDKURL, eventURL, externalURL)
+	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled, javaScriptSDKURL, eventURL, externalURL, settings.SkipMemberEmailVerification)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {

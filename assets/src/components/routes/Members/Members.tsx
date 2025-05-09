@@ -16,23 +16,24 @@ import { TransformedMember, transformMember, validateMemberEmail } from '../../.
 import { Link } from '../../base/Link/Link';
 
 const Members = () => {
-	const [isLoadingMembers, setIsLoadingMembers] = useState<boolean>(true);
+	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isRemoveAlertOpen, setIsRemoveAlertOpen] = useState<boolean>(false);
 	const [isInviteMemberDialogOpen, setIsInviteMemberDialogOpen] = useState<boolean>(false);
 	const [members, setMembers] = useState<TransformedMember[]>();
+	const [skipEmailVerification, setSkipEmailVerification] = useState<boolean>();
 
 	const { api, handleError, member: loggedMember } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<number>(0);
 
 	useEffect(() => {
-		const fetchMembers = async () => {
+		const fetchData = async () => {
 			let members: Member[];
 			try {
 				members = await api.members();
 			} catch (err) {
 				handleError(err);
-				setTimeout(() => setIsLoadingMembers(false), 300);
+				setTimeout(() => setIsLoading(false), 300);
 				return;
 			}
 			const transformed: TransformedMember[] = [];
@@ -40,15 +41,26 @@ const Members = () => {
 				transformed.push(transformMember(m));
 			}
 			setMembers(transformed);
-			setTimeout(() => setIsLoadingMembers(false), 300);
+
+			let skipEmailVerification: boolean;
+			try {
+				skipEmailVerification = await api.skipMemberEmailVerification();
+			} catch (err) {
+				handleError(err);
+				setTimeout(() => setIsLoading(false), 300);
+				return;
+			}
+			setSkipEmailVerification(skipEmailVerification);
+
+			setTimeout(() => setIsLoading(false), 300);
 		};
 
-		if (!isLoadingMembers) {
+		if (!isLoading) {
 			return;
 		}
 
-		fetchMembers();
-	}, [isLoadingMembers]);
+		fetchData();
+	}, [isLoading]);
 
 	const onDeleteMember = (id: number) => {
 		pendingDeletedMember.current = id;
@@ -70,10 +82,10 @@ const Members = () => {
 			}
 		}
 		setIsRemoveAlertOpen(false);
-		setIsLoadingMembers(true);
+		setIsLoading(true);
 	};
 
-	if (isLoadingMembers) {
+	if (isLoading) {
 		return (
 			<div className='members'>
 				<div className='members__content'>
@@ -100,9 +112,17 @@ const Members = () => {
 					</Link>
 					<div className='members__title'>
 						<p className='members__title-text'>Members</p>
-						<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
-							Invite a new member
-						</SlButton>
+						{skipEmailVerification ? (
+							<Link path={'organization/members/add'}>
+								<SlButton size='small' variant='primary' onClick={() => null}>
+									Add a new member
+								</SlButton>
+							</Link>
+						) : (
+							<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
+								Invite a new member
+							</SlButton>
+						)}
 					</div>
 					<div className='members__list'>
 						{members.map((member) => {
@@ -177,7 +197,7 @@ const Members = () => {
 				<InviteMemberDialog
 					isOpen={isInviteMemberDialogOpen}
 					setIsOpen={setIsInviteMemberDialogOpen}
-					setIsLoadingMembers={setIsLoadingMembers}
+					setIsLoadingMembers={setIsLoading}
 				/>
 			</div>
 		);
