@@ -170,8 +170,9 @@ Configuration for OAuth integrations with external applications.
 - **`MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET`** \
   OAuth Client Secret for Mailchimp.
 
-## Telemetry
+## OpenTelemetry (experimental)
 
-- **`MEERGO_TELEMETRY_ENABLE`** \
-  Enable or disable [telemetry](telemetry) to collect anonymous usage statistics.
-  By default, the telemetry is disabled.
+- **`MEERGO_OPEN_TELEMETRY_ENABLE`** \
+  Setting this variable to `"true"` enables sending some telemetry data to the OpenTelemetry collector.
+  
+  **Important**. Note that this feature is experimental, partially functional and still under development. The actual telemetry is handled separately, see the `MEERGO_DISABLE_TELEMETRY` environment variable.

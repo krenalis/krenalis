@@ -61,8 +61,8 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	OAuth     map[string]*state.ConnectorOAuth
-	Telemetry struct {
+	OAuth         map[string]*state.ConnectorOAuth
+	OpenTelemetry struct {
 		Enable bool
 	}
 }
@@ -93,7 +93,7 @@ type LocalConfig struct {
 // return any error.
 func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
-	if settings.Telemetry.Enable {
+	if settings.OpenTelemetry.Enable {
 		err := telemetry.Init(ctx)
 		if err != nil {
 			return err
