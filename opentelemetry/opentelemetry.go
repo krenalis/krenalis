@@ -5,12 +5,12 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package telemetry enables sending telemetry data to the OpenTelemetry
+// Package opentelemetry enables sending telemetry data to the OpenTelemetry
 // Collector.
 //
 // See the documentation within 'doc/src/developers/telemetry.md' for more
 // details.
-package telemetry
+package opentelemetry
 
 import (
 	"context"

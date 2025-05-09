@@ -29,7 +29,7 @@ import (
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/metrics"
-	"github.com/meergo/meergo/telemetry"
+	"github.com/meergo/meergo/opentelemetry"
 
 	"github.com/getsentry/sentry-go"
 )
@@ -94,7 +94,7 @@ type LocalConfig struct {
 func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	if settings.OpenTelemetry.Enable {
-		err := telemetry.Init(ctx)
+		err := opentelemetry.Init(ctx)
 		if err != nil {
 			return err
 		}
