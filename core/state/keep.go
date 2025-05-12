@@ -395,10 +395,6 @@ func (state *State) createConnection(n notification) {
 					a.RefreshToken = e.Account.RefreshToken
 					a.ExpiresIn = e.Account.ExpiresIn
 				})
-				// Update the accounts.
-				state.mu.Lock()
-				state.accounts[a.ID] = a
-				state.mu.Unlock()
 			}
 		} else {
 			a = &Account{
@@ -415,7 +411,7 @@ func (state *State) createConnection(n notification) {
 			state.mu.Lock()
 			state.accounts[a.ID] = a
 			state.mu.Unlock()
-			// Update the workspaces.
+			// Update the workspace.
 			workspace.mu.Lock()
 			workspace.accounts[a.ID] = a
 			workspace.mu.Unlock()
