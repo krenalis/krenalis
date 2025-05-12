@@ -143,6 +143,9 @@ func main() {
 	// Run "go generate" within cmd/spec.
 	NewCmd("go", "generate", "./...").InDir(repo, "cmd", "spec").Run(cliOptions.explicit)
 
+	// Validate the Docker Compose file 'compose.yaml'.
+	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run(cliOptions.explicit)
+
 	if cliOptions.explicit {
 		fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 	}
