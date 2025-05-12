@@ -4,22 +4,34 @@ services:
     ports:
       - 9090:9090
     environment:
-      MEERGO_ENCRYPTION_KEY: 6uA9ccQxZ+/1PlqXZFR49QZ0fnQDCNZIugyKwHv3WdkqcoIA3iSwuuj1yvM+f2cZFQ7Saqjq695Y0AP+rlZDOg==
-      MEERGO_HTTP_HOST: meergo
-      MEERGO_HTTP_PORT: 9090
-      MEERGO_HTTP_EXTERNAL_URL: http://localhost:9090/
+      # Telemetry (for collecting errors, crash reports, etc...) in Meergo is
+      # enabled by default.
+      # Uncomment the following line to disable it:
+      # MEERGO_DISABLE_TELEMETRY="true"
+
+      # This Docker Compose file is set up so that Meergo connects to the
+      # PostgreSQL database started via Docker Compose, which has already been
+      # initialized to work with Meergo. However, if you would like to use any
+      # other PostgreSQL instance (pre-initialized with the Meergo database),
+      # you can refer to it here. In case that such instance runs locally, you
+      # can refer to its host with 'host.docker.internal'.
       MEERGO_DB_HOST: db
       MEERGO_DB_PORT: 5432
       MEERGO_DB_USERNAME: meergo
       MEERGO_DB_PASSWORD: meergo
       MEERGO_DB_DATABASE: meergo
+
+      # These settings configure Meergo to run optimally within Docker, so it is
+      # not recommended that you change them.
+      MEERGO_ENCRYPTION_KEY: 6uA9ccQxZ+/1PlqXZFR49QZ0fnQDCNZIugyKwHv3WdkqcoIA3iSwuuj1yvM+f2cZFQ7Saqjq695Y0AP+rlZDOg==
+      MEERGO_HTTP_HOST: meergo
+      MEERGO_HTTP_PORT: 9090
+      MEERGO_HTTP_EXTERNAL_URL: http://localhost:9090/
       MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION: true
       MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
       MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR: /bin/meergo-files/transformation-functions
-      # Telemetry (for collecting errors, crash reports, etc...) is enabled by default.
-      # Uncomment the following line to disable it:
-      # MEERGO_DISABLE_TELEMETRY="true"
+
     volumes:
       - ./docker-compose:/bin/meergo-files
     depends_on:
