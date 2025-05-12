@@ -16,7 +16,9 @@ const Link = ({ children, path, className, onRedirect, onClick }: LinkProps) => 
 	const { setIsLoadingState, toastRef } = useContext(AppContext);
 
 	const onLinkClick = async (e) => {
-		onClick();
+		if (onClick != null) {
+			onClick();
+		}
 		if (onRedirect) {
 			await onRedirect();
 		}
