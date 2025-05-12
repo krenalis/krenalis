@@ -73,7 +73,7 @@ interface SidebarProps {
 const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
 	const { redirect, connections, setIsLoadingState, logout, isPasswordless } = useContext(AppContext);
 
-	const onLogout = async () => {
+	const onLogout = () => {
 		logout();
 	};
 

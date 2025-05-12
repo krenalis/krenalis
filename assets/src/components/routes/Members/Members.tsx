@@ -22,7 +22,7 @@ const Members = () => {
 	const [members, setMembers] = useState<TransformedMember[]>();
 	const [skipEmailVerification, setSkipEmailVerification] = useState<boolean>();
 
-	const { api, handleError, member: loggedMember } = useContext(AppContext);
+	const { api, handleError, member: loggedMember, logout } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<number>(0);
 
@@ -85,6 +85,10 @@ const Members = () => {
 		setIsLoading(true);
 	};
 
+	const onLogout = () => {
+		logout();
+	};
+
 	if (isLoading) {
 		return (
 			<div className='members'>
@@ -133,9 +137,6 @@ const Members = () => {
 									name={
 										<div className='members__member-name'>
 											{member.name}
-											{member.email === loggedMember.email && (
-												<SlBadge variant='neutral'>You</SlBadge>
-											)}
 											{member.invitation !== '' && <SlBadge variant='neutral'>Invited</SlBadge>}
 											{member.invitation === 'Expired' && (
 												<SlBadge variant='danger'>Invitation expired</SlBadge>
@@ -155,6 +156,15 @@ const Members = () => {
 									}
 									action={
 										<div className='members__member-actions'>
+											{member.email === loggedMember.email && (
+												<SlButton
+													className='members__member-logout'
+													size='small'
+													onClick={onLogout}
+												>
+													Logout
+												</SlButton>
+											)}
 											{member.id === loggedMember.id && (
 												<Link path={'organization/members/current'}>
 													<SlButton className='members__member-edit' size='small'>
