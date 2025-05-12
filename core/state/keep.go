@@ -587,6 +587,7 @@ func (state *State) deleteAction(n notification) {
 // DeleteConnection is the event sent when a connection is deleted.
 type DeleteConnection struct {
 	ID         int
+	Account    bool // indicates whether the associated account was also deleted.
 	connection *Connection
 }
 
@@ -601,11 +602,14 @@ func (state *State) deleteConnection(n notification) {
 		return
 	}
 	e.connection = state.connections[e.ID]
-	// Update connections and keys.
+	// Update connections, keys, and accounts.
 	state.mu.Lock()
 	delete(state.connections, e.ID)
 	for _, key := range e.connection.Keys {
 		delete(state.connectionsByKey, key)
+	}
+	if e.Account {
+		delete(state.accounts, e.connection.account.ID)
 	}
 	state.mu.Unlock()
 	// Update the workspace.
@@ -621,6 +625,9 @@ func (state *State) deleteConnection(n notification) {
 	}
 	ws.mu.Lock()
 	delete(ws.connections, e.ID)
+	if e.Account {
+		delete(ws.accounts, e.connection.account.ID)
+	}
 	// Mark whether the connection is found between the current primary sources
 	// or between the pending ones.
 	var found bool

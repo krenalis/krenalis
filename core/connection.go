@@ -1008,11 +1008,14 @@ func (this *Connection) Delete(ctx context.Context) error {
 		}
 		if connector.OAuth != nil {
 			// Delete the account of the deleted connection if it has no other connections.
-			_, err := tx.Exec(ctx, "DELETE FROM accounts AS a WHERE NOT EXISTS (\n"+
+			result, err := tx.Exec(ctx, "DELETE FROM accounts AS a WHERE NOT EXISTS (\n"+
 				"\tSELECT FROM connections AS c\n"+
 				"\tWHERE a.id = c.account AND c.id <> $1 AND c.account IS NULL\n)", n.ID)
 			if err != nil {
 				return nil, err
+			}
+			if result.RowsAffected() > 0 {
+				n.Account = true
 			}
 		}
 		// Remove the connection as primary source, if any.
