@@ -481,6 +481,7 @@ func (state *State) createWorkspace(n notification) {
 		Name:                           e.Name,
 		UserSchema:                     e.UserSchema,
 		UserPrimarySources:             map[string]int{},
+		accounts:                       map[int]*Account{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
 		Warehouse:                      e.Warehouse,
