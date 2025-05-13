@@ -128,12 +128,9 @@ func (state *State) APIKeyByToken(token string) (*APIKey, bool) {
 // Account returns the account with identifier id.
 // The boolean return value reports whether the account exists.
 func (state *State) Account(id int) (*Account, bool) {
-	// TODO(marco): optimize.
-	for _, o := range state.Organizations() {
-		for _, ws := range o.Workspaces() {
-			if a, ok := ws.Account(id); ok {
-				return a, true
-			}
+	for _, ws := range state.Workspaces() {
+		if a, ok := ws.Account(id); ok {
+			return a, true
 		}
 	}
 	return nil, false
