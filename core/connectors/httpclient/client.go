@@ -83,6 +83,7 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 
 	n := state.SetAccount{
 		ID:           a.ID,
+		Workspace:    connection.Workspace().ID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    expiresIn,

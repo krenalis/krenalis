@@ -141,13 +141,12 @@ func decodeNotification(n notification, e any) bool {
 
 // replaceAccount calls the function f passing a copy of the account with
 // identifier id. After f is returned, it replaces the account with its copy in
-// the state and returns the latter.
-func (state *State) replaceAccount(id int, f func(*Account)) *Account {
-	a := state.accounts[id]
+// the workspace and returns the latter.
+func (ws *Workspace) replaceAccount(id int, f func(*Account)) *Account {
+	a := ws.accounts[id]
 	aa := new(Account)
 	*aa = *a
 	f(aa)
-	ws := aa.workspace
 	ws.mu.Lock()
 	ws.accounts[id] = aa
 	ws.mu.Unlock()
@@ -159,7 +158,6 @@ func (state *State) replaceAccount(id int, f func(*Account)) *Account {
 			connection.mu.Unlock()
 		}
 	}
-	state.accounts[id] = aa
 	return aa
 }
 
@@ -384,13 +382,14 @@ func (state *State) createConnection(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	workspace := state.workspaces[e.Workspace]
+	ws := state.workspaces[e.Workspace]
 	connector := state.connectors[e.Connector]
 	var a *Account
 	if connector.OAuth != nil {
-		if _, ok := state.accounts[e.Account.ID]; ok {
+		if _, ok := ws.accounts[e.Account.ID]; ok {
 			if e.Account.AccessToken != "" {
-				a = state.replaceAccount(e.Account.ID, func(a *Account) {
+				// Update the workspace.
+				a = ws.replaceAccount(e.Account.ID, func(a *Account) {
 					a.AccessToken = e.Account.AccessToken
 					a.RefreshToken = e.Account.RefreshToken
 					a.ExpiresIn = e.Account.ExpiresIn
@@ -400,27 +399,23 @@ func (state *State) createConnection(n notification) {
 			a = &Account{
 				mu:           new(sync.Mutex),
 				ID:           e.Account.ID,
-				workspace:    workspace,
+				workspace:    ws,
 				connector:    connector,
 				Code:         e.Account.Code,
 				AccessToken:  e.Account.AccessToken,
 				RefreshToken: e.Account.RefreshToken,
 				ExpiresIn:    e.Account.ExpiresIn,
 			}
-			// Update the accounts.
-			state.mu.Lock()
-			state.accounts[a.ID] = a
-			state.mu.Unlock()
 			// Update the workspace.
-			workspace.mu.Lock()
-			workspace.accounts[a.ID] = a
-			workspace.mu.Unlock()
+			ws.mu.Lock()
+			ws.accounts[a.ID] = a
+			ws.mu.Unlock()
 		}
 	}
 	c := &Connection{
 		mu:                new(sync.Mutex),
-		organization:      workspace.organization,
-		workspace:         workspace,
+		organization:      ws.organization,
+		workspace:         ws,
 		ID:                e.ID,
 		Name:              e.Name,
 		connector:         connector,
@@ -443,9 +438,9 @@ func (state *State) createConnection(n notification) {
 	}
 	state.mu.Unlock()
 	// Update the workspace.
-	workspace.mu.Lock()
-	workspace.connections[c.ID] = c
-	workspace.mu.Unlock()
+	ws.mu.Lock()
+	ws.connections[c.ID] = c
+	ws.mu.Unlock()
 	// Update the linked connections.
 	for _, ec := range c.LinkedConnections {
 		state.replaceConnection(ec, func(ec *Connection) {
@@ -598,18 +593,20 @@ func (state *State) deleteConnection(n notification) {
 		return
 	}
 	e.connection = state.connections[e.ID]
-	// Update connections, keys, and accounts.
+	// Update connections and keys.
 	state.mu.Lock()
 	delete(state.connections, e.ID)
 	for _, key := range e.connection.Keys {
 		delete(state.connectionsByKey, key)
 	}
-	if e.Account {
-		delete(state.accounts, e.connection.account.ID)
-	}
 	state.mu.Unlock()
 	// Update the workspace.
 	ws := e.connection.workspace
+	if e.Account {
+		ws.mu.Lock()
+		delete(ws.accounts, e.connection.account.ID)
+		ws.mu.Unlock()
+	}
 	var actionsToPurge []int
 	if e.connection.Role == Source {
 		actionsToPurge = ws.actionsToPurge
@@ -707,10 +704,6 @@ func (state *State) deleteWorkspace(n notification) {
 			delete(state.connectionsByKey, key)
 		}
 		delete(state.connections, c.ID)
-	}
-	// Delete the accounts.
-	for _, a := range e.workspace.accounts {
-		delete(state.accounts, a.ID)
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
@@ -979,6 +972,7 @@ func (state *State) seeLeader(n notification) {
 // SetAccount is the event sent when an account is changed.
 type SetAccount struct {
 	ID           int
+	Workspace    int
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    time.Time
@@ -990,7 +984,8 @@ func (state *State) setAccount(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	state.replaceAccount(e.ID, func(a *Account) {
+	ws := state.workspaces[e.Workspace]
+	ws.replaceAccount(e.ID, func(a *Account) {
 		a.AccessToken = e.AccessToken
 		a.RefreshToken = e.RefreshToken
 		a.ExpiresIn = e.ExpiresIn

@@ -42,7 +42,6 @@ type State struct {
 
 	mu               *sync.Mutex            // for the 'actions', ..., and 'workspaces' fields
 	actions          map[int]*Action        // protected by mu
-	accounts         map[int]*Account       // protected by mu
 	connections      map[int]*Connection    // protected by mu
 	connectionsByKey map[string]*Connection // protected by mu
 	apiKeyByToken    map[string]*APIKey     // protected by mu
@@ -90,7 +89,6 @@ func New(db *db.DB, encryptionKey []byte, connectorsOAuth map[string]*ConnectorO
 		connections:      map[int]*Connection{},
 		connectionsByKey: map[string]*Connection{},
 		actions:          map[int]*Action{},
-		accounts:         map[int]*Account{},
 	}
 
 	// Init the notifier.

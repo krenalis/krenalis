@@ -305,7 +305,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 	}
 
 	// Read all accounts.
-	state.accounts = map[int]*Account{}
 	err = tx.QueryScan(ctx, "SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM accounts",
 		func(rows *db.Rows) error {
 			for rows.Next() {
@@ -319,7 +318,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				a.workspace = state.workspaces[workspaceID]
 				a.connector = state.connectors[connectorName]
 				a.workspace.accounts[a.ID] = &a
-				state.accounts[a.ID] = &a
 			}
 			return nil
 		})
@@ -341,17 +339,17 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			); err != nil {
 				return err
 			}
-			workspace := state.workspaces[workspaceID]
+			ws := state.workspaces[workspaceID]
 			c.mu = new(sync.Mutex)
-			c.organization = workspace.organization
-			c.workspace = workspace
+			c.organization = ws.organization
+			c.workspace = ws
 			c.connector = state.connectors[connector]
 			if c.connector == nil {
 				return fmt.Errorf("the %s connector is required but not registered. (Possibly forgotten import?)", connector)
 			}
 			c.actions = map[int]*Action{}
 			if account > 0 {
-				c.account = state.accounts[account]
+				c.account = ws.accounts[account]
 			}
 			if c.SendingMode == nil && c.Role == Destination && c.connector.SendingMode != nil {
 				mode := Cloud
@@ -370,7 +368,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				connection = &Connection{}
 				*connection = c
 			}
-			workspace.connections[c.ID] = connection
+			ws.connections[c.ID] = connection
 			state.connections[c.ID] = connection
 		}
 		return nil
