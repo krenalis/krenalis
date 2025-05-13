@@ -649,7 +649,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			return 0, errors.BadRequest("authorization token is not valid")
 		}
 		n.Account.Code = account.Code
-		a, ok := this.workspace.AccountByCode(account.Code)
+		a, ok := this.workspace.AccountByCode(account.Connector, account.Code)
 		if ok {
 			n.Account.ID = a.ID
 		}

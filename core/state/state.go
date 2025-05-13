@@ -522,13 +522,13 @@ func (workspace *Workspace) Account(id int) (*Account, bool) {
 	return a, ok
 }
 
-// AccountByCode returns the account with the given code. The boolean return
-// value reports whether the account exists.
-func (workspace *Workspace) AccountByCode(code string) (*Account, bool) {
+// AccountByCode returns the account with the given code for the specified
+// connector. The boolean indicates whether the account exists.
+func (workspace *Workspace) AccountByCode(connector, code string) (*Account, bool) {
 	var a *Account
 	workspace.mu.Lock()
 	for _, account := range workspace.accounts {
-		if account.Code == code {
+		if account.connector.Name == connector && account.Code == code {
 			a = account
 			break
 		}
