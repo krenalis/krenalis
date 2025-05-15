@@ -4,7 +4,7 @@ on:
 jobs:
   upload-sourcemaps-to-sentry:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
 
     steps:
       - name: Checkout
