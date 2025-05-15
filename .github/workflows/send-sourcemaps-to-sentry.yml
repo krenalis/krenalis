@@ -1,12 +1,8 @@
 on:
-  workflow_dispatch:
-
-  # push:
-  #   branches:
-  #     - main
+  push:
 
 jobs:
-  tests:
+  upload-sourcemaps-to-sentry:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -14,5 +10,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-    # TODO: in the branch with Sentry integration in the admin, develop this
-    # part here.
+      - name: Setup Go (needed for building assets)
+        uses: actions/setup-go@v5
+        with:
+          # Keep in sync with the version within "Dockerfile".
+          # Keep in sync with the version within "go.mod".
+          go-version: "1.24"
+
+      - name: Install Brotli (for decompressing built assets)
+        run: sudo apt install -y brotli
+
+      - name: Install the Sentry CLI tool
+        run: curl -sL https://sentry.io/get-cli/ | bash
+
+      - name: Build assets running 'go generate'
+        run: go generate
+        working-directory: ./cmd/meergo
+
+      - name: Decompress .br assets using Brotli
+        run: find -name "*.br" -not -path "./shoelace/*" | xargs brotli -dvf
+        working-directory: ./cmd/meergo/meergo-assets
+
+      - name: Upload the source maps to Sentry
+        run: sentry-cli sourcemaps upload .
+        env:
+          # These secrets can be configured at:
+          # https://github.com/meergo/meergo/settings/secrets/actions.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        working-directory: ./cmd/meergo/meergo-assets

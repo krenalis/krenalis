@@ -65,7 +65,10 @@ const router = createBrowserRouter([
 			{
 				element: <AppLayout />,
 				children: [
-					{ path: 'connectors/:name', element: <ConnectorSettings /> },
+					{
+						path: 'connectors/:name',
+						element: <ConnectorSettings />,
+					},
 					{ path: 'connectors/file/:name', element: <FileConnector /> },
 					{ path: 'connectors', element: <ConnectorsList /> },
 					{ path: 'connections/sources', element: <ConnectionsList /> },

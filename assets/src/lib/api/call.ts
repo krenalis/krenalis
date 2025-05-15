@@ -1,5 +1,7 @@
 import { NotFoundError, UnavailableError, UnprocessableError, UnauthorizedError } from './errors';
 import JSONbig from 'json-bigint';
+import * as Sentry from '@sentry/react';
+import { scrubURL } from '../telemetry/scrubURL';
 
 const call = async (url: string, method: string, workspaceID?: number, body?: any, opt?: any) => {
 	let headers = {
@@ -44,6 +46,15 @@ const call = async (url: string, method: string, workspaceID?: number, body?: an
 				let parsed = await res.json();
 				let { code, message, cause } = parsed.error;
 				if (res.status === 400) {
+					Sentry.withScope((scope) => {
+						scope.setExtra('type', 'Bad Request');
+						const [scrubbedURL, extras] = scrubURL(url, true);
+						scope.setExtra('requestURL', scrubbedURL);
+						for (const k of Object.keys(extras)) {
+							scope.setExtra(k, extras[k]);
+						}
+						Sentry.captureException(new Error(message));
+					});
 					console.error(
 						`%c meergo: ${message}${cause ? ' | Cause: ' + cause : ''}`,
 						'background:#dc362e;color:#dcdcdc',

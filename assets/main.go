@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/meergo/meergo/debugid"
 	"github.com/meergo/meergo/json"
 
 	"github.com/andybalholm/brotli"
@@ -190,6 +191,28 @@ func buildAssets() error {
 		}
 		if st.Size() == 0 {
 			return fmt.Errorf("bundled file %q is empty", file)
+		}
+	}
+
+	// Inject Sentry's Debug IDs.
+	filenames := []string{
+		outDir + "index.js",
+		outDir + "monaco/vs/editor/editor.main.js",
+		outDir + "monaco/vs/editor/editor.worker.js",
+		outDir + "monaco/vs/language/typescript/ts.worker.js",
+	}
+	for _, filename := range filenames {
+		debugID, err := debugid.CalculateFileDebugID(filename)
+		if err != nil {
+			return fmt.Errorf("cannot calculate Debug ID for file %s: %s", filename, err)
+		}
+		err = debugid.InjectDebugIDIntoFile(filename, debugID)
+		if err != nil {
+			return fmt.Errorf("cannot inject Debug ID into file %s: %s", filename, err)
+		}
+		err = debugid.InjectDebugIDIntoSourceMap(filename+".map", debugID)
+		if err != nil {
+			return fmt.Errorf("cannot inject Debug ID into source map file %s: %s", filename+".map", err)
 		}
 	}
 

@@ -138,6 +138,12 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	return nil, err
 }
 
+// SentryTelemetryEnabled returns wheter the Sentry telemetry is
+// enabled.
+func (api api) SentryTelemetryEnabled(w http.ResponseWriter, r *http.Request) (any, error) {
+	return api.sentryTelemetryEnabled, nil
+}
+
 // SkipMemberEmailVerification returns wheter to skip the verification
 // of the email during the creation of a new member.
 func (api api) SkipMemberEmailVerification(w http.ResponseWriter, r *http.Request) (any, error) {

@@ -14,6 +14,8 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './useApp';
 import { UnauthorizedError } from '../../../lib/api/errors';
+import * as Sentry from '@sentry/react';
+import RootError from '../RootError/RootError';
 
 setBasePath('/admin/src/shoelace/dist');
 
@@ -184,12 +186,12 @@ const App = () => {
 	}
 
 	return (
-		<>
+		<Sentry.ErrorBoundary fallback={<RootError />}>
 			{content}
 			<div>
 				<Toast ref={toastRef} status={status} isFullscreen={isFullscreen} />
 			</div>
-		</>
+		</Sentry.ErrorBoundary>
 	);
 };
 

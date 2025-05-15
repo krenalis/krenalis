@@ -22,6 +22,8 @@ import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
 import { hasFilters } from '../../../lib/core/action';
 import { formatNumber } from '../../../utils/formatNumber';
+import * as Sentry from '@sentry/react';
+import { scrubURL } from '../../../lib/telemetry/scrubURL';
 
 const FILTER_STEP = 2;
 
@@ -59,6 +61,41 @@ const useApp = (
 
 	useEffect(() => {
 		const loadAppState = async () => {
+			// Check if Sentry telemetry is enabled.
+			let isSentryTelemetryEnabled: boolean = false;
+			try {
+				isSentryTelemetryEnabled = await api.sentryTelemetryEnabled();
+			} catch (err) {
+				handleError(err);
+				setIsLoadingState(false);
+				return;
+			}
+			if (isSentryTelemetryEnabled) {
+				Sentry.init({
+					dsn: 'https://4bc227ec8dc487e9bae1f3aea7f3ede1@o4509282180136960.ingest.de.sentry.io/4509292547211344',
+					// Setting this option to true will send default PII
+					// data to Sentry. For example, automatic IP address
+					// collection on events.
+					sendDefaultPii: false,
+					beforeSend: (event) => {
+						const [scrubbedURL, extras] = scrubURL(event.request.url, false);
+						event.request.url = scrubbedURL;
+						event.extra = {
+							...event.extra,
+							...extras,
+						};
+						return event;
+					},
+					beforeBreadcrumb: (breadcrumb) => {
+						if (breadcrumb.category === 'fetch') {
+							const [scrubbedURL] = scrubURL(breadcrumb.data.url, true);
+							breadcrumb.data.url = scrubbedURL;
+						}
+						return breadcrumb;
+					},
+				});
+			}
+
 			// get the workspaces list.
 			let ws: Workspace[];
 			try {

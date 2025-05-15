@@ -60,13 +60,14 @@ type apisServer struct {
 	eventURL                    string
 	externalURL                 string
 	skipMemberEmailVerification bool
+	sentryTelemetryEnabled      bool
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
 // Core. encryptionKey is the key used to encrypt the session cookie.
 // runsOnHTTPs indicates if the server runs on HTTPS.
 // It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool) *apisServer {
+func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool, sentryTelemetryEnabled bool) *apisServer {
 
 	if len(encryptionKey) != 64 {
 		panic("encryptionKey is not 64 bytes long")
@@ -79,6 +80,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, java
 		eventURL:                    eventURL,
 		externalURL:                 externalURL,
 		skipMemberEmailVerification: skipMemberEmailVerification,
+		sentryTelemetryEnabled:      sentryTelemetryEnabled,
 	}
 
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
@@ -140,6 +142,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, java
 		"GET    /members/current":                                api.Member,                           /* only admin */
 		"GET    /members/invitations/{token}":                    api.MemberInvitation,                 /* only admin */
 		"GET    /members/reset-password/{token}":                 api.ValidateMemberPasswordResetToken, /* only admin */
+		"GET    /sentry-telemetry-enabled":                       api.SentryTelemetryEnabled,           /* only admin */
 		"GET    /skip-member-email-verification":                 api.SkipMemberEmailVerification,      /* only admin */
 		"GET    /transformation-languages":                       api.TransformationLanguages,
 		"GET    /users":                                          workspace.Users,

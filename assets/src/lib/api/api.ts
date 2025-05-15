@@ -57,6 +57,8 @@ import {
 	userTraitsResponse,
 } from './types/responses';
 
+const API_BASE_PATH = '/api/v1';
+
 class API {
 	apiURL: string;
 	workspaceID: number;
@@ -64,7 +66,7 @@ class API {
 	connectors: Connectors;
 
 	constructor(origin: string, workspaceID: number) {
-		const apiURL = origin + '/api/v1';
+		const apiURL = origin + API_BASE_PATH;
 		this.apiURL = apiURL;
 		this.workspaceID = workspaceID;
 		this.workspaces = new Workspaces(origin, apiURL, workspaceID);
@@ -99,6 +101,10 @@ class API {
 		return await call(`${this.apiURL}/members/reset-password/${token}`, http.PUT, this.workspaceID, {
 			password,
 		});
+	};
+
+	sentryTelemetryEnabled = async (): Promise<boolean> => {
+		return await call(`${this.apiURL}/sentry-telemetry-enabled`, http.GET);
 	};
 
 	skipMemberEmailVerification = async (): Promise<boolean> => {
@@ -1035,3 +1041,4 @@ function queryString(parameters: Array<[string, any]>) {
 }
 
 export default API;
+export { API_BASE_PATH };
