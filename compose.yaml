@@ -15,6 +15,10 @@ services:
       # other PostgreSQL instance (pre-initialized with the Meergo database),
       # you can refer to it here. In case that such instance runs locally, you
       # can refer to its host with 'host.docker.internal'.
+      #
+      # Note that these settings are not related to the data warehouse, where
+      # user data and events are stored, which is instead configured using the
+      # Meergo admin when creating a new workspace.
       MEERGO_DB_HOST: db
       MEERGO_DB_PORT: 5432
       MEERGO_DB_USERNAME: meergo
