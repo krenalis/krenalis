@@ -100,6 +100,7 @@ func Main(assets fs.FS) {
 			Dsn:              "https://83b8a272533bd2db6b535547c6517d0e@o4509282180136960.ingest.de.sentry.io/4509282208514128",
 			Debug:            false, // set to "true" to get information about telemetry sent to Sentry.
 			AttachStacktrace: true,
+			SendDefaultPII:   false, // TODO: is it okay to set it to false? See https://github.com/meergo/meergo/issues/1517.
 			// The default integrations provided by the Sentry SDK are preserved
 			// here. We may consider enabling them selectively in the future,
 			// but for now they seem reasonable. The list of integrations loaded

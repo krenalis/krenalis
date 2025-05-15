@@ -76,6 +76,7 @@ const useApp = (
 					// Setting this option to true will send default PII
 					// data to Sentry. For example, automatic IP address
 					// collection on events.
+					// TODO: is it okay to set it to false? See https://github.com/meergo/meergo/issues/1517.
 					sendDefaultPii: false,
 					beforeSend: (event) => {
 						const [scrubbedURL, extras] = scrubURL(event.request.url, false);
