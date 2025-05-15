@@ -9,6 +9,18 @@ services:
       # Uncomment the following line to disable it:
       # MEERGO_DISABLE_TELEMETRY="true"
 
+      # HubSpot.
+      # Set these environment variables to connect to your HubSpot app when
+      # running Meergo with Docker Compose. Otherwise, they can be left blank.
+      MEERGO_OAUTH_HUBSPOT_CLIENT_ID:
+      MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET:
+
+      # Mailchimp.
+      # Set these environment variables to connect to your Mailchimp app when
+      # running Meergo with Docker Compose. Otherwise, they can be left blank.
+      MEERGO_OAUTH_MAILCHIMP_CLIENT_ID:
+      MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET:
+
       # This Docker Compose file is set up so that Meergo connects to the
       # PostgreSQL database started via Docker Compose, which has already been
       # initialized to work with Meergo. However, if you would like to use any
