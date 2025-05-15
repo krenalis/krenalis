@@ -1,6 +1,7 @@
 module github.com/meergo/meergo
 
 // Keep in sync with the version within ".github/workflows/main.yml".
+// Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 // Keep in sync with the version within "Dockerfile".
 go 1.24
 

@@ -1,6 +1,7 @@
 # Stage 0: Meergo Building Stage.
 
 # Keep in sync with the version within ".github/workflows/main.yml".
+# Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 # Keep in sync with the version within "go.mod".
 FROM golang:1.24
 
