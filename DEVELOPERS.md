@@ -6,6 +6,7 @@ This file contains information useful to Meergo developers.
 
 - [Before Pushing Commits to `main`](#before-pushing-commits-to-main)
 - [How to run tests using GitHub Action](#how-to-run-tests-using-github-action)
+- [Sentry Telemetry](#sentry-telemetry)
 - [Expose and see Meergo metrics](#expose-and-see-meergo-metrics)
 - [Local Testing Cookbook](#local-testing-cookbook)
   - [Testing Snowflake](#testing-snowflake)
@@ -50,6 +51,20 @@ go run ./commit --help
 4. Click on "Run workflow"
 
 > ⌛ Note that this may take some time, even something on the order of about ten minutes.
+
+## Sentry Telemetry
+
+<img src="https://sentry-brand.storage.googleapis.com/sentry-logo-black.png" width=400px>
+
+Here are some key points about **how Meergo sends telemetry data to Sentry**:
+
+* **Telemetry only handles errors**. Other data, such as traces, spans, performance monitoring, are currently not sent.
+
+* **Enabling and disabling the telemetry is controlled only by the env. var**. The `MEERGO_DISABLE_TELEMETRY` environment variable is the only thing that can enable or disable telemetry. Anything else (how Meergo is compiled, build flags, availability of Debug IDs, etc...) does not impact the sending of data to Sentry.
+
+* **If the server sends telemetry, the client does too, and vice versa**. There are no scenarios where only one of the two components sends telemetry and the other one doesn't.
+
+* **Admin stack traces are available only under certain conditions**. The ability to see stack traces of admin errors in Sentry only exists if (1) Meergo is running in production mode (i.e., non-dev mode) and (2) the Meergo assets are unchanged from any commit in the repository, for which the GitHub Action sent source maps with Debug IDs to sentry. So, in any other case, the errors displayed on Sentry may not show a correct stack trace.
 
 ## Expose and see Meergo metrics
 
