@@ -927,7 +927,7 @@ const TransformationBox = ({
 						}`}
 					>
 						<PropertyTooltip propertyName={k} typeName={typeName} type={property.full.type}>
-							<span className='action__transformation-output-property-key'>{k}</span>
+							<span className='action__transformation-output-property-key'>{property.full.name}</span>
 							<span className='action__transformation-output-property-type'>{typeName}</span>
 						</PropertyTooltip>
 						{showRequired && (
@@ -2619,7 +2619,7 @@ const TransformationProperty = ({
 							/>
 						</SlTooltip>
 					)}
-					<PropertyTooltip propertyName={property.name} typeName={typeName} type={property.type}>
+					<PropertyTooltip propertyName={path} typeName={typeName} type={property.type}>
 						<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
 						<span className='fullscreen-transformation__property-type'>
 							<span>{typeName}</span>
