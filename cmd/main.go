@@ -233,7 +233,7 @@ func settingsFromEnv() (*Settings, error) {
 		if settings.OAuth == nil {
 			settings.OAuth = make(map[string]*state.ConnectorOAuth)
 		}
-		settings.OAuth["MailChimp"] = &state.ConnectorOAuth{
+		settings.OAuth["Mailchimp"] = &state.ConnectorOAuth{
 			ClientID:     clientID,
 			ClientSecret: os.Getenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET"),
 		}
