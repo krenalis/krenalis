@@ -537,9 +537,6 @@ github.com/moby/sys/userns
 ## explicit; go 1.18
 github.com/moby/term
 github.com/moby/term/windows
-# github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-## explicit
-github.com/mohae/deepcopy
 # github.com/morikuni/aec v1.0.0
 ## explicit
 github.com/morikuni/aec
@@ -644,6 +641,9 @@ github.com/testcontainers/testcontainers-go/modules/clickhouse
 # github.com/testcontainers/testcontainers-go/modules/postgres v0.36.0
 ## explicit; go 1.23.0
 github.com/testcontainers/testcontainers-go/modules/postgres
+# github.com/tiendc/go-deepcopy v1.6.0
+## explicit; go 1.18
+github.com/tiendc/go-deepcopy
 # github.com/tklauser/go-sysconf v0.3.12
 ## explicit; go 1.13
 github.com/tklauser/go-sysconf
@@ -663,13 +663,13 @@ github.com/twmb/franz-go/pkg/sasl/plain
 ## explicit; go 1.21
 github.com/twmb/franz-go/pkg/kmsg
 github.com/twmb/franz-go/pkg/kmsg/internal/kbin
-# github.com/xuri/efp v0.0.0-20240408161823-9ad904a10d6d
+# github.com/xuri/efp v0.0.1
 ## explicit; go 1.11
 github.com/xuri/efp
-# github.com/xuri/excelize/v2 v2.9.0
-## explicit; go 1.18
+# github.com/xuri/excelize/v2 v2.9.1
+## explicit; go 1.23.0
 github.com/xuri/excelize/v2
-# github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7
+# github.com/xuri/nfp v0.0.1
 ## explicit; go 1.15
 github.com/xuri/nfp
 # github.com/yusufpapurcu/wmi v1.2.4
@@ -779,7 +779,7 @@ golang.org/x/exp/slices
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.36.0
+# golang.org/x/net v0.40.0
 ## explicit; go 1.23.0
 golang.org/x/net/html
 golang.org/x/net/html/atom
