@@ -19,7 +19,7 @@ Before you can add a Mailchimp data destination, you need to create a private ke
 
 1. Log in to your <a href="https://mailchimp.com/" target="_blank">Mailchimp</a> account.
 2. Click the account box at the top right and then click **Profile**.
-3. On the **Profile** page, click **Extra > Registered apps**.
+3. On the **Profile** page, click **Extras > Registered apps**.
 4. On the **Registered apps** page, click **Register An App**.
 5. In the **App name** field, enter a name for the new app, for example, "Meergo data destination."
 6. In the **Redirect URI** field, enter “https://your-meergo-domain/admin/oauth/authorize” where “your-meergo-domain” is the domain, and port if present, of your Meergo domain.
