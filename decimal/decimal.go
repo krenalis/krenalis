@@ -72,6 +72,8 @@ var ErrRange = errors.New("out of range")
 type Decimal struct {
 	s string
 	b decimal.Big
+
+	_ [0]func() // makes Decimal non-comparable
 }
 
 // Append appends x to buf and returns the extended buffer.
