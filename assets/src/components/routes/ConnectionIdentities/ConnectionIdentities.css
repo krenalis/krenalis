@@ -13,6 +13,11 @@
 	margin-bottom: 15px;
 }
 
+.connection-identities__title {
+	margin-bottom: 10px;
+	color: var(--sl-color-neutral-600);
+}
+
 .connection-identities .connection-identities__anonymous-identity {
 	color: #9b9b9b;
 	padding: 3px 7px;

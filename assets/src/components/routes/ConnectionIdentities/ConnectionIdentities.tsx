@@ -27,7 +27,12 @@ const ConnectionIdentities = () => {
 					</div>
 				</div>
 			) : (
-				<Grid columns={identityProperties} rows={identitiesRows} />
+				<>
+					<div className='connection-identities__title'>
+						These are the last {identitiesRows.length} identities imported by the connection
+					</div>
+					<Grid columns={identityProperties} rows={identitiesRows} />
+				</>
 			)}
 		</div>
 	);
