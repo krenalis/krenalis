@@ -128,6 +128,10 @@
 	padding-right: 20px;
 }
 
+.connection-actions__run-button::part(label) {
+	padding-left: 6px !important;
+}
+
 .connection-actions__run-button > sl-icon[name='play'] {
 	font-size: 16px;
 }
