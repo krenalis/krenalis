@@ -13,6 +13,7 @@ import {
 	flattenSchema,
 	getTransformationFunctionParameterName,
 	isRecursiveType,
+	propertyTypesAreEqual,
 	transformInActionToSet,
 } from '../../../lib/core/action';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
@@ -201,7 +202,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [selectedLanguage]);
 
-	const flatSchema = useMemo<TransformedMapping>(() => {
+	const flatInputSchema = useMemo<TransformedMapping>(() => {
 		return flattenSchema(actionType.inputSchema);
 	}, [actionType.inputSchema]);
 
@@ -234,10 +235,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			}
 			setAction(a);
 		};
-		if (flatSchema != null && transformationType === 'mappings') {
+		if (flatInputSchema != null && transformationType === 'mappings') {
 			validateExpressions();
 		}
-	}, [flatSchema, transformationType]);
+	}, [flatInputSchema, transformationType]);
 
 	const needFormat: boolean = useMemo(() => {
 		if (
@@ -262,15 +263,15 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			if (action.identityColumn === '' && !isFirstCompilation.current) {
 				return 'The user identifier cannot be empty';
 			}
-			return checkIfPropertyExists(action.identityColumn, flatSchema);
+			return checkIfPropertyExists(action.identityColumn, flatInputSchema);
 		}
-	}, [action, flatSchema]);
+	}, [action, flatInputSchema]);
 
 	const lastChangeTimeColumnError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			return checkIfPropertyExists(action.lastChangeTimeColumn, flatSchema);
+			return checkIfPropertyExists(action.lastChangeTimeColumn, flatInputSchema);
 		}
-	}, [action, flatSchema]);
+	}, [action, flatInputSchema]);
 
 	const { identityColumnList, lastChangeTimeList, mappingList } = useMemo(() => {
 		return {
@@ -454,6 +455,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			actionType={actionType}
 			isTransformationFunctionSupported={isTransformationFunctionSupported}
 			hasSchema={actionType.outputSchema != null}
+			flatInputSchema={flatInputSchema}
 		/>
 	);
 
@@ -595,6 +597,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					isFullscreenTransformationOpen={isFullscreenTransformationOpen}
 					selectedLanguage={selectedLanguage}
 					body={box}
+					flatInputSchema={flatInputSchema}
 					inputSchema={actionType.inputSchema}
 					outputSchema={actionType.outputSchema}
 				/>
@@ -624,6 +627,7 @@ interface TransformationBoxProps {
 	actionType: TransformedActionType;
 	isTransformationFunctionSupported: boolean;
 	hasSchema: boolean;
+	flatInputSchema: TransformedMapping;
 }
 
 const isMappingChanged = (oldMapping: TransformedMapping, newMapping: TransformedMapping): boolean => {
@@ -684,6 +688,7 @@ const TransformationBox = ({
 	actionType,
 	isTransformationFunctionSupported,
 	hasSchema,
+	flatInputSchema,
 }: TransformationBoxProps) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [isCompletelyOpen, setIsCompletelyOpen] = useState<boolean>(false);
@@ -806,6 +811,43 @@ const TransformationBox = ({
 				property.disabled === true ||
 				(isOutMatchingProperty && property.value === '');
 
+			const keys = Object.keys(action.transformation.mapping);
+
+			const parents: string[] = [];
+			for (const key of keys) {
+				if (k.startsWith(`${key}.`)) {
+					parents.push(key);
+				}
+			}
+
+			let closestMappedParent: string;
+			for (const parent of [...parents].reverse()) {
+				const isMapped =
+					action.transformation.mapping[parent].value !== '' &&
+					action.transformation.mapping[parent].error === '';
+				if (isMapped) {
+					closestMappedParent = parent;
+					break;
+				}
+			}
+
+			let automaticallyMapped: string;
+			if (closestMappedParent != null) {
+				const mapping = action.transformation.mapping[closestMappedParent];
+				const indentationDifference = property.indentation - mapping.indentation;
+				const mappingProperty = flatInputSchema[mapping.value];
+				const flat = flattenSchema(mappingProperty.full.type as ObjectType);
+				let key = Object.keys(flat).find(
+					(k) =>
+						flat[k].full.name === property.full.name &&
+						flat[k].indentation === indentationDifference - 1 &&
+						propertyTypesAreEqual(flat[k].full.type, property.full.type),
+				);
+				if (key != null) {
+					automaticallyMapped = `${mapping.value}.${key}`;
+				}
+			}
+
 			const hasRequired =
 				isTableKey ||
 				(actionType.target === 'Events' && (property.createRequired || property.updateRequired)) ||
@@ -822,21 +864,7 @@ const TransformationBox = ({
 					if (property.value !== '') {
 						showRequired = true;
 					} else {
-						const keys = Object.keys(action.transformation.mapping);
-
-						const parents: string[] = [];
-						for (const key of keys) {
-							if (k.startsWith(`${key}.`)) {
-								parents.push(key);
-							}
-						}
-
-						const hasMappedParent =
-							parents.findIndex(
-								(k) =>
-									action.transformation.mapping[k].value !== '' &&
-									action.transformation.mapping[k].error === '',
-							) !== -1;
+						const hasMappedParent = closestMappedParent != null;
 						if (hasMappedParent) {
 							showRequired = true;
 						} else {
@@ -890,7 +918,13 @@ const TransformationBox = ({
 				>
 					<Combobox
 						onInput={onUpdateMapping}
-						value={showMatchingIn ? action.matching.in : property.value}
+						value={
+							showMatchingIn
+								? action.matching.in
+								: automaticallyMapped != null
+									? automaticallyMapped
+									: property.value
+						}
 						controlled={true}
 						name={k}
 						disabled={isDisabled}
@@ -1121,6 +1155,7 @@ interface FullscreenTransformationProps {
 	isFullscreenTransformationOpen: boolean;
 	selectedLanguage: string;
 	body: ReactNode;
+	flatInputSchema: TransformedMapping;
 	inputSchema: ObjectType;
 	outputSchema: ObjectType;
 }
@@ -1129,6 +1164,7 @@ const FullscreenTransformation = ({
 	isFullscreenTransformationOpen,
 	selectedLanguage,
 	body,
+	flatInputSchema,
 	inputSchema,
 	outputSchema,
 }: FullscreenTransformationProps) => {
@@ -1184,12 +1220,11 @@ const FullscreenTransformation = ({
 		};
 	}, [connection, actionType]);
 
-	const { flatInputSchema, flatOutputSchema } = useMemo(() => {
+	const { flatOutputSchema } = useMemo(() => {
 		return {
-			flatInputSchema: flattenSchema(inputSchema),
 			flatOutputSchema: flattenSchema(outputSchema),
 		};
-	}, [inputSchema, outputSchema]);
+	}, [outputSchema]);
 
 	let eventListenerFilter = null;
 	if (isEventBasedUserImport || isAppEventsExport) {
