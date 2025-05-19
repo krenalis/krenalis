@@ -230,10 +230,11 @@ func init() {
 				},
 			},
 			{
-				Name:        "Retrieve user identities",
-				Description: "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.",
-				Method:      GET,
-				URL:         "/v1/users/:id/identities",
+				Name: "Retrieve user identities",
+				Description: "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.\n\n" +
+					"Identities are sorted by last change time, in descending order, so the most recently changed identities are returned first.",
+				Method: GET,
+				URL:    "/v1/users/:id/identities",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

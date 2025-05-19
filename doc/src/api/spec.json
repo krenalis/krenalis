@@ -9468,7 +9468,7 @@
                 },
                 {
                     "name": "Retrieve user identities",
-                    "description": "Retrieves user identities from the workspace's data warehouse, exactly as they were imported from a connection, before being unified with identities from other connections.",
+                    "description": "Retrieves user identities from the workspace's data warehouse, exactly as they were imported from a connection, before being unified with identities from other connections.\n\nIdentities are sorted by last change time, in descending order, so the most recently changed identities are returned first.",
                     "method": "GET",
                     "url": "/v1/connections/:id/identities",
                     "parameters": [
@@ -15868,7 +15868,7 @@
                 },
                 {
                     "name": "Retrieve user identities",
-                    "description": "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.",
+                    "description": "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.\n\nIdentities are sorted by last change time, in descending order, so the most recently changed identities are returned first.",
                     "method": "GET",
                     "url": "/v1/users/:id/identities",
                     "parameters": [

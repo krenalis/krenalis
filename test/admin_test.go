@@ -35,6 +35,7 @@ import (
 const showUI = false
 
 func TestAdmin(t *testing.T) {
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()

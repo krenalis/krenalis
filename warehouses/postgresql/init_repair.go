@@ -106,6 +106,7 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, user
 		createOperationsTable,
 		createUserSchemaVersionTable,
 		userIdentitiesSQLSchema(userColumns),
+		userIdentitiesIndex(),
 		usersSQLSchema("_users_0", userColumns),
 	}
 	if !repair {
@@ -125,6 +126,12 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, user
 		}
 	}
 	return nil
+}
+
+// userIdentitiesIndex returns a query in the format "CREATE INDEX ..." that
+// creates the necessary indexes for the user identities table.
+func userIdentitiesIndex() string {
+	return `CREATE INDEX IF NOT EXISTS "last_change_time_idx" ON "_user_identities" ("__last_change_time__");`
 }
 
 // userIdentitiesSQLSchema returns the SQL schema (in the form "CREATE TABLE

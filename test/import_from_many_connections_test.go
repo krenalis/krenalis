@@ -218,30 +218,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		}
 	}
 	{
-		dummyIdentity := identities[0]
-		dummyIdentity.LastChangeTime = time.Time{}
-		assertEqualIdentity(dummyIdentity, meergotester.UserIdentity{
-			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
-			Action:         dummyAction,
-			ID:             "dummy1",
-			AnonymousIds:   nil,
-			LastChangeTime: time.Time{},
-		})
-	}
-	t.Log("identity imported from Dummy is ok")
-	{
-		csvIdentity := identities[1]
-		assertEqualIdentity(csvIdentity, meergotester.UserIdentity{
-			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
-			Action:         csvAction,
-			ID:             "1",
-			AnonymousIds:   nil,
-			LastChangeTime: time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
-		})
-	}
-	t.Log("identity imported from CSV is ok")
-	{
-		eventIdentity := identities[2]
+		eventIdentity := getIdentityByConnection(t, identities, javaScript)
 		eventIdentity.LastChangeTime = time.Time{}
 		assertEqualIdentity(eventIdentity, meergotester.UserIdentity{
 			Connection:     javaScript, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
@@ -252,5 +229,38 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		})
 	}
 	t.Log("identity imported from JavaScript is ok")
+	{
+		csvIdentity := getIdentityByConnection(t, identities, fs)
+		assertEqualIdentity(csvIdentity, meergotester.UserIdentity{
+			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
+			Action:         csvAction,
+			ID:             "1",
+			AnonymousIds:   nil,
+			LastChangeTime: time.Date(2001, 2, 2, 3, 4, 5, 0, time.UTC),
+		})
+	}
+	t.Log("identity imported from CSV is ok")
+	{
+		dummyIdentity := getIdentityByConnection(t, identities, dummy)
+		dummyIdentity.LastChangeTime = time.Time{}
+		assertEqualIdentity(dummyIdentity, meergotester.UserIdentity{
+			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
+			Action:         dummyAction,
+			ID:             "dummy1",
+			AnonymousIds:   nil,
+			LastChangeTime: time.Time{},
+		})
+	}
+	t.Log("identity imported from Dummy is ok")
 
+}
+
+func getIdentityByConnection(t *testing.T, identities []meergotester.UserIdentity, connection int) meergotester.UserIdentity {
+	for _, identity := range identities {
+		if identity.Connection == connection {
+			return identity
+		}
+	}
+	t.Fatalf("identity with connection %q not found among provided identities", connection)
+	return meergotester.UserIdentity{}
 }

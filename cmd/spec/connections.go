@@ -357,10 +357,11 @@ func init() {
 				},
 			},
 			{
-				Name:        "Retrieve user identities",
-				Description: "Retrieves user identities from the workspace's data warehouse, exactly as they were imported from a connection, before being unified with identities from other connections.",
-				Method:      GET,
-				URL:         "/v1/connections/:id/identities",
+				Name: "Retrieve user identities",
+				Description: "Retrieves user identities from the workspace's data warehouse, exactly as they were imported from a connection, before being unified with identities from other connections.\n\n" +
+					"Identities are sorted by last change time, in descending order, so the most recently changed identities are returned first.",
+				Method: GET,
+				URL:    "/v1/connections/:id/identities",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

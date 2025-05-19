@@ -1341,6 +1341,9 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
+// Identities are sorted by last change time, in descending order, so the most
+// recently changed identities are returned first.
+//
 // It returns an errors.UnprocessableError error with code MaintenanceMode, if
 // the data warehouse is in maintenance mode.
 func (this *Connection) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {

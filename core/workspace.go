@@ -1053,9 +1053,12 @@ func (this *Workspace) UserPropertiesSuitableAsIdentifiers() types.Type {
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
-// It returns an errors.NotFoundError error, if the user does not exist.
-// It returns an errors.UnprocessableError error with code MaintenanceMode if
-// the data warehouse is in maintenance mode.
+// Identities are sorted by last change time, in descending order, so the most
+// recently changed identities are returned first.
+//
+// It returns an errors.NotFoundError error, if the user does not exist. It
+// returns an errors.UnprocessableError error with code MaintenanceMode if the
+// data warehouse is in maintenance mode.
 func (this *Workspace) Identities(ctx context.Context, user string, first, limit int) ([]UserIdentity, int, error) {
 	this.core.mustBeOpen()
 	if _, ok := types.ParseUUID(user); !ok {
@@ -1759,6 +1762,9 @@ func (this *Workspace) Warehouse() (string, json.Value) {
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
+// Identities are sorted by last change time, in descending order, so the most
+// recently changed identities are returned first.
+//
 // If there are no identities, a nil slice is returned.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
@@ -1775,10 +1781,11 @@ func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, f
 			"__anonymous_ids__",
 			"__last_change_time__",
 		},
-		Where:   where,
-		OrderBy: "__pk__",
-		First:   first,
-		Limit:   limit,
+		Where:     where,
+		OrderBy:   "__last_change_time__",
+		OrderDesc: true,
+		First:     first,
+		Limit:     limit,
 	})
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
