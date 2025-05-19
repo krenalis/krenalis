@@ -26,6 +26,42 @@ type Where struct {
 	Conditions []WhereCondition `json:"conditions"` // cannot be empty.
 }
 
+// Equal reports whether the receiver is equal to w.
+func (where *Where) Equal(w *Where) bool {
+	if where.Logical != w.Logical {
+		return false
+	}
+	if len(where.Conditions) != len(w.Conditions) {
+		return false
+	}
+	for i, c := range where.Conditions {
+		c2 := w.Conditions[i]
+		if !slices.Equal(c.Property, c2.Property) {
+			return false
+		}
+		if c.Operator != c2.Operator {
+			return false
+		}
+		if len(c.Values) != len(c2.Values) {
+			return false
+		}
+		for j, v := range c.Values {
+			v2 := c2.Values[j]
+			switch v := v.(type) {
+			case decimal.Decimal:
+				if v2, ok := v2.(decimal.Decimal); !ok || !v.Equal(v2) {
+					return false
+				}
+			default:
+				if v != v2 {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
 func (where *Where) MarshalJSON() ([]byte, error) {
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)
