@@ -27,6 +27,8 @@ This file contains information useful to Meergo developers.
 
 ## Before Pushing Commits to `main`
 
+> Before proceeding, **make sure you have all the necessary dependencies** installed locally. For the complete list of them, please refer to the file [.github/workflows/main.yml](.github/workflows/main.yml).
+
 Before pushing commits to the `main` branch of Meergo, from the root of this repository, run:
 
 ```
@@ -40,8 +42,6 @@ For various options and other ways to test, see the command documentation by run
 ```
 go run ./commit --help
 ```
-
-**Tests Dependencies**. Refer to the file [.github/workflows/main.yml](.github/workflows/main.yml) for the list of dependencies required to run the tests and their respective supported versions.
 
 ## How to run tests using GitHub Action
 
