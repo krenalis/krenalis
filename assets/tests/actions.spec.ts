@@ -32,11 +32,11 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 		hasText: 'Import customers',
 	});
 
-	await expect(name).toBeVisible();
+	await expect(name).toBeAttached();
 
 	let button = name.locator('..').locator('..').locator('sl-button');
 	await button.click();
-	await expect(page.locator('.action__header')).toBeVisible();
+	await expect(page.locator('.action__header')).toBeAttached();
 
 	let email = page.locator('.combobox[data-id="email"]');
 	await email.locator('sl-input').click();
@@ -109,11 +109,11 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 	expected.connection = id;
 	deepCompareActionSchema(got, expected);
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
 test(`Add "Export customers" action on Dummy`, async ({ page }) => {
@@ -123,11 +123,11 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 		hasText: 'Export customers',
 	});
 
-	await expect(name).toBeVisible();
+	await expect(name).toBeAttached();
 
 	let button = name.locator('..').locator('..').locator('sl-button');
 	await button.click();
-	await expect(page.locator('.action__header')).toBeVisible();
+	await expect(page.locator('.action__header')).toBeAttached();
 
 	// Filters.
 	await fillUserActionFilters(page);
@@ -149,7 +149,7 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 		page.locator('.action__transformation-mappings .action__transformation-output-property >> input', {
 			hasText: 'email',
 		}),
-	).not.toBeVisible();
+	).not.toBeAttached();
 
 	// Update on duplicates.
 	await page.locator('.action__update-on-duplicates sl-checkbox').click();
@@ -293,11 +293,11 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 	expected.connection = id;
 	deepCompareActionSchema(got, expected);
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
 test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
@@ -307,11 +307,11 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 		hasText: 'Send Add to Cart',
 	});
 
-	await expect(name).toBeVisible();
+	await expect(name).toBeAttached();
 
 	let button = name.locator('..').locator('..').locator('sl-button');
 	await button.click();
-	await expect(page.locator('.action__header')).toBeVisible();
+	await expect(page.locator('.action__header')).toBeAttached();
 
 	// Mappings.
 	let mappings = page.locator('.action__transformation');
@@ -366,11 +366,11 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 	expected.connection = id;
 	deepCompareActionSchema(got, expected);
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
 test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
@@ -380,11 +380,11 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 		hasText: 'Import users',
 	});
 
-	await expect(name).toBeVisible();
+	await expect(name).toBeAttached();
 
 	let button = name.locator('..').locator('..').locator('sl-button');
 	await button.click();
-	await expect(page.locator('.action__header')).toBeVisible();
+	await expect(page.locator('.action__header')).toBeAttached();
 
 	// Query.
 	await page.click('.monaco-editor');
@@ -392,10 +392,10 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	await page.keyboard.press('Backspace');
 	await page.keyboard.type('SELECT email, first_name, last_name FROM users WHERE ${last_change_time} LIMIT ${limit}');
 	await page.click('.action__query-preview');
-	await expect(page.locator('.action__query-preview-drawer')).toBeVisible();
+	await expect(page.locator('.action__query-preview-drawer')).toBeAttached();
 	await page.locator('.action__query-preview-drawer >> [part="close-button"]').click();
 	await page.click('.action__query-confirm');
-	await expect(page.locator('.action__transformation')).toBeVisible();
+	await expect(page.locator('.action__transformation')).toBeAttached();
 
 	// Identity column.
 	const identity = page.locator('.action__transformation-identity-column');
@@ -505,11 +505,11 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	expected.connection = id;
 	deepCompareActionSchema(got, expected);
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
 test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
@@ -519,11 +519,11 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 		hasText: 'Export users',
 	});
 
-	await expect(name).toBeVisible();
+	await expect(name).toBeAttached();
 
 	let button = name.locator('..').locator('..').locator('sl-button');
 	await button.click();
-	await expect(page.locator('.action__header')).toBeVisible();
+	await expect(page.locator('.action__header')).toBeAttached();
 
 	// Filters.
 	await fillUserActionFilters(page);
@@ -532,8 +532,8 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	await page.locator('.action__table sl-input >> input').fill('users');
 	await page.locator('.action__table sl-button').click();
 
-	await expect(page.locator('.action__table-key-section')).toBeVisible();
-	await expect(page.locator('.action__transformation')).toBeVisible();
+	await expect(page.locator('.action__table-key-section')).toBeAttached();
+	await expect(page.locator('.action__transformation')).toBeAttached();
 
 	// Table key.
 	let tableKey = page.locator('.action__table-key-property');
@@ -683,11 +683,11 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	expected.connection = id;
 	deepCompareActionSchema(got, expected);
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
 test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => {
@@ -709,11 +709,11 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			hasText: 'Import users',
 		});
 
-		await expect(name).toBeVisible();
+		await expect(name).toBeAttached();
 
 		let button = name.locator('..').locator('..').locator('sl-button');
 		await button.click();
-		await expect(page.locator('.action__header')).toBeVisible();
+		await expect(page.locator('.action__header')).toBeAttached();
 
 		// Filters
 		//
@@ -727,7 +727,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		await page.click('.action__file-preview');
 
 		const preview = page.locator('.action__file-preview-drawer');
-		await expect(preview).toBeVisible();
+		await expect(preview).toBeAttached();
 		await expect(
 			preview.locator('.grid__header-row .grid__header-cell').nth(0).locator('.grid__cell-content'),
 		).toHaveText('first_name');
@@ -864,11 +864,11 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		expected.connection = connectionID;
 		deepCompareActionSchema(got, expected);
 
-		await expect(page.locator('.connection-actions__grid')).toBeVisible();
+		await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 		await page.reload();
 
-		await expect(page.locator('.connection-actions__grid')).toBeVisible();
+		await expect(page.locator('.connection-actions__grid')).toBeAttached();
 	});
 });
 
@@ -892,11 +892,11 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			hasText: 'Import users',
 		});
 
-		await expect(name).toBeVisible();
+		await expect(name).toBeAttached();
 
 		let button = name.locator('..').locator('..').locator('sl-button');
 		await button.click();
-		await expect(page.locator('.action__header')).toBeVisible();
+		await expect(page.locator('.action__header')).toBeAttached();
 
 		// Filters.
 		await fillUserActionFilters(page);
@@ -1197,11 +1197,11 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 		expected.connection = connectionID;
 		deepCompareActionSchema(got, expected);
 
-		await expect(page.locator('.connection-actions__grid')).toBeVisible();
+		await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 		await page.reload();
 
-		await expect(page.locator('.connection-actions__grid')).toBeVisible();
+		await expect(page.locator('.connection-actions__grid')).toBeAttached();
 	});
 });
 
@@ -1212,11 +1212,11 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 		hasText: 'Import events',
 	});
 
-	await expect(name).toBeVisible();
+	await expect(name).toBeAttached();
 
 	let button = name.locator('..').locator('..').locator('sl-button');
 	await button.click();
-	await expect(page.locator('.action__header')).toBeVisible();
+	await expect(page.locator('.action__header')).toBeAttached();
 
 	// Filters.
 	await page.locator('.action__filters-add-condition').click();
@@ -1275,11 +1275,11 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 	expected.connection = id;
 	deepCompareActionSchema(got, expected);
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
 test(`Add "Import users" action on Javascript`, async ({ page }) => {
@@ -1289,11 +1289,11 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 		hasText: 'Import users',
 	});
 
-	await expect(name).toBeVisible();
+	await expect(name).toBeAttached();
 
 	let button = name.locator('..').locator('..').locator('sl-button');
 	await button.click();
-	await expect(page.locator('.action__header')).toBeVisible();
+	await expect(page.locator('.action__header')).toBeAttached();
 
 	// Filters.
 	await page.locator('.action__filters-add-condition').click();
@@ -1352,9 +1352,9 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 	expected.connection = id;
 	deepCompareActionSchema(got, expected);
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions__grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });

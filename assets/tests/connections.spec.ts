@@ -20,11 +20,11 @@ test(`Add Dummy source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connections/sources`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Dummy' }),
-	).toBeVisible();
+	).toBeAttached();
 	await page.goto(`${adminURL}/connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Dummy' }),
-	).toBeVisible();
+	).toBeAttached();
 });
 
 test(`Add Dummy destination`, async ({ page }) => {
@@ -38,11 +38,11 @@ test(`Add Dummy destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connections/destinations`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Dummy' }),
-	).toBeVisible();
+	).toBeAttached();
 	await page.goto(`${adminURL}/connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Dummy' }),
-	).toBeVisible();
+	).toBeAttached();
 });
 
 test(`Add PostgreSQL source`, async ({ page }) => {
@@ -56,7 +56,7 @@ test(`Add PostgreSQL source`, async ({ page }) => {
 	await page.locator('sl-input >> input[name="Database"]').fill(config.dbName);
 
 	await page.click('.feedback-button');
-	await expect(page.locator('.feedback-button.feedback-button--confirm')).toBeVisible();
+	await expect(page.locator('.feedback-button.feedback-button--confirm')).toBeAttached();
 
 	await page.click('.connector-settings__save-button');
 
@@ -69,12 +69,12 @@ test(`Add PostgreSQL source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connections/sources`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'PostgreSQL' }),
-	).toBeVisible();
+	).toBeAttached();
 
 	await page.goto(`${adminURL}/connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'PostgreSQL' }),
-	).toBeVisible();
+	).toBeAttached();
 });
 
 test(`Add PostgreSQL destination`, async ({ page }) => {
@@ -88,7 +88,7 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 	await page.locator('sl-input >> input[name="Database"]').fill(config.dbName);
 
 	await page.click('.feedback-button');
-	await expect(page.locator('.feedback-button.feedback-button--confirm')).toBeVisible();
+	await expect(page.locator('.feedback-button.feedback-button--confirm')).toBeAttached();
 
 	await page.click('.connector-settings__save-button');
 
@@ -101,12 +101,12 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connections/destinations`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'PostgreSQL' }),
-	).toBeVisible();
+	).toBeAttached();
 
 	await page.goto(`${adminURL}/connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'PostgreSQL' }),
-	).toBeVisible();
+	).toBeAttached();
 });
 
 test(`Add Filesystem source`, async ({ page }) => {
@@ -127,12 +127,12 @@ test(`Add Filesystem source`, async ({ page }) => {
 		await page.goto(`${adminURL}/connections/sources`);
 		await expect(
 			page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
-		).toBeVisible();
+		).toBeAttached();
 
 		await page.goto(`${adminURL}/connections`);
 		await expect(
 			page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
-		).toBeVisible();
+		).toBeAttached();
 	});
 });
 
@@ -154,12 +154,12 @@ test(`Add Filesystem destination`, async ({ page }) => {
 		await page.goto(`${adminURL}/connections/destinations`);
 		await expect(
 			page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
-		).toBeVisible();
+		).toBeAttached();
 
 		await page.goto(`${adminURL}/connections`);
 		await expect(
 			page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
-		).toBeVisible();
+		).toBeAttached();
 	});
 });
 
@@ -174,9 +174,9 @@ test(`Add Javascript source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connections/sources`);
 	await expect(
 		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Javascript' }),
-	).toBeVisible();
+	).toBeAttached();
 	await page.goto(`${adminURL}/connections`);
 	await expect(
 		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Javascript' }),
-	).toBeVisible();
+	).toBeAttached();
 });

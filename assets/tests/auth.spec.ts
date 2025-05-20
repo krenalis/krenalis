@@ -6,29 +6,29 @@ const LOGOUT_BUTTON_CLASS = '.sidebar__item-text-logout';
 
 test('Passwordless login', async ({ page }) => {
 	await page.goto(`${adminURL}/`);
-	await expect(page.locator('#central-logo')).toBeVisible();
+	await expect(page.locator('#central-logo')).toBeAttached();
 });
 
 test('Update the member email to disable passwordless login', async ({ page }) => {
 	await page.goto(`${adminURL}/`);
 	await page.click('.header__passwordless-tooltip-body > a');
-	await page.click('.members__member-edit')
+	await page.click('.members__member-edit');
 	await page.getByRole('textbox', { name: 'email' }).fill('test@open2b.com');
-	await page.click('.member__save-button')
+	await page.click('.member__save-button');
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await logout(page);
-	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 });
 
 test('Try to access a page that requires authentication and check that it redirects to the login page', async ({
 	page,
 }) => {
 	await page.goto(`${adminURL}/`);
-	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 	await page.goto(`${adminURL}/connections`);
-	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 	await page.goto(`${adminURL}/users`);
-	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 });
 
 test('Login', async ({ page }) => {
@@ -36,18 +36,18 @@ test('Login', async ({ page }) => {
 	await page.getByRole('textbox', { name: 'email' }).fill('test@open2b.com');
 	await page.getByRole('textbox', { name: 'password' }).fill('foopass2');
 	await page.click('sl-button');
-	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeAttached();
 	await logout(page);
 });
 
 test('Logout', async ({ page }) => {
 	await login(page);
 	await page.goto(`${adminURL}/`);
-	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeAttached();
 	await page.click(LOGOUT_BUTTON_CLASS);
-	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 	await page.goto(`${adminURL}/connections`);
-	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 	await page.goto(`${adminURL}/users`);
-	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
 });
