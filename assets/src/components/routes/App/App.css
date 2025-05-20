@@ -305,6 +305,7 @@ sl-dialog::part(body) {
 
 .app .route-content {
 	padding: 24px;
+	padding-bottom: 50px;
 	background-color: var(--bg-gray);
 	border-top-left-radius: 8px;
 	border: 1px solid #ececec;
@@ -419,4 +420,10 @@ sl-split-panel sl-icon[slot='divider'] {
 .schema-combobox-item__name {
 	opacity: 0.8;
 	font-family: var(--monospace-fonts);
+}
+
+/* Sentry */
+
+#sentry-feedback {
+	--actor-background: #29232fcc;
 }

@@ -94,6 +94,11 @@ const useApp = (
 						}
 						return breadcrumb;
 					},
+					integrations: [
+						Sentry.feedbackIntegration({
+							colorScheme: 'dark',
+						}),
+					],
 				});
 			}
 
