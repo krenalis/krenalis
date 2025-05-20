@@ -510,6 +510,12 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		return err
 	}
 
+	// Read the installation ID from the metadata.
+	err = tx.QueryRow(ctx, "SELECT value FROM metadata WHERE key = 'installation_id'").Scan(&state.metadata.InstallationID)
+	if err != nil {
+		return err
+	}
+
 	return state.notifications.Commit(ctx, tx)
 }
 

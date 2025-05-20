@@ -42,6 +42,7 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -74,12 +75,13 @@ type Core struct {
 var hasBeenCalled bool
 
 type Config struct {
-	EncryptionKey    []byte // encryption key shared by all nodes
-	DB               DBConfig
-	FunctionProvider any // must be a LambdaConfig or LocalConfig value
-	MemberEmailFrom  string
-	SMTP             SMTPConfig
-	ConnectorsOAuth  map[string]*state.ConnectorOAuth
+	EncryptionKey          []byte // encryption key shared by all nodes
+	DB                     DBConfig
+	FunctionProvider       any // must be a LambdaConfig or LocalConfig value
+	MemberEmailFrom        string
+	SMTP                   SMTPConfig
+	ConnectorsOAuth        map[string]*state.ConnectorOAuth
+	SentryTelemetryEnabled bool
 }
 
 type DBConfig struct {
@@ -180,6 +182,13 @@ func New(conf *Config) (*Core, error) {
 	core.state, err = state.New(db, conf.EncryptionKey, conf.ConnectorsOAuth)
 	if err != nil {
 		return nil, err
+	}
+
+	// Add the Meergo installation ID tag to Sentry.
+	if conf.SentryTelemetryEnabled {
+		sentry.ConfigureScope(func(scope *sentry.Scope) {
+			scope.SetTag("meergo_installation_id", core.state.InstallationID())
+		})
 	}
 
 	// Init the event operation store.

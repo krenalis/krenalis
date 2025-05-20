@@ -118,9 +118,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 
 	config := core.Config{
-		DB:              settings.DB,
-		MemberEmailFrom: settings.MemberEmailFrom,
-		SMTP:            settings.SMTP,
+		DB:                     settings.DB,
+		MemberEmailFrom:        settings.MemberEmailFrom,
+		SMTP:                   settings.SMTP,
+		SentryTelemetryEnabled: settings.SentryTelemetryEnabled,
 	}
 
 	// Choose the transformation function provider setting.

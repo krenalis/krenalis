@@ -308,3 +308,11 @@ CREATE TABLE notifications (
     payload jsonb NOT NULL,
     PRIMARY KEY (id)
 );
+
+CREATE TABLE metadata (
+    key text,
+    value text,
+    PRIMARY KEY (key)
+);
+
+INSERT INTO metadata (key, value) VALUES ('installation_id', gen_random_uuid());
