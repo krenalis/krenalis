@@ -386,7 +386,7 @@ func build(outDir, vendorDir, entryPoint string, external []string, resolve map[
 		EntryPoints:       []string{entryPoint},
 		Format:            api.FormatESModule,
 		JSX:               api.JSXAutomatic,
-		LegalComments:     api.LegalCommentsNone,
+		LegalComments:     api.LegalCommentsEndOfFile,
 		MinifyIdentifiers: true,
 		MinifySyntax:      true,
 		MinifyWhitespace:  true,

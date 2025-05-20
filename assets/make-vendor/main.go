@@ -288,7 +288,6 @@ func build(outDir, entryPoint string, plugin api.Plugin) error {
 		EntryPoints:       []string{entryPoint},
 		Format:            api.FormatESModule,
 		JSX:               api.JSXAutomatic,
-		LegalComments:     api.LegalCommentsNone,
 		MinifyIdentifiers: true,
 		MinifySyntax:      true,
 		MinifyWhitespace:  true,

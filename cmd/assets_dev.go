@@ -271,6 +271,7 @@ func watchAndBuild(entryPoint, outDir string, external []string) (esbuild.BuildC
 		Format:            esbuild.FormatESModule,
 		JSX:               esbuild.JSXAutomatic,
 		JSXDev:            true,
+		LegalComments:     esbuild.LegalCommentsEndOfFile,
 		MinifyIdentifiers: false, // It must be false for the JSX dev setting to work
 		MinifySyntax:      true,
 		MinifyWhitespace:  true,
