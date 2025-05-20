@@ -851,7 +851,7 @@ type Connection struct {
 	Strategy          *Strategy
 	SendingMode       *SendingMode
 	WebsiteHost       string
-	LinkedConnections []int
+	LinkedConnections []int // It’s nil if events aren’t supported or if there are no linked connections.
 	Keys              []string
 	Settings          []byte
 	UsersQuery        string

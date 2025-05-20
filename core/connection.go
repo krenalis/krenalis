@@ -2174,6 +2174,10 @@ func validateLinkedConnections(connections []int, c *state.Connector, ws *state.
 		if !c.SourceTargets.Contains(state.Events) {
 			return errors.BadRequest("connector %s, used as destination, does not support event connections", c.Name)
 		}
+	} else {
+		if !c.DestinationTargets.Contains(state.Events) {
+			return errors.BadRequest("connector %s, used as source, does not support event connections", c.Name)
+		}
 	}
 	for i, id := range connections {
 		if id < 1 || id > maxInt32 {
