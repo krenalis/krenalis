@@ -283,6 +283,33 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	return err
 }
 
+// AddOrganization adds a new organization and returns its identifier.
+// name cannot be empty and cannot be longer than 45 runes.
+func (core *Core) AddOrganization(ctx context.Context, name string) (int, error) {
+	core.mustBeOpen()
+	if err := util.ValidateStringField("name", name, 45); err != nil {
+		return 0, errors.BadRequest("%s", err)
+	}
+	var id int
+	err := core.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1)").Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// APIKey returns the organization and workspace identifiers associated with the
+// provided API key token. If the API key is not restricted to a workspace, the
+// workspace identifier will be 0. The boolean return value indicates whether
+// the token exists.
+func (core *Core) APIKey(token string) (int, int, bool) {
+	key, ok := core.state.APIKeyByToken(token)
+	if !ok {
+		return 0, 0, false
+	}
+	return key.Organization, key.Workspace, true
+}
+
 // ChangeMemberPasswordByToken changes the password of a member with the given
 // reset password token. password's length must be at least 8 character long.
 //
@@ -322,33 +349,6 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 		return nil, err
 	})
 	return err
-}
-
-// AddOrganization adds a new organization and returns its identifier.
-// name cannot be empty and cannot be longer than 45 runes.
-func (core *Core) AddOrganization(ctx context.Context, name string) (int, error) {
-	core.mustBeOpen()
-	if err := util.ValidateStringField("name", name, 45); err != nil {
-		return 0, errors.BadRequest("%s", err)
-	}
-	var id int
-	err := core.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1)").Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
-}
-
-// APIKey returns the organization and workspace identifiers associated with the
-// provided API key token. If the API key is not restricted to a workspace, the
-// workspace identifier will be 0. The boolean return value indicates whether
-// the token exists.
-func (core *Core) APIKey(token string) (int, int, bool) {
-	key, ok := core.state.APIKeyByToken(token)
-	if !ok {
-		return 0, 0, false
-	}
-	return key.Organization, key.Workspace, true
 }
 
 // Close closes the Core. When Close is called, no other calls to Core's methods
@@ -554,34 +554,6 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 	return organization.Name, email, nil
 }
 
-// ValidateMemberPasswordResetToken validates the given password reset token.
-//
-// If a password reset request with the the given password reset token does not
-// exist or if the token is expired, it returns a NotFoundError error.
-func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) error {
-	core.mustBeOpen()
-	if !isValidMemberToken(token) {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
-	}
-	var organizationID int
-	var createdAt time.Time
-	err := core.db.QueryRow(ctx, "SELECT organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&organizationID, &createdAt)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return errors.NotFound("reset password token %q does not exist or is expired", token)
-		}
-		return err
-	}
-	if isResetPasswordTokenExpired(createdAt) {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
-	}
-	_, ok := core.state.Organization(organizationID)
-	if !ok {
-		return errors.NotFound("reset password token %q does not exist or is expired", token)
-	}
-	return nil
-}
-
 // Organization returns the organization with identifier id.
 //
 // It returns an errors.NotFound error if the organization does not exist.
@@ -648,6 +620,34 @@ func (core *Core) Organizations(ctx context.Context, order OrganizationSort, fir
 func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	core.mustBeOpen()
 	core.events.collector.ServeHTTP(w, r)
+}
+
+// ValidateMemberPasswordResetToken validates the given password reset token.
+//
+// If a password reset request with the the given password reset token does not
+// exist or if the token is expired, it returns a NotFoundError error.
+func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) error {
+	core.mustBeOpen()
+	if !isValidMemberToken(token) {
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
+	}
+	var organizationID int
+	var createdAt time.Time
+	err := core.db.QueryRow(ctx, "SELECT organization, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&organizationID, &createdAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.NotFound("reset password token %q does not exist or is expired", token)
+		}
+		return err
+	}
+	if isResetPasswordTokenExpired(createdAt) {
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
+	}
+	_, ok := core.state.Organization(organizationID)
+	if !ok {
+		return errors.NotFound("reset password token %q does not exist or is expired", token)
+	}
+	return nil
 }
 
 // DataTransformation represents transformation passed to (*Core).TransformData

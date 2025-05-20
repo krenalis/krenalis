@@ -40,6 +40,22 @@ func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 	return nil, err
 }
 
+// ChangeMemberPasswordByToken changes the password of a member with the given
+// reset password token.
+//
+// Login is not required to call ChangeMemberPasswordByToken.
+func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Request) (any, error) {
+	var body struct {
+		Password string `json:"password"`
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = api.core.ChangeMemberPasswordByToken(r.Context(), r.PathValue("token"), body.Password)
+	return nil, err
+}
+
 // Connector returns a connector.
 func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
@@ -159,22 +175,6 @@ func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.R
 		return nil, err
 	}
 	return nil, nil
-}
-
-// ChangeMemberPasswordByToken changes the password of a member with the given
-// reset password token.
-//
-// Login is not required to call ChangeMemberPasswordByToken.
-func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Request) (any, error) {
-	var body struct {
-		Password string `json:"password"`
-	}
-	err := json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = api.core.ChangeMemberPasswordByToken(r.Context(), r.PathValue("token"), body.Password)
-	return nil, err
 }
 
 // JavaScriptSDKURL returns the URL that serves the JavaScript SDK.

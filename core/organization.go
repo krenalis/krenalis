@@ -452,62 +452,6 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	return err
 }
 
-// SendMemberPasswordReset sends a reset password email to the given email
-// address using the given template.
-//
-// It returns an errors.UnprocessableError error with code
-//   - EmailSendFailed, if emails cannot be sent.
-func (this *Organization) SendMemberPasswordReset(ctx context.Context, email string, emailTemplate string) error {
-	this.core.mustBeOpen()
-	err := validateMemberEmail(email)
-	if err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	resetToken, err := generateMemberToken()
-	if err != nil {
-		return err
-	}
-	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
-		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
-	}
-	now := time.Now().UTC()
-	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
-		if err != nil {
-			return nil, err
-		}
-		if !exists {
-			return nil, errResetPasswordTokenNotExist
-		}
-		_, err = tx.Exec(
-			ctx,
-			`UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2 WHERE organization = $3 AND email = $4`,
-			resetToken,
-			now,
-			this.organization.ID,
-			email,
-		)
-		return nil, err
-	})
-	if err != nil {
-		if err == errResetPasswordTokenNotExist {
-			// Do not return errors so that non-logged in users cannot
-			// tell if the email exists or not.
-			return nil
-		}
-		return err
-	}
-	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
-	emailToSend := &emailToSend{
-		From:     this.core.memberEmailFrom,
-		Subject:  "Your Meergo password reset",
-		To:       email,
-		BodyHTML: []byte(t),
-	}
-	err = sendMail(emailToSend, this.core.smtp)
-	return err
-}
-
 // Member returns the organization's member with identifier id.
 // If the member does not exist, it returns an errors.NotFound error.
 func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
@@ -576,6 +520,62 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 		return nil, err
 	}
 	return members, nil
+}
+
+// SendMemberPasswordReset sends a reset password email to the given email
+// address using the given template.
+//
+// It returns an errors.UnprocessableError error with code
+//   - EmailSendFailed, if emails cannot be sent.
+func (this *Organization) SendMemberPasswordReset(ctx context.Context, email string, emailTemplate string) error {
+	this.core.mustBeOpen()
+	err := validateMemberEmail(email)
+	if err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	resetToken, err := generateMemberToken()
+	if err != nil {
+		return err
+	}
+	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
+		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
+	}
+	now := time.Now().UTC()
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, errResetPasswordTokenNotExist
+		}
+		_, err = tx.Exec(
+			ctx,
+			`UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2 WHERE organization = $3 AND email = $4`,
+			resetToken,
+			now,
+			this.organization.ID,
+			email,
+		)
+		return nil, err
+	})
+	if err != nil {
+		if err == errResetPasswordTokenNotExist {
+			// Do not return errors so that non-logged in users cannot
+			// tell if the email exists or not.
+			return nil
+		}
+		return err
+	}
+	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(resetToken))
+	emailToSend := &emailToSend{
+		From:     this.core.memberEmailFrom,
+		Subject:  "Your Meergo password reset",
+		To:       email,
+		BodyHTML: []byte(t),
+	}
+	err = sendMail(emailToSend, this.core.smtp)
+	return err
 }
 
 // TestWorkspaceCreation tests a workspace creation. It tests that a warehouse
