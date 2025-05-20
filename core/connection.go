@@ -1376,7 +1376,7 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 
 // LinkConnection links the connection (which must be a website, mobile, or
 // server connection) to the connection identified by dst, which must be a
-// destination app connection that supports events. If the two connections are
+// destination connection that supports events. If the two connections are
 // already linked, this method does nothing.
 //
 // Returns an errors.NotFoundError if the destination connection does not exist.
@@ -1399,11 +1399,9 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	ws := this.connection.Workspace()
 	if c, ok := ws.Connection(dst); !ok {
 		return errors.NotFound("connection %d does not exist", dst)
-	} else if c.Role == state.Source {
+	} else if c.Role != state.Destination {
 		return errors.BadRequest("connection %d is not a destination", dst)
-	} else if connector := c.Connector(); connector.Type != state.App {
-		return errors.BadRequest("destination %d is not an app", dst)
-	} else if !connector.DestinationTargets.Contains(state.Events) {
+	} else if connector := c.Connector(); !connector.DestinationTargets.Contains(state.Events) {
 		return errors.BadRequest("destination %d does not support events", dst)
 	}
 	n := state.LinkConnection{
@@ -1793,8 +1791,8 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 
 // UnlinkConnection unlinks the connection (which must be a website, mobile, or
 // server connection) from the connection identified by dst, which must be a
-// destination app connection that supports events. If the two connections are
-// not linked, this method does nothing.
+// destination connection that supports events. If the two connections are not
+// linked, this method does nothing.
 //
 // If the destination connection does not exist, it returns an
 // errors.NotFoundError.
@@ -1819,9 +1817,7 @@ func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
 		return errors.NotFound("connection %d does not exist", dst)
 	} else if c.Role == state.Source {
 		return errors.BadRequest("connection %d is not a destination", dst)
-	} else if connector := c.Connector(); connector.Type != state.App {
-		return errors.BadRequest("destination %d is not an app", dst)
-	} else if !connector.DestinationTargets.Contains(state.Events) {
+	} else if connector := c.Connector(); !connector.DestinationTargets.Contains(state.Events) {
 		return errors.BadRequest("destination %d does not support events", dst)
 	}
 
