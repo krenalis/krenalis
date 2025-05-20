@@ -130,7 +130,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	if settings.Transformations.Local.NodeExecutable != "" || settings.Transformations.Local.PythonExecutable != "" {
 		if config.FunctionProvider != nil {
-			return errors.New("cannot specify both the Lambda and the local transformation provider in the configuration (hint: check the environment variables passed to Meergo)")
+			return errors.New("meergo environment variables cannot specify both the Lambda and the local transformation")
 		}
 		config.FunctionProvider = core.LocalConfig(settings.Transformations.Local)
 	}
@@ -142,16 +142,16 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 				continue
 			}
 			if setting.ClientID == "" {
-				return fmt.Errorf("OAuth clientID value for connector %q cannot be empty (hint: check the environment variables passed to Meergo)", name)
+				return fmt.Errorf("OAuth clientID value provided in meergo environment variables for connector %q cannot be empty", name)
 			}
-			return fmt.Errorf("OAuth clientSecret value for connector %q cannot be empty (hint: check the environment variables passed to Meergo)", name)
+			return fmt.Errorf("OAuth clientSecret value provided in meergo environment variables for connector %q cannot be empty", name)
 		}
 		config.ConnectorsOAuth = maps.Clone(settings.OAuth)
 	}
 
 	// Decode the encryption key.
 	if settings.EncryptionKey == "" {
-		return errors.New("encryption key is missing from the configuration file")
+		return errors.New("encryption key not provided with meergo environment variables")
 	}
 	if padding := len(settings.EncryptionKey) % 4; padding > 0 {
 		settings.EncryptionKey += strings.Repeat("=", 4-padding)
@@ -159,10 +159,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	var err error
 	config.EncryptionKey, err = base64.StdEncoding.DecodeString(settings.EncryptionKey)
 	if err != nil {
-		return errors.New("encryption key in the configuration file is not in Base64 format")
+		return errors.New("encryption key provided with meergo environment variables is not in Base64 format")
 	}
 	if len(config.EncryptionKey) != 64 {
-		return fmt.Errorf("encryption key in the configuration file is not 64 bytes long, but %d", len(config.EncryptionKey))
+		return fmt.Errorf("encryption key provided with meergo environment variables is not 64 bytes long, but %d", len(config.EncryptionKey))
 	}
 
 	core, err := core.New(&config)
