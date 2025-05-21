@@ -1045,6 +1045,7 @@ func (state *State) setActionStatus(n notification) {
 	state.replaceAction(e.ID, func(a *Action) {
 		a.Enabled = e.Enabled
 	})
+	dispatchNotification(state, e)
 }
 
 // SetConnectionSettings is the event sent when the settings of a connection is
