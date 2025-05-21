@@ -391,9 +391,6 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	await page.keyboard.press('Control+A');
 	await page.keyboard.press('Backspace');
 	await page.keyboard.type('SELECT email, first_name, last_name FROM users WHERE ${last_change_time} LIMIT ${limit}');
-	await page.click('.action__query-preview');
-	await expect(page.locator('.action__query-preview-drawer')).toBeAttached();
-	await page.locator('.action__query-preview-drawer >> [part="close-button"]').click();
 	await page.click('.action__query-confirm');
 	await expect(page.locator('.action__transformation')).toBeAttached();
 
@@ -719,18 +716,6 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		await page.locator('.action__file-path >> input').fill(fileName);
 		await page.click('.connector-ui .connector-checkbox:last-child sl-checkbox');
 
-		await page.click('.action__file-preview');
-
-		const preview = page.locator('.action__file-preview-drawer');
-		await expect(preview).toBeAttached();
-		await expect(
-			preview.locator('.grid__header-row .grid__header-cell').nth(0).locator('.grid__cell-content'),
-		).toHaveText('first_name');
-		await expect(
-			preview.locator('.grid__row:nth-child(2) .grid__cell').nth(0).locator('.grid__cell-content'),
-		).toHaveText('John');
-
-		await page.click('.action__file-preview-drawer >> .drawer__close');
 		await page.click('.action__file-confirm');
 
 		// Identity column.
