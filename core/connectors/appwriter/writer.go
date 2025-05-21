@@ -201,6 +201,7 @@ func (w *Writer) compact() {
 	for i < len(w.records) && w.records[i].properties == nil {
 		i++
 	}
+	clear(w.records[:i])
 	w.records = append(w.records[:0], w.records[i:]...)
 	if w.iterator != nil {
 		w.iterator.index = max(0, w.iterator.index-i)
