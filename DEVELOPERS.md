@@ -66,6 +66,8 @@ Here are some key points about **how Meergo sends telemetry data to Sentry**:
 
 * **Admin stack traces are available only under certain conditions**. The ability to see stack traces of admin errors in Sentry only exists if (1) Meergo is running in production mode (i.e., non-dev mode) and (2) the Meergo assets are unchanged from any commit in the repository, for which the GitHub Action sent source maps with Debug IDs to sentry. So, in any other case, the errors displayed on Sentry may not show a correct stack trace.
 
+* **Admin errors are sent to Sentry through a server tunnel**. This avoids the problem of adblockers blocking data from being sent directly to Sentry. This is not a problem for the user, as they can disable telemetry at any time through the environment variable.
+
 ## Expose and see Meergo metrics
 
 1. **Enable metrics** by setting to `true` the `Enabled` constant in file `metrics/metrics.go`

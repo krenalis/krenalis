@@ -180,7 +180,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
 	}
 
-	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled, javaScriptSDKURL, eventURL, externalURL, settings.SkipMemberEmailVerification, settings.SentryTelemetryEnabled)
+	errorReportingTunnel := newErrorReportingTunnel()
+	defer errorReportingTunnel.Close()
+
+	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled,
+		javaScriptSDKURL, eventURL, externalURL, settings.SkipMemberEmailVerification,
+		settings.SentryTelemetryEnabled, errorReportingTunnel)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {

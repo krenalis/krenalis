@@ -61,13 +61,16 @@ type apisServer struct {
 	externalURL                 string
 	skipMemberEmailVerification bool
 	sentryTelemetryEnabled      bool
+	errorReportingTunnel        *errorReportingTunnel
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
 // Core. encryptionKey is the key used to encrypt the session cookie.
 // runsOnHTTPs indicates if the server runs on HTTPS.
 // It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool, sentryTelemetryEnabled bool) *apisServer {
+func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool,
+	javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool,
+	sentryTelemetryEnabled bool, errorReportingTunnel *errorReportingTunnel) *apisServer {
 
 	if len(encryptionKey) != 64 {
 		panic("encryptionKey is not 64 bytes long")
@@ -81,6 +84,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, java
 		externalURL:                 externalURL,
 		skipMemberEmailVerification: skipMemberEmailVerification,
 		sentryTelemetryEnabled:      sentryTelemetryEnabled,
+		errorReportingTunnel:        errorReportingTunnel,
 	}
 
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
@@ -174,12 +178,13 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool, java
 		"POST   /keys":                                           organization.CreateAPIKey, /* only admin */
 		"POST   /members":                                        organization.AddMember,    /* only admin */
 		"POST   /members/invitations":                            organization.InviteMember, /* only admin */
-		"POST   /members/login":                                  s.login,                   /* only admin */
-		"POST   /members/logout":                                 s.logout,                  /* only admin */
-		"POST   /transformations":                                api.TransformData,         /* only admin */
-		"POST   /ui":                                             workspace.ServeUI,         /* only admin */
-		"POST   /ui-event":                                       workspace.ServeUI,         /* only admin */
-		"POST   /validate-expression":                            api.ValidateExpression,    /* only admin */
+		"POST   /members/login":                                  s.login,
+		"POST   /members/logout":                                 s.logout,               /* only admin */
+		"POST   /reporting/errors":                               s.reportError,          /* only admin */
+		"POST   /transformations":                                api.TransformData,      /* only admin */
+		"POST   /ui":                                             workspace.ServeUI,      /* only admin */
+		"POST   /ui-event":                                       workspace.ServeUI,      /* only admin */
+		"POST   /validate-expression":                            api.ValidateExpression, /* only admin */
 		"POST   /warehouse/repair":                               workspace.RepairWarehouse,
 		"POST   /workspaces":                                     organization.CreateWorkspace,
 		"POST   /workspaces/test":                                organization.TestWorkspaceCreation,
@@ -504,6 +509,22 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 		}
 		header.Add("Set-Cookie", v+"; Priority=High")
 	}
+	return nil, nil
+}
+
+// reportError reports to Sentry the error specified in the given request.
+// If the user is not logged in, this method does nothing.
+func (s *apisServer) reportError(w http.ResponseWriter, r *http.Request) (any, error) {
+	// Check if the user is logged. If not, discard the reported errors.
+	organization := organization{s}
+	_, _, err := organization.memberCredentials(r)
+	if err != nil {
+		if _, ok := err.(*errors.UnauthorizedError); ok {
+			return nil, nil
+		}
+		return nil, err
+	}
+	s.errorReportingTunnel.ServeHTTP(w, r)
 	return nil, nil
 }
 
