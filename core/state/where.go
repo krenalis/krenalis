@@ -28,6 +28,12 @@ type Where struct {
 
 // Equal reports whether the receiver is equal to w.
 func (where *Where) Equal(w *Where) bool {
+	if where == nil && w == nil {
+		return true
+	}
+	if where == nil || w == nil {
+		return false
+	}
 	if where.Logical != w.Logical {
 		return false
 	}

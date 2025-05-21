@@ -183,64 +183,79 @@ func Test_unmarshalWhere(t *testing.T) {
 func Test_Where_Equal(t *testing.T) {
 
 	tests := []struct {
-		w1, w2 Where
+		w1, w2 *Where
 		equal  bool
 	}{
 		{
-			w1:    Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsNull}}},
-			w2:    Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsNull}}},
+			w1:    nil,
+			w2:    nil,
 			equal: true,
 		},
 		{
-			w1:    Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIs, Values: []any{5}}}},
-			w2:    Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIs, Values: []any{5}}}},
+			w1:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsNull}}},
+			w2:    nil,
+			equal: false,
+		},
+		{
+			w1:    nil,
+			w2:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsNull}}},
+			equal: false,
+		},
+		{
+			w1:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsNull}}},
+			w2:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsNull}}},
 			equal: true,
 		},
 		{
-			w1:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"x", "y"}, Operator: OpIsBetween, Values: []any{time.Date(2025, 01, 01, 12, 30, 0, 0, time.UTC), time.Date(2025, 12, 31, 16, 45, 12, 0, time.UTC)}}}},
-			w2:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"x", "y"}, Operator: OpIsBetween, Values: []any{time.Date(2025, 01, 01, 12, 30, 0, 0, time.UTC), time.Date(2025, 12, 31, 16, 45, 12, 0, time.UTC)}}}},
+			w1:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIs, Values: []any{5}}}},
+			w2:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIs, Values: []any{5}}}},
 			equal: true,
 		},
 		{
-			w1:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"c"}, Operator: OpIs, Values: []any{decimal.MustParse("12.89")}}}},
-			w2:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"c"}, Operator: OpIs, Values: []any{decimal.MustParse("12.89")}}}},
+			w1:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"x", "y"}, Operator: OpIsBetween, Values: []any{time.Date(2025, 01, 01, 12, 30, 0, 0, time.UTC), time.Date(2025, 12, 31, 16, 45, 12, 0, time.UTC)}}}},
+			w2:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"x", "y"}, Operator: OpIsBetween, Values: []any{time.Date(2025, 01, 01, 12, 30, 0, 0, time.UTC), time.Date(2025, 12, 31, 16, 45, 12, 0, time.UTC)}}}},
 			equal: true,
 		},
 		{
-			w1:    Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsFalse}}},
-			w2:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsFalse}}},
+			w1:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"c"}, Operator: OpIs, Values: []any{decimal.MustParse("12.89")}}}},
+			w2:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"c"}, Operator: OpIs, Values: []any{decimal.MustParse("12.89")}}}},
+			equal: true,
+		},
+		{
+			w1:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsFalse}}},
+			w2:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsFalse}}},
 			equal: false,
 		},
 		{
-			w1:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsFalse}}},
-			w2:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIsFalse}}},
+			w1:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsFalse}}},
+			w2:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIsFalse}}},
 			equal: false,
 		},
 		{
-			w1:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsFalse}}},
-			w2:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsTrue}}},
+			w1:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsFalse}}},
+			w2:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"a"}, Operator: OpIsTrue}}},
 			equal: false,
 		},
 		{
-			w1:    Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIs, Values: []any{"foo"}}}},
-			w2:    Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIs, Values: []any{"foo", "boo"}}}},
+			w1:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIs, Values: []any{"foo"}}}},
+			w2:    &Where{Logical: OpAnd, Conditions: []WhereCondition{{Property: []string{"b"}, Operator: OpIs, Values: []any{"foo", "boo"}}}},
 			equal: false,
 		},
 		{
-			w1:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"x", "y"}, Operator: OpIsBetween, Values: []any{time.Date(2025, 01, 01, 12, 30, 0, 0, time.UTC), time.Date(2025, 12, 31, 15, 45, 12, 0, time.UTC)}}}},
-			w2:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"x", "y"}, Operator: OpIsBetween, Values: []any{time.Date(2025, 01, 01, 12, 30, 0, 0, time.UTC), time.Date(2025, 12, 31, 16, 45, 12, 0, time.UTC)}}}},
+			w1:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"x", "y"}, Operator: OpIsBetween, Values: []any{time.Date(2025, 01, 01, 12, 30, 0, 0, time.UTC), time.Date(2025, 12, 31, 15, 45, 12, 0, time.UTC)}}}},
+			w2:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"x", "y"}, Operator: OpIsBetween, Values: []any{time.Date(2025, 01, 01, 12, 30, 0, 0, time.UTC), time.Date(2025, 12, 31, 16, 45, 12, 0, time.UTC)}}}},
 			equal: false,
 		},
 		{
-			w1:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"c"}, Operator: OpIs, Values: []any{decimal.MustParse("39.05")}}}},
-			w2:    Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"c"}, Operator: OpIs, Values: []any{decimal.MustParse("12.89")}}}},
+			w1:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"c"}, Operator: OpIs, Values: []any{decimal.MustParse("39.05")}}}},
+			w2:    &Where{Logical: OpOr, Conditions: []WhereCondition{{Property: []string{"c"}, Operator: OpIs, Values: []any{decimal.MustParse("12.89")}}}},
 			equal: false,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			equal := test.w1.Equal(&test.w2)
+			equal := test.w1.Equal(test.w2)
 			if test.equal != equal {
 				t.Fatalf("expected equal %t, got %t", test.equal, equal)
 			}
