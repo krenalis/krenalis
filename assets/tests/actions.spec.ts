@@ -715,11 +715,6 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		await button.click();
 		await expect(page.locator('.action__header')).toBeAttached();
 
-		// Filters
-		//
-		// TODO: currently there is an unhandled error when using the
-		// filters of this type of action (see issue #1139).
-
 		// File
 		await page.locator('.action__file-path >> input').fill(fileName);
 		await page.click('.connector-ui .connector-checkbox:last-child sl-checkbox');
