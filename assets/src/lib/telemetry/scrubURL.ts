@@ -86,7 +86,7 @@ const REQUEST_PATTERNS = [
 	'/members/current',
 	'/members/invitations/!token',
 	'/members/reset-password/!token',
-	'/sentry-telemetry-enabled',
+	'/reporting/errors/enabled',
 	'/skip-member-email-verification',
 	'/transformation-languages',
 	'/users',

@@ -103,8 +103,8 @@ class API {
 		});
 	};
 
-	sentryTelemetryEnabled = async (): Promise<boolean> => {
-		return await call(`${this.apiURL}/sentry-telemetry-enabled`, http.GET);
+	reportingErrorsEnabled = async (): Promise<boolean> => {
+		return await call(`${this.apiURL}/reporting/errors/enabled`, http.GET);
 	};
 
 	skipMemberEmailVerification = async (): Promise<boolean> => {

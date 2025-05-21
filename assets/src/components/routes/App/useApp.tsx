@@ -61,16 +61,16 @@ const useApp = (
 
 	useEffect(() => {
 		const loadAppState = async () => {
-			// Check if Sentry telemetry is enabled.
-			let isSentryTelemetryEnabled: boolean = false;
+			// Check if Sentry errors reporting is enabled.
+			let reportingErrorsEnabled: boolean = false;
 			try {
-				isSentryTelemetryEnabled = await api.sentryTelemetryEnabled();
+				reportingErrorsEnabled = await api.reportingErrorsEnabled();
 			} catch (err) {
 				handleError(err);
 				setIsLoadingState(false);
 				return;
 			}
-			if (isSentryTelemetryEnabled) {
+			if (reportingErrorsEnabled) {
 				Sentry.init({
 					dsn: 'https://4bc227ec8dc487e9bae1f3aea7f3ede1@o4509282180136960.ingest.de.sentry.io/4509292547211344',
 					tunnel: '/api/v1/reporting/errors',
