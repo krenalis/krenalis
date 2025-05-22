@@ -26,44 +26,59 @@ import (
 // In case of a validation error, this function panics.
 func validateAppConnector(app AppInfo) {
 
-	// TODO(Gianluca): Groups are currently not supported, see
-	// https://github.com/meergo/meergo/issues/895.
-	if (app.AsSource != nil && app.AsSource.Targets&GroupsTarget != 0) ||
-		(app.AsDestination != nil && app.AsDestination.Targets&GroupsTarget != 0) {
-		panic("target Groups is not supported by this installation of Meergo (see https://github.com/meergo/meergo/issues/895)")
+	if app.AsSource == nil && app.AsDestination == nil {
+		panic(fmt.Sprintf("connector %s: AppInfo must include at least the AsSource and AsDestination fields", app.Name))
 	}
 
 	if app.AsSource != nil {
-		if app.AsSource.Targets&UsersTarget != 0 {
+		targets := app.AsSource.Targets
+		if targets == 0 || (targets&^(UsersTarget|GroupsTarget)) != 0 {
+			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible values are meergo.UsersTarget, meergo.GroupsTarget, or a combination of them using the bitwise OR operator", app.Name))
+		}
+		if targets&UsersTarget != 0 {
 			iface := reflect.TypeFor[interface {
-				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
+				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 			}]()
 			if !app.ct.Implements(iface) {
-				panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", app.Name))
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
+		}
+		if targets&GroupsTarget != 0 {
+			// TODO(Gianluca): Groups are currently not supported, see
+			// https://github.com/meergo/meergo/issues/895.
+			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target includes GroupsTarget, but groups are currently not supported by Meergo (see https://github.com/meergo/meergo/issues/895).", app.Name))
 		}
 	}
 
 	if app.AsDestination != nil {
-		if app.AsDestination.Targets&UsersTarget != 0 {
+		targets := app.AsDestination.Targets
+		if targets == 0 || (targets&^(EventsTarget|UsersTarget|GroupsTarget)) != 0 {
+			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.EventsTarget, meergo.UsersTarget, meergo.GroupsTarget, or a combination of them using the bitwise OR operator", app.Name))
+		}
+		if targets&UsersTarget != 0 {
 			iface := reflect.TypeFor[interface {
+				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
 				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 				Upsert(ctx context.Context, target Targets, records Records) error
-				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
 			}]()
 			if !app.ct.Implements(iface) {
-				panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", app.Name))
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
 		}
-		if app.AsDestination.Targets&EventsTarget != 0 {
+		if targets&GroupsTarget != 0 {
+			// TODO(Gianluca): Groups are currently not supported, see
+			// https://github.com/meergo/meergo/issues/895.
+			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target includes GroupsTarget, but groups are currently not supported by Meergo (see https://github.com/meergo/meergo/issues/895).", app.Name))
+		}
+		if targets&EventsTarget != 0 {
 			iface := reflect.TypeFor[interface {
 				EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
 				EventTypes(ctx context.Context) ([]*EventType, error)
 				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 			}]()
 			if !app.ct.Implements(iface) {
-				panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", app.Name))
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
 			if app.AsDestination.SendingMode == None {
 				panic(fmt.Sprintf("connector %s is declared to support Events as destination, but it does not specify a sending mode", app.Name))
@@ -74,7 +89,7 @@ func validateAppConnector(app AppInfo) {
 	if app.Terms.User != "" || app.Terms.Users != "" {
 		if (app.AsSource == nil || app.AsSource.Targets&UsersTarget == 0) &&
 			(app.AsDestination == nil || app.AsDestination.Targets&UsersTarget == 0) {
-			panic(fmt.Sprintf("connector %s cannot specify a term for user and/or users"+
+			panic(fmt.Sprintf("connector %s: cannot specify a term for user and/or users"+
 				" if it does not support the Users target neither as source nor as destination", app.Name))
 		}
 	}
@@ -82,18 +97,26 @@ func validateAppConnector(app AppInfo) {
 	if app.Terms.Group != "" || app.Terms.Groups != "" {
 		if (app.AsSource == nil || app.AsSource.Targets&GroupsTarget == 0) &&
 			(app.AsDestination == nil || app.AsDestination.Targets&GroupsTarget == 0) {
-			panic(fmt.Sprintf("connector %s cannot specify a term for group and/or groups"+
+			panic(fmt.Sprintf("connector %s: cannot specify a term for group and/or groups"+
 				" if it does not support the Groups target neither as source nor as destination", app.Name))
 		}
 	}
 
-	if (app.AsSource != nil && app.AsSource.HasSettings) ||
-		(app.AsDestination != nil && app.AsDestination.HasSettings) {
+	var hasSourceSettings = app.AsSource != nil && app.AsSource.HasSettings
+	var hasDestinationSettings = app.AsDestination != nil && app.AsDestination.HasSettings
+	if hasSourceSettings || hasDestinationSettings {
 		iface := reflect.TypeFor[interface {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if !app.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", app.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
+		}
+	} else if !hasSourceSettings && !hasDestinationSettings {
+		iface := reflect.TypeFor[interface {
+			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
+		}]()
+		if app.ct.Implements(iface) {
+			panic(fmt.Sprintf("connector %s: ServeUI is implemented, but neither app.AsSource.HasSettings nor app.AsDestination.HasSettings is set to true", app.Name))
 		}
 	}
 
@@ -102,7 +125,7 @@ func validateAppConnector(app AppInfo) {
 			OAuthAccount(ctx context.Context) (string, error)
 		}]()
 		if !app.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", app.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 		}
 	}
 
@@ -111,7 +134,7 @@ func validateAppConnector(app AppInfo) {
 			ReceiveWebhook(r *http.Request, role Role) ([]WebhookPayload, error)
 		}]()
 		if !app.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", app.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 		}
 	}
 
@@ -132,7 +155,7 @@ func validateDatabaseConnector(database DatabaseInfo) {
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 	}]()
 	if !database.ct.Implements(iface) {
-		panic(fmt.Sprintf("the Database connector %s does not implement the required methods", database.Name))
+		panic(fmt.Sprintf("connector %s: it does not implement the required methods", database.Name))
 	}
 }
 
@@ -148,7 +171,7 @@ func validateFileConnector(file FileInfo) {
 			Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", file.Name))
+			panic(fmt.Sprintf("connector %s: inconsistency between the declared functionalities and the methods it actually implements", file.Name))
 		}
 	}
 
@@ -158,7 +181,7 @@ func validateFileConnector(file FileInfo) {
 			ContentType(ctx context.Context) string
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", file.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Name))
 		}
 	}
 
@@ -167,7 +190,7 @@ func validateFileConnector(file FileInfo) {
 			Sheets(ctx context.Context, r io.Reader) ([]string, error)
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", file.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Name))
 		}
 	}
 
@@ -177,7 +200,7 @@ func validateFileConnector(file FileInfo) {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", file.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Name))
 		}
 	}
 
@@ -195,7 +218,7 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 	}]()
 	if !fileStorage.ct.Implements(iface) {
-		panic(fmt.Sprintf("the FileStorage connector %s does not implement the minimum required methods", fileStorage.Name))
+		panic(fmt.Sprintf("connector %s: it does not implement the minimum required methods", fileStorage.Name))
 	}
 
 	if fileStorage.AsSource {
@@ -203,7 +226,7 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 			Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 		}]()
 		if !fileStorage.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", fileStorage.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Name))
 		}
 	}
 
@@ -212,7 +235,7 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 			Write(ctx context.Context, r io.Reader, name, contentType string) error
 		}]()
 		if !fileStorage.ct.Implements(iface) {
-			panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", fileStorage.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Name))
 		}
 	}
 
@@ -230,6 +253,6 @@ func validateStreamConnector(stream StreamInfo) {
 		Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error
 	}]()
 	if !stream.ct.Implements(iface) {
-		panic(fmt.Sprintf("the Stream connector %s does not implement the required methods", stream.Name))
+		panic(fmt.Sprintf("connector %s: it does not implement the required methods", stream.Name))
 	}
 }
