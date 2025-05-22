@@ -21,10 +21,6 @@
 	gap: 30px;
 }
 
-.connectors-list__connectors .card {
-	width: calc(33.333333% - 20px);
-}
-
 .connectors-list__no-connector {
 	text-align: center;
 	width: 100%;
@@ -36,8 +32,86 @@
 	margin-top: 30px;
 	font-size: 17px;
 	opacity: 0.7;
+	max-width: 1200px;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .connectors-list__no-connector sl-icon {
 	font-size: 30px;
+}
+
+.connectors-list__connectors {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+}
+
+.connectors-list__card {
+	background-color: var(--bg-primary);
+	padding: 50px;
+	border-radius: var(--radius);
+	box-shadow: var(--sl-shadow-small);
+	text-align: center;
+	border: 1px solid var(--sl-color-neutral-200);
+	transition:
+		background-color 0.3s,
+		border 0.3s;
+	cursor: pointer;
+}
+
+.connectors-list__card--disabled {
+	cursor: default;
+}
+
+.connectors-list__card:hover {
+	background-color: var(--sl-color-primary-50);
+	border: 1px solid var(--sl-color-primary-600);
+}
+
+.connectors-list__card--disabled:hover {
+	background-color: var(--sl-color-neutral-100);
+	border: 1px solid var(--sl-color-neutral-600);
+}
+
+.connectors-list__card-logo > svg {
+	max-height: 70px;
+	width: auto;
+	padding: 5px;
+	margin: 0 auto 30px auto;
+}
+
+.connectors-list__card-unknown-logo {
+	background-color: var(--bg-gray);
+	color: var(--text-primary);
+	width: 60px;
+	height: 60px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius);
+	margin: 0 auto 30px auto;
+	font-size: 22px;
+}
+
+.connectors-list__card-name {
+	font-weight: 600;
+}
+
+.connectors-list__card-type {
+	margin-top: 10px;
+}
+
+.connectors-list__card-description {
+	margin-top: 10px;
+	font-size: 15px;
+	opacity: 0.9;
+	max-width: 250px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+@media screen and (max-width: 1200px) {
+	.connectors-list__card {
+		padding: 40px 20px;
+	}
 }

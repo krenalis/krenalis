@@ -1,20 +1,19 @@
 import React, { useState, useContext, useLayoutEffect, useMemo } from 'react';
 import './ConnectorsList.css';
 import { Role } from '../../../lib/api/types/types';
-import Card from '../../base/Card/Card';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import { authCodeURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
-import { Link } from '../../base/Link/Link';
+import TransformedConnector from '../../../lib/core/connector';
 
 const ConnectorsList = () => {
 	const [searchTerm, setSearchTerm] = useState<string>('');
 
-	const { api, handleError, connectors, setTitle } = useContext(AppContext);
+	const { api, handleError, connectors, setTitle, redirect } = useContext(AppContext);
 
 	const location = useLocation();
 
@@ -31,18 +30,29 @@ const ConnectorsList = () => {
 		setTitle(`Add a ${connectionRole.toLocaleLowerCase()}`);
 	}, [connectionRole]);
 
-	const authorizeWithOAuth = async (connectorName: string, role: Role) => {
-		localStorage.setItem('meergo_ui_add_connector_name', connectorName);
-		localStorage.setItem('meergo_ui_add_connection_role', connectionRole);
-		let res: authCodeURLResponse;
-		try {
-			res = await api.connectors.authCodeURL(connectorName, role);
-		} catch (err) {
-			handleError(err);
+	const onConnectorClick = async (connector: TransformedConnector) => {
+		if (connector.isStream) {
+			// Stream connectors are not available yet.
 			return;
 		}
-		window.location.href = res.url;
-		return;
+		if (connector.requiresAuth) {
+			localStorage.setItem('meergo_ui_add_connector_name', connector.name);
+			localStorage.setItem('meergo_ui_add_connection_role', connectionRole);
+			let res: authCodeURLResponse;
+			try {
+				res = await api.connectors.authCodeURL(connector.name, connectionRole as Role);
+			} catch (err) {
+				handleError(err);
+				return;
+			}
+			window.location.href = res.url;
+			return;
+		}
+		if (connector.isFile) {
+			redirect(`connectors/file/${connector.name}?role=${connectionRole}`);
+		} else {
+			redirect(`connectors/${connector.name}?role=${connectionRole}`);
+		}
 	};
 
 	const onSearchTermUpdate = (e) => {
@@ -60,39 +70,36 @@ const ConnectorsList = () => {
 		}
 		const name = c.name;
 		if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
-			connectorsCards.push(
-				<Card
+			let card = (
+				<div
+					className={`connectors-list__card${c.isStream ? ' connectors-list__card--disabled' : ''}`}
 					key={c.name}
-					name={c.name}
-					icon={c.icon}
-					type={c.type}
-					description={connectionRole === 'Source' ? c.asSource.description : c.asDestination.description}
+					data-name={c.name}
+					onClick={() => onConnectorClick(c)}
 				>
-					<SlTooltip content={c.isStream ? 'Stream connectors will be available soon' : `Add ${c.name}`}>
-						<Link
-							path={
-								c.requiresAuth
-									? null
-									: c.isFile
-										? `connectors/file/${c.name}?role=${connectionRole}`
-										: `connectors/${c.name}?role=${connectionRole}`
-							}
-						>
-							<SlButton
-								size='medium'
-								variant='default'
-								disabled={c.isStream}
-								onClick={
-									c.requiresAuth ? () => authorizeWithOAuth(c.name, connectionRole as Role) : null
-								}
-								circle
-							>
-								<SlIcon name='plus' />
-							</SlButton>
-						</Link>
-					</SlTooltip>
-				</Card>,
+					<div className='connectors-list__card-top'>
+						<div className='connectors-list__card-logo' dangerouslySetInnerHTML={{ __html: c.icon }} />
+						<div className='connectors-list__card-name'>{name}</div>
+						{c.type && (
+							<SlBadge className='connectors-list__card-type' variant='neutral'>
+								{c.type}
+							</SlBadge>
+						)}
+						<div className='connectors-list__card-description'>
+							{connectionRole === 'Source' ? c.asSource.description : c.asDestination.description}
+						</div>
+					</div>
+				</div>
 			);
+			if (c.isStream) {
+				connectorsCards.push(
+					<SlTooltip placement='top' content={'Stream connectors will be available soon'}>
+						{card}
+					</SlTooltip>,
+				);
+			} else {
+				connectorsCards.push(card);
+			}
 		}
 	}
 
@@ -107,16 +114,14 @@ const ConnectorsList = () => {
 				>
 					<SlIcon name='search' slot='prefix' />
 				</SlInput>
-				<div className='connectors-list__connectors'>
-					{connectorsCards.length > 0 ? (
-						connectorsCards
-					) : (
-						<div className='connectors-list__no-connector'>
-							<SlIcon name='exclamation-circle' />
-							Nothing found
-						</div>
-					)}
-				</div>
+				{connectorsCards.length > 0 ? (
+					<div className='connectors-list__connectors'>{connectorsCards}</div>
+				) : (
+					<div className='connectors-list__no-connector'>
+						<SlIcon name='exclamation-circle' />
+						Nothing found
+					</div>
+				)}
 			</div>
 		</div>
 	);
