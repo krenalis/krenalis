@@ -248,8 +248,8 @@ func (state *State) ID() uuid.UUID {
 }
 
 // InstallationID returns the installation ID.
-func (s *State) InstallationID() string {
-	return s.metadata.InstallationID
+func (state *State) InstallationID() string {
+	return state.metadata.InstallationID
 }
 
 // IsLeader reports whether this node is the leader.
