@@ -11,7 +11,6 @@ package connectors
 import (
 	_ "github.com/meergo/meergo/connectors/clickhouse"
 	_ "github.com/meergo/meergo/connectors/csv"
-	_ "github.com/meergo/meergo/connectors/dummy"
 	_ "github.com/meergo/meergo/connectors/excel"
 	_ "github.com/meergo/meergo/connectors/filesystem"
 	_ "github.com/meergo/meergo/connectors/googleanalytics"
@@ -34,6 +33,5 @@ import (
 	_ "github.com/meergo/meergo/connectors/sftp"
 	_ "github.com/meergo/meergo/connectors/snowflake"
 	_ "github.com/meergo/meergo/connectors/stripe"
-	_ "github.com/meergo/meergo/connectors/uisample"
 	_ "github.com/meergo/meergo/connectors/website"
 )

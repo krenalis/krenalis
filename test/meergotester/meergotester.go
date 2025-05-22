@@ -37,6 +37,7 @@ import (
 	"github.com/meergo/meergo/types"
 
 	_ "github.com/meergo/meergo/connectors"
+	_ "github.com/meergo/meergo/connectors/dummy"
 	_ "github.com/meergo/meergo/warehouses"
 
 	"github.com/testcontainers/testcontainers-go"
