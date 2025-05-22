@@ -11,6 +11,8 @@ package uisample
 import (
 	"context"
 	"errors"
+	"io"
+	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
@@ -22,9 +24,13 @@ func init() {
 		Name: "UISample",
 		AsSource: &meergo.AsAppSource{
 			Description: "Test the UI components",
+			Targets:     meergo.UsersTarget,
+			HasSettings: true,
 		},
 		AsDestination: &meergo.AsAppDestination{
 			Description: "Test the UI components",
+			Targets:     meergo.UsersTarget,
+			HasSettings: true,
 		},
 	}, New)
 }
@@ -44,6 +50,11 @@ func New(conf *meergo.AppConfig) (*UISample, error) {
 type UISample struct {
 	conf     *meergo.AppConfig
 	settings *innerSettings
+}
+
+// Records returns the records of the specified target.
+func (uiSample *UISample) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+	return nil, "", io.EOF
 }
 
 // Schema returns the schema of the specified target in the specified role.
@@ -124,6 +135,11 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings js
 	}
 
 	return ui, nil
+}
+
+// Upsert updates or creates records in the app for the specified target.
+func (uiSample *UISample) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+	return nil
 }
 
 // saveSettings saves the settings.
