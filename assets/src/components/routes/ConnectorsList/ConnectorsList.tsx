@@ -103,6 +103,14 @@ const ConnectorsList = () => {
 		}
 	}
 
+	// TODO(@Andrea): add the link to the feedback page on the Meergo
+	// website when it is implemented.
+	const feedbackMessage = (
+		<span className='connectors-list__feedback-message'>
+			Can't find the connector you're looking for? <a target='_blank'>Contact us</a>
+		</span>
+	);
+
 	return (
 		<div className='connectors-list'>
 			<div className='route-content'>
@@ -115,11 +123,18 @@ const ConnectorsList = () => {
 					<SlIcon name='search' slot='prefix' />
 				</SlInput>
 				{connectorsCards.length > 0 ? (
-					<div className='connectors-list__connectors'>{connectorsCards}</div>
+					<div className='connectors-list__connectors'>
+						{connectorsCards}
+						<div className='connectors-list__feedback'>
+							<SlIcon name='chat-dots' />
+							{feedbackMessage}
+						</div>
+					</div>
 				) : (
 					<div className='connectors-list__no-connector'>
 						<SlIcon name='exclamation-circle' />
-						Nothing found
+						<div className='connectors-list__no-connector-title'>Nothing found</div>
+						<div className='connectors-list__no-connector-feedback'>{feedbackMessage}</div>
 					</div>
 				)}
 			</div>
