@@ -516,7 +516,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		return err
 	}
 
-	return state.notifications.Commit(ctx, tx)
+	return state.notifications.CommitAndStartListening(ctx, tx)
 }
 
 // article returns "a" or "an" based on the first letter of the name.

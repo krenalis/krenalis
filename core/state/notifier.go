@@ -75,9 +75,9 @@ func (notifier *notifier) Close() {
 	notifier.closed.cancel()
 }
 
-// Commit commits the transaction tx in which the state was read and starts
-// receiving state change notifications.
-func (notifier *notifier) Commit(ctx context.Context, tx *db.Tx) error {
+// CommitAndStartListening commits the transaction tx, which has read the state,
+// then starts listening for state change notifications.
+func (notifier *notifier) CommitAndStartListening(ctx context.Context, tx *db.Tx) error {
 	// Read the last notification ID.
 	var latest int64
 	err := tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
