@@ -60,8 +60,10 @@ type apisServer struct {
 	eventURL                    string
 	externalURL                 string
 	skipMemberEmailVerification bool
-	sentryTelemetryEnabled      bool
-	errorReportingTunnel        *errorReportingTunnel
+	sentryTelemetry             struct {
+		level       core.TelemetryLevel
+		errorTunnel *telemetryErrorTunnel
+	}
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
@@ -70,7 +72,7 @@ type apisServer struct {
 // It panics if the session key is not at least 64 bytes long.
 func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool,
 	javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool,
-	sentryTelemetryEnabled bool, errorReportingTunnel *errorReportingTunnel) *apisServer {
+	sentryTelemetryLevel core.TelemetryLevel, telemetryErrorTunnel *telemetryErrorTunnel) *apisServer {
 
 	if len(encryptionKey) != 64 {
 		panic("encryptionKey is not 64 bytes long")
@@ -83,9 +85,9 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool,
 		eventURL:                    eventURL,
 		externalURL:                 externalURL,
 		skipMemberEmailVerification: skipMemberEmailVerification,
-		sentryTelemetryEnabled:      sentryTelemetryEnabled,
-		errorReportingTunnel:        errorReportingTunnel,
 	}
+	s.sentryTelemetry.level = sentryTelemetryLevel
+	s.sentryTelemetry.errorTunnel = telemetryErrorTunnel
 
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
 	s.secureCookie = securecookie.New(hashKey, blockKey)
@@ -146,8 +148,8 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool,
 		"GET    /members/current":                                api.Member,                           /* only admin */
 		"GET    /members/invitations/{token}":                    api.MemberInvitation,                 /* only admin */
 		"GET    /members/reset-password/{token}":                 api.ValidateMemberPasswordResetToken, /* only admin */
-		"GET    /reporting/errors/enabled":                       api.SentryTelemetryEnabled,           /* only admin */
 		"GET    /skip-member-email-verification":                 api.SkipMemberEmailVerification,      /* only admin */
+		"GET    /telemetry/level":                                api.SentryTelemetryLevel,             /* only admin */
 		"GET    /transformation-languages":                       api.TransformationLanguages,
 		"GET    /users":                                          workspace.Users,
 		"GET    /users/schema":                                   workspace.UserSchema,
@@ -179,12 +181,12 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool,
 		"POST   /members":                                        organization.AddMember,    /* only admin */
 		"POST   /members/invitations":                            organization.InviteMember, /* only admin */
 		"POST   /members/login":                                  s.login,
-		"POST   /members/logout":                                 s.logout,               /* only admin */
-		"POST   /reporting/errors":                               s.reportError,          /* only admin */
-		"POST   /transformations":                                api.TransformData,      /* only admin */
-		"POST   /ui":                                             workspace.ServeUI,      /* only admin */
-		"POST   /ui-event":                                       workspace.ServeUI,      /* only admin */
-		"POST   /validate-expression":                            api.ValidateExpression, /* only admin */
+		"POST   /members/logout":                                 s.logout,                /* only admin */
+		"POST   /telemetry/errors":                               s.forwardTelemetryError, /* only admin */
+		"POST   /transformations":                                api.TransformData,       /* only admin */
+		"POST   /ui":                                             workspace.ServeUI,       /* only admin */
+		"POST   /ui-event":                                       workspace.ServeUI,       /* only admin */
+		"POST   /validate-expression":                            api.ValidateExpression,  /* only admin */
 		"POST   /warehouse/repair":                               workspace.RepairWarehouse,
 		"POST   /workspaces":                                     organization.CreateWorkspace,
 		"POST   /workspaces/test":                                organization.TestWorkspaceCreation,
@@ -366,6 +368,22 @@ func (s *apisServer) credentials(r *http.Request) (*core.Organization, *core.Wor
 
 var errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or is no longer valid")
 
+// forwardTelemetryError forwards a telemetry error from a client to Sentry.
+// If the user is not logged in, this method does nothing.
+func (s *apisServer) forwardTelemetryError(w http.ResponseWriter, r *http.Request) (any, error) {
+	// Check if the user is logged. If not, discard the reported errors.
+	organization := organization{s}
+	_, _, err := organization.memberCredentials(r)
+	if err != nil {
+		if _, ok := err.(*errors.UnauthorizedError); ok {
+			return nil, nil
+		}
+		return nil, err
+	}
+	s.sentryTelemetry.errorTunnel.ServeHTTP(w, r)
+	return nil, nil
+}
+
 // memberCredentials is like credentials but only accepts a session cookie.
 // It returns the associated organization and member.
 //
@@ -509,22 +527,6 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 		}
 		header.Add("Set-Cookie", v+"; Priority=High")
 	}
-	return nil, nil
-}
-
-// reportError reports to Sentry the error specified in the given request.
-// If the user is not logged in, this method does nothing.
-func (s *apisServer) reportError(w http.ResponseWriter, r *http.Request) (any, error) {
-	// Check if the user is logged. If not, discard the reported errors.
-	organization := organization{s}
-	_, _, err := organization.memberCredentials(r)
-	if err != nil {
-		if _, ok := err.(*errors.UnauthorizedError); ok {
-			return nil, nil
-		}
-		return nil, err
-	}
-	s.errorReportingTunnel.ServeHTTP(w, r)
 	return nil, nil
 }
 

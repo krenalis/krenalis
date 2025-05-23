@@ -16,13 +16,13 @@ import (
 	"time"
 )
 
-// This code implements a tunnel for Sentry events, which are sent first to
+// This code implements a tunnel for Sentry errors, which are sent first to
 // Meergo and then forwarded to Sentry.
 //
 // See the documentation here:
 // https://docs.sentry.io/platforms/javascript/troubleshooting/#using-the-tunnel-option.
 
-// Configuration for sending events to Sentry.
+// Configuration for forwarding events to Sentry.
 const (
 	sentryAdminHost      = "o4509282180136960.ingest.de.sentry.io"
 	sentryAdminProjectID = "4509292547211344"
@@ -40,7 +40,7 @@ var (
 // debugTunnel, if enabled, prints debug tunnel information to stderr.
 const debugTunnel = false
 
-type errorReportingTunnel struct {
+type telemetryErrorTunnel struct {
 	done   chan bool
 	ticker *time.Ticker
 
@@ -48,10 +48,10 @@ type errorReportingTunnel struct {
 	requestsPerIP map[string]int
 }
 
-// newErrorReportingTunnel instantiates a new errorReportingTunnel, which can be
-// used to forward error reporting from a client to Sentry.
-func newErrorReportingTunnel() *errorReportingTunnel {
-	t := &errorReportingTunnel{
+// newTelemetryErrorTunnel instantiates a new telemetryErrorsTunnel, which can
+// be used to forward error reporting from a client to Sentry.
+func newTelemetryErrorTunnel() *telemetryErrorTunnel {
+	t := &telemetryErrorTunnel{
 		done:          make(chan bool),
 		ticker:        time.NewTicker(timeSlotDuration),
 		requestsPerIP: map[string]int{},
@@ -75,7 +75,7 @@ func newErrorReportingTunnel() *errorReportingTunnel {
 // There is a maximum number of requests that a client can request to forward to
 // Sentry in a given time slot; if this limit is exceeded, forward requests are
 // silently ignored.
-func (t *errorReportingTunnel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (t *telemetryErrorTunnel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	clientIP, ok := normalizedIP(r)
 	if !ok {
 		return
@@ -95,7 +95,7 @@ func (t *errorReportingTunnel) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	debugTunnelInfo("forwarded POST request to %s from client %q", sentryUpstreamAdminURL, clientIP)
 }
 
-func (t *errorReportingTunnel) Close() {
+func (t *telemetryErrorTunnel) Close() {
 	t.done <- true
 }
 
@@ -104,7 +104,7 @@ func (t *errorReportingTunnel) Close() {
 //
 // If the number of requests exceeds the maximum allowed, the counter is not
 // incremented and an error is returned.
-func (t *errorReportingTunnel) increaseRequestsPerIP(ip string) error {
+func (t *telemetryErrorTunnel) increaseRequestsPerIP(ip string) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	count := t.requestsPerIP[ip]
@@ -116,7 +116,7 @@ func (t *errorReportingTunnel) increaseRequestsPerIP(ip string) error {
 	return nil
 }
 
-func (t *errorReportingTunnel) clearRequestsPerIP() {
+func (t *telemetryErrorTunnel) clearRequestsPerIP() {
 	debugTunnelInfo("clearing 'requestsPerIP'")
 	t.mu.Lock()
 	clear(t.requestsPerIP)

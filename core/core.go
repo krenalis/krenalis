@@ -75,13 +75,13 @@ type Core struct {
 var hasBeenCalled bool
 
 type Config struct {
-	EncryptionKey          []byte // encryption key shared by all nodes
-	DB                     DBConfig
-	FunctionProvider       any // must be a LambdaConfig or LocalConfig value
-	MemberEmailFrom        string
-	SMTP                   SMTPConfig
-	ConnectorsOAuth        map[string]*state.ConnectorOAuth
-	SentryTelemetryEnabled bool
+	EncryptionKey        []byte // encryption key shared by all nodes
+	DB                   DBConfig
+	FunctionProvider     any // must be a LambdaConfig or LocalConfig value
+	MemberEmailFrom      string
+	SMTP                 SMTPConfig
+	ConnectorsOAuth      map[string]*state.ConnectorOAuth
+	SentryTelemetryLevel TelemetryLevel
 }
 
 type DBConfig struct {
@@ -120,6 +120,16 @@ type SMTPConfig struct {
 	Username string
 	Password string
 }
+
+// TelemetryLevel represent the Sentry telemetry level.
+type TelemetryLevel string
+
+const (
+	TelemetryLevelNone   TelemetryLevel = "none"
+	TelemetryLevelErrors TelemetryLevel = "errors"
+	TelemetryLevelStats  TelemetryLevel = "stats"
+	TelemetryLevelAll    TelemetryLevel = "all"
+)
 
 type ExpressionToBeExtracted struct {
 	Value string     `json:"value"`
@@ -185,7 +195,7 @@ func New(conf *Config) (*Core, error) {
 	}
 
 	// Add the Meergo installation ID tag to Sentry.
-	if conf.SentryTelemetryEnabled {
+	if conf.SentryTelemetryLevel != TelemetryLevelNone {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
 			scope.SetTag("meergo_installation_id", core.state.InstallationID())
 		})

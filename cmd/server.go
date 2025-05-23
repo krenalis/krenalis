@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/core"
+	corepkg "github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/opentelemetry"
@@ -38,7 +38,7 @@ type Settings struct {
 	EncryptionKey               string
 	TerminationDelay            time.Duration
 	JavaScriptSDKURL            string
-	SentryTelemetryEnabled      bool
+	SentryTelemetryLevel        corepkg.TelemetryLevel
 	SkipMemberEmailVerification bool
 	HTTP                        struct {
 		Host string
@@ -51,7 +51,7 @@ type Settings struct {
 		ExternalURL string
 		EventURL    string
 	}
-	DB              core.DBConfig
+	DB              corepkg.DBConfig
 	MemberEmailFrom string
 	SMTP            struct {
 		Host     string
@@ -117,22 +117,22 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
 	}
 
-	config := core.Config{
-		DB:                     settings.DB,
-		MemberEmailFrom:        settings.MemberEmailFrom,
-		SMTP:                   settings.SMTP,
-		SentryTelemetryEnabled: settings.SentryTelemetryEnabled,
+	config := corepkg.Config{
+		DB:                   settings.DB,
+		MemberEmailFrom:      settings.MemberEmailFrom,
+		SMTP:                 settings.SMTP,
+		SentryTelemetryLevel: settings.SentryTelemetryLevel,
 	}
 
 	// Choose the transformation function provider setting.
 	if settings.Transformations.Lambda.Node.Runtime != "" || settings.Transformations.Lambda.Python.Runtime != "" {
-		config.FunctionProvider = core.LambdaConfig(settings.Transformations.Lambda)
+		config.FunctionProvider = corepkg.LambdaConfig(settings.Transformations.Lambda)
 	}
 	if settings.Transformations.Local.NodeExecutable != "" || settings.Transformations.Local.PythonExecutable != "" {
 		if config.FunctionProvider != nil {
 			return errors.New("meergo environment variables cannot specify both the Lambda and the local transformation")
 		}
-		config.FunctionProvider = core.LocalConfig(settings.Transformations.Local)
+		config.FunctionProvider = corepkg.LocalConfig(settings.Transformations.Local)
 	}
 
 	// Validate the settings of the connectors.
@@ -165,7 +165,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		return fmt.Errorf("encryption key provided with meergo environment variables is not 64 bytes long, but %d", len(config.EncryptionKey))
 	}
 
-	core, err := core.New(&config)
+	core, err := corepkg.New(&config)
 	if err != nil {
 		return err
 	}
@@ -180,12 +180,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
 	}
 
-	errorReportingTunnel := newErrorReportingTunnel()
-	defer errorReportingTunnel.Close()
+	telemetryErrorTunnel := newTelemetryErrorTunnel()
+	defer telemetryErrorTunnel.Close()
 
 	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled,
 		javaScriptSDKURL, eventURL, externalURL, settings.SkipMemberEmailVerification,
-		settings.SentryTelemetryEnabled, errorReportingTunnel)
+		settings.SentryTelemetryLevel, telemetryErrorTunnel)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {
@@ -220,7 +220,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 				}
 
 				// Send the panic to Sentry.
-				if settings.SentryTelemetryEnabled {
+				if settings.SentryTelemetryLevel == corepkg.TelemetryLevelErrors ||
+					settings.SentryTelemetryLevel == corepkg.TelemetryLevelAll {
 					sentry.CurrentHub().Recover(r)
 					sentry.Flush(time.Second * 5)
 				}

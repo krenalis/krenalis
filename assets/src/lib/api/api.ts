@@ -49,6 +49,7 @@ import {
 	RecordsResponse,
 	SheetsResponse,
 	TableSchemaResponse,
+	TelemetryLevel,
 	TransformDataResponse,
 	TransformationLanguagesResponse,
 	UserEventsResponse,
@@ -103,12 +104,12 @@ class API {
 		});
 	};
 
-	reportingErrorsEnabled = async (): Promise<boolean> => {
-		return await call(`${this.apiURL}/reporting/errors/enabled`, http.GET);
-	};
-
 	skipMemberEmailVerification = async (): Promise<boolean> => {
 		return await call(`${this.apiURL}/skip-member-email-verification`, http.GET);
+	};
+
+	telemetryLevel = async (): Promise<TelemetryLevel> => {
+		return await call(`${this.apiURL}/telemetry/level`, http.GET);
 	};
 
 	eventsSchema = async (): Promise<ObjectType> => {

@@ -73,6 +73,8 @@ interface TableSchemaResponse {
 	issues: string[];
 }
 
+type TelemetryLevel = 'none' | 'errors' | 'stats' | 'all';
+
 interface TransformationLanguagesResponse {
 	languages: string[];
 }
@@ -204,6 +206,7 @@ export type {
 	ResponseUser,
 	SheetsResponse,
 	TableSchemaResponse,
+	TelemetryLevel,
 	TransformDataResponse,
 	TransformationLanguagesResponse,
 	UserEventsResponse,

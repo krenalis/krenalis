@@ -4,10 +4,10 @@ services:
     ports:
       - 9090:9090
     environment:
-      # Telemetry (for collecting errors, crash reports, etc...) in Meergo is
-      # enabled by default.
-      # Uncomment the following line to disable it:
-      # MEERGO_DISABLE_TELEMETRY="true"
+      # Sets the telemetry level in Meergo. You can set this to "none" to
+      # completely disable telemetry. Default is "all". See the environment
+      # variables documentation for more details.
+      MEERGO_TELEMETRY_LEVEL:
 
       # HubSpot.
       # Set these environment variables to connect to your HubSpot app when

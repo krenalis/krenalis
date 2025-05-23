@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/cmd"
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/testimages"
 	"github.com/meergo/meergo/types"
@@ -303,7 +304,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		// provided (this for example gives errors on Windows).
 		env := append(os.Environ(), []string{
 			"MEERGO_ENCRYPTION_KEY=" + encryptionKey,
-			"MEERGO_DISABLE_TELEMETRY=true",
+			"MEERGO_TELEMETRY_LEVEL=none",
 			"MEERGO_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"MEERGO_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
 			"MEERGO_DB_HOST=" + testsSettings.Database.Host,
@@ -341,7 +342,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		// Keep these in sync with the environment variables set above.
 		setts := cmd.Settings{}
 		setts.EncryptionKey = encryptionKey
-		setts.SentryTelemetryEnabled = false
+		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.HTTP.Host = testsSettings.HTTP.Host
 		setts.HTTP.Port = testsSettings.HTTP.Port
 		setts.DB.Host = testsSettings.Database.Host

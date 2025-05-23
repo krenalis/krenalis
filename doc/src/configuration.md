@@ -25,10 +25,17 @@ These variables can be provided to Meergo when it starts, or they can be declare
 
   If not provided, it is assumed that the JavaScript SDK is served by the same server that Meergo runs on, at the path `/javascript-sdk/dist/meergo.min.js`.
 
-- **`MEERGO_DISABLE_TELEMETRY`** \
-  When this variable is set to "true", sending telemetry data (such as errors, crash reports) is disabled.
+- **`MEERGO_TELEMETRY_LEVEL`** \
+  The level for telemetry data sent by Meergo.
 
-  By default, telemetry is enabled.
+  Available values are:
+
+  - `none`, which means no telemetry data will be sent
+  - `errors`, which means that only telemetry data related to errors will be sent
+  - `stats`, which means that only telemetry data related to software usage statistics will be sent
+  - `all`, which means that both types of telemetry data (errors and stats) will be sent
+
+  By default, the telemetry level is `all`.
 
 ## HTTP server configuration
 
@@ -189,4 +196,4 @@ Configuration for OAuth integrations with external applications.
 - **`MEERGO_OPEN_TELEMETRY_ENABLE`** \
   Setting this variable to `"true"` enables sending some telemetry data to the OpenTelemetry collector.
   
-  **Important**. Note that this feature is experimental, partially functional and still under development. The actual telemetry is handled separately, see the `MEERGO_DISABLE_TELEMETRY` environment variable.
+  **Important**. Note that this feature is experimental, partially functional and still under development. The actual telemetry is handled separately, see the `MEERGO_TELEMETRY_LEVEL` environment variable.

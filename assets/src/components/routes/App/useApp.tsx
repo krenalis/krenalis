@@ -14,7 +14,7 @@ import { Connection } from '../../../lib/api/types/connection';
 import Workspace from '../../../lib/api/types/workspace';
 import { Warehouse } from './App.types';
 import { WarehouseResponse } from '../../../lib/api/types/warehouse';
-import { Execution, Member } from '../../../lib/api/types/responses';
+import { Execution, Member, TelemetryLevel } from '../../../lib/api/types/responses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { TransformedMember, transformMember } from '../../../lib/core/member';
 import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
@@ -61,19 +61,18 @@ const useApp = (
 
 	useEffect(() => {
 		const loadAppState = async () => {
-			// Check if Sentry errors reporting is enabled.
-			let reportingErrorsEnabled: boolean = false;
+			let telemetryLevel: TelemetryLevel = 'all';
 			try {
-				reportingErrorsEnabled = await api.reportingErrorsEnabled();
+				telemetryLevel = await api.telemetryLevel();
 			} catch (err) {
 				handleError(err);
 				setIsLoadingState(false);
 				return;
 			}
-			if (reportingErrorsEnabled) {
+			if (telemetryLevel == 'errors' || telemetryLevel == 'all') {
 				Sentry.init({
 					dsn: 'https://4bc227ec8dc487e9bae1f3aea7f3ede1@o4509282180136960.ingest.de.sentry.io/4509292547211344',
-					tunnel: '/api/v1/reporting/errors',
+					tunnel: '/api/v1/telemetry/errors',
 					// Setting this option to true will send default PII
 					// data to Sentry. For example, automatic IP address
 					// collection on events.

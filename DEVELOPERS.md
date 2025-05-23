@@ -58,15 +58,17 @@ go run ./commit --help
 
 Here are some key points about **how Meergo sends telemetry data to Sentry**:
 
-* **Telemetry only handles errors**. Other data, such as traces, spans, performance monitoring, are currently not sent.
+* **Telemetry can be enabled at various levels**. There is a "none" level, which disables it completely, an "errors" level, which only sends errors, a "stats" level , which only sends statistics, and an "all" level, which sends both errors and statistics.
 
-* **Enabling and disabling the telemetry is controlled only by the env. var**. The `MEERGO_DISABLE_TELEMETRY` environment variable is the only thing that can enable or disable telemetry. Anything else (how Meergo is compiled, build flags, availability of Debug IDs, etc...) does not impact the sending of data to Sentry.
+* **Telemetry currently only handles errors**. Other data, such as statistics, traces, spans, performance monitoring, can be enabled but currently are not sent.
+
+* **Enabling and disabling the telemetry is controlled only by the env. var**. The `MEERGO_TELEMETRY_LEVEL` environment variable is the only thing that can enable or disable telemetry. Anything else (how Meergo is compiled, build flags, availability of Debug IDs, etc...) does not impact the sending of data to Sentry.
 
 * **If the server sends telemetry, the client does too, and vice versa**. There are no scenarios where only one of the two components sends telemetry and the other one doesn't.
 
 * **Admin stack traces are available only under certain conditions**. The ability to see stack traces of admin errors in Sentry only exists if (1) Meergo is running in production mode (i.e., non-dev mode) and (2) the Meergo assets are unchanged from any commit in the repository, for which the GitHub Action sent source maps with Debug IDs to sentry. So, in any other case, the errors displayed on Sentry may not show a correct stack trace.
 
-* **Admin errors are sent to Sentry through a server tunnel**. This avoids the problem of adblockers blocking data from being sent directly to Sentry. This is not a problem for the user, as they can disable telemetry at any time through the environment variable.
+* **Admin errors are sent to Sentry through a server tunnel**. This avoids the problem of adblockers blocking data from being sent directly to Sentry. This does not cause any inconvenience to the user, as they can disable telemetry at any time through the environment variable.
 
 ## Expose and see Meergo metrics
 

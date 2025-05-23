@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/state"
 
 	"github.com/getsentry/sentry-go"
@@ -94,7 +95,8 @@ func Main(assets fs.FS) {
 	}
 
 	// Configure Sentry, if necessary.
-	if settings.SentryTelemetryEnabled {
+	if settings.SentryTelemetryLevel == core.TelemetryLevelErrors ||
+		settings.SentryTelemetryLevel == core.TelemetryLevelAll {
 		// Configure Sentry.
 		err = sentry.Init(sentry.ClientOptions{
 			Dsn:              "https://83b8a272533bd2db6b535547c6517d0e@o4509282180136960.ingest.de.sentry.io/4509282208514128",
@@ -150,11 +152,21 @@ func settingsFromEnv() (*Settings, error) {
 		}
 	}
 	settings.JavaScriptSDKURL = os.Getenv("MEERGO_JAVASCRIPT_SDK_URL")
-	disableTelemetry, err := boolEnvVar(os.Getenv("MEERGO_DISABLE_TELEMETRY"))
-	if err != nil {
-		return nil, fmt.Errorf("invalid value specified for MEERGO_DISABLE_TELEMETRY: %s", err)
+
+	// Telemetry level.
+	switch os.Getenv("MEERGO_TELEMETRY_LEVEL") {
+	case "none":
+		settings.SentryTelemetryLevel = core.TelemetryLevelNone
+	case "errors":
+		settings.SentryTelemetryLevel = core.TelemetryLevelErrors
+	case "stats":
+		settings.SentryTelemetryLevel = core.TelemetryLevelStats
+	case "", "all":
+		settings.SentryTelemetryLevel = core.TelemetryLevelAll
+	default:
+		return nil, fmt.Errorf("invalid telemetry level specified for MEERGO_TERMINATION_DELAY," +
+			" expecting one of: \"none\", \"errors\", \"stats\", \"all\" or \"\" (which means \"all\")")
 	}
-	settings.SentryTelemetryEnabled = !disableTelemetry
 
 	// HTTP.
 	settings.HTTP.Host = os.Getenv("MEERGO_HTTP_HOST")
