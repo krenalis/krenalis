@@ -529,7 +529,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						return fmt.Errorf("cannot decode value for 'encryption_key' as Base64: %s", err)
 					}
 				case "installation_id":
-					state.metadata.InstallationID = value
+					state.metadata.installationID = value
 				default:
 					return fmt.Errorf("unexpected key %q in metadata", key)
 				}
@@ -539,14 +539,14 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 	if err != nil {
 		return err
 	}
-	if state.metadata.InstallationID == "" {
-		return errors.New("missing key 'installation_id' in table 'metadata'")
-	}
 	if state.metadata.encryptionKey == nil {
 		return errors.New("missing key 'encryption_key' in table 'metadata'")
 	}
 	if len(state.metadata.encryptionKey) != 64 {
 		return errors.New("value for 'encryption_key' must be a Base64 string that encodes 64 bytes")
+	}
+	if state.metadata.installationID == "" {
+		return errors.New("missing key 'installation_id' in table 'metadata'")
 	}
 
 	return state.notifications.CommitAndStartListening(ctx, tx, state.metadata.encryptionKey[:32])
