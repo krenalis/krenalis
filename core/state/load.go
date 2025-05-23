@@ -8,7 +8,9 @@
 package state
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -510,13 +512,44 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		return err
 	}
 
-	// Read the installation ID from the metadata.
-	err = tx.QueryRow(ctx, "SELECT value FROM metadata WHERE key = 'installation_id'").Scan(&state.metadata.InstallationID)
+	// Read the metadata, which include the installation ID and the encryption
+	// key.
+	err = tx.QueryScan(ctx, "SELECT key, value FROM metadata",
+		func(rows *db.Rows) error {
+			for rows.Next() {
+				var key, value string
+				err := rows.Scan(&key, &value)
+				if err != nil {
+					return err
+				}
+				switch key {
+				case "encryption_key":
+					state.metadata.encryptionKey, err = base64.StdEncoding.DecodeString(value)
+					if err != nil {
+						return fmt.Errorf("cannot decode value for 'encryption_key' as Base64: %s", err)
+					}
+				case "installation_id":
+					state.metadata.InstallationID = value
+				default:
+					return fmt.Errorf("unexpected key %q in metadata", key)
+				}
+			}
+			return nil
+		})
 	if err != nil {
 		return err
 	}
+	if state.metadata.InstallationID == "" {
+		return errors.New("missing key 'installation_id' in table 'metadata'")
+	}
+	if state.metadata.encryptionKey == nil {
+		return errors.New("missing key 'encryption_key' in table 'metadata'")
+	}
+	if len(state.metadata.encryptionKey) != 64 {
+		return errors.New("value for 'encryption_key' must be a Base64 string that encodes 64 bytes")
+	}
 
-	return state.notifications.CommitAndStartListening(ctx, tx)
+	return state.notifications.CommitAndStartListening(ctx, tx, state.metadata.encryptionKey[:32])
 }
 
 // article returns "a" or "an" based on the first letter of the name.

@@ -10,10 +10,6 @@ These variables can be provided to Meergo when it starts, or they can be declare
 
 ## General settings
 
-- **`MEERGO_ENCRYPTION_KEY`** \
-  Key used for encrypting admin cookies and PostgreSQL notifications. It must be a randomly generated 64-byte sequence, encoded in Base64. \
-  Example: `QTayM1ovJctpSidiXgqC8AeFsqYGbWTdwGykdJ2ll1fpxkzFI9FtNf+/FepV1c/Zu9g/y+0FsM8d2nust97tlw`
-
 - **`MEERGO_TERMINATION_DELAY`** \
   Delay time before gracefully shutting down the server. If left empty, the server will initiate a graceful shutdown immediately after receiving the termination signal, without waiting for the specified delay. \
   Example: `1s` (1 second), `200ms` (200 milliseconds) 

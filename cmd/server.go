@@ -10,7 +10,6 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"errors"
 	"expvar"
 	"fmt"
@@ -35,7 +34,6 @@ import (
 )
 
 type Settings struct {
-	EncryptionKey               string
 	TerminationDelay            time.Duration
 	JavaScriptSDKURL            string
 	SentryTelemetryLevel        corepkg.TelemetryLevel
@@ -149,22 +147,6 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		config.ConnectorsOAuth = maps.Clone(settings.OAuth)
 	}
 
-	// Decode the encryption key.
-	if settings.EncryptionKey == "" {
-		return errors.New("encryption key not provided with meergo environment variables")
-	}
-	if padding := len(settings.EncryptionKey) % 4; padding > 0 {
-		settings.EncryptionKey += strings.Repeat("=", 4-padding)
-	}
-	var err error
-	config.EncryptionKey, err = base64.StdEncoding.DecodeString(settings.EncryptionKey)
-	if err != nil {
-		return errors.New("encryption key provided with meergo environment variables is not in Base64 format")
-	}
-	if len(config.EncryptionKey) != 64 {
-		return fmt.Errorf("encryption key provided with meergo environment variables is not 64 bytes long, but %d", len(config.EncryptionKey))
-	}
-
 	core, err := corepkg.New(&config)
 	if err != nil {
 		return err
@@ -183,7 +165,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	telemetryErrorTunnel := newTelemetryErrorTunnel()
 	defer telemetryErrorTunnel.Close()
 
-	apisServer := newAPIsServer(core, config.EncryptionKey, settings.HTTP.TLS.Enabled,
+	apisServer := newAPIsServer(core, settings.HTTP.TLS.Enabled,
 		javaScriptSDKURL, eventURL, externalURL, settings.SkipMemberEmailVerification,
 		settings.SentryTelemetryLevel, telemetryErrorTunnel)
 

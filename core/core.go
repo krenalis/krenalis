@@ -75,7 +75,6 @@ type Core struct {
 var hasBeenCalled bool
 
 type Config struct {
-	EncryptionKey        []byte // encryption key shared by all nodes
 	DB                   DBConfig
 	FunctionProvider     any // must be a LambdaConfig or LocalConfig value
 	MemberEmailFrom      string
@@ -189,7 +188,7 @@ func New(conf *Config) (*Core, error) {
 	}
 
 	// Instantiate the state.
-	core.state, err = state.New(db, conf.EncryptionKey, conf.ConnectorsOAuth)
+	core.state, err = state.New(db, conf.ConnectorsOAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -508,6 +507,11 @@ func (core *Core) Connectors() []*Connector {
 func (core *Core) CountOrganizations(ctx context.Context) int {
 	core.mustBeOpen()
 	return len(core.state.Organizations())
+}
+
+// EncryptionKey returns the encryption key. It is 64 bytes long.
+func (core *Core) EncryptionKey() []byte {
+	return core.state.EncryptionKey()
 }
 
 // ExpressionsProperties returns all the unique properties contained inside a

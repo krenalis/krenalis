@@ -144,7 +144,6 @@ func settingsFromEnv() (*Settings, error) {
 	settings := &Settings{}
 	var err error
 
-	settings.EncryptionKey = os.Getenv("MEERGO_ENCRYPTION_KEY")
 	if termDelay := os.Getenv("MEERGO_TERMINATION_DELAY"); termDelay != "" {
 		settings.TerminationDelay, err = time.ParseDuration(termDelay)
 		if err != nil {

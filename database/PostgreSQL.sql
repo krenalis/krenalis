@@ -315,4 +315,8 @@ CREATE TABLE metadata (
     PRIMARY KEY (key)
 );
 
-INSERT INTO metadata (key, value) VALUES ('installation_id', gen_random_uuid());
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+INSERT INTO metadata (key, value) VALUES
+    ('encryption_key', encode(gen_random_bytes(64), 'base64')),
+    ('installation_id', gen_random_uuid());

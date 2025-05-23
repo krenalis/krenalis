@@ -39,7 +39,6 @@ services:
 
       # These settings configure Meergo to run optimally within Docker, so it is
       # not recommended that you change them.
-      MEERGO_ENCRYPTION_KEY: 6uA9ccQxZ+/1PlqXZFR49QZ0fnQDCNZIugyKwHv3WdkqcoIA3iSwuuj1yvM+f2cZFQ7Saqjq695Y0AP+rlZDOg==
       MEERGO_HTTP_HOST: meergo
       MEERGO_HTTP_PORT: 9090
       MEERGO_HTTP_EXTERNAL_URL: http://localhost:9090/

@@ -67,16 +67,11 @@ type apisServer struct {
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
-// Core. encryptionKey is the key used to encrypt the session cookie.
+// Core.
 // runsOnHTTPs indicates if the server runs on HTTPS.
-// It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool,
+func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 	javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool,
 	sentryTelemetryLevel core.TelemetryLevel, telemetryErrorTunnel *telemetryErrorTunnel) *apisServer {
-
-	if len(encryptionKey) != 64 {
-		panic("encryptionKey is not 64 bytes long")
-	}
 
 	s := &apisServer{
 		core:                        core,
@@ -89,6 +84,7 @@ func newAPIsServer(core *core.Core, encryptionKey []byte, runsOnHTTPS bool,
 	s.sentryTelemetry.level = sentryTelemetryLevel
 	s.sentryTelemetry.errorTunnel = telemetryErrorTunnel
 
+	encryptionKey := core.EncryptionKey()
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
 	s.secureCookie = securecookie.New(hashKey, blockKey)
 	s.secureCookie.MaxAge(sessionMaxAge)

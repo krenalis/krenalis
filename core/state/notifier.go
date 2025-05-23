@@ -54,11 +54,10 @@ type notifier struct {
 
 // newNotifier returns a new notifier that will send received notifications to
 // the notification channel ch. To begin receiving notifications, call Commit.
-func newNotifier(db *db.DB, ch chan<- notification, key []byte) *notifier {
+func newNotifier(db *db.DB, ch chan<- notification) *notifier {
 	notifier := &notifier{
 		db:     db,
 		ch:     ch,
-		key:    key,
 		loaded: make(chan struct{}, 1),
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -77,7 +76,9 @@ func (notifier *notifier) Close() {
 
 // CommitAndStartListening commits the transaction tx, which has read the state,
 // then starts listening for state change notifications.
-func (notifier *notifier) CommitAndStartListening(ctx context.Context, tx *db.Tx) error {
+// key is the encryption key that will be set and used in the notifier; it must
+// be 32 bytes long.
+func (notifier *notifier) CommitAndStartListening(ctx context.Context, tx *db.Tx, key []byte) error {
 	// Read the last notification ID.
 	var latest int64
 	err := tx.QueryRow(ctx, "SELECT COALESCE(MAX(id),0) FROM notifications").Scan(&latest)
@@ -91,6 +92,7 @@ func (notifier *notifier) CommitAndStartListening(ctx context.Context, tx *db.Tx
 	if err != nil {
 		return err
 	}
+	notifier.key = key
 	notifier.next = latest + 1
 	notifier.loaded <- struct{}{}
 	return nil

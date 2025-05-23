@@ -9,10 +9,8 @@ package meergotester
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/tls"
 	_ "embed"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -267,17 +265,6 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		Jar: jar,
 	}
 
-	// Create an encryption key.
-	var encryptionKey string
-	{
-		key := make([]byte, 64)
-		_, err = rand.Read(key)
-		if err != nil {
-			t.Fatalf("cannot generate an encryption key: %s", err)
-		}
-		encryptionKey = base64.StdEncoding.EncodeToString(key)
-	}
-
 	// Wait for the assets to be generated.
 	<-assetsGenerated
 
@@ -303,7 +290,6 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		// in running Meergo if certain system environment variables are not
 		// provided (this for example gives errors on Windows).
 		env := append(os.Environ(), []string{
-			"MEERGO_ENCRYPTION_KEY=" + encryptionKey,
 			"MEERGO_TELEMETRY_LEVEL=none",
 			"MEERGO_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"MEERGO_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
@@ -341,7 +327,6 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		// Meergo settings.
 		// Keep these in sync with the environment variables set above.
 		setts := cmd.Settings{}
-		setts.EncryptionKey = encryptionKey
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.HTTP.Host = testsSettings.HTTP.Host
 		setts.HTTP.Port = testsSettings.HTTP.Port
