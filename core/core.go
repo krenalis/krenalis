@@ -436,12 +436,12 @@ func (core *Core) Connector(name string) (*Connector, error) {
 	if connector.Terms.Users == "" {
 		connector.Terms.Users = "users"
 	}
-	if connector.Terms.Group == "" {
-		connector.Terms.Group = "group"
-	}
-	if connector.Terms.Groups == "" {
-		connector.Terms.Groups = "groups"
-	}
+	//if connector.Terms.Group == "" { TODO(marco): Implement groups
+	//	connector.Terms.Group = "group"
+	//}
+	//if connector.Terms.Groups == "" {
+	//	connector.Terms.Groups = "groups"
+	//}
 	return &connector, nil
 }
 
@@ -486,12 +486,12 @@ func (core *Core) Connectors() []*Connector {
 		if connector.Terms.Users == "" {
 			connector.Terms.Users = "users"
 		}
-		if connector.Terms.Group == "" {
-			connector.Terms.Group = "group"
-		}
-		if connector.Terms.Groups == "" {
-			connector.Terms.Groups = "groups"
-		}
+		//if connector.Terms.Group == "" { TODO(marco): Implement groups
+		//	connector.Terms.Group = "group"
+		//}
+		//if connector.Terms.Groups == "" {
+		//	connector.Terms.Groups = "groups"
+		//}
 		connectors[i] = &connector
 	}
 	slices.SortFunc(connectors, func(a, b *Connector) int {

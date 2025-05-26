@@ -12,18 +12,12 @@ package hubspot
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	_ "embed"
-	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
-	"unicode/utf8"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
@@ -42,12 +36,10 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "HubSpot",
 		AsSource: &meergo.AsAppSource{
-			// Description: "Import contacts as users and companies as groups from HubSpot",
 			Description: "Import contacts as users from HubSpot",
 			Targets:     meergo.UsersTarget,
 		},
 		AsDestination: &meergo.AsAppDestination{
-			// Description: "Export users as contacts and groups as companies to HubSpot",
 			Description: "Export users as contacts to HubSpot",
 			Targets:     meergo.UsersTarget,
 		},
@@ -55,7 +47,6 @@ func init() {
 			User:  "contact",
 			Users: "contacts",
 		},
-		// TermForGroups:   "companies",
 		IdentityIDLabel: "HubSpot ID",
 		Icon:            icon,
 		OAuth: meergo.OAuth{
@@ -105,12 +96,7 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 // Records returns the records of the specified target.
 func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
-	path := "/crm/v3/objects/"
-	if target == meergo.UsersTarget {
-		path += "contacts/"
-	} else {
-		path += "companies/"
-	}
+	path := "/crm/v3/objects/contacts/"
 
 	var response struct {
 		Results []struct {
@@ -144,9 +130,6 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		path += "batch/read"
 	} else {
 		propertyName := "lastmodifieddate"
-		if target == meergo.GroupsTarget {
-			propertyName = "hs_lastmodifieddate"
-		}
 		unix := lastChangeTime.UnixMilli()
 		if unix < 0 {
 			unix = 0
@@ -191,16 +174,6 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		}
 		records[i].Properties = result.Properties
 		records[i].LastChangeTime = updatedAt.UTC()
-	}
-
-	if target == meergo.GroupsTarget {
-		for _, object := range records {
-			contacts, err := hs.companyContacts(ctx, object.ID)
-			if err != nil {
-				return nil, "", err
-			}
-			object.Associations = contacts
-		}
 	}
 
 	cursor = response.Paging.Next.After
@@ -288,10 +261,6 @@ func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, role meergo.Rol
 // Upsert updates or creates records in the app for the specified target.
 func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
-	if target == meergo.GroupsTarget {
-		return errors.New("groups are not supported")
-	}
-
 	// Note that records.All() cannot be used because the HubSpot API's "upsert" method does not allow updating contacts using "hs_object_id".
 	// See https://community.hubspot.com/t5/APIs-Integrations/Create-or-update-a-batch-of-contacts-by-unique-property-values/m-p/1047925.
 
@@ -323,42 +292,6 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/"+method, &body, nil)
 }
 
-// companyContacts returns the contacts of the given company.
-func (hs *HubSpot) companyContacts(ctx context.Context, company string) ([]string, error) {
-	contacts := []string{}
-	path := "/crm/v3/objects/companies/" + url.PathEscape(company) + "/associations/Contact"
-	after := ""
-	for {
-		var response struct {
-			Results []struct {
-				ID string `json:"id"`
-			} `json:"results"`
-			Paging struct {
-				Next struct {
-					After string `json:"after"`
-				} `json:"next"`
-			} `json:"paging"`
-		}
-		requestURL := path
-		if after != "" {
-			requestURL += "?after=" + url.QueryEscape(after)
-		}
-		err := hs.call(ctx, "GET", requestURL, nil, &response)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, result := range response.Results {
-			contacts = append(contacts, result.ID)
-		}
-		after = response.Paging.Next.After
-		if after == "" {
-			break
-		}
-	}
-	return contacts, nil
-}
-
 func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader, response any) error {
 	req, err := http.NewRequestWithContext(ctx, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
@@ -387,46 +320,6 @@ func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader
 		return json.Decode(res.Body, response)
 	}
 	return nil
-}
-
-// isValidWebhook reports whether the webhook is valid.
-// https://developers.hubspot.com/docs/api/webhooks/validating-requests.
-func isValidWebhook(clientSecret string, r *http.Request) bool {
-	// The HTTP method must be POST.
-	if r.Method != "POST" {
-		return false
-	}
-	// The timestamp cannot be older than 5 minutes.
-	timestamp, _ := strconv.ParseInt(r.Header.Get("X-HubSpot-Request-Timestamp"), 10, 64)
-	if timestamp < time.Now().UTC().Add(-5*time.Minute).UnixMilli() {
-		return false
-	}
-	// Read the signature.
-	signature, err := base64.StdEncoding.DecodeString(r.Header.Get("X-HubSpot-Signature-v3"))
-	if err != nil {
-		return false
-	}
-	// Read the body.
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return false
-	}
-	_ = r.Body.Close()
-	// The body must be UTF-8 encoded.
-	if !utf8.Valid(body) {
-		return false
-	}
-	r.Body = io.NopCloser(bytes.NewReader(body))
-	// Compute the HMAC SHA-256 signature.
-	mac := hmac.New(sha256.New, []byte(clientSecret))
-	_, _ = io.WriteString(mac, "POST")
-	_, _ = io.WriteString(mac, "https://")
-	_, _ = io.WriteString(mac, r.Host)
-	_, _ = io.WriteString(mac, r.RequestURI)
-	_, _ = mac.Write(body)
-	_, _ = io.WriteString(mac, r.Header.Get("X-HubSpot-Request-Timestamp"))
-	// The signature of the request must be the same as the computed signature.
-	return hmac.Equal(signature, mac.Sum(nil))
 }
 
 type hubspotError struct {

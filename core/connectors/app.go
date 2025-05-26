@@ -278,14 +278,15 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 			return types.Type{}, connectorError(err)
 		}
 		return schema, nil
-	case state.Groups:
-		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.GroupsTarget, meergo.Role(role), "")
-		if err != nil {
-			return types.Type{}, connectorError(err)
-		}
-		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.connector)
-		}
+		// TODO(marco): Implement groups
+		//case state.Groups:
+		//	schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.GroupsTarget, meergo.Role(role), "")
+		//	if err != nil {
+		//		return types.Type{}, connectorError(err)
+		//	}
+		//	if !schema.Valid() {
+		//		return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.connector)
+		//	}
 	}
 	panic("unexpected target")
 }
@@ -552,7 +553,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				record := Record{
 					ID:             user.ID,
 					LastChangeTime: user.LastChangeTime.UTC().Truncate(time.Microsecond),
-					Associations:   user.Associations,
+					// Associations:   user.Associations, TODO(marco): Implement groups
 				}
 
 				// Validate the last change time.

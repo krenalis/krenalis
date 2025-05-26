@@ -38,7 +38,7 @@ type Targets int
 const (
 	EventsTarget Targets = 1 << iota
 	UsersTarget
-	GroupsTarget
+	// GroupsTarget // TOODO(marco) Implement groups
 )
 
 // AppInfo represents an app connector info.
@@ -57,13 +57,12 @@ type AppInfo struct {
 	ct      reflect.Type
 }
 
-// AppTerms represents the terms that an app connector uses to refer to various
-// entities, such as users or groups.
+// AppTerms represents the terms that an app connector uses to refer to users.
 type AppTerms struct {
-	User   string
-	Users  string
-	Group  string
-	Groups string
+	User  string
+	Users string
+	// Group  string TODO(marco) Implement groups
+	// Groups string
 }
 
 // AsAppSource represents the specific information of an app connector used as a
@@ -163,9 +162,10 @@ type Record struct {
 	// microseconds; any precision beyond microseconds will be truncated.
 	LastChangeTime time.Time
 
-	// Associations contains the identifiers of the user's groups or the group's users.
-	// It is not significant if it is nil.
-	Associations []string
+	// TODO(marco): implements groups
+	//// Associations contains the identifiers of the user's groups or the group's users.
+	//// It is not significant if it is nil.
+	//Associations []string
 
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.

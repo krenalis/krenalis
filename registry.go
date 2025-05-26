@@ -368,8 +368,9 @@ func validateAppConnector(app AppInfo) {
 
 	if app.AsSource != nil {
 		targets := app.AsSource.Targets
-		if targets == 0 || (targets&^(UsersTarget|GroupsTarget)) != 0 {
-			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible values are meergo.UsersTarget, meergo.GroupsTarget, or a combination of them using the bitwise OR operator", app.Name))
+		//if targets == 0 || (targets&^(UsersTarget|GroupsTarget)) != 0 { TODO(marco): Implement groups
+		if targets == 0 || (targets&^UsersTarget) != 0 {
+			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible value is meergo.UsersTarget", app.Name))
 		}
 		if targets&UsersTarget != 0 {
 			iface := reflect.TypeFor[interface {
@@ -380,17 +381,13 @@ func validateAppConnector(app AppInfo) {
 				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
 		}
-		if targets&GroupsTarget != 0 {
-			// TODO(Gianluca): Groups are currently not supported, see
-			// https://github.com/meergo/meergo/issues/895.
-			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target includes GroupsTarget, but groups are currently not supported by Meergo (see https://github.com/meergo/meergo/issues/895).", app.Name))
-		}
 	}
 
 	if app.AsDestination != nil {
 		targets := app.AsDestination.Targets
-		if targets == 0 || (targets&^(EventsTarget|UsersTarget|GroupsTarget)) != 0 {
-			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.EventsTarget, meergo.UsersTarget, meergo.GroupsTarget, or a combination of them using the bitwise OR operator", app.Name))
+		//if targets == 0 || (targets&^(EventsTarget|UsersTarget|GroupsTarget)) != 0 { TODO(marco): Implement groups
+		if targets == 0 || (targets&^(EventsTarget|UsersTarget)) != 0 {
+			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.EventsTarget, meergo.UsersTarget, or a combination of them using the bitwise OR operator", app.Name))
 		}
 		if targets&UsersTarget != 0 {
 			iface := reflect.TypeFor[interface {
@@ -401,11 +398,6 @@ func validateAppConnector(app AppInfo) {
 			if !app.ct.Implements(iface) {
 				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
-		}
-		if targets&GroupsTarget != 0 {
-			// TODO(Gianluca): Groups are currently not supported, see
-			// https://github.com/meergo/meergo/issues/895.
-			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target includes GroupsTarget, but groups are currently not supported by Meergo (see https://github.com/meergo/meergo/issues/895).", app.Name))
 		}
 		if targets&EventsTarget != 0 {
 			iface := reflect.TypeFor[interface {
@@ -430,13 +422,14 @@ func validateAppConnector(app AppInfo) {
 		}
 	}
 
-	if app.Terms.Group != "" || app.Terms.Groups != "" {
-		if (app.AsSource == nil || app.AsSource.Targets&GroupsTarget == 0) &&
-			(app.AsDestination == nil || app.AsDestination.Targets&GroupsTarget == 0) {
-			panic(fmt.Sprintf("connector %s: cannot specify a term for group and/or groups"+
-				" if it does not support the Groups target neither as source nor as destination", app.Name))
-		}
-	}
+	// TODO(marco): Implement groups
+	//if app.Terms.Group != "" || app.Terms.Groups != "" {
+	//	if (app.AsSource == nil || app.AsSource.Targets&GroupsTarget == 0) &&
+	//		(app.AsDestination == nil || app.AsDestination.Targets&GroupsTarget == 0) {
+	//		panic(fmt.Sprintf("connector %s: cannot specify a term for group and/or groups"+
+	//			" if it does not support the Groups target neither as source nor as destination", app.Name))
+	//	}
+	//}
 
 	var hasSourceSettings = app.AsSource != nil && app.AsSource.HasSettings
 	var hasDestinationSettings = app.AsDestination != nil && app.AsDestination.HasSettings

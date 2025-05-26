@@ -1,12 +1,12 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Users and Groups{% end %}
+{% macro Title string %}Users{% end %}
 {% Article %}
 
-# Users and groups
+# Users
 
-An app connector, if the related app allows it, can read, create, and update users and groups within the app, enabling Meergo to import and export users and groups. An app connector may support users only, groups only, or both.
+An app connector, if the related app allows it, can read, create, and update users within the app, enabling Meergo to import and export users.
 
-Firstly, include the `Users` and `Groups` flags during connector registration, based on what the connector supports, as the targets for source and destination:
+Firstly, include the `UsersTarget` flag during connector registration as the targets for source and destination:
 
 ```go
 meergo.RegisterApp(meergo.AppInfo{
@@ -25,9 +25,9 @@ meergo.RegisterApp(meergo.AppInfo{
 }, New)
 ```
 
-After that, to read, update, and create app records, the connector must implement the `Records` and `Upserts` methods. These methods take the target they should operate on as an argument, which can be either `Users` or `Groups`. They should only implement the targets that the connector supports.
+After that, to read, update, and create app records, the connector must implement the `Records` and `Upserts` methods. These methods take the target they should operate on as an argument, which currently can only be `UsersTarget`.
 
-Here, we'll use the term "records" to refer to both users and groups interchangeably.
+Here, we'll use the term "records" to refer to users.
 
 Let's start by looking at how to read records using the `Records` method.
 
@@ -42,7 +42,7 @@ Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, id
 The parameters for this method are:
 
 - `ctx`: The context.
-- `target`: Specifies whether user or group records should be returned. It can be either `UsersTarget` or `GroupsTarget`.
+- `target`: Specifies the type of entities to return. Currently, only `UsersTarget` is supported.
 - `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
 - `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
 - `properties`: Contains the names of the properties that must be returned for each record.
@@ -69,7 +69,7 @@ type Record struct {
 - `ID`: The record's identifier in the app. It must be a valid, non-empty UTF-8 string.
 - `Properties`: The record's properties and their values. Additional properties not requested are not considered. The connector may omit a property for a user if that user does not have that property. This is distinct from a property with a `null` value.
 - `LastChangeTime`:  The date and time the record was last changed. It can have any time zone. The precision of this time is limited to microseconds; any precision beyond microseconds will be truncated. If the date is unknown, return the zero time `time.Time{}`.
-- `Associations`: Identifiers of the groups the user belongs to, if the record refers to a user, or identifiers of the users that belong to the group. If none exist, or if the app only supports users or groups, indicate `nil` or an empty slice.
+{# - `Associations`: Identifiers of the groups the user belongs to, if the record refers to a user, or identifiers of the users that belong to the group. If none exist, or if the app only supports users or groups, indicate `nil` or an empty slice. #}
 
 If an error occurs, `Records` must return a non-nil error, and it should not be an EOF error. 
 
@@ -110,7 +110,7 @@ To update or create a record, Meergo uses the connector's `Upsert` method:
 Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error
 ```
 
-This method is used during an export process to update existing users or groups, or to create new users or groups in the application. The `target` parameter specifies whether the operation applies to users or groups, depending on what the connector supports.
+This method is used during the export process to update existing users or create new ones in the application. The target parameter must be set to `UsersTarget` to indicate that the operation applies to users.
 
 The `records` parameter contains a collection of records to update or create. **You don’t need to process all the records in the collection at once.** Instead, only handle as many as you can send in a single HTTP request to the application. Even if the application supports processing only one record per request, that's fine. Meergo will automatically call the method again for any records that remain unprocessed.
 

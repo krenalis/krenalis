@@ -4,7 +4,7 @@
 
 # App connectors
 
-App connectors allow to connect to apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and groups and to send events.
+App connectors allow to connect to apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and to send events.
 
 App connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
 
@@ -108,15 +108,15 @@ The `AppInfo` type describes information about the app connector:
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
 - `AsSource`: information about the app connector when it used as source. This should be set only when the app connector can be used as a source, otherwise should be nil.
   - `Description`: brief description of the connector when it is used as a source.
-  - `Targets`: targets supported by the app connector when it is used as source. Can contain `UsersTarget` and `GroupsTarget`.
+  - `Targets`: targets supported by the app connector when it is used as source. Can only contain `UsersTarget`.
   - `HasSettings`: indicates whether the connection has settings when used as a source
 - `AsDestination`: information about the app connector when it used as destination. This should be set only when the app connector can be used as a destination, otherwise should be nil.
   - `Description`: brief description of the connector when it is used as a destination.
-  - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `EventsTarget`, `UsersTarget`, and `GroupsTarget`.
+  - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `EventsTarget` and `UsersTarget`.
   - `HasSettings`: indicates whether the connection has settings when used as destination
   - `SendingMode`: mode used to send the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
-- `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
+{# - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups". #}
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 {# - `WebhooksPer`: indicates if webhooks are per account, connection, or connector. #}
 - `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth).
@@ -179,5 +179,5 @@ type AppConfig struct {
 
 - [OAuth](app/oauth)
 - [Backoff](app/backoff)
-- [Users and groups](app/users-and-groups)
+- [Users](app/users)
 - [Send events](app/send-events)

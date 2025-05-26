@@ -10,8 +10,8 @@ When representing user, group, and event data in a connector, these are mapped t
 
 During an import, connectors return data to import, such as user information. This data must use specific types according to the data type. Key scenarios for handling data in an app connector include:
 
-- [`Records`](./app/users-and-groups#read-records) method of apps returns properties of users or groups.
-- `ReceiveWebhook` method of apps may return properties of users or groups.
+- [`Records`](./app/users-and-groups#read-records) method of apps returns properties of users.
+- `ReceiveWebhook` method of apps may return properties of users.
 - [`Query`](database#query-method) method of databases returns the resulting rows from a query.
 - [`Read`](file#read-method) method of files takes a `RecordWriter` whose methods return the read records.
 
@@ -81,7 +81,7 @@ When one of these layouts is used, the values returned as `string` or `float64` 
 During an export, when a connector (whether app, database, or file) receives data to export, such as user information, it receives Go types specific to the data types. This involves methods such as:
 
 - [`EventRequest`](app/send-events#sending-an-event) method of apps takes extra event information.
-- [`Upsert`](app/users-and-groups#update-and-create-records) method of apps takes properties of a user or group.
+- [`Upsert`](app/users#update-and-create-records) method of apps takes properties of a user.
 - [`Upsert`](database#upsert-method) method of databases takes rows to be added or updated.
 - [`Write`](file#write-method) method of files takes a `RecordReader` whose `Record` method returns the next record to write.
 

@@ -34,10 +34,10 @@ type Connector struct {
 }
 
 type ConnectorTerms struct {
-	User   string `json:"user"`
-	Users  string `json:"users"`
-	Group  string `json:"group"`
-	Groups string `json:"groups"`
+	User  string `json:"user"`
+	Users string `json:"users"`
+	// Group  string `json:"group"`  TODO(marco): Implement groups
+	// Groups string `json:"groups"`
 }
 
 type SourceConnector struct {

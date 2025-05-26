@@ -126,10 +126,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.SourceDescription = connector.SourceDescription
 			c.DestinationDescription = connector.DestinationDescription
 			c.Terms = ConnectorTerms{
-				User:   "user",
-				Users:  "users",
-				Group:  "group",
-				Groups: "groups",
+				User:  "user",
+				Users: "users",
+				// Group:  "group", TODO(marco): Implement groups
+				// Groups: "groups",
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
@@ -139,10 +139,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.SourceDescription = connector.SourceDescription
 			c.DestinationDescription = connector.DestinationDescription
 			c.Terms = ConnectorTerms{
-				User:   "user",
-				Users:  "users",
-				Group:  "group",
-				Groups: "groups",
+				User:  "user",
+				Users: "users",
+				// Group:  "group", TODO(marco): Implement groups
+				// Groups: "groups",
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
@@ -162,10 +162,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.SourceDescription = connector.SourceDescription
 			c.DestinationDescription = connector.DestinationDescription
 			c.Terms = ConnectorTerms{
-				User:   "user",
-				Users:  "users",
-				Group:  "group",
-				Groups: "groups",
+				User:  "user",
+				Users: "users",
+				// Group:  "group", TODO(marco): Implement groups
+				// Groups: "groups",
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon

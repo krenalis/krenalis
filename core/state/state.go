@@ -677,10 +677,10 @@ func (t ConnectorTargets) Contains(target Target) bool {
 // ConnectorTerms represents the terms that a connector uses to refer to various
 // entities, such as users or groups.
 type ConnectorTerms struct {
-	User   string
-	Users  string
-	Group  string
-	Groups string
+	User  string
+	Users string
+	// Group  string  TODO(Marco): implement groups
+	// Groups string
 }
 
 // ConnectorType represents a connector type.

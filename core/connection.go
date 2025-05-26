@@ -407,72 +407,73 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			}
 		}
 	}
-	if targets.Contains(state.Groups) {
-		switch typ := c.Connector().Type; typ {
-		case
-			state.App:
-			var name, description string
-			if c.Role == state.Source {
-				// Source/App/Groups.
-				name = "Import " + connector.Terms.Groups
-				description = "Import " + connector.Terms.Groups
-				if connector.Terms.Groups != "groups" {
-					description += " as groups"
-				}
-				description += " from " + connector.Name
-			} else {
-				// Destination/App/Groups.
-				name = "Export " + connector.Terms.Groups
-				description = "Export groups "
-				if connector.Terms.Groups != "groups" {
-					description += " as " + connector.Terms.Groups
-				}
-				description += " to " + connector.Name
-			}
-			at := ActionType{
-				Name:        name,
-				Description: description,
-				Target:      Groups,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.Database,
-			state.FileStorage:
-			var name, description string
-			if c.Role == state.Source {
-				// Source/FileStorage/Groups.
-				// Source/Database/Groups.
-				name = "Import groups"
-				description = "Import groups from " + connector.Name
-			} else {
-				// Destination/FileStorage/Groups.
-				// Destination/Database/Groups.
-				name = "Export groups"
-				description = "Export groups to " + connector.Name
-			}
-			at := ActionType{
-				Name:        name,
-				Description: description,
-				Target:      Groups,
-			}
-			actionTypes = append(actionTypes, at)
-		case
-			state.Mobile,
-			state.Server,
-			state.Website:
-			if c.Role == state.Source {
-				// Source/Mobile/Groups.
-				// Source/Server/Groups.
-				// Source/Website/Groups.
-				at := ActionType{
-					Name:        "Import groups",
-					Description: "Import groups from the events of the " + connector.Name,
-					Target:      Groups,
-				}
-				actionTypes = append(actionTypes, at)
-			}
-		}
-	}
+	// TODO(marco): Implement groups
+	//if targets.Contains(state.Groups) {
+	//	switch typ := c.Connector().Type; typ {
+	//	case
+	//		state.App:
+	//		var name, description string
+	//		if c.Role == state.Source {
+	//			// Source/App/Groups.
+	//			name = "Import " + connector.Terms.Groups
+	//			description = "Import " + connector.Terms.Groups
+	//			if connector.Terms.Groups != "groups" {
+	//				description += " as groups"
+	//			}
+	//			description += " from " + connector.Name
+	//		} else {
+	//			// Destination/App/Groups.
+	//			name = "Export " + connector.Terms.Groups
+	//			description = "Export groups "
+	//			if connector.Terms.Groups != "groups" {
+	//				description += " as " + connector.Terms.Groups
+	//			}
+	//			description += " to " + connector.Name
+	//		}
+	//		at := ActionType{
+	//			Name:        name,
+	//			Description: description,
+	//			Target:      Groups,
+	//		}
+	//		actionTypes = append(actionTypes, at)
+	//	case
+	//		state.Database,
+	//		state.FileStorage:
+	//		var name, description string
+	//		if c.Role == state.Source {
+	//			// Source/FileStorage/Groups.
+	//			// Source/Database/Groups.
+	//			name = "Import groups"
+	//			description = "Import groups from " + connector.Name
+	//		} else {
+	//			// Destination/FileStorage/Groups.
+	//			// Destination/Database/Groups.
+	//			name = "Export groups"
+	//			description = "Export groups to " + connector.Name
+	//		}
+	//		at := ActionType{
+	//			Name:        name,
+	//			Description: description,
+	//			Target:      Groups,
+	//		}
+	//		actionTypes = append(actionTypes, at)
+	//	case
+	//		state.Mobile,
+	//		state.Server,
+	//		state.Website:
+	//		if c.Role == state.Source {
+	//			// Source/Mobile/Groups.
+	//			// Source/Server/Groups.
+	//			// Source/Website/Groups.
+	//			at := ActionType{
+	//				Name:        "Import groups",
+	//				Description: "Import groups from the events of the " + connector.Name,
+	//				Target:      Groups,
+	//			}
+	//			actionTypes = append(actionTypes, at)
+	//		}
+	//	}
+	//}
 	if targets.Contains(state.Events) {
 		switch typ := c.Connector().Type; typ {
 		case state.Mobile, state.Server, state.Website:
