@@ -13,12 +13,12 @@ meergo.RegisterApp(meergo.AppInfo{
     ...
     AsSource: &meergo.AsAppSource{
         ...
-        Targets:  meergo.Users,
+        Targets:  meergo.UsersTarget,
         ...
     },
     AsDestination: &meergo.AsAppDestination{
         ...
-        Targets:  meergo.Users,
+        Targets:  meergo.UsersTarget,
         ...
     },
     ...
@@ -42,7 +42,7 @@ Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, id
 The parameters for this method are:
 
 - `ctx`: The context.
-- `target`: Specifies whether user or group records should be returned. It can be either `Users` or `Groups`.
+- `target`: Specifies whether user or group records should be returned. It can be either `UsersTarget` or `GroupsTarget`.
 - `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
 - `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
 - `properties`: Contains the names of the properties that must be returned for each record.
@@ -110,21 +110,52 @@ To update or create a record, Meergo uses the connector's `Upsert` method:
 Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error
 ```
 
-This method is used during an export process to update existing users or groups, or to create new users or groups in the application. The `target` parameter specifies whether the operation applies to **Users** or **Groups**, depending on what the connector supports.
+This method is used during an export process to update existing users or groups, or to create new users or groups in the application. The `target` parameter specifies whether the operation applies to users or groups, depending on what the connector supports.
 
 The `records` parameter contains a collection of records to update or create. **You don’t need to process all the records in the collection at once.** Instead, only handle as many as you can send in a single HTTP request to the application. Even if the application supports processing only one record per request, that's fine. Meergo will automatically call the method again for any records that remain unprocessed.
+
+As soon as an iteration over the records parameter completes—either when `First` returns or when the iteration over the sequence returned by `All` or `Same` ends—Meergo can immediately start a new call to `Upsert` with the remaining unconsumed records, even if previous `Upsert` calls are still in progress.
+
+This ensures that only one iteration over a given `Records` sequence is active at any time, but allows multiple concurrent HTTP requests to the application, improving throughput and efficiency.
+
+Each call to `Upsert` must consume at least one record from the provided `records` sequence (by calling `First`, `All`, or `Same`). If the implementation cannot consume any record, it must return an error. If such an error is returned, the iteration is aborted and no further calls to `Upsert` will be made for the remaining records.
 
 #### Key concept: processed records
 
 Meergo considers a record processed as soon as it has been read from the `Records` collection. To better understand how this works, let’s first explore the methods provided by the `Records` interface. Afterward, we’ll review how to use these methods effectively in various scenarios.
 
 ```go
-// Records represents a collection of records to be created or updated. A record
-// to be created has an empty ID. The collection is guaranteed to contain at
-// least one record.
+// Records provides access to a non-empty sequence of records to be created or
+// updated by Upsert. A record to be created has an empty ID.
 //
-// After calling First or once the iterator returned by All or Same stops, no
-// further method calls on Records are allowed.
+// To iterate over records, call All, Same, or First. Only one of these methods
+// can be called on a Records value.
+//   - All returns an iterator over all records.
+//   - Same returns an iterator over records of the same operation type (create
+//     or update) as the first record.
+//   - First returns the first record.
+//
+// Records are consumed as they are yielded by the iterator. A record is
+// considered consumed when it is produced by the iterator and not skipped
+// using Skip.
+//
+// Example:
+//
+//	for i, rec := range records.All() {
+//	    // rec is now consumed unless Skip is called here
+//	    if !shouldProcess(rec) {
+//	        records.Skip()
+//	        continue
+//	    }
+//	    process(rec)
+//	}
+//
+// Calling Skip within the iteration marks the current record as not consumed,
+// so it will be available in subsequent Upsert calls.
+//
+// Only one iteration (using All or Same) or call to First may be active on a
+// Records value. After an iteration completes or First is called, the Records
+// value must not be used again.
 type Records interface {
 
     // All returns an iterator to read all records. Properties of the records in the
@@ -150,6 +181,10 @@ type Records interface {
     // subsequent iteration will resume at the next record while preserving the same
     // index. Skip may only be called during iterations from All or Same, and only
     // if the record's properties have not been modified.
+    //
+    // Skip cannot be called to skip the first record. The first record is always
+    // consumed when iterating with All or Same.
+    // It is safe to call Skip multiple times on the same record.
     Skip()
 }
 ```

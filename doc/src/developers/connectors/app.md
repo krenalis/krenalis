@@ -107,7 +107,7 @@ The `AppInfo` type describes information about the app connector:
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
 - `AsSource`: information about the app connector when it used as source. This should be set only when the app connector can be used as a source, otherwise should be nil.
   - `Description`: brief description of the connector when it is used as a source.
-  - `Targets`: targets supported by the app connector when it is used as source. Can contain `Users` and `Groups`.
+  - `Targets`: targets supported by the app connector when it is used as source. Can contain `UsersTarget` and `GroupsTarget`.
   - `HasSettings`: indicates whether the connection has settings when used as a source
 - `AsDestination`: information about the app connector when it used as destination. This should be set only when the app connector can be used as a destination, otherwise should be nil.
   - `Description`: brief description of the connector when it is used as a destination.

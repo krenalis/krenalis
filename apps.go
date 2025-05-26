@@ -191,12 +191,37 @@ func (err RecordsError) Error() string {
 	return msg
 }
 
-// Records represents a collection of records to be created or updated. A record
-// to be created has an empty ID. The collection is guaranteed to contain at
-// least one record.
+// Records provides access to a non-empty sequence of records to be created or
+// updated by Upsert. A record to be created has an empty ID.
 //
-// After calling First or once the iterator returned by All or Same stops, no
-// further method calls on Records are allowed.
+// To iterate over records, call All, Same, or First. Only one of these methods
+// can be called on a Records value.
+//   - All returns an iterator over all records.
+//   - Same returns an iterator over records of the same operation type (create
+//     or update) as the first record.
+//   - First returns the first record.
+//
+// Records are consumed as they are yielded by the iterator. A record is
+// considered consumed when it is produced by the iterator and not skipped
+// using Skip.
+//
+// Example:
+//
+//	for i, rec := range records.All() {
+//	    // rec is now consumed unless Skip is called here
+//	    if !shouldProcess(rec) {
+//	        records.Skip()
+//	        continue
+//	    }
+//	    process(rec)
+//	}
+//
+// Calling Skip within the iteration marks the current record as not consumed,
+// so it will be available in subsequent Upsert calls.
+//
+// Only one iteration (using All or Same) or call to First may be active on a
+// Records value. After an iteration completes or First is called, the Records
+// value must not be used again.
 type Records interface {
 
 	// All returns an iterator to read all records. Properties of the records in the
@@ -204,12 +229,13 @@ type Records interface {
 	All() iter.Seq2[int, Record]
 
 	// First returns the first record. The record's properties may be modified.
-	// After First is called, no further method calls on Records are allowed.
+	// First può essere chiamato al posto di All e Some se l'app consente di aggiornare o creare un solo record alla volta.
 	First() Record
 
 	// Peek retrieves the next record without advancing the iterator. It returns the
 	// record and true if a record is available, or false if there are no further
-	// records. The returned record must not be modified.
+	// records. Can only be called during an iteration with All or Same.
+	// The returned record must not be modified.
 	Peek() (Record, bool)
 
 	// Same returns an iterator for records: either all records to update
@@ -222,6 +248,10 @@ type Records interface {
 	// subsequent iteration will resume at the next record while preserving the same
 	// index. Skip may only be called during iterations from All or Same, and only
 	// if the record's properties have not been modified.
+	//
+	// Skip cannot be called to skip the first record. The first record is always
+	// consumed when iterating with All or Same.
+	// It is safe to call Skip multiple times on the same record.
 	Skip()
 }
 
