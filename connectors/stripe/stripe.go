@@ -78,6 +78,20 @@ func New(conf *meergo.AppConfig) (*Stripe, error) {
 	return &c, nil
 }
 
+// RecordSchema returns the schema of the specified target and role.
+func (stripe *Stripe) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+	// docs: https://stripe.com/docs/api/customers/object
+	//
+	// currently the user schema is the standard schema of the user returned
+	// when the api is called without specifying the "expand" field.
+	//
+	// Stripe gives the ability to use this additional "expand" field when
+	// calling its APIs to retrieve additional information:
+	// https://stripe.com/docs/api/expanding_objects
+
+	return schema, nil
+}
+
 // Records returns the records of the specified target.
 func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, _ []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
@@ -113,20 +127,6 @@ func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time
 	cursor = users[len(users)-1].ID
 
 	return users, cursor, nil
-}
-
-// Schema returns the schema of the specified target in the specified role.
-func (stripe *Stripe) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-	// docs: https://stripe.com/docs/api/customers/object
-	//
-	// currently the user schema is the standard schema of the user returned
-	// when the api is called without specifying the "expand" field.
-	//
-	// Stripe gives the ability to use this additional "expand" field when
-	// calling its APIs to retrieve additional information:
-	// https://stripe.com/docs/api/expanding_objects
-
-	return schema, nil
 }
 
 // ServeUI serves the connector's user interface.

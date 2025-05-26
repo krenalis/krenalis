@@ -184,6 +184,25 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, event meergo.RawEvent, eve
 	return req, nil
 }
 
+// EventTypeSchema returns the schema of the specified event type.
+func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+	schema := func(placeholder string) types.Type {
+		return types.Object([]types.Property{
+			{Name: "event", Placeholder: placeholder, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+			{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
+		})
+	}
+	switch eventType {
+	case "track":
+		return schema("event"), nil
+	case "page":
+		return schema(`"Page View"`), nil
+	case "screen":
+		return schema(`"Screen View"`), nil
+	}
+	return types.Type{}, meergo.ErrEventTypeNotExist
+}
+
 // EventTypes returns the event types of the connector's instance.
 func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	return []*meergo.EventType{
@@ -203,25 +222,6 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 			Description: "Send screen events to Mixpanel",
 		},
 	}, nil
-}
-
-// Schema returns the schema of the specified target in the specified role.
-func (mp *Mixpanel) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-	schema := func(placeholder string) types.Type {
-		return types.Object([]types.Property{
-			{Name: "event", Placeholder: placeholder, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
-			{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
-		})
-	}
-	switch eventType {
-	case "track":
-		return schema("event"), nil
-	case "page":
-		return schema(`"Page View"`), nil
-	case "screen":
-		return schema(`"Screen View"`), nil
-	}
-	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.

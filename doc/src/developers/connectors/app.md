@@ -58,6 +58,11 @@ func (ky *Klaviyo) EventRequest(ctx context.Context, event meergo.RawEvent, even
     // ...
 }
 
+// EventTypeSchema returns the schema of the specified event type.
+func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+    // ...
+}
+
 // EventTypes returns the event types of the connector's instance.
 func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
     // ...
@@ -69,13 +74,13 @@ func (ky *Klaviyo) ReceiveWebhook(r *http.Request) ([]meergo.WebhookPayload, err
     // ...
 }
 #}
-// Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+// RecordSchema returns the schema of the specified target and role.
+func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
     // ...
 }
 
-// Schema returns the schema of the specified target in the specified role.
-func (ky *Klaviyo) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
+// Records returns the records of the specified target.
+func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
     // ...
 }
 

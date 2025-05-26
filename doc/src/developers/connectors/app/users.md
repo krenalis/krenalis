@@ -47,7 +47,7 @@ The parameters for this method are:
 - `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
 - `properties`: Contains the names of the properties that must be returned for each record.
 - `cursor`: Indicates the starting position for reading records. This is the cursor value from a previous call in a paginated query. For the first call, it is empty.
-- `schema`: It is a recent user or group source schema, as returned by the `Schema` method.
+- `schema`: It is a recent user source schema, as returned by the `RecordSchema` method.
 
 
 > Typically, the `Records` method returns at least one record if there are no errors. However, it is valid for it to return no records even when there are no errors. Additionally, the `Records` method may return duplicate records (i.e., records with the same ID), but only the first record in such cases will be processed.

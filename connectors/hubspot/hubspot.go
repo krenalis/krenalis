@@ -93,6 +93,80 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
+// RecordSchema returns the schema of the specified target and role.
+func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+
+	var response struct {
+		Results []struct {
+			Hidden  bool   `json:"hidden"`
+			Name    string `json:"name"`
+			Options []struct {
+				Label  string `json:"label"`
+				Value  string `json:"value"`
+				Hidden bool   `json:"hidden"`
+			} `json:"options"`
+			Label                string `json:"label"`
+			Description          string `json:"description"`
+			Type                 string `json:"type"`
+			ModificationMetadata struct {
+				ReadOnlyValue bool `json:"readOnlyValue"`
+			} `json:"modificationMetadata"`
+		} `json:"results"`
+	}
+	err := hs.call(ctx, "GET", "/crm/v3/properties/contact", nil, &response)
+	if err != nil {
+		return types.Type{}, err
+	}
+
+	properties := make([]types.Property, 0, len(response.Results))
+	for _, r := range response.Results {
+		typ := propertyType(r.Type)
+		if !typ.Valid() {
+			continue
+		}
+		if role == meergo.Destination && r.ModificationMetadata.ReadOnlyValue {
+			continue
+		}
+		property := types.Property{
+			Name:        r.Name,
+			Type:        typ,
+			Nullable:    true,
+			Description: r.Label + "\n\n" + r.Description,
+		}
+		if typ.Kind() == types.TextKind {
+			if len(r.Options) == 0 {
+				property.Type.WithCharLen(65536)
+			} else {
+				var n int
+				for _, option := range r.Options {
+					if !option.Hidden {
+						n++
+					}
+				}
+				if n == 0 {
+					continue // all options are hidden, skip the property
+				}
+				values := make([]string, 0, n)
+				for _, option := range r.Options {
+					if option.Hidden {
+						continue
+					}
+					values = append(values, option.Value)
+				}
+				property.Type = typ.WithValues(values...)
+			}
+		}
+		properties = append(properties, property)
+	}
+
+	schema, err := types.ObjectOf(properties)
+	if err != nil {
+		return types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
+	}
+
+	return schema, nil
+}
+
 // Records returns the records of the specified target.
 func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
@@ -182,80 +256,6 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 	}
 
 	return records, cursor, err
-}
-
-// Schema returns the schema of the specified target in the specified role.
-func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, role meergo.Role, _ string) (types.Type, error) {
-
-	var response struct {
-		Results []struct {
-			Hidden  bool   `json:"hidden"`
-			Name    string `json:"name"`
-			Options []struct {
-				Label  string `json:"label"`
-				Value  string `json:"value"`
-				Hidden bool   `json:"hidden"`
-			} `json:"options"`
-			Label                string `json:"label"`
-			Description          string `json:"description"`
-			Type                 string `json:"type"`
-			ModificationMetadata struct {
-				ReadOnlyValue bool `json:"readOnlyValue"`
-			} `json:"modificationMetadata"`
-		} `json:"results"`
-	}
-	err := hs.call(ctx, "GET", "/crm/v3/properties/contact", nil, &response)
-	if err != nil {
-		return types.Type{}, err
-	}
-
-	properties := make([]types.Property, 0, len(response.Results))
-	for _, r := range response.Results {
-		typ := propertyType(r.Type)
-		if !typ.Valid() {
-			continue
-		}
-		if role == meergo.Destination && r.ModificationMetadata.ReadOnlyValue {
-			continue
-		}
-		property := types.Property{
-			Name:        r.Name,
-			Type:        typ,
-			Nullable:    true,
-			Description: r.Label + "\n\n" + r.Description,
-		}
-		if typ.Kind() == types.TextKind {
-			if len(r.Options) == 0 {
-				property.Type.WithCharLen(65536)
-			} else {
-				var n int
-				for _, option := range r.Options {
-					if !option.Hidden {
-						n++
-					}
-				}
-				if n == 0 {
-					continue // all options are hidden, skip the property
-				}
-				values := make([]string, 0, n)
-				for _, option := range r.Options {
-					if option.Hidden {
-						continue
-					}
-					values = append(values, option.Value)
-				}
-				property.Type = typ.WithValues(values...)
-			}
-		}
-		properties = append(properties, property)
-	}
-
-	schema, err := types.ObjectOf(properties)
-	if err != nil {
-		return types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
-	}
-
-	return schema, nil
 }
 
 // Upsert updates or creates records in the app for the specified target.

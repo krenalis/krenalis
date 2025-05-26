@@ -104,6 +104,98 @@ func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
 	return account, err
 }
 
+// RecordSchema returns the schema of the specified target and role.
+func (mc *MailChimp) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+
+	// Fetch the contact fields, also known as audience fields or merge fields.
+	// Mailchimp allows for more than 1,000 fields per audience, but the connector reasonably reads only the first 1,000.
+	// See https://mailchimp.com/developer/marketing/docs/merge-fields/.
+	var res struct {
+		MergeFields []struct {
+			Tag          string `json:"tag"`
+			Name         string `json:"name"`
+			Type         string `json:"type"`
+			Required     bool   `json:"required"`
+			DisplayOrder int    `json:"display_order"`
+			Options      struct {
+				Choices []string `json:"choices"`
+			} `json:"options"`
+		} `json:"merge_fields"`
+	}
+	params := url.Values{
+		"count":  []string{"1000"},
+		"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
+	}
+	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(mc.settings.Audience)+"/merge-fields", params, nil, 200, &res)
+	if err != nil {
+		return types.Type{}, err
+	}
+	fields := make([]types.Property, 0, len(res.MergeFields))
+	for _, f := range res.MergeFields {
+		if !types.IsValidPropertyName(f.Tag) {
+			continue
+		}
+		var field types.Property
+		switch f.Type {
+		case "text":
+			field.Type = types.Text().WithCharLen(255)
+		case "number":
+			field.Type = types.Decimal(14, 2)
+			field.Nullable = true
+		case "radio", "dropdown":
+			var values []string
+		Choices:
+			// Remove duplicated values.
+			for i, value := range f.Options.Choices {
+				for _, value2 := range f.Options.Choices[i+1:] {
+					if value == value2 {
+						continue Choices
+					}
+				}
+				values = append(values, value)
+			}
+			if values == nil {
+				continue
+			}
+			field.Type = types.Text().WithValues(values...)
+			if !slices.Contains(values, "") {
+				field.Nullable = true
+			}
+		case "date":
+			field.Type = types.Date()
+			field.Nullable = true
+		case "birthday":
+			field.Type = types.Text().WithCharLen(5)
+		case "address":
+			field.Type = addressType
+		case "zip":
+			field.Type = types.Text().WithCharLen(5)
+		case "phone":
+			field.Type = types.Text()
+		case "url":
+			field.Type = types.Text()
+		default:
+			continue
+		}
+		field.Name = f.Tag
+		field.UpdateRequired = f.Required
+		field.Description = f.Name
+		fields = append(fields, field)
+	}
+
+	// Build the schema.
+	properties := make([]types.Property, len(staticProperties)+1)
+	copy(properties[:2], staticProperties[:2])
+	properties[2] = types.Property{
+		Name:        "merge_fields",
+		Type:        types.Object(fields),
+		Description: "Audience fields",
+	}
+	copy(properties[3:], staticProperties[2:])
+
+	return types.Object(properties), nil
+}
+
 // Records returns the records of the specified target.
 func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, _, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
@@ -207,98 +299,6 @@ var addressType = types.Object([]types.Property{
 	{Name: "zip", Type: types.Text(), UpdateRequired: true},
 	{Name: "country", Type: types.Text()},
 })
-
-// Schema returns the schema of the specified target in the specified role.
-func (mc *MailChimp) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-
-	// Fetch the contact fields, also known as audience fields or merge fields.
-	// Mailchimp allows for more than 1,000 fields per audience, but the connector reasonably reads only the first 1,000.
-	// See https://mailchimp.com/developer/marketing/docs/merge-fields/.
-	var res struct {
-		MergeFields []struct {
-			Tag          string `json:"tag"`
-			Name         string `json:"name"`
-			Type         string `json:"type"`
-			Required     bool   `json:"required"`
-			DisplayOrder int    `json:"display_order"`
-			Options      struct {
-				Choices []string `json:"choices"`
-			} `json:"options"`
-		} `json:"merge_fields"`
-	}
-	params := url.Values{
-		"count":  []string{"1000"},
-		"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
-	}
-	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(mc.settings.Audience)+"/merge-fields", params, nil, 200, &res)
-	if err != nil {
-		return types.Type{}, err
-	}
-	fields := make([]types.Property, 0, len(res.MergeFields))
-	for _, f := range res.MergeFields {
-		if !types.IsValidPropertyName(f.Tag) {
-			continue
-		}
-		var field types.Property
-		switch f.Type {
-		case "text":
-			field.Type = types.Text().WithCharLen(255)
-		case "number":
-			field.Type = types.Decimal(14, 2)
-			field.Nullable = true
-		case "radio", "dropdown":
-			var values []string
-		Choices:
-			// Remove duplicated values.
-			for i, value := range f.Options.Choices {
-				for _, value2 := range f.Options.Choices[i+1:] {
-					if value == value2 {
-						continue Choices
-					}
-				}
-				values = append(values, value)
-			}
-			if values == nil {
-				continue
-			}
-			field.Type = types.Text().WithValues(values...)
-			if !slices.Contains(values, "") {
-				field.Nullable = true
-			}
-		case "date":
-			field.Type = types.Date()
-			field.Nullable = true
-		case "birthday":
-			field.Type = types.Text().WithCharLen(5)
-		case "address":
-			field.Type = addressType
-		case "zip":
-			field.Type = types.Text().WithCharLen(5)
-		case "phone":
-			field.Type = types.Text()
-		case "url":
-			field.Type = types.Text()
-		default:
-			continue
-		}
-		field.Name = f.Tag
-		field.UpdateRequired = f.Required
-		field.Description = f.Name
-		fields = append(fields, field)
-	}
-
-	// Build the schema.
-	properties := make([]types.Property, len(staticProperties)+1)
-	copy(properties[:2], staticProperties[:2])
-	properties[2] = types.Property{
-		Name:        "merge_fields",
-		Type:        types.Object(fields),
-		Description: "Audience fields",
-	}
-	copy(properties[3:], staticProperties[2:])
-
-	return types.Object(properties), nil
-}
 
 // ServeUI serves the connector's user interface.
 func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {

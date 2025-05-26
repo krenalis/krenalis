@@ -41,25 +41,13 @@ type App struct {
 	err         error
 }
 
-type appSchemaConnector interface {
-	// Schema returns the schema of the specified target in the specified role. For
-	// Users or Groups, role can be Source or Destination, and it returns their
-	// respective schemas. For Events, role is Destination, and it returns the
-	// schema of the specified event type.
-	//
-	// For events, the returned schema describes properties required by the
-	// connector to dispatch an event of this type. Actions based on the specified
-	// event type will have a transformation that, given the received event,
-	// provides the properties required by the connector. These properties, along
-	// with the received event, are passed to the connector's EventRequest method.
-	//
-	// If no extra information is needed for the event type, the returned schema is
-	// the invalid schema. If the event type does not exist, it returns the
-	// ErrEventTypeNotExist error.
-	Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error)
-}
+type appRecordConnector interface {
 
-type appRecordsConnector interface {
+	// RecordSchema returns the schema of the specified target in the specified
+	// role. Role can be Source or Destination, and it returns their respective
+	// schemas.
+	RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error)
+
 	// Records returns the records of the specified target. The target can only be
 	// either Users or Groups, and it must be a target supported by the connector.
 	//
@@ -90,6 +78,7 @@ type appRecordsConnector interface {
 }
 
 type appEventsConnector interface {
+
 	// EventRequest returns a request to send an event to the app. event is the
 	// event to send, eventType is the type of event to send, schema is its schema,
 	// properties are the property values conforming to the schema, and redacted
@@ -103,6 +92,19 @@ type appEventsConnector interface {
 	// specified event type does not exist, it returns the ErrEventTypeNotExist
 	// error.
 	EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error)
+
+	// EventTypeSchema returns the schema of the specified event type.
+	//
+	// The returned schema describes properties required by the connector to
+	// send an event of this type. Actions based on the specified event type
+	// will have a transformation that, given the received event, provides the
+	// properties required by the connector. These properties, along with the
+	// raw event, are passed to the connector's EventRequest method.
+	//
+	// If no extra information is needed for the event type, the returned schema
+	// is the invalid schema. If the event type does not exist, it returns the
+	// ErrEventTypeNotExist error.
+	EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
 
 	// EventTypes returns the event types of the connector's instance.
 	EventTypes(ctx context.Context) ([]*EventType, error)
@@ -182,7 +184,7 @@ func (app *App) EventRequest(ctx context.Context, event RawEvent, eventType stri
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypeSchema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.EventsTarget, meergo.Destination, eventType)
+	eventTypeSchema, err := app.inner.(appEventsConnector).EventTypeSchema(ctx, eventType)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -264,7 +266,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.EventsTarget, meergo.Destination, eventType)
+		schema, err := app.inner.(appEventsConnector).EventTypeSchema(ctx, eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -397,7 +399,7 @@ func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	if schema := app.users.schemas[role-1]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.UsersTarget, meergo.Role(role), "")
+	schema, err := app.inner.(appRecordConnector).RecordSchema(ctx, meergo.UsersTarget, meergo.Role(role))
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
@@ -511,7 +513,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []meergo.Record
 			var err error
-			users, cursor, err = r.inner.(appRecordsConnector).Records(ctx, meergo.UsersTarget, r.lastChangeTime, nil, names, cursor, r.appSchema)
+			users, cursor, err = r.inner.(appRecordConnector).Records(ctx, meergo.UsersTarget, r.lastChangeTime, nil, names, cursor, r.appSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

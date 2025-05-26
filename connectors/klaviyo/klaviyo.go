@@ -124,6 +124,17 @@ func (ky *Klaviyo) EventRequest(ctx context.Context, event meergo.RawEvent, even
 	return req, nil
 }
 
+// EventTypeSchema returns the schema of the specified event type.
+func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+	if eventType == "create_event" {
+		return types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), CreateRequired: true},
+			{Name: "metric_name", Type: types.Text(), CreateRequired: true},
+		}), nil
+	}
+	return types.Type{}, meergo.ErrUIEventNotExist
+}
+
 // EventTypes returns the event types of the connector's instance.
 func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	return []*meergo.EventType{
@@ -135,117 +146,8 @@ func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 	}, nil
 }
 
-// Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
-
-	var hasID bool
-	var hasUpdated bool
-
-	u := cursor
-	if u == "" {
-		var b strings.Builder
-		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
-		i := 0
-		for _, p := range properties {
-			if p == "id" {
-				hasID = true
-				continue
-			}
-			if i > 0 {
-				b.WriteByte(',')
-			}
-			b.WriteString(p)
-			if p == "updated" {
-				hasUpdated = true
-			}
-			i++
-		}
-		if !hasUpdated {
-			b.WriteString(",updated")
-		}
-		b.WriteString("&page%5Bsize%5D=100&sort=updated")
-		if !lastChangeTime.IsZero() {
-			b.WriteString("&filter=greater-than%28updated%2C")
-			b.WriteString(url.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
-			b.WriteString("%29")
-		}
-		if ids != nil {
-			b.WriteString("&filter=any%28id%2C%5B")
-			for i, id := range ids {
-				if i > 0 {
-					b.WriteString("%2C")
-				}
-				b.WriteString(`%22`)
-				b.WriteString(url.QueryEscape(id))
-				b.WriteString(`%22`)
-			}
-			b.WriteString("%5D%29")
-		}
-		u = b.String()
-	}
-
-	var response struct {
-		Data []struct {
-			ID         string         `json:"id"`
-			Attributes map[string]any `json:"attributes"`
-		} `json:"data"`
-		Links struct {
-			Next string `json:"next"`
-		} `json:"links"`
-	}
-
-	err := ky.call(ctx, "GET", u, nil, 200, &response)
-	if err != nil {
-		return nil, "", err
-	}
-	if response.Links.Next != "" && !strings.HasPrefix(response.Links.Next, "https://a.klaviyo.com/") {
-		return nil, "", fmt.Errorf("unexpected links.next URL %q", response.Links.Next)
-	}
-	if len(response.Data) == 0 {
-		return nil, "", io.EOF
-	}
-
-	users := make([]meergo.Record, len(response.Data))
-	for i, data := range response.Data {
-		users[i] = meergo.Record{
-			ID: data.ID,
-		}
-		updated, _ := data.Attributes["updated"].(string)
-		lastChangeTime, err := time.Parse(time.RFC3339, updated)
-		if err != nil {
-			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
-			continue
-		}
-		if hasID {
-			data.Attributes["id"] = users[i].ID
-		}
-		if !hasUpdated {
-			delete(data.Attributes, "updated")
-		}
-		users[i].Properties = data.Attributes
-		users[i].LastChangeTime = lastChangeTime.UTC()
-	}
-
-	if response.Links.Next == "" {
-		return users, "", io.EOF
-	}
-
-	return users, response.Links.Next, nil
-}
-
-// Schema returns the schema of the specified target in the specified role.
-func (ky *Klaviyo) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-
-	if target == meergo.EventsTarget {
-		if eventType != "create_event" {
-			return types.Type{}, meergo.ErrUIEventNotExist
-		}
-		return types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), CreateRequired: true},
-			{Name: "metric_name", Type: types.Text(), CreateRequired: true},
-		}), nil
-	}
-
+// RecordSchema returns the schema of the specified target and role.
+func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
 	// The fields which are not marked as "required" in the documentation
 	// (available here:
 	// https://developers.klaviyo.com/en/reference/get_profiles) are declared as
@@ -395,6 +297,104 @@ func (ky *Klaviyo) Schema(ctx context.Context, target meergo.Targets, role meerg
 		})
 	}
 	return schema, nil
+}
+
+// Records returns the records of the specified target.
+func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
+
+	var hasID bool
+	var hasUpdated bool
+
+	u := cursor
+	if u == "" {
+		var b strings.Builder
+		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
+		i := 0
+		for _, p := range properties {
+			if p == "id" {
+				hasID = true
+				continue
+			}
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(p)
+			if p == "updated" {
+				hasUpdated = true
+			}
+			i++
+		}
+		if !hasUpdated {
+			b.WriteString(",updated")
+		}
+		b.WriteString("&page%5Bsize%5D=100&sort=updated")
+		if !lastChangeTime.IsZero() {
+			b.WriteString("&filter=greater-than%28updated%2C")
+			b.WriteString(url.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
+			b.WriteString("%29")
+		}
+		if ids != nil {
+			b.WriteString("&filter=any%28id%2C%5B")
+			for i, id := range ids {
+				if i > 0 {
+					b.WriteString("%2C")
+				}
+				b.WriteString(`%22`)
+				b.WriteString(url.QueryEscape(id))
+				b.WriteString(`%22`)
+			}
+			b.WriteString("%5D%29")
+		}
+		u = b.String()
+	}
+
+	var response struct {
+		Data []struct {
+			ID         string         `json:"id"`
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+		Links struct {
+			Next string `json:"next"`
+		} `json:"links"`
+	}
+
+	err := ky.call(ctx, "GET", u, nil, 200, &response)
+	if err != nil {
+		return nil, "", err
+	}
+	if response.Links.Next != "" && !strings.HasPrefix(response.Links.Next, "https://a.klaviyo.com/") {
+		return nil, "", fmt.Errorf("unexpected links.next URL %q", response.Links.Next)
+	}
+	if len(response.Data) == 0 {
+		return nil, "", io.EOF
+	}
+
+	users := make([]meergo.Record, len(response.Data))
+	for i, data := range response.Data {
+		users[i] = meergo.Record{
+			ID: data.ID,
+		}
+		updated, _ := data.Attributes["updated"].(string)
+		lastChangeTime, err := time.Parse(time.RFC3339, updated)
+		if err != nil {
+			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
+			continue
+		}
+		if hasID {
+			data.Attributes["id"] = users[i].ID
+		}
+		if !hasUpdated {
+			delete(data.Attributes, "updated")
+		}
+		users[i].Properties = data.Attributes
+		users[i].LastChangeTime = lastChangeTime.UTC()
+	}
+
+	if response.Links.Next == "" {
+		return users, "", io.EOF
+	}
+
+	return users, response.Links.Next, nil
 }
 
 // ServeUI serves the connector's user interface.

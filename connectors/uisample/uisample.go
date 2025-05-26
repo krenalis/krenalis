@@ -52,14 +52,14 @@ type UISample struct {
 	settings *innerSettings
 }
 
+// RecordSchema returns the schema of the specified target and role.
+func (uiSample *UISample) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+	return types.Type{}, meergo.ErrEventTypeNotExist
+}
+
 // Records returns the records of the specified target.
 func (uiSample *UISample) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
 	return nil, "", io.EOF
-}
-
-// Schema returns the schema of the specified target in the specified role.
-func (uiSample *UISample) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.

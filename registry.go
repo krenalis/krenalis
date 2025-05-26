@@ -374,8 +374,8 @@ func validateAppConnector(app AppInfo) {
 		}
 		if targets&UsersTarget != 0 {
 			iface := reflect.TypeFor[interface {
+				RecordSchema(ctx context.Context, target Targets, role Role) (types.Type, error)
 				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
-				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 			}]()
 			if !app.ct.Implements(iface) {
 				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
@@ -391,8 +391,8 @@ func validateAppConnector(app AppInfo) {
 		}
 		if targets&UsersTarget != 0 {
 			iface := reflect.TypeFor[interface {
+				RecordSchema(ctx context.Context, target Targets, role Role) (types.Type, error)
 				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
-				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 				Upsert(ctx context.Context, target Targets, records Records) error
 			}]()
 			if !app.ct.Implements(iface) {
@@ -402,8 +402,8 @@ func validateAppConnector(app AppInfo) {
 		if targets&EventsTarget != 0 {
 			iface := reflect.TypeFor[interface {
 				EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
+				EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
 				EventTypes(ctx context.Context) ([]*EventType, error)
-				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 			}]()
 			if !app.ct.Implements(iface) {
 				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))

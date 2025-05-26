@@ -122,18 +122,18 @@ func (ga *Analytics) EventRequest(ctx context.Context, event meergo.RawEvent, ev
 	return req, nil
 }
 
-// EventTypes returns the event types of the connector's instance.
-func (ga *Analytics) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
-	return meergoEventTypes, nil
-}
-
-// Schema returns the schema of the specified target in the specified role.
-func (ga *Analytics) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
+// EventTypeSchema returns the schema of the specified event type.
+func (ga *Analytics) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 	event, ok := eventTypeByID[eventType]
 	if ok {
 		return event.Schema, nil
 	}
 	return types.Type{}, meergo.ErrEventTypeNotExist
+}
+
+// EventTypes returns the event types of the connector's instance.
+func (ga *Analytics) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+	return meergoEventTypes, nil
 }
 
 // ServeUI serves the connector's user interface.

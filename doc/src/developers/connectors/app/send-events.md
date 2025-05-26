@@ -20,11 +20,11 @@ meergo.RegisterApp(meergo.AppInfo{
 }, New)
 ```
 
-This piece of code registers your connector, telling Meergo that it's ready to manage events (as well as users) when used as destination. Next, you'll need to implement two key methods within your connector:
+This piece of code registers your connector, telling Meergo that it's ready to manage events (as well as users) when used as destination. Next, you'll need to implement three key methods within your connector:
 
-- `EventTypes`: Lists the types of events the app can work with.
 - `EventRequest`: Takes an event and turns it into an HTTP request for sending the event to the app.
-- `Schema`: Provides the schema of an event, given its event type. If the connector already handles users, probably this method is already implemented and should only be extended to support events.
+- `EventTypeSchema`: Provides the schema of an event, given its event type.
+- `EventTypes`: Lists the types of events the app can work with.
 
 Let's look more closely at what each part does.
 
@@ -54,7 +54,7 @@ Sometimes, the event might lack necessary information required for sending to th
 
 Actions based on an event type involve a transformation that, given an event, provides the extra information required by the connector. This information, along with the event, is passed to the connector's `EventRequest` method.
 
-The schema of an event type is provided by the connector's `Schema` method when the target is `EventsTarget`. If no extra information is needed for an event type, it must return the invalid schema.
+The schema of an event type is provided by the connector's `EventTypeSchema` method. If no extra information is needed for an event type, it must return the invalid schema.
 
 For instance, if you need to send a ["share"](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events?hl=en#share) event to Google Analytics, you might require parameters like "method," "content_type," and "item_id," which could vary for each event. However, during the connector implementation stage, you might not have values for these parameters or know where to obtain them. In such cases, you can specify how to determine these parameters using a transformation in the action for the "share" event.
 

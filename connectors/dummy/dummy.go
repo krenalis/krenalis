@@ -110,6 +110,40 @@ func (dummy *Dummy) EventRequest(ctx context.Context, event meergo.RawEvent, eve
 	return req, nil
 }
 
+// EventTypeSchema returns the schema of the specified event type.
+func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+	dummy.simulateHTTPDelay()
+	switch eventType {
+	case "send_add_to_cart":
+		return types.Object([]types.Property{
+			{Name: "email", Type: types.Text(), CreateRequired: true},
+			{Name: "itemName", Type: types.Text()},
+			{Name: "itemId", Type: types.Int(32)},
+		}), nil
+	case "send_custom_event":
+		return types.Object([]types.Property{
+			{Name: "email", Type: types.Text()},
+		}), nil
+	case "send_identity":
+		return types.Object([]types.Property{
+			{Name: "email", CreateRequired: true, Type: types.Text()},
+			{Name: "traits", Type: types.Object([]types.Property{
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street1", Type: types.Text()},
+					{Name: "street2", Type: types.Text()},
+				})},
+			})},
+		}), nil
+	case "send_generic_event":
+		return types.Object([]types.Property{
+			{Name: "properties", Type: types.JSON()},
+		}), nil
+	case "send_event_with_no_schema":
+		return types.Type{}, nil
+	}
+	return types.Type{}, meergo.ErrEventTypeNotExist
+}
+
 // EventTypes returns the event types of the connector's instance.
 func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	dummy.simulateHTTPDelay()
@@ -140,6 +174,34 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 			Description: "Send an event which does not require mapping",
 		},
 	}, nil
+}
+
+// RecordSchema returns the schema of the specified target and role.
+func (dummy *Dummy) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+	dummy.simulateHTTPDelay()
+	var properties []types.Property
+	if role == meergo.Source {
+		properties = append(properties, types.Property{Name: "dummyId", Type: types.Text()})
+	}
+	properties = append(properties, []types.Property{
+		{Name: "email", Type: types.Text(), Nullable: true},
+		{Name: "firstName", Type: types.Text(), Nullable: true},
+		{Name: "fullName", Type: types.Text(), Nullable: true},
+		{Name: "lastName", Type: types.Text(), Nullable: true},
+		{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Nullable: true},
+		{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
+	}...)
+	if role == meergo.Destination {
+		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.Text())})
+	}
+	properties = append(properties, []types.Property{
+		{Name: "address", Type: types.Object([]types.Property{
+			{Name: "street", Type: types.Text(), Nullable: true},
+			{Name: "postal_code", Type: types.Text(), Nullable: true},
+			{Name: "city", Type: types.Text(), Nullable: true},
+		}), Nullable: true},
+	}...)
+	return types.Object(properties), nil
 }
 
 // Records returns the records of the specified target.
@@ -210,65 +272,6 @@ type innerSettings struct {
 	CustomerExportFailPercentage int // in [0, 100]
 	URLForDispatchingEvents      string
 	SimulateHTTPDelay            bool
-}
-
-// Schema returns the schema of the specified target in the specified role.
-func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-	dummy.simulateHTTPDelay()
-	if target == meergo.UsersTarget {
-		var properties []types.Property
-		if role == meergo.Source {
-			properties = append(properties, types.Property{Name: "dummyId", Type: types.Text()})
-		}
-		properties = append(properties, []types.Property{
-			{Name: "email", Type: types.Text(), Nullable: true},
-			{Name: "firstName", Type: types.Text(), Nullable: true},
-			{Name: "fullName", Type: types.Text(), Nullable: true},
-			{Name: "lastName", Type: types.Text(), Nullable: true},
-			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Nullable: true},
-			{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
-		}...)
-		if role == meergo.Destination {
-			properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.Text())})
-		}
-		properties = append(properties, []types.Property{
-			{Name: "address", Type: types.Object([]types.Property{
-				{Name: "street", Type: types.Text(), Nullable: true},
-				{Name: "postal_code", Type: types.Text(), Nullable: true},
-				{Name: "city", Type: types.Text(), Nullable: true},
-			}), Nullable: true},
-		}...)
-		return types.Object(properties), nil
-	}
-	switch eventType {
-	case "send_add_to_cart":
-		return types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), CreateRequired: true},
-			{Name: "itemName", Type: types.Text()},
-			{Name: "itemId", Type: types.Int(32)},
-		}), nil
-	case "send_custom_event":
-		return types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-		}), nil
-	case "send_identity":
-		return types.Object([]types.Property{
-			{Name: "email", CreateRequired: true, Type: types.Text()},
-			{Name: "traits", Type: types.Object([]types.Property{
-				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text()},
-					{Name: "street2", Type: types.Text()},
-				})},
-			})},
-		}), nil
-	case "send_generic_event":
-		return types.Object([]types.Property{
-			{Name: "properties", Type: types.JSON()},
-		}), nil
-	case "send_event_with_no_schema":
-		return types.Type{}, nil
-	}
-	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.
