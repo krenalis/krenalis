@@ -64,6 +64,14 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	return api.core.Connector(api.name(r))
 }
 
+// ConnectorDocumentation returns the documentation of a connector.
+func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if _, _, err := api.credentials(r); err != nil {
+		return nil, err
+	}
+	return api.core.ConnectorDocumentation(api.name(r))
+}
+
 // Connectors returns the connectors.
 func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {

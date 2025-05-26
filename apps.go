@@ -68,18 +68,18 @@ type AppTerms struct {
 // AsAppSource represents the specific information of an app connector used as a
 // source.
 type AsAppSource struct {
-	Description string
-	Targets     Targets
-	HasSettings bool
+	Targets       Targets
+	HasSettings   bool
+	Documentation ConnectorRoleDocumentation
 }
 
 // AsAppDestination represents the specific information of an app connector used
 // as a destination.
 type AsAppDestination struct {
-	Description string
-	Targets     Targets
-	HasSettings bool
-	SendingMode SendingMode // mode of event sending. 'None' for sources and non-supporting event apps.
+	Targets       Targets
+	HasSettings   bool
+	SendingMode   SendingMode // mode of event sending. 'None' for sources and non-supporting event apps.
+	Documentation ConnectorRoleDocumentation
 }
 
 // OAuth represents the OAuth 2.0 connector information.

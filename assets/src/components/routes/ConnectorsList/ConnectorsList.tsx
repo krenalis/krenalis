@@ -85,8 +85,8 @@ const ConnectorsList = () => {
 								{c.type}
 							</SlBadge>
 						)}
-						<div className='connectors-list__card-description'>
-							{connectionRole === 'Source' ? c.asSource.description : c.asDestination.description}
+						<div className='connectors-list__card-summary'>
+							{connectionRole === 'Source' ? c.asSource.summary : c.asDestination.summary}
 						</div>
 					</div>
 				</div>

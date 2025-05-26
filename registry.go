@@ -541,7 +541,7 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 		panic(fmt.Sprintf("connector %s: it does not implement the minimum required methods", fileStorage.Name))
 	}
 
-	if fileStorage.AsSource {
+	if fileStorage.AsSource != nil {
 		iface := reflect.TypeFor[interface {
 			Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 		}]()
@@ -550,7 +550,7 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 		}
 	}
 
-	if fileStorage.AsDestination {
+	if fileStorage.AsDestination != nil {
 		iface := reflect.TypeFor[interface {
 			Write(ctx context.Context, r io.Reader, name, contentType string) error
 		}]()

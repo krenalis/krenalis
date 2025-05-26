@@ -27,6 +27,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 // TODO(Gianluca): Groups are partially supported by this connector. When they
 // are fully supported by both the connector and Meergo, re-enable the
 // descriptions that refer to the groups and add the target "Groups" where
@@ -36,12 +42,18 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "HubSpot",
 		AsSource: &meergo.AsAppSource{
-			Description: "Import contacts as users from HubSpot",
-			Targets:     meergo.UsersTarget,
+			Targets: meergo.UsersTarget,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Import contacts as users from HubSpot",
+				Overview: sourceOverview,
+			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Export users as contacts to HubSpot",
-			Targets:     meergo.UsersTarget,
+			Targets: meergo.UsersTarget,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Export users as contacts to HubSpot",
+				Overview: destinationOverview,
+			},
 		},
 		Terms: meergo.AppTerms{
 			User:  "contact",

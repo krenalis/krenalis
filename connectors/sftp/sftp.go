@@ -34,12 +34,26 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name:          "SFTP",
-		AsSource:      true,
-		AsDestination: true,
-		Icon:          icon,
+		Name: "SFTP",
+		AsSource: &meergo.AsFileStorageSource{
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Overview: sourceOverview,
+			},
+		},
+		AsDestination: &meergo.AsFileStorageDestination{
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Overview: destinationOverview,
+			},
+		},
+		Icon: icon,
 	}, New)
 }
 

@@ -29,32 +29,72 @@ var iconNode = "<svg></svg>"
 // Connector icon.
 var iconPython = "<svg></svg>"
 
+//go:embed documentation/dotnet/overview.md
+var dotnetOverview string
+
+//go:embed documentation/go/overview.md
+var goOverview string
+
+//go:embed documentation/java/overview.md
+var javaOverview string
+
+//go:embed documentation/node/overview.md
+var nodeOverview string
+
+//go:embed documentation/python/overview.md
+var pythonOverview string
+
 func init() {
 	servers := []meergo.ServerInfo{
 		{
-			Name:              ".NET",
-			SourceDescription: "Import events and users from a server using .NET",
-			Icon:              iconDotNet,
+			Name: ".NET",
+			Icon: iconDotNet,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from a server using .NET",
+					Overview: dotnetOverview,
+				},
+			},
 		},
 		{
-			Name:              "Go",
-			SourceDescription: "Import events and users from a server using Go",
-			Icon:              iconGo,
+			Name: "Go",
+			Icon: iconGo,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from a server using Go",
+					Overview: goOverview,
+				},
+			},
 		},
 		{
-			Name:              "Java",
-			SourceDescription: "Import events and users from a server using Java",
-			Icon:              iconJava,
+			Name: "Java",
+			Icon: iconJava,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from a server using Java",
+					Overview: javaOverview,
+				},
+			},
 		},
 		{
-			Name:              "Node.js",
-			SourceDescription: "Import events and users from a server using Node.js",
-			Icon:              iconNode,
+			Name: "Node.js",
+			Icon: iconNode,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from a server using Node.js",
+					Overview: nodeOverview,
+				},
+			},
 		},
 		{
-			Name:              "Python",
-			SourceDescription: "Import events and users from a server using Python",
-			Icon:              iconPython,
+			Name: "Python",
+			Icon: iconPython,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from a server using Python",
+					Overview: pythonOverview,
+				},
+			},
 		},
 	}
 	for _, srv := range servers {

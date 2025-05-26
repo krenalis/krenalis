@@ -22,23 +22,23 @@ interface Connector {
 interface ConnectorTerms {
 	user: string;
 	users: string;
-	group: string;
-	groups: string;
+    // group: string;  // TODO(marco): Implement groups
+    // groups: string;
 }
 
 interface SourceConnector {
-	description: string;
 	targets: ConnectorTarget[];
 	hasSettings: boolean;
 	sampleQuery: string;
 	// WebhooksPer: WebhooksPer; // TODO(marco): implement webhooks
+	summary: string;
 }
 
 interface DestinationConnector {
-	description: string;
 	targets: ConnectorTarget[];
 	hasSettings: boolean;
 	sendingMode: SendingMode | null;
+	summary: string;
 }
 
 export type {

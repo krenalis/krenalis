@@ -13,10 +13,9 @@ import (
 
 // WebsiteInfo represents a website connector info.
 type WebsiteInfo struct {
-	Name                   string
-	SourceDescription      string
-	DestinationDescription string
-	Icon                   string // icon in SVG format
+	Name          string
+	Icon          string // icon in SVG format
+	Documentation ConnectorDocumentation
 
 	newFunc reflect.Value
 	ct      reflect.Type

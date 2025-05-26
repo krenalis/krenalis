@@ -13,6 +13,16 @@ import (
 	"reflect"
 )
 
+type ConnectorDocumentation struct {
+	Source      ConnectorRoleDocumentation
+	Destination ConnectorRoleDocumentation
+}
+
+type ConnectorRoleDocumentation struct {
+	Summary  string
+	Overview string
+}
+
 // ConnectorInfo is the interface implemented by connector infos.
 type ConnectorInfo interface {
 	ReflectType() reflect.Type

@@ -13,10 +13,9 @@ import (
 
 // MobileInfo represents a mobile connector info.
 type MobileInfo struct {
-	Name                   string
-	SourceDescription      string
-	DestinationDescription string
-	Icon                   string // icon in SVG format
+	Name          string
+	Icon          string // icon in SVG format
+	Documentation ConnectorDocumentation
 
 	newFunc reflect.Value
 	ct      reflect.Type

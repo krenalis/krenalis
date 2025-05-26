@@ -39,18 +39,30 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "Mailchimp",
 		AsSource: &meergo.AsAppSource{
-			Description: "Import contacts as users from Mailchimp",
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Import contacts as users from Mailchimp",
+				Overview: sourceOverview,
+			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Export users as contacts to Mailchimp",
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Export users as contacts to Mailchimp",
+				Overview: destinationOverview,
+			},
 		},
 		Terms: meergo.AppTerms{
 			User:  "contact",

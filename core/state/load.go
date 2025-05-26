@@ -32,13 +32,15 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.Type = App
 			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = ConnectorTargets(asSource.Targets)
-				c.SourceDescription = asSource.Description
 				c.HasSourceSettings = asSource.HasSettings
+				c.Documentation.Source.Summary = asSource.Documentation.Summary
+				c.Documentation.Source.Overview = asSource.Documentation.Overview
 			}
 			if asDest := connector.AsDestination; asDest != nil {
 				c.DestinationTargets = ConnectorTargets(asDest.Targets)
-				c.DestinationDescription = asDest.Description
 				c.HasDestinationSettings = asDest.HasSettings
+				c.Documentation.Destination.Summary = asDest.Documentation.Summary
+				c.Documentation.Destination.Overview = asDest.Documentation.Overview
 			}
 			c.Terms = ConnectorTerms(connector.Terms)
 			switch connector.AsDestination.SendingMode {
@@ -77,25 +79,36 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.DestinationTargets = UsersFlag
 			// It is assumed that each Database connector always have both
 			// source and destination settings.
-			c.SourceDescription = "Import users from " + article(c.Name) + " " + c.Name + " database"
-			c.DestinationDescription = "Exports users to " + article(c.Name) + " " + c.Name + " database"
 			c.HasSourceSettings = true
 			c.HasDestinationSettings = true
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 			c.SampleQuery = connector.SampleQuery
 			c.Icon = connector.Icon
+			c.Documentation = connector.Documentation
+			if summary := c.Documentation.Source.Summary; summary == "" {
+				c.Documentation.Source.Summary = "Import users from " + article(c.Name) + " " + c.Name + " database"
+			}
+			if summary := c.Documentation.Destination.Summary; summary == "" {
+				c.Documentation.Destination.Summary = "Exports users to " + article(c.Name) + " " + c.Name + " database"
+			}
 		case meergo.FileInfo:
 			c.Name = connector.Name
 			c.Type = File
-			if connector.AsSource != nil {
+			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = UsersFlag
-				c.SourceDescription = "Import users from " + article(c.Name) + " " + c.Name + " file"
-				c.HasSourceSettings = connector.AsSource.HasSettings
+				c.HasSourceSettings = asSource.HasSettings
+				c.Documentation.Source = asSource.Documentation
+				if c.Documentation.Source.Summary == "" {
+					c.Documentation.Source.Summary = "Import users from " + article(c.Name) + " " + c.Name + " file"
+				}
 			}
-			if connector.AsDestination != nil {
+			if asDest := connector.AsDestination; asDest != nil {
 				c.DestinationTargets = UsersFlag
-				c.DestinationDescription = "Exports users to " + article(c.Name) + " " + c.Name + " file"
 				c.HasDestinationSettings = connector.AsDestination.HasSettings
+				c.Documentation.Destination = asDest.Documentation
+				if c.Documentation.Destination.Summary == "" {
+					c.Documentation.Destination.Summary = "Export users to " + article(c.Name) + " " + c.Name + " file"
+				}
 			}
 			c.FileExtension = connector.Extension
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
@@ -104,27 +117,31 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		case meergo.FileStorageInfo:
 			c.Name = connector.Name
 			c.Type = FileStorage
-			if connector.AsSource {
+			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = UsersFlag
-				c.SourceDescription = "Import users from a file on " + c.Name
 				// It is assumed that, if a FileStorage connector can be
 				// used as a source, it always has source settings.
 				c.HasSourceSettings = true
+				c.Documentation.Source = asSource.Documentation
+				if c.Documentation.Source.Summary == "" {
+					c.Documentation.Source.Summary = "Import users from a file on " + c.Name
+				}
 			}
-			if connector.AsDestination {
+			if asDest := connector.AsDestination; asDest != nil {
 				c.DestinationTargets = UsersFlag
-				c.DestinationDescription = "Exports users to a file on " + c.Name
 				// It is assumed that, if a FileStorage connector can be
 				// used as a destination, it always has destination
 				// settings.
 				c.HasDestinationSettings = true
+				c.Documentation.Destination = asDest.Documentation
+				if c.Documentation.Source.Summary == "" {
+					c.Documentation.Source.Summary = "Exports users to a file on " + c.Name
+				}
 			}
 			c.Icon = connector.Icon
 		case meergo.MobileInfo:
 			c.Name = connector.Name
 			c.Type = Mobile
-			c.SourceDescription = connector.SourceDescription
-			c.DestinationDescription = connector.DestinationDescription
 			c.Terms = ConnectorTerms{
 				User:  "user",
 				Users: "users",
@@ -133,11 +150,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
+			c.Documentation = connector.Documentation
 		case meergo.ServerInfo:
 			c.Name = connector.Name
 			c.Type = Server
-			c.SourceDescription = connector.SourceDescription
-			c.DestinationDescription = connector.DestinationDescription
 			c.Terms = ConnectorTerms{
 				User:  "user",
 				Users: "users",
@@ -146,21 +162,19 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
+			c.Documentation = connector.Documentation
 		case meergo.StreamInfo:
 			c.Name = connector.Name
 			c.Type = Stream
-			c.SourceDescription = connector.SourceDescription
-			c.DestinationDescription = connector.DestinationDescription
 			c.SourceTargets = EventsFlag
 			// It is assumed that a stream connector always have settings.
 			c.HasSourceSettings = true
 			c.HasDestinationSettings = true
 			c.Icon = connector.Icon
+			c.Documentation = connector.Documentation
 		case meergo.WebsiteInfo:
 			c.Name = connector.Name
 			c.Type = Website
-			c.SourceDescription = connector.SourceDescription
-			c.DestinationDescription = connector.DestinationDescription
 			c.Terms = ConnectorTerms{
 				User:  "user",
 				Users: "users",
@@ -169,6 +183,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
+			c.Documentation = connector.Documentation
 		}
 		state.connectors[name] = &c
 	}

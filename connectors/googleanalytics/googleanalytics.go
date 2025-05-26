@@ -25,6 +25,9 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/overview.md
+var overview string
+
 // sendToDebugServer controls whether the events should be sent to the debug
 // server instead of the production server.
 //
@@ -36,10 +39,13 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "Google Analytics",
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Send events to Google Analytics",
 			Targets:     meergo.EventsTarget,
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Send events to Google Analytics",
+				Overview: overview,
+			},
 		},
 		Icon: icon,
 	}, New)

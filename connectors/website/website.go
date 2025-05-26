@@ -17,12 +17,20 @@ import (
 // Connector icon.
 var iconJavaScript = "<svg></svg>"
 
+//go:embed documentation/overview.md
+var overview string
+
 func init() {
 	websites := []meergo.WebsiteInfo{
 		{
-			Name:              "JavaScript",
-			SourceDescription: "Import events and users from a website using JavaScript",
-			Icon:              iconJavaScript,
+			Name: "JavaScript",
+			Icon: iconJavaScript,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from a website using JavaScript",
+					Overview: overview,
+				},
+			},
 		},
 	}
 	for _, ws := range websites {

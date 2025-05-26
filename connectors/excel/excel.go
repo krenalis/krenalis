@@ -27,16 +27,29 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
 		Name: "Excel",
 		AsSource: &meergo.AsSourceFile{
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Overview: sourceOverview,
+			},
 		},
-		AsDestination: &meergo.AsDestinationFile{},
-		HasSheets:     true,
-		Extension:     "xlsx",
-		Icon:          icon,
+		AsDestination: &meergo.AsDestinationFile{
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Overview: destinationOverview,
+			},
+		},
+		HasSheets: true,
+		Extension: "xlsx",
+		Icon:      icon,
 	}, New)
 }
 

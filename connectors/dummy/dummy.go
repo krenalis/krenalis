@@ -30,19 +30,31 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "Dummy",
 		AsSource: &meergo.AsAppSource{
-			Description: "Import customers as users from Dummy",
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Import customers as users from Dummy",
+				Overview: sourceOverview,
+			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Export users as customers and send events to Dummy",
 			Targets:     meergo.EventsTarget | meergo.UsersTarget,
 			SendingMode: meergo.Combined,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Export users as customers and send events to Dummy",
+				Overview: destinationOverview,
+			},
 		},
 		Terms: meergo.AppTerms{
 			User:  "customer",

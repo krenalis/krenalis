@@ -17,11 +17,19 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/overview.md
+var overview string
+
 func init() {
 	meergo.RegisterServer(meergo.ServerInfo{
-		Name:              "Segment",
-		SourceDescription: "Import events and users from Segment",
-		Icon:              icon,
+		Name: "Segment",
+		Icon: icon,
+		Documentation: meergo.ConnectorDocumentation{
+			Source: meergo.ConnectorRoleDocumentation{
+				Summary:  "Import events and users from Segment",
+				Overview: overview,
+			},
+		},
 	}, New)
 }
 

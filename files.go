@@ -35,13 +35,15 @@ type FileInfo struct {
 // AsSourceFile represents the specific information of a file connector used as
 // a source.
 type AsSourceFile struct {
-	HasSettings bool
+	HasSettings   bool
+	Documentation ConnectorRoleDocumentation
 }
 
 // AsDestinationFile represents the specific information of a file connector
 // used as a destination.
 type AsDestinationFile struct {
-	HasSettings bool
+	HasSettings   bool
+	Documentation ConnectorRoleDocumentation
 }
 
 // ReflectType returns the type of the value implementing the file connector info.

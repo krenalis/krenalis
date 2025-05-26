@@ -31,11 +31,24 @@ func (err *InvalidPathError) Error() string {
 // FileStorageInfo represents a file storage connector info.
 type FileStorageInfo struct {
 	Name          string
-	AsSource      bool
-	AsDestination bool
+	AsSource      *AsFileStorageSource
+	AsDestination *AsFileStorageDestination
 	Icon          string // icon in SVG format
-	newFunc       reflect.Value
-	ct            reflect.Type
+
+	newFunc reflect.Value
+	ct      reflect.Type
+}
+
+// AsFileStorageSource represents the specific information of a file storage
+// connector used as a source.
+type AsFileStorageSource struct {
+	Documentation ConnectorRoleDocumentation
+}
+
+// AsFileStorageDestination represents the specific information of a file storage
+// connector used as a destination.
+type AsFileStorageDestination struct {
+	Documentation ConnectorRoleDocumentation
 }
 
 // ReflectType returns the type of the value implementing the file storage

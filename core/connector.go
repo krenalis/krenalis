@@ -41,11 +41,11 @@ type ConnectorTerms struct {
 }
 
 type SourceConnector struct {
-	Description string      `json:"description"`
 	Targets     []Target    `json:"targets"`
 	HasSettings bool        `json:"hasSettings"`
 	SampleQuery string      `json:"sampleQuery"`
 	WebhooksPer WebhooksPer `json:"webhooksPer"`
+	Summary     string      `json:"summary"`
 }
 
 type DestinationConnector struct {
@@ -53,6 +53,7 @@ type DestinationConnector struct {
 	Targets     []Target     `json:"targets"`
 	HasSettings bool         `json:"hasSettings"`
 	SendingMode *SendingMode `json:"sendingMode"`
+	Summary     string       `json:"summary"`
 }
 
 // ConnectorType represents a connector type.

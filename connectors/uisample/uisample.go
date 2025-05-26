@@ -10,6 +10,7 @@ package uisample
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"io"
 	"time"
@@ -19,18 +20,27 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+//go:embed documentation/overview.md
+var overview string
+
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "UISample",
 		AsSource: &meergo.AsAppSource{
-			Description: "Test the UI components",
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Test the UI components",
+				Overview: overview,
+			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Test the UI components",
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Test the UI components",
+				Overview: overview,
+			},
 		},
 	}, New)
 }

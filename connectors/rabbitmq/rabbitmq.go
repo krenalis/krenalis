@@ -26,11 +26,19 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/overview.md
+var overview string
+
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
-		Name:              "RabbitMQ",
-		SourceDescription: "Import events and users from RabbitMQ",
-		Icon:              icon,
+		Name: "RabbitMQ",
+		Icon: icon,
+		Documentation: meergo.ConnectorDocumentation{
+			Source: meergo.ConnectorRoleDocumentation{
+				Summary:  "Import events and users from RabbitMQ",
+				Overview: overview,
+			},
+		},
 	}, New)
 }
 

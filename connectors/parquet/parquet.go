@@ -36,13 +36,27 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
-		Name:          "Parquet",
-		Icon:          icon,
-		Extension:     "parquet",
-		AsSource:      &meergo.AsSourceFile{},
-		AsDestination: &meergo.AsDestinationFile{},
+		Name:      "Parquet",
+		Icon:      icon,
+		Extension: "parquet",
+		AsSource: &meergo.AsSourceFile{
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Overview: sourceOverview,
+			},
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Overview: destinationOverview,
+			},
+		},
 	}, New)
 }
 

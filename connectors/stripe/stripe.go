@@ -30,6 +30,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 var baseURL = "https://api.stripe.com"
 
 type innerSettings struct {
@@ -45,14 +51,20 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "Stripe",
 		AsSource: &meergo.AsAppSource{
-			Description: "Import customers as users",
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Import customers as users",
+				Overview: sourceOverview,
+			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Export users as customers",
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Export users as customers",
+				Overview: destinationOverview,
+			},
 		},
 		Terms: meergo.AppTerms{
 			User:  "customer",

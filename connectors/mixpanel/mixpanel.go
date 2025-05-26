@@ -27,14 +27,20 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/overview.md
+var overview string
+
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "Mixpanel",
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Send events to Mixpanel",
 			Targets:     meergo.EventsTarget,
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Send events to Mixpanel",
+				Overview: overview,
+			},
 		},
 		Icon: icon,
 		BackoffPolicy: meergo.BackoffPolicy{

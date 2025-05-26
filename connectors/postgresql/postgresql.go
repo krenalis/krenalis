@@ -34,11 +34,25 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "PostgreSQL",
 		SampleQuery: "SELECT *\nFROM users\n",
 		Icon:        icon,
+		Documentation: meergo.ConnectorDocumentation{
+			Source: meergo.ConnectorRoleDocumentation{
+				Overview: sourceOverview,
+			},
+			Destination: meergo.ConnectorRoleDocumentation{
+				Overview: destinationOverview,
+			},
+		},
 	}, New)
 }
 

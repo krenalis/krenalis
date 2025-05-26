@@ -415,19 +415,19 @@ func (core *Core) Connector(name string) (*Connector, error) {
 	}
 	if c.SourceTargets != 0 {
 		connector.AsSource = &SourceConnector{
-			Description: c.SourceDescription,
 			Targets:     stateToCoreTargets(c.SourceTargets),
 			HasSettings: c.HasSourceSettings,
 			SampleQuery: c.SampleQuery,
 			WebhooksPer: WebhooksPer(c.WebhooksPer),
+			Summary:     c.Documentation.Source.Summary,
 		}
 	}
 	if c.DestinationTargets != 0 {
 		connector.AsDestination = &DestinationConnector{
-			Description: c.DestinationDescription,
 			Targets:     stateToCoreTargets(c.DestinationTargets),
 			HasSettings: c.HasDestinationSettings,
 			SendingMode: (*SendingMode)(c.SendingMode),
+			Summary:     c.Documentation.Destination.Summary,
 		}
 	}
 	if connector.Terms.User == "" {
@@ -443,6 +443,36 @@ func (core *Core) Connector(name string) (*Connector, error) {
 	//	connector.Terms.Groups = "groups"
 	//}
 	return &connector, nil
+}
+
+// ConnectorDocumentation represents the documentation of a connector.
+type ConnectorDocumentation struct {
+	Source      ConnectorRoleDocumentation
+	Destination ConnectorRoleDocumentation
+}
+
+// ConnectorRoleDocumentation represents the documentation of a connector
+// relative to a role.
+type ConnectorRoleDocumentation struct {
+	Summary  string
+	Overview string
+}
+
+// ConnectorDocumentation returns the documentation of the connector with the
+// provided name.
+//
+// It returns an errors.NotFoundError error if the connector does not exist.
+func (core *Core) ConnectorDocumentation(name string) (*ConnectorDocumentation, error) {
+	core.mustBeOpen()
+	c, ok := core.state.Connector(name)
+	if !ok {
+		return nil, errors.NotFound("connector %q does not exist", name)
+	}
+	doc := ConnectorDocumentation{
+		Source:      ConnectorRoleDocumentation(c.Documentation.Source),
+		Destination: ConnectorRoleDocumentation(c.Documentation.Destination),
+	}
+	return &doc, nil
 }
 
 // Connectors returns the connectors.
@@ -465,19 +495,19 @@ func (core *Core) Connectors() []*Connector {
 		}
 		if c.SourceTargets != 0 {
 			connector.AsSource = &SourceConnector{
-				Description: c.SourceDescription,
 				Targets:     stateToCoreTargets(c.SourceTargets),
 				HasSettings: c.HasSourceSettings,
 				SampleQuery: c.SampleQuery,
 				WebhooksPer: WebhooksPer(c.WebhooksPer),
+				Summary:     c.Documentation.Source.Summary,
 			}
 		}
 		if c.DestinationTargets != 0 {
 			connector.AsDestination = &DestinationConnector{
-				Description: c.DestinationDescription,
 				Targets:     stateToCoreTargets(c.DestinationTargets),
 				HasSettings: c.HasDestinationSettings,
 				SendingMode: (*SendingMode)(c.SendingMode),
+				Summary:     c.Documentation.Destination.Summary,
 			}
 		}
 		if connector.Terms.User == "" {

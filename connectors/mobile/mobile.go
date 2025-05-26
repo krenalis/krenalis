@@ -20,17 +20,33 @@ var iconAndroid = "<svg></svg>"
 // Connector icon.
 var iconApple = "<svg></svg>"
 
+//go:embed documentation/android/overview.md
+var androidOverview string
+
+//go:embed documentation/apple/overview.md
+var appleOverview string
+
 func init() {
 	mobiles := []meergo.MobileInfo{
 		{
-			Name:              "Android",
-			SourceDescription: "Import events and users from an Android mobile device",
-			Icon:              iconAndroid,
+			Name: "Android",
+			Icon: iconAndroid,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from an Android mobile device",
+					Overview: androidOverview,
+				},
+			},
 		},
 		{
-			Name:              "Apple",
-			SourceDescription: "Import events and users from an Apple mobile device",
-			Icon:              iconApple,
+			Name: "Apple",
+			Icon: iconApple,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from an Apple mobile device",
+					Overview: appleOverview,
+				},
+			},
 		},
 	}
 	for _, srv := range mobiles {

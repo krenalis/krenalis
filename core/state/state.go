@@ -636,8 +636,6 @@ type Connector struct {
 	Type                   ConnectorType
 	SourceTargets          ConnectorTargets
 	DestinationTargets     ConnectorTargets
-	SourceDescription      string
-	DestinationDescription string
 	Terms                  ConnectorTerms
 	SendingMode            *SendingMode
 	HasSheets              bool
@@ -650,6 +648,7 @@ type Connector struct {
 	WebhooksPer            WebhooksPer
 	OAuth                  *OAuth
 	BackoffPolicy          meergo.BackoffPolicy
+	Documentation          meergo.ConnectorDocumentation
 }
 
 // ConnectorTargets represents the targets of a connector.

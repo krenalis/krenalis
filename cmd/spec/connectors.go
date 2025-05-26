@@ -30,12 +30,6 @@ func init() {
 			Name: "asSource",
 			Type: types.Object([]types.Property{
 				{
-					Name:        "description",
-					Type:        types.Text(),
-					Placeholder: `"import contacts as users and companies as groups from HubSpot"`,
-					Description: `A brief description of the connector when it is used as a source.`,
-				},
-				{
 					Name:        "targets",
 					Type:        types.Array(types.Text().WithValues("Events", "Users", "Groups")),
 					Placeholder: `[ "Users", "Groups" ]`,
@@ -61,6 +55,12 @@ func init() {
 				//	Description: "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
 				//		"It is `\"None\"` if the connector is not an app or does not support webhooks.",
 				//},
+				{
+					Name:        "summary",
+					Type:        types.Text(),
+					Placeholder: `"Import contacts as users and companies as groups from HubSpot"`,
+					Description: `A brief description of the connector when it is used as a source.`,
+				},
 			}),
 			Placeholder: `...`,
 			Nullable:    true,
@@ -69,12 +69,6 @@ func init() {
 		{
 			Name: "asDestination",
 			Type: types.Object([]types.Property{
-				{
-					Name:        "description",
-					Type:        types.Text(),
-					Placeholder: `"export users as contacts and groups as companies to HubSpot"`,
-					Description: `A brief description of the connector when it is used as a destination.`,
-				},
 				{
 					Name:        "targets",
 					Type:        types.Array(types.Text().WithValues("Events", "Users", "Groups")),
@@ -93,6 +87,12 @@ func init() {
 					Nullable:    true,
 					Placeholder: `null`,
 					Description: "The mode used by app connectors to send the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events.",
+				},
+				{
+					Name:        "summary",
+					Type:        types.Text(),
+					Placeholder: `"Export users as contacts and groups as companies to HubSpot"`,
+					Description: `A brief description of the connector when it is used as a destination.`,
 				},
 			}),
 			Placeholder: `...`,
@@ -202,6 +202,66 @@ func init() {
 				},
 				Response: &Response{
 					Parameters: getReturnsParameters,
+				},
+				Errors: []Error{
+					{404, NotFound, "connector does not exist"},
+				},
+			},
+			{
+				Name:        "Get connector documentation",
+				Description: "Get the documentation of a connector by name.",
+				Method:      GET,
+				URL:         "/v1/connectors/:name/documentation",
+				Parameters: []types.Property{
+					{
+						Name:           "name",
+						Type:           types.Text(),
+						Placeholder:    `"HubSpot"`,
+						CreateRequired: true,
+						Description:    "The connector's name.",
+					},
+				},
+				Response: &Response{
+					Parameters: []types.Property{
+						{
+							Name: "source",
+							Type: types.Object([]types.Property{
+								{
+									Name:        "summary",
+									Type:        types.Text(),
+									Placeholder: `"Export users as contacts and groups as companies to HubSpot"`,
+									Description: `A brief description of the connector.`,
+								},
+								{
+									Name:        "overview",
+									Type:        types.Text(),
+									Placeholder: `"# HubSpot\nThe HubSpot data source allows..."`,
+									Description: `A Markdown-formatted overview of the connector.`,
+								},
+							}),
+							Placeholder: "...",
+							Description: "The documentation of the connector when it is used as a source.",
+						},
+						{
+							Name: "destination",
+							Type: types.Object([]types.Property{
+								{
+									Name:        "summary",
+									Type:        types.Text(),
+									Placeholder: `"Export users as contacts and groups as companies to HubSpot"`,
+									Description: `A brief description of the connector.`,
+								},
+								{
+									Name:        "overview",
+									Type:        types.Text(),
+									Placeholder: `"# HubSpot\nThe HubSpot data destination allows..."`,
+									Description: `A Markdown-formatted overview of the connector.`,
+								},
+							}),
+							Placeholder: "...",
+							Description: "The documentation of the connector when it is used as a destination.",
+						},
+					},
 				},
 				Errors: []Error{
 					{404, NotFound, "connector does not exist"},

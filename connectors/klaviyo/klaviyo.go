@@ -29,19 +29,31 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/source/overview.md
+var sourceOverview string
+
+//go:embed documentation/destination/overview.md
+var destinationOverview string
+
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name: "Klaviyo",
 		AsSource: &meergo.AsAppSource{
-			Description: "Import profiles as users from Klaviyo",
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Import profiles as users from Klaviyo",
+				Overview: sourceOverview,
+			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Description: "Export users as profiles and send events to Klaviyo",
 			Targets:     meergo.EventsTarget | meergo.UsersTarget,
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
+			Documentation: meergo.ConnectorRoleDocumentation{
+				Summary:  "Export users as profiles and send events to Klaviyo",
+				Overview: destinationOverview,
+			},
 		},
 		Terms: meergo.AppTerms{
 			User:  "client",

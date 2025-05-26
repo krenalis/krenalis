@@ -158,9 +158,9 @@ const getActionTypeFromConnection = (
 const getConnectionDescription = (connection: Connection, connector: TransformedConnector): string => {
 	let description: string;
 	if (connection.role === 'Source') {
-		description = connector.asSource.description;
+		description = connector.asSource.summary;
 	} else {
-		description = connector.asDestination.description;
+		description = connector.asDestination.summary;
 	}
 	return description;
 };

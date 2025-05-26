@@ -29,11 +29,19 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+//go:embed documentation/overview.md
+var overview string
+
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
-		Name:              "Kafka",
-		SourceDescription: "Import events and users from Kafka",
-		Icon:              icon,
+		Name: "Kafka",
+		Icon: icon,
+		Documentation: meergo.ConnectorDocumentation{
+			Source: meergo.ConnectorRoleDocumentation{
+				Summary:  "Import events and users from Kafka",
+				Overview: overview,
+			},
+		},
 	}, New)
 }
 

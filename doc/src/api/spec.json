@@ -9641,14 +9641,6 @@
                                                     "kind": "object",
                                                     "properties": [
                                                         {
-                                                            "name": "description",
-                                                            "placeholder": "\"import contacts as users and companies as groups from HubSpot\"",
-                                                            "type": {
-                                                                "kind": "text"
-                                                            },
-                                                            "description": "A brief description of the connector when it is used as a source."
-                                                        },
-                                                        {
                                                             "name": "targets",
                                                             "placeholder": "[ \"Users\", \"Groups\" ]",
                                                             "type": {
@@ -9679,6 +9671,31 @@
                                                                 "kind": "text"
                                                             },
                                                             "description": "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector."
+<<<<<<< HEAD
+                                                        },
+                                                        {
+                                                            "name": "webhooksPer",
+                                                            "placeholder": "\"None\"",
+                                                            "type": {
+                                                                "kind": "text",
+                                                                "values": [
+                                                                    "None",
+                                                                    "Account",
+                                                                    "Connection",
+                                                                    "Connector"
+                                                                ]
+                                                            },
+                                                            "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
+                                                        },
+                                                        {
+                                                            "name": "summary",
+                                                            "placeholder": "\"Import contacts as users and companies as groups from HubSpot\"",
+                                                            "type": {
+                                                                "kind": "text"
+                                                            },
+                                                            "description": "A brief description of the connector when it is used as a source."
+=======
+>>>>>>> main
                                                         }
                                                     ]
                                                 },
@@ -9691,14 +9708,6 @@
                                                 "type": {
                                                     "kind": "object",
                                                     "properties": [
-                                                        {
-                                                            "name": "description",
-                                                            "placeholder": "\"export users as contacts and groups as companies to HubSpot\"",
-                                                            "type": {
-                                                                "kind": "text"
-                                                            },
-                                                            "description": "A brief description of the connector when it is used as a destination."
-                                                        },
                                                         {
                                                             "name": "targets",
                                                             "placeholder": "[ \"Users\", \"Groups\" ]",
@@ -9736,6 +9745,14 @@
                                                             },
                                                             "nullable": true,
                                                             "description": "The mode used by app connectors to send the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events."
+                                                        },
+                                                        {
+                                                            "name": "summary",
+                                                            "placeholder": "\"Export users as contacts and groups as companies to HubSpot\"",
+                                                            "type": {
+                                                                "kind": "text"
+                                                            },
+                                                            "description": "A brief description of the connector when it is used as a destination."
                                                         }
                                                     ]
                                                 },
@@ -9885,14 +9902,6 @@
                                     "kind": "object",
                                     "properties": [
                                         {
-                                            "name": "description",
-                                            "placeholder": "\"import contacts as users and companies as groups from HubSpot\"",
-                                            "type": {
-                                                "kind": "text"
-                                            },
-                                            "description": "A brief description of the connector when it is used as a source."
-                                        },
-                                        {
                                             "name": "targets",
                                             "placeholder": "[ \"Users\", \"Groups\" ]",
                                             "type": {
@@ -9923,6 +9932,31 @@
                                                 "kind": "text"
                                             },
                                             "description": "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector."
+<<<<<<< HEAD
+                                        },
+                                        {
+                                            "name": "webhooksPer",
+                                            "placeholder": "\"None\"",
+                                            "type": {
+                                                "kind": "text",
+                                                "values": [
+                                                    "None",
+                                                    "Account",
+                                                    "Connection",
+                                                    "Connector"
+                                                ]
+                                            },
+                                            "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
+                                        },
+                                        {
+                                            "name": "summary",
+                                            "placeholder": "\"Import contacts as users and companies as groups from HubSpot\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "A brief description of the connector when it is used as a source."
+=======
+>>>>>>> main
                                         }
                                     ]
                                 },
@@ -9935,14 +9969,6 @@
                                 "type": {
                                     "kind": "object",
                                     "properties": [
-                                        {
-                                            "name": "description",
-                                            "placeholder": "\"export users as contacts and groups as companies to HubSpot\"",
-                                            "type": {
-                                                "kind": "text"
-                                            },
-                                            "description": "A brief description of the connector when it is used as a destination."
-                                        },
                                         {
                                             "name": "targets",
                                             "placeholder": "[ \"Users\", \"Groups\" ]",
@@ -9980,6 +10006,14 @@
                                             },
                                             "nullable": true,
                                             "description": "The mode used by app connectors to send the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events."
+                                        },
+                                        {
+                                            "name": "summary",
+                                            "placeholder": "\"Export users as contacts and groups as companies to HubSpot\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "A brief description of the connector when it is used as a destination."
                                         }
                                     ]
                                 },
@@ -10066,6 +10100,88 @@
                                     "kind": "text"
                                 },
                                 "description": "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon."
+                            }
+                        ]
+                    },
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "connector does not exist"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get connector documentation",
+                    "description": "Get the documentation of a connector by name.",
+                    "method": "GET",
+                    "url": "/v1/connectors/:name/documentation",
+                    "parameters": [
+                        {
+                            "name": "name",
+                            "placeholder": "\"HubSpot\"",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "createRequired": true,
+                            "description": "The connector's name."
+                        }
+                    ],
+                    "moreParameters": null,
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "source",
+                                "placeholder": "...",
+                                "type": {
+                                    "kind": "object",
+                                    "properties": [
+                                        {
+                                            "name": "summary",
+                                            "placeholder": "\"Export users as contacts and groups as companies to HubSpot\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "A brief description of the connector."
+                                        },
+                                        {
+                                            "name": "overview",
+                                            "placeholder": "\"# HubSpot\\nThe HubSpot data source allows...\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "A Markdown-formatted overview of the connector."
+                                        }
+                                    ]
+                                },
+                                "description": "The documentation of the connector when it is used as a source."
+                            },
+                            {
+                                "name": "destination",
+                                "placeholder": "...",
+                                "type": {
+                                    "kind": "object",
+                                    "properties": [
+                                        {
+                                            "name": "summary",
+                                            "placeholder": "\"Export users as contacts and groups as companies to HubSpot\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "A brief description of the connector."
+                                        },
+                                        {
+                                            "name": "overview",
+                                            "placeholder": "\"# HubSpot\\nThe HubSpot data destination allows...\"",
+                                            "type": {
+                                                "kind": "text"
+                                            },
+                                            "description": "A Markdown-formatted overview of the connector."
+                                        }
+                                    ]
+                                },
+                                "description": "The documentation of the connector when it is used as a destination."
                             }
                         ]
                     },
