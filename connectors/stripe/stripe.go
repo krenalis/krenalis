@@ -27,21 +27,13 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-const maxEventPayload = 1024 * 1024
-
 // Connector icon.
 var icon = "<svg></svg>"
 
 var baseURL = "https://api.stripe.com"
 
-type webhookSettings struct {
-	id     string
-	secret string
-}
-
 type innerSettings struct {
-	APIKey  string
-	webhook webhookSettings
+	APIKey string
 }
 
 type Stripe struct {
