@@ -1,6 +1,6 @@
 type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'Server' | 'Stream' | 'Website';
 
-type WebhooksPer = 'None' | 'Account' | 'Connection' | 'Connector';
+// type WebhooksPer = 'None' | 'Account' | 'Connection' | 'Connector'; // TODO(marco): implement webhooks
 
 type SendingMode = 'Cloud' | 'Device' | 'Combined';
 
@@ -31,7 +31,7 @@ interface SourceConnector {
 	targets: ConnectorTarget[];
 	hasSettings: boolean;
 	sampleQuery: string;
-	WebhooksPer: WebhooksPer;
+	// WebhooksPer: WebhooksPer; // TODO(marco): implement webhooks
 }
 
 interface DestinationConnector {
@@ -47,7 +47,7 @@ export type {
 	SourceConnector,
 	DestinationConnector,
 	ConnectorType,
-	WebhooksPer,
+	// WebhooksPer, // TODO(marco): implement webhooks
 	SendingMode,
 	ConnectorTarget,
 };

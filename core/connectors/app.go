@@ -108,13 +108,14 @@ type appEventsConnector interface {
 	EventTypes(ctx context.Context) ([]*EventType, error)
 }
 
-type webhookConnector interface {
-	// ReceiveWebhook receives a webhook request and returns its payloads. If
-	// webhooks are per connection, role is the connection's role, otherwise is
-	// Both. It returns the ErrWebhookUnauthorized error is the request was not
-	// authorized. The context is the request's context.
-	ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error)
-}
+// TODO(marco): implement webhooks
+//type webhookConnector interface {
+//	// ReceiveWebhook receives a webhook request and returns its payloads. If
+//	// webhooks are per connection, role is the connection's role, otherwise is
+//	// Both. It returns the ErrWebhookUnauthorized error is the request was not
+//	// authorized. The context is the request's context.
+//	ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error)
+//}
 
 type appOAuthConnector interface {
 	// OAuthAccount returns the app's account associated with the OAuth
@@ -140,10 +141,10 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		users:       schema{lock: make(chan struct{}, 1)},
 		targets:     targets,
 	}
-	var accountID int
+	// var accountID int // TODO(marco): implement webhooks
 	var accountCode string
 	if a, ok := connection.Account(); ok {
-		accountID = a.ID
+		// accountID = a.ID // TODO(marco): implement webhooks
 		accountCode = a.Code
 	}
 	app.inner, app.err = meergo.RegisteredApp(app.connector).New(&meergo.AppConfig{
@@ -151,7 +152,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 		OAuthAccount: accountCode,
 		HTTPClient:   app.httpClient,
-		WebhookURL:   webhookURL(connection, accountID),
+		// WebhookURL:   webhookURL(connection, accountID), // TODO(marco): implement webhooks
 	})
 	return app
 }

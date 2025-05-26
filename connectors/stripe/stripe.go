@@ -12,10 +12,7 @@ package stripe
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	_ "embed"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -73,8 +70,7 @@ func init() {
 			// https://docs.stripe.com/api/errors
 			"429 500 502 503 504": meergo.ExponentialStrategy(200 * time.Millisecond),
 		},
-		Icon:        icon,
-		WebhooksPer: meergo.WebhooksPerConnection,
+		Icon: icon,
 	}, New)
 }
 
@@ -86,116 +82,8 @@ func New(conf *meergo.AppConfig) (*Stripe, error) {
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Stripe connector")
 		}
-		if c.settings.webhook.secret == "" && conf.SetSettings != nil {
-			err = c.setupWebhooksEndpoint()
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 	return &c, nil
-}
-
-// ReceiveWebhook receives a webhook request and returns its payloads.
-func (stripe *Stripe) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error) {
-
-	// Extract signature from Stripe-Signature header.
-	var timestamp time.Time
-	var signatures [][]byte
-	{
-		parts := strings.Split(r.Header.Get("Stripe-Signature"), ",")
-		for _, part := range parts {
-			if strings.HasPrefix(part, "t=") {
-				ts, err := strconv.ParseInt(part[2:], 10, 64)
-				if err != nil {
-					return nil, meergo.ErrWebhookUnauthorized
-				}
-				timestamp = time.Unix(ts, 0)
-				continue
-			}
-			if strings.HasPrefix(part, "v1=") {
-				sig, err := hex.DecodeString(part[3:])
-				if err == nil {
-					signatures = append(signatures, sig)
-				}
-			}
-		}
-		if len(signatures) == 0 {
-			return nil, meergo.ErrWebhookUnauthorized
-		}
-	}
-
-	body, err := io.ReadAll(io.LimitReader(r.Body, maxEventPayload+1))
-	if err != nil {
-		return nil, err
-	}
-	if len(body) > maxEventPayload {
-		return nil, errors.New("webhook payload is too large")
-	}
-
-	// Calculate the message signature and check if it matches one of the
-	// signatures in the header.
-	mac := hmac.New(sha256.New, []byte(stripe.settings.webhook.secret))
-	mac.Write([]byte(fmt.Sprintf("%d", timestamp.Unix())))
-	mac.Write([]byte("."))
-	mac.Write(body)
-	messageSignature := mac.Sum(nil)
-
-	var isValidSignature bool
-	for _, sig := range signatures {
-		if hmac.Equal(messageSignature, sig) {
-			isValidSignature = true
-			break
-		}
-	}
-	if !isValidSignature {
-		return nil, meergo.ErrWebhookUnauthorized
-	}
-
-	var message struct {
-		ID   string `json:"id"`
-		Data struct {
-			Object             map[string]any `json:"object"`
-			PreviousAttributes map[string]any `json:"previous_attributes"`
-		} `json:"data"`
-		Type    string `json:"type"`
-		Created int64  `json:"created"`
-	}
-
-	err = json.Unmarshal(body, &message)
-	if err != nil {
-		return nil, errors.New("webhook message is malformed")
-	}
-
-	var events []meergo.WebhookPayload
-	tmp := time.UnixMilli(message.Created).UTC()
-	switch message.Type {
-	case "customer.created":
-		event := meergo.UserCreateEvent{
-			Timestamp:  tmp,
-			User:       message.Data.Object["id"].(string),
-			Properties: message.Data.Object,
-		}
-		events = append(events, event)
-	case "customer.deleted":
-		event := meergo.UserDeleteEvent{
-			Timestamp: tmp,
-			User:      message.Data.Object["id"].(string),
-		}
-		events = append(events, event)
-	case "customer.updated":
-		for modifiedAttributeName := range message.Data.PreviousAttributes {
-			events = append(events, meergo.UserPropertyChangeEvent{
-				Timestamp: tmp,
-				User:      message.Data.Object["id"].(string),
-				Name:      modifiedAttributeName,
-				Value:     message.Data.Object[modifiedAttributeName],
-			})
-		}
-	}
-
-	return events, nil
-
 }
 
 // Records returns the records of the specified target.
@@ -345,42 +233,6 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 	}
 	stripe.settings = &s
 	return nil
-}
-
-// setupWebhooksEndpoint sets up the endpoint for webhooks.
-// It can be called if stripe.settings is not nil and stripe.conf.SetSettings is
-// not nil.
-func (stripe *Stripe) setupWebhooksEndpoint() error {
-
-	form := url.Values{
-		"url":              {stripe.conf.WebhookURL},
-		"enabled_events[]": {"customer.created", "customer.deleted", "customer.updated"},
-	}
-	body := strings.NewReader(form.Encode())
-
-	response := struct {
-		ID     string `json:"id"`
-		Secret string `json:"secret"`
-	}{}
-	err := stripe.call(context.TODO(), "POST", "/v1/webhook_endpoints", body, 200, &response)
-	if err != nil {
-		return err
-	}
-
-	settings := innerSettings{
-		APIKey: stripe.settings.APIKey,
-		webhook: webhookSettings{
-			id:     response.ID,
-			secret: response.Secret,
-		},
-	}
-
-	values, err := json.Marshal(settings)
-	if err != nil {
-		return err
-	}
-
-	return stripe.saveSettings(context.TODO(), values)
 }
 
 type stripeErrorResponse struct {

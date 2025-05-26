@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"reflect"
 	"sync"
 	"time"
@@ -460,15 +459,6 @@ func validateAppConnector(app AppInfo) {
 	if app.OAuth.AuthURL != "" {
 		iface := reflect.TypeFor[interface {
 			OAuthAccount(ctx context.Context) (string, error)
-		}]()
-		if !app.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
-		}
-	}
-
-	if app.WebhooksPer != WebhooksPerNone {
-		iface := reflect.TypeFor[interface {
-			ReceiveWebhook(r *http.Request, role Role) ([]WebhookPayload, error)
 		}]()
 		if !app.ct.Implements(iface) {
 			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))

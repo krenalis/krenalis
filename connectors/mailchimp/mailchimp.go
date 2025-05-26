@@ -56,8 +56,7 @@ func init() {
 			User:  "contact",
 			Users: "contacts",
 		},
-		Icon:        icon,
-		WebhooksPer: meergo.WebhooksPerConnection,
+		Icon: icon,
 		OAuth: meergo.OAuth{
 			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",
@@ -103,60 +102,6 @@ type innerSettings struct {
 func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
 	_, account, err := mc.metadata()
 	return account, err
-}
-
-// ReceiveWebhook receives a webhook request and returns its payloads.
-func (mc *MailChimp) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error) {
-
-	if mc.settings.WebhookSecret == "" {
-		// Webhooks are not set up.
-		if r.Method == "GET" && r.Header.Get("User-Agent") == "MailChimp.com WebHook Validator" {
-			// Setup call from Mailchimp.
-			return nil, nil
-		}
-		return nil, errors.New("unexpected webhook")
-	}
-
-	if r.URL.Query().Get("secret") != mc.settings.WebhookSecret {
-		// The webhook is not authenticated.
-		return nil, errors.New("unauthorized webhook")
-	}
-
-	err := r.ParseForm()
-	if err != nil {
-		return nil, err
-	}
-
-	timestamp, err := time.Parse(time.DateTime, r.Form.Get("fired_at"))
-	if err != nil {
-		return nil, err
-	}
-	user := r.Form.Get("data[id]")
-
-	// TODO(carlo): subscribe and unsubscribe events are important and should be handled as separate event types.
-	var events = make([]meergo.WebhookPayload, 1)
-	switch r.Form.Get("type") {
-	case "subscribe":
-		// User subscribed.
-		events[0] = meergo.UserCreateEvent{
-			Timestamp: timestamp,
-			User:      user,
-		}
-	case "unsubscribe", "profile", "upemail":
-		// User profile updated.
-		events[0] = meergo.UserChangeEvent{
-			Timestamp: timestamp,
-			User:      user,
-		}
-	case "cleaned":
-		// User profile deleted.
-		// TODO(carlo): couldn't trigger this webhook, so the effective content is unknown.
-		events[0] = meergo.UserDeleteEvent{
-			Timestamp: timestamp,
-			User:      user,
-		}
-	}
-	return events, nil
 }
 
 // Records returns the records of the specified target.
@@ -736,59 +681,6 @@ type webhook struct {
 	URL string `json:"url"`
 }
 
-// initWebhooks initializes webhooks.
-func (mc *MailChimp) initWebhooks(ctx context.Context) error {
-	if mc.conf.SetSettings == nil || mc.settings.WebhookSecret != "" {
-		return nil
-	}
-	baseURL := mc.conf.WebhookURL
-	webhooks, err := mc.webhooks(ctx, mc.settings.Audience)
-	if err != nil {
-		return err
-	}
-	var secret string
-	for _, webhook := range webhooks {
-		u, err := url.Parse(webhook.URL)
-		if err != nil {
-			return fmt.Errorf("Mailchimp has returned an invalid webhook URL")
-		}
-		if strings.HasPrefix(u.String(), baseURL) {
-			continue
-		}
-		if secret == "" {
-			sec := u.Query().Get("secret")
-			if len(sec) == 20 {
-				secret = sec
-				if !(webhook.Events.Cleaned &&
-					webhook.Events.Profile &&
-					webhook.Events.Subscribe &&
-					webhook.Events.Unsubscribe &&
-					webhook.Events.Upemail &&
-					!webhook.Events.Campaign) {
-					err = mc.updateWebhook(ctx, mc.settings.Audience, webhook.ID)
-					if err != nil {
-						return err
-					}
-				}
-				continue
-			}
-		}
-		_ = mc.deleteWebhook(ctx, mc.settings.Audience, webhook.ID)
-	}
-	if secret == "" {
-		secret, err = mc.createWebhook(ctx, mc.settings.Audience)
-		if err != nil {
-			return fmt.Errorf("cannot create webhook: %s", err)
-		}
-	}
-	mc.settings.WebhookSecret = secret
-	b, err := json.Marshal(&mc.settings)
-	if err != nil {
-		return err
-	}
-	return mc.conf.SetSettings(ctx, b)
-}
-
 var errAudienceNotExist = errors.New("audience does not exist")
 
 // webhooks returns the webhooks for the provide audience.
@@ -805,41 +697,6 @@ func (mc *MailChimp) webhooks(ctx context.Context, audience string) ([]webhook, 
 		return nil, err
 	}
 	return response.Webhooks, nil
-}
-
-// createWebhook creates a webhook for the provided audience and returns its
-// secret.
-func (mc *MailChimp) createWebhook(ctx context.Context, audience string) (string, error) {
-	path := "/lists/" + url.PathEscape(audience) + "/webhooks"
-	secret, err := generateRandomString(20)
-	if err != nil {
-		return "", err
-	}
-	webhookURL, _ := json.Marshal(mc.conf.WebhookURL + "?secret=" + url.QueryEscape(secret))
-	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
-		`"sources":{"user":true,"admin":true,"api":true},"url":` + string(webhookURL) + `}`
-	err = mc.call(ctx, "POST", path, nil, strings.NewReader(body), 200, nil)
-	if err != nil {
-		return "", err
-	}
-	return secret, nil
-}
-
-// deleteWebhook deletes webhook. It does nothing if the webhook does not exist.
-func (mc *MailChimp) deleteWebhook(ctx context.Context, audience, webhook string) error {
-	err := mc.call(ctx, "DELETE", "/lists/"+url.PathEscape(audience)+"/webhooks/"+url.PathEscape(webhook), nil, nil, 204, nil)
-	if e, ok := err.(*mailchimpError); ok && e.Status == 404 {
-		err = nil
-	}
-	return err
-}
-
-// updateWebhook updates the webhook for the provided audience.
-func (mc *MailChimp) updateWebhook(ctx context.Context, audience, webhook string) error {
-	path := "/lists/" + url.PathEscape(audience) + "/webhooks/" + url.PathEscape(webhook)
-	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
-		`"sources":{"user":true,"admin":true,"api":true}`
-	return mc.call(ctx, "PATCH", path, nil, strings.NewReader(body), 200, nil)
 }
 
 // metadata returns the datacenter and the account id.

@@ -53,7 +53,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				c.SendingMode = &mode
 			}
 			c.IdentityIDLabel = connector.IdentityIDLabel
-			c.WebhooksPer = WebhooksPer(connector.WebhooksPer)
+			// c.WebhooksPer = WebhooksPer(connector.WebhooksPer) TODO(marco): implement webhooks
 			if connector.OAuth.AuthURL != "" {
 				c.OAuth = &OAuth{
 					OAuth: connector.OAuth,

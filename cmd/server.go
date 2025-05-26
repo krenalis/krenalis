@@ -217,9 +217,9 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
 			apisServer.ServeHTTP(w, r)
 			return
-		case strings.HasPrefix(r.URL.Path, "/webhook/"):
-			core.ServeWebhook(w, r)
-			return
+		//case strings.HasPrefix(r.URL.Path, "/webhook/"): TODO(marco): implement webhooks
+		//	core.ServeWebhook(w, r)
+		//	return
 		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
 			assets.ServeHTTP(w, r)
 			return

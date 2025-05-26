@@ -58,7 +58,6 @@ func init() {
 		// TermForGroups:   "companies",
 		IdentityIDLabel: "HubSpot ID",
 		Icon:            icon,
-		WebhooksPer:     meergo.WebhooksPerConnector,
 		OAuth: meergo.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL:          "https://api.hubapi.com/oauth/v1/token",
@@ -210,89 +209,6 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 	}
 
 	return records, cursor, err
-}
-
-// ReceiveWebhook receives a webhook request and returns its payloads.
-func (hs *HubSpot) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error) {
-	// See https://developers.hubspot.com/docs/api/webhooks.
-
-	// Check if the webhook is valid.
-	clientSecret, err := hs.httpClient.ClientSecret()
-	if err != nil {
-		return nil, err
-	}
-	if !isValidWebhook(clientSecret, r) {
-		return nil, meergo.ErrWebhookUnauthorized
-	}
-
-	var events []meergo.WebhookPayload
-
-	// Read the requests.
-	var requests []struct {
-		ObjectId         int    `json:"objectId"`
-		OccurredAt       int64  `json:"occurredAt"`
-		PortalId         int    `json:"portalId"`
-		PropertyName     string `json:"propertyName"`
-		PropertyValue    string `json:"propertyValue"`
-		SubscriptionType string `json:"subscriptionType"`
-	}
-	err = json.Decode(r.Body, &requests)
-	if err != nil {
-		return nil, err
-	}
-	for _, req := range requests {
-		var event meergo.WebhookPayload
-		timestamp := time.UnixMilli(req.OccurredAt).UTC()
-		account := strconv.Itoa(req.PortalId)
-		switch req.SubscriptionType {
-		case "company.propertyChange":
-			event = meergo.GroupPropertyChangeEvent{
-				Timestamp: timestamp,
-				Account:   account,
-				Group:     strconv.Itoa(req.ObjectId),
-				Name:      req.PropertyName,
-				Value:     req.PropertyValue,
-			}
-		case "contact.propertyChange":
-			event = meergo.UserPropertyChangeEvent{
-				Timestamp: timestamp,
-				Account:   account,
-				User:      strconv.Itoa(req.ObjectId),
-				Name:      req.PropertyName,
-				Value:     req.PropertyValue,
-			}
-		case "company.creation":
-			event = meergo.GroupCreateEvent{
-				Timestamp: timestamp,
-				Account:   account,
-				Group:     strconv.Itoa(req.ObjectId),
-			}
-		case "contact.creation":
-			event = meergo.UserCreateEvent{
-				Timestamp: timestamp,
-				Account:   account,
-				User:      strconv.Itoa(req.ObjectId),
-				Properties: map[string]any{
-					req.PropertyName: req.PropertyValue,
-				},
-			}
-		case "company.deletion":
-			event = meergo.GroupDeleteEvent{
-				Timestamp: timestamp,
-				Account:   account,
-				Group:     strconv.Itoa(req.ObjectId),
-			}
-		case "contact.deletion":
-			event = meergo.UserDeleteEvent{
-				Timestamp: timestamp,
-				Account:   account,
-				User:      strconv.Itoa(req.ObjectId),
-			}
-		}
-		events = append(events, event)
-	}
-
-	return events, nil
 }
 
 // Schema returns the schema of the specified target in the specified role.

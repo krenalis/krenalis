@@ -9679,20 +9679,6 @@
                                                                 "kind": "text"
                                                             },
                                                             "description": "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector."
-                                                        },
-                                                        {
-                                                            "name": "webhooksPer",
-                                                            "placeholder": "\"None\"",
-                                                            "type": {
-                                                                "kind": "text",
-                                                                "values": [
-                                                                    "None",
-                                                                    "Account",
-                                                                    "Connection",
-                                                                    "Connector"
-                                                                ]
-                                                            },
-                                                            "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
                                                         }
                                                     ]
                                                 },
@@ -9937,20 +9923,6 @@
                                                 "kind": "text"
                                             },
                                             "description": "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector."
-                                        },
-                                        {
-                                            "name": "webhooksPer",
-                                            "placeholder": "\"None\"",
-                                            "type": {
-                                                "kind": "text",
-                                                "values": [
-                                                    "None",
-                                                    "Account",
-                                                    "Connection",
-                                                    "Connector"
-                                                ]
-                                            },
-                                            "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
                                         }
                                     ]
                                 },

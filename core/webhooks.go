@@ -11,15 +11,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log/slog"
-	"net/http"
-	"net/url"
-	"regexp"
-	"strconv"
 
-	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/connectors"
-	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 )
 
@@ -93,72 +85,74 @@ var (
 	errNotFound   = errors.New("not found")
 )
 
-// ServeWebhook serves a webhook request. The request path starts with
-// "/webhook/{connector}/" where {connector} is a connector identifier.
-func (core *Core) ServeWebhook(w http.ResponseWriter, r *http.Request) {
-	core.mustBeOpen()
-	err := core.receiveWebhook(r)
-	if err != nil {
-		switch err {
-		case errNotFound:
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		case connectors.ErrNoWebhooks:
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		case meergo.ErrWebhookUnauthorized:
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		slog.Error("core: cannot serve webhook", "err", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-}
+// TODO(marco): implement webhooks
+//// ServeWebhook serves a webhook request. The request path starts with
+//// "/webhook/{connector}/" where {connector} is a connector identifier.
+//func (core *Core) ServeWebhook(w http.ResponseWriter, r *http.Request) {
+//	core.mustBeOpen()
+//	err := core.receiveWebhook(r)
+//	if err != nil {
+//		switch err {
+//		case errNotFound:
+//			http.Error(w, "Not Found", http.StatusNotFound)
+//			return
+//		case connectors.ErrNoWebhooks:
+//			http.Error(w, "Not Found", http.StatusNotFound)
+//			return
+//		case meergo.ErrWebhookUnauthorized:
+//			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+//			return
+//		}
+//		slog.Error("core: cannot serve webhook", "err", err)
+//		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+//		return
+//	}
+//}
 
-var webhookPathReg = regexp.MustCompile(`^/webhook/([scr])/([^/]+)/`)
-
-// receiveWebhook receives a webhook.
-func (core *Core) receiveWebhook(req *http.Request) error {
-	m := webhookPathReg.FindStringSubmatch(req.URL.Path)
-	if m == nil {
-		return errNotFound
-	}
-	var events []meergo.WebhookPayload
-	var err error
-	switch m[1] {
-	case "a":
-		id, _ := strconv.Atoi(m[2])
-		if id < 1 || id > maxInt32 {
-			return errBadRequest
-		}
-		account, ok := core.state.Account(id)
-		if !ok {
-			return errNotFound
-		}
-		events, err = core.connectors.ReceivePerAccountWebhook(account, req)
-	case "s":
-		id, _ := strconv.Atoi(m[2])
-		if id < 1 || id > maxInt32 {
-			return errBadRequest
-		}
-		connection, ok := core.state.Connection(id)
-		if !ok {
-			return errNotFound
-		}
-		events, err = core.connectors.ReceivePerConnectionWebhook(connection, req)
-	case "c":
-		name := url.PathEscape(m[2])
-		connector, ok := core.state.Connector(name)
-		if !ok || connector.WebhooksPer != state.WebhooksPerConnector {
-			return errNotFound
-		}
-		events, err = core.connectors.ReceivePerConnectorWebhook(connector, req)
-	}
-	if err != nil {
-		return err
-	}
-	// TODO(marco) store the events
-	_ = events
-	return nil
-}
+// TODO(marco): implement webhooks
+//var webhookPathReg = regexp.MustCompile(`^/webhook/([scr])/([^/]+)/`)
+//
+//// receiveWebhook receives a webhook.
+//func (core *Core) receiveWebhook(req *http.Request) error {
+//	m := webhookPathReg.FindStringSubmatch(req.URL.Path)
+//	if m == nil {
+//		return errNotFound
+//	}
+//	var events []meergo.WebhookPayload
+//	var err error
+//	switch m[1] {
+//	case "a":
+//		id, _ := strconv.Atoi(m[2])
+//		if id < 1 || id > maxInt32 {
+//			return errBadRequest
+//		}
+//		account, ok := core.state.Account(id)
+//		if !ok {
+//			return errNotFound
+//		}
+//		events, err = core.connectors.ReceivePerAccountWebhook(account, req)
+//	case "s":
+//		id, _ := strconv.Atoi(m[2])
+//		if id < 1 || id > maxInt32 {
+//			return errBadRequest
+//		}
+//		connection, ok := core.state.Connection(id)
+//		if !ok {
+//			return errNotFound
+//		}
+//		events, err = core.connectors.ReceivePerConnectionWebhook(connection, req)
+//	case "c":
+//		name := url.PathEscape(m[2])
+//		connector, ok := core.state.Connector(name)
+//		if !ok || connector.WebhooksPer != state.WebhooksPerConnector {
+//			return errNotFound
+//		}
+//		events, err = core.connectors.ReceivePerConnectorWebhook(connector, req)
+//	}
+//	if err != nil {
+//		return err
+//	}
+//	// TODO(marco) store the events
+//	_ = events
+//	return nil
+//}

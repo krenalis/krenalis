@@ -22,10 +22,6 @@ import (
 // not exist.
 var ErrEventTypeNotExist = errors.New("event type does not exist")
 
-// ErrWebhookUnauthorized is returned by the ReceiveWebhook method if the
-// request was not authorized.
-var ErrWebhookUnauthorized = errors.New("webhook unauthorized")
-
 // SendingMode represents the mode of event sending.
 type SendingMode int
 
@@ -52,7 +48,6 @@ type AppInfo struct {
 	AsDestination   *AsAppDestination
 	Terms           AppTerms
 	IdentityIDLabel string
-	WebhooksPer     WebhooksPer   // indicates if webhooks are per account, connection, or connector.
 	OAuth           OAuth         // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
 	BackoffPolicy   BackoffPolicy // backoff policy. It controls retry timing using provided strategies or custom ones.
 	TimeLayouts     TimeLayouts   // layouts for time values. If left empty, it is ISO 8601.
@@ -129,7 +124,6 @@ type AppConfig struct {
 	SetSettings  SetSettingsFunc
 	OAuthAccount string
 	HTTPClient   HTTPClient
-	WebhookURL   string
 }
 
 // AppNewFunc represents functions that create new app connector instances.

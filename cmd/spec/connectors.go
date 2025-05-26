@@ -53,13 +53,14 @@ func init() {
 					Placeholder: `""`,
 					Description: "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector.",
 				},
-				{
-					Name:        "webhooksPer",
-					Type:        types.Text().WithValues("None", "Account", "Connection", "Connector"),
-					Placeholder: `"None"`,
-					Description: "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
-						"It is `\"None\"` if the connector is not an app or does not support webhooks.",
-				},
+				// TODO(marco): implement webhooks
+				//{
+				//	Name:        "webhooksPer",
+				//	Type:        types.Text().WithValues("None", "Account", "Connection", "Connector"),
+				//	Placeholder: `"None"`,
+				//	Description: "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
+				//		"It is `\"None\"` if the connector is not an app or does not support webhooks.",
+				//},
 			}),
 			Placeholder: `...`,
 			Nullable:    true,

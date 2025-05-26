@@ -63,11 +63,12 @@ func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
     // ...
 }
 
+{#
 // ReceiveWebhook receives a webhook request and returns its payloads.
 func (ky *Klaviyo) ReceiveWebhook(r *http.Request) ([]meergo.WebhookPayload, error) {
     // ...
 }
-
+#}
 // Records returns the records of the specified target.
 func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
     // ...
@@ -117,7 +118,7 @@ The `AppInfo` type describes information about the app connector:
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
-- `WebhooksPer`: indicates if webhooks are per account, connection, or connector.
+{# - `WebhooksPer`: indicates if webhooks are per account, connection, or connector. #}
 - `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth).
 - `BackoffPolicy`: Backoff policy. It controls retry timing using provided strategies or custom ones. See [Backoff documentation](app/backoff).
 - `Layouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
@@ -164,7 +165,7 @@ type AppConfig struct {
     SetSettings  meergo.SetSettingsFunc
     OAuthAccount string
     HTTPClient   meergo.HTTPClient
-    WebhookURL   string
+{#    WebhookURL   string #}
 }
 ```
 
@@ -172,7 +173,7 @@ type AppConfig struct {
 - `SetSettings`: A function that enables the connector to update its settings as necessary.
 - `OAuthAccount`: The app's account associated with the OAuth authorization.
 - `HTTPClient`: The HTTP client used by the connector to make requests to the app. It seamlessly implements OAuth authorization if required and retries idempotent requests as specified.
-- `WebhookURL`: The URL where the webhook can be sent, provided the connector supports webhooks.
+{# - `WebhookURL`: The URL where the webhook can be sent, provided the connector supports webhooks. #}
 
 ### Continue reading
 

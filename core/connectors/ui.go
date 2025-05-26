@@ -70,10 +70,10 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 //
 // It panics if the connector has no settings.
 func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, settings json.Value) (json.Value, error) {
-	var accountID int
+	// var accountID int TODO(marco): implement webhooks
 	var accountCode string
 	if r, ok := connection.Account(); ok {
-		accountID = r.ID
+		// accountID = r.ID TODO(marco): implement webhooks
 		accountCode = r.Code
 	}
 	var inner any
@@ -85,7 +85,8 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 			SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 			OAuthAccount: accountCode,
 			HTTPClient:   connectors.http.ConnectionClient(connection.ID),
-			WebhookURL:   webhookURL(connection, accountID)})
+			// WebhookURL:   webhookURL(connection, accountID) // TODO(marco): implement webhooks
+		})
 	case state.Database:
 		var database any
 		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{
