@@ -102,6 +102,7 @@ const ConnectorsList = () => {
 					data-name={c.name}
 					onClick={() => onConnectorClick(c)}
 				>
+					<div className='connectors-list__card-beta-label'>BETA</div>
 					<div className='connectors-list__card-top'>
 						<div className='connectors-list__card-logo' dangerouslySetInnerHTML={{ __html: c.icon }} />
 						<div className='connectors-list__card-name'>{name}</div>

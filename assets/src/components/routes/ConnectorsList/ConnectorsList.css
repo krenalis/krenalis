@@ -57,6 +57,7 @@
 		background-color 0.3s,
 		border 0.3s;
 	cursor: pointer;
+	position: relative;
 }
 
 .connectors-list__card--disabled {
@@ -71,6 +72,18 @@
 .connectors-list__card--disabled:hover {
 	background-color: var(--sl-color-neutral-100);
 	border: 1px solid var(--sl-color-neutral-600);
+}
+
+.connectors-list__card-beta-label {
+	width: max-content;
+	position: absolute;
+	right: 8px;
+	top: 8px;
+	background-color: var(--sl-color-primary-400);
+	color: var(--text-onaccent);
+	padding: 3px 20px;
+	font-size: 13px;
+	border-radius: 3px;
 }
 
 .connectors-list__card-logo > svg {
