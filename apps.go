@@ -188,20 +188,19 @@ func (err RecordsError) Error() string {
 // Records provides access to a non-empty sequence of records to be created or
 // updated by Upsert. A record to be created has an empty ID.
 //
-// To iterate over records, call All, Same, or First. Only one of these methods
-// can be called on a Records value.
+// To iterate over records, call either All, Same, or First — only one of these
+// can be used per Records value:
 //   - All returns an iterator over all records.
-//   - Same returns an iterator over records of the same operation type (create
+//   - Same returns an iterator over records with the same operation type (create
 //     or update) as the first record.
 //   - First returns the first record.
 //
 // Records are consumed as they are yielded by the iterator. A record is
-// considered consumed when it is produced by the iterator and not skipped
-// using Skip.
+// considered consumed once produced by the iterator, unless Skip is called.
 //
 // Example:
 //
-//	for i, rec := range records.All() {
+//	for _, rec := range records.All() {
 //	    // rec is now consumed unless Skip is called here
 //	    if !shouldProcess(rec) {
 //	        records.Skip()
@@ -210,7 +209,7 @@ func (err RecordsError) Error() string {
 //	    process(rec)
 //	}
 //
-// Calling Skip within the iteration marks the current record as not consumed,
+// Calling Skip during iteration marks the current record as not consumed,
 // so it will be available in subsequent Upsert calls.
 //
 // Only one iteration (using All or Same) or call to First may be active on a
