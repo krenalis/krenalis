@@ -22,8 +22,8 @@ interface Connector {
 interface ConnectorTerms {
 	user: string;
 	users: string;
-    // group: string;  // TODO(marco): Implement groups
-    // groups: string;
+	// group: string;  // TODO(marco): Implement groups
+	// groups: string;
 }
 
 interface SourceConnector {
