@@ -77,12 +77,12 @@
 .connectors-list__card-beta-label {
 	width: max-content;
 	position: absolute;
-	right: 8px;
-	top: 8px;
-	background-color: var(--sl-color-primary-400);
-	color: var(--text-onaccent);
-	padding: 3px 20px;
-	font-size: 13px;
+	right: 10px;
+	top: 10px;
+	border: 1px solid var(--sl-color-primary-300);
+	color: var(--sl-color-primary-400);
+	padding: 0 12px;
+	font-size: 12px;
 	border-radius: 3px;
 }
 
