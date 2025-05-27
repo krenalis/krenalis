@@ -697,6 +697,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 
 		await page.goto(`${adminURL}/connectors?role=Source`);
 		await page.click(`[data-name="CSV"]`);
+		await page.click('.connectors-list__documentation-add');
 
 		await page.click('.file-connector__storage sl-select');
 		await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
@@ -863,6 +864,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 
 		await page.goto(`${adminURL}/connectors?role=Destination`);
 		await page.click(`[data-name="CSV"]`);
+		await page.click('.connectors-list__documentation-add');
 
 		await page.click('.file-connector__storage sl-select');
 		await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();

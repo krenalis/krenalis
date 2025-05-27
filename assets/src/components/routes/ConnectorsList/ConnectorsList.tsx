@@ -4,14 +4,21 @@ import { Role } from '../../../lib/api/types/types';
 import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { authCodeURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import TransformedConnector from '../../../lib/core/connector';
+import * as marked from 'marked';
 
 const ConnectorsList = () => {
 	const [searchTerm, setSearchTerm] = useState<string>('');
+	const [selectedConnector, setSelectedConnector] = useState<TransformedConnector>();
+	const [isLoadingDocumentation, setIsLoadingDocumentation] = useState<boolean>(false);
+	const [documentation, setDocumentation] = useState<string>();
 
 	const { api, handleError, connectors, setTitle, redirect } = useContext(AppContext);
 
@@ -30,17 +37,18 @@ const ConnectorsList = () => {
 		setTitle(`Add a ${connectionRole.toLocaleLowerCase()}`);
 	}, [connectionRole]);
 
-	const onConnectorClick = async (connector: TransformedConnector) => {
-		if (connector.isStream) {
+	const onConnectorAdd = async () => {
+		let c = selectedConnector;
+		if (c.isStream) {
 			// Stream connectors are not available yet.
 			return;
 		}
-		if (connector.requiresAuth) {
-			localStorage.setItem('meergo_ui_add_connector_name', connector.name);
+		if (c.requiresAuth) {
+			localStorage.setItem('meergo_ui_add_connector_name', c.name);
 			localStorage.setItem('meergo_ui_add_connection_role', connectionRole);
 			let res: authCodeURLResponse;
 			try {
-				res = await api.connectors.authCodeURL(connector.name, connectionRole as Role);
+				res = await api.connectors.authCodeURL(c.name, connectionRole as Role);
 			} catch (err) {
 				handleError(err);
 				return;
@@ -48,11 +56,28 @@ const ConnectorsList = () => {
 			window.location.href = res.url;
 			return;
 		}
-		if (connector.isFile) {
-			redirect(`connectors/file/${connector.name}?role=${connectionRole}`);
+		if (c.isFile) {
+			redirect(`connectors/file/${c.name}?role=${connectionRole}`);
 		} else {
-			redirect(`connectors/${connector.name}?role=${connectionRole}`);
+			redirect(`connectors/${c.name}?role=${connectionRole}`);
 		}
+	};
+
+	const onConnectorClick = async (connector: TransformedConnector) => {
+		setSelectedConnector(connector);
+		setIsLoadingDocumentation(true);
+		let doc: string;
+		try {
+			const res = await api.connectors.connectorDocumentation(connector.name);
+			doc = await marked.parse(res[connectionRole].Overview);
+		} catch (err) {
+			setSelectedConnector(null);
+			setIsLoadingDocumentation(false);
+			handleError(err);
+			return;
+		}
+		setDocumentation(doc);
+		setIsLoadingDocumentation(false);
 	};
 
 	const onSearchTermUpdate = (e) => {
@@ -138,6 +163,36 @@ const ConnectorsList = () => {
 					</div>
 				)}
 			</div>
+			<SlDrawer
+				style={{ '--size': '600px' } as React.CSSProperties}
+				open={selectedConnector != null}
+				className='connectors-list__documentation-drawer'
+				onSlAfterHide={() => {
+					setSelectedConnector(null);
+				}}
+			>
+				<div className='connectors-list__documentation-drawer-label' slot='label'>
+					<span>{selectedConnector?.name}</span>
+					<SlButton className='connectors-list__documentation-add' variant='primary' onClick={onConnectorAdd}>
+						Add {connectionRole.toLowerCase()}...
+					</SlButton>
+				</div>
+				{isLoadingDocumentation ? (
+					<SlSpinner
+						style={
+							{
+								fontSize: '3rem',
+								'--track-width': '6px',
+							} as React.CSSProperties
+						}
+					/>
+				) : (
+					<div
+						className='connectors-list__documentation'
+						dangerouslySetInnerHTML={{ __html: documentation }}
+					/>
+				)}
+			</SlDrawer>
 		</div>
 	);
 };

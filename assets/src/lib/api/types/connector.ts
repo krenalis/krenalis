@@ -19,6 +19,16 @@ interface Connector {
 	icon: string;
 }
 
+interface ConnectorRoleDocumentation {
+	Summary: string;
+	Overview: string;
+}
+
+interface ConnectorDocumentation {
+	Source: ConnectorRoleDocumentation;
+	Destination: ConnectorRoleDocumentation;
+}
+
 interface ConnectorTerms {
 	user: string;
 	users: string;
@@ -47,6 +57,8 @@ export type {
 	SourceConnector,
 	DestinationConnector,
 	ConnectorType,
+	ConnectorRoleDocumentation,
+	ConnectorDocumentation,
 	// WebhooksPer, // TODO(marco): implement webhooks
 	SendingMode,
 	ConnectorTarget,

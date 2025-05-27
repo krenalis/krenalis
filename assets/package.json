@@ -13,6 +13,7 @@
     "@testing-library/user-event": "14.5.1",
     "esbuild": "0.20.2",
     "json-bigint": "1.0.0",
+    "marked": "15.0.12",
     "monaco-editor": "^0.52.2",
     "react": "18.2.0",
     "react-date-range": "2.0.1",

@@ -15,7 +15,7 @@ import {
 	Filter,
 } from './types/action';
 import { UI_BASE_PATH } from '../../constants/paths';
-import { Connector } from './types/connector';
+import { Connector, ConnectorDocumentation } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
 import Workspace, {
 	CreateWorkspaceResponse,
@@ -990,6 +990,10 @@ class Connectors {
 
 	get = async (connector: string): Promise<Connector> => {
 		return await call(`${this.apiURL}/connectors/${connector}`, http.GET);
+	};
+
+	connectorDocumentation = async (connector: string): Promise<ConnectorDocumentation> => {
+		return await call(`${this.apiURL}/connectors/${connector}/documentation`, http.GET);
 	};
 
 	ui = async (

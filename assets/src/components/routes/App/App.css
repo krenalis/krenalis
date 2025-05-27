@@ -239,19 +239,6 @@ sl-drawer[placement='bottom']::part(panel) {
 
 /* TODO: why this doesn't work? */
 
-sl-drawer::part(body)::-webkit-scrollbar {
-	width: 10px;
-	height: 10px;
-}
-
-sl-drawer::part(body)::-webkit-scrollbar-thumb {
-	background: var(--sl-color-neutral-300);
-}
-
-sl-drawer::part(body)::-webkit-scrollbar-track {
-	background: transparent;
-}
-
 input::placeholder,
 sl-input::part(input)::placeholder,
 sl-textarea::part(textarea)::placeholder {

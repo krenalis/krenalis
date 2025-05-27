@@ -135,7 +135,41 @@
 .connectors-list__feedback-message a {
 	color: var(--sl-color-primary-600);
 	text-decoration: underline;
-	font-weight: 00;
+}
+
+.connectors-list__documentation {
+	padding-bottom: 30px;
+}
+
+.connectors-list__documentation > *:first-child {
+	margin-top: 0;
+}
+
+.connectors-list__documentation-drawer::part(header) {
+	flex-flow: row-reverse;
+}
+
+.connectors-list__documentation-drawer::part(header-actions) {
+	padding-right: 10px;
+}
+
+.connectors-list__documentation-drawer::part(title) {
+	padding-left: 0;
+}
+
+.connectors-list__documentation-drawer::part(body) {
+	padding-top: 0;
+}
+
+.connectors-list__documentation-drawer-label {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	justify-content: space-between;
+}
+
+.connectors-list__documentation-drawer-label sl-button::part(base) {
+	min-width: 110px;
 }
 
 @media screen and (max-width: 1200px) {
