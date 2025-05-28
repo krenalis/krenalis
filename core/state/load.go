@@ -375,9 +375,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				}
 				c.SendingMode = &mode
 			}
-			if c.connector.Type == Server {
-				c.Keys = []string{}
-			}
 			connection, ok := state.connections[c.ID]
 			if ok {
 				*connection = c
