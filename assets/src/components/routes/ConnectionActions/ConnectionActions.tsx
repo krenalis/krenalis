@@ -164,7 +164,7 @@ const ConnectionActions = () => {
 												onSelectActionType(actionType);
 											}}
 										>
-											Add...
+											Add action...
 										</SlButton>
 									}
 								/>
