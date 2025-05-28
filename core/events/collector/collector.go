@@ -190,8 +190,8 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// connectionByKey returns an enable source mobile, server or website connection
-// given its key and true, if exists, otherwise returns nil and false.
+// connectionByKey returns a source mobile, server or website connection given
+// its key and true, if exists, otherwise returns nil and false.
 func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	conn, ok := c.state.ConnectionByKey(key)
 	if ok && conn.Role == state.Source {
