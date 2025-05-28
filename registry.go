@@ -150,7 +150,7 @@ func RegisterFileStorage[T any](storage FileStorageInfo, new FileStorageNewFunc[
 }
 
 // RegisterMobile makes a mobile connector available by the provided name. If
-// RegisterDatabase is called twice with the same name or if new is nil, it
+// RegisterMobile is called twice with the same name or if new is nil, it
 // panics.
 func RegisterMobile[T any](mobile MobileInfo, new MobileNewFunc[T]) {
 	if new == nil {
