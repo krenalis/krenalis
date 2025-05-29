@@ -66,7 +66,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 
 	// Retrieve the user imported from the event.
 	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
-	if 1 != total {
+	if total != 1 {
 		t.Fatalf("expected one user, got %d", total)
 	}
 	found := false
