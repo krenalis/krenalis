@@ -5,7 +5,8 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package server implements the .Net, Go, Java, Node.js, and Python connectors.
+// Package server implements the .Net, Android, Apple, Go, Java, JavaScript,
+// Node.js, and Python connectors.
 package server
 
 import (
@@ -18,10 +19,19 @@ import (
 var iconDotNet = "<svg></svg>"
 
 // Connector icon.
+var iconAndroid = "<svg></svg>"
+
+// Connector icon.
+var iconApple = "<svg></svg>"
+
+// Connector icon.
 var iconGo = "<svg></svg>"
 
 // Connector icon.
 var iconJava = "<svg></svg>"
+
+// Connector icon.
+var iconJavaScript = "<svg></svg>"
 
 // Connector icon.
 var iconNode = "<svg></svg>"
@@ -32,11 +42,20 @@ var iconPython = "<svg></svg>"
 //go:embed documentation/dotnet/overview.md
 var dotnetOverview string
 
+//go:embed documentation/android/overview.md
+var androidOverview string
+
+//go:embed documentation/apple/overview.md
+var appleOverview string
+
 //go:embed documentation/go/overview.md
 var goOverview string
 
 //go:embed documentation/java/overview.md
 var javaOverview string
+
+//go:embed documentation/javascript/overview.md
+var javaScriptOverview string
 
 //go:embed documentation/node/overview.md
 var nodeOverview string
@@ -57,6 +76,28 @@ func init() {
 			},
 		},
 		{
+			Name:       "Android",
+			Icon:       iconAndroid,
+			Strategies: true,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from an Android mobile device",
+					Overview: androidOverview,
+				},
+			},
+		},
+		{
+			Name:       "Apple",
+			Icon:       iconApple,
+			Strategies: true,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from an Apple mobile device",
+					Overview: appleOverview,
+				},
+			},
+		},
+		{
 			Name: "Go",
 			Icon: iconGo,
 			Documentation: meergo.ConnectorDocumentation{
@@ -73,6 +114,17 @@ func init() {
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Java",
 					Overview: javaOverview,
+				},
+			},
+		},
+		{
+			Name:       "JavaScript",
+			Icon:       iconJavaScript,
+			Strategies: true,
+			Documentation: meergo.ConnectorDocumentation{
+				Source: meergo.ConnectorRoleDocumentation{
+					Summary:  "Import events and users from a website using JavaScript",
+					Overview: javaScriptOverview,
 				},
 			},
 		},
