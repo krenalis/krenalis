@@ -21,7 +21,7 @@ var icon = "<svg></svg>"
 var overview string
 
 func init() {
-	meergo.RegisterServer(meergo.ServerInfo{
+	meergo.RegisterSDK(meergo.SDKInfo{
 		Name: "Segment",
 		Icon: icon,
 		Documentation: meergo.ConnectorDocumentation{
@@ -34,7 +34,7 @@ func init() {
 }
 
 // New returns a new Segment connector instance.
-func New(*meergo.ServerConfig) (*Segment, error) {
+func New(*meergo.SDKConfig) (*Segment, error) {
 	return &Segment{}, nil
 }
 

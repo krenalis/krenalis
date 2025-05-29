@@ -46,7 +46,7 @@ func TestActionsCreation(t *testing.T) {
 	}
 	srcFsID := c.CreateSourceFilesystem(storageDir)
 	dstFsID := c.CreateDestinationFilesystem(storageDir)
-	javaScriptConnection := c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
+	javaScriptConnection := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	postgreSQLConnection := c.CreateSourcePostgreSQL()
 
 	tests := []struct {

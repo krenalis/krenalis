@@ -22,7 +22,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const [connectionToSet, setConnectionToSet] = useState<ConnectionToSet>({
 		name: connection.name,
 		strategy: connection.strategy,
-		websiteHost: connection.websiteHost,
 		sendingMode: connection.sendingMode,
 	});
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
@@ -42,13 +41,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.strategy = value;
-		setConnectionToSet(c);
-	};
-
-	const onWebsitehostChange = (e) => {
-		const value = e.target.value;
-		const c = { ...connectionToSet };
-		c.websiteHost = value;
 		setConnectionToSet(c);
 	};
 
@@ -98,9 +90,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		}, 500);
 	};
 
-	const showStrategy =
-		connection.role === 'Source' &&
-		(connection.connector.type === 'Mobile' || connection.connector.type === 'Website');
+	const showStrategy = connection.role === 'Source' && connection.connector.strategies;
 
 	return (
 		<div className='connection-settings__general-settings'>
@@ -156,15 +146,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 						</SlOption>
 					))}
 				</SlSelect>
-			)}
-
-			{connection.connector.type === 'Website' && (
-				<SlInput
-					label='Website host'
-					className='connection-settings__website-host-field'
-					value={connectionToSet.websiteHost}
-					onSlInput={onWebsitehostChange}
-				/>
 			)}
 
 			<SlButton

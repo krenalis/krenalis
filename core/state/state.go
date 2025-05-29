@@ -648,6 +648,7 @@ type Connector struct {
 	WebhooksPer            WebhooksPer
 	OAuth                  *OAuth
 	BackoffPolicy          meergo.BackoffPolicy
+	Strategies             bool
 	Documentation          meergo.ConnectorDocumentation
 }
 
@@ -690,10 +691,8 @@ const (
 	Database
 	File
 	FileStorage
-	Mobile
-	Server
+	SDK
 	Stream
-	Website
 )
 
 // Scan implements the sql.Scanner interface.
@@ -712,14 +711,10 @@ func (typ *ConnectorType) Scan(src any) error {
 		t = File
 	case "FileStorage":
 		t = FileStorage
-	case "Mobile":
-		t = Mobile
-	case "Server":
-		t = Server
+	case "SDK":
+		t = SDK
 	case "Stream":
 		t = Stream
-	case "Website":
-		t = Website
 	default:
 		return fmt.Errorf("invalid state.ConnectionType: %s", s)
 	}
@@ -749,14 +744,10 @@ func (typ ConnectorType) Value() (driver.Value, error) {
 		return "File", nil
 	case FileStorage:
 		return "FileStorage", nil
-	case Mobile:
-		return "Mobile", nil
-	case Server:
-		return "Server", nil
+	case SDK:
+		return "SDK", nil
 	case Stream:
 		return "Stream", nil
-	case Website:
-		return "Website", nil
 	}
 	return nil, fmt.Errorf("not a valid ConnectorType: %d", typ)
 }
@@ -870,7 +861,6 @@ type Connection struct {
 	account           *Account
 	Strategy          *Strategy
 	SendingMode       *SendingMode
-	WebsiteHost       string
 	LinkedConnections []int // It’s nil if events aren’t supported or if there are no linked connections.
 	Keys              []string
 	Settings          []byte

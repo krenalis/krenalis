@@ -41,7 +41,7 @@ func init() {
 		UpdateRequired: true,
 		Nullable:       true,
 		Description: `The [strategy](/identity-resolution/anonymous-users-strategies) for anonymous users. ` +
-			`It is required and can only be provided for source mobile and website connections.`,
+			`It is required and can only be provided for source SDK connections that use them.`,
 	}
 	sendingModeParameter := types.Property{
 		Name:           "sendingMode",
@@ -52,23 +52,14 @@ func init() {
 		Description: "The mode for sending events. It can be one of the sending modes supported by the app.\n\n" +
 			"It is required and can only be provided with destination app connections that supports it.",
 	}
-	websiteHostParameter := types.Property{
-		Name:           "websiteHost",
-		Type:           types.Text(),
-		UpdateRequired: true,
-		Nullable:       true,
-		Placeholder:    "www.example.com",
-		Description: "The host of the website. It is used for documentation purposes only, with no functional impact.\n\n" +
-			"It is required and can only be provided with website connections.",
-	}
 	linkedConnectionsParameter := types.Property{
 		Name:        "linkedConnections",
 		Type:        types.Array(types.Int(32)),
 		Nullable:    true,
 		Placeholder: "null",
 		Description: "The IDs of of the connections to which events are sent or from which events are received.\n\n" +
-			"For source connections (website, mobile, server), the linked connections are the destination app connections where the received events are forwarded. " +
-			"On the other hand, for destination app connections, the linked connections are the source website, mobile, or server connections from which events are received.\n\n" +
+			"For source connections (SDK), the linked connections are the destination app connections where the received events are forwarded. " +
+			"On the other hand, for destination app connections, the linked connections are the source SDK connections from which events are received.\n\n" +
 			"If this field is null, it means there are no linked connections, or the connection type does not match any of the types mentioned above.",
 	}
 	settingsParameter := types.Property{
@@ -91,7 +82,7 @@ func init() {
 		},
 		{
 			Name:        "connectorType",
-			Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Stream", "Website"),
+			Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK", "Stream"),
 			Placeholder: `"Website"`,
 			Description: "The type of the connection's connector.",
 		},
@@ -102,7 +93,7 @@ func init() {
 			Placeholder: `"Conversion"`,
 			Nullable:    true,
 			Description: "The [strategy](/identity-resolution/anonymous-users-strategies) for anonymous users. " +
-				"It is `null` if the connection is not a mobile or website source connection.",
+				"It is `null` if the connection is not a SDK source connection, or if the connection's connector does not support strategies.",
 		},
 		{
 			Name:        "sendingMode",
@@ -110,14 +101,6 @@ func init() {
 			Placeholder: `"Cloud"`,
 			Nullable:    true,
 			Description: "The mode for sending events. It is null if the connection is not a destination app that supports sending mode.",
-		},
-		{
-			Name:        "websiteHost",
-			Type:        types.Text(),
-			Nullable:    true,
-			Placeholder: `"www.example.com"`,
-			Description: "The host of the website. It is used for documentation purposes only, with no functional impact.\n\n" +
-				"It is null if the connection is not a website.",
 		},
 		linkedConnectionsParameter,
 		{
@@ -190,12 +173,11 @@ func init() {
 						CreateRequired: true,
 						Placeholder:    `"WebSite"`,
 						Description: "The name of the [connector](/connectors/) for which to create the connection. " +
-							"It can be an app, database, file storage, mobile, server, or website connector, " +
+							"It can be an app, database, file storage or SDK connector, " +
 							"but cannot be a file connector or a stream connector.\n\nStream connections will be available soon.",
 					},
 					strategyParameter,
 					sendingModeParameter,
-					websiteHostParameter,
 					linkedConnectionsParameter,
 					settingsParameter,
 					{
@@ -315,7 +297,6 @@ func init() {
 					nameParameter,
 					strategyParameter,
 					sendingModeParameter,
-					websiteHostParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},

@@ -133,10 +133,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		executeActionDropdownButtonRefs.current[actionID].current.hideTooltip();
 	};
 
-	const isActionExecutionSupported =
-		connection.connector.type !== 'Website' &&
-		connection.connector.type !== 'Mobile' &&
-		connection.connector.type !== 'Server';
+	const isActionExecutionSupported = connection.connector.type !== 'SDK';
 
 	const rows: GridRow[] = [];
 	for (const action of actions) {

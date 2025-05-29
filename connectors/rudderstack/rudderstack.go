@@ -21,7 +21,7 @@ var icon = "<svg></svg>"
 var overview string
 
 func init() {
-	meergo.RegisterServer(meergo.ServerInfo{
+	meergo.RegisterSDK(meergo.SDKInfo{
 		Name: "RudderStack",
 		Icon: icon,
 		Documentation: meergo.ConnectorDocumentation{
@@ -34,7 +34,7 @@ func init() {
 }
 
 // New returns a new RudderStack connector instance.
-func New(*meergo.ServerConfig) (*RudderStack, error) {
+func New(*meergo.SDKConfig) (*RudderStack, error) {
 	return &RudderStack{}, nil
 }
 

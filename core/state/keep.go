@@ -370,7 +370,6 @@ type CreateConnection struct {
 	}
 	Strategy          *Strategy    // strategy
 	SendingMode       *SendingMode // sending mode
-	WebsiteHost       string       // website host in form host:port
 	LinkedConnections []int        // linked connections
 	EventWriteKey     string       // event write key to add
 	Settings          []byte
@@ -423,7 +422,6 @@ func (state *State) createConnection(n notification) {
 		account:           a,
 		Strategy:          e.Strategy,
 		SendingMode:       e.SendingMode,
-		WebsiteHost:       e.WebsiteHost,
 		LinkedConnections: e.LinkedConnections,
 		Settings:          e.Settings,
 		actions:           map[int]*Action{},
@@ -1191,7 +1189,6 @@ type UpdateConnection struct {
 	Name        string
 	Strategy    *Strategy
 	SendingMode *SendingMode
-	WebsiteHost string
 }
 
 // updateConnection updates a connection.
@@ -1204,7 +1201,6 @@ func (state *State) updateConnection(n notification) {
 		c.Name = e.Name
 		c.Strategy = e.Strategy
 		c.SendingMode = e.SendingMode
-		c.WebsiteHost = e.WebsiteHost
 	})
 	dispatchNotification(state, e)
 }

@@ -383,7 +383,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					ScheduleStart:        this.ScheduleStart,
 					SchedulePeriod:       this.SchedulePeriod,
 				}
-			case Mobile, Server, Website:
+			case SDK:
 				serialized = struct {
 					serializedAction
 					Filter         *Filter         `json:"filter"`
@@ -1362,26 +1362,14 @@ func isExportUsersToFile(connectorType state.ConnectorType, role state.Role, tar
 // on a connection with the given role, and an action with the given target, is
 // importing events into the data warehouse.
 func isImportingEventsIntoWarehouse(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	if role == state.Source && target == state.Events {
-		switch connectorType {
-		case state.Mobile, state.Server, state.Website:
-			return true
-		}
-	}
-	return false
+	return role == state.Source && target == state.Events && connectorType == state.SDK
 }
 
 // isImportingUserIdentitiesFromEvents reports whether a connector of the
 // given type, on a connection with the given role, and an action with the
 // given target, is importing user identities from events.
 func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	if role == state.Source && target == state.Users {
-		switch connectorType {
-		case state.Mobile, state.Server, state.Website:
-			return true
-		}
-	}
-	return false
+	return role == state.Source && target == state.Users && connectorType == state.SDK
 }
 
 // onlyForMatching returns a schema which contains only the properties of schema

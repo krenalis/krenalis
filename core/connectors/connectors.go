@@ -6,7 +6,7 @@
 //
 
 // Package connectors provides the interface to interact with app, database,
-// file, mobile, server, stream and website connectors.
+// file, SDK and stream connectors.
 package connectors
 
 import (
@@ -174,7 +174,7 @@ type Writer interface {
 }
 
 // Connectors allows to interact with the apps, databases, files, file storages,
-// mobile, streams, and websites connectors.
+// SDK and streams connectors.
 type Connectors struct {
 	state *state.State
 	http  *httpclient.HTTP

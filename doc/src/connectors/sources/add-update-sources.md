@@ -14,8 +14,6 @@ You can add sources or update existing ones from the **Sources** page of your ad
 
 Choose the source you want to add:
 
-* **Website**
-    * [JavaScript](javascript)
 * **Application**
     * [HubSpot](hubspot)
     * [Klaviyo](klaviyo)
@@ -35,12 +33,12 @@ Choose the source you want to add:
     * [Excel](excel)
     * [JSON](json)
     * [Parquet](parquet)
-* **Mobile**
+* **SDK**
     * [Android](android)
     * Apple
-* **Server**
     * [.NET](dotnet)
     * [Go](go)
     * [Java](java)
     * [Node.js](nodejs)
     * [Python](python)
+    * [JavaScript](javascript)

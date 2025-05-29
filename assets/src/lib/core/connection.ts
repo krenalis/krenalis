@@ -27,7 +27,6 @@ class TransformedConnection {
 	storage: number;
 	compression: Compression;
 	strategy?: Strategy | null;
-	websiteHost: string;
 	sendingMode: SendingMode | null;
 	status: ConnectionStatus;
 	description: string;
@@ -46,7 +45,6 @@ class TransformedConnection {
 		storage: number,
 		compression: Compression,
 		strategy: Strategy | null,
-		websiteHost: string,
 		sendingMode: SendingMode | null,
 		status: ConnectionStatus,
 		description: string,
@@ -64,7 +62,6 @@ class TransformedConnection {
 		this.storage = storage == null ? 0 : storage;
 		this.compression = compression;
 		this.strategy = strategy;
-		this.websiteHost = websiteHost;
 		this.sendingMode = sendingMode;
 		this.status = status;
 		this.description = description;
@@ -92,20 +89,12 @@ class TransformedConnection {
 		return this.connector.type === 'FileStorage';
 	}
 
-	get isMobile() {
-		return this.connector.type === 'Mobile';
-	}
-
-	get isServer() {
-		return this.connector.type === 'Server';
+	get isSDK() {
+		return this.connector.type === 'SDK';
 	}
 
 	get isStream() {
 		return this.connector.type === 'Stream';
-	}
-
-	get isWebsite() {
-		return this.connector.type === 'Website';
 	}
 
 	get isSource() {
@@ -117,9 +106,7 @@ class TransformedConnection {
 	}
 
 	get isEventBased() {
-		return (
-			this.connector.type === 'Mobile' || this.connector.type === 'Server' || this.connector.type === 'Website'
-		);
+		return this.connector.type === 'SDK';
 	}
 
 	get hasIdentities() {
@@ -127,9 +114,7 @@ class TransformedConnection {
 	}
 
 	get hasAnonymousIdentifiers() {
-		return (
-			this.connector.type === 'Mobile' || this.connector.type === 'Server' || this.connector.type === 'Website'
-		);
+		return this.connector.type === 'SDK';
 	}
 
 	get hasSettings(): boolean {
@@ -186,12 +171,12 @@ const getConnectionStatus = (connection: Connection): ConnectionStatus => {
 };
 
 const isSourceEventConnection = (role: ConnectionRole, type: ConnectorType): boolean => {
-	return role === 'Source' && (type === 'Website' || type === 'Server' || type === 'Mobile');
+	return role === 'Source' && type === 'SDK';
 };
 
 const isEventConnection = (role: ConnectionRole, type: ConnectorType, targets: ConnectorTarget[]): boolean => {
 	return (
-		(role === 'Source' && (type === 'Website' || type === 'Server' || type === 'Mobile')) ||
+		(role === 'Source' && type === 'SDK') ||
 		(role === 'Destination' && type === 'App' && targets.includes('Events'))
 	);
 };

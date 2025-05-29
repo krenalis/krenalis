@@ -412,6 +412,7 @@ func (core *Core) Connector(name string) (*Connector, error) {
 		RequiresAuth:    c.OAuth != nil,
 		Terms:           ConnectorTerms(c.Terms),
 		Icon:            c.Icon,
+		Strategies:      c.Strategies,
 	}
 	if c.SourceTargets != 0 {
 		connector.AsSource = &SourceConnector{
@@ -492,6 +493,7 @@ func (core *Core) Connectors() []*Connector {
 			RequiresAuth:    c.OAuth != nil,
 			Terms:           ConnectorTerms(c.Terms),
 			Icon:            c.Icon,
+			Strategies:      c.Strategies,
 		}
 		if c.SourceTargets != 0 {
 			connector.AsSource = &SourceConnector{

@@ -14,7 +14,7 @@ graph LR
 	source --> source_app(["App"]) --> source_app_users(["Users"])
 	source --> source_db(["Database"]) --> source_db_users(["Users"])
 	source --> source_fileStorage(["FileStorage"]) --> source_fileStorage_users(["Users"])
-	source --> source_events_based([Mobile/Server/Website])
+	source --> source_events_based([SDK])
 	
 	source_events_based --> source_events_based_users(["Users"])
 	source_events_based --> source_events_based_events(["Events"])

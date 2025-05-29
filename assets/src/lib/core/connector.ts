@@ -19,6 +19,7 @@ class TransformedConnector {
 	requiresAuth: boolean;
 	terms: ConnectorTerms;
 	icon: string;
+	strategies: boolean;
 
 	constructor(
 		name: string,
@@ -31,6 +32,7 @@ class TransformedConnector {
 		requiresAuth: boolean,
 		terms: ConnectorTerms,
 		icon: string,
+		strategies: boolean,
 	) {
 		this.name = name;
 		this.type = type;
@@ -42,6 +44,11 @@ class TransformedConnector {
 		this.requiresAuth = requiresAuth;
 		this.terms = terms;
 		this.icon = icon ? icon : icons.PLUG;
+		this.strategies = strategies;
+	}
+
+	get hasSnippet() {
+		return this.name === 'JavaScript';
 	}
 
 	get isApp() {
@@ -60,20 +67,12 @@ class TransformedConnector {
 		return this.type === 'FileStorage';
 	}
 
-	get isMobile() {
-		return this.type === 'Mobile';
-	}
-
-	get isServer() {
-		return this.type === 'Server';
+	get isSDK() {
+		return this.type === 'SDK';
 	}
 
 	get isStream() {
 		return this.type === 'Stream';
-	}
-
-	get isWebsite() {
-		return this.type === 'Website';
 	}
 
 	get supportedSendingModes(): SendingMode[] {
@@ -99,7 +98,7 @@ class TransformedConnector {
 			}
 		} else if (this.isDatabase || this.isFileStorage) {
 			identityIDLabel = 'ID';
-		} else if (this.isMobile || this.isServer || this.isWebsite) {
+		} else if (this.isSDK) {
 			identityIDLabel = 'User ID';
 		}
 		return identityIDLabel;

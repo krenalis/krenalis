@@ -22,7 +22,7 @@ func init() {
 		},
 		{
 			Name:        "type",
-			Type:        types.Text().WithValues("App", "Database", "File", "FileStorage", "Mobile", "Server", "Stream", "Website"),
+			Type:        types.Text().WithValues("App", "Database", "File", "FileStorage", "SDK", "Stream"),
 			Placeholder: `"App"`,
 			Description: "The type of connector.",
 		},
@@ -163,6 +163,12 @@ func init() {
 			Type:        types.Text(),
 			Placeholder: `"<svg icon>"`,
 			Description: "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon.",
+		},
+		{
+			Name:        "strategies",
+			Type:        types.Boolean(),
+			Placeholder: `true`,
+			Description: "Indicates whether the connector requires a strategy to be configured for user management.\n\nIf true, the strategy is mandatory and must be provided when creating connections for this connector, otherwise, if false, the strategy is not allowed for such connections.",
 		},
 	}
 

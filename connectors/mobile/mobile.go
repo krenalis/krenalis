@@ -27,10 +27,11 @@ var androidOverview string
 var appleOverview string
 
 func init() {
-	mobiles := []meergo.MobileInfo{
+	mobiles := []meergo.SDKInfo{
 		{
-			Name: "Android",
-			Icon: iconAndroid,
+			Name:       "Android",
+			Icon:       iconAndroid,
+			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users from an Android mobile device",
@@ -39,8 +40,9 @@ func init() {
 			},
 		},
 		{
-			Name: "Apple",
-			Icon: iconApple,
+			Name:       "Apple",
+			Icon:       iconApple,
+			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users from an Apple mobile device",
@@ -49,13 +51,13 @@ func init() {
 			},
 		},
 	}
-	for _, srv := range mobiles {
-		meergo.RegisterMobile(srv, New)
+	for _, mobile := range mobiles {
+		meergo.RegisterSDK(mobile, New)
 	}
 }
 
 // New returns a new Mobile connector instance.
-func New(*meergo.MobileConfig) (*Mobile, error) {
+func New(*meergo.SDKConfig) (*Mobile, error) {
 	return &Mobile{}, nil
 }
 

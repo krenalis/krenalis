@@ -343,7 +343,7 @@ const validateTransformation = (
 					throw errInvalidTransformation;
 				}
 			}
-		} else if (connection.isMobile || connection.isServer || connection.isWebsite) {
+		} else if (connection.isSDK) {
 			if (actionType.target === 'Events') {
 				if (hasValidTransformation(action)) {
 					throw errTransformationNotSupported;
@@ -1207,7 +1207,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		fields.push('Transformation');
 	} else if (type === 'FileStorage' && connection.role === 'Source') {
 		fields.push('Transformation');
-	} else if (type === 'Mobile' || type === 'Server' || type === 'Website') {
+	} else if (type === 'SDK') {
 		if (connection.role === 'Source' && (actionType.target === 'Users' || actionType.target === 'Groups')) {
 			fields.push('Transformation');
 		}

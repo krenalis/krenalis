@@ -139,9 +139,9 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				}
 			}
 			c.Icon = connector.Icon
-		case meergo.MobileInfo:
+		case meergo.SDKInfo:
 			c.Name = connector.Name
-			c.Type = Mobile
+			c.Type = SDK
 			c.Terms = ConnectorTerms{
 				User:  "user",
 				Users: "users",
@@ -150,18 +150,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
-			c.Documentation = connector.Documentation
-		case meergo.ServerInfo:
-			c.Name = connector.Name
-			c.Type = Server
-			c.Terms = ConnectorTerms{
-				User:  "user",
-				Users: "users",
-				// Group:  "group", TODO(marco): Implement groups
-				// Groups: "groups",
-			}
-			c.SourceTargets = EventsFlag | UsersFlag
-			c.Icon = connector.Icon
+			c.Strategies = connector.Strategies
 			c.Documentation = connector.Documentation
 		case meergo.StreamInfo:
 			c.Name = connector.Name
@@ -170,18 +159,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			// It is assumed that a stream connector always have settings.
 			c.HasSourceSettings = true
 			c.HasDestinationSettings = true
-			c.Icon = connector.Icon
-			c.Documentation = connector.Documentation
-		case meergo.WebsiteInfo:
-			c.Name = connector.Name
-			c.Type = Website
-			c.Terms = ConnectorTerms{
-				User:  "user",
-				Users: "users",
-				// Group:  "group", TODO(marco): Implement groups
-				// Groups: "groups",
-			}
-			c.SourceTargets = EventsFlag | UsersFlag
 			c.Icon = connector.Icon
 			c.Documentation = connector.Documentation
 		}
@@ -345,14 +322,14 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 	// Read all connections.
 	state.connections = map[int]*Connection{}
 	err = tx.QueryScan(ctx, "SELECT id, workspace, name, connector, role,"+
-		" account, strategy, sending_mode, website_host, linked_connections,"+
-		" settings, health FROM connections", func(rows *db.Rows) error {
+		" account, strategy, sending_mode, linked_connections, settings,"+
+		" health FROM connections", func(rows *db.Rows) error {
 		for rows.Next() {
 			var workspaceID, account int
 			var connector string
 			c := Connection{}
 			if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &connector, &c.Role,
-				&account, &c.Strategy, &c.SendingMode, &c.WebsiteHost, &c.LinkedConnections, &c.Settings, &c.Health,
+				&account, &c.Strategy, &c.SendingMode, &c.LinkedConnections, &c.Settings, &c.Health,
 			); err != nil {
 				return err
 			}

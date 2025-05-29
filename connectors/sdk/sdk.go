@@ -45,13 +45,13 @@ var nodeOverview string
 var pythonOverview string
 
 func init() {
-	servers := []meergo.ServerInfo{
+	servers := []meergo.SDKInfo{
 		{
 			Name: ".NET",
 			Icon: iconDotNet,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
-					Summary:  "Import events and users from a server using .NET",
+					Summary:  "Import events and users using .NET",
 					Overview: dotnetOverview,
 				},
 			},
@@ -61,7 +61,7 @@ func init() {
 			Icon: iconGo,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
-					Summary:  "Import events and users from a server using Go",
+					Summary:  "Import events and users using Go",
 					Overview: goOverview,
 				},
 			},
@@ -71,7 +71,7 @@ func init() {
 			Icon: iconJava,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
-					Summary:  "Import events and users from a server using Java",
+					Summary:  "Import events and users using Java",
 					Overview: javaOverview,
 				},
 			},
@@ -81,7 +81,7 @@ func init() {
 			Icon: iconNode,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
-					Summary:  "Import events and users from a server using Node.js",
+					Summary:  "Import events and users using Node.js",
 					Overview: nodeOverview,
 				},
 			},
@@ -91,20 +91,20 @@ func init() {
 			Icon: iconPython,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
-					Summary:  "Import events and users from a server using Python",
+					Summary:  "Import events and users using Python",
 					Overview: pythonOverview,
 				},
 			},
 		},
 	}
 	for _, srv := range servers {
-		meergo.RegisterServer(srv, New)
+		meergo.RegisterSDK(srv, New)
 	}
 }
 
-// New returns a new Server connector instance.
-func New(*meergo.ServerConfig) (*Server, error) {
-	return &Server{}, nil
+// New returns a new SDK connector instance.
+func New(*meergo.SDKConfig) (*SDK, error) {
+	return &SDK{}, nil
 }
 
-type Server struct{}
+type SDK struct{}

@@ -26,7 +26,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
+	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	javaScriptKey := c.EventWriteKeys(javaScriptID)[0]
 	c.CreateAction(javaScriptID, "Events", meergotester.ActionToSet{
 		Name:    "JavaScript events",

@@ -85,7 +85,7 @@ const ConnectionSettings = () => {
 	const tabs = useMemo(() => {
 		const tabs: TabName[] = ['general'];
 
-		if (c.isWebsite) {
+		if (c.connector.hasSnippet) {
 			tabs.push('snippet');
 		}
 

@@ -59,7 +59,6 @@ type Connection struct {
 	Role              Role          `json:"role"`
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
-	WebsiteHost       string        `json:"websiteHost"`
 	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
 	ActionsCount      int           `json:"actionsCount"`
 	Health            Health        `json:"-"` // See issue https://github.com/meergo/meergo/issues/1255.
@@ -294,7 +293,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		}
 
-	case state.Mobile, state.Server, state.Stream, state.Website:
+	case state.SDK, state.Stream:
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
 		}
@@ -302,19 +301,13 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		// https://github.com/meergo/meergo/issues/1264.
 		switch target {
 		case Users:
-			// Source/Mobile/Users.
-			// Source/Server/Users.
-			// Source/Website/Users.
+			// Source/SDK/Users.
 			return &ActionSchemas{In: events.Schema, Out: users}, nil
 		case Groups:
-			// Source/Mobile/Groups.
-			// Source/Server/Groups.
-			// Source/Website/Groups.
+			// Source/SDK/Groups.
 			return &ActionSchemas{In: events.Schema, Out: groups}, nil
 		case Events:
-			// Source/Mobile/Events.
-			// Source/Server/Events.
-			// Source/Website/Events.
+			// Source/SDK/Events.
 			return &ActionSchemas{In: events.Schema}, nil
 		}
 		return &ActionSchemas{}, nil
@@ -390,17 +383,12 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				Target:      Users,
 			}
 			actionTypes = append(actionTypes, at)
-		case
-			state.Mobile,
-			state.Server,
-			state.Website:
+		case state.SDK:
 			if c.Role == state.Source {
-				// Source/Mobile/Users.
-				// Source/Server/Users.
-				// Source/Website/Users.
+				// Source/SDK/Users.
 				at := ActionType{
 					Name:        "Import users",
-					Description: "Import users from the events of the " + connector.Name,
+					Description: "Import users from the events sent with " + connector.Name,
 					Target:      Users,
 				}
 				actionTypes = append(actionTypes, at)
@@ -457,14 +445,9 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	//			Target:      Groups,
 	//		}
 	//		actionTypes = append(actionTypes, at)
-	//	case
-	//		state.Mobile,
-	//		state.Server,
-	//		state.Website:
+	//	case state.SDK:
 	//		if c.Role == state.Source {
-	//			// Source/Mobile/Groups.
-	//			// Source/Server/Groups.
-	//			// Source/Website/Groups.
+	//			// Source/SDK/Groups.
 	//			at := ActionType{
 	//				Name:        "Import groups",
 	//				Description: "Import groups from the events of the " + connector.Name,
@@ -476,23 +459,12 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	//}
 	if targets.Contains(state.Events) {
 		switch typ := c.Connector().Type; typ {
-		case state.Mobile, state.Server, state.Website:
+		case state.SDK:
 			if c.Role == state.Source {
-				description := "Import events from the "
-				switch typ {
-				case state.Mobile:
-					description += "mobile app"
-				case state.Server:
-					description += "server"
-				case state.Website:
-					description += "website"
-				}
-				// Source/Mobile/Events.
-				// Source/Server/Events.
-				// Source/Website/Events.
+				// Source/SDK/Events.
 				at := ActionType{
 					Name:        "Import events",
-					Description: description,
+					Description: "Import events sent with " + connector.Name,
 					Target:      Events,
 				}
 				actionTypes = slices.Insert(actionTypes, 0, at)
@@ -849,7 +821,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		switch n.Target {
 		case state.Events:
 			switch connector.Type {
-			case state.Mobile, state.Server, state.Website:
+			case state.SDK:
 				exists, err := tx.QueryExists(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
 				if err != nil {
 					return nil, err
@@ -898,7 +870,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 }
 
 // CreateEventWriteKey creates a new event write key for the connection.
-// The connection must be a source mobile, server or website connection.
+// The connection must be a source SDK connection.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the connection has already too many keys, it returns an
@@ -908,9 +880,9 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.Mobile, state.Server, state.Website:
+	case state.SDK:
 	default:
-		return "", errors.NotFound("connection %d is not a mobile, server or website", c.ID)
+		return "", errors.NotFound("connection %d is not an SDK", c.ID)
 	}
 	if c.Role != state.Source {
 		return "", errors.NotFound("connection %d is not a source", c.ID)
@@ -1058,7 +1030,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 
 // DeleteEventWriteKey deletes the given event write key of the connection.
 // key cannot be empty and cannot be the only key for the connection.
-// The connection must be a source mobile, server or website connection.
+// The connection must be a source SDK connection.
 //
 // If the key does not exist, it returns an errors.NotFoundError error.
 // If the key is the only key for the connection, it returns an
@@ -1074,9 +1046,9 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.Mobile, state.Server, state.Website:
+	case state.SDK:
 	default:
-		return errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
+		return errors.BadRequest("connection %d is not an SDK", c.ID)
 	}
 	if c.Role != state.Source {
 		return errors.BadRequest("connection %d is not a source", c.ID)
@@ -1375,10 +1347,10 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 	return identities, total, err
 }
 
-// LinkConnection links the connection (which must be a website, mobile, or
-// server connection) to the connection identified by dst, which must be a
-// destination connection that supports events. If the two connections are
-// already linked, this method does nothing.
+// LinkConnection links the connection (which must be an SDK connection) to the
+// connection identified by dst, which must be a destination connection that
+// supports events. If the two connections are already linked, this method does
+// nothing.
 //
 // Returns an errors.NotFoundError if the destination connection does not exist.
 func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
@@ -1790,10 +1762,10 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	return schema, issues, err
 }
 
-// UnlinkConnection unlinks the connection (which must be a website, mobile, or
-// server connection) from the connection identified by dst, which must be a
-// destination connection that supports events. If the two connections are not
-// linked, this method does nothing.
+// UnlinkConnection unlinks the connection (which must be an SDK connection)
+// from the connection identified by dst, which must be a destination connection
+// that supports events. If the two connections are not linked, this method does
+// nothing.
 //
 // If the destination connection does not exist, it returns an
 // errors.NotFoundError.
@@ -1866,30 +1838,23 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
 		return errors.BadRequest("sending mode %q is not valid", *sm)
 	}
-	if host := connection.WebsiteHost; host != "" {
-		if _, _, err := parseWebsiteHost(host); err != nil {
-			return errors.BadRequest("website host %q is not valid", host)
-		}
-	}
 
 	n := state.UpdateConnection{
 		Connection:  this.connection.ID,
 		Name:        connection.Name,
 		Strategy:    (*state.Strategy)(connection.Strategy),
 		SendingMode: (*state.SendingMode)(connection.SendingMode),
-		WebsiteHost: connection.WebsiteHost,
 	}
 
 	c := this.connection.Connector()
 
 	// Validate the strategy.
 	if this.connection.Role == state.Source {
-		switch c.Type {
-		case state.Mobile, state.Website:
+		if c.Strategies {
 			if connection.Strategy == nil {
 				return errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}
-		default:
+		} else {
 			if connection.Strategy != nil {
 				return errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
 			}
@@ -1914,16 +1879,10 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 		return errors.BadRequest("source connections cannot have a sending mode")
 	}
 
-	// Validate the website host.
-	if n.WebsiteHost != "" && c.Type != state.Website {
-		return errors.BadRequest("connector %s cannot have a website host, it's a %s",
-			c.Name, strings.ToLower(c.Type.String()))
-	}
-
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1,"+
-			" strategy = $2, sending_mode = $3, website_host = $4 WHERE id = $5",
-			n.Name, n.Strategy, n.SendingMode, n.WebsiteHost, n.Connection)
+			" strategy = $2, sending_mode = $3 WHERE id = $4",
+			n.Name, n.Strategy, n.SendingMode, n.Connection)
 		if err != nil {
 			return nil, err
 		}
@@ -1937,14 +1896,14 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 }
 
 // EventWriteKeys returns the event write keys of the connection.
-// The connection must be a source mobile, server or website connection.
+// The connection must be a source SDK connection.
 func (this *Connection) EventWriteKeys() ([]string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
 	switch c.Connector().Type {
-	case state.Mobile, state.Server, state.Website:
+	case state.SDK:
 	default:
-		return nil, errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
+		return nil, errors.BadRequest("connection %d is not an SDK", c.ID)
 	}
 	if c.Role != state.Source {
 		return nil, errors.BadRequest("connection %d is not a source", c.ID)
@@ -2125,25 +2084,6 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 	return rawSchema, nil
 }
 
-// parseWebsiteHost parses a website host from the format "host:port" and
-// returns the host and the port. The host cannot be empty, cannot contain
-// invalid UTF-8 characters, cannot contain the NUL byte, and cannot be longer
-// than 255 characters. If a port is present, it must be in the range [1,65535].
-// If no port is present, it defaults to returning 443 as the port.
-func parseWebsiteHost(s string) (string, int, error) {
-	h, p, found := strings.Cut(s, ":")
-	if err := util.ValidateStringField("website host", h, 255); err != nil {
-		return "", 0, err
-	}
-	port := 443
-	if found {
-		if port, _ = strconv.Atoi(p); port < 1 || port > 65535 {
-			return "", 0, errors.New("website host's port is not valid")
-		}
-	}
-	return h, port, nil
-}
-
 // serializeCursor serializes a cursor to be returned by the API.
 func serializeCursor(cursor time.Time) (string, error) {
 	b, err := json.Marshal(cursor)
@@ -2316,19 +2256,14 @@ type ConnectionToSet struct {
 	Name string `json:"name"`
 
 	// Strategy is the strategy that determines how to merge anonymous and
-	// non-anonymous users. It can only be provided for source Mobile and Website
-	// connections.
+	// non-anonymous users. It can only be provided for Source SDK connections
+	// whose connector supports the strategies.
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It can only be provided for
 	// destination app connections that support it. In this case, it must be one of
 	// the sending modes supported by the app.
 	SendingMode *SendingMode `json:"sendingMode"`
-
-	// WebsiteHost is the host, in the form "host:port", of a website
-	// connection. It must be empty if the connection is not a website. It
-	// cannot be longer than 261 runes.
-	WebsiteHost string `json:"websiteHost"`
 }
 
 // tempFunctionProvider is a function provider that creates a function at each

@@ -1,4 +1,4 @@
-type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'Server' | 'Stream' | 'Website';
+type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'SDK' | 'Stream';
 
 // type WebhooksPer = 'None' | 'Account' | 'Connection' | 'Connector'; // TODO(marco): implement webhooks
 
@@ -17,6 +17,7 @@ interface Connector {
 	requiresAuth: boolean;
 	terms: ConnectorTerms;
 	icon: string;
+	strategies: boolean;
 }
 
 interface ConnectorRoleDocumentation {

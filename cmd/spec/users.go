@@ -34,7 +34,7 @@ func init() {
 			Name: "id",
 			Type: types.Text(),
 			Description: "The unique identifier that represents the identity in the source from which it was retrieved. This field is empty for anonymous users. Specifically:\n" +
-				"* For a website, mobile, or server connection, it corresponds to the User ID of the event. This field is empty for identities imported from anonymous events.\n" +
+				"* For an SDK connection, it corresponds to the User ID of the event. This field is empty for identities imported from anonymous events.\n" +
 				"* For an app connection, it is the value used to identify the user in the app. For example, in HubSpot, it corresponds to the HubSpot ID.\n" +
 				"* For a database or file storage connection, it is the value in the column designated as the identity.",
 		},

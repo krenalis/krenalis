@@ -55,7 +55,6 @@ const addDummySource = async (page: Page): Promise<number> => {
 					role: 'Source',
 					connector: 'Dummy',
 					strategy: null,
-					websiteHost: '',
 					sendingMode: null,
 					settings: {},
 					linkedConnections: null,
@@ -78,7 +77,6 @@ const addDummyDestination = async (page: Page): Promise<number> => {
 					role: 'Destination',
 					connector: 'Dummy',
 					strategy: null,
-					websiteHost: '',
 					sendingMode: 'Cloud',
 					settings: { URLForDispatchingEvents: '' },
 					linkedConnections: null,
@@ -101,7 +99,6 @@ const addPostgreSQLSource = async (page: Page): Promise<number> => {
 					role: 'Source',
 					connector: 'PostgreSQL',
 					strategy: null,
-					websiteHost: '',
 					sendingMode: null,
 					settings: {
 						Database: config.dbName,
@@ -131,7 +128,6 @@ const addPostgreSQLDestination = async (page: Page): Promise<number> => {
 					role: 'Destination',
 					connector: 'PostgreSQL',
 					strategy: null,
-					websiteHost: '',
 					sendingMode: null,
 					settings: {
 						Database: config.dbName,
@@ -165,7 +161,6 @@ const addFileSystemSource = async (
 						role: 'Source',
 						connector: 'Filesystem',
 						strategy: null,
-						websiteHost: '',
 						sendingMode: null,
 						settings: {
 							Root: tempDir,
@@ -195,7 +190,6 @@ const addFileSystemDestination = async (
 						role: 'Destination',
 						connector: 'Filesystem',
 						strategy: null,
-						websiteHost: '',
 						sendingMode: null,
 						settings: {
 							Root: tempDir,
@@ -221,7 +215,6 @@ const addJavascriptSource = async (page: Page): Promise<number> => {
 					role: 'Source',
 					connector: 'JavaScript',
 					strategy: 'Conversion',
-					websiteHost: '',
 					sendingMode: null,
 					settings: null,
 					linkedConnections: null,

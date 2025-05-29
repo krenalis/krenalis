@@ -71,8 +71,8 @@ type Collector struct {
 	closed           atomic.Bool
 }
 
-// New returns a new event collector. It receives HTTP requests from mobile,
-// server and website sources and sends them to the dispatcher.
+// New returns a new event collector. It receives HTTP requests from SDK sources
+// and sends them to the dispatcher.
 func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.OperationStore, provider transformers.FunctionProvider, dispatcher *dispatcher.Dispatcher, metrics *metrics.Collector) (*Collector, error) {
 	var c = &Collector{
 		db:               db,
@@ -100,7 +100,7 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.Ope
 		if action.Target != state.Users || !action.Enabled {
 			continue
 		}
-		if action.Connection().Keys == nil {
+		if action.Connection().Connector().Type != state.SDK {
 			continue
 		}
 		iw := newIdentityWriter(c.datastore, action, provider, opStore, metrics)
@@ -190,15 +190,12 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// connectionByKey returns a source mobile, server or website connection given
-// its key and true, if exists, otherwise returns nil and false.
+// connectionByKey returns a source SDK connection given its key and true, if
+// exists, otherwise returns nil and false.
 func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	conn, ok := c.state.ConnectionByKey(key)
-	if ok && conn.Role == state.Source {
-		switch conn.Connector().Type {
-		case state.Mobile, state.Server, state.Website:
-			return conn, true
-		}
+	if ok && conn.Role == state.Source && conn.Connector().Type == state.SDK {
+		return conn, true
 	}
 	return nil, false
 }
@@ -589,7 +586,7 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 	if action.Target != state.Users || !action.Enabled {
 		return
 	}
-	if action.Connection().Keys == nil {
+	if action.Connection().Connector().Type != state.SDK {
 		return
 	}
 	go func() {
@@ -617,7 +614,7 @@ func (c *Collector) onDeleteAction(n state.DeleteAction) {
 // onDeleteConnection is called when a connection is deleted.
 func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	connection := n.Connection()
-	if connection.Keys == nil {
+	if connection.Connector().Type != state.SDK {
 		return
 	}
 	for _, action := range connection.Actions() {
@@ -644,7 +641,7 @@ func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 		return
 	}
 	connection := action.Connection()
-	if connection.Keys == nil {
+	if connection.Connector().Type != state.SDK {
 		return
 	}
 	if action.Enabled {
@@ -666,7 +663,7 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 		return
 	}
 	connection := action.Connection()
-	if connection.Keys == nil {
+	if connection.Connector().Type != state.SDK {
 		return
 	}
 	if !action.Enabled {

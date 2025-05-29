@@ -28,14 +28,13 @@ import * as icons from '../../../constants/icons';
 const strategyOptions: Strategy[] = ['Conversion', 'Fusion', 'Isolation', 'Preservation'];
 
 const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): boolean => {
-	return connectionRole === 'Source' && (c.type === 'Mobile' || c.type === 'Website');
+	return connectionRole === 'Source' && c.strategies;
 };
 
 const ConnectorSettings = () => {
 	const [connector, setConnector] = useState<TransformedConnector | null>(null);
 	const [name, setName] = useState<string>('');
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
-	const [websiteHost, setWebsiteHost] = useState<string>('');
 	const [sendingMode, setSendingMode] = useState<SendingModeType | null>(null);
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
@@ -170,7 +169,6 @@ const ConnectorSettings = () => {
 					role: connectionRole,
 					connector: connectorName,
 					strategy: strategy,
-					websiteHost: websiteHost,
 					sendingMode: sendingMode,
 					settings: settings,
 					linkedConnections: null,
@@ -367,24 +365,6 @@ const ConnectorSettings = () => {
 									))}
 								</SlSelect>
 							</div>
-						)}
-						{c!.type === 'Website' && (
-							<>
-								<div className='connector-settings__input'>
-									<SlInput
-										className='connector-settings__host-field'
-										name='host'
-										value={websiteHost}
-										placeholder='www.example.com:443'
-										label='Host'
-										type='text'
-										onSlInput={(e) => {
-											const target = e.currentTarget as any;
-											setWebsiteHost(target.value);
-										}}
-									/>
-								</div>
-							</>
 						)}
 					</div>
 					{connector.hasSettings(connectionRole) ? (

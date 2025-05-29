@@ -143,9 +143,7 @@ const ConnectionMetrics = () => {
 					steps = ['RECEIVE', 'INPUT_VALIDATION', 'FINALIZE'];
 				}
 				break;
-			case 'Mobile':
-			case 'Server':
-			case 'Website':
+			case 'SDK':
 				if (selectedTarget == 'Users') {
 					steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
 				} else {

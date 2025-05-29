@@ -1,4 +1,4 @@
-,,Source / App / Users,Source / Database / Users,Source / FileStorage / Users,Source / [Mobile|Server|Website] / Users,Source / [Mobile|Server|Website] / Events,Destination / App / Users,Destination / App / Events,Destination / Database / Users,Destination / FileStorage / Users
+,,Source / App / Users,Source / Database / Users,Source / FileStorage / Users,Source / SDK / Users,Source / SDK / Events,Destination / App / Users,Destination / App / Events,Destination / Database / Users,Destination / FileStorage / Users
 Filters,,,,,,,,,,
 ,Filters support,Yes,No (there is already the query for filtering),Yes,Yes,Yes,Yes,Yes,Yes,Yes
 Schemas,,,,,,,,,,

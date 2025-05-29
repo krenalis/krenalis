@@ -40,8 +40,7 @@
 .connection-settings__name-field,
 .connection-settings__enabling-field,
 .connection-settings__strategy-field,
-.connection-settings__mode-field,
-.connection-settings__website-host-field {
+.connection-settings__mode-field {
 	margin-bottom: 30px;
 }
 
@@ -67,10 +66,6 @@
 .connection-settings__mode-field sl-option .connection-settings__mode-icon {
 	display: flex;
 	align-items: center;
-}
-
-.connection-settings__website-host-field {
-	max-width: 350px;
 }
 
 .connection-settings__update-button {

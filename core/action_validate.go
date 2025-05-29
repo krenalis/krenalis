@@ -639,14 +639,11 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		}
 	}
 
-	eventBasedConn := v.connection.connector.typ == state.Mobile ||
-		v.connection.connector.typ == state.Server ||
-		v.connection.connector.typ == state.Website
-
 	// Check the connections for which the transformation is prohibited.
 	targetUsersOrGroups := v.target == state.Users || v.target == state.Groups
-	transformationProhibited := (v.connection.role == state.Source && eventBasedConn && v.target == state.Events) ||
-		(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
+	transformationProhibited :=
+		(v.connection.role == state.Source && v.connection.connector.typ == state.SDK && v.target == state.Events) ||
+			(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
 	if transformationProhibited && action.Transformation != nil {
 		return errors.BadRequest("action cannot have a transformation")
 	}

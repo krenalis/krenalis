@@ -26,21 +26,17 @@ var (
 		databases  map[string]DatabaseInfo
 		files      map[string]FileInfo
 		storages   map[string]FileStorageInfo
-		mobiles    map[string]MobileInfo
-		servers    map[string]ServerInfo
+		sdks       map[string]SDKInfo
 		streams    map[string]StreamInfo
 		warehouses map[string]WarehouseDriver
-		websites   map[string]WebsiteInfo
 	}{
 		apps:       make(map[string]AppInfo),
 		databases:  make(map[string]DatabaseInfo),
 		files:      make(map[string]FileInfo),
 		storages:   make(map[string]FileStorageInfo),
-		mobiles:    make(map[string]MobileInfo),
-		servers:    make(map[string]ServerInfo),
+		sdks:       make(map[string]SDKInfo),
 		streams:    make(map[string]StreamInfo),
 		warehouses: make(map[string]WarehouseDriver),
-		websites:   make(map[string]WebsiteInfo),
 	}
 )
 
@@ -50,7 +46,7 @@ func Connectors() map[string]ConnectorInfo {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	n := len(registry.apps) + len(registry.databases) + len(registry.files) + len(registry.storages) +
-		len(registry.mobiles) + len(registry.servers) + len(registry.streams) + len(registry.websites)
+		len(registry.sdks) + len(registry.streams)
 	connectors := make(map[string]ConnectorInfo, n)
 	for _, c := range registry.apps {
 		connectors[c.Name] = c
@@ -64,16 +60,10 @@ func Connectors() map[string]ConnectorInfo {
 	for _, c := range registry.storages {
 		connectors[c.Name] = c
 	}
-	for _, c := range registry.mobiles {
-		connectors[c.Name] = c
-	}
-	for _, c := range registry.servers {
+	for _, c := range registry.sdks {
 		connectors[c.Name] = c
 	}
 	for _, c := range registry.streams {
-		connectors[c.Name] = c
-	}
-	for _, c := range registry.websites {
 		connectors[c.Name] = c
 	}
 	return connectors
@@ -149,38 +139,21 @@ func RegisterFileStorage[T any](storage FileStorageInfo, new FileStorageNewFunc[
 	registry.storages[storage.Name] = storage
 }
 
-// RegisterMobile makes a mobile connector available by the provided name. If
-// RegisterMobile is called twice with the same name or if new is nil, it
+// RegisterSDK makes an SDK connector available by the provided name. If
+// RegisterSDK is called twice with the same name or if new is nil, it
 // panics.
-func RegisterMobile[T any](mobile MobileInfo, new MobileNewFunc[T]) {
+func RegisterSDK[T any](sdk SDKInfo, new SDKNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + mobile.Name)
+		panic("meergo: new function is nil for connector " + sdk.Name)
 	}
-	mobile.newFunc = reflect.ValueOf(new)
-	mobile.ct = reflect.TypeOf((*T)(nil)).Elem()
+	sdk.newFunc = reflect.ValueOf(new)
+	sdk.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.mobiles[mobile.Name]; dup {
-		panic("meergo: RegisterMobile called twice for connector " + mobile.Name)
+	if _, dup := registry.sdks[sdk.Name]; dup {
+		panic("meergo: RegisterSDK called twice for connector " + sdk.Name)
 	}
-	registry.mobiles[mobile.Name] = mobile
-}
-
-// RegisterServer makes a server connector available by the provided name. If
-// RegisterServer is called twice with the same name or if new is nil, it
-// panics.
-func RegisterServer[T any](server ServerInfo, new ServerNewFunc[T]) {
-	if new == nil {
-		panic("meergo: new function is nil for connector " + server.Name)
-	}
-	server.newFunc = reflect.ValueOf(new)
-	server.ct = reflect.TypeOf((*T)(nil)).Elem()
-	registryMu.Lock()
-	defer registryMu.Unlock()
-	if _, dup := registry.servers[server.Name]; dup {
-		panic("meergo: RegisterServer called twice for connector " + server.Name)
-	}
-	registry.servers[server.Name] = server
+	registry.sdks[sdk.Name] = sdk
 }
 
 // RegisterStream makes a stream connector available by the provided name.
@@ -216,23 +189,6 @@ func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriv
 		panic("meergo: RegisterWarehouseDriver called twice for type " + typ.Name)
 	}
 	registry.warehouses[typ.Name] = typ
-}
-
-// RegisterWebsite makes a website connector available by the provided name. If
-// RegisterWebsite is called twice with the same name or if new is nil, it
-// panics.
-func RegisterWebsite[T any](website WebsiteInfo, new WebsiteNewFunc[T]) {
-	if new == nil {
-		panic("meergo: new function is nil for connector " + website.Name)
-	}
-	website.newFunc = reflect.ValueOf(new)
-	website.ct = reflect.TypeOf((*T)(nil)).Elem()
-	registryMu.Lock()
-	defer registryMu.Unlock()
-	if _, dup := registry.websites[website.Name]; dup {
-		panic("meergo: RegisterWebsite called twice for connector " + website.Name)
-	}
-	registry.websites[website.Name] = website
 }
 
 // RegisteredApp returns the app registered with the given name.
@@ -295,28 +251,16 @@ func RegisteredFileStorage(name string) FileStorageInfo {
 	return storage
 }
 
-// RegisteredMobile returns the mobile registered with the given name.
-// If a mobile with this name is not registered, it panics.
-func RegisteredMobile(name string) MobileInfo {
+// RegisteredSDK returns the SDK registered with the given name.
+// If an SDK with this name is not registered, it panics.
+func RegisteredSDK(name string) SDKInfo {
 	registryMu.Lock()
-	mobile, ok := registry.mobiles[name]
+	sdk, ok := registry.sdks[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown mobile connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown SDK connector %q (forgotten import?)", name))
 	}
-	return mobile
-}
-
-// RegisteredServer returns the server registered with the given name.
-// If a server with this name is not registered, it panics.
-func RegisteredServer(name string) ServerInfo {
-	registryMu.Lock()
-	server, ok := registry.servers[name]
-	registryMu.Unlock()
-	if !ok {
-		panic(fmt.Errorf("meergo: unknown server connector %q (forgotten import?)", name))
-	}
-	return server
+	return sdk
 }
 
 // RegisteredWarehouseDriver returns the warehouse driver registered with the
@@ -330,18 +274,6 @@ func RegisteredWarehouseDriver(name string) WarehouseDriver {
 		panic(fmt.Errorf("meergo: unknown warehouse driver %q (forgotten import?)", name))
 	}
 	return warehouse
-}
-
-// RegisteredWebsite returns the website registered with the given name.
-// If a website with this name is not registered, it panics.
-func RegisteredWebsite(name string) WebsiteInfo {
-	registryMu.Lock()
-	website, ok := registry.websites[name]
-	registryMu.Unlock()
-	if !ok {
-		panic(fmt.Errorf("meergo: unknown website connector %q (forgotten import?)", name))
-	}
-	return website
 }
 
 // WarehouseDrivers returns the warehouse drivers.

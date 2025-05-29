@@ -155,6 +155,7 @@ const useApp = (
 						c.requiresAuth,
 						c.terms,
 						c.icon,
+						c.strategies,
 					),
 				);
 			}
@@ -217,7 +218,6 @@ const useApp = (
 					c.storage,
 					c.compression,
 					c.strategy,
-					c.websiteHost,
 					c.sendingMode,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
@@ -284,7 +284,6 @@ const useApp = (
 					c.storage,
 					c.compression,
 					c.strategy,
-					c.websiteHost,
 					c.sendingMode,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),

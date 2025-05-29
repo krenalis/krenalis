@@ -52,7 +52,7 @@ CREATE TABLE api_keys (
     PRIMARY KEY (id)
 );
 
-CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');
+CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'SDK', 'Stream');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
@@ -73,7 +73,6 @@ CREATE TABLE connections (
     account integer NOT NULL DEFAULT 0,
     strategy strategy,
     sending_mode sending_mode,
-    website_host varchar(261) NOT NULL DEFAULT '',
     linked_connections integer[],
     settings varchar(65535),
     health health NOT NULL DEFAULT 'Healthy',

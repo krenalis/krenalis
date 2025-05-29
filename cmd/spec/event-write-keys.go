@@ -18,12 +18,12 @@ func init() {
 		Name: "Event write keys",
 		Description: "Event write keys are used for authentication when sending events from websites, mobile apps, and servers " +
 			"through the [Ingest event](events#ingest-event) and [Ingest events](events#ingest-events) endpoints.\n\n" +
-			"Keys for website and mobile connections are usually public, as they can be exposed in a website’s source code or on a mobile device. " +
-			"In contrast, keys for server connections should always remain private.",
+			"Keys for SDK connections that receive events from a website or a mobile are usually public, as they can be exposed in a website’s source code or on a mobile device. " +
+			"In contrast, keys for SDK connections used on servers should always remain private.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Create event write key",
-				Description: "Creates an event write key for a website, mobile, or server connection. " +
+				Description: "Creates an event write key for an SDK connection. " +
 					"Returns an error if the connection already has the maximum limit of 20 keys.",
 				Method: POST,
 				URL:    "/v1/connections/:id/event-write-keys",
@@ -33,7 +33,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "1371036433",
-						Description:    "The ID of the connection for which to create the key. It must be a website, mobile, or server.",
+						Description:    "The ID of the connection for which to create the key. It must be an SDK connection.",
 					},
 				},
 				Response: &Response{
@@ -54,7 +54,7 @@ func init() {
 			},
 			{
 				Name:        "List all event write keys",
-				Description: "Returns all event write keys for a website, mobile, or server connection.",
+				Description: "Returns all event write keys for an SDK connection.",
 				Method:      GET,
 				URL:         "/v1/connections/:id/event-write-keys",
 				Parameters: []types.Property{
@@ -63,7 +63,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "1371036433",
-						Description:    "The ID of the connection for which to return the keys. It must be a website, mobile, or server.",
+						Description:    "The ID of the connection for which to return the keys. It must be an SDK.",
 					},
 				},
 				Response: &Response{
@@ -83,7 +83,7 @@ func init() {
 			},
 			{
 				Name:        "Delete write key",
-				Description: "Deletes a write key from a website, mobile, or server connection. If the connection has only one key, it cannot be deleted.",
+				Description: "Deletes a write key from an SDK connection. If the connection has only one key, it cannot be deleted.",
 				Method:      DELETE,
 				URL:         "/v1/connections/:id/event-write-keys/:key",
 				Parameters: []types.Property{
@@ -92,7 +92,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "1371036433",
-						Description:    "The ID of the connection for which to delete the key. It must be a website, mobile, or server.",
+						Description:    "The ID of the connection for which to delete the key. It must be an SDK connection.",
 					},
 					{
 						Name:           "key",

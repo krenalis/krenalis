@@ -91,7 +91,6 @@ type ConnectionToCreate struct {
 	Role              Role            `json:"role"`
 	Connector         string          `json:"connector"`
 	Strategy          *Strategy       `json:"strategy"`
-	WebsiteHost       string          `json:"websiteHost"`
 	LinkedConnections []int           `json:"linkedConnections"`
 	SendingMode       *SendingMode    `json:"sendingMode"`
 	Settings          json.RawMessage `json:"settings"`

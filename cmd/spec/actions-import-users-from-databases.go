@@ -269,7 +269,7 @@ func init() {
 						},
 						{
 							Name:        "connectorType",
-							Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Website"),
+							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
 							Placeholder: `"Database"`,
 							Description: "The type of the connection's connector. It is always `\"Database\"` when the action imports users from a database.",
 						},

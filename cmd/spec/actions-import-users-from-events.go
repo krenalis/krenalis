@@ -116,7 +116,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The ID of the connection from which the events are received. It must be a source website, mobile, or server.",
+						Description:    "The ID of the connection from which the events are received. It must be a source SDK connection.",
 					},
 					{
 						Name:           "target",
@@ -162,7 +162,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the source website, mobile, or server action.",
+						Description:    "The ID of the source SDK action.",
 					},
 					nameParameter,
 					{
@@ -191,7 +191,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the source website, mobile, or server action.",
+						Description:    "The ID of the source SDK action.",
 					},
 				},
 				Response: &Response{
@@ -200,7 +200,7 @@ func init() {
 							Name:        "id",
 							Type:        types.Int(32),
 							Placeholder: "705981339",
-							Description: "The ID of the source website, mobile, or server action.",
+							Description: "The ID of the source SDK action.",
 						},
 						nameParameter,
 						{
@@ -211,15 +211,15 @@ func init() {
 						},
 						{
 							Name:        "connectorType",
-							Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Website"),
+							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
 							Placeholder: `"Website"`,
-							Description: "The type of the connection's connector. It is always `\"Mobile\"`, `\"Server\"`, or `\"Website\"` when the action imports users from events.",
+							Description: "The type of the connection's connector. It is always `\"SDK\"` when the action imports users from events.",
 						},
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Placeholder: "1371036433",
-							Description: "The ID of the connection from which the events are received. It is a source website, mobile, or server.",
+							Description: "The ID of the connection from which the events are received. It is a source SDK connection.",
 						},
 						{
 							Name:        "connectionRole",

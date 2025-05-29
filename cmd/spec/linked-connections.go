@@ -18,7 +18,7 @@ func init() {
 		Type:           types.Int(32),
 		CreateRequired: true,
 		Placeholder:    "1371036433",
-		Description:    "The ID of the source connection. It must be a website, mobile, or server.",
+		Description:    "The ID of the source connection. It must be an SDK connection.",
 	}
 	dstParameter := types.Property{
 		Name:           "dst",
@@ -31,7 +31,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "linked-connections",
 		Name:        "Linked connections",
-		Description: "A source connection from a website, mobile, or server is linked to a destination connection so that destination actions can send the events to an external application.",
+		Description: "A source SDK connection is linked to a destination connection so that destination actions can send the events to an external application.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Link connections",

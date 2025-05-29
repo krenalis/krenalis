@@ -62,7 +62,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	})
 
 	// Create a JavaScript event source connection.
-	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", "example.com", []int{dummyID})
+	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", []int{dummyID})
 	key := c.EventWriteKeys(javaScriptID)[0]
 
 	c.SendEvent(key, analytics.Identify{

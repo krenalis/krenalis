@@ -1,7 +1,7 @@
 import { Action, ActionType } from './action';
 import { ConnectorSettings } from './responses';
 
-type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'Server' | 'Stream' | 'Website';
+type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'SDK' | 'Stream';
 
 type ConnectionRole = 'Source' | 'Destination';
 
@@ -16,7 +16,6 @@ interface Connection {
 	storage: number;
 	compression: Compression;
 	strategy?: Strategy | null;
-	websiteHost: string;
 	sendingMode: SendingMode | null;
 	hasSettings: boolean;
 	actionsCount: number;
@@ -37,7 +36,6 @@ interface ConnectionToAdd {
 	role: string;
 	connector: string;
 	strategy?: Strategy | null;
-	websiteHost: string;
 	sendingMode?: SendingMode | null;
 	settings?: ConnectorSettings | null;
 	linkedConnections: Number[] | null;
@@ -46,7 +44,6 @@ interface ConnectionToAdd {
 interface ConnectionToSet {
 	name: string;
 	strategy?: Strategy | null;
-	websiteHost: string;
 	sendingMode?: SendingMode | null;
 }
 

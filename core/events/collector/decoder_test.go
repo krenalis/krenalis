@@ -487,7 +487,7 @@ func Test_Decoder(t *testing.T) {
 			}
 			connectionType := test.connectionType
 			if connectionType == 0 {
-				test.connectionType = state.Website
+				test.connectionType = state.SDK
 			}
 			i := 0
 			for got, err := range dec.Events(test.connection, connectionType) {

@@ -112,7 +112,7 @@ const ConnectionActions = () => {
 		<div
 			className={`connection-actions${connection.actions!.length === 0 ? ' connection-actions--no-action' : ''}`}
 		>
-			{connection.isWebsite && (
+			{connection.connector.hasSnippet && (
 				<Section
 					title='Add Meergo to your website'
 					className='connection-actions__instructions'
@@ -129,7 +129,6 @@ const ConnectionActions = () => {
 					<Snippet connectionID={connection.id} />
 				</Section>
 			)}
-
 			{/* Linked connections are shown: before the actions, in the case of destination actions; after the actions,
 			in the case of source actions. This is to better suggest the usability flow. */}
 			{connection.isDestination &&
@@ -139,7 +138,6 @@ const ConnectionActions = () => {
 					connection.connector.asDestination.targets,
 				) &&
 				linkedConnections}
-
 			<Section
 				className='connection-actions__list'
 				title='Actions'
@@ -193,13 +191,11 @@ const ConnectionActions = () => {
 					</>
 				)}
 			</Section>
-
 			{/* Linked connections are shown: before the actions, in the case of destination actions; after the actions,
 			in the case of source actions. This is to better suggest the usability flow. */}
 			{connection.isSource &&
 				isEventConnection('Source', connection.connector.type, connection.connector.asSource.targets) &&
 				linkedConnections}
-
 			<ActionTypesDialog
 				isOpen={isActionTypesDialogOpen}
 				setIsOpen={setIsActionTypesDialogOpen}

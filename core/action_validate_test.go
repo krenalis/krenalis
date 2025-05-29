@@ -315,7 +315,7 @@ func Test_validateAction(t *testing.T) {
 			formatHasSheets:         false,
 		},
 		{
-			name: "GOOD: Source/Website/Users - with mapping",
+			name: "GOOD: Source/SDK/Users - with mapping",
 			action: ActionToSet{
 				Name:     "Import users",
 				InSchema: types.Type{},
@@ -330,10 +330,10 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 		},
 		{
-			name: "GOOD: Source/Website/Users - with constant mapping",
+			name: "GOOD: Source/SDK/Users - with constant mapping",
 			action: ActionToSet{
 				Name:     "Import users",
 				InSchema: types.Type{},
@@ -348,10 +348,10 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 		},
 		{
-			name: "GOOD: Source/Website/Users - with function",
+			name: "GOOD: Source/SDK/Users - with function",
 			action: ActionToSet{
 				Name:     "Import users",
 				InSchema: types.Type{},
@@ -373,11 +373,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Source/Website/Users - with constant function",
+			name: "GOOD: Source/SDK/Users - with constant function",
 			action: ActionToSet{
 				Name:     "Import users",
 				InSchema: types.Type{},
@@ -399,20 +399,20 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Source/Website/Events - valid action",
+			name: "GOOD: Source/SDK/Events - valid action",
 			action: ActionToSet{
 				Name: "Import events",
 			},
 			target:                  state.Events,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 		},
 		{
-			name: "GOOD: Source/Website/Events - with filters",
+			name: "GOOD: Source/SDK/Events - with filters",
 			action: ActionToSet{
 				Filter: &Filter{
 					Logical: OpAnd,
@@ -428,7 +428,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.Events,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 		},
 		{
 			name: "GOOD: Destination/App/Users - with mapping",
@@ -1811,7 +1811,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "input schema must be invalid for actions that dispatch events to apps",
 		},
 		{
-			name: "BAD: Source/Website/Users - input schema must be invalid",
+			name: "BAD: Source/SDK/Users - input schema must be invalid",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1828,7 +1828,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 			err:                     "input schema must be invalid for actions that import user identities from events",
 		},
 		{
@@ -2534,7 +2534,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "filters are not allowed",
 		},
 		{
-			name: "BAD: Source/Website/Events - cannot provide input schema",
+			name: "BAD: Source/SDK/Events - cannot provide input schema",
 			action: ActionToSet{
 				Filter: &Filter{
 					Logical: OpAnd,
@@ -2553,11 +2553,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.Events,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 			err:                     "input schema must be invalid for actions that import events into data warehouse",
 		},
 		{
-			name: "BAD: Source/Website/Events - cannot provide output schema",
+			name: "BAD: Source/SDK/Events - cannot provide output schema",
 			action: ActionToSet{
 				OutSchema: types.Object([]types.Property{
 					{Name: "x", Type: types.Text()},
@@ -2566,7 +2566,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.Events,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.Website,
+			connectionConnectorType: state.SDK,
 			err:                     "output schema must be invalid when importing events into data warehouse",
 		},
 		{

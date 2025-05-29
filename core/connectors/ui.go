@@ -100,23 +100,13 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
-	case state.Mobile:
-		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
-		})
-	case state.Server:
-		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{
+	case state.SDK:
+		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.Stream:
 		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{
-			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
-		})
-	case state.Website:
-		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
@@ -167,14 +157,10 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{})
 	case state.FileStorage:
 		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{})
-	case state.Mobile:
-		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{})
-	case state.Server:
-		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{})
+	case state.SDK:
+		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKConfig{})
 	case state.Stream:
 		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{})
-	case state.Website:
-		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{})
 	}
 	if err != nil {
 		return nil, err
@@ -221,16 +207,12 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 		inner = database
 	case state.File:
 		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{SetSettings: setSettings})
-	case state.Mobile:
-		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{SetSettings: setSettings})
-	case state.Server:
-		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{SetSettings: setSettings})
+	case state.SDK:
+		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKConfig{SetSettings: setSettings})
 	case state.FileStorage:
 		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{SetSettings: setSettings})
 	case state.Stream:
 		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{SetSettings: setSettings})
-	case state.Website:
-		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{SetSettings: setSettings})
 	}
 	if err != nil {
 		return nil, err

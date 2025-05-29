@@ -484,25 +484,16 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	}
 
 	// UserAgent.
-	useRequestUserAgent := false
-	if connectionType != state.Server {
-		if _, ok := context["userAgent"].(string); !ok {
-			context["userAgent"] = d.userAgent
-			useRequestUserAgent = true
-		}
+	if _, ok := context["userAgent"].(string); !ok {
+		context["userAgent"] = d.userAgent
 	}
 
 	// Browser and OS.
-	if useRequestUserAgent {
-		context["browser"], context["os"] = parseUserAgent(d.userAgent)
-	} else {
-		if userAgent, ok := context["userAgent"].(string); ok {
-			contextBrowser, contextOS := parseUserAgent(userAgent)
-			context["browser"] = contextBrowser
-			if _, ok := context["os"]; !ok {
-				context["os"] = contextOS
-			}
-
+	if ua := context["userAgent"].(string); ua != "" {
+		contextBrowser, contextOS := parseUserAgent(ua)
+		context["browser"] = contextBrowser
+		if _, ok := context["os"]; !ok {
+			context["os"] = contextOS
 		}
 	}
 
@@ -514,16 +505,14 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 			return nil, errors.BadRequest("property 'ip' is not a valid IP address")
 		}
 	} else {
-		if connectionType != state.Server {
-			if d.remoteAddr.str == "" {
-				host, _, _ := net.SplitHostPort(d.remoteAddr.address)
-				if ip, str, err := parseIP(host); err == nil {
-					d.remoteAddr.ip, d.remoteAddr.str = ip, str
-					requestIP, context["ip"] = d.remoteAddr.ip, d.remoteAddr.str
-				}
-			} else {
+		if d.remoteAddr.str == "" {
+			host, _, _ := net.SplitHostPort(d.remoteAddr.address)
+			if ip, str, err := parseIP(host); err == nil {
+				d.remoteAddr.ip, d.remoteAddr.str = ip, str
 				requestIP, context["ip"] = d.remoteAddr.ip, d.remoteAddr.str
 			}
+		} else {
+			requestIP, context["ip"] = d.remoteAddr.ip, d.remoteAddr.str
 		}
 	}
 

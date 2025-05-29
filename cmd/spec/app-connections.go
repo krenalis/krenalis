@@ -93,7 +93,7 @@ func init() {
 						Type:           types.JSON(),
 						Placeholder:    `{...}`,
 						CreateRequired: true,
-						Description: "The event (as it would be received from a website, mobile, or server connection) that is sent to the app. " +
+						Description: "The event (as it would be received from an SDK connection) that is sent to the app. " +
 							"It must adhere to the [event schema](events#get-event-schema).",
 					},
 					{

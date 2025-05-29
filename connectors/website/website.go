@@ -21,10 +21,11 @@ var iconJavaScript = "<svg></svg>"
 var overview string
 
 func init() {
-	websites := []meergo.WebsiteInfo{
+	websites := []meergo.SDKInfo{
 		{
-			Name: "JavaScript",
-			Icon: iconJavaScript,
+			Name:       "JavaScript",
+			Icon:       iconJavaScript,
+			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users from a website using JavaScript",
@@ -34,12 +35,12 @@ func init() {
 		},
 	}
 	for _, ws := range websites {
-		meergo.RegisterWebsite(ws, New)
+		meergo.RegisterSDK(ws, New)
 	}
 }
 
 // New returns a new Website connector instance.
-func New(*meergo.WebsiteConfig) (*Website, error) {
+func New(*meergo.SDKConfig) (*Website, error) {
 	return &Website{}, nil
 }
 

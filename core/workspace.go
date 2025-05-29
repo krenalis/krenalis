@@ -433,7 +433,6 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Role:              Role(c.Role),
 		Strategy:          (*Strategy)(c.Strategy),
 		SendingMode:       (*SendingMode)(c.SendingMode),
-		WebsiteHost:       c.WebsiteHost,
 		LinkedConnections: slices.Clone(c.LinkedConnections),
 		ActionsCount:      len(c.Actions()),
 		Health:            Health(c.Health),
@@ -486,7 +485,6 @@ func (this *Workspace) Connections() []*Connection {
 			Role:              Role(c.Role),
 			Strategy:          (*Strategy)(c.Strategy),
 			SendingMode:       (*SendingMode)(c.SendingMode),
-			WebsiteHost:       c.WebsiteHost,
 			LinkedConnections: slices.Clone(c.LinkedConnections),
 			ActionsCount:      len(c.Actions()),
 			Health:            Health(c.Health),
@@ -535,11 +533,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
 		return 0, errors.BadRequest("sending mode %q is not valid", *sm)
 	}
-	if host := connection.WebsiteHost; host != "" {
-		if _, _, err := parseWebsiteHost(host); err != nil {
-			return 0, errors.BadRequest("website host %q is not valid", host)
-		}
-	}
 
 	c, ok := this.core.state.Connector(connection.Connector)
 	if !ok {
@@ -548,16 +541,12 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	switch c.Type {
 	case state.File:
 		return 0, errors.BadRequest("connections cannot have type file")
-	case state.Mobile, state.Server, state.Website:
+	case state.SDK:
 		if connection.Role == Destination {
 			return 0, errors.BadRequest("%s connections cannot be destinations", strings.ToLower(c.Type.String()))
 		}
 	case state.Stream:
 		return 0, errors.BadRequest("stream connectors are not currently supported")
-	}
-
-	if connection.WebsiteHost != "" && c.Type != state.Website {
-		return 0, errors.BadRequest("%s connections cannot have a website host", strings.ToLower(c.Type.String()))
 	}
 
 	// Validate linked connections.
@@ -573,7 +562,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		Role:              state.Role(connection.Role),
 		Strategy:          (*state.Strategy)(connection.Strategy),
 		SendingMode:       (*state.SendingMode)(connection.SendingMode),
-		WebsiteHost:       connection.WebsiteHost,
 		LinkedConnections: connection.LinkedConnections,
 	}
 	if n.Name == "" {
@@ -583,12 +571,11 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 
 	// Validate the strategy.
 	if connection.Role == Source {
-		switch c.Type {
-		case state.Mobile, state.Website:
+		if c.Strategies {
 			if connection.Strategy == nil {
 				return 0, errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}
-		default:
+		} else {
 			if connection.Strategy != nil {
 				return 0, errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
 			}
@@ -609,21 +596,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		}
 	} else if connection.SendingMode != nil {
 		return 0, errors.BadRequest("source connections cannot have a sending mode")
-	}
-
-	// Validate the website host.
-	if n.WebsiteHost != "" {
-		if c.Type != state.Website {
-			return 0, errors.BadRequest("connector %s cannot have a website host, it's a %s",
-				c.Name, strings.ToLower(c.Type.String()))
-		}
-		if h, p, found := strings.Cut(n.WebsiteHost, ":"); h == "" || len(n.WebsiteHost) > 255 {
-			return 0, errors.BadRequest("website host %q is not valid", n.WebsiteHost)
-		} else if found {
-			if port, _ := strconv.Atoi(p); port < 1 || port > 65535 {
-				return 0, errors.BadRequest("website host %q is not valid", n.WebsiteHost)
-			}
-		}
 	}
 
 	// Validate the authorization token.
@@ -699,8 +671,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	}
 
 	// Generate an event write key.
-	switch c.Type {
-	case state.Mobile, state.Server, state.Website:
+	if c.Type == state.SDK {
 		n.EventWriteKey, err = generateEventWriteKey()
 		if err != nil {
 			return 0, err
@@ -746,10 +717,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
 			"(id, workspace, name, connector, role, account,"+
-			" strategy, sending_mode, website_host, linked_connections, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+			" strategy, sending_mode, linked_connections, settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
 			n.ID, n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
-			n.SendingMode, n.WebsiteHost, n.LinkedConnections, string(n.Settings))
+			n.SendingMode, n.LinkedConnections, string(n.Settings))
 		if err != nil {
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_fkey" {
 				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
@@ -1872,19 +1843,14 @@ type ConnectionToAdd struct {
 	Connector string `json:"connector"`
 
 	// Strategy is the strategy that determines how to merge anonymous and
-	// non-anonymous users. It can only be provided for source Mobile and Website
-	// connections.
+	// non-anonymous users. It can only be provided for Source SDK connections
+	// whose connector supports the strategies.
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It can only be provided for
 	// destination app connections that support it. In this case, it must be one of
 	// the sending modes supported by the app.
 	SendingMode *SendingMode `json:"sendingMode"`
-
-	// WebsiteHost is the host, in the form "host:port", of a website
-	// connection. It must be empty if the connection is not a website. It
-	// cannot be longer than 261 runes.
-	WebsiteHost string `json:"websiteHost"`
 
 	// LinkedConnections, for connections supporting events, indicate the
 	// connections to which events can be sent or received. It is nil if there

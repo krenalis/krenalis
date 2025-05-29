@@ -247,13 +247,12 @@ func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSe
 	return id
 }
 
-func (c *Meergo) CreateJavaScriptSource(name, host string, linkedConnections []int) int {
+func (c *Meergo) CreateJavaScriptSource(name string, linkedConnections []int) int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
 		Connector:         "JavaScript",
 		Strategy:          &defaultStrategy,
-		WebsiteHost:       host,
 		LinkedConnections: linkedConnections,
 	})
 }

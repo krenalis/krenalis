@@ -31,6 +31,7 @@ type Connector struct {
 	RequiresAuth    bool                  `json:"requiresAuth"`
 	Terms           ConnectorTerms        `json:"terms"`
 	Icon            string                `json:"icon"`
+	Strategies      bool                  `json:"strategies"`
 }
 
 type ConnectorTerms struct {
@@ -64,10 +65,8 @@ const (
 	Database
 	File
 	FileStorage
-	Mobile
-	Server
+	SDK
 	Stream
-	Website
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -88,14 +87,10 @@ func (typ ConnectorType) String() string {
 		return "File"
 	case FileStorage:
 		return "FileStorage"
-	case Mobile:
-		return "Mobile"
-	case Server:
-		return "Server"
+	case SDK:
+		return "SDK"
 	case Stream:
 		return "Stream"
-	case Website:
-		return "Website"
 	}
 	panic("invalid connector type")
 }
@@ -124,14 +119,10 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 		t = File
 	case "FileStorage":
 		t = FileStorage
-	case "Mobile":
-		t = Mobile
-	case "Server":
-		t = Server
+	case "SDK":
+		t = SDK
 	case "Stream":
 		t = Stream
-	case "Website":
-		t = Website
 	default:
 		return fmt.Errorf("json: invalid core.ConnectionType: %s", s)
 	}
