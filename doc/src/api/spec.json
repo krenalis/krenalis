@@ -3455,7 +3455,7 @@
                             },
                             {
                                 "name": "connectorType",
-                                "placeholder": "\"Website\"",
+                                "placeholder": "\"SDK\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
@@ -5863,7 +5863,7 @@
                             },
                             {
                                 "name": "connectorType",
-                                "placeholder": "\"Website\"",
+                                "placeholder": "\"SDK\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
@@ -7779,7 +7779,7 @@
                             },
                             {
                                 "name": "connectorType",
-                                "placeholder": "\"Website\"",
+                                "placeholder": "\"SDK\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
@@ -9126,7 +9126,7 @@
                                             },
                                             {
                                                 "name": "connectorType",
-                                                "placeholder": "\"Website\"",
+                                                "placeholder": "\"SDK\"",
                                                 "type": {
                                                     "kind": "text",
                                                     "values": [
@@ -9269,7 +9269,7 @@
                             },
                             {
                                 "name": "connectorType",
-                                "placeholder": "\"Website\"",
+                                "placeholder": "\"SDK\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [

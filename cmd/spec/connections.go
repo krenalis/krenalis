@@ -83,7 +83,7 @@ func init() {
 		{
 			Name:        "connectorType",
 			Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK", "Stream"),
-			Placeholder: `"Website"`,
+			Placeholder: `"SDK"`,
 			Description: "The type of the connection's connector.",
 		},
 		roleParameter,

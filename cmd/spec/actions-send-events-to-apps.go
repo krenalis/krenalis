@@ -223,7 +223,7 @@ func init() {
 						{
 							Name:        "connectorType",
 							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
-							Placeholder: `"Website"`,
+							Placeholder: `"SDK"`,
 							Description: "The type of the connection's connector. It is always `\"SDK\"` when the action sends events to an app.",
 						},
 						{
