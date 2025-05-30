@@ -159,6 +159,12 @@ func init() {
 			Description: "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization.",
 		},
 		{
+			Name:        "authConfigured",
+			Type:        types.Boolean(),
+			Placeholder: `true`,
+			Description: "Indicates whether the required OAuth credentials (client ID and client secret) have been provided for this connector. It is true only if the connector requires authorization and the necessary environment variables are set.",
+		},
+		{
 			Name:        "icon",
 			Type:        types.Text(),
 			Placeholder: `"<svg icon>"`,

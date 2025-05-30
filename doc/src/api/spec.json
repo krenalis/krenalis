@@ -9754,6 +9754,14 @@
                                                 "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization."
                                             },
                                             {
+                                                "name": "authConfigured",
+                                                "placeholder": "true",
+                                                "type": {
+                                                    "kind": "boolean"
+                                                },
+                                                "description": "Indicates whether the required OAuth credentials (client ID and client secret) have been provided for this connector. It is true only if the connector requires authorization and the necessary environment variables are set."
+                                            },
+                                            {
                                                 "name": "icon",
                                                 "placeholder": "\"<svg icon>\"",
                                                 "type": {
@@ -10002,6 +10010,14 @@
                                     "kind": "boolean"
                                 },
                                 "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization."
+                            },
+                            {
+                                "name": "authConfigured",
+                                "placeholder": "true",
+                                "type": {
+                                    "kind": "boolean"
+                                },
+                                "description": "Indicates whether the required OAuth credentials (client ID and client secret) have been provided for this connector. It is true only if the connector requires authorization and the necessary environment variables are set."
                             },
                             {
                                 "name": "icon",

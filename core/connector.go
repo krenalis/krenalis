@@ -29,6 +29,7 @@ type Connector struct {
 	HasSheets       bool                  `json:"hasSheets"`
 	FileExtension   string                `json:"fileExtension"`
 	RequiresAuth    bool                  `json:"requiresAuth"`
+	AuthConfigured  bool                  `json:"authConfigured"`
 	Terms           ConnectorTerms        `json:"terms"`
 	Icon            string                `json:"icon"`
 	Strategies      bool                  `json:"strategies"`

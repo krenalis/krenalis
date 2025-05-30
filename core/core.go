@@ -431,6 +431,9 @@ func (core *Core) Connector(name string) (*Connector, error) {
 			Summary:     c.Documentation.Destination.Summary,
 		}
 	}
+	if c.OAuth != nil {
+		connector.AuthConfigured = c.OAuth.ClientID != "" && c.OAuth.ClientSecret != ""
+	}
 	if connector.Terms.User == "" {
 		connector.Terms.User = "user"
 	}
@@ -511,6 +514,9 @@ func (core *Core) Connectors() []*Connector {
 				SendingMode: (*SendingMode)(c.SendingMode),
 				Summary:     c.Documentation.Destination.Summary,
 			}
+		}
+		if c.OAuth != nil {
+			connector.AuthConfigured = c.OAuth.ClientID != "" && c.OAuth.ClientSecret != ""
 		}
 		if connector.Terms.User == "" {
 			connector.Terms.User = "user"
