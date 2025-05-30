@@ -77,7 +77,7 @@ func init() {
 		{
 			Name:        "connector",
 			Type:        types.Text(),
-			Placeholder: `"WebSite"`,
+			Placeholder: `"Website"`,
 			Description: "The name of the connection's [connector](/connectors/).",
 		},
 		{
