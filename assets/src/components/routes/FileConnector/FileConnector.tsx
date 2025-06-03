@@ -94,11 +94,12 @@ const FileConnector = () => {
 					) : (
 						<div className='file-connector__no-storage'>
 							<div>
-								Currently there are no {role === 'Source' ? 'sources' : 'destination'} storages
-								available
+								To add a file connection, you need to select a file storage connection to use for{' '}
+								{role === 'Source' ? 'reading' : 'writing'} the file, but none are currently available.
+								Please add one before proceeding.
 							</div>
 							<Link path={`connectors?role=${role}`}>
-								<SlButton variant='neutral'>Create one...</SlButton>
+								<SlButton variant='neutral'>Add file storage...</SlButton>
 							</Link>
 						</div>
 					)}
