@@ -49,7 +49,8 @@ type Stripe struct {
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name: "Stripe",
+		Name:       "Stripe",
+		Categories: meergo.CategoryEcommerce,
 		AsSource: &meergo.AsAppSource{
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,

@@ -32,7 +32,8 @@ var overview string
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name: "Mixpanel",
+		Name:       "Mixpanel",
+		Categories: meergo.CategoryAnalytics,
 		AsDestination: &meergo.AsAppDestination{
 			Targets:     meergo.EventsTarget,
 			HasSettings: true,

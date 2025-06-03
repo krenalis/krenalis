@@ -40,7 +40,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name: "HubSpot",
+		Name:       "HubSpot",
+		Categories: meergo.CategoryCRM,
 		AsSource: &meergo.AsAppSource{
 			Targets: meergo.UsersTarget,
 			Documentation: meergo.ConnectorRoleDocumentation{

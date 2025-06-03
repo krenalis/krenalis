@@ -44,9 +44,10 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
-		Name:      "Parquet",
-		Icon:      icon,
-		Extension: "parquet",
+		Name:       "Parquet",
+		Categories: meergo.CategoryFile,
+		Icon:       icon,
+		Extension:  "parquet",
 		AsSource: &meergo.AsSourceFile{
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Overview: sourceOverview,

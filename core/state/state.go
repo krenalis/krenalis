@@ -634,6 +634,7 @@ type Connector struct {
 	Name                   string
 	Icon                   string
 	Type                   ConnectorType
+	Categories             meergo.Category
 	SourceTargets          ConnectorTargets
 	DestinationTargets     ConnectorTargets
 	Terms                  ConnectorTerms

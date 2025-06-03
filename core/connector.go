@@ -23,6 +23,7 @@ type Connector struct {
 	connector       *state.Connector
 	Name            string                `json:"name"`
 	Type            ConnectorType         `json:"type"`
+	Categories      []string              `json:"categories"`
 	AsSource        *SourceConnector      `json:"asSource"`
 	AsDestination   *DestinationConnector `json:"asDestination"`
 	IdentityIDLabel string                `json:"identityIDLabel"`

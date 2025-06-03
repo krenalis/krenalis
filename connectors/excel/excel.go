@@ -35,7 +35,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
-		Name: "Excel",
+		Name:       "Excel",
+		Categories: meergo.CategoryFile,
 		AsSource: &meergo.AsSourceFile{
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{

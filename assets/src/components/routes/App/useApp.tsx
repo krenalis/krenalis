@@ -147,6 +147,7 @@ const useApp = (
 					new TransformedConnector(
 						c.name,
 						c.type,
+						c.categories,
 						c.asSource,
 						c.asDestination,
 						c.identityIDLabel,

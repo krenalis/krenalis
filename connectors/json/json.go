@@ -33,7 +33,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
-		Name: "JSON",
+		Name:       "JSON",
+		Categories: meergo.CategoryFile,
 		AsSource: &meergo.AsSourceFile{
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{

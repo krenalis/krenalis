@@ -27,6 +27,12 @@ func init() {
 			Description: "The type of connector.",
 		},
 		{
+			Name:        "categories",
+			Type:        types.Array(types.Text()),
+			Placeholder: `["CRM"]`,
+			Description: "The categories of the connector. There is always at least one category.",
+		},
+		{
 			Name: "asSource",
 			Type: types.Object([]types.Property{
 				{

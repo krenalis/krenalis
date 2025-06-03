@@ -119,7 +119,11 @@ const ConnectorsList = () => {
 			}
 		}
 		const name = c.name;
-		if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
+		let nameMatches = name.toLowerCase().includes(searchTerm.toLowerCase());
+		let categoriesMatch = c.categories.some((category) =>
+			category.toLowerCase().includes(searchTerm.toLowerCase()),
+		);
+		if (nameMatches || categoriesMatch) {
 			let card = (
 				<ConnectorCard
 					connector={!isInfo ? (c as TransformedConnector) : null}
@@ -247,11 +251,11 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 				<div className='connectors-list__card-top'>
 					<div className='connectors-list__card-logo' dangerouslySetInnerHTML={{ __html: connector.icon }} />
 					<div className='connectors-list__card-name'>{connector.name}</div>
-					{connector.type && (
-						<SlBadge className='connectors-list__card-type' variant='neutral'>
-							{connector.type}
+					{connector.categories.map((category, index) => (
+						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
+							{category}
 						</SlBadge>
-					)}
+					))}
 					<div className='connectors-list__card-summary'>
 						{role === 'Source' ? connector.asSource.summary : connector.asDestination.summary}
 					</div>
@@ -288,11 +292,11 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 						dangerouslySetInnerHTML={{ __html: connectorInfo.icon }}
 					/>
 					<div className='connectors-list__card-name'>{connectorInfo.name}</div>
-					{connectorInfo.connectorType && (
-						<SlBadge className='connectors-list__card-type' variant='neutral'>
-							{connectorInfo.connectorType}
+					{connectorInfo.categories.map((category, index) => (
+						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
+							{category}
 						</SlBadge>
-					)}
+					))}
 					<div className='connectors-list__card-summary'>
 						{role === 'Source'
 							? connectorInfo.asSource.description

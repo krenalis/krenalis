@@ -29,6 +29,7 @@ import (
 func init() {
     meergo.RegisterApp(meergo.AppInfo{
         Name: "Klaviyo",
+        Categories: meergo.CategoryAutomation | meergo.CategoryMarketing,
         AsSource: &meergo.AsAppSource{
             Description: "Import profiles as users from Klaviyo",
             Targets:     meergo.UsersTarget,
@@ -111,6 +112,7 @@ Later on, you can [build an executable with your connector](../../getting-starte
 The `AppInfo` type describes information about the app connector:
 
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
+- `Categories`: the categories that the connector falls into. There must be at least one category.
 - `AsSource`: information about the app connector when it used as source. This should be set only when the app connector can be used as a source, otherwise should be nil.
   - `Description`: brief description of the connector when it is used as a source.
   - `Targets`: targets supported by the app connector when it is used as source. Can only contain `UsersTarget`.

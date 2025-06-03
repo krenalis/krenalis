@@ -30,6 +30,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		case meergo.AppInfo:
 			c.Name = connector.Name
 			c.Type = App
+			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = ConnectorTargets(asSource.Targets)
 				c.HasSourceSettings = asSource.HasSettings
@@ -73,6 +74,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		case meergo.DatabaseInfo:
 			c.Name = connector.Name
 			c.Type = Database
+			c.Categories = connector.Categories
 			// It is assumed that each Database connector supports both read
 			// and write operations.
 			c.SourceTargets = UsersFlag
@@ -94,6 +96,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		case meergo.FileInfo:
 			c.Name = connector.Name
 			c.Type = File
+			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = UsersFlag
 				c.HasSourceSettings = asSource.HasSettings
@@ -117,6 +120,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		case meergo.FileStorageInfo:
 			c.Name = connector.Name
 			c.Type = FileStorage
+			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = UsersFlag
 				// It is assumed that, if a FileStorage connector can be
@@ -142,6 +146,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		case meergo.SDKInfo:
 			c.Name = connector.Name
 			c.Type = SDK
+			c.Categories = connector.Categories
 			c.Terms = ConnectorTerms{
 				User:  "user",
 				Users: "users",
@@ -155,6 +160,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		case meergo.StreamInfo:
 			c.Name = connector.Name
 			c.Type = Stream
+			c.Categories = connector.Categories
 			c.SourceTargets = EventsFlag
 			// It is assumed that a stream connector always have settings.
 			c.HasSourceSettings = true

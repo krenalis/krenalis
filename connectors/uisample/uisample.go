@@ -25,7 +25,8 @@ var overview string
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name: "UISample",
+		Name:       "UISample",
+		Categories: meergo.CategoryTest,
 		AsSource: &meergo.AsAppSource{
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,

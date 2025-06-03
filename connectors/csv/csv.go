@@ -37,9 +37,10 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
-		Name:      "CSV",
-		Icon:      icon,
-		Extension: "csv",
+		Name:       "CSV",
+		Categories: meergo.CategoryFile,
+		Icon:       icon,
+		Extension:  "csv",
 		AsSource: &meergo.AsSourceFile{
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{

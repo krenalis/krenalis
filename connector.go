@@ -9,9 +9,74 @@ package meergo
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 )
+
+// Category represents a connector's category.
+type Category int
+
+const (
+
+	// Note: when categories are changed, the 'Category.String' method (defined
+	// below) must also be changed accordingly, as well as the various
+	// references to the categories under 'doc'.
+
+	CategoryAnalytics Category = 1 << iota
+	CategoryAutomation
+	CategoryCRM
+	CategoryDatabase
+	CategoryEcommerce
+	CategoryEmail
+	CategoryEventStreaming
+	CategoryFile
+	CategoryFileStorage
+	CategoryMarketing
+	CategoryMobile
+	CategoryOLAP
+	CategorySDK
+	CategoryTest
+	CategoryWebsite
+)
+
+// String returns the string representation of a Category.
+func (c Category) String() string {
+	switch c {
+	case CategoryAnalytics:
+		return "Analytics"
+	case CategoryAutomation:
+		return "Automation"
+	case CategoryCRM:
+		return "CRM"
+	case CategoryDatabase:
+		return "Database"
+	case CategoryEcommerce:
+		return "E-commerce"
+	case CategoryEmail:
+		return "Email"
+	case CategoryEventStreaming:
+		return "Event streaming"
+	case CategoryFile:
+		return "File"
+	case CategoryFileStorage:
+		return "File storage"
+	case CategoryMarketing:
+		return "Marketing"
+	case CategoryMobile:
+		return "Mobile"
+	case CategoryOLAP:
+		return "OLAP"
+	case CategorySDK:
+		return "SDK"
+	case CategoryTest:
+		return "Test"
+	case CategoryWebsite:
+		return "Website"
+	default:
+		return fmt.Sprintf("<unexpected category %d>", c)
+	}
+}
 
 type ConnectorDocumentation struct {
 	Source      ConnectorRoleDocumentation

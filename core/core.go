@@ -406,6 +406,7 @@ func (core *Core) Connector(name string) (*Connector, error) {
 		connector:       c,
 		Name:            c.Name,
 		Type:            ConnectorType(c.Type),
+		Categories:      categoryBitmaskToCategoryNames(c.Categories),
 		IdentityIDLabel: c.IdentityIDLabel,
 		HasSheets:       c.HasSheets,
 		FileExtension:   c.FileExtension,
@@ -490,6 +491,7 @@ func (core *Core) Connectors() []*Connector {
 			connector:       c,
 			Name:            c.Name,
 			Type:            ConnectorType(c.Type),
+			Categories:      categoryBitmaskToCategoryNames(c.Categories),
 			IdentityIDLabel: c.IdentityIDLabel,
 			HasSheets:       c.HasSheets,
 			FileExtension:   c.FileExtension,
@@ -1445,6 +1447,19 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 		return err
 	}
 	return nil
+}
+
+// categoryBitmaskToCategoryNames converts a bitmask representing a connector's
+// categories into a slice of strings containing the various category names.
+func categoryBitmaskToCategoryNames(categoryBitmask meergo.Category) []string {
+	categoryNames := []string{}
+	for i := range 64 {
+		if categoryBitmask&(1<<i) != 0 {
+			categoryName := meergo.Category(1 << i).String()
+			categoryNames = append(categoryNames, categoryName)
+		}
+	}
+	return categoryNames
 }
 
 func isValidMemberToken(token string) bool {

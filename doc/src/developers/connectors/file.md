@@ -28,6 +28,7 @@ import (
 func init() {
     meergo.RegisterFile(meergo.FileInfo{
         Name:      "CSV",
+        Categories: meergo.CategoryFile,
         Extension: "csv",
         AsSource: &meergo.AsSourceFile{
             HasSettings: true,
@@ -84,6 +85,7 @@ Later on, you can [build an executable with your connector](../../getting-starte
 The `FileInfo` type describes information about the file connector:
 
 - `Name`: short name, typically the name of the file type. For example, "Excel", "CSV", "Parquet", etc.
+- `Categories`: the categories that the connector falls into. There must be at least one category.
 - `AsSource`: information about the file connector when it used as source. This should be set only when the file connector can be used as a source, otherwise should be nil.
   - `HasSettings`: indicates whether the connection has format settings when used as source.
 - `AsDestination`: information about the file connector when it used as destination. This should be set only when the file connector can be used as a destination, otherwise should be nil.

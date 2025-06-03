@@ -38,6 +38,7 @@ var destinationOverview string
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "MySQL",
+		Categories:  meergo.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM users\n",
 		Icon:        icon,
 		Documentation: meergo.ConnectorDocumentation{

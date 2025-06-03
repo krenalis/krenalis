@@ -29,6 +29,7 @@ import (
 func init() {
     meergo.RegisterFileStorage(meergo.FileStorageInfo{
         Name: "S3",
+        Categories:    meergo.CategoryFileStorage,
         AsSource:      true,
         AsDestination: true,
     }, New)
@@ -81,6 +82,7 @@ Later on, you can [build an executable with your connector](../../getting-starte
 The `FileStorageInfo` type describes information about the file storage connector:
 
 - `Name`: short name, typically the name of the storage. For example, "S3", "HTTP", "SFTP", etc.
+- `Categories`: the categories that the connector falls into. There must be at least one category.
 - `Icon`: icon in SVG format representing the file storage. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterFileStorage` function that, executed during package initialization, registers the file storage connector:

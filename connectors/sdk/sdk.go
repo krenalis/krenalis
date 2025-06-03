@@ -60,8 +60,9 @@ var pythonOverview string
 func init() {
 	servers := []meergo.SDKInfo{
 		{
-			Name: ".NET",
-			Icon: iconDotNet,
+			Name:       ".NET",
+			Categories: meergo.CategorySDK,
+			Icon:       iconDotNet,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using .NET",
@@ -71,6 +72,7 @@ func init() {
 		},
 		{
 			Name:       "Android",
+			Categories: meergo.CategorySDK | meergo.CategoryMobile,
 			Icon:       iconAndroid,
 			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
@@ -81,8 +83,9 @@ func init() {
 			},
 		},
 		{
-			Name: "Go",
-			Icon: iconGo,
+			Name:       "Go",
+			Categories: meergo.CategorySDK,
+			Icon:       iconGo,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Go",
@@ -91,8 +94,9 @@ func init() {
 			},
 		},
 		{
-			Name: "Java",
-			Icon: iconJava,
+			Name:       "Java",
+			Categories: meergo.CategorySDK,
+			Icon:       iconJava,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Java",
@@ -102,6 +106,7 @@ func init() {
 		},
 		{
 			Name:       "JavaScript",
+			Categories: meergo.CategorySDK | meergo.CategoryWebsite,
 			Icon:       iconJavaScript,
 			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
@@ -112,8 +117,9 @@ func init() {
 			},
 		},
 		{
-			Name: "Node.js",
-			Icon: iconNode,
+			Name:       "Node.js",
+			Categories: meergo.CategorySDK,
+			Icon:       iconNode,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Node.js",
@@ -122,8 +128,9 @@ func init() {
 			},
 		},
 		{
-			Name: "Python",
-			Icon: iconPython,
+			Name:       "Python",
+			Categories: meergo.CategorySDK,
+			Icon:       iconPython,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Python",

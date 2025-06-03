@@ -9573,6 +9573,17 @@
                                                 "description": "The type of connector."
                                             },
                                             {
+                                                "name": "categories",
+                                                "placeholder": "[\"CRM\"]",
+                                                "type": {
+                                                    "kind": "array",
+                                                    "elementType": {
+                                                        "kind": "text"
+                                                    }
+                                                },
+                                                "description": "The categories of the connector. There is always at least one category."
+                                            },
+                                            {
                                                 "name": "asSource",
                                                 "placeholder": "...",
                                                 "type": {
@@ -9829,6 +9840,17 @@
                                     ]
                                 },
                                 "description": "The type of connector."
+                            },
+                            {
+                                "name": "categories",
+                                "placeholder": "[\"CRM\"]",
+                                "type": {
+                                    "kind": "array",
+                                    "elementType": {
+                                        "kind": "text"
+                                    }
+                                },
+                                "description": "The categories of the connector. There is always at least one category."
                             },
                             {
                                 "name": "asSource",

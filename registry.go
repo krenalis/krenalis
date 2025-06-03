@@ -148,6 +148,7 @@ func RegisterSDK[T any](sdk SDKInfo, new SDKNewFunc[T]) {
 	}
 	sdk.newFunc = reflect.ValueOf(new)
 	sdk.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateSDKConnector(sdk)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.sdks[sdk.Name]; dup {
@@ -287,12 +288,21 @@ func WarehouseDrivers() []WarehouseDriver {
 	return drivers
 }
 
+// validateCategories validates the categories of a connector.
+func validateCategories(connectorName string, categories Category) {
+	if categories == 0 {
+		panic(fmt.Sprintf("connector %s: at least one category must be specified", connectorName))
+	}
+}
+
 // validateAppConnector validates the passed app connector, performing checks to
 // detect errors that could cause panic or errors in the Meergo code that uses
 // the connectors.
 //
 // In case of a validation error, this function panics.
 func validateAppConnector(app AppInfo) {
+
+	validateCategories(app.Name, app.Categories)
 
 	if app.AsSource == nil && app.AsDestination == nil {
 		panic(fmt.Sprintf("connector %s: AppInfo must include at least the AsSource and AsDestination fields", app.Name))
@@ -398,6 +408,7 @@ func validateAppConnector(app AppInfo) {
 //
 // In case of a validation error, this function panics.
 func validateDatabaseConnector(database DatabaseInfo) {
+	validateCategories(database.Name, database.Categories)
 	iface := reflect.TypeFor[interface {
 		Close() error
 		Columns(ctx context.Context, table string) ([]Column, error)
@@ -417,6 +428,8 @@ func validateDatabaseConnector(database DatabaseInfo) {
 //
 // In case of a validation error, this function panics.
 func validateFileConnector(file FileInfo) {
+
+	validateCategories(file.Name, file.Categories)
 
 	if file.AsSource != nil {
 		iface := reflect.TypeFor[interface {
@@ -465,6 +478,8 @@ func validateFileConnector(file FileInfo) {
 // In case of a validation error, this function panics.
 func validateFileStorageConnector(fileStorage FileStorageInfo) {
 
+	validateCategories(fileStorage.Name, fileStorage.Categories)
+
 	iface := reflect.TypeFor[interface {
 		AbsolutePath(ctx context.Context, name string) (string, error)
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
@@ -493,12 +508,22 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 
 }
 
+// validateSDKConnector validates the passed SDK connector, performing checks to
+// detect errors that could cause panic or errors in the Meergo code that uses
+// the connectors.
+//
+// In case of a validation error, this function panics.
+func validateSDKConnector(sdk SDKInfo) {
+	validateCategories(sdk.Name, sdk.Categories)
+}
+
 // validateStreamConnector validates the passed stream connector, performing
 // checks to detect errors that could cause panic or errors in the Meergo code
 // that uses the connectors.
 //
 // In case of a validation error, this function panics.
 func validateStreamConnector(stream StreamInfo) {
+	validateCategories(stream.Name, stream.Categories)
 	iface := reflect.TypeFor[interface {
 		Close() error
 		Receive(ctx context.Context) (event []byte, ack func(), err error)

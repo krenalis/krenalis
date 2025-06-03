@@ -22,8 +22,9 @@ var overview string
 
 func init() {
 	meergo.RegisterSDK(meergo.SDKInfo{
-		Name: "Segment",
-		Icon: icon,
+		Name:       "Segment",
+		Categories: meergo.CategoryAnalytics,
+		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from Segment",

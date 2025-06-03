@@ -11,6 +11,7 @@ import { Role } from '../api/types/types';
 class TransformedConnector {
 	name: string;
 	type: ConnectorType;
+	categories: Array<string>;
 	asSource: SourceConnector | null;
 	asDestination: DestinationConnector | null;
 	identityIDLabel: string;
@@ -25,6 +26,7 @@ class TransformedConnector {
 	constructor(
 		name: string,
 		type: ConnectorType,
+		categories: Array<string>,
 		asSource: SourceConnector | null,
 		asDestination: DestinationConnector | null,
 		identityIDLabel: string,
@@ -38,6 +40,7 @@ class TransformedConnector {
 	) {
 		this.name = name;
 		this.type = type;
+		this.categories = categories;
 		this.asSource = asSource;
 		this.asDestination = asDestination;
 		this.identityIDLabel = identityIDLabel;

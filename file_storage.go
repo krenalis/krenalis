@@ -31,6 +31,7 @@ func (err *InvalidPathError) Error() string {
 // FileStorageInfo represents a file storage connector info.
 type FileStorageInfo struct {
 	Name          string
+	Categories    Category // bitmask of connector's categories
 	AsSource      *AsFileStorageSource
 	AsDestination *AsFileStorageDestination
 	Icon          string // icon in SVG format

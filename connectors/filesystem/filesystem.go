@@ -34,7 +34,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name: "Filesystem",
+		Name:       "Filesystem",
+		Categories: meergo.CategoryFileStorage,
 		AsSource: &meergo.AsFileStorageSource{
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Overview: sourceOverview,

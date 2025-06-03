@@ -34,8 +34,9 @@ var overview string
 
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
-		Name: "Kafka",
-		Icon: icon,
+		Name:       "Kafka",
+		Categories: meergo.CategoryEventStreaming,
+		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from Kafka",

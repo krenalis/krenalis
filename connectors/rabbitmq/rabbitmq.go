@@ -31,8 +31,9 @@ var overview string
 
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
-		Name: "RabbitMQ",
-		Icon: icon,
+		Name:       "RabbitMQ",
+		Categories: meergo.CategoryEventStreaming,
+		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from RabbitMQ",

@@ -37,7 +37,8 @@ const sendToDebugServer = false
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name: "Google Analytics",
+		Name:       "Google Analytics",
+		Categories: meergo.CategoryAnalytics,
 		AsDestination: &meergo.AsAppDestination{
 			Targets:     meergo.EventsTarget,
 			HasSettings: true,

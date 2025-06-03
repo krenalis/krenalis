@@ -38,7 +38,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name: "Dummy",
+		Name:       "Dummy",
+		Categories: meergo.CategoryTest,
 		AsSource: &meergo.AsAppSource{
 			Targets:     meergo.UsersTarget,
 			HasSettings: true,

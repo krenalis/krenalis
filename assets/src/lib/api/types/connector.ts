@@ -9,6 +9,7 @@ type ConnectorTarget = 'Events' | 'Users' | 'Groups';
 interface Connector {
 	name: string;
 	type: ConnectorType;
+	categories: Array<string>;
 	asSource: SourceConnector | null;
 	asDestination: DestinationConnector | null;
 	identityIDLabel: string;
@@ -29,6 +30,7 @@ interface ConnectorImplementation {
 
 interface ConnectorInfo {
 	name: string;
+	categories: Array<string>;
 	icon: string;
 	iconLicense: string;
 	connectorType: ConnectorType;
