@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+
+	"github.com/google/uuid"
 )
 
 // Category represents a connector's category.
@@ -130,9 +132,6 @@ type HTTPClient interface {
 
 	// AccessToken returns an OAuth access token.
 	AccessToken(ctx context.Context) (string, error)
-
-	// UUID returns a random version 4 UUID, suitable for use as an idempotency key.
-	UUID() string
 }
 
 // Role represents a role.
@@ -156,4 +155,10 @@ func (role Role) String() string {
 		return "Destination"
 	}
 	panic("invalid role")
+}
+
+// UUID returns a random version 4 UUID. For example, it can be used as an
+// idempotency key.
+func UUID() string {
+	return uuid.NewString()
 }

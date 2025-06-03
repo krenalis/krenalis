@@ -26,7 +26,7 @@ You can use the strategies provided by Meergo, so you do not have to implement i
 
 ## Idempotency
 
-As mentioned earlier, only idempotent requests can be retried. The `Do` method of the provided HTTP client automatically treats GET, PUT, DELETE, and HEAD requests as idempotent. If you need to explicitly specify idempotency, use the `DoIdempotent` method. It remains your responsibility to ensure that the request is idempotent. When you need to generate an idempotency key for an HTTP request, you can use the `UUID` method of the provided HTTP client, which returns a random version 4 UUID.
+As mentioned earlier, only idempotent requests can be retried. The `Do` method of the provided HTTP client automatically treats GET, PUT, DELETE, and HEAD requests as idempotent. If you need to explicitly specify idempotency, use the `DoIdempotent` method. It remains your responsibility to ensure that the request is idempotent. When you need to generate an idempotency key for an HTTP request, you can use the `meergo.UUID` function, which returns a random version 4 UUID.
 
 ## Strategies
 

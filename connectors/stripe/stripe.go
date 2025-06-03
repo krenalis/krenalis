@@ -192,7 +192,7 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Rea
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
 	if req.Method == "POST" {
-		req.Header.Set("Idempotency-Key", client.UUID())
+		req.Header.Set("Idempotency-Key", meergo.UUID())
 	}
 	res, err := client.DoIdempotent(req, true)
 	if err != nil {

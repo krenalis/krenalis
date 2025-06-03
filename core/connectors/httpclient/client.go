@@ -22,8 +22,6 @@ import (
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
-
-	"github.com/google/uuid"
 )
 
 // backoffBase is the base for the default exponential backoff.
@@ -245,11 +243,6 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 
 	}
 
-}
-
-// UUID returns a random version 4 UUID, suitable for use as an idempotency key.
-func (c *Client) UUID() string {
-	return uuid.NewString()
 }
 
 // waitTime calculates the duration to wait before retrying a failed request,
