@@ -28,10 +28,11 @@ import (
 
 func init() {
     meergo.RegisterFileStorage(meergo.FileStorageInfo{
-        Name: "S3",
+        Name:          "S3",
         Categories:    meergo.CategoryFileStorage,
-        AsSource:      true,
-        AsDestination: true,
+        AsSource:      &meergo.AsFileStorageSource{},
+        AsDestination: &meergo.AsFileStorageDestination{},
+        Icon: icon,
     }, New)
 }
 
