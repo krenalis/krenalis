@@ -186,6 +186,9 @@ func (app *App) EventRequest(ctx context.Context, event RawEvent, eventType stri
 	}
 	eventTypeSchema, err := app.inner.(appEventsConnector).EventTypeSchema(ctx, eventType)
 	if err != nil {
+		if err == meergo.ErrEventTypeNotExist {
+			return nil, err
+		}
 		return nil, connectorError(err)
 	}
 	// Check that schema is aligned with the event type's schema.
@@ -202,6 +205,9 @@ func (app *App) EventRequest(ctx context.Context, event RawEvent, eventType stri
 	// Return the event request.
 	request, err := app.inner.(appEventsConnector).EventRequest(ctx, event, eventType, eventTypeSchema, properties, redacted)
 	if err != nil {
+		if err == meergo.ErrEventTypeNotExist {
+			return nil, err
+		}
 		return nil, connectorError(err)
 	}
 	return request, nil
@@ -268,6 +274,9 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		}
 		schema, err := app.inner.(appEventsConnector).EventTypeSchema(ctx, eventType)
 		if err != nil {
+			if err == meergo.ErrEventTypeNotExist {
+				return types.Type{}, err
+			}
 			return types.Type{}, connectorError(err)
 		}
 		if !schema.Valid() {
