@@ -82,19 +82,35 @@ When a connector instance is created, an HTTP client is passed to the constructo
 - Adding the "Authorization" HTTP header for connectors that use OAuth.
 - Refreshing the access token for connectors that use OAuth.
 
-The client implements the following interface:
+The client implements the `HTTPClient` interface:
 
 ```go
+// HTTPClient is the interface implemented by the HTTP client used by
+// connectors.
 type HTTPClient interface {
 
-    // Do sends an HTTP request with an Authorization header if required.
-    Do(req *http.Request) (res *http.Response, err error)
+	// Do sends an HTTP request with an Authorization header if required. It returns
+	// the response and ensures that the request body is closed, even in the case of
+	// errors. Redirects are not followed.
+	//
+	// If an error occurs during GET, PUT, DELETE, or HEAD requests, it retries
+	// using the client's backoff policy or a default policy if the client has no
+	// policy.
+	Do(req *http.Request) (res *http.Response, err error)
 
-    // ClientSecret returns the OAuth client secret of the HTTP client.
-    ClientSecret() (string, error)
+	// DoIdempotent behaves like Do, but unlike Do, which assumes GET, PUT, DELETE,
+	// and HEAD requests are idempotent by default, it allows to explicitly specify
+	// idempotency.
+	//
+	// If an error occurs during an idempotent request, it retries using the
+	// client's backoff policy or a default policy if the client has no policy.
+	DoIdempotent(req *http.Request, idempotent bool) (*http.Response, error)
 
-    // AccessToken returns an OAuth access token.
-    AccessToken(ctx context.Context) (string, error)
+	// ClientSecret returns the OAuth client secret of the HTTP client.
+	ClientSecret() (string, error)
+
+	// AccessToken returns an OAuth access token.
+	AccessToken(ctx context.Context) (string, error)
 }
 ```
 
@@ -128,20 +144,19 @@ Meergo considers a record processed as soon as it has been read from the `Record
 // Records provides access to a non-empty sequence of records to be created or
 // updated by Upsert. A record to be created has an empty ID.
 //
-// To iterate over records, call All, Same, or First. Only one of these methods
-// can be called on a Records value.
+// To iterate over records, call either All, Same, or First — only one of these
+// can be used per Records value:
 //   - All returns an iterator over all records.
-//   - Same returns an iterator over records of the same operation type (create
+//   - Same returns an iterator over records with the same operation type (create
 //     or update) as the first record.
 //   - First returns the first record.
 //
 // Records are consumed as they are yielded by the iterator. A record is
-// considered consumed when it is produced by the iterator and not skipped
-// using Skip.
+// considered consumed once produced by the iterator, unless Skip is called.
 //
 // Example:
 //
-//	for i, rec := range records.All() {
+//	for _, rec := range records.All() {
 //	    // rec is now consumed unless Skip is called here
 //	    if !shouldProcess(rec) {
 //	        records.Skip()
@@ -150,7 +165,7 @@ Meergo considers a record processed as soon as it has been read from the `Record
 //	    process(rec)
 //	}
 //
-// Calling Skip within the iteration marks the current record as not consumed,
+// Calling Skip during iteration marks the current record as not consumed,
 // so it will be available in subsequent Upsert calls.
 //
 // Only one iteration (using All or Same) or call to First may be active on a
@@ -158,34 +173,35 @@ Meergo considers a record processed as soon as it has been read from the `Record
 // value must not be used again.
 type Records interface {
 
-    // All returns an iterator to read all records. Properties of the records in the
-    // sequence may be modified unless the record is subsequently skipped.
-    All() iter.Seq2[int, Record]
+	// All returns an iterator to read all records. Properties of the records in the
+	// sequence may be modified unless the record is subsequently skipped.
+	All() iter.Seq2[int, Record]
 
-    // First returns the first record. The record's properties may be modified.
-    // After First is called, no further method calls on Records are allowed.
-    First() Record
+	// First returns the first record. The record's properties may be modified.
+	// First può essere chiamato al posto di All e Some se l'app consente di aggiornare o creare un solo record alla volta.
+	First() Record
 
-    // Peek retrieves the next record without advancing the iterator. It returns the
-    // record and true if a record is available, or false if there are no further
-    // records. The returned record must not be modified.
-    Peek() (Record, bool)
+	// Peek retrieves the next record without advancing the iterator. It returns the
+	// record and true if a record is available, or false if there are no further
+	// records. Can only be called during an iteration with All or Same.
+	// The returned record must not be modified.
+	Peek() (Record, bool)
 
-    // Same returns an iterator for records: either all records to update
-    // (if the first record is for update) or all records to create
-    // (if the first record is for creation). Properties of the records in the
-    // sequence may be modified unless the record is subsequently skipped.
-    Same() iter.Seq2[int, Record]
+	// Same returns an iterator for records: either all records to update
+	// (if the first record is for update) or all records to create
+	// (if the first record is for creation). Properties of the records in the
+	// sequence may be modified unless the record is subsequently skipped.
+	Same() iter.Seq2[int, Record]
 
-    // Skip skips the current record in the iteration and marks it as unread. The
-    // subsequent iteration will resume at the next record while preserving the same
-    // index. Skip may only be called during iterations from All or Same, and only
-    // if the record's properties have not been modified.
-    //
-    // Skip cannot be called to skip the first record. The first record is always
-    // consumed when iterating with All or Same.
-    // It is safe to call Skip multiple times on the same record.
-    Skip()
+	// Skip skips the current record in the iteration and marks it as unread. The
+	// subsequent iteration will resume at the next record while preserving the same
+	// index. Skip may only be called during iterations from All or Same, and only
+	// if the record's properties have not been modified.
+	//
+	// Skip cannot be called to skip the first record. The first record is always
+	// consumed when iterating with All or Same.
+	// It is safe to call Skip multiple times on the same record.
+	Skip()
 }
 ```
 

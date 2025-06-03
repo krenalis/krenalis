@@ -29,19 +29,26 @@ import (
 func init() {
     meergo.RegisterApp(meergo.AppInfo{
         Name: "Klaviyo",
-        Categories: meergo.CategoryAutomation | meergo.CategoryMarketing,
         AsSource: &meergo.AsAppSource{
-            Description: "Import profiles as users from Klaviyo",
-            Targets:     meergo.UsersTarget,
-            HasSettings: true,
+            Targets:       meergo.UsersTarget,
+            HasSettings:   true,
+            Documentation: meergo.ConnectorRoleDocumentation{
+                Summary: "Import profiles as users from Klaviyo",	
+            },
         },
         AsDestination: &meergo.AsAppDestination{
-            Description: "Export users as profiles and send events to Klaviyo",
-            Targets:     meergo.EventsTarget | meergo.UsersTarget,
-            HasSettings: true,
-            SendingMode: meergo.Cloud,
+            Targets:       meergo.EventsTarget | meergo.UsersTarget,
+            HasSettings:   true,
+            SendingMode:   meergo.Cloud,
+            Documentation: meergo.ConnectorRoleDocumentation{
+                Summary: "Export users as profiles and send events to Klaviyo",	
+            },
         },
-        TermForUsers: "clients",
+        Terms: meergo.AppTerms{
+            User:  "client",
+            Users: "clients",
+        },
+        Icon: icon,
     }, New)
 }
 
@@ -114,15 +121,15 @@ The `AppInfo` type describes information about the app connector:
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
 - `Categories`: the categories that the connector falls into. There must be at least one category.
 - `AsSource`: information about the app connector when it used as source. This should be set only when the app connector can be used as a source, otherwise should be nil.
-  - `Description`: brief description of the connector when it is used as a source.
   - `Targets`: targets supported by the app connector when it is used as source. Can only contain `UsersTarget`.
   - `HasSettings`: indicates whether the connection has settings when used as a source
+  - `Description`: description of the connector when it is used as a source.
 - `AsDestination`: information about the app connector when it used as destination. This should be set only when the app connector can be used as a destination, otherwise should be nil.
-  - `Description`: brief description of the connector when it is used as a destination.
   - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `EventsTarget` and `UsersTarget`.
   - `HasSettings`: indicates whether the connection has settings when used as destination
   - `SendingMode`: mode used to send the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
-- `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
+  - `Description`: description of the connector when it is used as a destination.
+  - `Terms`: singular and plural terms used by the app to refer to users—for example, "client"/"clients", "customer"/"customers", or "user"/"users".
 {# - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups". #}
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 {# - `WebhooksPer`: indicates if webhooks are per account, connection, or connector. #}
@@ -138,18 +145,25 @@ func init() {
     meergo.RegisterApp(meergo.AppInfo{
         Name: "Klaviyo",
         AsSource: &meergo.AsAppSource{
-            Description: "Import profiles as users from Klaviyo",
-            Targets:     meergo.Users,
-            HasSettings: true,
+            Targets:       meergo.Users,
+            HasSettings:   true,
+            Documentation: meergo.ConnectorRoleDocumentation{
+                Summary: "Import profiles as users from Klaviyo",	
+            },
         },
         AsDestination: &meergo.AsAppDestination{
-            Description: "Export users as profiles and send events to Klaviyo",
-            Targets:     meergo.EventsTarget | meergo.UsersTarget,
-            HasSettings: true,
-            SendingMode: meergo.Cloud,
+            Targets:       meergo.EventsTarget | meergo.UsersTarget,
+            HasSettings:   true,
+            SendingMode:   meergo.Cloud,
+            Documentation: meergo.ConnectorRoleDocumentation{
+                Summary: "Export users as profiles and send events to Klaviyo",	
+            },
         },
-        TermForUsers: "clients",
-        Icon:         icon,
+        Terms: meergo.AppTerms{
+            User:  "client",
+            Users: "clients",
+        },
+        Icon: icon,
     }, New)
 }
 ```
