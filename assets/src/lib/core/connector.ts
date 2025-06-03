@@ -17,6 +17,7 @@ class TransformedConnector {
 	hasSheets: boolean;
 	fileExtension: string;
 	requiresAuth: boolean;
+	authConfigured: boolean;
 	terms: ConnectorTerms;
 	icon: string;
 	strategies: boolean;
@@ -30,6 +31,7 @@ class TransformedConnector {
 		hasSheets: boolean,
 		fileExtension: string,
 		requiresAuth: boolean,
+		authConfigured: boolean,
 		terms: ConnectorTerms,
 		icon: string,
 		strategies: boolean,
@@ -42,6 +44,7 @@ class TransformedConnector {
 		this.hasSheets = hasSheets;
 		this.fileExtension = fileExtension;
 		this.requiresAuth = requiresAuth;
+		this.authConfigured = authConfigured;
 		this.terms = terms;
 		this.icon = icon ? icon : icons.PLUG;
 		this.strategies = strategies;

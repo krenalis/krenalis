@@ -1,20 +1,22 @@
-import React, { useState, useContext, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useContext, useLayoutEffect, useMemo, useEffect } from 'react';
 import './ConnectorsList.css';
 import { Role } from '../../../lib/api/types/types';
 import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import { authCodeURLResponse } from '../../../lib/api/types/responses';
+import { authCodeURLResponse, ConnectorsInfoResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import TransformedConnector from '../../../lib/core/connector';
 import * as marked from 'marked';
+import { connectorsInfo } from '../../../lib/api/connectorsInfo';
+import { ConnectorInfo } from '../../../lib/api/types/connector';
 
 const ConnectorsList = () => {
+	const [additionalConnectorsInfo, setAdditionalConnectorsInfo] = useState<ConnectorInfo[]>([]);
 	const [searchTerm, setSearchTerm] = useState<string>('');
 	const [selectedConnector, setSelectedConnector] = useState<TransformedConnector>();
 	const [isLoadingDocumentation, setIsLoadingDocumentation] = useState<boolean>(false);
@@ -37,13 +39,26 @@ const ConnectorsList = () => {
 		setTitle(`Add a ${connectionRole.toLocaleLowerCase()}`);
 	}, [connectionRole]);
 
+	useEffect(() => {
+		const fetchConnectorsInfo = async () => {
+			let res: ConnectorsInfoResponse;
+			try {
+				res = await connectorsInfo();
+			} catch (err) {
+				console.error(err);
+				return;
+			}
+			setAdditionalConnectorsInfo(res.connectors);
+		};
+		fetchConnectorsInfo();
+	}, []);
+
 	const onConnectorAdd = async () => {
 		let c = selectedConnector;
-		if (c.isStream) {
-			// Stream connectors are not available yet.
-			return;
-		}
 		if (c.requiresAuth) {
+			if (!c.authConfigured) {
+				return;
+			}
 			localStorage.setItem('meergo_ui_add_connector_name', c.name);
 			localStorage.setItem('meergo_ui_add_connection_role', connectionRole);
 			let res: authCodeURLResponse;
@@ -85,47 +100,35 @@ const ConnectorsList = () => {
 		setSearchTerm(value);
 	};
 
-	const connectorsCards = [];
-	for (const c of connectors) {
-		if (
-			(connectionRole === 'Source' && c.asSource == null) ||
-			(connectionRole === 'Destination' && c.asDestination == null)
-		) {
-			continue;
+	const cards = [];
+	for (const c of [...connectors, ...additionalConnectorsInfo]) {
+		const isInfo = c['asSource']?.['implemented'] != null || c['asDestination']?.['implemented'] != null;
+		if (isInfo) {
+			if (
+				(connectionRole === 'Source' && (c as ConnectorInfo).asSource == null) ||
+				(connectionRole === 'Destination' && (c as ConnectorInfo).asDestination == null)
+			) {
+				continue;
+			}
+		} else {
+			if (
+				(connectionRole === 'Source' && (c as TransformedConnector).asSource == null) ||
+				(connectionRole === 'Destination' && (c as TransformedConnector).asDestination == null)
+			) {
+				continue;
+			}
 		}
 		const name = c.name;
 		if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
 			let card = (
-				<div
-					className={`connectors-list__card${c.isStream ? ' connectors-list__card--disabled' : ''}`}
-					key={c.name}
-					data-name={c.name}
-					onClick={() => onConnectorClick(c)}
-				>
-					<div className='connectors-list__card-beta-label'>Beta</div>
-					<div className='connectors-list__card-top'>
-						<div className='connectors-list__card-logo' dangerouslySetInnerHTML={{ __html: c.icon }} />
-						<div className='connectors-list__card-name'>{name}</div>
-						{c.type && (
-							<SlBadge className='connectors-list__card-type' variant='neutral'>
-								{c.type}
-							</SlBadge>
-						)}
-						<div className='connectors-list__card-summary'>
-							{connectionRole === 'Source' ? c.asSource.summary : c.asDestination.summary}
-						</div>
-					</div>
-				</div>
+				<ConnectorCard
+					connector={!isInfo ? (c as TransformedConnector) : null}
+					connectorInfo={isInfo ? (c as ConnectorInfo) : null}
+					onClick={onConnectorClick}
+					role={connectionRole}
+				/>
 			);
-			if (c.isStream) {
-				connectorsCards.push(
-					<SlTooltip placement='top' content={'Stream connectors will be available soon'}>
-						{card}
-					</SlTooltip>,
-				);
-			} else {
-				connectorsCards.push(card);
-			}
+			cards.push(card);
 		}
 	}
 
@@ -148,9 +151,9 @@ const ConnectorsList = () => {
 				>
 					<SlIcon name='search' slot='prefix' />
 				</SlInput>
-				{connectorsCards.length > 0 ? (
+				{cards.length > 0 ? (
 					<div className='connectors-list__connectors'>
-						{connectorsCards}
+						{cards}
 						<div className='connectors-list__feedback'>
 							<SlIcon name='chat-dots' />
 							{feedbackMessage}
@@ -174,7 +177,12 @@ const ConnectorsList = () => {
 			>
 				<div className='connectors-list__documentation-drawer-label' slot='label'>
 					<span>{selectedConnector?.name}</span>
-					<SlButton className='connectors-list__documentation-add' variant='primary' onClick={onConnectorAdd}>
+					<SlButton
+						className='connectors-list__documentation-add'
+						variant='primary'
+						onClick={onConnectorAdd}
+						disabled={selectedConnector?.requiresAuth && !selectedConnector?.authConfigured}
+					>
 						Add {connectionRole.toLowerCase()}...
 					</SlButton>
 				</div>
@@ -188,14 +196,120 @@ const ConnectorsList = () => {
 						}
 					/>
 				) : (
-					<div
-						className='connectors-list__documentation'
-						dangerouslySetInnerHTML={{ __html: documentation }}
-					/>
+					<>
+						<div
+							className='connectors-list__documentation'
+							dangerouslySetInnerHTML={{ __html: documentation }}
+						/>
+						{selectedConnector?.requiresAuth && !selectedConnector?.authConfigured && (
+							<div className='connectors-list__oauth-not-configured'>
+								OAuth authentication for this connector is not configured. Please contact your Meergo
+								administrator to set it up.{' '}
+								<a href='#' target='_blank'>
+									Our documentation
+								</a>{' '}
+								provides instructions on how to configure {selectedConnector.name} OAuth.
+							</div>
+						)}
+					</>
 				)}
 			</SlDrawer>
 		</div>
 	);
+};
+
+interface ConnectorsCardProps {
+	connector: TransformedConnector | null;
+	connectorInfo: ConnectorInfo | null;
+	onClick?: (c: TransformedConnector) => void;
+	role: string;
+}
+
+const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCardProps) => {
+	if ((connector != null && connectorInfo != null) || (connector == null && connectorInfo == null)) {
+		return null;
+	}
+
+	if (connector != null) {
+		return (
+			<div
+				className='connectors-list__card'
+				key={connector.name}
+				data-name={connector.name}
+				onClick={() => onClick(connector)}
+			>
+				{connector.isStream ? (
+					<div className='connectors-list__card-coming-label'>Coming soon</div>
+				) : (
+					<div className='connectors-list__card-beta-label'>Beta</div>
+				)}
+
+				<div className='connectors-list__card-top'>
+					<div className='connectors-list__card-logo' dangerouslySetInnerHTML={{ __html: connector.icon }} />
+					<div className='connectors-list__card-name'>{connector.name}</div>
+					{connector.type && (
+						<SlBadge className='connectors-list__card-type' variant='neutral'>
+							{connector.type}
+						</SlBadge>
+					)}
+					<div className='connectors-list__card-summary'>
+						{role === 'Source' ? connector.asSource.summary : connector.asDestination.summary}
+					</div>
+				</div>
+			</div>
+		);
+	} else {
+		const isComingSoon =
+			(role === 'Source' && connectorInfo.asSource.comingSoon) ||
+			(role === 'Destination' && connectorInfo.asDestination.comingSoon);
+
+		const isUnderConsideration =
+			(role === 'Source' && !connectorInfo.asSource.implemented) ||
+			(role === 'Destination' && !connectorInfo.asDestination.implemented);
+
+		const isInLatestVersion =
+			(role === 'Source' && connectorInfo.asSource.implemented) ||
+			(role === 'Destination' && connectorInfo.asDestination.implemented);
+
+		return (
+			<div
+				className={`connectors-list__card connectors-list__card--info`}
+				key={connectorInfo.name}
+				data-name={connectorInfo.name}
+			>
+				{isComingSoon ? (
+					<div className='connectors-list__card-coming-label'>Coming soon</div>
+				) : isUnderConsideration ? (
+					<div className='connectors-list__card-coming-label'>Under consideration</div>
+				) : null}
+				<div className='connectors-list__card-top'>
+					<div
+						className='connectors-list__card-logo'
+						dangerouslySetInnerHTML={{ __html: connectorInfo.icon }}
+					/>
+					<div className='connectors-list__card-name'>{connectorInfo.name}</div>
+					{connectorInfo.connectorType && (
+						<SlBadge className='connectors-list__card-type' variant='neutral'>
+							{connectorInfo.connectorType}
+						</SlBadge>
+					)}
+					<div className='connectors-list__card-summary'>
+						{role === 'Source'
+							? connectorInfo.asSource.description
+							: connectorInfo.asDestination.description}
+					</div>
+					{isUnderConsideration && (
+						<div className='connectors-list__card-contact-us'>Contact us if you are interested</div>
+					)}
+					{isInLatestVersion && (
+						<div className='connectors-list__card-update-version'>
+							Update to the latest version to use this connector
+						</div>
+					)}
+				</div>
+			</div>
+		);
+	}
 };
 
 export default ConnectorsList;

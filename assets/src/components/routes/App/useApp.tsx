@@ -153,6 +153,7 @@ const useApp = (
 						c.hasSheets,
 						c.fileExtension,
 						c.requiresAuth,
+						c.authConfigured,
 						c.terms,
 						c.icon,
 						c.strategies,

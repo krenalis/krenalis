@@ -6,6 +6,12 @@
 	margin: auto;
 }
 
+.connectors-list__spinner {
+	display: block;
+	margin: auto;
+	margin-top: 50px;
+}
+
 .connectors-list__search-bar {
 	max-width: 1200px;
 	margin: auto;
@@ -60,21 +66,13 @@
 	position: relative;
 }
 
-.connectors-list__card--disabled {
-	cursor: default;
-}
-
 .connectors-list__card:hover {
 	background-color: var(--sl-color-primary-50);
-	border: 1px solid var(--sl-color-primary-600);
+	border: 1px solid var(--sl-color-primary-200);
 }
 
-.connectors-list__card--disabled:hover {
-	background-color: var(--sl-color-neutral-100);
-	border: 1px solid var(--sl-color-neutral-600);
-}
-
-.connectors-list__card-beta-label {
+.connectors-list__card-beta-label,
+.connectors-list__card-coming-label {
 	width: max-content;
 	position: absolute;
 	right: 10px;
@@ -84,6 +82,11 @@
 	padding: 0 12px;
 	font-size: 12px;
 	border-radius: 3px;
+}
+
+.connectors-list__card-coming-label {
+	border: 1px solid var(--sl-color-neutral-400);
+	color: var(--sl-color-neutral-500);
 }
 
 .connectors-list__card-logo > svg {
@@ -123,9 +126,31 @@
 	margin-right: auto;
 }
 
+.connectors-list__card-contact-us,
+.connectors-list__card-update-version {
+	margin-top: 10px;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--sl-color-neutral-500);
+}
+
+.connectors-list__card-update-version {
+	color: var(--sl-color-danger-500);
+}
+
+.connectors-list__card--info {
+	background-color: var(--sl-color-neutral-50);
+	cursor: default;
+}
+
+.connectors-list__card--info:hover {
+	background-color: var(--sl-color-neutral-50);
+	border: 1px solid var(--sl-color-neutral-200);
+}
+
 .connectors-list__feedback {
 	border: 2px dashed var(--sl-color-neutral-200);
-	background-color: var(--sl-color-neutral-100);
+	background-color: var(--sl-color-neutral-50);
 	border-radius: var(--radius);
 	display: flex;
 	justify-content: center;
@@ -150,10 +175,6 @@
 	text-decoration: underline;
 }
 
-.connectors-list__documentation {
-	padding-bottom: 30px;
-}
-
 .connectors-list__documentation > *:first-child {
 	margin-top: 0;
 }
@@ -172,6 +193,7 @@
 
 .connectors-list__documentation-drawer::part(body) {
 	padding-top: 0;
+	padding-bottom: 40px;
 }
 
 .connectors-list__documentation-drawer-label {
@@ -191,6 +213,16 @@
 
 .connectors-list__documentation p {
 	padding-top: 1em;
+}
+
+.connectors-list__oauth-not-configured {
+	margin: 0 12px;
+	color: var(--sl-color-danger-600);
+}
+
+.connectors-list__oauth-not-configured a {
+	color: var(--sl-color-neutral-600);
+	text-decoration: underline;
 }
 
 @media screen and (max-width: 1200px) {

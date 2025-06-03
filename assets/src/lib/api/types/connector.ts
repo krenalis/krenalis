@@ -15,9 +15,25 @@ interface Connector {
 	hasSheets: boolean;
 	fileExtension: string;
 	requiresAuth: boolean;
+	authConfigured: boolean;
 	terms: ConnectorTerms;
 	icon: string;
 	strategies: boolean;
+}
+
+interface ConnectorImplementation {
+	description: string;
+	implemented: boolean;
+	comingSoon: boolean;
+}
+
+interface ConnectorInfo {
+	name: string;
+	icon: string;
+	iconLicense: string;
+	connectorType: ConnectorType;
+	asSource: ConnectorImplementation;
+	asDestination: ConnectorImplementation;
 }
 
 interface ConnectorRoleDocumentation {
@@ -58,6 +74,7 @@ export type {
 	SourceConnector,
 	DestinationConnector,
 	ConnectorType,
+	ConnectorInfo,
 	ConnectorRoleDocumentation,
 	ConnectorDocumentation,
 	// WebhooksPer, // TODO(marco): implement webhooks

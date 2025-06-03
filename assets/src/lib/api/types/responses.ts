@@ -1,4 +1,5 @@
 import { ActionError } from './action';
+import { ConnectorInfo } from './connector';
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
 import { UserEvent, UserIdentity, UserTraits } from './user';
@@ -14,6 +15,10 @@ interface ConnectorUIResponse {
 	fields: ConnectorField[];
 	buttons: ConnectorButton[];
 	settings: ConnectorSettings;
+}
+
+interface ConnectorsInfoResponse {
+	connectors: ConnectorInfo[];
 }
 
 interface Execution {
@@ -186,6 +191,7 @@ export type {
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
 	ConnectorUIResponse,
+	ConnectorsInfoResponse,
 	CreateEventListenerResponse,
 	Event,
 	EventListenerEventsResponse,
