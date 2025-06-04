@@ -36,7 +36,7 @@ For this installation method you need to have [Git](https://git-scm.com/download
 
    [http://localhost:9090/admin/](http://localhost:9090/admin/)
 
-Initially, login is not required with the Docker installation. To enable login, create a new member with their email and password:
+Initially, login is not required with the Docker installation. To enable login, create a new member with their email and password.
 
 ## Pre-packaged binaries
 
