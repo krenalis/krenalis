@@ -75,7 +75,7 @@ const ConnectorsList = () => {
 	}, [connectors, additionalConnectorsInfo, connectionRole, searchTerm]);
 
 	const categories: string[] = useMemo(() => {
-		let categories = ['All'];
+		let categories = [];
 		for (const connector of [...connectors, ...additionalConnectorsInfo]) {
 			for (const category of connector.categories) {
 				const isAlreadyIncluded = categories.includes(category);
@@ -85,6 +85,7 @@ const ConnectorsList = () => {
 			}
 		}
 		categories.sort();
+		categories.unshift('All');
 		return categories;
 	}, [connectors, additionalConnectorsInfo]);
 
