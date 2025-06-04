@@ -98,7 +98,7 @@ const FileConnector = () => {
 								{role === 'Source' ? 'reading' : 'writing'} the file, but none are currently available.
 								Please add one before proceeding.
 							</div>
-							<Link path={`connectors?role=${role}`}>
+							<Link path={`connectors?role=${role}&category=File%20storage`}>
 								<SlButton variant='neutral'>Add file storage...</SlButton>
 							</Link>
 						</div>

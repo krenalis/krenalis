@@ -21,7 +21,9 @@ const ConnectorsList = () => {
 	const [selectedConnector, setSelectedConnector] = useState<TransformedConnector>();
 	const [isLoadingDocumentation, setIsLoadingDocumentation] = useState<boolean>(false);
 	const [documentation, setDocumentation] = useState<string>();
-	const [selectedCategory, setSelectedCategory] = useState<string>('All');
+	const [selectedCategory, setSelectedCategory] = useState<string>(
+		new URLSearchParams(window.location.search).get('category') ?? 'All',
+	);
 
 	const { api, handleError, connectors, setTitle, redirect } = useContext(AppContext);
 
