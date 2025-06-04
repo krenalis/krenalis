@@ -169,7 +169,7 @@ func RegisterStream[T any](stream StreamInfo, new StreamNewFunc[T]) {
 	validateStreamConnector(stream)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.files[stream.Name]; dup {
+	if _, dup := registry.streams[stream.Name]; dup {
 		panic("meergo: RegisterStream called twice for connector " + stream.Name)
 	}
 	registry.streams[stream.Name] = stream
