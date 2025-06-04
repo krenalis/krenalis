@@ -18,6 +18,7 @@ import (
 	_ "github.com/meergo/meergo/connectors/json"
 	_ "github.com/meergo/meergo/connectors/klaviyo"
 	_ "github.com/meergo/meergo/connectors/mailchimp"
+	_ "github.com/meergo/meergo/connectors/meergoapi"
 	_ "github.com/meergo/meergo/connectors/mixpanel"
 	_ "github.com/meergo/meergo/connectors/mysql"
 	_ "github.com/meergo/meergo/connectors/parquet"

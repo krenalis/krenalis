@@ -26,6 +26,7 @@ const (
 	// references to the categories under 'doc'.
 
 	CategoryAnalytics Categories = 1 << iota
+	CategoryAPI
 	CategoryAutomation
 	CategoryCRM
 	CategoryDatabase
@@ -47,6 +48,8 @@ func (c Categories) String() string {
 	switch c {
 	case CategoryAnalytics:
 		return "Analytics"
+	case CategoryAPI:
+		return "API"
 	case CategoryAutomation:
 		return "Automation"
 	case CategoryCRM:

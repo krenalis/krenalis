@@ -29,6 +29,7 @@
   <li><a href="sources/java"> Java</a></li>
   <li><a href="sources/nodejs"> Node.js</a></li>
   <li><a href="sources/python"> Python</a></li>
+  <li><a href="sources/meergoapi"> Meergo API</a></li>
 </ul>
 
 ## Destinations
