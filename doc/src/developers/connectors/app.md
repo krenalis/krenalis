@@ -29,6 +29,7 @@ import (
 func init() {
     meergo.RegisterApp(meergo.AppInfo{
         Name: "Klaviyo",
+        Categories: meergo.CategoryAutomation | meergo.CategoryMarketing,
         AsSource: &meergo.AsAppSource{
             Targets:       meergo.UsersTarget,
             HasSettings:   true,

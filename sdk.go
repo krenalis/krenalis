@@ -14,9 +14,9 @@ import (
 // SDKInfo represents an SDK connector info.
 type SDKInfo struct {
 	Name          string
-	Categories    Category // bitmask of connector's categories
-	Icon          string   // icon in SVG format
-	Strategies    bool     // whether this connector supports users strategies
+	Categories    Categories // categories
+	Icon          string     // icon in SVG format
+	Strategies    bool       // whether this connector supports users strategies
 	Documentation ConnectorDocumentation
 
 	newFunc reflect.Value

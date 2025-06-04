@@ -16,16 +16,16 @@ import (
 	"github.com/google/uuid"
 )
 
-// Category represents a connector's category.
-type Category int
+// Categories represents connector categories.
+type Categories int
 
 const (
 
-	// Note: when categories are changed, the 'Category.String' method (defined
-	// below) must also be changed accordingly, as well as the various
+	// Note: when categories are changed, the 'Categories.String' method
+	// (defined below) must also be changed accordingly, as well as the various
 	// references to the categories under 'doc'.
 
-	CategoryAnalytics Category = 1 << iota
+	CategoryAnalytics Categories = 1 << iota
 	CategoryAutomation
 	CategoryCRM
 	CategoryDatabase
@@ -42,8 +42,8 @@ const (
 	CategoryWebsite
 )
 
-// String returns the string representation of a Category.
-func (c Category) String() string {
+// String returns the string representation of a single category.
+func (c Categories) String() string {
 	switch c {
 	case CategoryAnalytics:
 		return "Analytics"

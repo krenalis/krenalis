@@ -1451,11 +1451,11 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 
 // categoryBitmaskToCategoryNames converts a bitmask representing a connector's
 // categories into a slice of strings containing the various category names.
-func categoryBitmaskToCategoryNames(categoryBitmask meergo.Category) []string {
+func categoryBitmaskToCategoryNames(categoryBitmask meergo.Categories) []string {
 	categoryNames := []string{}
 	for i := range 64 {
 		if categoryBitmask&(1<<i) != 0 {
-			categoryName := meergo.Category(1 << i).String()
+			categoryName := meergo.Categories(1 << i).String()
 			categoryNames = append(categoryNames, categoryName)
 		}
 	}

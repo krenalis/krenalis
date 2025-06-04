@@ -289,7 +289,7 @@ func WarehouseDrivers() []WarehouseDriver {
 }
 
 // validateCategories validates the categories of a connector.
-func validateCategories(connectorName string, categories Category) {
+func validateCategories(connectorName string, categories Categories) {
 	if categories == 0 {
 		panic(fmt.Sprintf("connector %s: at least one category must be specified", connectorName))
 	}

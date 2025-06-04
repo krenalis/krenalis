@@ -14,8 +14,8 @@ import (
 // StreamInfo represents a stream connector info.
 type StreamInfo struct {
 	Name          string
-	Categories    Category // bitmask of connector's categories
-	Icon          string   // icon in SVG format
+	Categories    Categories // categories
+	Icon          string     // icon in SVG format
 	Documentation ConnectorDocumentation
 
 	newFunc reflect.Value
