@@ -27,8 +27,7 @@ To use the Node.js data source, you will need the [Node SDK](../../developers/no
 3. Search for the **Node.js** source using the search bar at the top.
 4. Next to the **Node.js** source, click the **+** icon to open the source addition page.
 5. (Optional) In the **Name** field, provide a name to easily identify the source later (e.g., the name of the Node.js application or server).
-6. (Optional) From the **Strategy** dropdown, select a strategy. You can modify this later if needed.
-7. Click **Add**.
+6. Click **Add**.
 
 Once the Node.js data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
 

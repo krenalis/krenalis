@@ -27,7 +27,6 @@ To use the Java data source, you will need the [Java SDK](../../developers/java-
 3. Search for the **Java** source using the search bar at the top.
 4. Next to the **Java** source, click the **+** icon to open the source addition page.
 5. (Optional) In the **Name** field, provide a name to easily identify the source later (e.g., the name of the Java application or server).
-6. (Optional) From the **Strategy** dropdown, select a strategy. You can modify this later if needed.
 7. Click **Add**.
 
 Once the Java data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
