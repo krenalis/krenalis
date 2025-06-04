@@ -210,10 +210,11 @@ func (d *decoder) Reset(r *http.Request) error {
 	}
 
 	// It is either a single-event or a batch-event request, depending on the "batch" property.
-	tok, err := d.dec.ReadToken()
+	err = d.dec.SkipToken() // Skip the '{' token.
 	if err != nil {
 		return errRead(err)
 	}
+	var tok json.Token
 	for {
 		tok, err = d.dec.ReadToken()
 		if err != nil {
