@@ -19,6 +19,9 @@ RUN go mod download -x
 # checking out a new, freshly downloaded repository of Meergo.
 COPY ./ ./
 WORKDIR ./cmd/meergo
+# Create a Go source file that imports the Filesystem connector, since this
+# connector is not included by default in the Meergo command in the repository.
+RUN printf 'package main\nimport _ "github.com/meergo/meergo/connectors/filesystem"\n' | tee import_filesystem.go
 RUN go generate
 WORKDIR ../../
 RUN go build -tags osusergo,netgo -trimpath ./cmd/meergo
