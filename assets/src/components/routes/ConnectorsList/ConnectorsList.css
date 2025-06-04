@@ -15,7 +15,41 @@
 .connectors-list__search-bar {
 	max-width: 1200px;
 	margin: auto;
-	margin-bottom: 30px;
+}
+
+.connectors-list__categories {
+	max-width: 1200px;
+	margin: 15px auto;
+	display: flex;
+	flex-flow: row wrap;
+	gap: 10px;
+}
+
+.connectors-list__category {
+	border: 1px solid var(--sl-color-neutral-500);
+	padding: 5px 12px;
+	font-size: 14px;
+	border-radius: 4px;
+	color: var(--sl-color-neutral-500);
+	font-weight: 500;
+	background-color: transparent;
+	cursor: pointer;
+	min-width: 70px;
+	transition:
+		background-color 0.3s,
+		color 0.3s;
+}
+
+.connectors-list__category:hover {
+	color: var(--sl-color-indigo-600);
+	border: 1px solid var(--sl-color-indigo-600);
+}
+
+.connectors-list__category--selected,
+.connectors-list__category--selected:hover {
+	background-color: var(--sl-color-indigo-600);
+	border: 1px solid var(--sl-color-indigo-600);
+	color: var(--text-onaccent);
 }
 
 .connectors-list__connectors {
@@ -64,6 +98,7 @@
 		border 0.3s;
 	cursor: pointer;
 	position: relative;
+	height: 315px;
 }
 
 .connectors-list__card:hover {
@@ -160,6 +195,7 @@
 	flex-flow: column;
 	gap: 15px;
 	color: var(--sl-color-neutral-600);
+	height: 315px;
 }
 
 .connectors-list__feedback sl-icon {

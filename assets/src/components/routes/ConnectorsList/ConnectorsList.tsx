@@ -21,6 +21,7 @@ const ConnectorsList = () => {
 	const [selectedConnector, setSelectedConnector] = useState<TransformedConnector>();
 	const [isLoadingDocumentation, setIsLoadingDocumentation] = useState<boolean>(false);
 	const [documentation, setDocumentation] = useState<string>();
+	const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
 	const { api, handleError, connectors, setTitle, redirect } = useContext(AppContext);
 
@@ -34,6 +35,56 @@ const ConnectorsList = () => {
 			return roleParam;
 		}
 	}, [location]);
+
+	const searchedConnectors: any[] = useMemo(() => {
+		let searchedConnectors = [];
+		for (const c of [...connectors, ...additionalConnectorsInfo]) {
+			if (
+				(connectionRole === 'Source' && c.asSource == null) ||
+				(connectionRole === 'Destination' && c.asDestination == null)
+			) {
+				continue;
+			}
+
+			const isInfo = c['asSource']?.['implemented'] != null || c['asDestination']?.['implemented'] != null;
+			if (isInfo) {
+				const isAlreadyInstalled =
+					connectors.findIndex(
+						(conn) =>
+							conn.name === c.name &&
+							((connectionRole === 'Source' && c.asSource != null) ||
+								(connectionRole === 'Destination' && c.asDestination != null)),
+					) !== -1;
+				if (isAlreadyInstalled) {
+					continue;
+				}
+			}
+
+			const name = c.name;
+			let nameMatches = name.toLowerCase().includes(searchTerm.toLowerCase());
+			let categoriesMatch = c.categories.some((category) =>
+				category.toLowerCase().includes(searchTerm.toLowerCase()),
+			);
+			if (nameMatches || categoriesMatch) {
+				searchedConnectors.push(c);
+			}
+		}
+		return searchedConnectors;
+	}, [connectors, additionalConnectorsInfo, connectionRole, searchTerm]);
+
+	const categories: string[] = useMemo(() => {
+		let categories = ['All'];
+		for (const connector of [...connectors, ...additionalConnectorsInfo]) {
+			for (const category of connector.categories) {
+				const isAlreadyIncluded = categories.includes(category);
+				if (!isAlreadyIncluded) {
+					categories.push(category);
+				}
+			}
+		}
+		categories.sort();
+		return categories;
+	}, [connectors, additionalConnectorsInfo]);
 
 	useLayoutEffect(() => {
 		setTitle(`Add a ${connectionRole.toLocaleLowerCase()}`);
@@ -95,35 +146,19 @@ const ConnectorsList = () => {
 		setIsLoadingDocumentation(false);
 	};
 
+	const onSelectCategory = (category: string) => {
+		setSelectedCategory(category);
+	};
+
 	const onSearchTermUpdate = (e) => {
 		const value = e.currentTarget.value;
 		setSearchTerm(value);
 	};
 
 	const cards = [];
-	for (const c of [...connectors, ...additionalConnectorsInfo]) {
+	for (const c of searchedConnectors) {
 		const isInfo = c['asSource']?.['implemented'] != null || c['asDestination']?.['implemented'] != null;
-		if (isInfo) {
-			if (
-				(connectionRole === 'Source' && (c as ConnectorInfo).asSource == null) ||
-				(connectionRole === 'Destination' && (c as ConnectorInfo).asDestination == null)
-			) {
-				continue;
-			}
-		} else {
-			if (
-				(connectionRole === 'Source' && (c as TransformedConnector).asSource == null) ||
-				(connectionRole === 'Destination' && (c as TransformedConnector).asDestination == null)
-			) {
-				continue;
-			}
-		}
-		const name = c.name;
-		let nameMatches = name.toLowerCase().includes(searchTerm.toLowerCase());
-		let categoriesMatch = c.categories.some((category) =>
-			category.toLowerCase().includes(searchTerm.toLowerCase()),
-		);
-		if (nameMatches || categoriesMatch) {
+		if (selectedCategory === 'All' || c.categories.includes(selectedCategory)) {
 			let card = (
 				<ConnectorCard
 					connector={!isInfo ? (c as TransformedConnector) : null}
@@ -155,6 +190,18 @@ const ConnectorsList = () => {
 				>
 					<SlIcon name='search' slot='prefix' />
 				</SlInput>
+				<div className='connectors-list__categories'>
+					{categories.map((c) => {
+						return (
+							<button
+								className={`connectors-list__category${selectedCategory === c ? ' connectors-list__category--selected' : ''}`}
+								onClick={() => onSelectCategory(c)}
+							>
+								{c}
+							</button>
+						);
+					})}
+				</div>
 				{cards.length > 0 ? (
 					<div className='connectors-list__connectors'>
 						{cards}
@@ -242,12 +289,7 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 				data-name={connector.name}
 				onClick={() => onClick(connector)}
 			>
-				{connector.isStream ? (
-					<div className='connectors-list__card-coming-label'>Coming soon</div>
-				) : (
-					<div className='connectors-list__card-beta-label'>Beta</div>
-				)}
-
+				<div className='connectors-list__card-beta-label'>Beta</div>
 				<div className='connectors-list__card-top'>
 					<div className='connectors-list__card-logo' dangerouslySetInnerHTML={{ __html: connector.icon }} />
 					<div className='connectors-list__card-name'>{connector.name}</div>
