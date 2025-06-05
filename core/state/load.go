@@ -345,7 +345,8 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.workspace = ws
 			c.connector = state.connectors[connector]
 			if c.connector == nil {
-				return fmt.Errorf("the %s connector is required but not registered. (Possibly forgotten import?)", connector)
+				return fmt.Errorf("the %s connector required by the %s '%s' is not included in the executable. "+
+					"Recompile the executable with the %s connector to resolve the issue", connector, c.Role, c.Name, connector)
 			}
 			c.actions = map[int]*Action{}
 			if account > 0 {
@@ -424,7 +425,8 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				if format != nil {
 					action.format = state.connectors[*format]
 					if action.format == nil {
-						return fmt.Errorf("the %s connector is required but not registered. (Possibly forgotten import?)", *format)
+						return fmt.Errorf("the %s connector required by the %s '%s' is not included in the executable. "+
+							"Recompile the executable with the %s connector to resolve the issue", *format, c.Role, c.Name, *format)
 					}
 				}
 				action.mu = new(sync.Mutex)

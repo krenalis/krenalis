@@ -1139,8 +1139,7 @@ const computeDefaultAction = (
 		target: actionType.target,
 		name: actionType.name,
 		// The action is enabled by default only for batch operations importing or exporting users.
-		enabled:
-			actionType.target == 'User' && (connection.isApp || connection.isDatabase || connection.isFileStorage),
+		enabled: actionType.target == 'User' && (connection.isApp || connection.isDatabase || connection.isFileStorage),
 		filter: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema),

@@ -176,8 +176,7 @@ const isSourceEventConnection = (role: ConnectionRole, type: ConnectorType): boo
 
 const isEventConnection = (role: ConnectionRole, type: ConnectorType, targets: ConnectorTarget[]): boolean => {
 	return (
-		(role === 'Source' && type === 'SDK') ||
-		(role === 'Destination' && type === 'App' && targets.includes('Event'))
+		(role === 'Source' && type === 'SDK') || (role === 'Destination' && type === 'App' && targets.includes('Event'))
 	);
 };
 
