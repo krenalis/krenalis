@@ -1,3 +1,58 @@
+# v2.35.0, 2025-05-22 <!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Enhancements 🎉
+* JWT Authentication by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1538
+* Add support for overriding `database` in DSN URL by @kokizzu in https://github.com/ClickHouse/clickhouse-go/pull/1541
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-go/compare/v2.34.0...v2.35.0
+
+# v2.34.0, 2025-04-01 <!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+
+### Enhancements 🎉 
+* allow appending to Decimal column with `string` by @rutaka-n in https://github.com/ClickHouse/clickhouse-go/pull/1532
+* Enhancements for decimal strings by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1535
+### Bug fixes 🐛 
+* Add length check to `FixedString` to prevent panic by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1534
+### Other Changes 🛠
+* chore: replace github.com/pkg/errors with stdlib by @hazzik in https://github.com/ClickHouse/clickhouse-go/pull/1530
+
+## New Contributors
+* @hazzik made their first contribution in https://github.com/ClickHouse/clickhouse-go/pull/1530
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-go/compare/v2.33.1...v2.34.0
+
+# v2.33.1, 2025-03-18 <!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Bug fixes 🐛 
+* fix concurrent map write errors with context by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1523
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-go/compare/v2.33.0...v2.33.1
+
+# v2.33.0, 2025-03-07 <!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Enhancements 🎉 
+* Add handling for nested structs in named tuples by @Exca-DK in https://github.com/ClickHouse/clickhouse-go/pull/1500
+* Add option to control MaxConnsPerHost for http.Transport by @holycheater in https://github.com/ClickHouse/clickhouse-go/pull/1517
+
+### Bug fixes 🐛 
+* fix ConnOpenRandom strategy, issue: #1509 by @PalanQu in https://github.com/ClickHouse/clickhouse-go/pull/1510
+* fix: preserve nil elements in map by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1516
+
+
+## New Contributors
+* @PalanQu made their first contribution in https://github.com/ClickHouse/clickhouse-go/pull/1510
+* @Exca-DK made their first contribution in https://github.com/ClickHouse/clickhouse-go/pull/1500
+* @holycheater made their first contribution in https://github.com/ClickHouse/clickhouse-go/pull/1517
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-go/compare/v2.32.2...v2.33.0
+
 # v2.32.2, 2025-02-20 <!-- Release notes generated using configuration in .github/release.yml at main -->
 
 ## What's Changed

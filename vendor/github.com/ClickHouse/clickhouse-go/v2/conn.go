@@ -20,6 +20,7 @@ package clickhouse
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -30,7 +31,6 @@ import (
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/resources"
-	"github.com/pkg/errors"
 
 	"github.com/ClickHouse/ch-go/compress"
 	chproto "github.com/ClickHouse/ch-go/proto"
@@ -110,7 +110,18 @@ func dial(ctx context.Context, addr string, num int, opt *Options) (*connect, er
 		}
 	)
 
-	if err := connect.handshake(opt.Auth.Database, opt.Auth.Username, opt.Auth.Password); err != nil {
+	auth := opt.Auth
+	if useJWTAuth(opt) {
+		jwt, err := opt.GetJWT(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get JWT: %w", err)
+		}
+
+		auth.Username = jwtAuthMarker
+		auth.Password = jwt
+	}
+
+	if err := connect.handshake(auth); err != nil {
 		return nil, err
 	}
 
@@ -256,7 +267,7 @@ func (c *connect) compressBuffer(start int) error {
 	if c.compression != CompressionNone && len(c.buffer.Buf) > 0 {
 		data := c.buffer.Buf[start:]
 		if err := c.compressor.Compress(data); err != nil {
-			return errors.Wrap(err, "compress")
+			return fmt.Errorf("compress: %w", err)
 		}
 		c.buffer.Buf = append(c.buffer.Buf[:start], c.compressor.Data...)
 	}
@@ -344,10 +355,10 @@ func (c *connect) readData(ctx context.Context, packet byte, compressible bool) 
 		defer c.reader.DisableCompression()
 	}
 
-	opts := queryOptions(ctx)
+	userLocation := queryOptionsUserLocation(ctx)
 	location := c.server.Timezone
-	if opts.userLocation != nil {
-		location = opts.userLocation
+	if userLocation != nil {
+		location = userLocation
 	}
 
 	block := proto.Block{Timezone: location}
@@ -369,7 +380,7 @@ func (c *connect) flush() error {
 
 	n, err := c.conn.Write(c.buffer.Buf)
 	if err != nil {
-		return errors.Wrap(err, "write")
+		return fmt.Errorf("write: %w", err)
 	}
 
 	if n != len(c.buffer.Buf) {

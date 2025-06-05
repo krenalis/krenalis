@@ -54,7 +54,10 @@ func (o *stdConnOpener) Driver() driver.Driver {
 			debugf = log.New(os.Stdout, "[clickhouse-std] ", 0).Printf
 		}
 	}
-	return &stdDriver{debugf: debugf}
+	return &stdDriver{
+		opt:    o.opt,
+		debugf: debugf,
+	}
 }
 
 func (o *stdConnOpener) Connect(ctx context.Context) (_ driver.Conn, err error) {
@@ -83,15 +86,15 @@ func (o *stdConnOpener) Connect(ctx context.Context) (_ driver.Conn, err error) 
 		return nil, ErrAcquireConnNoAddress
 	}
 
-	random := rand.Int()
 	for i := range o.opt.Addr {
 		var num int
 		switch o.opt.ConnOpenStrategy {
 		case ConnOpenInOrder:
 			num = i
 		case ConnOpenRoundRobin:
-			num = (int(connID) + i) % len(o.opt.Addr)
+			num = (connID + i) % len(o.opt.Addr)
 		case ConnOpenRandom:
+			random := rand.Int()
 			num = (random + i) % len(o.opt.Addr)
 		}
 		if conn, err = dialFunc(ctx, o.opt.Addr[num], connID, o.opt); err == nil {
@@ -201,6 +204,7 @@ type stdConnect interface {
 }
 
 type stdDriver struct {
+	opt    *Options
 	conn   stdConnect
 	commit func() error
 	debugf func(format string, v ...any)
@@ -306,8 +310,8 @@ func (std *stdDriver) ExecContext(ctx context.Context, query string, args []driv
 	}
 
 	var err error
-	if options := queryOptions(ctx); options.async.ok {
-		err = std.conn.asyncInsert(ctx, query, options.async.wait, rebind(args)...)
+	if asyncOpt := queryOptionsAsync(ctx); asyncOpt.ok {
+		err = std.conn.asyncInsert(ctx, query, asyncOpt.wait, rebind(args)...)
 	} else {
 		err = std.conn.exec(ctx, query, rebind(args)...)
 	}
