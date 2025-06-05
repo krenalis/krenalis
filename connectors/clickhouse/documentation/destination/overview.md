@@ -8,4 +8,3 @@ Using this connector you can write the unified users from your data warehouse in
 ## What does it require?
 
 * A ClickHouse database with a table in which to store the users.
-

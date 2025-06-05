@@ -153,4 +153,4 @@ The `Write` method is used by Meergo to save a file to the storage when exportin
 
 `Write` reads the content from the provided `Reader`. The `name` parameter represents the file path specified by the user, which has been validated with the `AbsolutePath` method. The `contentType` parameter indicates the type of content in the file, obtained from the `ContentType` method of the file connector.
 
-The connector should ensure, as much as possible, that the write operation is both atomic and durable. If `Write` returns an error, no file should be created. Conversely, if it returns a nil error, the file has been successfully written. 
+The connector should ensure, as much as possible, that the write operation is both atomic and durable. If `Write` returns an error, no file should be created. Conversely, if it returns a nil error, the file has been successfully written.

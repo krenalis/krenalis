@@ -72,4 +72,3 @@ However, when you set up a mapping, Meergo automatically fills in the mapping ex
 | `search`   | `String`            | Query string of the URL; corresponding to `location.search` in JavaScript.                                                                                                                                                                 |
 | `title`    | `String`            | Title; corresponding to `document.title` in JavaScript.                                                                                                                                                                                    |
 | `url`      | `String`            | Complete URL of the page, corresponding to the page's canonical URL, and in case it does not exist, the JavaScript `location.href` is utilized.                                                                                            |
-

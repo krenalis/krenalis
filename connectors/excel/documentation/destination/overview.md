@@ -5,4 +5,4 @@ This connector lets you export unified users from your data warehouse (users con
 
 ## What does it require?
 
-* A file storage data destination (such as S3 or SFTP) for writing an Excel file. 
+* A file storage data destination (such as S3 or SFTP) for writing an Excel file.

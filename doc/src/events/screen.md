@@ -60,5 +60,3 @@ However, when you set up a mapping, Meergo automatically fills in the mapping ex
 | Property   | JSON&nbsp;Type | Description                                      |
 |------------|----------------|--------------------------------------------------|
 | `name`     | `String`       | Page name designated as reserved for future use. |
-
-

@@ -10,4 +10,4 @@ Using this connector, which interfaces with RudderStack, you can integrate custo
 
 ## What does it require?
 
-* Any [RudderStack](https://www.rudderstack.com/) account or a self-hosted RudderStack deployment. 
+* Any [RudderStack](https://www.rudderstack.com/) account or a self-hosted RudderStack deployment.

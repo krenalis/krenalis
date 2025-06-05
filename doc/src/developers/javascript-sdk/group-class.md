@@ -99,4 +99,3 @@ meergo.group().traits(null);
 ```javascript
 meergo.group().traits({ name: 'Acme Inc.' });
 ```
-

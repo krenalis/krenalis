@@ -503,4 +503,3 @@ For example a map with arrays of texts as values:
 ```
 
 Examples of values are `{"score": "6205", "player": "Everett Hayes"}`, `{"width": 1920, "height": 1080}`.
-

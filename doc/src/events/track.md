@@ -76,5 +76,3 @@ However, when you set up a mapping, Meergo automatically fills in the mapping ex
 | `currency` | `String`       | Currency for the event's resulting revenue, specified in ISO 4127 format, must be set; otherwise, the revenue is assumed to be in US dollars.                          |
 | `revenue`  | `Number`       | Income generated from the event. For instance, a $24.99 shirt would bring in a revenue of `24.99` dollars.                                                             |
 | `value`    | `String`       | Abstract value of the event, emphasized when it doesn't directly generate income but is important for marketing goals, like boosting brand visibility on social media. |
-
-

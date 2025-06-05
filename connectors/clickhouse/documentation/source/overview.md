@@ -9,4 +9,3 @@ Using this connector you can read users from a ClickHouse database, store them i
 ## What does it require?
 
 * A ClickHouse database to read the users from.
-

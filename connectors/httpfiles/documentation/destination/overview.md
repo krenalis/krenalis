@@ -6,4 +6,3 @@ This connector lets you send a POST request to an HTTP server with a file (e.g.,
 ## What does it require?
 
 * An HTTP server that supports POST requests.
-

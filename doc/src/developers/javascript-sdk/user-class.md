@@ -144,4 +144,3 @@ meergo.user().traits(null);
 ```javascript
 meergo.user().traits({ firstName: 'Emily', lastName: 'Johnson' });
 ```
-

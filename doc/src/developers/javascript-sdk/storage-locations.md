@@ -81,4 +81,3 @@ All keys are prefixed with "`meergo.<writeKey>.`" where `<writeKey>` represents 
 | `session`     | Session ID and its expiration time. |
 | `userId`      | User ID.                            |
 | `userTraits`  | User traits.                        |
-

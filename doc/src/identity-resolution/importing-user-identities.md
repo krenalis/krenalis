@@ -16,4 +16,3 @@ When a user identity is imported from a connection, the identities are updated l
 
 * If it is **imported for the first time**, a new identity is created
 * If it **has already been imported** previously, the properties of the already imported identity are overwritten with those of the new one (including overwriting values which are null)
-
