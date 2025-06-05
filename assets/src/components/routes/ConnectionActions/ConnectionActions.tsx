@@ -49,7 +49,7 @@ const ConnectionActions = () => {
 
 	const onSelectActionType = (actionType: ActionType) => {
 		let name: string;
-		if (actionType.target === 'Events') {
+		if (actionType.target === 'Event') {
 			if (actionType.eventType) {
 				name = `event/${actionType.eventType}`;
 			} else {

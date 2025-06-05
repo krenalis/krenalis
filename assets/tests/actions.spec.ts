@@ -55,7 +55,7 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 
 	const expectedBody = `
 	{
-		"target": "Users",
+		"target": "User",
 		"eventType": null,
 		"name": "Import customers",
 		"enabled": true,
@@ -165,7 +165,7 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 
 	const expectedBody = `
 	{
-		"target": "Users",
+		"target": "User",
 		"eventType": null,
 		"name": "Export customers",
 		"enabled": true,
@@ -320,7 +320,7 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 
 	const expectedBody = `
 	{
-		"target": "Events",
+		"target": "Event",
 		"eventType": "send_add_to_cart",
 		"name": "Send Add to Cart",
 		"enabled": false,
@@ -409,7 +409,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 
 	const expectedBody = `
 	{
-		"target": "Users",
+		"target": "User",
 		"eventType": null,
 		"name": "Import users",
 		"enabled": true,
@@ -550,7 +550,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 
 	const expectedBody = `
 	{
-		"target": "Users",
+		"target": "User",
 		"eventType": null,
 		"name": "Export users",
 		"enabled": true,
@@ -737,7 +737,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 
 		const expectedBody = `
 		{
-			"target": "Users",
+			"target": "User",
 			"eventType": null,
 			"name": "Import users",
 			"enabled": true,
@@ -890,7 +890,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 
 		const expectedBody = `
 		{
-			"target": "Users",
+			"target": "User",
 			"eventType": null,
 			"name": "Export users",
 			"enabled": true,
@@ -1216,7 +1216,7 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 
 	const expectedBody = `
 	{
-		"target": "Events",
+		"target": "Event",
 		"eventType": null,
 		"name": "Import events",
 		"enabled": false,
@@ -1293,7 +1293,7 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 
 	const expectedBody = `
 	{
-		"target": "Users",
+		"target": "User",
 		"eventType": null,
 		"name": "Import users",
 		"enabled": false,

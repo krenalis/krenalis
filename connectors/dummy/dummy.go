@@ -41,7 +41,7 @@ func init() {
 		Name:       "Dummy",
 		Categories: meergo.CategoryTest,
 		AsSource: &meergo.AsAppSource{
-			Targets:     meergo.UsersTarget,
+			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import customers as users from Dummy",
@@ -49,7 +49,7 @@ func init() {
 			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Targets:     meergo.EventsTarget | meergo.UsersTarget,
+			Targets:     meergo.TargetEvent | meergo.TargetUser,
 			SendingMode: meergo.Combined,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{

@@ -28,11 +28,11 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 
 	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	javaScriptKey := c.EventWriteKeys(javaScriptID)[0]
-	c.CreateAction(javaScriptID, "Events", meergotester.ActionToSet{
+	c.CreateAction(javaScriptID, "Event", meergotester.ActionToSet{
 		Name:    "JavaScript events",
 		Enabled: true,
 	})
-	importUsersAction := c.CreateAction(javaScriptID, "Users", meergotester.ActionToSet{
+	importUsersAction := c.CreateAction(javaScriptID, "User", meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},

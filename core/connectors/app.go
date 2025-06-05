@@ -49,7 +49,7 @@ type appRecordConnector interface {
 	RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error)
 
 	// Records returns the records of the specified target. The target can only be
-	// either Users or Groups, and it must be a target supported by the connector.
+	// either User or Group, and it must be a target supported by the connector.
 	//
 	// If lastChangeTime is not the zero time, only the records changed or created
 	// at or after that time will be returned, and its precision is limited to
@@ -178,7 +178,7 @@ func (app *App) Connector() string {
 // *schemas.Error error. If the connector returns an error it returns a
 // *UnavailableError error.
 //
-// It panics if the app does not support the Events target, or if schema is
+// It panics if the app does not support the Event target, or if schema is
 // valid but not an object.
 func (app *App) EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 	if app.err != nil {
@@ -233,9 +233,9 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 }
 
 // Schema returns the app's schema for the provided target. If target is
-// state.Events, eventType represents the type of the event.
+// state.TargetEvent, eventType represents the type of the event.
 //
-// If the target is state.Events and the event type refers to an app event for
+// If the target is state.TargetEvent and the event type refers to an app event for
 // which no schema is expected, this method returns the invalid type and no
 // errors.
 //
@@ -252,7 +252,7 @@ func (app *App) Schema(ctx context.Context, target state.Target, eventType strin
 // SchemaAsRole is like Schema but returns the schema as the provided role,
 // instead of the role of the app's connection.
 //
-// If the target is state.Events and the event type refers to an app event for
+// If the target is state.TargetEvent and the event type refers to an app event for
 // which no schema is expected, this method returns the invalid type and no
 // errors.
 //
@@ -268,7 +268,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		panic("invalid role")
 	}
 	switch target {
-	case state.Events:
+	case state.TargetEvent:
 		if role != state.Destination {
 			panic("invalid role")
 		}
@@ -283,7 +283,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 			return types.Type{}, nil
 		}
 		return types.AsRole(schema, types.Destination), nil
-	case state.Users:
+	case state.TargetUser:
 		schema, err := app.userSchema(ctx, role)
 		if err != nil {
 			return types.Type{}, connectorError(err)
@@ -291,7 +291,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		return schema, nil
 		// TODO(marco): Implement groups
 		//case state.Groups:
-		//	schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.GroupsTarget, meergo.Role(role), "")
+		//	schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.GroupTarget, meergo.Role(role), "")
 		//	if err != nil {
 		//		return types.Type{}, connectorError(err)
 		//	}
@@ -377,7 +377,7 @@ func (app *App) Writer(ctx context.Context, outSchema types.Type, exportMode sta
 		return nil, errors.New("ack function is missing")
 	}
 	// Get the destination schema.
-	destinationSchema, err := app.SchemaAsRole(ctx, state.Destination, state.Users, "")
+	destinationSchema, err := app.SchemaAsRole(ctx, state.Destination, state.TargetUser, "")
 	if err != nil {
 		return nil, err
 	}
@@ -408,7 +408,7 @@ func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	if schema := app.users.schemas[role-1]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.(appRecordConnector).RecordSchema(ctx, meergo.UsersTarget, meergo.Role(role))
+	schema, err := app.inner.(appRecordConnector).RecordSchema(ctx, meergo.TargetUser, meergo.Role(role))
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
@@ -522,7 +522,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []meergo.Record
 			var err error
-			users, cursor, err = r.inner.(appRecordConnector).Records(ctx, meergo.UsersTarget, r.lastChangeTime, nil, names, cursor, r.appSchema)
+			users, cursor, err = r.inner.(appRecordConnector).Records(ctx, meergo.TargetUser, r.lastChangeTime, nil, names, cursor, r.appSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

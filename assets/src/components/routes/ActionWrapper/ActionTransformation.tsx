@@ -99,7 +99,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const hasIdentityColumns = useMemo(() => {
 		return (
-			connection.isSource && (connection.isDatabase || connection.isFileStorage) && actionType.target === 'Users'
+			connection.isSource && (connection.isDatabase || connection.isFileStorage) && actionType.target === 'User'
 		);
 	}, [connection, actionType]);
 
@@ -312,8 +312,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			}
 		}
 		let doesNotExist = errorMessage.endsWith('does not exist');
-		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.target === 'Users';
-		const isAppEventsExport = connection.isApp && connection.isDestination && actionType.target === 'Events';
+		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.target === 'User';
+		const isAppEventsExport = connection.isApp && connection.isDestination && actionType.target === 'Event';
 		if (doesNotExist) {
 			if (isEventBasedUserImport) {
 				errorMessage += `, perhaps you meant "traits.${value}"?`;
@@ -850,7 +850,7 @@ const TransformationBox = ({
 
 			const hasRequired =
 				isTableKey ||
-				(actionType.target === 'Events' && (property.createRequired || property.updateRequired)) ||
+				(actionType.target === 'Event' && (property.createRequired || property.updateRequired)) ||
 				(action.exportMode != null &&
 					((property.createRequired && action.exportMode.includes('Create')) ||
 						(property.updateRequired && action.exportMode.includes('Update'))));
@@ -1215,8 +1215,8 @@ const FullscreenTransformation = ({
 
 	const { isEventBasedUserImport, isAppEventsExport } = useMemo(() => {
 		return {
-			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.target === 'Users',
-			isAppEventsExport: connection.isApp && connection.isDestination && actionType.target === 'Events',
+			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.target === 'User',
+			isAppEventsExport: connection.isApp && connection.isDestination && actionType.target === 'Event',
 		};
 	}, [connection, actionType]);
 
@@ -1277,7 +1277,7 @@ const FullscreenTransformation = ({
 	}, [transformationType]);
 
 	useEffect(() => {
-		if (actionType.target === 'Events' && outputSchema == null) {
+		if (actionType.target === 'Event' && outputSchema == null) {
 			// The action doesn't have a transformation. The fullscreen
 			// is shown only to allow testing of event dispatching, so
 			// we preselect the samples and preview panels.
@@ -1306,7 +1306,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		const fetchSamples = async () => {
-			if (actionType.target !== 'Users') {
+			if (actionType.target !== 'User') {
 				return;
 			}
 			if (!isFullscreenTransformationOpen || hasAlreadyFetchedSamples.current) {
@@ -1937,7 +1937,7 @@ const FullscreenTransformation = ({
 									onClick={(e) => onSampleClick(e, s)}
 								>
 									<div className='fullscreen-transformation__sample-name'>
-										{actionType.target === 'Users' ? (
+										{actionType.target === 'User' ? (
 											<>
 												{idIdentifier.current && (
 													<div className='fullscreen-transformation__sample-id'>
@@ -2089,7 +2089,7 @@ const FullscreenTransformation = ({
 				</div>
 			);
 		}
-	} else if (connection.isDestination && actionType.target === 'Users') {
+	} else if (connection.isDestination && actionType.target === 'User') {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
 				<p className='fullscreen-transformation__no-sample-text'>
@@ -2190,7 +2190,7 @@ const FullscreenTransformation = ({
 								onClick={onSelectOutputResult}
 								disabled={isExecuting}
 							>
-								{connection.isDestination && actionType.target === 'Events' ? 'Preview' : 'Result'}
+								{connection.isDestination && actionType.target === 'Event' ? 'Preview' : 'Result'}
 							</SlButton>
 						</SlButtonGroup>
 					</div>
@@ -2289,7 +2289,7 @@ const FullscreenTransformation = ({
 									<div className='fullscreen-transformation__output-success'>
 										{connection.isApp &&
 										connection.isDestination &&
-										actionType.target === 'Events' ? (
+										actionType.target === 'Event' ? (
 											output
 										) : (
 											<SyntaxHighlight>{output}</SyntaxHighlight>
@@ -2568,7 +2568,7 @@ const TransformationProperty = ({
 
 	const hasRequired =
 		isTableKey ||
-		(actionType.target === 'Events' && (property.createRequired || property.updateRequired)) ||
+		(actionType.target === 'Event' && (property.createRequired || property.updateRequired)) ||
 		(exportMode != null &&
 			((property.createRequired && exportMode.includes('Create')) ||
 				(property.updateRequired && exportMode.includes('Update'))));
@@ -3048,7 +3048,7 @@ function transformationHeaders(
 		}
 		rightHeader = ['Output user', 'to warehouse'];
 	} else {
-		if (action.target == 'Events') {
+		if (action.target == 'Event') {
 			leftHeader = ['Input event', 'from source connections'];
 			rightHeader = ['Output event', `to ${connection.connector.name}`];
 		} else {

@@ -35,7 +35,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	javaScriptKey = keys[0]
 
 	// Create a first action, with a filter.
-	action1 := c.CreateAction(javaScriptID, "Users", meergotester.ActionToSet{
+	action1 := c.CreateAction(javaScriptID, "User", meergotester.ActionToSet{
 		Name:     "Action 1",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -58,7 +58,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Create a second action, which imports identities from events with a
 	// different filter than the first action.
-	action2 := c.CreateAction(javaScriptID, "Users", meergotester.ActionToSet{
+	action2 := c.CreateAction(javaScriptID, "User", meergotester.ActionToSet{
 		Name:     "Action 2",
 		Enabled:  true,
 		InSchema: types.Type{},

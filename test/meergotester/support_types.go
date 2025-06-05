@@ -312,9 +312,9 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 type Target int
 
 const (
-	Events Target = iota + 1
-	Users
-	Groups
+	TargetEvent Target = iota + 1
+	TargetUser
+	TargetGroup
 )
 
 func (at Target) MarshalJSON() ([]byte, error) {
@@ -323,12 +323,12 @@ func (at Target) MarshalJSON() ([]byte, error) {
 
 func (at Target) String() string {
 	switch at {
-	case Events:
-		return "Events"
-	case Users:
-		return "Users"
-	case Groups:
-		return "Groups"
+	case TargetEvent:
+		return "Event"
+	case TargetUser:
+		return "User"
+	case TargetGroup:
+		return "Group"
 	default:
 		panic("invalid target")
 	}
@@ -342,17 +342,17 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an api.Target value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an meergotester.Target value", v)
 	}
 	switch s {
-	case "Events":
-		*at = Events
-	case "Users":
-		*at = Users
-	case "Groups":
-		*at = Groups
+	case "Event":
+		*at = TargetEvent
+	case "User":
+		*at = TargetUser
+	case "Group":
+		*at = TargetGroup
 	default:
-		return fmt.Errorf("json: invalid apis.Target: %s", s)
+		return fmt.Errorf("json: invalid meergotester.Target: %s", s)
 	}
 	return nil
 }

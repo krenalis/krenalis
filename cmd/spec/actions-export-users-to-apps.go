@@ -167,10 +167,10 @@ func init() {
 					},
 					{
 						Name:           "target",
-						Type:           types.Text().WithValues("Users"),
+						Type:           types.Text().WithValues("User"),
 						CreateRequired: true,
-						Placeholder:    `"Users"`,
-						Description:    "The entity on which the action operates, which must be `\"Users\"` in order to create an action that exports users.",
+						Placeholder:    `"User"`,
+						Description:    "The entity on which the action operates, which must be `\"User\"` in order to create an action that exports users.",
 					},
 					{
 						Name:        "enabled",
@@ -286,9 +286,9 @@ func init() {
 						},
 						{
 							Name:        "target",
-							Type:        types.Text().WithValues("Users", "Events"),
-							Placeholder: `"Users"`,
-							Description: "The entity on which the action operates. It is always `\"Users\"` when the action exports users to an app.",
+							Type:        types.Text().WithValues("User", "Event"),
+							Placeholder: `"User"`,
+							Description: "The entity on which the action operates. It is always `\"User\"` when the action exports users to an app.",
 						},
 						{
 							Name:        "enabled",

@@ -2,7 +2,7 @@ import { ConnectorSettings } from './responses';
 import { Compression } from './connection';
 import Type, { ObjectType } from './types';
 
-type ActionTarget = 'Events' | 'Users' | 'Groups';
+type ActionTarget = 'Event' | 'User' | 'Group';
 
 type ActionStep = 'Receive' | 'InputValidation' | 'Filter' | 'Transformation' | 'OutputValidation' | 'Finalize';
 

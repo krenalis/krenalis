@@ -36,9 +36,9 @@ const (
 type Targets int
 
 const (
-	EventsTarget Targets = 1 << iota
-	UsersTarget
-	// GroupsTarget // TOODO(marco) Implement groups
+	TargetEvent Targets = 1 << iota
+	TargetUser
+	// TargetGroup // TOODO(marco) Implement groups
 )
 
 // AppInfo represents an app connector info.

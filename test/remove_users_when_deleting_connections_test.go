@@ -50,8 +50,8 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 			},
 		},
 	}
-	action1 := c.CreateAction(dummy1, "Users", actionParams)
-	action2 := c.CreateAction(dummy2, "Users", actionParams)
+	action1 := c.CreateAction(dummy1, "User", actionParams)
+	action2 := c.CreateAction(dummy2, "User", actionParams)
 
 	// Import from both actions - and implicitly trigger the identity resolution
 	// process.

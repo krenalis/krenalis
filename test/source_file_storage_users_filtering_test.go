@@ -30,7 +30,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 	}
 	fs1 := c.CreateSourceFilesystem(storageDir)
 
-	action1 := c.CreateAction(fs1, "Users", meergotester.ActionToSet{
+	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
 		Name:    "CSV",
 		Enabled: true,
 		Path:    "users.csv",

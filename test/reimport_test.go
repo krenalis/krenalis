@@ -32,7 +32,7 @@ func TestReimport(t *testing.T) {
 	// - the email
 	// - the first name
 	//
-	dummyAction := c.CreateAction(dummy, "Users", meergotester.ActionToSet{
+	dummyAction := c.CreateAction(dummy, "User", meergotester.ActionToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{

@@ -210,7 +210,7 @@ func (c *actionCleaner) deleteDiscontinuedFunctions() {
 func (c *actionCleaner) onDeleteAction(n state.DeleteAction) {
 	action := n.Action()
 	connection := action.Connection()
-	if action.Target != state.Users || connection.Role != state.Source {
+	if action.Target != state.TargetUser || connection.Role != state.Source {
 		return
 	}
 	ws := connection.Workspace()
@@ -231,7 +231,7 @@ func (c *actionCleaner) onDeleteConnection(n state.DeleteConnection) {
 		return
 	}
 	for _, action := range connection.Actions() {
-		if action.Target == state.Users {
+		if action.Target == state.TargetUser {
 			go c.purgeWorkspace(ws.ID)
 			return
 		}

@@ -34,7 +34,7 @@ func Test_UserIdentities(t *testing.T) {
 	fs1 := c.CreateSourceFilesystem(storageDir)
 	fs2 := c.CreateSourceFilesystem(storageDir)
 
-	action1 := c.CreateAction(fs1, "Users", meergotester.ActionToSet{
+	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
 		Name:    "CSV 1",
 		Enabled: true,
 		Path:    "users1.csv",
@@ -58,7 +58,7 @@ func Test_UserIdentities(t *testing.T) {
 		}),
 	})
 
-	action2 := c.CreateAction(fs2, "Users", meergotester.ActionToSet{
+	action2 := c.CreateAction(fs2, "User", meergotester.ActionToSet{
 		Name:    "CSV 2",
 		Enabled: true,
 		Path:    "users2.csv",

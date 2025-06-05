@@ -28,7 +28,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
+		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -53,7 +53,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Export the users to Dummy.
 	{
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
-		exportUsersActionID := c.CreateAction(dummyDest, "Users", meergotester.ActionToSet{
+		exportUsersActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{
 			Name:    "Export users to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -83,7 +83,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// successfully.
 	{
 		dummySrc := c.CreateDummy("Dummy (source 2)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
+		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{

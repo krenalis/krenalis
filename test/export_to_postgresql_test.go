@@ -27,7 +27,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
+		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -83,7 +83,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Export to PostgreSQL.
-	exportAction := c.CreateAction(pgsql, "Users", meergotester.ActionToSet{
+	exportAction := c.CreateAction(pgsql, "User", meergotester.ActionToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",

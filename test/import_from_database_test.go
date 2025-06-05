@@ -25,7 +25,7 @@ func TestImportFromDatabase(t *testing.T) {
 
 	pgSQL := c.CreateSourcePostgreSQL()
 
-	importUsers := c.CreateAction(pgSQL, "Users", meergotester.ActionToSet{
+	importUsers := c.CreateAction(pgSQL, "User", meergotester.ActionToSet{
 		Name:    "Import users",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{

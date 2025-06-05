@@ -133,9 +133,9 @@ const (
 type Target int
 
 const (
-	Events Target = iota + 1
-	Users
-	Groups
+	TargetEvent Target = iota + 1
+	TargetUser
+	TargetGroup
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -145,12 +145,12 @@ func (at Target) MarshalJSON() ([]byte, error) {
 
 func (at Target) String() string {
 	switch at {
-	case Events:
-		return "Events"
-	case Users:
-		return "Users"
-	case Groups:
-		return "Groups"
+	case TargetEvent:
+		return "Event"
+	case TargetUser:
+		return "User"
+	case TargetGroup:
+		return "Group"
 	default:
 		panic("invalid target")
 	}
@@ -168,12 +168,12 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("json: cannot scan a %T value into an api.Target value", v)
 	}
 	switch s {
-	case "Events":
-		*at = Events
-	case "Users":
-		*at = Users
-	case "Groups":
-		*at = Groups
+	case "Event":
+		*at = TargetEvent
+	case "User":
+		*at = TargetUser
+	case "Group":
+		*at = TargetGroup
 	default:
 		return fmt.Errorf("json: invalid core.Target: %s", s)
 	}
@@ -209,7 +209,7 @@ func (this *Action) Delete(ctx context.Context) error {
 			return nil, errors.NotFound("action %d does not exist", n.ID)
 		}
 		// Mark the action as deleted.
-		if c.Role == state.Source && this.action.Target == state.Users {
+		if c.Role == state.Source && this.action.Target == state.TargetUser {
 			_, err = tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_append(actions_to_purge, $1)"+
 				" WHERE actions_to_purge IS NOT NULL", n.ID)
 			if err != nil {
@@ -222,9 +222,9 @@ func (this *Action) Delete(ctx context.Context) error {
 }
 
 // Execute executes the action, which must be an app, database, or file storage
-// action with a target of Users or Groups. It starts an execution and returns
-// its identifier. Both the action and its connection must be enabled and the
-// action must not already be executing.
+// action with a target of User or Group. It starts an execution and returns its
+// identifier. Both the action and its connection must be enabled and the action
+// must not already be executing.
 //
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
@@ -239,7 +239,7 @@ func (this *Action) Delete(ctx context.Context) error {
 func (this *Action) Execute(ctx context.Context, incremental *bool) (int, error) {
 	this.core.mustBeOpen()
 	c := this.action.Connection()
-	if t := this.action.Target; t != state.Users && t != state.Groups {
+	if t := this.action.Target; t != state.TargetUser && t != state.TargetGroup {
 		return 0, errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
 	typ := c.Connector().Type
@@ -295,7 +295,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 	}
 	var serialized any
 	if a.ConnectionRole == Source {
-		if a.Target == Users {
+		if a.Target == TargetUser {
 			switch a.ConnectorType {
 			case App:
 				serialized = struct {
@@ -398,7 +398,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 				}
 			}
 		}
-		if a.Target == Events {
+		if a.Target == TargetEvent {
 			serialized = struct {
 				serializedAction
 				Filter   *Filter    `json:"filter"`
@@ -411,7 +411,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 		}
 	}
 	if a.ConnectionRole == Destination {
-		if a.Target == Users {
+		if a.Target == TargetUser {
 			switch a.ConnectorType {
 			case App:
 				serialized = struct {
@@ -491,7 +491,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 				}
 			}
 		}
-		if a.Target == Events {
+		if a.Target == TargetEvent {
 			serialized = struct {
 				serializedAction
 				EventType      string          `json:"eventType"`
@@ -556,12 +556,12 @@ func (this *Action) ServeUI(ctx context.Context, event string, settings json.Val
 }
 
 // SetSchedulePeriod sets the schedule period, in minutes, of the action. The
-// action must be a Users or Groups action and period can be 0, 5, 15, 30, 60,
+// action must be a User or Group action and period can be 0, 5, 15, 30, 60,
 // 120, 180, 360, 480, 720, or 1440. The schedular is disabled if period is nil.
 func (this *Action) SetSchedulePeriod(ctx context.Context, period *SchedulePeriod) error {
 	this.core.mustBeOpen()
 	switch this.action.Target {
-	case state.Users, state.Groups:
+	case state.TargetUser, state.TargetGroup:
 	default:
 		return errors.BadRequest("cannot set schedule period of a %s action", this.action.Target)
 	}
@@ -800,7 +800,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			return nil, err
 		}
 		// Determine properties that are no longer transformed.
-		if c.Role == state.Source && this.action.Target == state.Users {
+		if c.Role == state.Source && this.action.Target == state.TargetUser {
 			var prevOutPaths []string
 			err := tx.QueryRow(ctx, "SELECT transformation_out_paths, properties_to_unset "+
 				"FROM actions WHERE id = $1", n.ID).Scan(&prevOutPaths, &n.PropertiesToUnset)
@@ -1033,7 +1033,7 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		this.EventType = &et
 	}
 	_, this.Running = this.action.Execution()
-	if action.Target == state.Users || action.Target == state.Groups {
+	if action.Target == state.TargetUser || action.Target == state.TargetGroup {
 		if action.SchedulePeriod != 0 {
 			start := int(action.ScheduleStart)
 			period := SchedulePeriod(action.SchedulePeriod)
@@ -1349,27 +1349,27 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 // on a connection with the given role, and an action with the given target,
 // is dispatching events to apps.
 func isDispatchingEventsToApps(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Destination && target == state.Events && connectorType == state.App
+	return role == state.Destination && target == state.TargetEvent && connectorType == state.App
 }
 
 // isExportUsersToFile reports whether a connector of the given type, on a
 // connection with the given role is exporting users into a file.
 func isExportUsersToFile(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return connectorType == state.FileStorage && role == state.Destination && target == state.Users
+	return connectorType == state.FileStorage && role == state.Destination && target == state.TargetUser
 }
 
 // isImportingEventsIntoWarehouse reports whether a connector of the given type,
 // on a connection with the given role, and an action with the given target, is
 // importing events into the data warehouse.
 func isImportingEventsIntoWarehouse(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Source && target == state.Events && connectorType == state.SDK
+	return role == state.Source && target == state.TargetEvent && connectorType == state.SDK
 }
 
 // isImportingUserIdentitiesFromEvents reports whether a connector of the
 // given type, on a connection with the given role, and an action with the
 // given target, is importing user identities from events.
 func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Source && target == state.Users && connectorType == state.SDK
+	return role == state.Source && target == state.TargetUser && connectorType == state.SDK
 }
 
 // onlyForMatching returns a schema which contains only the properties of schema
@@ -1386,7 +1386,7 @@ func onlyForMatching(schema types.Type) types.Type {
 // shouldReload determines if the next execution of the action requires
 // reloading, based on whether the notification n is used to update the action.
 func shouldReload(a *state.Action, n *state.UpdateAction) bool {
-	if a.Target != state.Users && a.Target != state.Groups {
+	if a.Target != state.TargetUser && a.Target != state.TargetGroup {
 		return false
 	}
 	if a.ExportMode != n.ExportMode {

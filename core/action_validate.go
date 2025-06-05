@@ -445,7 +445,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	// Note that filters are always allowed except for actions that import users
 	// from databases.
 	filtersAllowed := !(v.connection.role == state.Source &&
-		v.connection.connector.typ == state.Database && v.target == state.Users)
+		v.connection.connector.typ == state.Database && v.target == state.TargetUser)
 	if action.Filter != nil && !filtersAllowed {
 		return errors.BadRequest("filters are not allowed")
 	}
@@ -572,7 +572,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	}
 
 	// Do some checks related to exporting users to databases.
-	exportUsersToDatabase := v.connection.connector.typ == state.Database && v.connection.role == state.Destination && v.target == state.Users
+	exportUsersToDatabase := v.connection.connector.typ == state.Database && v.connection.role == state.Destination && v.target == state.TargetUser
 	if exportUsersToDatabase {
 		if action.TableName == "" {
 			return errors.BadRequest("table name cannot be empty for destination database actions")
@@ -622,7 +622,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 
 	// Check if the export options are needed.
 	needsExportOptions := v.connection.connector.typ == state.App &&
-		v.connection.role == state.Destination && v.target == state.Users
+		v.connection.role == state.Destination && v.target == state.TargetUser
 	if needsExportOptions {
 		if action.ExportMode == "" {
 			return errors.BadRequest("export mode cannot be empty")
@@ -640,9 +640,9 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	}
 
 	// Check the connections for which the transformation is prohibited.
-	targetUsersOrGroups := v.target == state.Users || v.target == state.Groups
+	targetUsersOrGroups := v.target == state.TargetUser || v.target == state.TargetGroup
 	transformationProhibited :=
-		(v.connection.role == state.Source && v.connection.connector.typ == state.SDK && v.target == state.Events) ||
+		(v.connection.role == state.Source && v.connection.connector.typ == state.SDK && v.target == state.TargetEvent) ||
 			(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
 	if transformationProhibited && action.Transformation != nil {
 		return errors.BadRequest("action cannot have a transformation")
@@ -772,7 +772,7 @@ walk:
 // target of the action, and typ is the action's connection type.
 func validateActionSchema(io string, schema types.Type, role state.Role, target state.Target, typ state.ConnectorType, tableKey string) error {
 
-	isUserSchema := target == state.Users &&
+	isUserSchema := target == state.TargetUser &&
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
 
 	for path, p := range types.WalkAll(schema) {
@@ -817,7 +817,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		}
 		if role == state.Destination && io == "output" {
 			switch {
-			case typ == state.App && target == state.Events:
+			case typ == state.App && target == state.TargetEvent:
 				if p.UpdateRequired {
 					return fmt.Errorf("output action schema property %q cannot have UpdateRequired set to true", path)
 				}

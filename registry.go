@@ -310,11 +310,11 @@ func validateAppConnector(app AppInfo) {
 
 	if app.AsSource != nil {
 		targets := app.AsSource.Targets
-		//if targets == 0 || (targets&^(UsersTarget|GroupsTarget)) != 0 { TODO(marco): Implement groups
-		if targets == 0 || (targets&^UsersTarget) != 0 {
-			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible value is meergo.UsersTarget", app.Name))
+		//if targets == 0 || (targets&^(TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
+		if targets == 0 || (targets&^TargetUser) != 0 {
+			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible value is meergo.TargetUser", app.Name))
 		}
-		if targets&UsersTarget != 0 {
+		if targets&TargetUser != 0 {
 			iface := reflect.TypeFor[interface {
 				RecordSchema(ctx context.Context, target Targets, role Role) (types.Type, error)
 				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
@@ -327,11 +327,11 @@ func validateAppConnector(app AppInfo) {
 
 	if app.AsDestination != nil {
 		targets := app.AsDestination.Targets
-		//if targets == 0 || (targets&^(EventsTarget|UsersTarget|GroupsTarget)) != 0 { TODO(marco): Implement groups
-		if targets == 0 || (targets&^(EventsTarget|UsersTarget)) != 0 {
-			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.EventsTarget, meergo.UsersTarget, or a combination of them using the bitwise OR operator", app.Name))
+		//if targets == 0 || (targets&^(TargetEvent|TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
+		if targets == 0 || (targets&^(TargetEvent|TargetUser)) != 0 {
+			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.TargetEvent, meergo.TargetUser, or a combination of them using the bitwise OR operator", app.Name))
 		}
-		if targets&UsersTarget != 0 {
+		if targets&TargetUser != 0 {
 			iface := reflect.TypeFor[interface {
 				RecordSchema(ctx context.Context, target Targets, role Role) (types.Type, error)
 				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
@@ -341,7 +341,7 @@ func validateAppConnector(app AppInfo) {
 				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
 		}
-		if targets&EventsTarget != 0 {
+		if targets&TargetEvent != 0 {
 			iface := reflect.TypeFor[interface {
 				EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
 				EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
@@ -351,25 +351,25 @@ func validateAppConnector(app AppInfo) {
 				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
 			if app.AsDestination.SendingMode == None {
-				panic(fmt.Sprintf("connector %s is declared to support Events as destination, but it does not specify a sending mode", app.Name))
+				panic(fmt.Sprintf("connector %s is declared to support Event as destination, but it does not specify a sending mode", app.Name))
 			}
 		}
 	}
 
 	if app.Terms.User != "" || app.Terms.Users != "" {
-		if (app.AsSource == nil || app.AsSource.Targets&UsersTarget == 0) &&
-			(app.AsDestination == nil || app.AsDestination.Targets&UsersTarget == 0) {
+		if (app.AsSource == nil || app.AsSource.Targets&TargetUser == 0) &&
+			(app.AsDestination == nil || app.AsDestination.Targets&TargetUser == 0) {
 			panic(fmt.Sprintf("connector %s: cannot specify a term for user and/or users"+
-				" if it does not support the Users target neither as source nor as destination", app.Name))
+				" if it does not support the User target neither as source nor as destination", app.Name))
 		}
 	}
 
 	// TODO(marco): Implement groups
 	//if app.Terms.Group != "" || app.Terms.Groups != "" {
-	//	if (app.AsSource == nil || app.AsSource.Targets&GroupsTarget == 0) &&
-	//		(app.AsDestination == nil || app.AsDestination.Targets&GroupsTarget == 0) {
+	//	if (app.AsSource == nil || app.AsSource.Targets&GroupTarget == 0) &&
+	//		(app.AsDestination == nil || app.AsDestination.Targets&GroupTarget == 0) {
 	//		panic(fmt.Sprintf("connector %s: cannot specify a term for group and/or groups"+
-	//			" if it does not support the Groups target neither as source nor as destination", app.Name))
+	//			" if it does not support the Group target neither as source nor as destination", app.Name))
 	//	}
 	//}
 

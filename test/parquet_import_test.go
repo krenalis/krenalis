@@ -53,7 +53,7 @@ func TestParquetImport(t *testing.T) {
 
 	// Create a Filesystem source connection, with an action that imports from the Parquet file.
 	fs := c.CreateSourceFilesystem(storageDir)
-	action1 := c.CreateAction(fs, "Users", meergotester.ActionToSet{
+	action1 := c.CreateAction(fs, "User", meergotester.ActionToSet{
 		Name:    "Parquet",
 		Enabled: true,
 		Path:    "test.parquet",

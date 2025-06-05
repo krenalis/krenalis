@@ -50,7 +50,7 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Retrieve the input and the output schema, which must me both valid.
-	schemas := c.ActionSchemas(dummyID, core.Users, "")
+	schemas := c.ActionSchemas(dummyID, core.TargetUser, "")
 	if err := isValidSchema(schemas["in"]); err != nil {
 		t.Fatal(err)
 	}

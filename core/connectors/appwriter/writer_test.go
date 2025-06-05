@@ -40,7 +40,7 @@ func Test_Writer(t *testing.T) {
 		t.Run(fmt.Sprintf("%d/%d/%f", test.num, test.seed, test.create), func(t *testing.T) {
 
 			app := newApp(t, test.seed)
-			w := New(app.ack, state.Users, app, "test")
+			w := New(app.ack, state.TargetUser, app, "test")
 
 			ctx := context.Background()
 

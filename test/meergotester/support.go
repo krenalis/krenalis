@@ -121,7 +121,7 @@ func (c *Meergo) ConnectionUI(connection int) map[string]any {
 
 func (c *Meergo) CreateAction(conn int, target string, action ActionToSet) int {
 	switch target {
-	case "Events", "Users", "Groups":
+	case "Event", "User", "Group":
 	default:
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
@@ -145,7 +145,7 @@ func (c *Meergo) CreateAction(conn int, target string, action ActionToSet) int {
 // panicking.
 func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (int, error) {
 	switch target {
-	case "Events", "Users", "Groups":
+	case "Event", "User", "Group":
 	default:
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
@@ -240,7 +240,7 @@ func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSe
 		panic(err)
 	}
 	body["connection"] = conn
-	body["target"] = "Events"
+	body["target"] = "Event"
 	body["eventType"] = eventType
 	var id int
 	c.MustCall("POST", "/api/v1/actions", body, &id)

@@ -206,7 +206,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		}
 		const actionsCell = (
 			<div className='connection-actions__buttons'>
-				{(action.target === 'Users' || action.target === 'Groups') && isActionExecutionSupported && (
+				{(action.target === 'User' || action.target === 'Group') && isActionExecutionSupported && (
 					<>
 						<FeedbackButton
 							ref={executeActionButtonRefs.current[action.id]}

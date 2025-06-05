@@ -448,7 +448,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 
 	// Set the event types.
 	if conn.Type == state.App && c.Role == state.Destination &&
-		c.Connector().DestinationTargets.Contains(state.Events) {
+		c.Connector().DestinationTargets.Contains(state.TargetEvent) {
 		appEventTypes, err := connection.app().EventTypes(ctx)
 		if err != nil {
 			return nil, err

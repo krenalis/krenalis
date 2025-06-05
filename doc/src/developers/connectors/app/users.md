@@ -6,26 +6,26 @@
 
 An app connector, if the related app allows it, can read, create, and update users within the app, enabling Meergo to import and export users.
 
-Firstly, include the `UsersTarget` flag during connector registration as the targets for source and destination:
+Firstly, include the `TargetUser` flag during connector registration as the targets for source and destination:
 
 ```go
 meergo.RegisterApp(meergo.AppInfo{
     ...
     AsSource: &meergo.AsAppSource{
         ...
-        Targets:  meergo.UsersTarget,
+        Targets: meergo.TargetUser,
         ...
     },
     AsDestination: &meergo.AsAppDestination{
         ...
-        Targets:  meergo.UsersTarget,
+        Targets: meergo.TargetUser,
         ...
     },
     ...
 }, New)
 ```
 
-After that, to read, update, and create app records, the connector must implement the `Records` and `Upserts` methods. These methods take the target they should operate on as an argument, which currently can only be `UsersTarget`.
+After that, to read, update, and create app records, the connector must implement the `Records` and `Upserts` methods. These methods take the target they should operate on as an argument, which currently can only be `TargetUser`.
 
 Here, we'll use the term "records" to refer to users.
 
@@ -42,7 +42,7 @@ Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, id
 The parameters for this method are:
 
 - `ctx`: The context.
-- `target`: Specifies the type of entities to return. Currently, only `UsersTarget` is supported.
+- `target`: Specifies the type of entities to return. Currently, only `TargetUser` is supported.
 - `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
 - `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
 - `properties`: Contains the names of the properties that must be returned for each record.
@@ -126,7 +126,7 @@ To update or create a record, Meergo uses the connector's `Upsert` method:
 Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error
 ```
 
-This method is used during the export process to update existing users or create new ones in the application. The target parameter must be set to `UsersTarget` to indicate that the operation applies to users.
+This method is used during the export process to update existing users or create new ones in the application. The target parameter must be set to `TargetUser` to indicate that the operation applies to users.
 
 The `records` parameter contains a collection of records to update or create. **You don’t need to process all the records in the collection at once.** Instead, only handle as many as you can send in a single HTTP request to the application. Even if the application supports processing only one record per request, that's fine. Meergo will automatically call the method again for any records that remain unprocessed.
 

@@ -39,7 +39,7 @@ func TestExportUsersToFile(t *testing.T) {
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
+		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -83,7 +83,7 @@ func TestExportUsersToFile(t *testing.T) {
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 	// Create an action for the CSV for exporting the users.
-	exportUsersActionID := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
+	exportUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
 		Name:    "Export users to the CSV on Filesystem",
 		Enabled: true,
 		Path:    exportedFilename,

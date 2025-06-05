@@ -1472,14 +1472,14 @@ func isValidMemberToken(token string) bool {
 
 func stateToCoreTargets(targets state.ConnectorTargets) []Target {
 	ts := []Target{}
-	if targets.Contains(state.Users) {
-		ts = append(ts, Users)
+	if targets.Contains(state.TargetUser) {
+		ts = append(ts, TargetUser)
 	}
-	if targets.Contains(state.Groups) {
-		ts = append(ts, Groups)
+	if targets.Contains(state.TargetGroup) {
+		ts = append(ts, TargetGroup)
 	}
-	if targets.Contains(state.Events) {
-		ts = append(ts, Events)
+	if targets.Contains(state.TargetEvent) {
+		ts = append(ts, TargetEvent)
 	}
 	return ts
 }

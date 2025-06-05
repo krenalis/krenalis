@@ -31,14 +31,14 @@ func init() {
         Name: "Klaviyo",
         Categories: meergo.CategoryAutomation | meergo.CategoryMarketing,
         AsSource: &meergo.AsAppSource{
-            Targets:       meergo.UsersTarget,
+            Targets:       meergo.TargetUser,
             HasSettings:   true,
             Documentation: meergo.ConnectorRoleDocumentation{
                 Summary: "Import profiles as users from Klaviyo",	
             },
         },
         AsDestination: &meergo.AsAppDestination{
-            Targets:       meergo.EventsTarget | meergo.UsersTarget,
+            Targets:       meergo.TargetEvent | meergo.TargetUser,
             HasSettings:   true,
             SendingMode:   meergo.Cloud,
             Documentation: meergo.ConnectorRoleDocumentation{
@@ -122,11 +122,11 @@ The `AppInfo` type describes information about the app connector:
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
 - `Categories`: the categories that the connector falls into. There must be at least one category.
 - `AsSource`: information about the app connector when it used as source. This should be set only when the app connector can be used as a source, otherwise should be nil.
-  - `Targets`: targets supported by the app connector when it is used as source. Can only contain `UsersTarget`.
+  - `Targets`: targets supported by the app connector when it is used as source. Can only contain `TargetUser`.
   - `HasSettings`: indicates whether the connection has settings when used as a source
   - `Description`: description of the connector when it is used as a source.
 - `AsDestination`: information about the app connector when it used as destination. This should be set only when the app connector can be used as a destination, otherwise should be nil.
-  - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `EventsTarget` and `UsersTarget`.
+  - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `TargetEvent` and `TargetUser`.
   - `HasSettings`: indicates whether the connection has settings when used as destination
   - `SendingMode`: mode used to send the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
   - `Description`: description of the connector when it is used as a destination.
@@ -146,14 +146,14 @@ func init() {
     meergo.RegisterApp(meergo.AppInfo{
         Name: "Klaviyo",
         AsSource: &meergo.AsAppSource{
-            Targets:       meergo.Users,
+            Targets:       meergo.TargetUser,
             HasSettings:   true,
             Documentation: meergo.ConnectorRoleDocumentation{
                 Summary: "Import profiles as users from Klaviyo",	
             },
         },
         AsDestination: &meergo.AsAppDestination{
-            Targets:       meergo.EventsTarget | meergo.UsersTarget,
+            Targets:       meergo.TargetEvent | meergo.TargetUser,
             HasSettings:   true,
             SendingMode:   meergo.Cloud,
             Documentation: meergo.ConnectorRoleDocumentation{

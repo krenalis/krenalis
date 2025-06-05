@@ -51,7 +51,7 @@ type UpsertableApp interface {
 // called for confirmation. To ensure that all records are successfully sent to
 // the app, the Close method must be called after all writes.
 type Writer struct {
-	target meergo.Targets // target, can be Users or Groups
+	target meergo.Targets // target, can be TargetUser or TargetGroup
 	app    UpsertableApp  // app connector
 	name   string         // name of the app connector
 	ack    AckFunc        // ack function

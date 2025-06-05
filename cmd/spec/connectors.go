@@ -37,9 +37,9 @@ func init() {
 			Type: types.Object([]types.Property{
 				{
 					Name:        "targets",
-					Type:        types.Array(types.Text().WithValues("Events", "Users", "Groups")),
-					Placeholder: `[ "Users", "Groups" ]`,
-					Description: "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`",
+					Type:        types.Array(types.Text().WithValues("Event", "User", "Group")),
+					Placeholder: `[ "User", "Group" ]`,
+					Description: "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Event\"`, `\"User\"`, and `\"Group\"`",
 				},
 				{
 					Name:        "hasSettings",
@@ -77,9 +77,9 @@ func init() {
 			Type: types.Object([]types.Property{
 				{
 					Name:        "targets",
-					Type:        types.Array(types.Text().WithValues("Events", "Users", "Groups")),
-					Placeholder: `[ "Users", "Groups" ]`,
-					Description: "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`",
+					Type:        types.Array(types.Text().WithValues("Event", "User", "Group")),
+					Placeholder: `[ "User", "Group" ]`,
+					Description: "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Event\"`, `\"User\"`, and `\"Group\"`",
 				},
 				{
 					Name:        "hasSettings",

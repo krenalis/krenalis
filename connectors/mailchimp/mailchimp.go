@@ -50,7 +50,7 @@ func init() {
 		Name:       "Mailchimp",
 		Categories: meergo.CategoryEmail | meergo.CategoryMarketing | meergo.CategoryAutomation,
 		AsSource: &meergo.AsAppSource{
-			Targets:     meergo.UsersTarget,
+			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import contacts as users from Mailchimp",
@@ -58,7 +58,7 @@ func init() {
 			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Targets:     meergo.UsersTarget,
+			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Export users as contacts to Mailchimp",

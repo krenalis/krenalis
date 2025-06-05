@@ -128,9 +128,9 @@ const getActionTypeFromConnection = (
 	eventType: string | null,
 ): ActionType | undefined => {
 	let actionType: ActionType | undefined;
-	if (target === 'Events') {
+	if (target === 'Event') {
 		if (eventType == null) {
-			actionType = connection.actionTypes!.find((t) => t.target === 'Events' && t.eventType === null);
+			actionType = connection.actionTypes!.find((t) => t.target === 'Event' && t.eventType === null);
 		} else {
 			actionType = connection.actionTypes!.find((t) => t.eventType === eventType);
 		}
@@ -177,7 +177,7 @@ const isSourceEventConnection = (role: ConnectionRole, type: ConnectorType): boo
 const isEventConnection = (role: ConnectionRole, type: ConnectorType, targets: ConnectorTarget[]): boolean => {
 	return (
 		(role === 'Source' && type === 'SDK') ||
-		(role === 'Destination' && type === 'App' && targets.includes('Events'))
+		(role === 'Destination' && type === 'App' && targets.includes('Event'))
 	);
 };
 

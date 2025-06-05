@@ -26,8 +26,8 @@ const ActionTypesDialog = ({
 	const eventActionTypes: ReactNode[] = [];
 	for (const type of actionTypes) {
 		let disablingReason = null;
-		if (connection.actions != null && type.target === 'Events' && connection.isSource) {
-			let importEventAction = connection.actions.findIndex((a) => a.target === 'Events');
+		if (connection.actions != null && type.target === 'Event' && connection.isSource) {
+			let importEventAction = connection.actions.findIndex((a) => a.target === 'Event');
 			if (importEventAction > -1) {
 				disablingReason = 'You can add only one action that imports events';
 			}
@@ -47,7 +47,7 @@ const ActionTypesDialog = ({
 				action={<SlIcon name='chevron-right' />}
 			/>
 		);
-		if (type.target === 'Users' || type.target === 'Groups') {
+		if (type.target === 'User' || type.target === 'Group') {
 			standardActionTypes.push(tile);
 		} else {
 			eventActionTypes.push(tile);

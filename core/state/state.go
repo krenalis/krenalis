@@ -665,11 +665,11 @@ const (
 // Contains reports whether t contains the given target.
 func (t ConnectorTargets) Contains(target Target) bool {
 	switch target {
-	case Events:
+	case TargetEvent:
 		return t&EventsFlag != 0
-	case Users:
+	case TargetUser:
 		return t&UsersFlag != 0
-	case Groups:
+	case TargetGroup:
 		return t&GroupsFlag != 0
 	}
 	panic("invalid target")
@@ -1099,9 +1099,9 @@ func (c Compression) Ext() string {
 type Target int
 
 const (
-	Events Target = iota + 1
-	Users
-	Groups
+	TargetEvent Target = iota + 1
+	TargetUser
+	TargetGroup
 )
 
 // Scan implements the sql.Scanner interface.
@@ -1111,12 +1111,12 @@ func (target *Target) Scan(src any) error {
 		return fmt.Errorf("cannot scan a %T value into an state.Target value", src)
 	}
 	switch s {
-	case "Events":
-		*target = Events
-	case "Users":
-		*target = Users
-	case "Groups":
-		*target = Groups
+	case "Event":
+		*target = TargetEvent
+	case "User":
+		*target = TargetUser
+	case "Group":
+		*target = TargetGroup
 	default:
 		return fmt.Errorf("invalid state.Target: %s", s)
 	}
@@ -1127,12 +1127,12 @@ func (target *Target) Scan(src any) error {
 // It panics if target is not a valid Target value.
 func (target Target) String() string {
 	switch target {
-	case Events:
-		return "Events"
-	case Users:
-		return "Users"
-	case Groups:
-		return "Groups"
+	case TargetEvent:
+		return "Event"
+	case TargetUser:
+		return "User"
+	case TargetGroup:
+		return "Group"
 	}
 	panic("invalid target")
 }
@@ -1141,12 +1141,12 @@ func (target Target) String() string {
 // It returns an error if target is not a valid Target.
 func (target Target) Value() (driver.Value, error) {
 	switch target {
-	case Events:
-		return "Events", nil
-	case Users:
-		return "Users", nil
-	case Groups:
-		return "Groups", nil
+	case TargetEvent:
+		return "Event", nil
+	case TargetUser:
+		return "User", nil
+	case TargetGroup:
+		return "Group", nil
 	}
 	return nil, fmt.Errorf("not a valid Target: %d", target)
 }

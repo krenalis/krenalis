@@ -39,7 +39,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 
 		dummy = c.CreateDummy("Dummy", meergotester.Source)
-		dummyAction = c.CreateAction(dummy, "Users", meergotester.ActionToSet{
+		dummyAction = c.CreateAction(dummy, "User", meergotester.ActionToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -87,7 +87,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
 		fs = c.CreateSourceFilesystem(storageDir)
-		csvAction = c.CreateAction(fs, "Users", meergotester.ActionToSet{
+		csvAction = c.CreateAction(fs, "User", meergotester.ActionToSet{
 			Name:    "Import users from CSV on Filesystem",
 			Enabled: true,
 			Path:    "users_genders.csv",
@@ -140,11 +140,11 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				t.Fatalf("expected one key, got %d keys", len(keys))
 			}
 			javaScriptKey = keys[0]
-			c.CreateAction(javaScript, "Events", meergotester.ActionToSet{
+			c.CreateAction(javaScript, "Event", meergotester.ActionToSet{
 				Name:    "JavaScript",
 				Enabled: true,
 			})
-			javascriptUsersAction = c.CreateAction(javaScript, "Users", meergotester.ActionToSet{
+			javascriptUsersAction = c.CreateAction(javaScript, "User", meergotester.ActionToSet{
 				Name:     "JavaScript",
 				Enabled:  true,
 				InSchema: types.Type{},

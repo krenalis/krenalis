@@ -28,7 +28,7 @@ func init() {
 		Name:       "UISample",
 		Categories: meergo.CategoryTest,
 		AsSource: &meergo.AsAppSource{
-			Targets:     meergo.UsersTarget,
+			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Test the UI components",
@@ -36,7 +36,7 @@ func init() {
 			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Targets:     meergo.UsersTarget,
+			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Test the UI components",

@@ -35,7 +35,7 @@ var destinationOverview string
 
 // TODO(Gianluca): Groups are partially supported by this connector. When they
 // are fully supported by both the connector and Meergo, re-enable the
-// descriptions that refer to the groups and add the target "Groups" where
+// descriptions that refer to the groups and add the target "Group" where
 // needed.
 
 func init() {
@@ -43,14 +43,14 @@ func init() {
 		Name:       "HubSpot",
 		Categories: meergo.CategoryCRM,
 		AsSource: &meergo.AsAppSource{
-			Targets: meergo.UsersTarget,
+			Targets: meergo.TargetUser,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import contacts as users from HubSpot",
 				Overview: sourceOverview,
 			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Targets: meergo.UsersTarget,
+			Targets: meergo.TargetUser,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Export users as contacts to HubSpot",
 				Overview: destinationOverview,

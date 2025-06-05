@@ -34,7 +34,7 @@ func TestEvents(t *testing.T) {
 
 	// Load some users in the data warehouse from Dummy.
 	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
+	importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -66,11 +66,11 @@ func TestEvents(t *testing.T) {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
-		c.CreateAction(javaScriptID, "Events", meergotester.ActionToSet{
+		c.CreateAction(javaScriptID, "Event", meergotester.ActionToSet{
 			Name:    "JavaScript",
 			Enabled: true,
 		})
-		c.CreateAction(javaScriptID, "Users", meergotester.ActionToSet{
+		c.CreateAction(javaScriptID, "User", meergotester.ActionToSet{
 			Name:     "JavaScript",
 			Enabled:  true,
 			InSchema: types.Type{},
@@ -222,7 +222,7 @@ func TestEvents(t *testing.T) {
 	// Test importing a user identity with an action that has no mapping.
 	javaScript2ID := c.CreateJavaScriptSource("JavaScript (source 2)", nil)
 	javaScript2Key := c.EventWriteKeys(javaScript2ID)[0]
-	c.CreateAction(javaScript2ID, "Users", meergotester.ActionToSet{
+	c.CreateAction(javaScript2ID, "User", meergotester.ActionToSet{
 		Name:    "JavaScript",
 		Enabled: true,
 	})

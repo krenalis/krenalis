@@ -301,14 +301,14 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 
 	const isTransformationFunctionSupported = useMemo(() => {
 		if (isLoading) return false;
-		if (actionType.target === 'Users' || actionType.target === 'Groups') {
+		if (actionType.target === 'User' || actionType.target === 'Group') {
 			if (connection.isSource) {
 				return connection.isApp || connection.isDatabase || connection.isFileStorage || connection.isEventBased;
 			} else {
 				return connection.isApp || connection.isDatabase;
 			}
 		}
-		if (actionType.target == 'Events' && connection.isApp && connection.isDestination) {
+		if (actionType.target == 'Event' && connection.isApp && connection.isDestination) {
 			return true;
 		}
 		return false;

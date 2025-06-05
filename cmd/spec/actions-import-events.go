@@ -51,10 +51,10 @@ func init() {
 					},
 					{
 						Name:           "target",
-						Type:           types.Text().WithValues("Events"),
+						Type:           types.Text().WithValues("Event"),
 						CreateRequired: true,
-						Placeholder:    `"Events"`,
-						Description:    "The entity on which the action operates, which must be `\"Events\"` in order to create an action that imports events.",
+						Placeholder:    `"Event"`,
+						Description:    "The entity on which the action operates, which must be `\"Event\"` in order to create an action that imports events.",
 					},
 					{
 						Name:        "enabled",
@@ -156,9 +156,9 @@ func init() {
 						},
 						{
 							Name:        "target",
-							Type:        types.Text().WithValues("Users", "Events"),
-							Placeholder: `"Events"`,
-							Description: "The entity on which the action operates. It is always `\"Events\"` when the action imports events.",
+							Type:        types.Text().WithValues("User", "Event"),
+							Placeholder: `"Event"`,
+							Description: "The entity on which the action operates. It is always `\"Event\"` when the action imports events.",
 						},
 						{
 							Name:        "enabled",

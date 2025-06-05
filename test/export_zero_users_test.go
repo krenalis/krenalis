@@ -35,7 +35,7 @@ func TestExportZeroUsers(t *testing.T) {
 	// Test the export of zero users to an app (Dummy).
 	func() {
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
-		exportUsersActionID := c.CreateAction(dummyDest, "Users", meergotester.ActionToSet{
+		exportUsersActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{
 			Name:    "Export users to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -82,7 +82,7 @@ func TestExportZeroUsers(t *testing.T) {
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 		// Create an action for the Filesystem for exporting the users.
-		exportUsersActionID := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
+		exportUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
 			Name:    "Export users to the CSV on Filesystem",
 			Enabled: true,
 			Path:    exportedFilename,

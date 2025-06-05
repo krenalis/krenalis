@@ -463,14 +463,14 @@ func (connection connection) src(r *http.Request) (*core.Connection, error) {
 func (connection connection) target(r *http.Request) (core.Target, string, error) {
 	v := r.PathValue("target")
 	switch v {
-	case "Users":
-		return core.Users, "", nil
-	case "Groups":
-		return core.Groups, "", nil
-	case "Events":
-		return core.Events, "", nil
+	case "User":
+		return core.TargetUser, "", nil
+	case "Group":
+		return core.TargetGroup, "", nil
+	case "Event":
+		return core.TargetEvent, "", nil
 	case "":
-		return core.Events, r.PathValue("type"), nil
+		return core.TargetEvent, r.PathValue("type"), nil
 	}
 	return 0, "", errors.NotFound("")
 }

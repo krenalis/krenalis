@@ -120,10 +120,10 @@ func init() {
 					},
 					{
 						Name:           "target",
-						Type:           types.Text().WithValues("Events"),
+						Type:           types.Text().WithValues("Event"),
 						CreateRequired: true,
-						Placeholder:    `"Events"`,
-						Description:    "The entity on which the action operates, which must be `\"Events\"` in order to create an action that sends events.",
+						Placeholder:    `"Event"`,
+						Description:    "The entity on which the action operates, which must be `\"Event\"` in order to create an action that sends events.",
 					},
 					{
 						Name:        "enabled",
@@ -240,9 +240,9 @@ func init() {
 						},
 						{
 							Name:        "target",
-							Type:        types.Text().WithValues("Users", "Events"),
-							Placeholder: `"Events"`,
-							Description: "The entity on which the action operates. It is always `\"Events\"` when the action sends events to an app.",
+							Type:        types.Text().WithValues("User", "Event"),
+							Placeholder: `"Event"`,
+							Description: "The entity on which the action operates. It is always `\"Event\"` when the action sends events to an app.",
 						},
 						{
 							Name:        "enabled",

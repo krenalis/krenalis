@@ -38,7 +38,7 @@ const ActionWrapper = () => {
 					const eventType = instructions[instructions.length - 1];
 					actionType = connection.actionTypes!.find((a) => a.eventType === eventType);
 				} else {
-					actionType = connection.actionTypes!.find((a) => a.target === 'Events' && a.eventType === null);
+					actionType = connection.actionTypes!.find((a) => a.target === 'Event' && a.eventType === null);
 				}
 			} else {
 				const target = instructions[instructions.length - 1];

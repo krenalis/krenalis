@@ -52,7 +52,7 @@ func init() {
 		Name:       "Stripe",
 		Categories: meergo.CategoryEcommerce,
 		AsSource: &meergo.AsAppSource{
-			Targets:     meergo.UsersTarget,
+			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import customers as users",
@@ -60,7 +60,7 @@ func init() {
 			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Targets:     meergo.UsersTarget,
+			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Export users as customers",

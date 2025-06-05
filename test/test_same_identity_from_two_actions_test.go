@@ -26,7 +26,7 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 	dummy := c.CreateDummy("Dummy", meergotester.Source)
 
 	// Import the "first_name" property from the first action.
-	action1 := c.CreateAction(dummy, "Users", meergotester.ActionToSet{
+	action1 := c.CreateAction(dummy, "User", meergotester.ActionToSet{
 		Name:    "Import users (1)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -45,7 +45,7 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 	// Import the "last_name" property from the second action: this will create
 	// separated identities that refer to the same "identity" - from the app's
 	// point of view.
-	action2 := c.CreateAction(dummy, "Users", meergotester.ActionToSet{
+	action2 := c.CreateAction(dummy, "User", meergotester.ActionToSet{
 		Name:    "Import users (2)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{

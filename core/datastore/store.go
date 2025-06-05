@@ -26,7 +26,7 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Events the data warehouse
+const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued events the data warehouse
 
 // ErrDifferentWarehouse is an error indicating that the data warehouse being
 // attempted to connect to, during the change of the warehouse settings, is a

@@ -31,7 +31,7 @@ func TestImportWithTransformation(t *testing.T) {
 
 	// Create an action with a transformation function which imports users, then
 	// execute it.
-	importUsersID := c.CreateAction(dummyID, "Users", meergotester.ActionToSet{
+	importUsersID := c.CreateAction(dummyID, "User", meergotester.ActionToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{

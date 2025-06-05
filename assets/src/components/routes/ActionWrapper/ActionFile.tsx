@@ -359,7 +359,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	}, []);
 
 	useEffect(() => {
-		if (isImport || isEditing || actionType.target !== 'Users') {
+		if (isImport || isEditing || actionType.target !== 'User') {
 			return;
 		}
 		const hasEmailColumn = actionType.inputSchema.properties.find((p) => p.name === 'email');

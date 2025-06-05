@@ -326,25 +326,25 @@ const validateTransformation = (
 ) => {
 	if (connection.isSource) {
 		if (connection.isApp) {
-			if (actionType.target === 'Users' || actionType.target === 'Groups') {
+			if (actionType.target === 'User' || actionType.target === 'Group') {
 				if (!hasValidTransformation(action)) {
 					throw errInvalidTransformation;
 				}
 			}
 		} else if (connection.isDatabase) {
-			if (actionType.target === 'Users' || actionType.target === 'Groups') {
+			if (actionType.target === 'User' || actionType.target === 'Group') {
 				if (!hasValidTransformation(action)) {
 					throw errInvalidTransformation;
 				}
 			}
 		} else if (connection.isFileStorage) {
-			if (actionType.target === 'Users' || actionType.target === 'Groups') {
+			if (actionType.target === 'User' || actionType.target === 'Group') {
 				if (!hasValidTransformation(action)) {
 					throw errInvalidTransformation;
 				}
 			}
 		} else if (connection.isSDK) {
-			if (actionType.target === 'Events') {
+			if (actionType.target === 'Event') {
 				if (hasValidTransformation(action)) {
 					throw errTransformationNotSupported;
 				}
@@ -352,24 +352,24 @@ const validateTransformation = (
 		}
 	} else {
 		if (connection.isApp) {
-			if (actionType.target === 'Users' || actionType.target === 'Groups') {
+			if (actionType.target === 'User' || actionType.target === 'Group') {
 				if (!hasValidTransformation(action)) {
 					throw errInvalidTransformation;
 				}
 			}
-			if (actionType.target === 'Events' && actionType.outputSchema == null) {
+			if (actionType.target === 'Event' && actionType.outputSchema == null) {
 				if (hasValidTransformation(action)) {
 					throw errTransformationNotSupported;
 				}
 			}
 		} else if (connection.isDatabase) {
-			if (actionType.target === 'Users' || actionType.target === 'Groups') {
+			if (actionType.target === 'User' || actionType.target === 'Group') {
 				if (!hasValidTransformation(action)) {
 					throw errInvalidTransformation;
 				}
 			}
 		} else if (connection.isFileStorage) {
-			if (actionType.target === 'Users' || actionType.target === 'Groups') {
+			if (actionType.target === 'User' || actionType.target === 'Group') {
 				if (hasValidTransformation(action)) {
 					throw errTransformationNotSupported;
 				}
@@ -579,7 +579,7 @@ const transformInActionToSet = async (
 	let query: string;
 
 	const isDestinationFileOnUsers =
-		connection.isDestination && connection.isFileStorage && actionType.target === 'Users';
+		connection.isDestination && connection.isFileStorage && actionType.target === 'User';
 
 	const flattenedInputSchema = flattenSchema(actionType.inputSchema);
 	const flattenedOutputSchema = flattenSchema(actionType.outputSchema);
@@ -592,8 +592,8 @@ const transformInActionToSet = async (
 	}
 
 	const allowsConstantTransformation =
-		(connection.isSource && connection.isEventBased && actionType.target === 'Users') ||
-		(connection.isDestination && connection.isApp && actionType.target === 'Events');
+		(connection.isSource && connection.isEventBased && actionType.target === 'User') ||
+		(connection.isDestination && connection.isApp && actionType.target === 'Event');
 
 	if (action.transformation.mapping != null) {
 		const inputSchema: ObjectType = { kind: 'object', properties: [] };
@@ -610,7 +610,7 @@ const transformInActionToSet = async (
 			const isFirstLevel = pair.indentation === 0;
 			if (pair.value === '') {
 				const hasRequired =
-					(actionType.target === 'Events' && (pair.createRequired || pair.updateRequired)) ||
+					(actionType.target === 'Event' && (pair.createRequired || pair.updateRequired)) ||
 					(action.exportMode != null &&
 						((pair.createRequired && action.exportMode.includes('Create')) ||
 							(pair.updateRequired && action.exportMode.includes('Update'))));
@@ -998,7 +998,7 @@ const transformInActionToSet = async (
 	}
 
 	const isDatabaseExportOnUsers =
-		connection.connector.type === 'Database' && connection.role === 'Destination' && actionType.target === 'Users';
+		connection.connector.type === 'Database' && connection.role === 'Destination' && actionType.target === 'User';
 
 	if (isDatabaseExportOnUsers) {
 		// the table key must be defined for database type actions that
@@ -1060,10 +1060,10 @@ const transformInActionToSet = async (
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && actionType.target == 'Events';
+	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && actionType.target == 'Event';
 	let dispatchEventsToApps =
-		connection.isDestination && connection.connector.type == 'App' && actionType.target == 'Events';
-	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && actionType.target == 'Users';
+		connection.isDestination && connection.connector.type == 'App' && actionType.target == 'Event';
+	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && actionType.target == 'User';
 	if (importIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps) {
 		inSchema = null;
 	}
@@ -1140,7 +1140,7 @@ const computeDefaultAction = (
 		name: actionType.name,
 		// The action is enabled by default only for batch operations importing or exporting users.
 		enabled:
-			actionType.target == 'Users' && (connection.isApp || connection.isDatabase || connection.isFileStorage),
+			actionType.target == 'User' && (connection.isApp || connection.isDatabase || connection.isFileStorage),
 		filter: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema),
@@ -1189,7 +1189,7 @@ const computeDefaultAction = (
 const hasFilters = (connection: TransformedConnection, target: ActionTarget) => {
 	// Filters are always allowed except for actions that import users
 	// from databases.
-	return !(connection.role === 'Source' && connection.connector.type === 'Database' && target === 'Users');
+	return !(connection.role === 'Source' && connection.connector.type === 'Database' && target === 'User');
 };
 
 const computeActionTypeFields = (connection: TransformedConnection, actionType: ActionType) => {
@@ -1208,7 +1208,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	} else if (type === 'FileStorage' && connection.role === 'Source') {
 		fields.push('Transformation');
 	} else if (type === 'SDK') {
-		if (connection.role === 'Source' && (actionType.target === 'Users' || actionType.target === 'Groups')) {
+		if (connection.role === 'Source' && (actionType.target === 'User' || actionType.target === 'Group')) {
 			fields.push('Transformation');
 		}
 	}
@@ -1216,7 +1216,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	if (
 		type === 'App' &&
 		connection.role === 'Destination' &&
-		(actionType.target === 'Users' || actionType.target === 'Groups')
+		(actionType.target === 'User' || actionType.target === 'Group')
 	) {
 		fields.push('Matching');
 		fields.push('UpdateOnDuplicates');
@@ -1229,7 +1229,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 
 	if (type === 'FileStorage') {
 		if (connection.role === 'Destination') {
-			if (actionType.target === 'Users') {
+			if (actionType.target === 'User') {
 				fields.push('OrderBy');
 			}
 		}
@@ -1243,7 +1243,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	if (
 		(type === 'App' || type === 'Database' || type === 'FileStorage') &&
 		connection.role === 'Source' &&
-		(actionType.target === 'Users' || actionType.target === 'Groups')
+		(actionType.target === 'User' || actionType.target === 'Group')
 	) {
 		fields.push('Incremental');
 	}
@@ -1409,14 +1409,14 @@ const getTransformationFunctionParameterName = (
 	connection: TransformedConnection,
 	actionType: TransformedActionType,
 ): String => {
-	if (isSourceEventConnection(connection.role, connection.connector.type) && actionType.target === 'Users') {
+	if (isSourceEventConnection(connection.role, connection.connector.type) && actionType.target === 'User') {
 		return 'event';
 	}
-	if (actionType.target === 'Users') {
+	if (actionType.target === 'User') {
 		return 'user';
-	} else if (actionType.target === 'Events') {
+	} else if (actionType.target === 'Event') {
 		return 'event';
-	} else if (actionType.target === 'Groups') {
+	} else if (actionType.target === 'Group') {
 		return 'group';
 	}
 };

@@ -44,7 +44,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	c.UpdateIdentityResolution(true, []string{"email"})
 
 	// Create an action for the CSV for importing the users.
-	importUsersActionID := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
+	importUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
 		Name:    "Import users from CSV on Filesystem",
 		Enabled: true,
 		Path:    "users.csv",

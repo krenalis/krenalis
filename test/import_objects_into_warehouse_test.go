@@ -25,7 +25,7 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	defer c.Stop()
 
 	dummy := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummy, "Users", meergotester.ActionToSet{
+	importUsersID := c.CreateAction(dummy, "User", meergotester.ActionToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{

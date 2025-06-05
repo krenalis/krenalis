@@ -86,8 +86,8 @@ const ConnectionMetrics = () => {
 	const [eventActionsErrors, setEventActionsErrors] = useState<ActionError[]>([]);
 	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [selectedTarget, setSelectedTarget] = useState<'Users' | 'Events'>(
-		c.actions.findIndex((a) => a.target === 'Events') !== -1 ? 'Events' : 'Users',
+	const [selectedTarget, setSelectedTarget] = useState<'User' | 'Event'>(
+		c.actions.findIndex((a) => a.target === 'Event') !== -1 ? 'Event' : 'User',
 	);
 	const [selectedMetricsRange, setSelectedMetricsRange] = useState<metricsRange>('last15Minutes');
 	const [isCustomMetricsRangePickerOpen, setIsCustomMetricsRangePickerOpen] = useState<boolean>(false);
@@ -130,7 +130,7 @@ const ConnectionMetrics = () => {
 		switch (c.connector.type) {
 			case 'App':
 				if (c.role == 'Destination') {
-					if (selectedTarget == 'Events') {
+					if (selectedTarget == 'Event') {
 						steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
 					}
 				}
@@ -144,7 +144,7 @@ const ConnectionMetrics = () => {
 				}
 				break;
 			case 'SDK':
-				if (selectedTarget == 'Users') {
+				if (selectedTarget == 'User') {
 					steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
 				} else {
 					steps = ['RECEIVE', 'FILTER', 'FINALIZE'];
@@ -155,7 +155,7 @@ const ConnectionMetrics = () => {
 
 	useEffect(() => {
 		let data: FunnelData;
-		if (selectedTarget === 'Events') {
+		if (selectedTarget === 'Event') {
 			if (eventFunnelData == null) {
 				return;
 			}
@@ -238,9 +238,9 @@ const ConnectionMetrics = () => {
 			let userActionsIds: number[] = [];
 			let eventActionsIds: number[] = [];
 			for (const action of c.actions) {
-				if (action.target === 'Users') {
+				if (action.target === 'User') {
 					userActionsIds.push(action.id);
-				} else if (action.target === 'Events') {
+				} else if (action.target === 'Event') {
 					eventActionsIds.push(action.id);
 				}
 			}
@@ -251,11 +251,11 @@ const ConnectionMetrics = () => {
 			}
 
 			if (userActionsIds.length > 0) {
-				supportedTargets.current.push('Users');
+				supportedTargets.current.push('User');
 			}
 
 			if (eventActionsIds.length > 0) {
-				supportedTargets.current.push('Events');
+				supportedTargets.current.push('Event');
 			}
 
 			let fetchMetrics: (...args) => Promise<ActionMetrics> = null;
@@ -285,9 +285,9 @@ const ConnectionMetrics = () => {
 
 			let target = selectedTarget;
 			let ids: number[] = [];
-			if (target === 'Users') {
+			if (target === 'User') {
 				ids = userActionsIds;
-			} else if (target === 'Events') {
+			} else if (target === 'Event') {
 				ids = eventActionsIds;
 			}
 
@@ -299,7 +299,7 @@ const ConnectionMetrics = () => {
 				stopLoading();
 				return;
 			}
-			if (target === 'Users') {
+			if (target === 'User') {
 				setUserActionsMetrics(metrics);
 			} else {
 				setEventActionsMetrics(metrics);
@@ -313,7 +313,7 @@ const ConnectionMetrics = () => {
 				stopLoading();
 				return;
 			}
-			if (target === 'Users') {
+			if (target === 'User') {
 				setUserActionsErrors(errorRes.errors);
 			} else {
 				setEventActionsErrors(errorRes.errors);
@@ -355,11 +355,11 @@ const ConnectionMetrics = () => {
 	}, []);
 
 	const onSelectUsers = () => {
-		setSelectedTarget('Users');
+		setSelectedTarget('User');
 	};
 
 	const onSelectEvents = () => {
-		setSelectedTarget('Events');
+		setSelectedTarget('Event');
 	};
 
 	const onSelectLast15Minutes = () => {
@@ -401,7 +401,7 @@ const ConnectionMetrics = () => {
 		);
 	}
 
-	const isUsersSelected = selectedTarget === 'Users';
+	const isUsersSelected = selectedTarget === 'User';
 	let titleRange = '';
 	if (selectedMetricsRange === 'last15Minutes') {
 		titleRange = 'Last 15 minutes';
@@ -469,17 +469,17 @@ const ConnectionMetrics = () => {
 						<SlButtonGroup>
 							<SlButton
 								variant={isUsersSelected ? 'default' : 'primary'}
-								onClick={supportedTargets.current.includes('Events') ? onSelectEvents : null}
+								onClick={supportedTargets.current.includes('Event') ? onSelectEvents : null}
 								size='small'
-								disabled={!supportedTargets.current.includes('Events')}
+								disabled={!supportedTargets.current.includes('Event')}
 							>
 								Events
 							</SlButton>
 							<SlButton
 								variant={isUsersSelected ? 'primary' : 'default'}
-								onClick={supportedTargets.current.includes('Users') ? onSelectUsers : null}
+								onClick={supportedTargets.current.includes('User') ? onSelectUsers : null}
 								size='small'
-								disabled={!supportedTargets.current.includes('Users')}
+								disabled={!supportedTargets.current.includes('User')}
 							>
 								Users
 							</SlButton>

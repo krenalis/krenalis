@@ -106,7 +106,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Create and execute the actions.
 
 	addJSONAction := func(source int, filename string, properties map[string]bool) int {
-		return c.CreateAction(source, "Users", meergotester.ActionToSet{
+		return c.CreateAction(source, "User", meergotester.ActionToSet{
 			Name:    "Action",
 			Enabled: true,
 			Path:    filename,

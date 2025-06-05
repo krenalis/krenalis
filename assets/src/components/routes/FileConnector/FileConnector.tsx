@@ -116,7 +116,7 @@ const FileConnector = () => {
 										size='small'
 										variant='primary'
 										onClick={() => {
-											onAddActionType('users');
+											onAddActionType('user');
 										}}
 									>
 										Add
@@ -135,7 +135,7 @@ const FileConnector = () => {
 										size='small'
 										variant='primary'
 										onClick={() => {
-											onAddActionType('groups');
+											onAddActionType('group');
 										}}
 									>
 										Add

@@ -35,7 +35,7 @@ func init() {
 		Name:       "Mixpanel",
 		Categories: meergo.CategoryAnalytics,
 		AsDestination: &meergo.AsAppDestination{
-			Targets:     meergo.EventsTarget,
+			Targets:     meergo.TargetEvent,
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
 			Documentation: meergo.ConnectorRoleDocumentation{

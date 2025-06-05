@@ -541,15 +541,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Users\"",
+                            "placeholder": "\"User\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Users"
+                                    "User"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Users\"` in order to create an action that exports users."
+                            "description": "The entity on which the action operates, which must be `\"User\"` in order to create an action that exports users."
                         },
                         {
                             "name": "enabled",
@@ -1226,15 +1226,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Users\"",
+                                "placeholder": "\"User\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action exports users to an app."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action exports users to an app."
                             },
                             {
                                 "name": "enabled",
@@ -1568,15 +1568,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Users\"",
+                            "placeholder": "\"User\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Users"
+                                    "User"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Users\"` in order to create an action that exports users."
+                            "description": "The entity on which the action operates, which must be `\"User\"` in order to create an action that exports users."
                         },
                         {
                             "name": "enabled",
@@ -2019,15 +2019,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Users\"",
+                                "placeholder": "\"User\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action exports users to a database."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action exports users to a database."
                             },
                             {
                                 "name": "enabled",
@@ -2336,15 +2336,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Users\"",
+                            "placeholder": "\"User\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Users"
+                                    "User"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Users\"` in order to create an action that exports users."
+                            "description": "The entity on which the action operates, which must be `\"User\"` in order to create an action that exports users."
                         },
                         {
                             "name": "enabled",
@@ -2858,15 +2858,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Users\"",
+                                "placeholder": "\"User\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` for an action that exports users."
+                                "description": "The entity on which the action operates. It is always `\"User\"` for an action that exports users."
                             },
                             {
                                 "name": "enabled",
@@ -3121,15 +3121,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Events\"",
+                            "placeholder": "\"Event\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Events"
+                                    "Event"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Events\"` in order to create an action that imports events."
+                            "description": "The entity on which the action operates, which must be `\"Event\"` in order to create an action that imports events."
                         },
                         {
                             "name": "enabled",
@@ -3490,15 +3490,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Events\"",
+                                "placeholder": "\"Event\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Events\"` when the action imports events."
+                                "description": "The entity on which the action operates. It is always `\"Event\"` when the action imports events."
                             },
                             {
                                 "name": "enabled",
@@ -3657,15 +3657,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Users\"",
+                            "placeholder": "\"User\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Users"
+                                    "User"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Users\"` in order to create an action that imports users."
+                            "description": "The entity on which the action operates, which must be `\"User\"` in order to create an action that imports users."
                         },
                         {
                             "name": "enabled",
@@ -4268,15 +4268,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Users\"",
+                                "placeholder": "\"User\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from an app."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action imports users from an app."
                             },
                             {
                                 "name": "enabled",
@@ -4573,15 +4573,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Users\"",
+                            "placeholder": "\"User\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Users"
+                                    "User"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Users\"` in order to create an action that imports users."
+                            "description": "The entity on which the action operates, which must be `\"User\"` in order to create an action that imports users."
                         },
                         {
                             "name": "enabled",
@@ -5080,15 +5080,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Users\"",
+                                "placeholder": "\"User\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from a database."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action imports users from a database."
                             },
                             {
                                 "name": "enabled",
@@ -5329,15 +5329,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Users\"",
+                            "placeholder": "\"User\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Users"
+                                    "User"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Users\"` in order to create an action that imports users."
+                            "description": "The entity on which the action operates, which must be `\"User\"` in order to create an action that imports users."
                         },
                         {
                             "name": "enabled",
@@ -5898,15 +5898,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Users\"",
+                                "placeholder": "\"User\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from events."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action imports users from events."
                             },
                             {
                                 "name": "enabled",
@@ -6158,15 +6158,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Users\"",
+                            "placeholder": "\"User\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Users"
+                                    "User"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Users\"` in order to create an action that imports users."
+                            "description": "The entity on which the action operates, which must be `\"User\"` in order to create an action that imports users."
                         },
                         {
                             "name": "enabled",
@@ -6932,15 +6932,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Users\"",
+                                "placeholder": "\"User\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from a file."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action imports users from a file."
                             },
                             {
                                 "name": "enabled",
@@ -7220,15 +7220,15 @@
                         },
                         {
                             "name": "target",
-                            "placeholder": "\"Events\"",
+                            "placeholder": "\"Event\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Events"
+                                    "Event"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The entity on which the action operates, which must be `\"Events\"` in order to create an action that sends events."
+                            "description": "The entity on which the action operates, which must be `\"Event\"` in order to create an action that sends events."
                         },
                         {
                             "name": "enabled",
@@ -7814,15 +7814,15 @@
                             },
                             {
                                 "name": "target",
-                                "placeholder": "\"Events\"",
+                                "placeholder": "\"Event\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Users",
-                                        "Events"
+                                        "User",
+                                        "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Events\"` when the action sends events to an app."
+                                "description": "The entity on which the action operates. It is always `\"Event\"` when the action sends events to an app."
                             },
                             {
                                 "name": "enabled",
@@ -9591,19 +9591,19 @@
                                                     "properties": [
                                                         {
                                                             "name": "targets",
-                                                            "placeholder": "[ \"Users\", \"Groups\" ]",
+                                                            "placeholder": "[ \"User\", \"Group\" ]",
                                                             "type": {
                                                                 "kind": "array",
                                                                 "elementType": {
                                                                     "kind": "text",
                                                                     "values": [
-                                                                        "Events",
-                                                                        "Users",
-                                                                        "Groups"
+                                                                        "Event",
+                                                                        "User",
+                                                                        "Group"
                                                                     ]
                                                                 }
                                                             },
-                                                            "description": "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`"
+                                                            "description": "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Event\"`, `\"User\"`, and `\"Group\"`"
                                                         },
                                                         {
                                                             "name": "hasSettings",
@@ -9642,19 +9642,19 @@
                                                     "properties": [
                                                         {
                                                             "name": "targets",
-                                                            "placeholder": "[ \"Users\", \"Groups\" ]",
+                                                            "placeholder": "[ \"User\", \"Group\" ]",
                                                             "type": {
                                                                 "kind": "array",
                                                                 "elementType": {
                                                                     "kind": "text",
                                                                     "values": [
-                                                                        "Events",
-                                                                        "Users",
-                                                                        "Groups"
+                                                                        "Event",
+                                                                        "User",
+                                                                        "Group"
                                                                     ]
                                                                 }
                                                             },
-                                                            "description": "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`"
+                                                            "description": "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Event\"`, `\"User\"`, and `\"Group\"`"
                                                         },
                                                         {
                                                             "name": "hasSettings",
@@ -9860,19 +9860,19 @@
                                     "properties": [
                                         {
                                             "name": "targets",
-                                            "placeholder": "[ \"Users\", \"Groups\" ]",
+                                            "placeholder": "[ \"User\", \"Group\" ]",
                                             "type": {
                                                 "kind": "array",
                                                 "elementType": {
                                                     "kind": "text",
                                                     "values": [
-                                                        "Events",
-                                                        "Users",
-                                                        "Groups"
+                                                        "Event",
+                                                        "User",
+                                                        "Group"
                                                     ]
                                                 }
                                             },
-                                            "description": "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`"
+                                            "description": "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Event\"`, `\"User\"`, and `\"Group\"`"
                                         },
                                         {
                                             "name": "hasSettings",
@@ -9911,19 +9911,19 @@
                                     "properties": [
                                         {
                                             "name": "targets",
-                                            "placeholder": "[ \"Users\", \"Groups\" ]",
+                                            "placeholder": "[ \"User\", \"Group\" ]",
                                             "type": {
                                                 "kind": "array",
                                                 "elementType": {
                                                     "kind": "text",
                                                     "values": [
-                                                        "Events",
-                                                        "Users",
-                                                        "Groups"
+                                                        "Event",
+                                                        "User",
+                                                        "Group"
                                                     ]
                                                 }
                                             },
-                                            "description": "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`"
+                                            "description": "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Event\"`, `\"User\"`, and `\"Group\"`"
                                         },
                                         {
                                             "name": "hasSettings",

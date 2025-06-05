@@ -4,7 +4,7 @@ type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'SDK' | 'Stre
 
 type SendingMode = 'Cloud' | 'Device' | 'Combined';
 
-type ConnectorTarget = 'Events' | 'Users' | 'Groups';
+type ConnectorTarget = 'Event' | 'User' | 'Group';
 
 interface Connector {
 	name: string;

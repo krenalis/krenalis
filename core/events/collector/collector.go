@@ -97,7 +97,7 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.Ope
 		c.eventWriters.Store(ws.ID, store.NewEventWriter(c.eventAck))
 	}
 	for _, action := range st.Actions() {
-		if action.Target != state.Users || !action.Enabled {
+		if action.Target != state.TargetUser || !action.Enabled {
 			continue
 		}
 		if action.Connection().Connector().Type != state.SDK {
@@ -227,7 +227,7 @@ func (c *Collector) eventDestinations(connection *state.Connection) []*state.Act
 			continue
 		}
 		for _, action := range c.Actions() {
-			if action.Enabled && action.Target == state.Events {
+			if action.Enabled && action.Target == state.TargetEvent {
 				actions = append(actions, action)
 			}
 		}
@@ -240,7 +240,7 @@ func (c *Collector) eventDestinations(connection *state.Connection) []*state.Act
 // otherwise, it returns nil and false.
 func (c *Collector) importEventsAction(connection *state.Connection) (*state.Action, bool) {
 	for _, a := range connection.Actions() {
-		if a.Enabled && a.Target == state.Events {
+		if a.Enabled && a.Target == state.TargetEvent {
 			return a, true
 		}
 	}
@@ -256,7 +256,7 @@ func (c *Collector) reloadEvents(ctx context.Context) {
 			if !ok {
 				continue
 			}
-			if action.Target == state.Users {
+			if action.Target == state.TargetUser {
 				// Import the user identities into the data warehouse
 				if w, ok := c.identityWriters.Load(action.ID); ok {
 					w.(*identityWriter).Write(op.Event)
@@ -510,7 +510,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		eventContext := event["context"].(map[string]any)
 		if event["type"] == "identify" || eventContext["traits"] != nil {
 			for _, action := range connection.Actions() {
-				if action.Target != state.Users || !action.Enabled {
+				if action.Target != state.TargetUser || !action.Enabled {
 					continue
 				}
 				c.metrics.ReceivePassed(action.ID, 1)
@@ -583,7 +583,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 // onCreateAction is called when an action is created.
 func (c *Collector) onCreateAction(n state.CreateAction) {
 	action, _ := c.state.Action(n.ID)
-	if action.Target != state.Users || !action.Enabled {
+	if action.Target != state.TargetUser || !action.Enabled {
 		return
 	}
 	if action.Connection().Connector().Type != state.SDK {
@@ -618,7 +618,7 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 		return
 	}
 	for _, action := range connection.Actions() {
-		if action.Target != state.Users || !action.Enabled {
+		if action.Target != state.TargetUser || !action.Enabled {
 			continue
 		}
 		iw, ok := c.identityWriters.LoadAndDelete(action.ID)
@@ -637,7 +637,7 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 // onSetActionStatus is called when the status of an action is set.
 func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 	action, _ := c.state.Action(n.ID)
-	if action.Target != state.Users {
+	if action.Target != state.TargetUser {
 		return
 	}
 	connection := action.Connection()
@@ -659,7 +659,7 @@ func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 // onUpdateAction is called when an action is updated.
 func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	action, _ := c.state.Action(n.ID)
-	if action.Target != state.Users {
+	if action.Target != state.TargetUser {
 		return
 	}
 	connection := action.Connection()

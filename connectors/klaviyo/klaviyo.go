@@ -40,7 +40,7 @@ func init() {
 		Name:       "Klaviyo",
 		Categories: meergo.CategoryAutomation | meergo.CategoryMarketing,
 		AsSource: &meergo.AsAppSource{
-			Targets:     meergo.UsersTarget,
+			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import profiles as users from Klaviyo",
@@ -48,7 +48,7 @@ func init() {
 			},
 		},
 		AsDestination: &meergo.AsAppDestination{
-			Targets:     meergo.EventsTarget | meergo.UsersTarget,
+			Targets:     meergo.TargetEvent | meergo.TargetUser,
 			HasSettings: true,
 			SendingMode: meergo.Cloud,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -153,8 +153,8 @@ func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 	return []*meergo.EventType{
 		{
 			ID:          "create_event",
-			Name:        "Create Event",
-			Description: "Create an Event on Klaviyo",
+			Name:        "Create event",
+			Description: "Create an event on Klaviyo",
 		},
 	}, nil
 }

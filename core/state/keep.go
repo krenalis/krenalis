@@ -337,7 +337,7 @@ func (state *State) createAction(n notification) {
 		LastChangeTimeFormat: e.LastChangeTimeFormat,
 		Incremental:          e.Incremental,
 	}
-	if c.Role == Source && e.Target == Users {
+	if c.Role == Source && e.Target == TargetUser {
 		action.propertiesToUnset = []string{}
 	}
 	if e.Filter != nil {
@@ -565,7 +565,7 @@ func (state *State) deleteAction(n notification) {
 	delete(c.actions, e.ID)
 	c.mu.Unlock()
 	ws := c.workspace
-	if c.Role == Source && e.action.Target == Users {
+	if c.Role == Source && e.action.Target == TargetUser {
 		actionsToPurge := append(ws.actionsToPurge, e.ID)
 		ws.mu.Lock()
 		ws.actionsToPurge = actionsToPurge
@@ -610,7 +610,7 @@ func (state *State) deleteConnection(n notification) {
 	if e.connection.Role == Source {
 		actionsToPurge = ws.actionsToPurge
 		for _, action := range e.connection.actions {
-			if action.Target == Users {
+			if action.Target == TargetUser {
 				actionsToPurge = append(actionsToPurge, action.ID)
 			}
 		}

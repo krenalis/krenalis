@@ -418,7 +418,7 @@ func TestActionsCreation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			_, err := c.CreateActionErr(test.conn, "Users", test.action)
+			_, err := c.CreateActionErr(test.conn, "User", test.action)
 			switch {
 			case test.err == "" && err == nil:
 				// Ok.

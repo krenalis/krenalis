@@ -87,8 +87,8 @@ func (this *Workspace) AlterUserSchema(ctx context.Context, schema types.Type, p
 		if source.Role != state.Source {
 			return errors.BadRequest("primary source %d is not a source connection", s)
 		}
-		if !source.Connector().SourceTargets.Contains(state.Users) {
-			return errors.BadRequest("primary source %d does not support Users target", s)
+		if !source.Connector().SourceTargets.Contains(state.TargetUser) {
+			return errors.BadRequest("primary source %d does not support User target", s)
 		}
 	}
 	if this.workspace.IR.ID != nil || this.workspace.AlterUserSchema.ID != nil {

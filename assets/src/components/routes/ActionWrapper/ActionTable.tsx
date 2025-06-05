@@ -159,7 +159,7 @@ const ActionTable = () => {
 					/>
 				</div>
 			</Section>
-			{actionType.target === 'Users' && !isTransformationHidden && (
+			{actionType.target === 'User' && !isTransformationHidden && (
 				<Section
 					title='Table key'
 					description='The property of the table that is used as key in export queries'
