@@ -25,14 +25,17 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// showUI controls whether to display the Playwright UI or not, that is, whether
-// to pass the "--ui" option to the "playwright test" command.
+// passUIFlagToPlaywright, when set to true, passes the '--ui' flag to the
+// Playwright command, when it is executed for the admin tests.
 //
-// Setting this constant to true could be particularly useful in the case of
-// tests that do not pass, allowing for more selective execution of various
-// tests while simultaneously checking the output of the browser window and
-// other useful information for debugging.
-const showUI = false
+// To understand what the '--ui' flag does, see the Playwright UI Mode
+// documentation: https://playwright.dev/docs/test-ui-mode.
+//
+// NOTE: this is intended for advanced usage and debugging purposes only, so if
+// the admin test is run with this constant enabled, the Go test will always
+// fail, as there is no way to determine whether the test set launched via the
+// UI is complete and whether all tests ran correctly and successfully.
+const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
@@ -147,11 +150,11 @@ func TestAdmin(t *testing.T) {
 	assetsDir := filepath.Join("..", "assets")
 	run(t, "npm", []string{"install"}, assetsDir)
 	run(t, "npx", []string{"playwright", "install", "chromium"}, assetsDir)
-	if showUI {
+	if passUIFlagToPlaywright {
 		run(t, "npx", []string{"playwright", "test", "--ui"}, assetsDir)
-		t.Fatal("the tests were launched through the UI, which means that the Go test" +
-			" cannot know the result of the individual tests, and therefore this test" +
-			" is considered failed as a precaution")
+		t.Fatal("The admin test was run with the constant 'passUIFlagToPlaywright' set to true," +
+			" so the test is considered to have failed as a precaution." +
+			" For more details, see the documentation for the constant 'passUIFlagToPlaywright'.")
 	} else {
 		run(t, "npx", []string{"playwright", "test"}, assetsDir)
 	}
