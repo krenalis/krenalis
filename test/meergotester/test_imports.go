@@ -1,0 +1,30 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2025 Open2b
+//
+
+package meergotester
+
+// This file has two purposes:
+//
+// (1) to import connectors and warehouses into the Meergo executable of the
+// tests, when the tests are run by compiling Meergo directly inside the test
+// executable. In this first case, this file acts as any other source file in
+// Go.
+//
+// (2) to define the connectors and warehouses needed by the tests, so that this
+// file is then copied to the temporary directory where the Meergo executable
+// used in the tests will be compiled, in those cases where the tests are run by
+// running Meergo in a separate process (which is the default case). For this
+// reason, it is IMPORTANT that this file is not moved or renamed without
+// changing the test execution procedure.
+
+import (
+	_ "github.com/meergo/meergo/connectors"
+	_ "github.com/meergo/meergo/connectors/dummy"
+	_ "github.com/meergo/meergo/connectors/filesystem"
+	_ "github.com/meergo/meergo/connectors/kafka"
+	_ "github.com/meergo/meergo/warehouses"
+)
