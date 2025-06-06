@@ -100,7 +100,7 @@ func main() {
 			// a default timeout of 10 minutes (see 'go help testflag'), which is
 			// not sufficient to run all the tests inside "/test" in cases when, for
 			// example, they are executed in a GitHub Action.
-			args = append(args, "--timeout=30m")
+			args = append(args, "--timeout=2h")
 		} else {
 			// Just to avoid the command running indefinitely without even printing
 			// output. 18 minutes should be more than enough time to run the tests
