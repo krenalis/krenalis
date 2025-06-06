@@ -529,7 +529,7 @@ It returns a `Promise` that resolves or rejects when Meergo finishes initializin
 #### Example
 
 ```javascript
-meergo.ready(() => console.log('Meergo has been inizialized'));
+meergo.ready(() => console.log('Meergo has been initialized'));
 ```
 
 ```javascript

@@ -249,7 +249,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	// Initialize the PostgreSQL database.
 	err = initializePostgreSQLDatabase(ctx, testsSettings.Database)
 	if err != nil {
-		t.Fatalf("cannot inizialize the PostgreSQL database: %s", err)
+		t.Fatalf("cannot initialize the PostgreSQL database: %s", err)
 	}
 
 	// Create the HTTP client.
