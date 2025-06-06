@@ -27,7 +27,7 @@ func TestImportWithTransformation(t *testing.T) {
 	// Create a Dummy (source) connection.
 	dummyID := c.CreateDummy("Dummy (source)", meergotester.Source)
 
-	c.UpdateIdentityResolution(true, []string{"email"})
+	c.UpdateIdentityResolution(false, []string{"email"})
 
 	// Create an action with a transformation function which imports users, then
 	// execute it.
@@ -64,6 +64,8 @@ def transform(user: dict) -> dict:
 	})
 	exec := c.ExecuteAction(importUsersID)
 	c.WaitForExecutionsCompletion(dummyID, exec)
+
+	c.RunIdentityResolution()
 
 	// Retrieve the users.
 	const expectedTotal = 10
