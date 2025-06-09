@@ -70,6 +70,8 @@ Here are some key points about **how Meergo sends telemetry data to Sentry**:
 
 * **Admin errors are sent to Sentry through a server tunnel**. This avoids the problem of adblockers blocking data from being sent directly to Sentry. This does not cause any inconvenience to the user, as they can disable telemetry at any time through the environment variable.
 
+* **Currently, the server only sends panics**. This is because it is not possible to send the errors returned by the various methods and functions using the Sentry integration with *slog*, as they may contain personal and/or sensitive data. As for the panics, we ensure that they never contain personal and/or sensitive data.
+
 ## Expose and see Meergo metrics
 
 1. **Enable metrics** by setting to `true` the `Enabled` constant in file `metrics/metrics.go`

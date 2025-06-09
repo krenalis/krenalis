@@ -25,7 +25,6 @@ import (
 	"github.com/meergo/meergo/core/state"
 
 	"github.com/getsentry/sentry-go"
-	sentryslog "github.com/getsentry/sentry-go/slog"
 	"github.com/joho/godotenv"
 )
 
@@ -58,9 +57,7 @@ func Main(assets fs.FS) {
 	}
 	defer logFile.Close()
 
-	// Here slog is set to write to stderr and the 'error.log' file. Later, if
-	// reading the settings determines that telemetry should be also sent to
-	// Sentry, slog will be set up again in that way.
+	// Set slog to write to stderr and to the 'error.log' file.
 	fileLogger := slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stderr), nil))
 	slog.SetDefault(fileLogger)
 
@@ -114,10 +111,6 @@ func Main(assets fs.FS) {
 			os.Exit(1)
 		}
 		defer sentry.Flush(2 * time.Second)
-		// Log on stderr, 'error.log' and Sentry.
-		sentryLogger := slog.New(sentryslog.Option{Level: slog.LevelDebug}.NewSentryHandler())
-		logger := slog.New(NewCopyHandler(fileLogger.Handler(), sentryLogger.Handler()))
-		slog.SetDefault(logger)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
