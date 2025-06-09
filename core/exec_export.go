@@ -397,7 +397,7 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 				return nil, errMatchingPropertyConversion(inName, exName)
 			}
 		default:
-			panic(fmt.Sprintf("core: unexpected value %#v (type %T) for internal kind %s ", v, v, in.Kind()))
+			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 		min, max := ex.IntRange()
 		if i < min || i > max {
@@ -421,7 +421,7 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 				return nil, errMatchingPropertyConversion(inName, exName)
 			}
 		default:
-			panic(fmt.Sprintf("core: unexpected value %#v (type %T) for internal kind %s ", v, v, in.Kind()))
+			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 		min, max := ex.UintRange()
 		if i < min || i > max {
@@ -438,7 +438,7 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		case string:
 			s = v
 		default:
-			panic(fmt.Sprintf("core: unexpected value %#v (type %T) for internal kind %s ", v, v, in.Kind()))
+			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 		if byteLen, ok := ex.ByteLen(); ok && len(s) > byteLen {
 			return nil, errMatchingPropertyConversion(inName, exName)
@@ -464,7 +464,7 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 			}
 			return u, nil
 		default:
-			panic(fmt.Sprintf("core: unexpected value %#v (type %T) for internal kind %s ", v, v, in.Kind()))
+			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 	}
 	panic(fmt.Sprintf("core: unexpected external kind %s", ex.Kind()))
