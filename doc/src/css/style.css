@@ -288,3 +288,16 @@ footer .company { flex: 2; text-align: right; }
 :root {
     --microtip-transition-easing: lenear;
 }
+
+body > article {
+    overflow: unset!important;
+}
+
+article aside nav {
+    position: sticky;
+    top: 10px;
+    left: 0;
+    max-height: calc(100vh - 30px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
