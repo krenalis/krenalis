@@ -162,12 +162,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
 	}
 
-	telemetryErrorTunnel := newTelemetryErrorTunnel()
-	defer telemetryErrorTunnel.Close()
+	sentryErrorTunnel := newSentryErrorTunnel()
+	defer sentryErrorTunnel.Close()
 
 	apisServer := newAPIsServer(core, settings.HTTP.TLS.Enabled,
 		javaScriptSDKURL, eventURL, externalURL, settings.SkipMemberEmailVerification,
-		settings.SentryTelemetryLevel, telemetryErrorTunnel)
+		settings.SentryTelemetryLevel, sentryErrorTunnel)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {

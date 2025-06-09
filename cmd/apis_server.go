@@ -62,7 +62,7 @@ type apisServer struct {
 	skipMemberEmailVerification bool
 	sentryTelemetry             struct {
 		level       core.TelemetryLevel
-		errorTunnel *telemetryErrorTunnel
+		errorTunnel *sentryErrorTunnel
 	}
 }
 
@@ -71,7 +71,7 @@ type apisServer struct {
 // runsOnHTTPs indicates if the server runs on HTTPS.
 func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 	javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool,
-	sentryTelemetryLevel core.TelemetryLevel, telemetryErrorTunnel *telemetryErrorTunnel) *apisServer {
+	sentryTelemetryLevel core.TelemetryLevel, sentryErrorTunnel *sentryErrorTunnel) *apisServer {
 
 	s := &apisServer{
 		core:                        core,
@@ -82,7 +82,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 		skipMemberEmailVerification: skipMemberEmailVerification,
 	}
 	s.sentryTelemetry.level = sentryTelemetryLevel
-	s.sentryTelemetry.errorTunnel = telemetryErrorTunnel
+	s.sentryTelemetry.errorTunnel = sentryErrorTunnel
 
 	encryptionKey := core.EncryptionKey()
 	hashKey, blockKey := encryptionKey[:32], encryptionKey[32:]
@@ -178,12 +178,12 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 		"POST   /members":                                        organization.AddMember,    /* only admin */
 		"POST   /members/invitations":                            organization.InviteMember, /* only admin */
 		"POST   /members/login":                                  s.login,
-		"POST   /members/logout":                                 s.logout,                /* only admin */
-		"POST   /telemetry/errors":                               s.forwardTelemetryError, /* only admin */
-		"POST   /transformations":                                api.TransformData,       /* only admin */
-		"POST   /ui":                                             workspace.ServeUI,       /* only admin */
-		"POST   /ui-event":                                       workspace.ServeUI,       /* only admin */
-		"POST   /validate-expression":                            api.ValidateExpression,  /* only admin */
+		"POST   /members/logout":                                 s.logout,               /* only admin */
+		"POST   /sentry/errors":                                  s.forwardSentryError,   /* only admin */
+		"POST   /transformations":                                api.TransformData,      /* only admin */
+		"POST   /ui":                                             workspace.ServeUI,      /* only admin */
+		"POST   /ui-event":                                       workspace.ServeUI,      /* only admin */
+		"POST   /validate-expression":                            api.ValidateExpression, /* only admin */
 		"POST   /warehouse/repair":                               workspace.RepairWarehouse,
 		"POST   /workspaces":                                     organization.CreateWorkspace,
 		"POST   /workspaces/test":                                organization.TestWorkspaceCreation,
@@ -241,17 +241,24 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "POST", "PUT":
-		// Validate the content type.
-		mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		if err != nil || (mt != "application/json" && mt != "text/plain") || len(params) > 1 {
-			err := errors.BadRequest("request's content type must be 'application/json'")
-			_ = err.WriteTo(w)
-			return
-		}
-		if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
-			err := errors.BadRequest("request's content type charset must be 'utf-8'")
-			_ = err.WriteTo(w)
-			return
+		if r.URL.Path == "/api/v1/sentry/errors" {
+			// In this case, do not validate the content type, because when the
+			// Sentry SDK sends user feedback with screenshots attached, the
+			// content type is not JSON, and therefore this check would fail,
+			// preventing such reports from being sent to Sentry.
+		} else {
+			// Validate the content type.
+			mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+			if err != nil || (mt != "application/json" && mt != "text/plain") || len(params) > 1 {
+				err := errors.BadRequest("request's content type must be 'application/json'")
+				_ = err.WriteTo(w)
+				return
+			}
+			if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
+				err := errors.BadRequest("request's content type charset must be 'utf-8'")
+				_ = err.WriteTo(w)
+				return
+			}
 		}
 		// Validate the content length.
 		if cl := r.Header.Get("Content-Length"); cl != "" {
@@ -365,9 +372,9 @@ func (s *apisServer) credentials(r *http.Request) (*core.Organization, *core.Wor
 
 var errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or is no longer valid")
 
-// forwardTelemetryError forwards a telemetry error from a client to Sentry.
+// forwardSentryError forwards a telemetry error from a client to Sentry.
 // If the user is not logged in, this method does nothing.
-func (s *apisServer) forwardTelemetryError(w http.ResponseWriter, r *http.Request) (any, error) {
+func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) (any, error) {
 	// Check if the user is logged. If not, discard the reported errors.
 	organization := organization{s}
 	_, _, err := organization.memberCredentials(r)

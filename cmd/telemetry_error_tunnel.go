@@ -40,7 +40,7 @@ var (
 // debugTunnel, if enabled, prints debug tunnel information to stderr.
 const debugTunnel = false
 
-type telemetryErrorTunnel struct {
+type sentryErrorTunnel struct {
 	done   chan bool
 	ticker *time.Ticker
 
@@ -48,10 +48,10 @@ type telemetryErrorTunnel struct {
 	requestsPerIP map[string]int
 }
 
-// newTelemetryErrorTunnel instantiates a new telemetryErrorsTunnel, which can
+// newSentryErrorTunnel instantiates a new telemetryErrorsTunnel, which can
 // be used to forward error reporting from a client to Sentry.
-func newTelemetryErrorTunnel() *telemetryErrorTunnel {
-	t := &telemetryErrorTunnel{
+func newSentryErrorTunnel() *sentryErrorTunnel {
+	t := &sentryErrorTunnel{
 		done:          make(chan bool),
 		ticker:        time.NewTicker(timeSlotDuration),
 		requestsPerIP: map[string]int{},
@@ -75,7 +75,7 @@ func newTelemetryErrorTunnel() *telemetryErrorTunnel {
 // There is a maximum number of requests that a client can request to forward to
 // Sentry in a given time slot; if this limit is exceeded, forward requests are
 // silently ignored.
-func (t *telemetryErrorTunnel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (t *sentryErrorTunnel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	clientIP, ok := normalizedIP(r)
 	if !ok {
 		return
@@ -95,7 +95,7 @@ func (t *telemetryErrorTunnel) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	debugTunnelInfo("forwarded POST request to %s from client %q", sentryUpstreamAdminURL, clientIP)
 }
 
-func (t *telemetryErrorTunnel) Close() {
+func (t *sentryErrorTunnel) Close() {
 	t.done <- true
 }
 
@@ -104,7 +104,7 @@ func (t *telemetryErrorTunnel) Close() {
 //
 // If the number of requests exceeds the maximum allowed, the counter is not
 // incremented and an error is returned.
-func (t *telemetryErrorTunnel) increaseRequestsPerIP(ip string) error {
+func (t *sentryErrorTunnel) increaseRequestsPerIP(ip string) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	count := t.requestsPerIP[ip]
@@ -116,7 +116,7 @@ func (t *telemetryErrorTunnel) increaseRequestsPerIP(ip string) error {
 	return nil
 }
 
-func (t *telemetryErrorTunnel) clearRequestsPerIP() {
+func (t *sentryErrorTunnel) clearRequestsPerIP() {
 	debugTunnelInfo("clearing 'requestsPerIP'")
 	t.mu.Lock()
 	clear(t.requestsPerIP)
