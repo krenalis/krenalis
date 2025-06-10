@@ -55,12 +55,12 @@ type Writer struct {
 	app    UpsertableApp  // app connector
 	name   string         // name of the app connector
 	ack    AckFunc        // ack function
-	timer  *time.Timer    // timer to trigger an iterator every maxTimeBetweenIterations
 
-	mu        sync.Mutex // mutex for iterator, records, index, and available fields
-	iterator  *iterator  // current iterator, if any; protected by mu
-	records   []record   // records in the queue; protected by mu
-	available int        // number of available (non-read) records; protected by mu
+	mu        sync.Mutex  // mutex for iterator, records, index, and available fields
+	iterator  *iterator   // current iterator, if any; protected by mu
+	records   []record    // records in the queue; protected by mu
+	available int         // number of available (non-read) records; protected by mu
+	timer     *time.Timer // timer to trigger an iterator every maxTimeBetweenIterations; protected by mu
 
 	close struct {
 		closed    atomic.Bool        // indicates if the writer has been closed
@@ -102,12 +102,12 @@ func New(ack AckFunc, target state.Target, app UpsertableApp, name string) *Writ
 					iter = newIterator(w)
 					w.iterator = iter
 				}
+				w.timer.Reset(maxTimeBetweenIterations)
 				w.mu.Unlock()
 				if iter != nil {
 					w.close.iterators.Add(1)
 					go w.consume(iter)
 				}
-				w.timer.Reset(maxTimeBetweenIterations)
 			case <-w.close.ctx.Done():
 				return
 			}
