@@ -1,9 +1,9 @@
-import { scrollSidebar } from "./sidebar.js";
+import { handleSidebar } from "./sidebar.js";
+import { buildTableOfContent } from "./table-of-content.js";
 
 const setup = () => {
-    setTimeout(() => {
-        scrollSidebar();
-    }, 100);
+    handleSidebar();
+    buildTableOfContent();
 };
 
 setup();

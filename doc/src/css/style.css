@@ -250,6 +250,13 @@ footer .company { flex: 2; text-align: right; }
     .page-support .support > div:first-child { border: none; }
     .page-support .support .channel { margin-left: 0; }
 
+    .article aside { margin: 1rem 0; }
+    .article aside button { background: #f4f6f8; border: 0; cursor: pointer; display: block; font-size: 14px; font-weight: bold; line-height: 19px; padding-right: 40px; padding: 12px; text-align: left; width: 100%; }
+    .article 
+    .article aside nav { display: none; padding: 0 1rem; }
+    .article aside.expanded nav { display: block; }
+    .article aside ul a { font-size: .9rem; }
+    .article article > .wrap { display: block; padding-top: 1em; }
 }
 
 @media only screen and (max-width: 767px) {
@@ -270,14 +277,6 @@ footer .company { flex: 2; text-align: right; }
     .index body > section.benchmark { padding: 1rem; }
     .benchmark, .benchmark + .benchmark { padding: 0; width: auto; }
 
-    .article aside { margin: 1rem 0; }
-    .article aside button { background: #f4f6f8; border: 0; cursor: pointer; display: block; font-size: 14px; font-weight: bold; line-height: 19px; padding-right: 40px; padding: 12px; text-align: left; width: 100%; }
-    .article 
-    .article aside nav { display: none; padding: 0 1rem; }
-    .article aside.expanded nav { display: block; }
-    .article aside ul a { font-size: .9rem; }
-    .article article > .wrap { display: block; padding-top: 1em; }
-
     .get-meergo { font-size: .9rem; }
 
     footer { font-size: 0.8rem; text-align: center; }
@@ -287,17 +286,213 @@ footer .company { flex: 2; text-align: right; }
 
 :root {
     --microtip-transition-easing: lenear;
+    --sidebar-width: 280px;
+    --header-height: 50px;
+    --mobile-header-height: 80px;
+    --border-primary: #e6e6e6;
+    --bg-primary: #fff;
+    --main-width: 1200px;
+    --table-of-content-width: 200px;
 }
 
 body > article {
     overflow: unset!important;
 }
 
-article aside nav {
+body > article > .wrap {
+    display: flex!important;
+    max-width: unset!important;
+    padding: 0!important;
+}
+
+article aside {
+    margin-right: 0!important;
+    width: var(--sidebar-width)!important;
+    min-width: var(--sidebar-width) !important;
+    border-right: 1px solid var(--border-primary);
+    margin-top: 0!important;
+    padding-left: 15px;
+}
+
+article aside nav,
+.table-of-content {
     position: sticky;
-    top: 10px;
+    top: 0;
     left: 0;
-    max-height: calc(100vh - 30px);
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+article aside nav {
+    padding-right: 30px;
+    max-height: 100vh;
+}
+
+article aside ul {
+    margin: 0;
+}
+
+article aside nav > ul {
+    padding-top: 5px!important;
+    padding-bottom: 5px!important;
+}
+
+.article aside li h4 {
+    margin: 0!important
+}
+
+body > article > .wrap > .main {
+    width: 100%;
+}
+
+body > article > .wrap > .main > .content {
+    max-width: var(--main-width);
+    padding-left: 30px;
+    padding-right: 30px;
+    overflow-x: unset;
+}
+
+.header {
+    border-bottom: 1px solid var(--border-primary);
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    padding-left: 30px;
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-primary);
+    z-index: 90;
+}
+
+.header .sections {
+    display: block;
+    margin: 0!important;
+}
+
+.header .sections,
+.header .sections > a:first-child {
+    padding-left: 0;
+}
+
+.sidebar-button {
+    border-radius: 5px;
+}
+
+.table-of-content {
+    position: fixed;
+    text-align: right;
+    margin-top: calc(var(--header-height) + 30px);
+    max-height: calc(100vh - var(--header-height));
+    left: calc(var(--sidebar-width) + var(--main-width));
+    width: var(--table-of-content-width);
+    padding-left: 10px;
+}
+
+.table-of-content a {
+    display: block;
+    margin-bottom: 7px;
+    color: #555;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color .3s;
+}
+
+.table-of-content a:hover {
+    color: #4f46e5;
+}
+
+.article .api-spec .api-request-box code {
+    width: unset!important;
+}
+
+.article .api-spec .spec {
+    column-gap: 50px;
+    grid-template-columns: 45% calc(55% - 50px);
+}
+
+.article .api-spec:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.article pre {
+    overflow-x: unset;
+}
+
+@media screen and (max-width: 1700px)  {
+
+    .table-of-content {
+        display: none;
+    }
+
+}
+
+@media screen and (max-width: 1024px) {
+
+    .article article > .wrap {
+        display: block!important;
+    }
+
+    article aside {
+        width: 100% !important;
+        margin-top: var(--header-height) !important;
+        padding: 10px 30px !important;
+        background-color: var(--bg-primary)!important;
+        border-bottom: 1px solid var(--border-primary);
+        z-index: 99;
+    }
+
+    article aside nav {
+        max-height: unset!important;
+    }
+
+    .header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 0 20px;
+        font-size: 13px;
+        justify-content: center;
+        background-color: var(--bg-primary)!important;
+        border: 0;
+        margin-top: 5px;
+    }
+
+    .header .sections > a {
+        padding-left: 0!important;
+        padding-right: 0!important;
+        margin: 0 10px!important;
+    }
+
+}
+
+@media screen and (max-width: 768px) {
+
+    .article .api-spec .spec {
+        display: block!important;
+    }
+
+}
+
+@media screen and (max-width: 480px) {
+
+    .header {
+        height: var(--mobile-header-height);
+    }
+
+    .header .sections {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+    }
+
+    .header .sections > a {
+        padding-bottom: 3px!important;
+    }
+
+    article aside {
+        margin-top: var(--mobile-header-height)!important;
+    }
+
 }

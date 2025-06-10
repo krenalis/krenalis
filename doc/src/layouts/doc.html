@@ -17,7 +17,7 @@
 <article>
     <div class="wrap">
         <aside>
-            <button onclick="$(this.parentNode).toggleClass('expanded')">In this section<span></span></button>
+            <button class="sidebar-button">In this section<span></span></button>
             <nav>
                 <ul>
                     {% if hasPrefix(filepath, "connectors/") %}
@@ -221,18 +221,21 @@
                 </ul>
             </nav>
         </aside>
-        <div class="content">
-            <nav class="sections">
-                <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "developers/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
-                <a href="/connectors/"{% if hasPrefix(filepath, "connectors/") %} class="selected"{% end %}>Connectors</a>
-                <a href="/developers/"{% if hasPrefix(filepath, "developers/") %} class="selected"{% end %}>Developers</a>
-                <a href="/api/"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
-            </nav>
-            {{ Article() }}
+        <div class="main">
+            <div class="header">
+                <nav class="sections">
+                    <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "developers/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
+                    <a href="/connectors/"{% if hasPrefix(filepath, "connectors/") %} class="selected"{% end %}>Connectors</a>
+                    <a href="/developers/"{% if hasPrefix(filepath, "developers/") %} class="selected"{% end %}>Developers</a>
+                    <a href="/api/"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
+                </nav>
+            </div>
+            <div class="content">
+                {{ Article() }}
+            </div>
         </div>
     </div>
 </article>
-{{ render "/partials/footer.html" }}
 {{ highlight.JS() }}
 <script src="/js/index.js" type="module"></script>
 {{ copyAPIRequest.JS() }}
