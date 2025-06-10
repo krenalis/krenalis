@@ -100,11 +100,18 @@ func Main(assets fs.FS) {
 			Debug:            false, // set to "true" to get information about telemetry sent to Sentry.
 			AttachStacktrace: true,
 			SendDefaultPII:   false, // TODO: is it okay to set it to false? See https://github.com/meergo/meergo/issues/1517.
-			// The default integrations provided by the Sentry SDK are preserved
-			// here. We may consider enabling them selectively in the future,
-			// but for now they seem reasonable. The list of integrations loaded
-			// by the Sentry SDK is available here:
-			// https://github.com/getsentry/sentry-go/blob/master/integrations.go.
+			Integrations: func(integrations []sentry.Integration) []sentry.Integration {
+				// The list of integrations loaded by the Sentry SDK by default
+				// is available here: https://github.com/getsentry/sentry-go/blob/master/integrations.go.
+				var filteredIntegrations []sentry.Integration
+				for _, integration := range integrations {
+					if integration.Name() == "ContextifyFrames" {
+						continue
+					}
+					filteredIntegrations = append(filteredIntegrations, integration)
+				}
+				return filteredIntegrations
+			},
 		})
 		if err != nil {
 			slog.Error("cmd: cannot init Sentry", "err", err)
