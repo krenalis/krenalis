@@ -80,6 +80,11 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 	return map[string]any{"connectors": api.core.Connectors()}, nil
 }
 
+// InstallationID returns the installation ID.
+func (api api) InstallationID(w http.ResponseWriter, r *http.Request) (any, error) {
+	return api.core.InstallationID(), nil
+}
+
 // EventSchema returns the event schema.
 func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {

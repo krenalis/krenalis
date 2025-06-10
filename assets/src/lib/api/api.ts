@@ -74,6 +74,10 @@ class API {
 		this.connectors = new Connectors(origin, apiURL);
 	}
 
+	installationID = async (): Promise<string> => {
+		return await call(`${this.apiURL}/installation-id`, http.GET);
+	};
+
 	javaScriptSDKURL = async (): Promise<string> => {
 		return await call(`${this.apiURL}/javascript-sdk-url`, http.GET);
 	};

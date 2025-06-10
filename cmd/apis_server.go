@@ -139,6 +139,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 		"GET    /events/settings/{write_key}":                    api.EventsSettings,
 		"GET    /identity-resolution/latest":                     workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":                   workspace.IdentityResolutionSettings,
+		"GET    /installation-id":                                api.InstallationID,                   /* only admin */
 		"GET    /javascript-sdk-url":                             api.JavaScriptSDKURL,                 /* only admin */
 		"GET    /keys":                                           organization.APIKeys,                 /* only admin */
 		"GET    /members":                                        organization.Members,                 /* only admin */

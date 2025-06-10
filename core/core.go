@@ -196,7 +196,7 @@ func New(conf *Config) (*Core, error) {
 	// Add the Meergo installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
-			scope.SetTag("meergo_installation_id", core.state.InstallationID())
+			scope.SetTag("meergo_installation_id", core.InstallationID())
 		})
 	}
 
@@ -547,6 +547,11 @@ func (core *Core) Connectors() []*Connector {
 func (core *Core) CountOrganizations(ctx context.Context) int {
 	core.mustBeOpen()
 	return len(core.state.Organizations())
+}
+
+// InstallationID returns the installation ID.
+func (core *Core) InstallationID() string {
+	return core.state.InstallationID()
 }
 
 // EncryptionKey returns the encryption key. It is 64 bytes long.

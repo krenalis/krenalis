@@ -63,6 +63,7 @@ const useApp = (
 
 	useEffect(() => {
 		const loadAppState = async () => {
+			// Retrieve telemetry level from server.
 			let telemetryLevel: TelemetryLevel = 'all';
 			try {
 				telemetryLevel = await api.telemetryLevel();
@@ -72,6 +73,17 @@ const useApp = (
 				return;
 			}
 			if (telemetryLevel == 'errors' || telemetryLevel == 'all') {
+				// Retrieves the installation ID from the server, which will
+				// then be added as a tag to events sent to Sentry.
+				let installationID: string;
+				try {
+					installationID = await api.installationID();
+				} catch (err) {
+					handleError(err);
+					setIsLoadingState(false);
+					return;
+				}
+				// Initialize the Sentry SDK.
 				Sentry.init({
 					dsn: 'https://4bc227ec8dc487e9bae1f3aea7f3ede1@o4509282180136960.ingest.de.sentry.io/4509292547211344',
 					tunnel: '/api/v1/sentry/errors',
@@ -137,6 +149,8 @@ const useApp = (
 						}),
 					],
 				});
+				// Add the installation ID as tag
+				Sentry.setTag('meergo_installation_id', installationID);
 			}
 
 			// get the workspaces list.
