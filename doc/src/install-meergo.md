@@ -87,6 +87,8 @@ For this installation method you need to have [Go](https://go.dev/doc/install) 1
    go build
    ```
 
+   > Note: You can provide the `-trimpath` option to the `go build` command to remove absolute paths from any error stack traces in Meergo. This way, if telemetry is enabled, the absolute paths will not be sent.
+
    Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
 
 Proceed with the [configuration](#configuration) after completing these steps.
@@ -113,6 +115,8 @@ For this installation method you need to have [Git](https://git-scm.com/download
    go generate
    go build
    ```
+
+   > Note: You can provide the `-trimpath` option to the `go build` command to remove absolute paths from any error stack traces in Meergo. This way, if telemetry is enabled, the absolute paths will not be sent.
 
    Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
 

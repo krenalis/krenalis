@@ -19,6 +19,10 @@
 //  7. Generate the assets: go generate
 //  8. Build: go build
 //
+// Note: You can provide the '-trimpath' option to the 'go build' command to
+// remove absolute paths from any error stack traces in Meergo. This way, if
+// telemetry is enabled, the absolute paths will not be sent.
+//
 // Note: Re-execute 'go generate' if you change Meergo module version.
 //
 // See also https://github.com/meergo/meergo/blob/main/doc/src/getting-started.md
