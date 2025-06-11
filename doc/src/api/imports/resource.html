@@ -202,12 +202,12 @@
           {% end %}
           {% body := bodyParameters(endpoint) %}
           {% queryString := queryStringParameters(endpoint) %}
-          <div>   -H "<span>Authorization: Bearer &lt;YOUR_{% if endpoint.writeKeyAuth %}WRITE{% else %}API{% end %}_KEY&gt;</span>"{% if body or queryString %} \{% end %}</div>
+          <div>  -H "<span>Authorization: Bearer &lt;YOUR_{% if endpoint.writeKeyAuth %}WRITE{% else %}API{% end %}_KEY&gt;</span>"{% if body or queryString %} \{% end %}</div>
           {% if body %}
-          <div>   --json '<span>{{ requestToHTML(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</span>'</div>
+          <div>  --json '<span>{{ requestToHTML(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</span>'</div>
           {% end if %}
           {% if queryString %}
-            {% for i, p := range queryString %}<div>   -d "{{ p.placeholder }}"{% if i != len(queryString) - 1 %} \{% end if %}</div>{% end %}
+            {% for i, p := range queryString %}<div>  -d "{{ p.placeholder }}"{% if i != len(queryString) - 1 %} \{% end if %}</div>{% end %}
           {% end %}
         </code>
       </div>

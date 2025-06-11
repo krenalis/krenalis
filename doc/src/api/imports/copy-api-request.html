@@ -14,9 +14,15 @@
     document.querySelectorAll('.api-request-box .copy-request').forEach(element => {
       element.addEventListener('click', async (event) => {
         const t = event.currentTarget;
-		    const text = t.closest('.api-request-box').querySelector('code').textContent.trim().replace(/\u00A0/g, ' ');
+        const codeWrapper = t.closest(".api-request-box").querySelector("code");
+        const lines = Array.from(codeWrapper.childNodes).filter(
+          (node) => node.nodeType === Node.ELEMENT_NODE
+        );
+        const code = lines
+          .map((node) => node.textContent.replace(/\u00A0/g, " ").replace(/\s+$/, ""))
+          .join("\n");
 		    try {
-			    await navigator.clipboard.writeText(text);
+			    await navigator.clipboard.writeText(code);
 			    const label = t.getAttribute('aria-label');
 			    t.setAttribute('aria-label', 'Copied');
 			    t.addEventListener('mouseleave', () => { t.setAttribute('aria-label', label) }, { once: true });
