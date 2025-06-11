@@ -98,7 +98,7 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, event meergo.RawEvent, eve
 	if redacted {
 		authorization = "[REDACTED]"
 	}
-	req.Header.Set("Authorization", authorization)
+	req.Header.Set("Authorization", "Basic "+authorization)
 
 	body := properties["properties"].(map[string]any)
 	body["$insert_id"] = event.MessageId()
