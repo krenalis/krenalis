@@ -404,7 +404,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 	return nil
 }
 
-// simulateHTTPDelay simulates an HTTP delay. If the settings indicates not to
+// simulateHTTPDelay simulates an HTTP delay. If the settings indicate not to
 // simulate delay, this method does nothing.
 func (dummy *Dummy) simulateHTTPDelay() {
 	if !dummy.settings.SimulateHTTPDelay {
