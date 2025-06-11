@@ -101,14 +101,14 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, event meergo.RawEvent, eve
 	req.Header.Set("Authorization", authorization)
 
 	body := properties["properties"].(map[string]any)
-	body["$insert_id"] = event.MessageId
+	body["$insert_id"] = event.MessageId()
 	body["time"] = formatTimestamp(event.Timestamp())
 	distinctID := event.AnonymousId()
 	if userId := event.UserId(); userId != "" {
 		distinctID = userId
 	}
 	body["distinct_id"] = distinctID
-	body["$device_id"] = event.AnonymousId
+	body["$device_id"] = event.AnonymousId()
 	context := event.Context()
 	if ip := context.IP(); ip == "" {
 		if location, ok := context.Location(); ok {
