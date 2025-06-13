@@ -210,7 +210,7 @@ func New(conf *Config) (*Core, error) {
 	core.datastore = datastore.New(core.state)
 
 	// Init the connectors.
-	core.connectors = connectors.New(db, core.state)
+	core.connectors = connectors.New(core.state)
 
 	// Init the events.
 	core.events.dispatcher, err = dispatcher.New(db, core.state, core.events.operationStore, core.functionProvider, core.connectors, core.metrics)

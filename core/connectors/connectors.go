@@ -181,8 +181,8 @@ type Connectors struct {
 }
 
 // New returns a new *Connectors value.
-func New(db *db.DB, state *state.State) *Connectors {
-	h := httpclient.New(db, state, http.DefaultTransport)
+func New(state *state.State) *Connectors {
+	h := httpclient.New(state, http.DefaultTransport)
 	return &Connectors{state: state, http: h}
 }
 
