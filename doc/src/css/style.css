@@ -388,6 +388,11 @@ body > article > .wrap > .main > .content {
     padding-left: 10px;
 }
 
+.table-of-content__title {
+    margin-bottom: 7px;
+    font-size: 15px;
+}
+
 .table-of-content a {
     display: block;
     margin-bottom: 7px;
