@@ -143,26 +143,6 @@ interface MapType {
 	elementType?: Type;
 }
 
-const typeKindToIconName: Record<TypeKind, string> = {
-	boolean: 'type-bold',
-	int: '123',
-	uint: '123',
-	float: '123',
-	decimal: '123',
-	datetime: 'calendar-date',
-	date: 'calendar-date',
-	time: 'clock',
-	year: '123',
-	uuid: 'fonts',
-	json: 'filetype-json',
-	inet: 'fonts',
-	text: 'fonts',
-	array: 'input-cursor',
-	object: 'braces',
-	map: 'braces-asterisk',
-};
-
-export { typeKindToIconName };
 export default Type;
 export type {
 	Property,

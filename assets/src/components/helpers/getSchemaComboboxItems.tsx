@@ -1,8 +1,8 @@
 import React from 'react';
 import { TransformedMapping, flattenSchema } from '../../lib/core/action';
-import { DecimalType, ObjectType, typeKindToIconName } from '../../lib/api/types/types';
+import { DecimalType, ObjectType } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import { TypeIcon } from '../base/TypeIcon/TypeIcon';
 
 const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): ComboboxItem[] => {
 	if (schema == null) {
@@ -132,7 +132,7 @@ const computeItems = (flatSchema: TransformedMapping) => {
 			content: (
 				<div className='schema-combobox-item' key={name}>
 					<div className='schema-combobox-item__type'>
-						<SlIcon name={typeKindToIconName[typ]} />
+						<TypeIcon kind={typ} />
 					</div>
 					<div className='schema-combobox-item__text'>
 						<div className='schema-combobox-item__name'>{name}</div>

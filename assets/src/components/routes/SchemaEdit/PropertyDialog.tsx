@@ -13,7 +13,6 @@ import {
 	MapType,
 	TextType,
 	TypeKind,
-	typeKindToIconName,
 	UintType,
 } from '../../../lib/api/types/types';
 import { PropertyToEdit } from './useSchemaEdit';
@@ -27,6 +26,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { enrichPropertyType } from '../../helpers/enrichPropertyType';
+import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
 
 const TYPE_KINDS: TypeKind[] = [
 	'boolean',
@@ -666,7 +666,7 @@ const PropertyDialog = ({
 								>
 									{TYPE_KINDS.map((t) => (
 										<SlOption key={t} value={t}>
-											<SlIcon slot='prefix' name={typeKindToIconName[t]} />
+											<TypeIcon slot='prefix' kind={t} />
 											{t}
 										</SlOption>
 									))}
@@ -687,7 +687,7 @@ const PropertyDialog = ({
 												if (t !== 'array' && t !== 'map' && t !== 'object') {
 													return (
 														<SlOption key={t} value={t}>
-															<SlIcon slot='prefix' name={typeKindToIconName[t]} />
+															<TypeIcon slot='prefix' kind={t} />
 															{t}
 														</SlOption>
 													);
@@ -713,7 +713,7 @@ const PropertyDialog = ({
 												if (t !== 'array' && t !== 'map' && t !== 'object') {
 													return (
 														<SlOption key={t} value={t}>
-															<SlIcon slot='prefix' name={typeKindToIconName[t]} />
+															<TypeIcon slot='prefix' kind={t} />
 															{t}
 														</SlOption>
 													);
