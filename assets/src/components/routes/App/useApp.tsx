@@ -108,46 +108,6 @@ const useApp = (
 						}
 						return breadcrumb;
 					},
-					integrations: [
-						Sentry.feedbackIntegration({
-							colorScheme: 'dark',
-							onFormOpen: () => {
-								const shadowRoot = document.querySelector('#sentry-feedback').shadowRoot;
-								if (!shadowRoot) {
-									return;
-								}
-								const dialog = shadowRoot.querySelector('.dialog');
-								const observer = new MutationObserver((mutations) => {
-									for (const m of mutations) {
-										for (const node of Array.from(m.addedNodes)) {
-											if (node instanceof HTMLElement && node.matches('.editor')) {
-												const wrapper = node.querySelector('.editor__canvas-container');
-												const bg = node.querySelector('.editor__image-container #background');
-												const fg = node.querySelector('.editor__image-container #foreground');
-												const inner = node.querySelector('.editor__canvas-container > div');
-
-												const imageWidth = bg.getAttribute('width');
-												const imageHeight = bg.getAttribute('height');
-												const wrapperHeight = wrapper.clientHeight;
-												const scale = wrapperHeight / Number(imageHeight);
-												const scaledWidth = Number(imageWidth) * scale;
-
-												for (const el of [bg, fg, inner]) {
-													(el as any).style.width = `${scaledWidth}px`;
-													(el as any).style.height = `${wrapperHeight}px`;
-												}
-
-												// Force recomputation of canvas size.
-												window.dispatchEvent(new Event('resize'));
-											}
-										}
-									}
-								});
-								observer.observe(dialog, { childList: true, subtree: true });
-								feedbackObserverRef.current = observer;
-							},
-						}),
-					],
 				});
 				// Add the installation ID as tag
 				Sentry.setTag('meergo_installation_id', installationID);

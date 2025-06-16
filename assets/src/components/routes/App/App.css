@@ -408,9 +408,3 @@ sl-split-panel sl-icon[slot='divider'] {
 	opacity: 0.8;
 	font-family: var(--monospace-fonts);
 }
-
-/* Sentry */
-
-#sentry-feedback {
-	--actor-background: #29232fcc;
-}
