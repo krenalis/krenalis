@@ -280,8 +280,8 @@ func (c *actionCleaner) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	}
 }
 
-// purgeWorkspace purges the identities associated with the delete actions of
-// a workspace. bo is non-nil only when a purge is being retried.
+// purgeWorkspace purges the identities associated with actions that have been
+// deleted for the workspace with the identifier id.
 func (c *actionCleaner) purgeWorkspace(id int) {
 
 	if _, ok := c.workspaces.Swap(id, true); ok {
