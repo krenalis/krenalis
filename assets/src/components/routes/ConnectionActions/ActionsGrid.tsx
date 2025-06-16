@@ -133,8 +133,6 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		executeActionDropdownButtonRefs.current[actionID].current.hideTooltip();
 	};
 
-	const isActionExecutionSupported = connection.connector.type !== 'SDK';
-
 	const rows: GridRow[] = [];
 	for (const action of actions) {
 		const actionType = connection.actionTypes.find(
@@ -145,6 +143,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				`Connection ${connection.id} no longer has target '${action.target}' and event type '${action.eventType}' for action ${action.id}`,
 			);
 		}
+
+		const isActionExecutionSupported =
+			(action.target === 'User' || action.target === 'Group') && connection.connector.type !== 'SDK';
 
 		let description = actionType.description;
 		if (connection.isFileStorage) {
@@ -206,7 +207,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		}
 		const actionsCell = (
 			<div className='connection-actions__buttons'>
-				{(action.target === 'User' || action.target === 'Group') && isActionExecutionSupported && (
+				{isActionExecutionSupported && (
 					<>
 						<FeedbackButton
 							ref={executeActionButtonRefs.current[action.id]}
@@ -268,17 +269,19 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 						<SlIcon slot='prefix' name='three-dots-vertical' />
 					</SlButton>
 					<SlMenu className='connection-actions__menu'>
-						<FeedbackButton
-							ref={executeActionDropdownButtonRefs.current[action.id]}
-							className='connection-actions__run-button'
-							size='small'
-							onClick={() => executeAction(connection, action.id)}
-							disabled={!action.enabled}
-							hoist={true}
-							placement='left'
-						>
-							Run now
-						</FeedbackButton>
+						{isActionExecutionSupported && (
+							<FeedbackButton
+								ref={executeActionDropdownButtonRefs.current[action.id]}
+								className='connection-actions__run-button'
+								size='small'
+								onClick={() => executeAction(connection, action.id)}
+								disabled={!action.enabled}
+								hoist={true}
+								placement='left'
+							>
+								Run now
+							</FeedbackButton>
+						)}
 						<SlMenuItem className='connection-actions__manage-button' onClick={() => onManageClick(action)}>
 							Manage...
 						</SlMenuItem>
