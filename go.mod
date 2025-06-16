@@ -40,7 +40,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.36.0
-	github.com/twmb/franz-go v1.19.3
+	github.com/twmb/franz-go v1.19.5
 	github.com/xuri/excelize/v2 v2.9.1
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.35.0
