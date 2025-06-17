@@ -1,16 +1,18 @@
 
 ## App connectors
 
-| Method         | Settings       | SetSettings    | OAuthAccount           | HTTPClient             |
-|----------------|----------------|----------------|------------------------|------------------------|
-| EventRequest   | ✓              | ✓              | ✓                      | ✓                      |
-| EventTypes     | ✓              | ✓              | ✓                      | ✓                      |
-| OAuthAccount   | -              | -              | -                      | ✓                      |
-| ReceiveWebhook | ✓ (connection) | ✓ (connection) | ✓ (account,connection) | ✓ (account,connection) |
-| Records        | ✓              | ✓              | ✓                      | ✓                      |
-| Schema         | ✓              | ✓              | ✓                      | ✓                      |
-| ServeUI        | -/✓            | -/✓            | ✓                      | ✓                      |
-| Upsert         | ✓              | ✓              | ✓                      | ✓                      |
+| Method            | Settings       | SetSettings    | OAuthAccount           | HTTPClient             |
+|-------------------|----------------|----------------|------------------------|------------------------|
+| EventTypeSchema   | ✓              | ✓              | ✓                      | ✓                      |
+| EventTypes        | ✓              | ✓              | ✓                      | ✓                      |
+| OAuthAccount      | -              | -              | -                      | ✓                      |
+| PreviewSendEvents | ✓              | ✓              | ✓                      | ✓                      |
+| ReceiveWebhook    | ✓ (connection) | ✓ (connection) | ✓ (account,connection) | ✓ (account,connection) |
+| RecordSchema      | ✓              | ✓              | ✓                      | ✓                      |
+| Records           | ✓              | ✓              | ✓                      | ✓                      |
+| ServeUI           | -/✓            | -/✓            | ✓                      | ✓                      |
+| SendEvents        | ✓              | ✓              | ✓                      | ✓                      |
+| Upsert            | ✓              | ✓              | ✓                      | ✓                      |
 
 
 ## Database connectors

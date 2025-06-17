@@ -62,11 +62,6 @@ func New(conf *meergo.AppConfig) (*Klaviyo, error) {
     // ...
 }
 
-// EventRequest returns a request to send an event to the app.
-func (ky *Klaviyo) EventRequest(ctx context.Context, event meergo.RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
-    // ...
-}
-
 // EventTypeSchema returns the schema of the specified event type.
 func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
     // ...
@@ -74,6 +69,12 @@ func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types
 
 // EventTypes returns the event types of the connector's instance.
 func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+    // ...
+}
+
+// PreviewSendEvents builds and returns the HTTP request that would be used to
+// send the given events to the app, without actually sending it.
+func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events Events) (*http.Request, error) {
     // ...
 }
 
@@ -90,6 +91,12 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role
 
 // Records returns the records of the specified target.
 func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+    // ...
+}
+
+// SendEvents sends events to an app. events is a non-empty sequence of
+// events to send.
+func (ky *Klaviyo) SendEvents(ctx context.Context, events Events) error {
     // ...
 }
 

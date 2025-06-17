@@ -147,10 +147,10 @@ type Events interface {
     // events. The returned event must not be modified.
     Peek() (*Event, bool)
 
-	// SameUser returns an iterator over the events of the same user. Properties of
-	// the events in the sequence may be modified unless the event is subsequently
-	// skipped.
-	SameUser() iter.Seq2[int, *Event]
+    // SameUser returns an iterator over the events of the same user. Properties of
+    // the events in the sequence may be modified unless the event is subsequently
+    // skipped.
+    SameUser() iter.Seq2[int, *Event]
 
     // Skip skips the current event in the iteration and marks it as unread. The
     // subsequent iteration will resume at the next event while preserving the same
@@ -215,7 +215,7 @@ If the application supports processing multiple events in a batch but requires t
 Below is an example implementation:
 
 ```go
-func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error { {
+func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
     // Prepare request.
     req := &meergo.EventsRequest{
@@ -269,7 +269,7 @@ If the application supports sending multiple events from different users in a si
 Here is an example implementation:
 
 ```go
-func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error { {
+func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
     // Prepare request.
     req := &meergo.EventsRequest{

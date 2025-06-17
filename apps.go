@@ -296,7 +296,8 @@ type EventSender interface {
 	// send an event of this type. Actions based on the specified event type
 	// will have a transformation that, given the received event, provides the
 	// properties required by the connector. These properties, along with the
-	// raw event, are passed to the connector's EventRequest method.
+	// raw event, are passed to the connector's PreviewSendEvents and SendEvents
+	// methods.
 	//
 	// If no extra information is needed for the event type, the returned schema
 	// is the invalid schema. If the event type does not exist, it returns the
