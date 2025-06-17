@@ -31,14 +31,14 @@ func main() {
 	cliOptions := parseCli()
 
 	if cliOptions.justTestAdmin {
-		runGoTestAdmin(cliOptions.explicit)
+		runGoTestAdmin()
 		os.Exit(0)
 	}
 
 	start := time.Now()
 
 	// Check if the locally installed Deno version is correct.
-	checkDenoVersion(cliOptions.explicit)
+	checkDenoVersion()
 
 	// Find modules and packages in the current working directory, then ensure
 	// that the script has been launched with the correct working directory.
@@ -61,101 +61,77 @@ func main() {
 	}
 
 	// Tidy modules.
-	if cliOptions.explicit {
-		fmt.Println("Tidy modules")
-	}
+	fmt.Println("Tidy modules")
 	for _, module := range modules {
-		removeGoSum(repo, module, cliOptions.explicit)
-		NewCmd("go", "mod", "tidy").InDir(repo, module).Run(cliOptions.explicit)
+		removeGoSum(repo, module)
+		NewCmd("go", "mod", "tidy").InDir(repo, module).Run()
 	}
 
 	// Format modules.
-	if cliOptions.explicit {
-		fmt.Println("Format modules")
-	}
+	fmt.Println("Format modules")
 	for _, module := range modules {
-		NewCmd("go", "fmt", "./...").InDir(repo, module).Run(cliOptions.explicit)
+		NewCmd("go", "fmt", "./...").InDir(repo, module).Run()
 	}
 
 	// Running 'go vet' on every module.
-	if cliOptions.explicit {
-		fmt.Println("Running 'go vet' on every module")
-	}
+	fmt.Println("Running 'go vet' on every module")
 	for _, module := range modules {
-		NewCmd("go", "vet", "./...").InDir(repo, module).Run(cliOptions.explicit)
+		NewCmd("go", "vet", "./...").InDir(repo, module).Run()
 	}
 
 	// Run Go tests.
 	if runGoTests := !cliOptions.noGoTest; runGoTests {
-		if cliOptions.explicit {
-			fmt.Println("Run Go tests")
+		fmt.Println("Run Go tests")
+		args := []string{
+			"test",
+			"-count",
+			"1",
+			"-failfast",
+			"-v",
+			// It is important to specify a timeout, because otherwise 'go test'
+			// has a default timeout of 10 minutes (see 'go help testflag'),
+			// which may not be sufficient to run all the tests inside "/test".
+			"--timeout=2h",
 		}
-		args := []string{"test", "-count", "1", "-failfast"}
 		if cliOptions.short {
 			args = append(args, "-short")
 		}
-		if cliOptions.explicit {
-			args = append(args, "-v")
-			// It is important to specify a timeout, because otherwise `go test` has
-			// a default timeout of 10 minutes (see 'go help testflag'), which is
-			// not sufficient to run all the tests inside "/test" in cases when, for
-			// example, they are executed in a GitHub Action.
-			args = append(args, "--timeout=2h")
-		} else {
-			// Just to avoid the command running indefinitely without even printing
-			// output. 18 minutes should be more than enough time to run the tests
-			// locally.
-			args = append(args, "-timeout=18m")
-		}
-		if cliOptions.explicit {
-			for _, pkg := range packages {
-				if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors/") {
-					continue // skip this package.
-				}
-				NewCmd("go", args...).InDir(repo, pkg).Run(cliOptions.explicit)
+
+		for _, pkg := range packages {
+			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors/") {
+				continue // skip this package.
 			}
-		} else {
-			args = append(args, "./...")
-			for _, module := range modules {
-				NewCmd("go", args...).InDir(repo, module).Run(cliOptions.explicit)
-			}
+			NewCmd("go", args...).InDir(repo, pkg).Run()
 		}
 	}
 
 	// Update the Go vendor.
-	NewCmd("go", "mod", "vendor").InDir(repo).Run(cliOptions.explicit)
+	NewCmd("go", "mod", "vendor").InDir(repo).Run()
 
 	// Run checks and do operations on the admin assets.
-	if cliOptions.explicit {
-		fmt.Println("Run checks and do operations on the admin assets")
-	}
-	NewCmd("npm", "install").InDir(repo, "assets").Run(cliOptions.explicit)
-	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run(cliOptions.explicit)
-	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run(cliOptions.explicit)
-	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run(cliOptions.explicit)
-	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run(cliOptions.explicit)
+	fmt.Println("Run checks and do operations on the admin assets")
+	NewCmd("npm", "install").InDir(repo, "assets").Run()
+	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run()
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run()
+	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run()
+	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run()
 
 	// Run checks and do operations on the JavaScript SDK.
-	if cliOptions.explicit {
-		fmt.Println("Run checks and do operations on the JavaScript SDK")
-	}
-	NewCmd("npm", "install").InDir(repo, "javascript-sdk").Run(cliOptions.explicit)
-	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run(cliOptions.explicit)
-	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run(cliOptions.explicit)
+	fmt.Println("Run checks and do operations on the JavaScript SDK")
+	NewCmd("npm", "install").InDir(repo, "javascript-sdk").Run()
+	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run()
+	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run()
 
 	// Run "go generate" within cmd/spec.
-	NewCmd("go", "generate", "./...").InDir(repo, "cmd", "spec").Run(cliOptions.explicit)
+	NewCmd("go", "generate", "./...").InDir(repo, "cmd", "spec").Run()
 
 	// Validate the Docker Compose file 'compose.yaml'.
-	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run(cliOptions.explicit)
+	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()
 
-	if cliOptions.explicit {
-		fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
-	}
+	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }
 
 type cliOptions struct {
-	explicit         bool
 	justTestAdmin    bool
 	noConnectorTests bool
 	noGoTest         bool
@@ -164,7 +140,6 @@ type cliOptions struct {
 
 func parseCli() cliOptions {
 
-	var explicit bool
 	var justTestAdmin bool
 	var noGoTest bool
 	var printHelp bool
@@ -175,12 +150,9 @@ func parseCli() cliOptions {
 		" so some parts of the software and/or changes made may not be validated " +
 		"when running the script with this option"
 
-	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
-		" each package separately and prints verbose output; may take a little longer;"+
-		" the tests set is unaltered by this option")
 	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the go tests on the admin. "+
 		reducedTestSetWarning)
-	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. Requires the '-x' flag. "+reducedTestSetWarning)
+	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. "+reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
 		" Useful when you just want to run vendor generation commands, various asset related commands, etc... "+
 		reducedTestSetWarning)
@@ -222,14 +194,7 @@ func parseCli() cliOptions {
 	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
 	mutualExclusive(noGoTest, noConnectorTests, "-no-go-test", "-no-connector-tests")
 
-	if noConnectorTests && !explicit {
-		fmt.Fprintf(flag.CommandLine.Output(), "CLI error: flag '--no-connector-tests' requires the flag '-x'\n")
-		flag.Usage()
-		os.Exit(1)
-	}
-
 	return cliOptions{
-		explicit:         explicit,
 		justTestAdmin:    justTestAdmin,
 		noConnectorTests: noConnectorTests,
 		noGoTest:         noGoTest,
@@ -237,10 +202,8 @@ func parseCli() cliOptions {
 	}
 }
 
-func checkDenoVersion(explicit bool) {
-	if explicit {
-		fmt.Println("Checking the Deno version")
-	}
+func checkDenoVersion() {
+	fmt.Println("Checking the Deno version")
 	cmd := exec.Command("deno", "--version")
 	var stdout bytes.Buffer
 	cmd.Stderr = os.Stderr
@@ -262,9 +225,7 @@ func checkDenoVersion(explicit bool) {
 			"If your intention is to update the tests to use Deno %s instead, please modify the specified version in the 'commit/commit.go' script.\n",
 			expectedDenoVersion, version, expectedDenoVersion, version))
 	}
-	if explicit {
-		fmt.Printf("Locally installed Deno version is correct: %s\n", version)
-	}
+	fmt.Printf("Locally installed Deno version is correct: %s\n", version)
 }
 
 // findModulesPackages finds the Go modules and packages within the given dir.
@@ -328,28 +289,16 @@ func (cmd *Cmd) InDir(elem ...string) *Cmd {
 	return cmd
 }
 
-func (cmd *Cmd) Run(explicit bool) {
+func (cmd *Cmd) Run() {
 	goCmd := exec.Command(cmd.Name, cmd.Args...)
-	var output bytes.Buffer
-	if explicit {
-		goCmd.Stdout = os.Stdout
-		goCmd.Stderr = os.Stderr
-	} else {
-		goCmd.Stdout = &output
-		goCmd.Stderr = &output
-	}
+	goCmd.Stdout = os.Stdout
+	goCmd.Stderr = os.Stderr
 	goCmd.Env = append(os.Environ(), cmd.AdditionalEnv...)
 	goCmd.Dir = cmd.Dir
-	if explicit {
-		logCmd(cmd.Dir, strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
-	}
+	logCmd(cmd.Dir, strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
 	err := goCmd.Run()
 	if err != nil {
-		if explicit {
-			// Stdout and Stderr have already been printed.
-		} else {
-			fmt.Print(output.String())
-		}
+		// Stdout and Stderr have already been printed.
 		fatal("command %q failed (%s)", cmd.Name, err)
 	}
 }
@@ -359,10 +308,8 @@ func fatal(msg string, args ...any) {
 	os.Exit(1)
 }
 
-func removeGoSum(repo, module string, explicit bool) {
-	if explicit {
-		logCmd(filepath.Join(repo, module), "rm go.sum")
-	}
+func removeGoSum(repo, module string) {
+	logCmd(filepath.Join(repo, module), "rm go.sum")
 	err := os.Remove(filepath.Join(repo, module, "go.sum"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		fatal("cannot remove 'go.sum': %s", err)
@@ -370,17 +317,13 @@ func removeGoSum(repo, module string, explicit bool) {
 }
 
 // runGoTestAdmin runs admin tests via go test.
-func runGoTestAdmin(explicit bool) {
+func runGoTestAdmin() {
 	start := time.Now()
-	args := []string{"test", "-run", "^TestAdmin$", "github.com/meergo/meergo/test", "-count", "1"}
-	if explicit {
-		args = append(args, "-v")
-	}
-	NewCmd("go", args...).Run(explicit)
+	args := []string{"test", "-run", "^TestAdmin$", "github.com/meergo/meergo/test", "-count", "1", "-v"}
+	NewCmd("go", args...).Run()
 	elapsed := time.Since(start)
 	if elapsed < 2*time.Second {
 		fatal("admin test took too little time (< 2 seconds). There is probably a problem" +
-			" with its execution, try running it with the '-x' option or check" +
-			" the implementation of the commit command")
+			" with the execution of such tests")
 	}
 }
