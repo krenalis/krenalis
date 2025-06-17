@@ -87,7 +87,7 @@ func (observer *Observer) DeleteListener(id string) {
 	observer.Lock()
 	for i, listener := range observer.listeners {
 		if listener.id == id {
-			observer.listeners = slices.Delete(observer.listeners, i, i)
+			observer.listeners = slices.Delete(observer.listeners, i, i+1)
 			break
 		}
 	}
