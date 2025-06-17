@@ -22,60 +22,59 @@
                 <ul>
                     {% if hasPrefix(filepath, "connectors/") %}
                     <li>
-                        <h4>Sources</h4>
-                        <ul>
-                            <li>{{ item(`connectors/sources/dotnet`, `.NET`) }}</li>
-                            <li>{{ item(`connectors/sources/android`, `Android`) }}</li>
-                            <li>{{ item(`connectors/sources/csv`, `CSV`) }}</li>
-                            <li>{{ item(`connectors/sources/clickhouse`, `ClickHouse`) }}</li>
-                            <li>{{ item(`connectors/sources/excel`, `Excel`) }}</li>
-                            <li>{{ item(`connectors/sources/go`, `Go`) }}</li>
-                            <li>{{ item(`connectors/sources/http-files`, `HTTP Files`) }}</li>
-                            <li>{{ item(`connectors/sources/hubspot`, `HubSpot`) }}</li>
-                            <li>{{ item(`connectors/sources/json`, `JSON`) }}</li>
-                            <li>{{ item(`connectors/sources/javascript`, `JavaScript`) }}</li>
-                            <li>{{ item(`connectors/sources/java`, `Java`) }}</li>
-                            <li>{{ item(`connectors/sources/klaviyo`, `Klaviyo`) }}</li>
-                            <li>{{ item(`connectors/sources/mailchimp`, `Mailchimp`) }}</li>
-                            <li>{{ item(`connectors/sources/mysql`, `MySQL`) }}</li>
-                            <li>{{ item(`connectors/sources/nodejs`, `Node.js`) }}</li>
-                            <li>{{ item(`connectors/sources/parquet`, `Parquet`) }}</li>
-                            <li>{{ item(`connectors/sources/postgresql`, `PostgreSQL`) }}</li>
-                            <li>{{ item(`connectors/sources/python`, `Python`) }}</li>
-                            <li>{{ item(`connectors/sources/rudderstack`, `RudderStack`) }}</li>
-                            <li>{{ item(`connectors/sources/s3`, `S3`) }}</li>
-                            <li>{{ item(`connectors/sources/sftp`, `SFTP`) }}</li>
-                            <li>{{ item(`connectors/sources/segment`, `Segment`) }}</li>
-                            <li>{{ item(`connectors/sources/snowflake`, `Snowflake`) }}</li>
-                            <li>{{ item(`connectors/sources/stripe`, `Stripe`) }}</li>
-                        </ul>
+                        <div>Connectors</div>
                     </li>
-                    <li>
-                        <h4>Destinations</h4>
-                        <ul>
-                            <li>{{ item(`connectors/destinations/csv`, `CSV`) }}</li>
-                            <li>{{ item(`connectors/destinations/clickhouse`, `ClickHouse`) }}</li>
-                            <li>{{ item(`connectors/destinations/excel`, `Excel`) }}</li>
-                            <li>{{ item(`connectors/destinations/google-analytics`, `Google Analytics`) }}</li>
-                            <li>{{ item(`connectors/destinations/http-files`, `HTTP Files`) }}</li>
-                            <li>{{ item(`connectors/destinations/hubspot`, `HubSpot`) }}</li>
-                            <li>{{ item(`connectors/destinations/json`, `JSON`) }}</li>
-                            <li>{{ item(`connectors/destinations/klaviyo`, `Klaviyo`) }}</li>
-                            <li>{{ item(`connectors/destinations/mailchimp`, `Mailchimp`) }}</li>
-                            <li>{{ item(`connectors/destinations/mixpanel`, `Mixpanel`) }}</li>
-                            <li>{{ item(`connectors/destinations/mysql`, `MySQL`) }}</li>
-                            <li>{{ item(`connectors/destinations/parquet`, `Parquet`) }}</li>
-                            <li>{{ item(`connectors/destinations/postgresql`, `PostgreSQL`) }}</li>
-                            <li>{{ item(`connectors/destinations/s3`, `S3`) }}</li>
-                            <li>{{ item(`connectors/destinations/sftp`, `SFTP`) }}</li>
-                            <li>{{ item(`connectors/destinations/snowflake`, `Snowflake`) }}</li>
-                            <li>{{ item(`connectors/destinations/stripe`, `Stripe`) }}</li>
-                        </ul>
-                    </li>
+                    <div>Sources</div>
+                    <li>{{ item(`connectors/sources/dotnet`, `.NET`) }}</li>
+                    <li>{{ item(`connectors/sources/android`, `Android`) }}</li>
+                    <li>{{ item(`connectors/sources/csv`, `CSV`) }}</li>
+                    <li>{{ item(`connectors/sources/clickhouse`, `ClickHouse`) }}</li>
+                    <li>{{ item(`connectors/sources/excel`, `Excel`) }}</li>
+                    <li>{{ item(`connectors/sources/go`, `Go`) }}</li>
+                    <li>{{ item(`connectors/sources/http-files`, `HTTP Files`) }}</li>
+                    <li>{{ item(`connectors/sources/hubspot`, `HubSpot`) }}</li>
+                    <li>{{ item(`connectors/sources/json`, `JSON`) }}</li>
+                    <li>{{ item(`connectors/sources/javascript`, `JavaScript`) }}</li>
+                    <li>{{ item(`connectors/sources/java`, `Java`) }}</li>
+                    <li>{{ item(`connectors/sources/klaviyo`, `Klaviyo`) }}</li>
+                    <li>{{ item(`connectors/sources/mailchimp`, `Mailchimp`) }}</li>
+                    <li>{{ item(`connectors/sources/mysql`, `MySQL`) }}</li>
+                    <li>{{ item(`connectors/sources/nodejs`, `Node.js`) }}</li>
+                    <li>{{ item(`connectors/sources/parquet`, `Parquet`) }}</li>
+                    <li>{{ item(`connectors/sources/postgresql`, `PostgreSQL`) }}</li>
+                    <li>{{ item(`connectors/sources/python`, `Python`) }}</li>
+                    <li>{{ item(`connectors/sources/rudderstack`, `RudderStack`) }}</li>
+                    <li>{{ item(`connectors/sources/s3`, `S3`) }}</li>
+                    <li>{{ item(`connectors/sources/sftp`, `SFTP`) }}</li>
+                    <li>{{ item(`connectors/sources/segment`, `Segment`) }}</li>
+                    <li>{{ item(`connectors/sources/snowflake`, `Snowflake`) }}</li>
+                    <li>{{ item(`connectors/sources/stripe`, `Stripe`) }}</li>
+                    <div>Destinations</div>
+                    <li>{{ item(`connectors/destinations/csv`, `CSV`) }}</li>
+                    <li>{{ item(`connectors/destinations/clickhouse`, `ClickHouse`) }}</li>
+                    <li>{{ item(`connectors/destinations/excel`, `Excel`) }}</li>
+                    <li>{{ item(`connectors/destinations/google-analytics`, `Google Analytics`) }}</li>
+                    <li>{{ item(`connectors/destinations/http-files`, `HTTP Files`) }}</li>
+                    <li>{{ item(`connectors/destinations/hubspot`, `HubSpot`) }}</li>
+                    <li>{{ item(`connectors/destinations/json`, `JSON`) }}</li>
+                    <li>{{ item(`connectors/destinations/klaviyo`, `Klaviyo`) }}</li>
+                    <li>{{ item(`connectors/destinations/mailchimp`, `Mailchimp`) }}</li>
+                    <li>{{ item(`connectors/destinations/mixpanel`, `Mixpanel`) }}</li>
+                    <li>{{ item(`connectors/destinations/mysql`, `MySQL`) }}</li>
+                    <li>{{ item(`connectors/destinations/parquet`, `Parquet`) }}</li>
+                    <li>{{ item(`connectors/destinations/postgresql`, `PostgreSQL`) }}</li>
+                    <li>{{ item(`connectors/destinations/s3`, `S3`) }}</li>
+                    <li>{{ item(`connectors/destinations/sftp`, `SFTP`) }}</li>
+                    <li>{{ item(`connectors/destinations/snowflake`, `Snowflake`) }}</li>
+                    <li>{{ item(`connectors/destinations/stripe`, `Stripe`) }}</li>
                     {% else if hasPrefix(filepath, "developers/") %}
                     <li>
-                        <h4>Send events</h4>
+                        <div>Developers</div>
+                    </li>
+                    <li>
+                        <li>{{ item(`developers/javascript-sdk/getting-started`, `Getting started`) }}</li>
                         <ul>
+                            <div>Send events</div>
                             <li>
                                 {{ item(`developers/javascript-sdk`, `JavaScript`) }}
                                 <ul>
@@ -107,29 +106,25 @@
                             <li>{{ item(`developers/java-sdk`, `Java`) }}</li>
                         </ul>
                     </li>
-                    <li>
-                        <h4>Building connectors</h4>
+                    <div>Building connectors</div>
+                    <li>{{ item(`developers/connectors/data-types`, `Data types`) }}</li>
+                    <li>{{ item(`developers/connectors/data-values`, `Data values`) }}</li>
+                    <li>{{ item(`developers/connectors/settings-and-ui`, `Settings and UI`) }}</li>
+                    <li>{{ item(`developers/connectors/app`, `App connectors`) }}
                         <ul>
-                            <li>{{ item(`developers/connectors/data-types`, `Data types`) }}</li>
-                            <li>{{ item(`developers/connectors/data-values`, `Data values`) }}</li>
-                            <li>{{ item(`developers/connectors/settings-and-ui`, `Settings and UI`) }}</li>
-                            <li>{{ item(`developers/connectors/app`, `App connectors`) }}
-                                <ul>
-                                    <li>{{ item(`developers/connectors/app/oauth`, `OAuth`) }}</li>
-                                    <li>{{ item(`developers/connectors/app/backoff`, `Backoff`) }}</li>
-                                    <li>{{ item(`developers/connectors/app/users`, `Users`) }}</li>
-                                    <li>{{ item(`developers/connectors/app/send-events`, `Send events`) }}</li>
-                                </ul>
-                            </li>
-                            <li>{{ item(`developers/connectors/database`, `Database connectors`) }}</li>
-                            <li>{{ item(`developers/connectors/file`, `File connectors`) }}</li>
-                            <li>{{ item(`developers/connectors/file-storage`, `File Storage connectors`) }}</li>
+                            <li>{{ item(`developers/connectors/app/oauth`, `OAuth`) }}</li>
+                            <li>{{ item(`developers/connectors/app/backoff`, `Backoff`) }}</li>
+                            <li>{{ item(`developers/connectors/app/users`, `Users`) }}</li>
+                            <li>{{ item(`developers/connectors/app/send-events`, `Send events`) }}</li>
                         </ul>
                     </li>
+                    <li>{{ item(`developers/connectors/database`, `Database connectors`) }}</li>
+                    <li>{{ item(`developers/connectors/file`, `File connectors`) }}</li>
+                    <li>{{ item(`developers/connectors/file-storage`, `File Storage connectors`) }}</li>
                     {% else if hasPrefix(filepath, "api/") %}
                     <li>
                         <div>API reference</div>
-                        <ul>
+                    </li>
                             <li>{{ item(`api/index`, `Introduction`) }}</li>
                             <li>{{ item(`api/authentication`, `Authentication`) }}</li>
                             <li>{{ item(`api/schemas`, `Schemas`) }}</li>
@@ -137,9 +132,8 @@
                             <li>{{ item(`api/users`, `Users`) }}</li>
                             <li>{{ item(`api/events`, `Events`) }}</li>
                             <li>
-                                <div>Connections</div>
+                                <li class="sidebar-expandable">{{ item(`api/connections`, `Connections`) }}</li>
                                 <ul>
-                                    <li>{{ item(`api/connections`, `Connections`) }}</li>
                                     <li>{{ item(`api/app-connections`, `App connections`) }}</li>
                                     <li>{{ item(`api/file-storage-connections`, `File storage connections`) }}</li>
                                     <li>{{ item(`api/database-connections`, `Database connections`) }}</li>
@@ -148,9 +142,8 @@
                                 </ul>
                             </li>
                             <li>
-                                <div>Actions</div>
+                                <li class="sidebar-expandable">{{ item(`api/actions`, `Actions`) }}</li>
                                 <ul>
-                                    <li>{{ item(`api/actions`, `Actions`) }}</li>
                                     <li>{{ item(`api/actions-import-users-from-apps`, `Import users from apps`) }}</li>
                                     <li>{{ item(`api/actions-import-users-from-databases`, `Import users from databases`) }}</li>
                                     <li>{{ item(`api/actions-import-users-from-files`, `Import users from files`) }}</li>
@@ -168,9 +161,10 @@
                             <li>{{ item(`api/warehouse`, `Warehouse`) }}</li>
                             <li>{{ item(`api/connectors`, `Connectors`) }}</li>
                             <li>{{ item(`api/system`, `System`) }}</li>
-                        </ul>
-                    </li>
                     {% else %}
+                    <li>
+                        <div>Documentation</div>
+                    </li>
                     <li>{{ item(``, `Overview`) }}</li>
                     <li>{{ item(`what-is-meergo`, `What is Meergo`) }}</li>
                     <li>{{ item(`install-meergo`, `Install Meergo`) }}</li>

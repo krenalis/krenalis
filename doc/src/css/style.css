@@ -337,8 +337,60 @@ article aside nav > ul {
     padding-bottom: 5px!important;
 }
 
-.article aside li h4 {
-    margin: 0!important
+article aside nav > ul div {
+    padding: 0.3rem 1.5rem!important;
+    margin-bottom: 0px !important;
+    margin-top: 5px!important
+}
+
+article aside nav > ul > li:first-child > div {
+    padding: 0!important;
+    margin-top: 0!important;
+}
+
+article aside ul a {
+    padding: 0.25rem 1.5rem!important;
+    margin: 0!important;
+}
+
+article aside ul li.sidebar-expandable a {
+    position: relative;
+}
+
+article aside ul li.sidebar-expandable a::before {
+  content: '';
+  font-size: 12px;
+  background-image: url('../images/chevron-right.svg');
+  width: 1rem;
+  height: 1rem;
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+article aside ul li.sidebar-expandable a.selected::before {
+    background-image: url('../images/chevron-right-white.svg')!important;
+    transform: rotate(90deg) translateX(-7px);
+}
+
+article aside ul li.sidebar-expandable.selected a::before {
+    background-image: url('../images/chevron-right.svg');
+    transform: rotate(90deg) translateX(-7px);
+}
+
+aside nav ul li.sidebar-expandable + ul {
+    display: none;
+    padding-left: 1rem;
+}
+
+aside nav ul li.sidebar-expandable.selected + ul {
+    display: block;
 }
 
 body > article > .wrap > .main {
