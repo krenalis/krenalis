@@ -27,13 +27,22 @@ import (
 // HTTP allows creating HTTP clients for connections and enables granting,
 // retrieving, and refreshing OAuth access tokens.
 type HTTP struct {
-	state     *state.State
+
+	// state is nil if the HTTP client was instantiated without providing a
+	// state; in that case, methods related to OAuth cannot be used, as their
+	// behavior may be unexpected or cause a panic.
+	state *state.State
+
 	transport http.RoundTripper
 	trace     io.Writer
 }
 
 // New returns an HTTP instance given the state and the transport to use for
 // HTTP connections.
+//
+// It is possible to provide a nil state; in that case the returned HTTP client
+// will be restricted and will not allow invocation of OAuth-related methods, as
+// their behavior may be unexpected or may cause a panic.
 func New(state *state.State, transport http.RoundTripper) *HTTP {
 	return &HTTP{
 		state:     state,
@@ -42,12 +51,20 @@ func New(state *state.State, transport http.RoundTripper) *HTTP {
 }
 
 // Client returns an HTTP client with the provided OAuth client secret and
-// access token. If the client does not need to support OAuth, clientSecret
-// and accessToken can be left empty.
+// access token. If the client does not need to support OAuth, clientSecret and
+// accessToken can be left empty.
+//
+// Moreover, if the HTTP has no state and the client does not need to support
+// OAuth, clientSecret and accessToken must be left empty; in this case,
+// OAuth-related Client methods cannot be invoked, as their behavior may be
+// undefined or cause a panic.
 //
 // backoffPolicy is the backoff policy. If it is nil, the client will use a
 // default policy.
 func (h *HTTP) Client(clientSecret, accessToken string, backoffPolicy meergo.BackoffPolicy) *Client {
+	if h.state == nil && (clientSecret != "" || accessToken != "") {
+		panic("when the HTTP state is nil, the clientSecret and accessToken cannot be provided")
+	}
 	return &Client{
 		http:          h,
 		clientSecret:  clientSecret,
