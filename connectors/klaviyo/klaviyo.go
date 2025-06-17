@@ -10,6 +10,7 @@
 package klaviyo
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -93,50 +94,6 @@ type innerSettings struct {
 	PrivateAPIKey string
 }
 
-// EventRequest returns a request to dispatch an event to the app.
-func (ky *Klaviyo) EventRequest(ctx context.Context, event meergo.RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
-	req := &meergo.EventRequest{
-		Method: "POST",
-		URL:    "https://a.klaviyo.com/api/events/",
-		Header: http.Header{},
-	}
-	key := ky.settings.PrivateAPIKey
-	if redacted {
-		key = "[REDACTED]"
-	}
-	req.Header.Set("Authorization", "Klaviyo-API-Key "+key)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Revision", apiRevision)
-	var body struct {
-		Data struct {
-			Type       string `json:"type"`
-			Attributes struct {
-				Profile struct {
-					Email string `json:"$email"`
-				} `json:"profile"`
-				Metric struct {
-					Name string `json:"name"`
-				} `json:"metric"`
-				Properties map[string]any `json:"properties"`
-				Time       string         `json:"time"`
-				Value      any            `json:"value"`
-			} `json:"attributes"`
-		} `json:"data"`
-	}
-	body.Data.Type = "event"
-	body.Data.Attributes.Profile.Email = properties["email"].(string)
-	body.Data.Attributes.Metric.Name = properties["metric_name"].(string)
-	body.Data.Attributes.Properties = properties
-	body.Data.Attributes.Time = event.Timestamp().Format(time.RFC3339)
-	var err error
-	req.Body, err = json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	return req, nil
-}
-
 // EventTypeSchema returns the schema of the specified event type.
 func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 	if eventType == "create_event" {
@@ -148,7 +105,7 @@ func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types
 	return types.Type{}, meergo.ErrUIEventNotExist
 }
 
-// EventTypes returns the event types of the connector's instance.
+// EventTypes returns the event types.
 func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	return []*meergo.EventType{
 		{
@@ -157,6 +114,110 @@ func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 			Description: "Create an event on Klaviyo",
 		},
 	}, nil
+}
+
+// PreviewSendEvents returns the HTTP request that would be used to send the
+// events to the app, without actually sending it.
+func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
+	return ky.sendEvents(ctx, events, true)
+}
+
+// Records returns the records of the specified target.
+func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
+
+	var hasID bool
+	var hasUpdated bool
+
+	u := cursor
+	if u == "" {
+		var b strings.Builder
+		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
+		i := 0
+		for _, p := range properties {
+			if p == "id" {
+				hasID = true
+				continue
+			}
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(p)
+			if p == "updated" {
+				hasUpdated = true
+			}
+			i++
+		}
+		if !hasUpdated {
+			b.WriteString(",updated")
+		}
+		b.WriteString("&page%5Bsize%5D=100&sort=updated")
+		if !lastChangeTime.IsZero() {
+			b.WriteString("&filter=greater-than%28updated%2C")
+			b.WriteString(url.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
+			b.WriteString("%29")
+		}
+		if ids != nil {
+			b.WriteString("&filter=any%28id%2C%5B")
+			for i, id := range ids {
+				if i > 0 {
+					b.WriteString("%2C")
+				}
+				b.WriteString(`%22`)
+				b.WriteString(url.QueryEscape(id))
+				b.WriteString(`%22`)
+			}
+			b.WriteString("%5D%29")
+		}
+		u = b.String()
+	}
+
+	var response struct {
+		Data []struct {
+			ID         string         `json:"id"`
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+		Links struct {
+			Next string `json:"next"`
+		} `json:"links"`
+	}
+
+	err := ky.call(ctx, "GET", u, nil, 200, &response)
+	if err != nil {
+		return nil, "", err
+	}
+	if response.Links.Next != "" && !strings.HasPrefix(response.Links.Next, "https://a.klaviyo.com/") {
+		return nil, "", fmt.Errorf("unexpected links.next URL %q", response.Links.Next)
+	}
+	if len(response.Data) == 0 {
+		return nil, "", io.EOF
+	}
+
+	users := make([]meergo.Record, len(response.Data))
+	for i, data := range response.Data {
+		users[i] = meergo.Record{
+			ID: data.ID,
+		}
+		updated, _ := data.Attributes["updated"].(string)
+		lastChangeTime, err := time.Parse(time.RFC3339, updated)
+		if err != nil {
+			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
+			continue
+		}
+		if hasID {
+			data.Attributes["id"] = users[i].ID
+		}
+		if !hasUpdated {
+			delete(data.Attributes, "updated")
+		}
+		users[i].Properties = data.Attributes
+		users[i].LastChangeTime = lastChangeTime.UTC()
+	}
+
+	if response.Links.Next == "" {
+		return users, "", io.EOF
+	}
+
+	return users, response.Links.Next, nil
 }
 
 // RecordSchema returns the schema of the specified target and role.
@@ -312,102 +373,10 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role
 	return schema, nil
 }
 
-// Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
-
-	var hasID bool
-	var hasUpdated bool
-
-	u := cursor
-	if u == "" {
-		var b strings.Builder
-		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
-		i := 0
-		for _, p := range properties {
-			if p == "id" {
-				hasID = true
-				continue
-			}
-			if i > 0 {
-				b.WriteByte(',')
-			}
-			b.WriteString(p)
-			if p == "updated" {
-				hasUpdated = true
-			}
-			i++
-		}
-		if !hasUpdated {
-			b.WriteString(",updated")
-		}
-		b.WriteString("&page%5Bsize%5D=100&sort=updated")
-		if !lastChangeTime.IsZero() {
-			b.WriteString("&filter=greater-than%28updated%2C")
-			b.WriteString(url.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
-			b.WriteString("%29")
-		}
-		if ids != nil {
-			b.WriteString("&filter=any%28id%2C%5B")
-			for i, id := range ids {
-				if i > 0 {
-					b.WriteString("%2C")
-				}
-				b.WriteString(`%22`)
-				b.WriteString(url.QueryEscape(id))
-				b.WriteString(`%22`)
-			}
-			b.WriteString("%5D%29")
-		}
-		u = b.String()
-	}
-
-	var response struct {
-		Data []struct {
-			ID         string         `json:"id"`
-			Attributes map[string]any `json:"attributes"`
-		} `json:"data"`
-		Links struct {
-			Next string `json:"next"`
-		} `json:"links"`
-	}
-
-	err := ky.call(ctx, "GET", u, nil, 200, &response)
-	if err != nil {
-		return nil, "", err
-	}
-	if response.Links.Next != "" && !strings.HasPrefix(response.Links.Next, "https://a.klaviyo.com/") {
-		return nil, "", fmt.Errorf("unexpected links.next URL %q", response.Links.Next)
-	}
-	if len(response.Data) == 0 {
-		return nil, "", io.EOF
-	}
-
-	users := make([]meergo.Record, len(response.Data))
-	for i, data := range response.Data {
-		users[i] = meergo.Record{
-			ID: data.ID,
-		}
-		updated, _ := data.Attributes["updated"].(string)
-		lastChangeTime, err := time.Parse(time.RFC3339, updated)
-		if err != nil {
-			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
-			continue
-		}
-		if hasID {
-			data.Attributes["id"] = users[i].ID
-		}
-		if !hasUpdated {
-			delete(data.Attributes, "updated")
-		}
-		users[i].Properties = data.Attributes
-		users[i].LastChangeTime = lastChangeTime.UTC()
-	}
-
-	if response.Links.Next == "" {
-		return users, "", io.EOF
-	}
-
-	return users, response.Links.Next, nil
+// SendEvents sends events to the app.
+func (ky *Klaviyo) SendEvents(ctx context.Context, events meergo.Events) error {
+	_, err := ky.sendEvents(ctx, events, false)
+	return err
 }
 
 // ServeUI serves the connector's user interface.
@@ -555,4 +524,68 @@ func (ky *Klaviyo) call(ctx context.Context, method, url string, body io.Reader,
 	}
 
 	return nil
+}
+
+const maxBodyEventsBytes = 5 * 1024 * 1024
+const maxBodyEvents = 1000
+
+// sendEvents sends the given events to the app, returning the HTTP request and
+// any error in sending the request or in the app server's response. If preview
+// is true, the HTTP request is built but not sent, so it is only returned.
+func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+
+	var body json.Buffer
+	body.WriteString(`{"data":{"type":"event-bulk-create-job","attributes":{"events-bulk-create":{"data":[`)
+
+	for i, event := range events.All() {
+		n := body.Len()
+		if i > 0 {
+			body.WriteByte(',')
+		}
+		body.WriteString(`{"type":"event-bulk-create","attributes":{"profile":{"data":{"type":"profile","attributes":{`)
+		_ = body.EncodeKeyValue("email", event.Properties["email"])
+		body.WriteString(`}}},{"events":{"data":[`)
+		body.WriteString(`{"type": "event","attributes":{"properties":`)
+		_ = body.Encode(event.Properties)
+		body.WriteString(`,"time":`)
+		_ = body.Encode(event.Raw.Timestamp())
+		body.WriteString(`,"metric":{"data":{"type":"metric","attributes":{"name":`)
+		_ = body.Encode(event.Properties["metric_name"].(string))
+		body.WriteString(`}}}}}]}}}`)
+		if n > maxBodyEventsBytes {
+			body.Truncate(n)
+			events.Skip()
+			break
+		}
+		if i+1 == maxBodyEvents {
+			break
+		}
+	}
+	body.WriteString(`]}}}}`)
+
+	req, err := http.NewRequest("POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(body.Bytes()))
+	if err != nil {
+		return nil, err
+	}
+	key := ky.settings.PrivateAPIKey
+	if preview {
+		key = "[REDACTED]"
+	}
+	req.Header.Set("Authorization", "Klaviyo-API-Key "+key)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Revision", apiRevision)
+
+	if preview {
+		return req, nil
+	}
+
+	_, err = ky.conf.HTTPClient.DoIdempotent(req, true)
+	if err != nil {
+		return req, err
+	}
+
+	// TODO: handle errors
+
+	return req, nil
 }

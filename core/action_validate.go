@@ -102,7 +102,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for actions that import events into data warehouse")
 			case dispatchEventsToApps:
-				return errors.BadRequest("input schema must be invalid for actions that dispatch events to apps")
+				return errors.BadRequest("input schema must be invalid for actions that send events to apps")
 			}
 		}
 		inSchema = events.Schema

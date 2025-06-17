@@ -29,9 +29,7 @@ import (
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/events/collector"
-	"github.com/meergo/meergo/core/events/dispatcher"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
@@ -54,10 +52,8 @@ type Core struct {
 	connectors *connectors.Connectors
 	metrics    *metrics.Collector
 	events     struct {
-		collector      *collector.Collector
-		observer       *collector.Observer
-		dispatcher     *dispatcher.Dispatcher
-		operationStore events.OperationStore
+		collector *collector.Collector
+		observer  *collector.Observer
 	}
 	functionProvider transformers.FunctionProvider
 	actionCleaner    *actionCleaner
@@ -200,9 +196,6 @@ func New(conf *Config) (*Core, error) {
 		})
 	}
 
-	// Init the event operation store.
-	core.events.operationStore = events.NewPostgreStore(db)
-
 	// Init the metrics.
 	core.metrics = metrics.New(db, core.state)
 
@@ -212,17 +205,9 @@ func New(conf *Config) (*Core, error) {
 	// Init the connectors.
 	core.connectors = connectors.New(core.state)
 
-	// Init the events.
-	core.events.dispatcher, err = dispatcher.New(db, core.state, core.events.operationStore, core.functionProvider, core.connectors, core.metrics)
+	// Init the event collector and observer.
+	core.events.collector, err = collector.New(db, core.state, core.datastore, core.connectors, core.functionProvider, core.metrics)
 	if err != nil {
-		core.datastore.Close()
-		core.state.Close()
-		return nil, err
-	}
-	core.events.collector, err = collector.New(db, core.state, core.datastore, core.events.operationStore,
-		core.functionProvider, core.events.dispatcher, core.metrics)
-	if err != nil {
-		core.events.dispatcher.Close()
 		core.datastore.Close()
 		core.state.Close()
 		return nil, err
@@ -384,9 +369,8 @@ func (core *Core) Close() {
 	core.close.Wait()
 	// Close the action cleaner.
 	core.actionCleaner.Close(context.Background())
-	// Close event collector, event dispatcher, metrics, datastore, and state.
+	// Close event collector, metrics, datastore, and state.
 	core.events.collector.Close()
-	core.events.dispatcher.Close()
 	core.metrics.Close(context.Background())
 	core.datastore.Close()
 	core.state.Close()

@@ -14,6 +14,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log/slog"
 	"math"
 	mathrand "math/rand/v2"
@@ -1403,11 +1404,10 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	return err
 }
 
-// PreviewSendEvent returns a preview of an event as it would be dispatches to
-// an app. The connection must be a destination app connection, and it is
-// expected to have an event type with identifier typ. If there is a
-// transformation, outSchema is the output schema of the transformation, and it
-// must be a valid.
+// PreviewSendEvent returns a preview of an event as it would be sent to an app.
+// The connection must be a destination app connection, and it is expected to
+// have an event type with identifier typ. If there is a transformation,
+// outSchema is the output schema of the transformation, and it must be a valid.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist for the connection.
@@ -1447,7 +1447,11 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
-	var transformedProperties map[string]any
+	ev := meergo.Event{
+		Type:   typ,
+		Schema: outSchema,
+		Raw:    events.RawEvent(properties),
+	}
 
 	if transformation.Mapping != nil || transformation.Function != nil {
 
@@ -1533,20 +1537,19 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		if err = records[0].Err; err != nil {
 			return nil, errors.Unprocessable(TransformationFailed, "%s", err)
 		}
-		transformedProperties = records[0].Properties
+		ev.Properties = records[0].Properties
 
 	} else {
 
 		if outSchema.Valid() {
 			return nil, errors.BadRequest("output schema is a valid schema, but no transformation has been provided")
 		}
+		ev.Properties = map[string]any{}
 
 	}
 
-	// Convert data into a meergo.RawEvent value.
-	ev := events.RawEvent(properties)
-
-	req, err := this.app().EventRequest(ctx, ev, typ, outSchema, transformedProperties, true)
+	// Create a preview before sending the event.
+	req, err := this.app().PreviewSendEvent(ctx, ev)
 	if err != nil {
 		if err == meergo.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
@@ -1565,31 +1568,35 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	var b json.Buffer
 	b.WriteString(req.Method)
 	b.WriteString(" ")
-	b.WriteString(req.URL)
+	b.WriteString(req.URL.String())
 	b.WriteByte('\n')
 	err = req.Header.Write(&b)
 	if err != nil {
 		return nil, err
 	}
 	if req.Body != nil {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
 		b.WriteByte('\n')
 		ct := req.Header.Get("Content-Type")
 		bodyWritten := false
 		switch ct {
 		case "application/json":
-			indented, err := json.Indent(req.Body, "", "    ")
+			indented, err := json.Indent(body, "", "    ")
 			if err == nil {
 				b.Write(indented)
 				bodyWritten = true
 			}
 		case "application/x-ndjson":
-			if utf8.Valid(req.Body) {
-				b.Write(req.Body)
+			if utf8.Valid(body) {
+				b.Write(body)
 				bodyWritten = true
 			}
 		}
 		if !bodyWritten {
-			_, _ = fmt.Fprintf(&b, "[%d bytes body]", len(req.Body))
+			_, _ = fmt.Fprintf(&b, "[%d bytes body]", len(body))
 		}
 	}
 

@@ -1808,7 +1808,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     "input schema must be invalid for actions that dispatch events to apps",
+			err:                     "input schema must be invalid for actions that send events to apps",
 		},
 		{
 			name: "BAD: Source/SDK/User - input schema must be invalid",

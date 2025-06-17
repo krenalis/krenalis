@@ -202,15 +202,6 @@ CREATE TABLE election (
 
 INSERT INTO election (number, leader, date) VALUES (1, '00000000-0000-0000-0000-000000000000', '2023-01-01 00:00:00.000000');
 
-CREATE TABLE event_payloads (
-    id uuid NOT NULL,
-    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
-    received_at timestamp NOT NULL,
-    actions integer[],
-    properties bytea NOT NULL,
-    PRIMARY KEY (id)
-);
-
 CREATE TABLE event_write_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
     key char(32) NOT NULL,

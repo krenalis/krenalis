@@ -8,6 +8,7 @@
 package meergo
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"iter"
@@ -16,10 +17,11 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/types"
 )
 
-// ErrEventTypeNotExist is returned by the Schema method if the event type does
-// not exist.
+// ErrEventTypeNotExist is returned by the EventSender.EventTypeSchema method if
+// the event type does not exist.
 var ErrEventTypeNotExist = errors.New("event type does not exist")
 
 // SendingMode represents the mode of event sending.
@@ -129,16 +131,7 @@ type AppConfig struct {
 // AppNewFunc represents functions that create new app connector instances.
 type AppNewFunc[T any] func(*AppConfig) (T, error)
 
-// EventRequest represents an event request.
-type EventRequest struct {
-	Endpoint string      // Destination identifier, e.g., "us", "europe", or leave empty.
-	Method   string      // HTTP method (e.g., "POST").
-	URL      string      // URL to which the request will be sent.
-	Header   http.Header // Header fields to be included with the request.
-	Body     []byte      // The body of the request.
-}
-
-// EventType represents a type of event that the app can receive.
+// EventType represents a type of event that can be sent to an app.
 type EventType struct {
 	// ID is the identifier of the event type. It must be unique for every event
 	// type of the connection.
@@ -151,6 +144,52 @@ type EventType struct {
 
 	// Description is the description of the event type to be displayed.
 	Description string
+}
+
+// RecordFetcher is implemented by app connectors that support fetching records.
+type RecordFetcher interface {
+
+	// RecordSchema returns the schema of the specified target in the specified
+	// role. Role can be Source or Destination, and it returns their respective
+	// schemas.
+	RecordSchema(ctx context.Context, target Targets, role Role) (types.Type, error)
+
+	// Records returns the records of the specified target. The target can only be
+	// either Users or Groups, and it must be a target supported by the connector.
+	//
+	// If lastChangeTime is not the zero time, only the records changed or created
+	// at or after that time will be returned, and its precision is limited to
+	// microseconds. If ids is not nil, only records with identifiers in ids should
+	// be returned, if any.
+	//
+	// properties are the names of the properties to read. cursor represents the
+	// position from which to start reading the records; it is the cursor value
+	// returned by the previous call in a paginated query. Subsequent calls will use
+	// this cursor value to retrieve the next batch of records.
+	//
+	// schema must be a recent schema returned by the Schema method of the
+	// connector. There is no guarantee that the returned properties will match this
+	// schema, so the caller must validate them.
+	//
+	// Records may return duplicate records, i.e., records with the same ID. The
+	// caller is responsible for deduplicating them.
+	//
+	// The string return value is used as the cursor in the subsequent call. It can
+	// be any UTF-8 encoded string, including an empty string. If there are no more
+	// records to return, the method returns the last records read (if any) along
+	// with the io.EOF error.
+	//
+	// In case of an error, it returns a non-nil and non-EOF error.
+	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
+}
+
+// RecordUpserter is implemented by app connectors that support updating and
+// creating records.
+type RecordUpserter interface {
+	RecordFetcher
+
+	// Upsert updates or creates records in the app for the specified target.
+	Upsert(ctx context.Context, target Targets, records Records) error
 }
 
 // Record represents an app record.
@@ -201,9 +240,9 @@ func (err RecordsError) Error() string {
 //
 // Example:
 //
-//	for _, rec := range records.All() {
+//	for i, rec := range records.All() {
 //	    // rec is now consumed unless Skip is called here
-//	    if !shouldProcess(rec) {
+//	    if i > 0 && !shouldProcess(rec) {
 //	        records.Skip()
 //	        continue
 //	    }
@@ -243,9 +282,102 @@ type Records interface {
 	// index. Skip may only be called during iterations from All or Same, and only
 	// if the record's properties have not been modified.
 	//
-	// Skip cannot be called to skip the first record. The first record is always
-	// consumed when iterating with All or Same.
-	// It is safe to call Skip multiple times on the same record.
+	// The first event must always be consumed. Calling Skip on it will cause a
+	// panic. It is safe to call Skip multiple times on the same record.
+	Skip()
+}
+
+// EventSender is implemented by app connectors that support event sending.
+type EventSender interface {
+
+	// EventTypeSchema returns the schema of the specified event type.
+	//
+	// The returned schema describes properties required by the connector to
+	// send an event of this type. Actions based on the specified event type
+	// will have a transformation that, given the received event, provides the
+	// properties required by the connector. These properties, along with the
+	// raw event, are passed to the connector's EventRequest method.
+	//
+	// If no extra information is needed for the event type, the returned schema
+	// is the invalid schema. If the event type does not exist, it returns the
+	// ErrEventTypeNotExist error.
+	EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
+
+	// EventTypes returns the event types of the connector's instance.
+	EventTypes(ctx context.Context) ([]*EventType, error)
+
+	// PreviewSendEvents builds and returns the HTTP request that would be used to
+	// send the given events to the app, without actually sending it.
+	//
+	// Authentication data in the returned request is redacted (i.e., replaced with
+	// "[REDACTED]").
+	PreviewSendEvents(ctx context.Context, events Events) (*http.Request, error)
+
+	// SendEvents sends events to an app. events is a non-empty sequence of
+	// events to send.
+	//
+	// This method is safe for concurrent use, on the same instance, by multiple
+	// goroutines. If an event type does not exist, it returns the
+	// ErrEventTypeNotExist error.
+	SendEvents(ctx context.Context, events Events) error
+}
+
+// Event represents an event that will be sent to an app.
+type Event struct {
+	ID         string         // identifier for the event. Guaranteed to be unique per event within the same connection.
+	Type       string         // event type (e.g., "user.signup", "order.placed").
+	Schema     types.Type     // schema of the event type; may be the invalid schema.
+	Properties map[string]any // event data after transformation based on the schema; empty if no transformation exists.
+	Raw        RawEvent       // original, untransformed event data as it was received.
+}
+
+// EventsError is returned by the SendEvents method of an app connector when
+// some events have been consumed, but they cannot be included in the current or
+// any future requests. It maps the event indices to the errors related to those
+// events.
+//
+// The EventsRequest method may return both a request with the events that were
+// included in the request and an EventsError error with the events that could
+// not be included in any request.
+type EventsError map[int]error
+
+func (err EventsError) Error() string {
+	var msg string
+	for i, e := range err {
+		msg += fmt.Sprintf("event %d: %v\n", i, e)
+	}
+	return msg
+}
+
+// Events represents a collection of events to be sent to an app. The collection
+// is guaranteed to contain at least one event.
+//
+// After calling First or once the iterator returned by All or SameUser stops,
+// no further method calls on Events are allowed.
+type Events interface {
+
+	// All returns an iterator to read all events. Properties of the events in the
+	// sequence may be modified unless the event is subsequently skipped.
+	All() iter.Seq2[int, *Event]
+
+	// First returns the first event. The event's properties may be modified.
+	// After First is called, no further method calls on Events are allowed.
+	First() *Event
+
+	// Peek retrieves the next event without advancing the iterator. It returns the
+	// event and true if an event is available, or false if there are no further
+	// events. The returned event must not be modified.
+	Peek() (*Event, bool)
+
+	// SameUser returns an iterator over the events of the same user. Properties of
+	// the events in the sequence may be modified unless the event is subsequently
+	// skipped.
+	SameUser() iter.Seq2[int, *Event]
+
+	// Skip skips the current event in the iteration and marks it as unread. The
+	// subsequent iteration will resume at the next event while preserving the same
+	// index. Skip may only be called during iterations from All or SameUser, and only
+	// if the event's properties have not been modified.
 	Skip()
 }
 

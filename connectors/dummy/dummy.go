@@ -9,6 +9,7 @@
 package dummy
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -100,29 +101,6 @@ func newDummyId() string {
 	return "dummy_" + string(b)
 }
 
-// EventRequest returns a request to dispatch an event to the app.
-func (dummy *Dummy) EventRequest(ctx context.Context, event meergo.RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
-	url := "https://example.com/"
-	if dummy.settings.URLForDispatchingEvents != "" {
-		url = dummy.settings.URLForDispatchingEvents
-	}
-	req := &meergo.EventRequest{
-		Method: "POST",
-		URL:    url,
-		Header: http.Header{},
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	if properties != nil {
-		var err error
-		req.Body, err = json.Marshal(properties)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return req, nil
-}
-
 // EventTypeSchema returns the schema of the specified event type.
 func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 	dummy.simulateHTTPDelay()
@@ -157,7 +135,7 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
-// EventTypes returns the event types of the connector's instance.
+// EventTypes returns the event types.
 func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	dummy.simulateHTTPDelay()
 	return []*meergo.EventType{
@@ -187,6 +165,12 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 			Description: "Send an event which does not require mapping",
 		},
 	}, nil
+}
+
+// PreviewSendEvents returns the HTTP request that would be used to send the
+// events to the app, without actually sending it.
+func (dummy *Dummy) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
+	return dummy.sendEvents(ctx, events, true)
 }
 
 // RecordSchema returns the schema of the specified target and role.
@@ -285,6 +269,12 @@ type innerSettings struct {
 	CustomerExportFailPercentage int // in [0, 100]
 	URLForDispatchingEvents      string
 	SimulateHTTPDelay            bool
+}
+
+// SendEvents sends events to the app.
+func (dummy *Dummy) SendEvents(ctx context.Context, events meergo.Events) error {
+	_, err := dummy.sendEvents(ctx, events, false)
+	return err
 }
 
 // ServeUI serves the connector's user interface.
@@ -404,15 +394,17 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 	return nil
 }
 
-// simulateHTTPDelay simulates an HTTP delay. If the settings indicate not to
-// simulate delay, this method does nothing.
-func (dummy *Dummy) simulateHTTPDelay() {
-	if !dummy.settings.SimulateHTTPDelay {
-		return
+// customerExportRandomlyFails determines whether exporting (i.e., writing to
+// Dummy) a customer should randomly fail, based on the settings.
+func (dummy *Dummy) customerExportRandomlyFails() bool {
+	switch failPerc := dummy.settings.CustomerExportFailPercentage; failPerc {
+	case 0:
+		return false
+	case 100:
+		return true
+	default:
+		return rand.IntN(100) < failPerc
 	}
-	latency := rand.Float64()*1.3 + 1.5 // seconds.
-	time.Sleep(time.Duration(latency * 1e9))
-	metrics.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
 }
 
 // saveSettings saves the settings.
@@ -437,17 +429,49 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	return nil
 }
 
-// customerExportRandomlyFails determines whether exporting (i.e., writing to
-// Dummy) a customer should randomly fail, based on the settings.
-func (dummy *Dummy) customerExportRandomlyFails() bool {
-	switch failPerc := dummy.settings.CustomerExportFailPercentage; failPerc {
-	case 0:
-		return false
-	case 100:
-		return true
-	default:
-		return rand.IntN(100) < failPerc
+// simulateHTTPDelay simulates an HTTP delay. If the settings indicate not to
+// simulate delay, this method does nothing.
+func (dummy *Dummy) simulateHTTPDelay() {
+	if !dummy.settings.SimulateHTTPDelay {
+		return
 	}
+	latency := rand.Float64()*1.3 + 1.5 // seconds.
+	time.Sleep(time.Duration(latency * 1e9))
+	metrics.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
+}
+
+// sendEvents sends the given events to the app, returning the HTTP request and
+// any error in sending the request or in the app server's response. If preview
+// is true, the HTTP request is built but not sent, so it is only returned.
+func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+	event := events.First()
+	var body []byte
+	if event.Schema.Valid() {
+		var err error
+		body, err = types.Marshal(event.Properties, event.Schema)
+		if err != nil {
+			return nil, err
+		}
+	}
+	u := "https://example.com/"
+	if dummy.settings.URLForDispatchingEvents != "" {
+		u = dummy.settings.URLForDispatchingEvents
+	}
+	req, err := http.NewRequest("POST", u, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	if preview {
+		return req, nil
+	}
+	_, err = dummy.conf.HTTPClient.DoIdempotent(req, true)
+	if err != nil {
+		return req, err
+	}
+	// TODO: handle errors
+	return req, nil
 }
 
 // deepClone returns a deep clone of the provided properties.

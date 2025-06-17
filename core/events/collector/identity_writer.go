@@ -26,22 +26,20 @@ var maxQueuedEventIdentityTime = 200 * time.Millisecond
 
 // identityWriter represents an identity writer for an action.
 type identityWriter struct {
-	action         int //action identifier
-	writer         *datastore.EventIdentityWriter
-	metrics        *metrics.Collector
-	operationStore events.OperationStore
-	mu             sync.Mutex                // for transformer, identities, and timer
-	transformer    *transformers.Transformer // protected by mu
-	identities     []events.Event            // protected by mu
-	timer          *time.Timer               // protected by mu
+	action      int //action identifier
+	writer      *datastore.EventIdentityWriter
+	metrics     *metrics.Collector
+	mu          sync.Mutex                // for transformer, identities, and timer
+	transformer *transformers.Transformer // protected by mu
+	identities  []events.Event            // protected by mu
+	timer       *time.Timer               // protected by mu
 }
 
 // newIdentityWriter returns a new identityWriter for the provided action.
-func newIdentityWriter(ds *datastore.Datastore, action *state.Action, provider transformers.FunctionProvider, opStore events.OperationStore, metrics *metrics.Collector) *identityWriter {
+func newIdentityWriter(ds *datastore.Datastore, action *state.Action, provider transformers.FunctionProvider, metrics *metrics.Collector) *identityWriter {
 	iw := &identityWriter{
-		action:         action.ID,
-		metrics:        metrics,
-		operationStore: opStore,
+		action:  action.ID,
+		metrics: metrics,
 	}
 	ws := action.Connection().Workspace()
 	store := ds.Store(ws.ID)
@@ -118,12 +116,6 @@ func (iw *identityWriter) Write(event events.Event) error {
 
 // ack acknowledges when identities are written to the data warehouse.
 func (iw *identityWriter) ack(action int, ids []string, err error) {
-	doneEvents := make([]events.DoneEvent, len(ids))
-	for i, id := range ids {
-		doneEvents[i].Action = action
-		doneEvents[i].ID = id
-	}
-	iw.operationStore.Done(doneEvents...)
 	if err != nil {
 		iw.metrics.FinalizeFailed(iw.action, len(ids), err.Error())
 		return

@@ -198,9 +198,8 @@ type Records interface {
 	// index. Skip may only be called during iterations from All or Same, and only
 	// if the record's properties have not been modified.
 	//
-	// Skip cannot be called to skip the first record. The first record is always
-	// consumed when iterating with All or Same.
-	// It is safe to call Skip multiple times on the same record.
+	// The first event must always be consumed. Calling Skip on it will cause a
+	// panic. It is safe to call Skip multiple times on the same record.
 	Skip()
 }
 ```

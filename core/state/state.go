@@ -12,6 +12,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"sync"
@@ -1233,6 +1234,24 @@ type Transformation struct {
 	Function *TransformationFunction
 	InPaths  []string
 	OutPaths []string
+}
+
+// Equal reports whether t and t2 represent the same transformation.
+// Both t and t2 must be well-formed transformations.
+func (t Transformation) Equal(t2 Transformation) bool {
+	if t.Function == nil || t2.Function == nil {
+		if !maps.Equal(t.Mapping, t2.Mapping) {
+			return false
+		}
+	} else {
+		if *t.Function != *t2.Function {
+			return false
+		}
+		if !slices.Equal(t.InPaths, t2.InPaths) || !slices.Equal(t.OutPaths, t2.OutPaths) {
+			return false
+		}
+	}
+	return true
 }
 
 // TransformationFunction represents a transformation function.

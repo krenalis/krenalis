@@ -41,75 +41,6 @@ type App struct {
 	err         error
 }
 
-type appRecordConnector interface {
-
-	// RecordSchema returns the schema of the specified target in the specified
-	// role. Role can be Source or Destination, and it returns their respective
-	// schemas.
-	RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error)
-
-	// Records returns the records of the specified target. The target can only be
-	// either User or Group, and it must be a target supported by the connector.
-	//
-	// If lastChangeTime is not the zero time, only the records changed or created
-	// at or after that time will be returned, and its precision is limited to
-	// microseconds. If ids is not nil, only records with identifiers in ids should
-	// be returned, if any.
-	//
-	// properties are the names of the properties to read. cursor represents the
-	// position from which to start reading the records; it is the cursor value
-	// returned by the previous call in a paginated query. Subsequent calls will use
-	// this cursor value to retrieve the next batch of records.
-	//
-	// schema must be a recent schema returned by the Schema method of the
-	// connector. There is no guarantee that the returned properties will match this
-	// schema, so the caller must validate them.
-	//
-	// Records may return duplicate records, i.e., records with the same ID. The
-	// caller is responsible for deduplicating them.
-	//
-	// The string return value is used as the cursor in the subsequent call. It can
-	// be any UTF-8 encoded string, including an empty string. If there are no more
-	// records to return, the method returns the last records read (if any) along
-	// with the io.EOF error.
-	//
-	// In case of an error, it returns a non-nil and non-EOF error.
-	Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error)
-}
-
-type appEventsConnector interface {
-
-	// EventRequest returns a request to send an event to the app. event is the
-	// event to send, eventType is the type of event to send, schema is its schema,
-	// properties are the property values conforming to the schema, and redacted
-	// indicates whether authentication data must be redacted in the returned
-	// request.
-	//
-	// If the event type does not have a schema, schema is the invalid schema and
-	// properties is nil.
-	//
-	// This method is safe for concurrent use by multiple goroutines. If the
-	// specified event type does not exist, it returns the ErrEventTypeNotExist
-	// error.
-	EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error)
-
-	// EventTypeSchema returns the schema of the specified event type.
-	//
-	// The returned schema describes properties required by the connector to
-	// send an event of this type. Actions based on the specified event type
-	// will have a transformation that, given the received event, provides the
-	// properties required by the connector. These properties, along with the
-	// raw event, are passed to the connector's EventRequest method.
-	//
-	// If no extra information is needed for the event type, the returned schema
-	// is the invalid schema. If the event type does not exist, it returns the
-	// ErrEventTypeNotExist error.
-	EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
-
-	// EventTypes returns the event types of the connector's instance.
-	EventTypes(ctx context.Context) ([]*EventType, error)
-}
-
 // TODO(marco): implement webhooks
 //type webhookConnector interface {
 //	// ReceiveWebhook receives a webhook request and returns its payloads. If
@@ -164,63 +95,14 @@ func (app *App) Connector() string {
 	return app.connector
 }
 
-// EventRequest returns a request to send an event to the app. event is the
-// event to send, eventType is the type of event to send, schema is its schema,
-// properties are the property values conforming to the schema, and redacted
-// indicates whether authentication data must be redacted in the returned
-// request.
-//
-// If the event type does not have a schema, schema is the invalid schema and
-// properties is nil.
-//
-// If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
-// error. If the schema is not aligned to the event type's schema, it returns a
-// *schemas.Error error. If the connector returns an error it returns a
-// *UnavailableError error.
-//
-// It panics if the app does not support the Event target, or if schema is
-// valid but not an object.
-func (app *App) EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
-	if app.err != nil {
-		return nil, app.err
-	}
-	eventTypeSchema, err := app.inner.(appEventsConnector).EventTypeSchema(ctx, eventType)
-	if err != nil {
-		if err == meergo.ErrEventTypeNotExist {
-			return nil, err
-		}
-		return nil, connectorError(err)
-	}
-	// Check that schema is aligned with the event type's schema.
-	createOnly := state.CreateOnly
-	err = schemas.CheckAlignment(schema, eventTypeSchema, &createOnly)
-	if err != nil {
-		return nil, err
-	}
-	// If schema is invalid, properties is nil. The EventRequest method,
-	// when the event schema is valid, requires properties to be non-nil.
-	if properties == nil && eventTypeSchema.Valid() {
-		properties = map[string]any{}
-	}
-	// Return the event request.
-	request, err := app.inner.(appEventsConnector).EventRequest(ctx, event, eventType, eventTypeSchema, properties, redacted)
-	if err != nil {
-		if err == meergo.ErrEventTypeNotExist {
-			return nil, err
-		}
-		return nil, connectorError(err)
-	}
-	return request, nil
-}
-
 // EventTypes returns the app's event types.
 // If the connector returns an error, it returns an *UnavailableError error.
-// It panics if the app does not support the events target.
+// It panics if the app does not support the event target.
 func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypes, err := app.inner.(appEventsConnector).EventTypes(ctx)
+	eventTypes, err := app.inner.(meergo.EventSender).EventTypes(ctx)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -232,6 +114,50 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 	return eventTypes, nil
 }
 
+// PreviewSendEvent returns the request that would be used to send events to
+// the app.
+//
+// It validates the event schema, which must align with the schema of the event
+// type, then passes that event type schema to the connector.
+//
+// If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
+// error. If the schema of the event is not aligned to the event type's schema,
+// it returns a *schemas.Error error. If the connector returns an error it
+// returns a *UnavailableError error.
+//
+// It panics if the app does not support the event target, or if schema is
+// valid but not an object.
+func (app *App) PreviewSendEvent(ctx context.Context, event meergo.Event) (*http.Request, error) {
+	if app.err != nil {
+		return nil, app.err
+	}
+	eventTypeSchema, err := app.inner.(meergo.EventSender).EventTypeSchema(ctx, event.Type)
+	if err != nil {
+		if err == meergo.ErrEventTypeNotExist {
+			return nil, err
+		}
+		return nil, connectorError(err)
+	}
+	// Check that schema is aligned with the event type's schema.
+	createOnly := state.CreateOnly
+	err = schemas.CheckAlignment(event.Schema, eventTypeSchema, &createOnly)
+	if err != nil {
+		return nil, err
+	}
+	// Pass the event type's schema to the connector.
+	event.Schema = eventTypeSchema
+	// Return the request that represents the event preview.
+	iterator := newSingleEventIterator(&event, app.connector)
+	req, err := app.inner.(meergo.EventSender).PreviewSendEvents(ctx, iterator)
+	if err != nil {
+		if err == meergo.ErrEventTypeNotExist {
+			return nil, err
+		}
+		return nil, connectorError(err)
+	}
+	return req, nil
+}
+
 // Schema returns the app's schema for the provided target. If target is
 // state.TargetEvent, eventType represents the type of the event.
 //
@@ -240,7 +166,7 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 // errors.
 //
 // For the users and the groups target, the returned schema contains only the
-// properties compatible with the app's role. For the events target, the
+// properties compatible with the app's role. For the event target, the
 // returned schema can be the invalid schema.
 //
 // If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
@@ -272,7 +198,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := app.inner.(appEventsConnector).EventTypeSchema(ctx, eventType)
+		schema, err := app.inner.(meergo.EventSender).EventTypeSchema(ctx, eventType)
 		if err != nil {
 			if err == meergo.ErrEventTypeNotExist {
 				return types.Type{}, err
@@ -302,14 +228,21 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	panic("unexpected target")
 }
 
-// SendEvent sends an event to the app and returns the HTTP response.
-func (app *App) SendEvent(ctx context.Context, req *meergo.EventRequest) (*http.Response, error) {
-	r, err := http.NewRequestWithContext(ctx, req.Method, req.URL, bytes.NewReader(req.Body))
-	if err != nil {
-		return nil, err
+// SendEvents sends events to an app. events must be a non-empty sequence of
+// events to send.
+//
+// If an event type does not exist, it returns the ErrEventTypeNotExist error.
+//
+// It panics if the app does not support the event target.
+func (app *App) SendEvents(ctx context.Context, events meergo.Events) error {
+	if app.err != nil {
+		return app.err
 	}
-	r.Header = req.Header.Clone()
-	return app.httpClient.DoIdempotent(r, false)
+	err := app.inner.(meergo.EventSender).SendEvents(ctx, events)
+	if err != nil && err != meergo.ErrEventTypeNotExist {
+		err = connectorError(err)
+	}
+	return err
 }
 
 // Users returns an iterator to iterate over the app's users. Each returned
@@ -408,7 +341,7 @@ func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	if schema := app.users.schemas[role-1]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.(appRecordConnector).RecordSchema(ctx, meergo.TargetUser, meergo.Role(role))
+	schema, err := app.inner.(meergo.RecordFetcher).RecordSchema(ctx, meergo.TargetUser, meergo.Role(role))
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
@@ -418,6 +351,72 @@ func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	schema = types.AsRole(schema, types.Role(role))
 	app.users.schemas[role-1] = schema
 	return schema, nil
+}
+
+// singleEventIterator implements the meergo.Events interface that iterates over
+// a single event.
+type singleEventIterator struct {
+	app       string
+	event     *meergo.Event
+	consumed  bool
+	iterating bool
+	skipped   bool
+}
+
+// newSingleEventIterator returns a singleEventIterator with the provided event.
+// app is the name of the app connector.
+func newSingleEventIterator(event *meergo.Event, app string) *singleEventIterator {
+	return &singleEventIterator{app: app, event: event}
+}
+
+func (iter *singleEventIterator) All() iter.Seq2[int, *meergo.Event] {
+	if iter.consumed {
+		panic(iter.app + " connector: SendEvents method called Events.All after the events were consumed")
+	}
+	iter.consumed = true
+	return func(yield func(i int, Event *meergo.Event) bool) {
+		iter.iterating = true
+		yield(0, iter.event)
+	}
+}
+
+func (iter *singleEventIterator) First() *meergo.Event {
+	if iter.consumed {
+		panic(iter.app + " connector: SendEvents method called Events.First after the events were consumed")
+	}
+	iter.consumed = true
+	return iter.event
+}
+
+func (iter *singleEventIterator) Peek() (*meergo.Event, bool) {
+	if iter.consumed && !iter.iterating {
+		panic(iter.app + " connector: SendEvents method called Events.Peek outside of an iteration")
+	}
+	if iter.consumed {
+		return nil, false
+	}
+	return iter.event, true
+}
+
+func (iter *singleEventIterator) SameUser() iter.Seq2[int, *meergo.Event] {
+	if iter.consumed {
+		panic(iter.app + " connector: SendEvents method called Events.Some after the events were consumed")
+	}
+	iter.consumed = true
+	return func(yield func(i int, Event *meergo.Event) bool) {
+		iter.iterating = true
+		yield(0, iter.event)
+	}
+}
+
+func (iter *singleEventIterator) Skip() {
+	if !iter.iterating {
+		panic(iter.app + " connector: SendEvents method called Events.Skip outside an iteration")
+	}
+	if iter.skipped {
+		return
+	}
+	iter.skipped = true
 }
 
 // sameValue checks if v and v2 have the same value, with t being the type of v.
@@ -522,7 +521,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []meergo.Record
 			var err error
-			users, cursor, err = r.inner.(appRecordConnector).Records(ctx, meergo.TargetUser, r.lastChangeTime, nil, names, cursor, r.appSchema)
+			users, cursor, err = r.inner.(meergo.RecordFetcher).Records(ctx, meergo.TargetUser, r.lastChangeTime, nil, names, cursor, r.appSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

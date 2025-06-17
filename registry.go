@@ -315,11 +315,7 @@ func validateAppConnector(app AppInfo) {
 			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible value is meergo.TargetUser", app.Name))
 		}
 		if targets&TargetUser != 0 {
-			iface := reflect.TypeFor[interface {
-				RecordSchema(ctx context.Context, target Targets, role Role) (types.Type, error)
-				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
-			}]()
-			if !app.ct.Implements(iface) {
+			if !app.ct.Implements(reflect.TypeFor[RecordFetcher]()) {
 				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
 		}
@@ -331,27 +327,17 @@ func validateAppConnector(app AppInfo) {
 		if targets == 0 || (targets&^(TargetEvent|TargetUser)) != 0 {
 			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.TargetEvent, meergo.TargetUser, or a combination of them using the bitwise OR operator", app.Name))
 		}
-		if targets&TargetUser != 0 {
-			iface := reflect.TypeFor[interface {
-				RecordSchema(ctx context.Context, target Targets, role Role) (types.Type, error)
-				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
-				Upsert(ctx context.Context, target Targets, records Records) error
-			}]()
-			if !app.ct.Implements(iface) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
-			}
-		}
 		if targets&TargetEvent != 0 {
-			iface := reflect.TypeFor[interface {
-				EventRequest(ctx context.Context, event RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
-				EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
-				EventTypes(ctx context.Context) ([]*EventType, error)
-			}]()
-			if !app.ct.Implements(iface) {
+			if !app.ct.Implements(reflect.TypeFor[EventSender]()) {
 				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
 			}
 			if app.AsDestination.SendingMode == None {
 				panic(fmt.Sprintf("connector %s is declared to support Event as destination, but it does not specify a sending mode", app.Name))
+			}
+			if targets&TargetUser != 0 {
+				if !app.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
+					panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
+				}
 			}
 		}
 	}

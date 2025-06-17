@@ -20,11 +20,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/events"
-	"github.com/meergo/meergo/core/events/dispatcher"
 	"github.com/meergo/meergo/core/filters"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"
@@ -53,36 +52,33 @@ type ValidationError interface {
 	PropertyPath() string
 }
 
-// A Collector collects events, persists them in the database and sends them to
-// the dispatcher.
+// A Collector collects events, persists them in the database, and sends them to
+// apps.
 type Collector struct {
 	db               *db.DB
 	state            *state.State
 	datastore        *datastore.Datastore
-	operationStore   events.OperationStore
 	metrics          *metrics.Collector
 	observer         *Observer
 	duplicated       sync.Map
 	functionProvider transformers.FunctionProvider
-	dispatcher       *dispatcher.Dispatcher
 	maxmindDB        *maxminddb.Reader
-	eventWriters     sync.Map // a map from workspace identifier to a *datastore.EventWriter value
-	identityWriters  sync.Map // a map from action identifier to a *identityWriter value
+	eventWriters     sync.Map      // a map from workspace identifier to a *datastore.EventWriter value
+	destinations     *destinations // destination connections used to send events
+	identityWriters  sync.Map      // a map from action identifier to a *identityWriter value
 	closed           atomic.Bool
 }
 
-// New returns a new event collector. It receives HTTP requests from SDK sources
-// and sends them to the dispatcher.
-func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.OperationStore, provider transformers.FunctionProvider, dispatcher *dispatcher.Dispatcher, metrics *metrics.Collector) (*Collector, error) {
+// New returns a new collector.
+func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connectors.Connectors, provider transformers.FunctionProvider, metrics *metrics.Collector) (*Collector, error) {
 	var c = &Collector{
 		db:               db,
 		state:            st,
 		datastore:        ds,
-		operationStore:   opStore,
 		metrics:          metrics,
 		observer:         newObserver(db),
 		functionProvider: provider,
-		dispatcher:       dispatcher,
+		destinations:     newDestinations(st, connectors, provider, metrics),
 	}
 	st.Freeze()
 	st.AddListener(c.onCreateAction)
@@ -97,14 +93,17 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.Ope
 		c.eventWriters.Store(ws.ID, store.NewEventWriter(c.eventAck))
 	}
 	for _, action := range st.Actions() {
-		if action.Target != state.TargetUser || !action.Enabled {
-			continue
+		// Create an identity writer for each active SDK action.
+		if action.Target == state.TargetUser {
+			if !action.Enabled {
+				continue
+			}
+			if action.Connection().Connector().Type != state.SDK {
+				continue
+			}
+			iw := newIdentityWriter(c.datastore, action, provider, metrics)
+			c.identityWriters.Store(action.ID, iw)
 		}
-		if action.Connection().Connector().Type != state.SDK {
-			continue
-		}
-		iw := newIdentityWriter(c.datastore, action, provider, opStore, metrics)
-		c.identityWriters.Store(action.ID, iw)
 	}
 	st.Unfreeze()
 
@@ -113,8 +112,6 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, opStore events.Ope
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", maxmindDBPath, err)
 	}
-
-	c.reloadEvents(context.Background())
 
 	return c, nil
 }
@@ -203,11 +200,6 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 // eventAck acknowledges when an event is written to the data warehouse.
 func (c *Collector) eventAck(evs []datastore.AckEvent, err error) {
 	meergoMetrics.Increment("Collector.eventAck.calls", 1)
-	doneEvents := make([]events.DoneEvent, len(evs))
-	for i, event := range evs {
-		doneEvents[i] = events.DoneEvent(event)
-	}
-	c.operationStore.Done(doneEvents...)
 	for _, event := range evs {
 		if err != nil {
 			c.metrics.FinalizeFailed(event.Action, 1, err.Error())
@@ -215,24 +207,6 @@ func (c *Collector) eventAck(evs []datastore.AckEvent, err error) {
 		}
 		c.metrics.FinalizePassed(event.Action, 1)
 	}
-}
-
-// eventDestinations returns the destination actions to which events from source
-// can be dispatched.
-func (c *Collector) eventDestinations(connection *state.Connection) []*state.Action {
-	var actions []*state.Action
-	for _, id := range connection.LinkedConnections {
-		c, ok := c.state.Connection(id)
-		if !ok {
-			continue
-		}
-		for _, action := range c.Actions() {
-			if action.Enabled && action.Target == state.TargetEvent {
-				actions = append(actions, action)
-			}
-		}
-	}
-	return actions
 }
 
 // importEventsAction returns the action of the source connection that imports
@@ -245,41 +219,6 @@ func (c *Collector) importEventsAction(connection *state.Connection) (*state.Act
 		}
 	}
 	return nil, false
-}
-
-// reloadEvents reloads the operations from the operation store.
-func (c *Collector) reloadEvents(ctx context.Context) {
-	operations, errf := c.operationStore.Pending(ctx)
-	for op := range operations {
-		for _, actionID := range op.Actions {
-			action, ok := c.state.Action(actionID)
-			if !ok {
-				continue
-			}
-			if action.Target == state.TargetUser {
-				// Import the user identities into the data warehouse
-				if w, ok := c.identityWriters.Load(action.ID); ok {
-					w.(*identityWriter).Write(op.Event)
-				}
-				continue
-			}
-			connection := action.Connection()
-			if connection.Role == state.Source {
-				// Store the events into the data warehouse.
-				ew, ok := c.eventWriters.Load(connection.Workspace().ID)
-				if !ok {
-					continue
-				}
-				_ = ew.(*datastore.EventWriter).Write(op.Event, action.ID)
-				continue
-			}
-			// Send the events to destinations.
-			_ = c.dispatcher.Dispatch(op.Event, action)
-		}
-	}
-	if err := errf(); err != nil {
-		slog.Error("core/events/collector: error occurred reloading events", "err", err)
-	}
 }
 
 // serveSettings is called by the ServeHTTP method to serve a settings request.
@@ -461,8 +400,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	var eventErr error
 
-	var operations []events.PendingOperation
-
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connectionType) {
 
@@ -534,40 +471,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 
-		// Send the events to destinations.
-		for _, action := range c.eventDestinations(connection) {
-			c.metrics.ReceivePassed(action.ID, 1)
-			if !filters.Applies(action.Filter, event) {
-				c.metrics.FilterFailed(action.ID, 1)
-				meergoMetrics.Increment("Collector.serveEvents.events_to_dispatched.filter_failed", 1)
-				continue
-			}
-			c.metrics.FilterPassed(action.ID, 1)
-			meergoMetrics.Increment("Collector.serveEvents.events_to_dispatched.filter_passed", 1)
-			err = c.dispatcher.Dispatch(event, action)
-			if err != nil {
-				c.metrics.FinalizeFailed(action.ID, 1, err.Error())
-				if eventErr == nil {
-					eventErr = errServiceUnavailable
-				}
-				continue
-			}
-			c.metrics.FinalizePassed(action.ID, 1)
-			actions = append(actions, action.ID)
+		// Send the event to apps.
+		for _, id := range connection.LinkedConnections {
+			c.destinations.QueueEvent(id, event)
 		}
 
-		if actions != nil {
-			operations = append(operations, events.PendingOperation{Event: event, Actions: actions})
-		}
-
-	}
-
-	// Persist the events.
-	if len(operations) > 0 {
-		err = c.operationStore.Store(context.Background(), operations)
-		if err != nil && eventErr == nil {
-			eventErr = errServiceUnavailable
-		}
 	}
 
 	if eventErr != nil {
@@ -590,7 +498,7 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 		return
 	}
 	go func() {
-		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.operationStore, c.metrics)
+		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
 		c.identityWriters.Store(action.ID, iw)
 	}()
 }
@@ -646,7 +554,7 @@ func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 	}
 	if action.Enabled {
 		go func() {
-			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.operationStore, c.metrics)
+			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
 			c.identityWriters.Store(action.ID, iw)
 		}()
 		return
@@ -675,7 +583,7 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	w, ok := c.identityWriters.Load(action.ID)
 	if !ok {
 		go func() {
-			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.operationStore, c.metrics)
+			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
 			c.identityWriters.Store(action.ID, iw)
 		}()
 		return

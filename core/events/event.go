@@ -167,7 +167,7 @@ var Schema = types.Object([]types.Property{
 })
 
 // rawEvent implements the meergo.RawEvent interface. A RawEvent is passed to
-// the EventRequest method of an app connector.
+// the SendEvents method of an app connector.
 type rawEvent struct {
 	event Event
 }

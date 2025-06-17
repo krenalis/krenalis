@@ -10,11 +10,12 @@
 package googleanalytics
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"net/http"
-	_url "net/url"
+	"net/url"
 	"strings"
 
 	"github.com/meergo/meergo"
@@ -74,59 +75,9 @@ type innerSettings struct {
 	APISecret     string
 }
 
-// EventRequest returns a request to dispatch an event to the app.
-func (ga *Analytics) EventRequest(ctx context.Context, event meergo.RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
-
-	req := &meergo.EventRequest{
-		Method: "POST",
-		URL:    "https://www.google-analytics.com/",
-		Header: http.Header{},
-	}
-	if sendToDebugServer {
-		req.URL += "debug/"
-	}
-	secret := ga.settings.APISecret
-	if redacted {
-		secret = "REDACTED"
-	}
-	req.URL += "mp/collect?api_secret=" + _url.QueryEscape(secret) + "&measurement_id=" + _url.QueryEscape(ga.settings.MeasurementID)
-	req.Header.Set("Content-Type", "application/json")
-
-	// Marshal the properties, if present.
-	var propertiesJSON json.Value
-	if schema.Valid() {
-		var err error
-		propertiesJSON, err = types.Marshal(properties, schema)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Prepare the request's body.
-	type requestEvent struct {
-		Name   string     `json:"name"`
-		Params json.Value `json:"params,omitempty"`
-	}
-	body := struct {
-		ClientID        string         `json:"client_id"`
-		UserID          string         `json:"user_id,omitempty"`
-		TimestampMicros int64          `json:"timestamp_micros"`
-		Events          []requestEvent `json:"events"`
-	}{
-		ClientID:        event.AnonymousId(),
-		UserID:          event.UserId(),
-		TimestampMicros: event.Timestamp().UnixMicro(),
-		Events: []requestEvent{
-			{Name: eventType, Params: propertiesJSON},
-		},
-	}
-	var err error
-	req.Body, err = json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
+// EventTypes returns the event types.
+func (ga *Analytics) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+	return meergoEventTypes, nil
 }
 
 // EventTypeSchema returns the schema of the specified event type.
@@ -138,9 +89,16 @@ func (ga *Analytics) EventTypeSchema(ctx context.Context, eventType string) (typ
 	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
-// EventTypes returns the event types of the connector's instance.
-func (ga *Analytics) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
-	return meergoEventTypes, nil
+// PreviewSendEvents returns the HTTP request that would be used to send the
+// events to the app, without actually sending it.
+func (ga *Analytics) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
+	return ga.sendEvents(ctx, events, true)
+}
+
+// SendEvents sends events to the app.
+func (ga *Analytics) SendEvents(ctx context.Context, events meergo.Events) error {
+	_, err := ga.sendEvents(ctx, events, false)
+	return err
 }
 
 // ServeUI serves the connector's user interface.
@@ -203,4 +161,101 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 	}
 	ga.settings = &s
 	return nil
+}
+
+const maxEventRequestSize = 130 * 1024 // from https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
+
+// sendEvents sends the given events to the app, returning the HTTP request and
+// any error in sending the request or in the app server's response. If preview
+// is true, the HTTP request is built but not sent, so it is only returned.
+func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+
+	u := "https://www.google-analytics.com/"
+	if sendToDebugServer {
+		u += "debug/"
+	}
+
+	secret := ga.settings.APISecret
+	if preview {
+		secret = "REDACTED"
+	}
+	u += "mp/collect?api_secret=" + url.QueryEscape(secret) + "&measurement_id=" + url.QueryEscape(ga.settings.MeasurementID)
+
+	var eventsWriter json.Buffer
+
+	eventsPerRequest := 0
+	var userID, anonymousId string
+	for i, event := range events.SameUser() {
+		if i == 0 {
+			// Note that 'userID' may also be empty after this assignment, which
+			// means that only events with empty 'userID' will be sent in this
+			// batch.
+			userID = event.Raw.UserId()
+			anonymousId = event.Raw.AnonymousId()
+		} else {
+			if event.Raw.UserId() != userID {
+				events.Skip()
+				continue
+			}
+			eventsWriter.WriteByte(',')
+		}
+		eventsWriter.WriteByte('{')
+		eventsWriter.EncodeKeyValue("name", event.Type)
+		if event.Schema.Valid() {
+			params, err := types.Marshal(event.Properties, event.Schema)
+			if err != nil {
+				return nil, err
+			}
+			eventsWriter.EncodeKeyValue("params", params)
+		}
+		eventsWriter.EncodeKeyValue("timestamp_micros", event.Raw.Timestamp().UnixMicro())
+		eventsWriter.WriteByte('}')
+		eventsPerRequest++
+		if eventsPerRequest == 25 {
+			// From the Google Analytics documentation: «Requests can have a maximum of 25 events.»
+			// https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
+			break
+		}
+		if eventsWriter.Len()+300 > maxEventRequestSize {
+			// From the Google Analytics documentation: «The post body must be smaller than 130kB.»
+			// https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
+			//
+			// 300 is just a margin value that takes into account the rest of
+			// the body, which will be built later, the JSON Object that
+			// encloses "events" (so the various keys "client_id", "user_id",
+			// etc.).
+			break
+		}
+	}
+
+	// Build the actual body.
+	var body json.Buffer
+	body.WriteByte('{')
+	body.EncodeKeyValue("client_id", anonymousId)
+	if userID != "" {
+		body.EncodeKeyValue("user_id", userID)
+	}
+	body.WriteString(`,"events":[`)
+	body.Write(eventsWriter.Bytes())
+	body.WriteString("]}")
+
+	req, err := http.NewRequest("POST", u, bytes.NewReader(body.Bytes()))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	if preview {
+		return req, nil
+	}
+
+	_, err = ga.conf.HTTPClient.DoIdempotent(req, true)
+	if err != nil {
+		return req, err
+	}
+
+	// TODO: handle errors
+
+	return req, nil
 }

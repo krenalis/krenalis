@@ -10,10 +10,12 @@
 package mixpanel
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -75,120 +77,37 @@ func New(conf *meergo.AppConfig) (*Mixpanel, error) {
 	return &c, nil
 }
 
-// EventRequest returns a request to dispatch an event to the app.
-func (mp *Mixpanel) EventRequest(ctx context.Context, event meergo.RawEvent, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+// EventTypes returns the event types.
+func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+	return []*meergo.EventType{
+		{
+			ID:          "track",
+			Name:        "Send track events",
+			Description: "Send track events to Mixpanel",
+		},
+		{
+			ID:          "page",
+			Name:        "Send page events",
+			Description: "Send page events to Mixpanel",
+		},
+		{
+			ID:          "screen",
+			Name:        "Send screen events",
+			Description: "Send screen events to Mixpanel",
+		},
+	}, nil
+}
 
-	if properties["event"].(string) == "" {
-		return nil, errors.New("event cannot be empty")
-	}
+// PreviewSendEvents returns the HTTP request that would be used to send the
+// events to the app, without actually sending it.
+func (mp *Mixpanel) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
+	return mp.sendEvents(ctx, events, true)
+}
 
-	req := &meergo.EventRequest{
-		Endpoint: "api",
-		Method:   "POST",
-		URL:      "https://api.mixpanel.com/",
-		Header:   http.Header{},
-	}
-	if mp.settings.UseEuropeanEndpoint {
-		req.Endpoint = "api-eu"
-		req.URL = "https://api-eu.mixpanel.com/"
-	}
-	req.URL += "import?strict=0&project_id=" + mp.settings.ProjectID
-	req.Header.Set("Content-Type", "application/x-ndjson")
-	authorization := base64.StdEncoding.EncodeToString([]byte(mp.settings.Username + ":" + mp.settings.Secret))
-	if redacted {
-		authorization = "[REDACTED]"
-	}
-	req.Header.Set("Authorization", "Basic "+authorization)
-
-	body := properties["properties"].(map[string]any)
-	body["$insert_id"] = event.MessageId()
-	body["time"] = formatTimestamp(event.Timestamp())
-	distinctID := event.AnonymousId()
-	if userId := event.UserId(); userId != "" {
-		distinctID = userId
-	}
-	body["distinct_id"] = distinctID
-	body["$device_id"] = event.AnonymousId()
-	context := event.Context()
-	if ip := context.IP(); ip == "" {
-		if location, ok := context.Location(); ok {
-			if country := location.Country(); country != "" {
-				body["mp_country_code"] = country
-			}
-			if city := location.City(); city != "" {
-				body["$city"] = city
-			}
-		}
-	} else {
-		body["ip"] = context.IP()
-		// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
-		// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
-		// enrichment occurs for all or none of them.
-		if location, ok := context.Location(); ok {
-			country := location.Country()
-			city := location.City()
-			if country != "" || city != "" {
-				if country != "" {
-					body["mp_country_code"] = country
-				} else {
-					body["mp_country_code"] = nil
-				}
-				if city != "" {
-					body["$city"] = city
-				} else {
-					body["$city"] = nil
-				}
-			}
-		}
-	}
-	if os, ok := context.OS(); ok && os.Name() != "" {
-		body["$os"] = os.Name()
-	}
-	if browser, ok := context.Browser(); ok {
-		if browser.Name() != "" {
-			body["$browser"] = browser.Name()
-		} else if browser.Other() != "" {
-			body["$browser"] = browser.Other()
-		}
-		if browser.Version() != "" {
-			body["$browser_version"] = browser.Version()
-		}
-	}
-	if page, ok := context.Page(); ok {
-		if referrer := page.Referrer(); referrer != "" {
-			u, err := url.Parse(referrer)
-			if err == nil {
-				body["$referrer"] = referrer
-				body["$referring_domain"] = u.Hostname()
-			}
-		}
-		if pageURL := page.URL(); pageURL != "" {
-			body["$current_url"] = pageURL
-			body["current_page_title"] = page.Title()
-			u, err := url.Parse(pageURL)
-			if err == nil {
-				body["current_domain"] = u.Hostname()
-				body["current_url_path"] = u.Path
-				body["current_url_protocol"] = u.Scheme + ":"
-			}
-		}
-	}
-	if screen, ok := context.Screen(); ok {
-		if w := screen.Width(); w != 0 {
-			body["$screen_width"] = w
-		}
-		if h := screen.Height(); h != 0 {
-			body["$screen_height"] = h
-		}
-	}
-
-	var err error
-	req.Body, err = json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
+// SendEvents sends events to the app.
+func (mp *Mixpanel) SendEvents(ctx context.Context, events meergo.Events) error {
+	_, err := mp.sendEvents(ctx, events, false)
+	return err
 }
 
 // EventTypeSchema returns the schema of the specified event type.
@@ -208,27 +127,6 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 		return schema(`"Screen View"`), nil
 	}
 	return types.Type{}, meergo.ErrEventTypeNotExist
-}
-
-// EventTypes returns the event types of the connector's instance.
-func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
-	return []*meergo.EventType{
-		{
-			ID:          "track",
-			Name:        "Send track events",
-			Description: "Send track events to Mixpanel",
-		},
-		{
-			ID:          "page",
-			Name:        "Send page events",
-			Description: "Send page events to Mixpanel",
-		},
-		{
-			ID:          "screen",
-			Name:        "Send screen events",
-			Description: "Send screen events to Mixpanel",
-		},
-	}, nil
 }
 
 // ServeUI serves the connector's user interface.
@@ -286,6 +184,170 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 	}
 	mp.settings = &s
 	return nil
+}
+
+// sendEvents sends the given events to the app, returning the HTTP request and
+// any error in sending the request or in the app server's response. If preview
+// is true, the HTTP request is built but not sent, so it is only returned.
+func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+
+	// TODO(Gianluca): handle the limits imposed by Mixpanel, see
+	// https://developer.mixpanel.com/reference/import-events.
+
+	// nlDelimitedEvents is a bytes.Buffer that contains newline-delimited JSON
+	// objects representing the events to send to Mixpanel.
+	var nlDelimitedEvents bytes.Buffer
+	for _, event := range events.All() {
+
+		if event.Properties["event"].(string) == "" {
+			return nil, errors.New("event cannot be empty")
+		}
+
+		body := event.Properties["properties"].(map[string]any)
+		body["$insert_id"] = event.Raw.MessageId()
+		body["time"] = formatTimestamp(event.Raw.Timestamp())
+		distinctID := event.Raw.AnonymousId()
+		if userId := event.Raw.UserId(); userId != "" {
+			distinctID = userId
+		}
+		body["distinct_id"] = distinctID
+		body["$device_id"] = event.Raw.AnonymousId()
+		context := event.Raw.Context()
+		if ip := context.IP(); ip == "" {
+			if location, ok := context.Location(); ok {
+				if country := location.Country(); country != "" {
+					body["mp_country_code"] = country
+				}
+				if city := location.City(); city != "" {
+					body["$city"] = city
+				}
+			}
+		} else {
+			body["ip"] = context.IP()
+			// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
+			// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
+			// enrichment occurs for all or none of them.
+			if location, ok := context.Location(); ok {
+				country := location.Country()
+				city := location.City()
+				if country != "" || city != "" {
+					if country != "" {
+						body["mp_country_code"] = country
+					} else {
+						body["mp_country_code"] = nil
+					}
+					if city != "" {
+						body["$city"] = city
+					} else {
+						body["$city"] = nil
+					}
+				}
+			}
+		}
+		if os, ok := context.OS(); ok && os.Name() != "" {
+			body["$os"] = os.Name()
+		}
+		if browser, ok := context.Browser(); ok {
+			if browser.Name() != "" {
+				body["$browser"] = browser.Name()
+			} else if browser.Other() != "" {
+				body["$browser"] = browser.Other()
+			}
+			if browser.Version() != "" {
+				body["$browser_version"] = browser.Version()
+			}
+		}
+		if page, ok := context.Page(); ok {
+			if referrer := page.Referrer(); referrer != "" {
+				u, err := url.Parse(referrer)
+				if err == nil {
+					body["$referrer"] = referrer
+					body["$referring_domain"] = u.Hostname()
+				}
+			}
+			if pageURL := page.URL(); pageURL != "" {
+				body["$current_url"] = pageURL
+				body["current_page_title"] = page.Title()
+				u, err := url.Parse(pageURL)
+				if err == nil {
+					body["current_domain"] = u.Hostname()
+					body["current_url_path"] = u.Path
+					body["current_url_protocol"] = u.Scheme + ":"
+				}
+			}
+		}
+		if screen, ok := context.Screen(); ok {
+			if w := screen.Width(); w != 0 {
+				body["$screen_width"] = w
+			}
+			if h := screen.Height(); h != 0 {
+				body["$screen_height"] = h
+			}
+		}
+
+		err := json.Encode(&nlDelimitedEvents, body)
+		if err != nil {
+			return nil, err
+		}
+
+		nlDelimitedEvents.WriteByte('\n')
+	}
+
+	u := "https://api.mixpanel.com/"
+	if mp.settings.UseEuropeanEndpoint {
+		u = "https://api-eu.mixpanel.com/"
+	}
+	u += "import?strict=1&project_id=" + mp.settings.ProjectID
+
+	req, err := http.NewRequest("POST", u, &nlDelimitedEvents)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-ndjson")
+	authorization := base64.StdEncoding.EncodeToString([]byte(mp.settings.Username + ":" + mp.settings.Secret))
+	if preview {
+		authorization = "[REDACTED]"
+	}
+	req.Header.Set("Authorization", "Basic "+authorization)
+
+	if preview {
+		return req, nil
+	}
+
+	// Send the request.
+	res, err := mp.conf.HTTPClient.DoIdempotent(req, true)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode == 200 {
+		return req, nil
+	}
+
+	// Handle the error.
+	if res.StatusCode != 400 {
+		return req, fmt.Errorf("Mixpanel server responded with %d error code", res.StatusCode)
+	}
+	var out struct {
+		FailedRecords []struct {
+			Index    int    `json:"index"`
+			InsertId string `json:"insert_id"`
+			Field    string `json:"field"`
+			Message  string `json:"message"`
+		} `json:"failed_records"`
+	}
+	err = json.Decode(res.Body, out)
+	if err != nil {
+		return req, fmt.Errorf("cannot decode Mixpanel response: %v", err)
+	}
+	if len(out.FailedRecords) == 0 {
+		return req, errors.New("unexpected status 400 with empty 'failed_records' in response from Mixpanel")
+	}
+	errors := make(meergo.EventsError, len(out.FailedRecords))
+	for _, f := range out.FailedRecords {
+		errors[f.Index] = fmt.Errorf("sending event %q: %s", f.Field, f.Message)
+	}
+
+	return req, errors
 }
 
 // formatTimestamp formats the timestamp t of an event as expected by Mixpanel.
