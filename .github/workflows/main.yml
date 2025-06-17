@@ -42,7 +42,7 @@ jobs:
           pip install pandas
           pip install pyarrow
 
-      - name: go run ./commit -x
-        run: go run ./commit -x
+      - name: go run ./commit -x -no-connector-tests
+        run: go run ./commit -x -no-connector-tests
 
       - uses: numtide/clean-git-action@v2

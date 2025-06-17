@@ -109,6 +109,9 @@ func main() {
 		}
 		if cliOptions.explicit {
 			for _, pkg := range packages {
+				if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors/") {
+					continue // skip this package.
+				}
 				NewCmd("go", args...).InDir(repo, pkg).Run(cliOptions.explicit)
 			}
 		} else {
@@ -152,10 +155,11 @@ func main() {
 }
 
 type cliOptions struct {
-	explicit      bool
-	justTestAdmin bool
-	noGoTest      bool
-	short         bool
+	explicit         bool
+	justTestAdmin    bool
+	noConnectorTests bool
+	noGoTest         bool
+	short            bool
 }
 
 func parseCli() cliOptions {
@@ -165,15 +169,18 @@ func parseCli() cliOptions {
 	var noGoTest bool
 	var printHelp bool
 	var short bool
+	var noConnectorTests bool
 
 	const reducedTestSetWarning = "WARNING: this option reduces the set of tests performed," +
-		" so it cannot be used to validate the repository before a commit"
+		" so some parts of the software and/or changes made may not be validated " +
+		"when running the script with this option"
 
 	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
 		" each package separately and prints verbose output; may take a little longer;"+
 		" the tests set is unaltered by this option")
 	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the go tests on the admin. "+
 		reducedTestSetWarning)
+	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. Requires the '-x' flag. "+reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
 		" Useful when you just want to run vendor generation commands, various asset related commands, etc... "+
 		reducedTestSetWarning)
@@ -206,11 +213,28 @@ func parseCli() cliOptions {
 			os.Exit(1)
 		}
 	}
-	mutualExclusive(justTestAdmin, short, "-just-test-admin", "-short")
-	mutualExclusive(justTestAdmin, noGoTest, "-just-test-admin", "-no-go-test")
-	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
 
-	return cliOptions{explicit: explicit, justTestAdmin: justTestAdmin, noGoTest: noGoTest, short: short}
+	// Flags incompatible with '--just-test-admin'.
+	mutualExclusive(justTestAdmin, noConnectorTests, "-just-test-admin", "-no-connector-tests")
+	mutualExclusive(justTestAdmin, noGoTest, "-just-test-admin", "-no-go-test")
+	mutualExclusive(justTestAdmin, short, "-just-test-admin", "-short")
+	// Flags incompatible with '--no-go-test'.
+	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
+	mutualExclusive(noGoTest, noConnectorTests, "-no-go-test", "-no-connector-tests")
+
+	if noConnectorTests && !explicit {
+		fmt.Fprintf(flag.CommandLine.Output(), "CLI error: flag '--no-connector-tests' requires the flag '-x'\n")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	return cliOptions{
+		explicit:         explicit,
+		justTestAdmin:    justTestAdmin,
+		noConnectorTests: noConnectorTests,
+		noGoTest:         noGoTest,
+		short:            short,
+	}
 }
 
 func checkDenoVersion(explicit bool) {

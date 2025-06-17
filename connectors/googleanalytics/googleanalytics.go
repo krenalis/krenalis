@@ -14,6 +14,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -244,6 +245,8 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		return nil, err
 	}
 
+	storeHTTPRequestWhenTesting(ctx, req)
+
 	req.Header.Set("Content-Type", "application/json")
 
 	if preview {
@@ -258,4 +261,24 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 	// TODO: handle errors
 
 	return req, nil
+}
+
+// gaTestString is a defined type used solely to pass a typed key to the
+// context. This is to avoid any kind of collisions with other values that may
+// be inserted into the context.
+type gaTestString string
+
+// storeHTTPRequestWhenTesting stores the HTTP request if requested by tests.
+//
+// To enable saving the HTTP request, the context must include, under the key
+// 'gaTestString("storeSentHTTPRequest")', a pointer to an http.Request memory
+// location where the sent request will be written.
+func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) {
+	if stored := ctx.Value(gaTestString("storeSentHTTPRequest")); stored != nil {
+		clonedReq := req.Clone(req.Context())
+		bodyBytes, _ := io.ReadAll(req.Body)
+		clonedReq.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		*(stored.(*http.Request)) = *clonedReq
+	}
 }

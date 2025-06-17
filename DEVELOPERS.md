@@ -37,6 +37,12 @@ go run ./commit
 
 Note that this command does not print anything and may take 10 to 15 minutes to execute.
 
+To run the tests without testing the connectors, run:
+
+```
+go run commit/commit.go --no-connector-tests
+```
+
 For various options and other ways to test, see the command documentation by running:
 
 ```
