@@ -215,7 +215,8 @@ func init() {
 								Type:           types.Text(),
 								Placeholder:    `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`,
 								UpdateRequired: true,
-								Description:    "Either `anonymousId` or `userId` must be provided and cannot be left empty.",
+								Nullable:       true,
+								Description:    "Either `anonymousId` or `userId` must be provided, and neither can be null or empty.",
 							},
 							{
 								Name: "channel",
@@ -224,6 +225,7 @@ func init() {
 							{
 								Name:        "category",
 								Type:        types.Text(),
+								Nullable:    true,
 								Description: "It is allowed only for page events.",
 							},
 							{
@@ -240,11 +242,14 @@ func init() {
 								Name:           "groupId",
 								Type:           types.Text(),
 								UpdateRequired: true,
+								Nullable:       true,
 								Description:    "It is required only for group events. For all other types of events, it is not permitted.",
 							},
 							{
-								Name: "messageId",
-								Type: types.Text(),
+								Name:        "messageId",
+								Type:        types.Text(),
+								Nullable:    true,
+								Description: "If it is missing or null, a generated UUID will be used as its value.",
 							},
 							{
 								Name:        "name",
@@ -265,14 +270,17 @@ func init() {
 								Type: types.DateTime(),
 							},
 							{
-								Name: "originalTimestamp",
-								Type: types.DateTime(),
+								Name:        "originalTimestamp",
+								Type:        types.DateTime(),
+								Nullable:    true,
+								Description: "It must follow the ISO 8601 timestamp format.",
 							},
 							{
 								Name:           "timestamp",
 								Type:           types.DateTime(),
 								UpdateRequired: true,
-								Description:    "It is required and cannot be null if `originalTimestamp` is present and not null.",
+								Nullable:       true,
+								Description:    "It must follow the ISO 8601 timestamp format. It is required and cannot be null if `originalTimestamp` is present and not null.",
 							},
 							{
 								Name:        "traits",
@@ -346,7 +354,8 @@ func init() {
 						Type:           types.Text(),
 						Placeholder:    `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`,
 						UpdateRequired: true,
-						Description:    "Either `anonymousId` or `userId` must be provided and cannot be left empty.",
+						Nullable:       true,
+						Description:    "Either `anonymousId` or `userId` must be provided. They cannot both be null or empty.",
 					},
 					{
 						Name: "channel",
@@ -355,6 +364,7 @@ func init() {
 					{
 						Name:        "category",
 						Type:        types.Text(),
+						Nullable:    true,
 						Description: "It is allowed only for page events.",
 					},
 					{
@@ -371,11 +381,14 @@ func init() {
 						Name:           "groupId",
 						Type:           types.Text(),
 						UpdateRequired: true,
+						Nullable:       true,
 						Description:    "It is required only for group events. For all other types of events, it is not permitted.",
 					},
 					{
-						Name: "messageId",
-						Type: types.Text(),
+						Name:        "messageId",
+						Type:        types.Text(),
+						Nullable:    true,
+						Description: "If it is missing or null, a generated UUID will be used as its value.",
 					},
 					{
 						Name:        "name",
@@ -396,14 +409,17 @@ func init() {
 						Type: types.DateTime(),
 					},
 					{
-						Name: "originalTimestamp",
-						Type: types.DateTime(),
+						Name:        "originalTimestamp",
+						Type:        types.DateTime(),
+						Nullable:    true,
+						Description: "It must follow the ISO 8601 timestamp format.",
 					},
 					{
 						Name:           "timestamp",
 						Type:           types.DateTime(),
 						UpdateRequired: true,
-						Description:    "It is required and cannot be null if `originalTimestamp` is present and not null.",
+						Nullable:       true,
+						Description:    "It must follow the ISO 8601 timestamp format. It is required and cannot be null if `originalTimestamp` is present and not null.",
 					},
 					{
 						Name:        "traits",
@@ -421,7 +437,7 @@ func init() {
 						Type:           types.Text(),
 						UpdateRequired: true,
 						Nullable:       true,
-						Description:    "It is required and cannot be null or empty for identify and alias events. For other event types, either `anonymousId` or `userId` must be provided, and neither can be null or empty.",
+						Description:    "It is required and cannot be null or empty for identify and alias events. For other event types, either `anonymousId` or `userId` must be provided, and they cannot both be null or empty.",
 					},
 					{
 						Name:     "integrations",
