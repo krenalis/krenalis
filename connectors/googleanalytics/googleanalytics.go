@@ -148,7 +148,7 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
-		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9' || c == '-') {
+		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' || c == '-') {
 			return meergo.NewInvalidSettingsError("API secret must contain only alphanumeric and '-' characters")
 		}
 	}
