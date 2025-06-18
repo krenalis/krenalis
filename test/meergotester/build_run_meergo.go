@@ -45,10 +45,6 @@ func buildMeergo(t *testing.T, repo, meergoDir string) {
 	// and for the assets.
 	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/meergo/meergo="+repo)
 
-	// Edit the go.mod as a workaround for
-	// https://github.com/meergo/meergo/issues/1558.
-	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/ClickHouse/clickhouse-go/v2=github.com/open2b/clickhouse-go/v2@v2.35.0-fix2")
-
 	// Copy the file with the connectors and warehouse imports, replacing the
 	// package name "meergotester" with "main".
 	testImports, err := os.ReadFile(filepath.Join(repo, "test", "meergotester", "test_imports.go"))
