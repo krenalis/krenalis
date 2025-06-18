@@ -117,39 +117,42 @@ func TestSendEvents(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			// Through the context, inform the 'SendEvents' method that the HTTP
+			// request must also be copied to the memory location specified via
+			// 'req', so its content can be verified in tests.
+			var req http.Request
+			ctx = context.WithValue(ctx, gaTestString("storeSentHTTPRequest"), &req)
 
-		// Through the context, inform the 'SendEvents' method that the HTTP
-		// request must also be copied to the memory location specified via
-		// 'req', so its content can be verified in tests.
-		var req http.Request
-		ctx = context.WithValue(ctx, gaTestString("storeSentHTTPRequest"), &req)
+			// Create an iterator over the test events.
+			events := testutils.NewEventsIterator(test.events)
 
-		// Create an iterator over the test events.
-		events := testutils.NewEventsIterator(test.events)
+			// Actually sends the events.
+			t.Log("calling SendEvents")
+			err = ga.SendEvents(ctx, events)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Log("SendEvent returned no errors")
 
-		// Actually sends the events.
-		err = ga.SendEvents(ctx, events)
-		if err != nil {
-			t.Fatal(err)
-		}
+			// Check that the HTTP request was actually set by the test.
+			if req.Method == "" {
+				t.Fatal("the 'SendEvents' function did not properly stored the HTTP request")
+			}
 
-		// Check that the HTTP request was actually set by the test.
-		if req.Method == "" {
-			t.Fatal("the 'SendEvents' function did not properly stored the HTTP request")
-		}
-
-		// Decode the request body and ensure it matches the expected result.
-		var jsonRequest map[string]any
-		dec := json.NewDecoder(req.Body)
-		dec.UseNumber()
-		err := dec.Decode(&jsonRequest)
-		if err != nil {
-			t.Fatal(err)
-		}
-		eq := reflect.DeepEqual(jsonRequest, test.expectedRequestBody)
-		if !eq {
-			t.Fatalf("expected %#v, got %#v", test.expectedRequestBody, jsonRequest)
-		}
+			// Decode the request body and ensure it matches the expected result.
+			var jsonRequest map[string]any
+			dec := json.NewDecoder(req.Body)
+			dec.UseNumber()
+			err := dec.Decode(&jsonRequest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			eq := reflect.DeepEqual(jsonRequest, test.expectedRequestBody)
+			if !eq {
+				t.Fatalf("expected %#v, got %#v", test.expectedRequestBody, jsonRequest)
+			}
+		})
 	}
 
 }
