@@ -67,6 +67,9 @@
   <li>
     <h4>{% if url != "" and passedInURL(url, p.name.(string)) %}:{% else if name != "" %}<span>{{ name }}.</span>{% end %}{{ p.name }}</h4>
     <span class="api-property-type">{% if p.nullable %}nullable {% end %}{{ dataType(p["type"]) }}</span>
+    {% if inReturns and p.readOptional %}
+    <span class="api-property-read-optional">Optional</span>
+    {% end if %}
     {% if not inReturns and (p.createRequired or p.updateRequired) %}
     <span class="api-property-create-required">{% if p.updateRequired %}Conditionally {% end %}Required</span>
     {% end if %}

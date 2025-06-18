@@ -168,6 +168,7 @@ nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
 .article .api-spec .method-list h4 span { color: #596171; }
 .article .api-spec .method-list { line-height: 1.5; }
 .article .api-spec .method-list .api-property-type { color: #596171; font-size: 12px; padding-left: 5px; }
+.article .api-spec .method-list .api-property-read-optional { color: #d59f38; font-weight: bold; font-size: 13px; padding-left: 5px; }
 .article .api-spec .method-list .api-property-create-required { color: #B13600; font-weight: bold; font-size: 13px; padding-left: 5px; }
 .article .api-spec .method-list .api-property-description { display: block; font-size: 14px; margin: 6px 0; }
 .article .api-spec .method-list .method-list { border: 1px solid #ccc; border-radius: 12px; }
