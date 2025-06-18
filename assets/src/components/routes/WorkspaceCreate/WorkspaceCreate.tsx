@@ -13,6 +13,22 @@ import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import InitialSchema from './InitialSchema.json';
 import * as icons from '../../../constants/icons';
 
+const postgresqlIcon = (
+	<img
+		slot='prefix'
+		className='workspace-add__warehouse-icon'
+		src=''
+	/>
+);
+
+const snowflakeIcon = (
+	<img
+		slot='prefix'
+		className='workspace-add__warehouse-icon'
+		src=''
+	/>
+);
+
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>(
@@ -158,10 +174,29 @@ const WorkspaceCreate = () => {
 				placeholder='My workspace'
 				helpText='A name for the workspace, so it can be easily recognized among other workspaces. It can be changed later.'
 			/>
-			<SlSelect value={selectedWarehouse} onSlChange={onChangeWarehouse} label='Warehouse'>
-				<SlOption value='PostgreSQL'>PostgreSQL</SlOption>
-				<SlOption value='Snowflake'>Snowflake</SlOption>
-				{isDocker && <SlOption value='PostgreSQL-Docker'>PostgreSQL via Docker</SlOption>}
+			<SlSelect
+				className='workspace-add__warehouse-list'
+				value={selectedWarehouse}
+				onSlChange={onChangeWarehouse}
+				label='Data warehouse'
+			>
+				{selectedWarehouse === 'PostgreSQL' || selectedWarehouse === 'PostgreSQL-Docker'
+					? postgresqlIcon
+					: snowflakeIcon}
+				<SlOption value='PostgreSQL'>
+					{postgresqlIcon}
+					PostgreSQL
+				</SlOption>
+				<SlOption value='Snowflake'>
+					{snowflakeIcon}
+					Snowflake
+				</SlOption>
+				{isDocker && (
+					<SlOption value='PostgreSQL-Docker'>
+						{postgresqlIcon}
+						PostgreSQL via Docker
+					</SlOption>
+				)}
 			</SlSelect>
 			{selectedWarehouse === 'PostgreSQL-Docker' ? (
 				<div className='workspace-add__docker-description'>

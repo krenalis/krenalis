@@ -11,6 +11,31 @@
 	margin-bottom: 30px;
 }
 
+.workspace-add__warehouse-list::part(combobox) {
+	min-height: 3rem;
+	font-size: 17px;
+}
+
+.workspace-add__warehouse-list::part(prefix) {
+	min-width: 25px;
+	min-height: 25px;
+}
+
+.workspace-add__warehouse-list::part(display-input) {
+	padding-left: 7px;
+}
+
+.workspace-add__warehouse-list sl-option::part(label) {
+	display: flex;
+	gap: 7px;
+	align-items: center;
+}
+
+.workspace-add__warehouse-icon {
+	width: 25px;
+	height: 25px;
+}
+
 .workspace-add__warehouse-settings {
 	margin-top: 30px;
 }
