@@ -29,11 +29,11 @@ func TestSendEvents(t *testing.T) {
 	// the settings that will be passed to the connector.
 	measurementID := os.Getenv("MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID")
 	if measurementID == "" {
-		t.Fatal("env var MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID is required but provided")
+		t.Fatal("env var MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID is required but not provided")
 	}
 	apiSecret := os.Getenv("MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET")
 	if apiSecret == "" {
-		t.Fatal("env var MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET is required but provided")
+		t.Fatal("env var MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET is required but not provided")
 	}
 	sett := innerSettings{
 		MeasurementID: measurementID,
