@@ -293,7 +293,8 @@ func init() {
 								Name:           "userId",
 								Type:           types.Text(),
 								UpdateRequired: true,
-								Description:    "Either `anonymousId` or `userId` must be provided and cannot be left empty.",
+								Nullable:       true,
+								Description:    "It is required and cannot be null or empty for identify and alias events. For other event types, either `anonymousId` or `userId` must be provided, and neither can be null or empty.",
 							},
 							{
 								Name:     "integrations",
@@ -418,7 +419,8 @@ func init() {
 						Name:           "userId",
 						Type:           types.Text(),
 						UpdateRequired: true,
-						Description:    "Either `anonymousId` or `userId` must be provided and cannot be left empty.",
+						Nullable:       true,
+						Description:    "It is required and cannot be null or empty for identify and alias events. For other event types, either `anonymousId` or `userId` must be provided, and neither can be null or empty.",
 					},
 					{
 						Name:     "integrations",

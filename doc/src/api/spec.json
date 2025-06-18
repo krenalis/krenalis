@@ -11334,7 +11334,8 @@
                                                 "kind": "text"
                                             },
                                             "updateRequired": true,
-                                            "description": "Either `anonymousId` or `userId` must be provided and cannot be left empty."
+                                            "nullable": true,
+                                            "description": "It is required and cannot be null or empty for identify and alias events. For other event types, either `anonymousId` or `userId` must be provided, and neither can be null or empty."
                                         },
                                         {
                                             "name": "integrations",
@@ -12523,7 +12524,8 @@
                                 "kind": "text"
                             },
                             "updateRequired": true,
-                            "description": "Either `anonymousId` or `userId` must be provided and cannot be left empty."
+                            "nullable": true,
+                            "description": "It is required and cannot be null or empty for identify and alias events. For other event types, either `anonymousId` or `userId` must be provided, and neither can be null or empty."
                         },
                         {
                             "name": "integrations",
