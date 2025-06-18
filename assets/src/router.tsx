@@ -57,7 +57,7 @@ const router = createBrowserRouter([
 						element: <Workspaces />,
 					},
 					{
-						path: 'add',
+						path: 'create',
 						element: <WorkspaceCreate />,
 					},
 				],

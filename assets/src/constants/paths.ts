@@ -7,7 +7,7 @@ const FULLSCREEN_PATHS = [
 	RESET_PASSWORD_PATH,
 	`${UI_BASE_PATH}reset-password/:token`,
 	`${UI_BASE_PATH}workspaces`,
-	`${UI_BASE_PATH}workspaces/add`,
+	`${UI_BASE_PATH}workspaces/create`,
 	`${UI_BASE_PATH}connections/:id/actions/edit/:action`,
 	`${UI_BASE_PATH}connections/:id/actions/add/event/:eventType`,
 	`${UI_BASE_PATH}connections/:id/actions/add/event`,

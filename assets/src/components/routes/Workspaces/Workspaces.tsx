@@ -15,8 +15,8 @@ const Workspaces = () => {
 		redirect('connections');
 	};
 
-	const onAddNewWorkspace = () => {
-		redirect('workspaces/add');
+	const onCreateNewWorkspace = () => {
+		redirect('workspaces/create');
 	};
 
 	workspaces.sort((a: Workspace, b: Workspace) => {
@@ -38,11 +38,11 @@ const Workspaces = () => {
 						<SlButton
 							variant='primary'
 							size='small'
-							className='workspace-list__add-button'
-							onClick={onAddNewWorkspace}
+							className='workspace-list__create-button'
+							onClick={onCreateNewWorkspace}
 						>
 							<SlIcon name='plus' slot='prefix' />
-							Add a new workspace
+							Create a new workspace
 						</SlButton>
 					)}
 				</div>
@@ -50,15 +50,15 @@ const Workspaces = () => {
 					{workspaces.length === 0 ? (
 						<>
 							<div className='workspace-list__no-workspace'>
-								Currently you don't have any workspace. Add at least one workspace to continue.
+								Currently you don't have any workspace. Create at least one workspace to continue.
 							</div>
 							<SlButton
 								className='workspace-list__no-workspace-action'
 								variant='primary'
-								onClick={onAddNewWorkspace}
+								onClick={onCreateNewWorkspace}
 							>
 								<SlIcon name='plus' slot='prefix' />
-								Add your first workspace
+								Create your first workspace
 							</SlButton>
 						</>
 					) : (

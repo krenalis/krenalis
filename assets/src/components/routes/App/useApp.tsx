@@ -133,8 +133,8 @@ const useApp = (
 					api = new API(window.location.origin, ws[0].id);
 				} else {
 					if (ws.length === 0) {
-						// the user must add a workspace.
-						redirect('workspaces/add');
+						// the user must create a workspace.
+						redirect('workspaces/create');
 					} else {
 						// the user must choose a workspace.
 						redirect('workspaces');

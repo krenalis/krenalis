@@ -16,7 +16,7 @@ import * as icons from '../../../constants/icons';
 const postgresqlIcon = (
 	<img
 		slot='prefix'
-		className='workspace-add__warehouse-icon'
+		className='workspace-create__warehouse-icon'
 		src=''
 	/>
 );
@@ -24,7 +24,7 @@ const postgresqlIcon = (
 const snowflakeIcon = (
 	<img
 		slot='prefix'
-		className='workspace-add__warehouse-icon'
+		className='workspace-create__warehouse-icon'
 		src=''
 	/>
 );
@@ -36,7 +36,7 @@ const WorkspaceCreate = () => {
 	);
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
-	const [isAddingWorkspace, setIsAddingWorkspace] = useState<boolean>(false);
+	const [isCreatingWorkspace, setIsCreatingWorkspace] = useState<boolean>(false);
 
 	const nameInputRef = useRef<any>();
 
@@ -73,7 +73,7 @@ const WorkspaceCreate = () => {
 		if (action === 'test') {
 			setIsCheckingWarehouse(true);
 		} else {
-			setIsAddingWorkspace(true);
+			setIsCreatingWorkspace(true);
 		}
 
 		let warehouse = selectedWarehouse;
@@ -137,11 +137,11 @@ const WorkspaceCreate = () => {
 				);
 				id = res.id;
 			} catch (err) {
-				setIsAddingWorkspace(false);
+				setIsCreatingWorkspace(false);
 				handleError(err);
 				return;
 			}
-			setIsAddingWorkspace(false);
+			setIsCreatingWorkspace(false);
 			setSelectedWorkspace(id);
 			setIsLoadingState(true);
 			redirect('settings');
@@ -155,17 +155,17 @@ const WorkspaceCreate = () => {
 	const isDocker = localStorage.getItem('meergo_ui_is_docker') != null;
 
 	return (
-		<div className='workspace-add'>
-			<div className='workspace-add__heading'>
-				<div className='workspace-add__title'>Add workspace</div>
+		<div className='workspace-create'>
+			<div className='workspace-create__heading'>
+				<div className='workspace-create__title'>Create workspace</div>
 				{!hasWorkspaces && (
-					<div className='workspace-add__description'>
-						Currently you don't have any workspace. Add a workspace to continue.
+					<div className='workspace-create__description'>
+						Currently you don't have any workspace. Create a workspace to continue.
 					</div>
 				)}
 			</div>
 			<SlInput
-				className='workspace-add__name'
+				className='workspace-create__name'
 				maxlength={100}
 				label='Name'
 				value={name}
@@ -175,7 +175,7 @@ const WorkspaceCreate = () => {
 				helpText='A name for the workspace, so it can be easily recognized among other workspaces. It can be changed later.'
 			/>
 			<SlSelect
-				className='workspace-add__warehouse-list'
+				className='workspace-create__warehouse-list'
 				value={selectedWarehouse}
 				onSlChange={onChangeWarehouse}
 				label='Data warehouse'
@@ -199,12 +199,12 @@ const WorkspaceCreate = () => {
 				)}
 			</SlSelect>
 			{selectedWarehouse === 'PostgreSQL-Docker' ? (
-				<div className='workspace-add__docker-description'>
+				<div className='workspace-create__docker-description'>
 					Since you are using Meergo with Docker you can easily create a new workspace by connecting it to the
 					PostgreSQL warehouse provided directly by our image.
 				</div>
 			) : (
-				<div className='workspace-add__warehouse-settings'>
+				<div className='workspace-create__warehouse-settings'>
 					{selectedWarehouse === 'PostgreSQL' ? (
 						<PostgreSQLSettings settings={warehouseSettings} setSettings={setWarehouseSettings} />
 					) : (
@@ -212,26 +212,26 @@ const WorkspaceCreate = () => {
 					)}
 				</div>
 			)}
-			<div className='workspace-add__buttons'>
+			<div className='workspace-create__buttons'>
 				{hasWorkspaces && (
-					<SlButton className='workspace-add__cancel-button' onClick={onCancel}>
+					<SlButton className='workspace-create__cancel-button' onClick={onCancel}>
 						Cancel
 					</SlButton>
 				)}
 				<SlButton
-					className='workspace-add__check-button'
+					className='workspace-create__check-button'
 					onClick={() => onWarehouseAction('test')}
 					loading={isCheckingWarehouse}
 				>
 					Check warehouse
 				</SlButton>
 				<SlButton
-					className='workspace-add__add-button'
+					className='workspace-create__create-button'
 					variant='primary'
 					onClick={() => onWarehouseAction('create')}
-					loading={isAddingWorkspace}
+					loading={isCreatingWorkspace}
 				>
-					Add workspace
+					Create workspace
 				</SlButton>
 			</div>
 		</div>

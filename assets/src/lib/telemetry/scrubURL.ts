@@ -7,7 +7,7 @@ const ROUTE_PATTERNS = [
 	'/reset-password',
 	'/reset-password/!token',
 	'/workspaces',
-	'/workspaces/add',
+	'/workspaces/create',
 	'/connectors',
 	'/connectors/:name',
 	'/connectors/file/:name',

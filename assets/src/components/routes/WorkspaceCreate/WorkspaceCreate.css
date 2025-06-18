@@ -1,66 +1,66 @@
-.workspace-add__heading {
+.workspace-create__heading {
 	margin-bottom: 20px;
 }
 
-.workspace-add__title {
+.workspace-create__title {
 	font-size: 23px;
 	font-weight: 600;
 }
 
-.workspace-add__name {
+.workspace-create__name {
 	margin-bottom: 30px;
 }
 
-.workspace-add__warehouse-list::part(combobox) {
+.workspace-create__warehouse-list::part(combobox) {
 	min-height: 3rem;
 	font-size: 17px;
 }
 
-.workspace-add__warehouse-list::part(prefix) {
+.workspace-create__warehouse-list::part(prefix) {
 	min-width: 25px;
 	min-height: 25px;
 }
 
-.workspace-add__warehouse-list::part(display-input) {
+.workspace-create__warehouse-list::part(display-input) {
 	padding-left: 7px;
 }
 
-.workspace-add__warehouse-list sl-option::part(label) {
+.workspace-create__warehouse-list sl-option::part(label) {
 	display: flex;
 	gap: 7px;
 	align-items: center;
 }
 
-.workspace-add__warehouse-icon {
+.workspace-create__warehouse-icon {
 	width: 25px;
 	height: 25px;
 }
 
-.workspace-add__warehouse-settings {
+.workspace-create__warehouse-settings {
 	margin-top: 30px;
 }
 
-.workspace-add__warehouse-settings > sl-input {
+.workspace-create__warehouse-settings > sl-input {
 	margin-bottom: 30px;
 }
 
-.workspace-add__warehouse-settings > sl-input:last-child {
+.workspace-create__warehouse-settings > sl-input:last-child {
 	margin-bottom: 0;
 }
 
-.workspace-add__docker-description {
+.workspace-create__docker-description {
 	margin-top: 3px;
 	font-size: 14px;
 	color: var(--sl-color-neutral-500);
 }
 
-.workspace-add__buttons {
+.workspace-create__buttons {
 	display: flex;
 	justify-content: center;
 	gap: 30px;
 	margin-top: 40px;
 }
 
-.workspace-add__add-button {
+.workspace-create__create-button {
 	min-width: 200px;
 }
