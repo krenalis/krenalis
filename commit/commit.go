@@ -116,12 +116,6 @@ func main() {
 	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run()
 	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run()
 
-	// Run checks and do operations on the JavaScript SDK.
-	fmt.Println("Run checks and do operations on the JavaScript SDK")
-	NewCmd("npm", "install").InDir(repo, "javascript-sdk").Run()
-	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run()
-	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run()
-
 	// Run "go generate" within cmd/spec.
 	NewCmd("go", "generate", "./...").InDir(repo, "cmd", "spec").Run()
 

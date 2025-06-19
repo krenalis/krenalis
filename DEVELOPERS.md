@@ -19,7 +19,6 @@ This file contains information useful to Meergo developers.
   - [5. Populate the database](#5-populate-the-database)
   - [7. Run and open the browser](#7-run-and-open-the-browser)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
-- [How to test events (and eventually import user identities)](#how-to-test-events-and-eventually-import-user-identities)
 - [Docker](#docker)
   - [Building Meergo Image](#building-meergo-image)
   - [Running Meergo within a Container](#running-meergo-within-a-container)
@@ -172,41 +171,6 @@ Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) an
 3. Run cloudflared: `cloudflared tunnel --url https://localhost:9090`
 4. Make a note of the URL listed in the standard output (example: https://xxxxxxx.trycloudflare.com)
 5. Open the URL in a browser
-
-## How to test events (and eventually import user identities)
-
-1. Add a JavaScript source connection with host `localhost:9090`.
-2. Add an action with type "Import events" (and/or an action "Import users", depending on what you want to test) and enable it.
-3. Copy the snippet in "Settings > Snippet" of the connection.
-4. Paste the snippet into your website between &lt;head&gt; and &lt;/head&gt;. You can also save the following HTML code into a file (let's suppose `javascript-sdk/mywebsite/index.html`):
-    <details>
-     <summary>Minimal HTML5 page</summary>
-
-     <pre>
-     &lt;!DOCTYPE html&gt;
-     &lt;html lang=&quot;en&quot;&gt;
-     &lt;head&gt;
-         &lt;meta charset=&quot;utf-8&quot;&gt;
-         &lt;title&gt;Test website&lt;/title&gt;
-         &lt;!-- Paste the snippet here  --&gt;
-     &lt;/head&gt;
-     &lt;body&gt;
-         &lt;p&gt;Test website&lt;/p&gt;
-     &lt;/body&gt;
-     &lt;/html&gt;
-     </pre>
-
-     </details>
-
-5. Build the JavaScript SDK:
-
-    ```sh
-    cd javascript-sdk
-    npm install
-    deno task build
-    ```
-
-6. Visit the URL pointing to the HTML file, for example https://localhost:9090/javascript-sdk/mywebsite/.
 
 ## Docker
 

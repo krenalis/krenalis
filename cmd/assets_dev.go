@@ -159,11 +159,6 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "meergo.min.js.map"))
 		return
 	}
-	if r.URL.Path == "/javascript-sdk/mywebsite/" || r.URL.Path == "/javascript-sdk/mywebsite/index.html" {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "mywebsite", "index.html"))
-		return
-	}
 	if strings.HasPrefix(r.URL.Path, "/admin/src/") {
 		// Serve Shoelace icons.
 		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/shoelace/dist/assets/icons/"); ok {
