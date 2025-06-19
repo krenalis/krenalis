@@ -74,9 +74,9 @@ const Snippet = ({ connectionID }: SnippetProps) => {
 	}, [connectionID]);
 
 	const snippet = useMemo<string>(() => {
-		const r1 = SNIPPET.replace('"writekey"', `"${keys[0]}"`);
-		const r2 = r1.replace('"endpoint"', `"${eventURL}"`);
-		const r3 = r2.replace('"javaScriptSDKURL"', `"${javaScriptSDKURL}"`);
+		const r1 = SNIPPET.replace('"writekey"', JSON.stringify(keys[0]));
+		const r2 = r1.replace('"endpoint"', JSON.stringify(eventURL));
+		const r3 = r2.replace('"javaScriptSDKURL"', JSON.stringify(javaScriptSDKURL));
 		return r3;
 	}, [SNIPPET, keys, eventURL]);
 
