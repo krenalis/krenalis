@@ -26,21 +26,15 @@ const (
 	// references to the categories under 'doc'.
 
 	CategoryAnalytics Categories = 1 << iota
-	CategoryAPI
-	CategoryAutomation
+	CategorySDKAndAPI
 	CategoryCRM
 	CategoryDatabase
 	CategoryEcommerce
-	CategoryEmail
 	CategoryEventStreaming
 	CategoryFile
 	CategoryFileStorage
 	CategoryMarketing
-	CategoryMobile
-	CategoryOLAP
-	CategorySDK
 	CategoryTest
-	CategoryWebsite
 )
 
 // String returns the string representation of a single category.
@@ -48,18 +42,14 @@ func (c Categories) String() string {
 	switch c {
 	case CategoryAnalytics:
 		return "Analytics"
-	case CategoryAPI:
-		return "API"
-	case CategoryAutomation:
-		return "Automation"
+	case CategorySDKAndAPI:
+		return "SDK & API"
 	case CategoryCRM:
 		return "CRM"
 	case CategoryDatabase:
 		return "Database"
 	case CategoryEcommerce:
 		return "E-commerce"
-	case CategoryEmail:
-		return "Email"
 	case CategoryEventStreaming:
 		return "Event streaming"
 	case CategoryFile:
@@ -68,16 +58,8 @@ func (c Categories) String() string {
 		return "File storage"
 	case CategoryMarketing:
 		return "Marketing"
-	case CategoryMobile:
-		return "Mobile"
-	case CategoryOLAP:
-		return "OLAP"
-	case CategorySDK:
-		return "SDK"
 	case CategoryTest:
 		return "Test"
-	case CategoryWebsite:
-		return "Website"
 	default:
 		return fmt.Sprintf("<unexpected category %d>", c)
 	}

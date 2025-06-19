@@ -23,7 +23,7 @@ var overview string
 func init() {
 	meergo.RegisterSDK(meergo.SDKInfo{
 		Name:       "Meergo API",
-		Categories: meergo.CategoryAPI,
+		Categories: meergo.CategorySDKAndAPI,
 		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{

@@ -61,7 +61,7 @@ func init() {
 	servers := []meergo.SDKInfo{
 		{
 			Name:       ".NET",
-			Categories: meergo.CategorySDK,
+			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconDotNet,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
@@ -72,7 +72,7 @@ func init() {
 		},
 		{
 			Name:       "Android",
-			Categories: meergo.CategorySDK | meergo.CategoryMobile,
+			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconAndroid,
 			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
@@ -84,7 +84,7 @@ func init() {
 		},
 		{
 			Name:       "Go",
-			Categories: meergo.CategorySDK,
+			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconGo,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
@@ -95,7 +95,7 @@ func init() {
 		},
 		{
 			Name:       "Java",
-			Categories: meergo.CategorySDK,
+			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconJava,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
@@ -106,7 +106,7 @@ func init() {
 		},
 		{
 			Name:       "JavaScript",
-			Categories: meergo.CategorySDK | meergo.CategoryWebsite,
+			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconJavaScript,
 			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
@@ -118,7 +118,7 @@ func init() {
 		},
 		{
 			Name:       "Node.js",
-			Categories: meergo.CategorySDK,
+			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconNode,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
@@ -129,7 +129,7 @@ func init() {
 		},
 		{
 			Name:       "Python",
-			Categories: meergo.CategorySDK,
+			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconPython,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
