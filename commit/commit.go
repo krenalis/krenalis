@@ -98,7 +98,7 @@ func main() {
 		}
 
 		for _, pkg := range packages {
-			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors/") {
+			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
 				continue // skip this package.
 			}
 			NewCmd("go", args...).InDir(repo, pkg).Run()
