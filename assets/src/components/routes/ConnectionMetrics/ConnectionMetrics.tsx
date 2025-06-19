@@ -607,7 +607,7 @@ const ConnectionMetrics = () => {
 						<Grid
 							columns={ERRORS_COLUMNS}
 							rows={isUsersSelected ? userActionErrorRows : eventActionErrorRows}
-							noRowsMessage={'no errors have occurred'}
+							noRowsMessage={'No errors have occurred'}
 						/>
 					</div>
 				</>
