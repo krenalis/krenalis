@@ -207,7 +207,8 @@ func Test_Stop(t *testing.T) {
 	if !bo.Stop() {
 		t.Fatalf("expected true, got false")
 	}
-	time.Sleep(10)
+	// Wait a bit to ensure no unexpected goroutines run after Stop.
+	time.Sleep(10 * time.Millisecond)
 }
 
 func Test_WaitTime(t *testing.T) {
