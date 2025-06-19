@@ -165,7 +165,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	sentryErrorTunnel := newSentryErrorTunnel()
 	defer sentryErrorTunnel.Close()
 
-	apisServer := newAPIsServer(core, settings.HTTP.TLS.Enabled,
+	runsOnHTTPS := settings.HTTP.TLS.Enabled || strings.HasPrefix(externalURL, "https://")
+	apisServer := newAPIsServer(core, runsOnHTTPS,
 		javaScriptSDKURL, eventURL, externalURL, settings.SkipMemberEmailVerification,
 		settings.SentryTelemetryLevel, sentryErrorTunnel)
 
