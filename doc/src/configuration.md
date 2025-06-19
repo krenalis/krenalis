@@ -19,7 +19,7 @@ These variables can be provided to Meergo when it starts, or they can be declare
 
   Example `https://my.cdn.meergo.example.com/javascript-sdk/dist/meergo.min.js`.
 
-  If not provided, it is assumed that the JavaScript SDK is served by the same server that Meergo runs on, at the path `/javascript-sdk/dist/meergo.min.js`.
+  If not provided, the default is `https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js`.
 
 - **`MEERGO_TELEMETRY_LEVEL`** \
   The level for telemetry data sent by Meergo.

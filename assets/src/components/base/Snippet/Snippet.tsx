@@ -76,7 +76,7 @@ const Snippet = ({ connectionID }: SnippetProps) => {
 	const snippet = useMemo<string>(() => {
 		const r1 = SNIPPET.replace('"writekey"', `"${keys[0]}"`);
 		const r2 = r1.replace('"endpoint"', `"${eventURL}"`);
-		const r3 = r2.replace('"/javascript-sdk/dist/meergo.min.js"', `"${javaScriptSDKURL}"`);
+		const r3 = r2.replace('"javaScriptSDKURL"', `"${javaScriptSDKURL}"`);
 		return r3;
 	}, [SNIPPET, keys, eventURL]);
 

@@ -155,7 +155,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	javaScriptSDKURL := settings.JavaScriptSDKURL
 	if javaScriptSDKURL == "" {
-		javaScriptSDKURL = strings.TrimRight(externalURL, "/") + "/javascript-sdk/dist/meergo.min.js"
+		javaScriptSDKURL = "https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js"
 	}
 	eventURL := settings.HTTP.EventURL
 	if eventURL == "" {
