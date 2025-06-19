@@ -196,7 +196,6 @@ const WorkspaceSelector = ({
 	}, []);
 
 	const onViewAllWorkspaces = () => {
-		setSelectedWorkspace(0);
 		redirect('workspaces');
 	};
 
