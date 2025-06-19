@@ -11,7 +11,7 @@ if (e.load) {
     var script = document.createElement("script");
     script.async = !0;
     script.type = "text/javascript";
-    script.src = "/javascript-sdk/dist/meergo.min.js";
+    script.src = "https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js";
     var elem = document.getElementsByTagName("script")[0];
     elem.parentNode.insertBefore(script, elem);
   };
