@@ -171,6 +171,10 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 	if n := len(s.Username); n < 20 || n > 100 {
 		return meergo.NewInvalidSettingsError("username length must be in range [20, 100]")
 	}
+	// TODO(Gianluca): this validation could be improved and/or standardized
+	// with the others across connectors, but it's not worth the effort since
+	// the project token will likely be deprecated and/or removed in future
+	// commits in favor of more modern authentication methods.
 	if n := len(s.Secret); n < 32 || n > 100 {
 		return meergo.NewInvalidSettingsError("secret length must be in range [32, 100]")
 	}

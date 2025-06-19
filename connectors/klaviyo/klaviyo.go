@@ -444,6 +444,8 @@ func (ky *Klaviyo) saveSettings(ctx context.Context, settings json.Value) error 
 	if err != nil {
 		return err
 	}
+	// Klaviyo private key specs are documented here:
+	// https://help.klaviyo.com/hc/en-us/articles/360052448451.
 	if n := len(s.PrivateAPIKey); n < 37 {
 		return meergo.NewInvalidSettingsError("private API key must be at least 37 characters long")
 	}

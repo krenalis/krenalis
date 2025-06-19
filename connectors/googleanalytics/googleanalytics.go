@@ -143,13 +143,17 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
 		return meergo.NewInvalidSettingsError("Measurement ID must begin with 'G-' or 'AW-'")
 	}
-	if n := len(s.APISecret); n < 1 || n > 40 {
-		return meergo.NewInvalidSettingsError("API secret length must be in [1,40]")
+	if n := len(s.APISecret); n < 1 || n > 100 {
+		return meergo.NewInvalidSettingsError("API secret length must be in [1,100]")
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
-		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' || c == '-') {
-			return meergo.NewInvalidSettingsError("API secret must contain only alphanumeric and '-' characters")
+		// ASCII characters with decimal codes from 33 (!) to 126 (~),
+		// inclusive, are printable characters. The space character, having
+		// decimal code 32, is therefore excluded from the range of accepted
+		// characters, and this is intentional.
+		if c < 33 || c > 126 {
+			return meergo.NewInvalidSettingsError("API secret must contain only valid characters")
 		}
 	}
 	b, err := json.Marshal(s)

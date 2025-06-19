@@ -225,9 +225,20 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 	if err != nil {
 		return err
 	}
-	if s.APIKey == "" {
-		return meergo.NewInvalidSettingsError("API key cannot be empty")
+	if n := len(s.APIKey); n < 1 || n > 100 {
+		return meergo.NewInvalidSettingsError("API key length must be in [1,100]")
 	}
+	for i := 0; i < len(s.APIKey); i++ {
+		c := s.APIKey[i]
+		// ASCII characters with decimal codes from 33 (!) to 126 (~),
+		// inclusive, are printable characters. The space character, having
+		// decimal code 32, is therefore excluded from the range of accepted
+		// characters, and this is intentional.
+		if c < 33 || c > 126 {
+			return meergo.NewInvalidSettingsError("API key must contain only valid characters")
+		}
+	}
+
 	b, err := json.Marshal(s)
 	if err != nil {
 		return err
