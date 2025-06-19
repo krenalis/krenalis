@@ -8,6 +8,8 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import Arrow from '../../base/Arrow/Arrow';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { DateRange } from 'react-date-range';
@@ -98,6 +100,7 @@ const ConnectionMetrics = () => {
 			key: 'selection',
 		},
 	]);
+	const [selectedAction, setSelectedAction] = useState<number | null>(null);
 
 	const { api, handleError } = useContext(AppContext);
 
@@ -237,11 +240,20 @@ const ConnectionMetrics = () => {
 		const fetchData = async () => {
 			let userActionsIds: number[] = [];
 			let eventActionsIds: number[] = [];
-			for (const action of c.actions) {
-				if (action.target === 'User') {
-					userActionsIds.push(action.id);
-				} else if (action.target === 'Event') {
-					eventActionsIds.push(action.id);
+			if (selectedAction == null) {
+				for (const action of c.actions) {
+					if (action.target === 'User') {
+						userActionsIds.push(action.id);
+					} else if (action.target === 'Event') {
+						eventActionsIds.push(action.id);
+					}
+				}
+			} else {
+				const a = c.actions.find((action) => action.id === selectedAction);
+				if (a.target === 'User') {
+					userActionsIds.push(a.id);
+				} else if (a.target === 'Event') {
+					eventActionsIds.push(a.id);
 				}
 			}
 
@@ -336,7 +348,7 @@ const ConnectionMetrics = () => {
 		return () => {
 			clearInterval(currentMetricsIntervalID.current);
 		};
-	}, [c, selectedTarget, selectedMetricsRange, customMetricsRange]);
+	}, [c, selectedTarget, selectedMetricsRange, customMetricsRange, selectedAction]);
 
 	useEffect(() => {
 		const handleCustomRangePickerClick = (e) => {
@@ -384,6 +396,15 @@ const ConnectionMetrics = () => {
 		selection[0].endDate = considerAsUTC(selection[0].endDate);
 		setCustomMetricsRange(selection);
 		setSelectedMetricsRange('Custom');
+	};
+
+	const onChangeSelectedAction = (e: any) => {
+		const v = e.target.value;
+		if (v === '') {
+			setSelectedAction(null);
+		} else {
+			setSelectedAction(Number(v));
+		}
 	};
 
 	if (isLoading) {
@@ -484,6 +505,12 @@ const ConnectionMetrics = () => {
 								Users
 							</SlButton>
 						</SlButtonGroup>
+						{c.actions?.length > 1 && (
+							<SlSelect size='small' onSlChange={onChangeSelectedAction}>
+								<SlOption value=''>All actions</SlOption>
+								{c.actions?.map((a) => <SlOption value={String(a.id)}>{a.name}</SlOption>)}
+							</SlSelect>
+						)}
 					</div>
 					<div className='connection-metrics__chart'>
 						<div className='connection-metrics__chart-heading'>

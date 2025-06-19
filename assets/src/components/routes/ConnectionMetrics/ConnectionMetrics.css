@@ -13,6 +13,8 @@
 	display: flex;
 	gap: 30px;
 	align-items: center;
+	row-gap: 15px;
+	flex-flow: row wrap;
 }
 
 .connection-metrics__tabs sl-button::part(base) {
