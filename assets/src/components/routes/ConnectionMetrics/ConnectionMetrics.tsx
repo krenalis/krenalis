@@ -527,7 +527,7 @@ const ConnectionMetrics = () => {
 								value={selectedAction == null ? '' : String(selectedAction)}
 								className='connection-metrics__actions'
 							>
-								<SlOption value=''>All actions</SlOption>
+								<SlOption value=''>All {selectedTarget.toLowerCase()} actions</SlOption>
 								{c.actions?.map((a) => {
 									if (a.target == selectedTarget) {
 										return <SlOption value={String(a.id)}>{a.name}</SlOption>;
