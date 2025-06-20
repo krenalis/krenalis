@@ -249,9 +249,9 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		return nil, err
 	}
 
-	storeHTTPRequestWhenTesting(ctx, req)
-
 	req.Header.Set("Content-Type", "application/json")
+
+	storeHTTPRequestWhenTesting(ctx, req)
 
 	if preview {
 		return req, nil
