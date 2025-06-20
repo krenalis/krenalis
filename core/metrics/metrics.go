@@ -270,7 +270,7 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 		threshold = timeslot + (60 - (timeslot % 60)) - interval
 	case Month:
 		interval = 30 * 24 * 60
-		threshold = timeslot + (24*60 - (timeslot % 24 * 60)) - interval
+		threshold = timeslot + (24*60 - (timeslot % (24 * 60))) - interval
 	}
 
 	query := `WITH aggregated AS (
