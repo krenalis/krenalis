@@ -27,16 +27,48 @@ This piece of code registers your connector, telling Meergo that it's ready to m
 type EventSender interface {
 
 	// EventTypeSchema returns the schema of the specified event type.
+	//
+	// The returned schema describes properties required by the connector to
+	// send an event of this type. Actions based on the specified event type
+	// will have a transformation that, given the received event, provides the
+	// properties required by the connector. These properties, along with the
+	// raw event, are passed to the connector's PreviewSendEvents and SendEvents
+	// methods.
+	//
+	// If no extra information is needed for the event type, the returned schema
+	// is the invalid schema. If the event type does not exist, it returns the
+	// ErrEventTypeNotExist error.
 	EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
 
-	// EventTypes returns the event types.
+	// EventTypes returns the event types of the connector's instance.
 	EventTypes(ctx context.Context) ([]*EventType, error)
 
-	// PreviewSendEvents returns the HTTP request that would be used to send the
-	// events to the app, without actually sending it.
+	// PreviewSendEvents builds and returns the HTTP request that would be used to
+	// send the given events to the app, without actually sending it.
+	//
+	// If any event type does not exist, it returns the ErrEventTypeNotExist error.
+	//
+	// Authentication data in the returned request is redacted (i.e., replaced with
+	// "[REDACTED]").
+	//
+	// This method is safe for concurrent use, on the same instance, by multiple
+	// goroutines.
 	PreviewSendEvents(ctx context.Context, events Events) (*http.Request, error)
 
-	// SendEvents sends events to the app.
+	// SendEvents sends a non-empty sequence of events to an app.
+	//
+	// If any event type does not exist, it returns the ErrEventTypeNotExist error.
+	//
+	// If one or more events fail to be delivered, it returns an EventsError, which
+	// includes a key for each failed event along with the corresponding error.
+	//
+	// If the returned error is not nil and not one of the above cases, it indicates
+	// a failure in the request itself that cannot be retried.
+	//
+	// If all events are delivered successfully, it returns nil.
+	//
+	// This method is safe for concurrent use, on the same instance, by multiple
+	// goroutines.
 	SendEvents(ctx context.Context, events Events) error
 }
 ```

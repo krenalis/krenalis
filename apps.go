@@ -310,16 +310,29 @@ type EventSender interface {
 	// PreviewSendEvents builds and returns the HTTP request that would be used to
 	// send the given events to the app, without actually sending it.
 	//
+	// If any event type does not exist, it returns the ErrEventTypeNotExist error.
+	//
 	// Authentication data in the returned request is redacted (i.e., replaced with
 	// "[REDACTED]").
-	PreviewSendEvents(ctx context.Context, events Events) (*http.Request, error)
-
-	// SendEvents sends events to an app. events is a non-empty sequence of
-	// events to send.
 	//
 	// This method is safe for concurrent use, on the same instance, by multiple
-	// goroutines. If an event type does not exist, it returns the
-	// ErrEventTypeNotExist error.
+	// goroutines.
+	PreviewSendEvents(ctx context.Context, events Events) (*http.Request, error)
+
+	// SendEvents sends a non-empty sequence of events to an app.
+	//
+	// If any event type does not exist, it returns the ErrEventTypeNotExist error.
+	//
+	// If one or more events fail to be delivered, it returns an EventsError, which
+	// includes a key for each failed event along with the corresponding error.
+	//
+	// If the returned error is not nil and not one of the above cases, it indicates
+	// a failure in the request itself that cannot be retried.
+	//
+	// If all events are delivered successfully, it returns nil.
+	//
+	// This method is safe for concurrent use, on the same instance, by multiple
+	// goroutines.
 	SendEvents(ctx context.Context, events Events) error
 }
 
