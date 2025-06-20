@@ -202,14 +202,6 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 			return res, nil
 		}
 
-		// Drain and close the response body.
-		closed := make(chan struct{})
-		go func() {
-			_, _ = io.Copy(io.Discard, res.Body)
-			_ = res.Body.Close()
-			close(closed)
-		}()
-
 		// Wait before retrying.
 		if netRetries {
 			retries = 0
@@ -219,6 +211,14 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		if err != nil {
 			return res, nil
 		}
+		// Drain and close the response body.
+		closed := make(chan struct{})
+		go func() {
+			_, _ = io.Copy(io.Discard, res.Body)
+			_ = res.Body.Close()
+			close(closed)
+		}()
+		// Wait.
 		select {
 		case <-time.After(wt):
 		case <-ctx.Done():
