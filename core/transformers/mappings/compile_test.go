@@ -534,3 +534,46 @@ func TestPropertyPaths(t *testing.T) {
 	}
 
 }
+
+func Test_typeOf(t *testing.T) {
+	tests := []struct {
+		name     string
+		expr     []part
+		expected types.Type
+	}{
+		{
+			name:     "value only",
+			expr:     []part{{value: 5, typ: types.Int(32)}},
+			expected: types.Int(32),
+		},
+		{
+			name:     "null value",
+			expr:     []part{{value: nil, typ: types.JSON()}},
+			expected: types.JSON(),
+		},
+		{
+			name:     "path only",
+			expr:     []part{{path: path{elements: []string{"name"}, decorators: []decorators{0}}, typ: types.Text()}},
+			expected: types.Text(),
+		},
+		{
+			name:     "value and path",
+			expr:     []part{{value: "foo", path: path{elements: []string{"name"}, decorators: []decorators{0}}, typ: types.Text()}},
+			expected: types.Text(),
+		},
+		{
+			name:     "multiple parts",
+			expr:     []part{{value: "foo", typ: types.Text()}, {value: "bar", typ: types.Text()}},
+			expected: types.Text(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := typeOf(tt.expr)
+			if !types.Equal(got, tt.expected) {
+				t.Fatalf("expected %s, got %s", tt.expected, got)
+			}
+		})
+	}
+}
