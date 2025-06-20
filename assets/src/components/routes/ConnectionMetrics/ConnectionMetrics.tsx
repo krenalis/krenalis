@@ -14,7 +14,7 @@ import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/inde
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { DateRange } from 'react-date-range';
 import { ActionError, ActionErrorsResponse } from '../../../lib/api/types/responses';
-import { ActionMetrics } from '../../../lib/api/types/action';
+import { ActionMetrics, ActionTarget } from '../../../lib/api/types/action';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
@@ -88,7 +88,7 @@ const ConnectionMetrics = () => {
 	const [eventActionsErrors, setEventActionsErrors] = useState<ActionError[]>([]);
 	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [selectedTarget, setSelectedTarget] = useState<'User' | 'Event'>(
+	const [selectedTarget, setSelectedTarget] = useState<ActionTarget>(
 		c.actions.findIndex((a) => a.target === 'Event') !== -1 ? 'Event' : 'User',
 	);
 	const [selectedMetricsRange, setSelectedMetricsRange] = useState<metricsRange>('last15Minutes');
@@ -106,6 +106,7 @@ const ConnectionMetrics = () => {
 
 	const supportedTargets = useRef([]);
 	const currentMetricsIntervalID = useRef<any>();
+	const previouslySelectedAction = useRef<number | null>(null);
 
 	const { userActionErrorRows, eventActionErrorRows } = useMemo(() => {
 		return {
@@ -366,12 +367,18 @@ const ConnectionMetrics = () => {
 		};
 	}, []);
 
-	const onSelectUsers = () => {
-		setSelectedTarget('User');
-	};
-
-	const onSelectEvents = () => {
-		setSelectedTarget('Event');
+	const onChangeSelectedTarget = (target: ActionTarget) => {
+		const isAlreadySelected = selectedTarget === target;
+		if (isAlreadySelected) {
+			return;
+		}
+		const toRestore = previouslySelectedAction.current;
+		previouslySelectedAction.current = null;
+		setSelectedTarget(target);
+		if (selectedAction != null) {
+			previouslySelectedAction.current = selectedAction;
+		}
+		setSelectedAction(toRestore);
 	};
 
 	const onSelectLast15Minutes = () => {
@@ -490,7 +497,11 @@ const ConnectionMetrics = () => {
 						<SlButtonGroup>
 							<SlButton
 								variant={isUsersSelected ? 'default' : 'primary'}
-								onClick={supportedTargets.current.includes('Event') ? onSelectEvents : null}
+								onClick={
+									supportedTargets.current.includes('Event')
+										? () => onChangeSelectedTarget('Event')
+										: null
+								}
 								size='small'
 								disabled={!supportedTargets.current.includes('Event')}
 							>
@@ -498,7 +509,11 @@ const ConnectionMetrics = () => {
 							</SlButton>
 							<SlButton
 								variant={isUsersSelected ? 'primary' : 'default'}
-								onClick={supportedTargets.current.includes('User') ? onSelectUsers : null}
+								onClick={
+									supportedTargets.current.includes('User')
+										? () => onChangeSelectedTarget('User')
+										: null
+								}
 								size='small'
 								disabled={!supportedTargets.current.includes('User')}
 							>
@@ -506,9 +521,18 @@ const ConnectionMetrics = () => {
 							</SlButton>
 						</SlButtonGroup>
 						{c.actions?.length > 1 && (
-							<SlSelect size='small' onSlChange={onChangeSelectedAction}>
+							<SlSelect
+								size='small'
+								onSlChange={onChangeSelectedAction}
+								value={selectedAction == null ? '' : String(selectedAction)}
+							>
 								<SlOption value=''>All actions</SlOption>
-								{c.actions?.map((a) => <SlOption value={String(a.id)}>{a.name}</SlOption>)}
+								{c.actions?.map((a) => {
+									if (a.target == selectedTarget) {
+										return <SlOption value={String(a.id)}>{a.name}</SlOption>;
+									}
+									return null;
+								})}
 							</SlSelect>
 						)}
 					</div>
