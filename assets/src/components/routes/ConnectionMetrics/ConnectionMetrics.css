@@ -46,6 +46,30 @@
 	opacity: 1;
 }
 
+.connection-metrics__actions::part(combobox) {
+	font-size: 0.75rem;
+	transition: border 0.5s;
+	box-shadow: none !important;
+	border: solid var(--sl-input-border-width) var(--sl-input-border-color) !important;
+}
+
+.connection-metrics__actions::part(display-input) {
+	transition: color 0.5s;
+	font-weight: 500;
+}
+
+.connection-metrics__actions:hover::part(combobox) {
+	border: 1px solid var(--sl-color-primary-300) !important;
+}
+
+.connection-metrics__actions:hover::part(display-input) {
+	color: var(--sl-color-primary-600);
+}
+
+.connection-metrics__actions sl-option::part(base) {
+	font-size: 0.75rem;
+}
+
 .connection-metrics__chart {
 	margin: 20px auto 0 auto;
 	width: 100%;

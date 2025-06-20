@@ -525,6 +525,7 @@ const ConnectionMetrics = () => {
 								size='small'
 								onSlChange={onChangeSelectedAction}
 								value={selectedAction == null ? '' : String(selectedAction)}
+								className='connection-metrics__actions'
 							>
 								<SlOption value=''>All actions</SlOption>
 								{c.actions?.map((a) => {
