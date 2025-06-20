@@ -496,7 +496,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 // typeOf returns the type of the expression expr.
 func typeOf(expr []part) types.Type {
 	p := expr[0]
-	if len(expr) > 0 || p.value != nil && p.path.elements != nil {
+	if len(expr) > 1 || p.value != nil && p.path.elements != nil {
 		return types.Text()
 	}
 	return p.typ
