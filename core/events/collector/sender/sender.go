@@ -491,24 +491,29 @@ func (s *Sender) resetTimerLocked() {
 
 // send sends events to the app by calling the connector's SendEvents method.
 func (s *Sender) send(iter *iterator) {
+
 	trace("Sender.send: iterator %p started\n", iter)
 	if asserts {
 		s.mu.Lock()
 		s._assertAvailable(s.available)
 		s.mu.Unlock()
 	}
-	var retry bool
-	var errors meergo.EventsError
+
+	var errEvents meergo.EventsError
+	var errRequest error
+
 	err := s.sendEvents(s.close.ctx, iter)
-	switch err := err.(type) {
-	case nil:
-	case meergo.EventsError:
-		errors = err
-	default:
-		trace("Sender.send: SendEvents returned an error that is not an EventsError: %s\n", err)
-		retry = true
+	if err != nil {
+		if ee, ok := err.(meergo.EventsError); ok {
+			errEvents = ee
+		} else {
+			errRequest = err
+			trace("Sender.send: SendEvents returned an error that is not an EventsError: %s\n", err)
+		}
 	}
+
 	var acksByError map[error][]Ack
+
 	s.mu.Lock()
 	if s.iterator == iter {
 		// SendEvents hasn't started the iteration; mark it as completed.
@@ -529,24 +534,19 @@ func (s *Sender) send(iter *iterator) {
 			}
 			user := s.events[i].user
 			s.releasableUsers[user] = struct{}{}
-			// Remove the event from the queue if it shouldn't be retried.
-			// The events are retried only if SendEvents returned a non-nil error other than meergo.EventsError.
-			if retry {
-				// Clear the iterator so another iterator can consume the event.
-				s.events[i].iterator = nil
-			} else {
-				ack := Ack{
-					Action: s.events[i].action,
-					Event:  s.events[i].ID,
-				}
-				var err error
-				if errors != nil {
-					err = errors[index]
-				}
-				acksByError[err] = append(acksByError[err], ack)
-				user.events--
-				s.events[i] = nil
+			ack := Ack{
+				Action: s.events[i].action,
+				Event:  s.events[i].ID,
 			}
+			var err error
+			if errEvents != nil {
+				err = errEvents[index]
+			} else if errRequest != nil {
+				err = errRequest
+			}
+			acksByError[err] = append(acksByError[err], ack)
+			user.events--
+			s.events[i] = nil
 			index++
 		}
 		if s.iterator == nil {
@@ -564,10 +564,12 @@ func (s *Sender) send(iter *iterator) {
 		}
 	}
 	s.mu.Unlock()
+
 	for err, acks := range acksByError {
 		trace("Sender.send: send ack for iterator %p with acks %#v and error %#v\n", iter, acks, err)
 		s.acks(acks, err)
 	}
+
 	s.close.iterators.Done()
 	s.compact()
 }

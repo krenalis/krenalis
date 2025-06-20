@@ -10,7 +10,6 @@ package sender
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"iter"
 	"math"
@@ -253,9 +252,8 @@ type ack struct {
 }
 
 type app struct {
-	t          *testing.T
-	testErrors bool
-	seed       uint64
+	t    *testing.T
+	seed uint64
 
 	mu        sync.Mutex
 	iteration uint64
@@ -266,10 +264,9 @@ type app struct {
 
 func newApp(t *testing.T, seed uint64) *app {
 	a := app{
-		t:          t,
-		testErrors: true,
-		seed:       seed,
-		acks:       []ack{},
+		t:    t,
+		seed: seed,
+		acks: []ack{},
 	}
 	return &a
 }
@@ -364,16 +361,8 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 	time.Sleep(time.Duration(rng.Int()%10) * time.Microsecond)
 
 	app.mu.Lock()
-	defer app.mu.Unlock()
-	if app.testErrors {
-		if rng.Int()%10 == 0 {
-			app.testErrors = false
-			return errors.New("an error occurred")
-		}
-	} else {
-		app.testErrors = true
-	}
 	app.delivered = append(app.delivered, delivered...)
+	app.mu.Unlock()
 
 	return nil
 }
