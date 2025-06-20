@@ -47,7 +47,7 @@ type sessionCookie struct {
 }
 
 const (
-	sessionCookieName = "api"
+	sessionCookieName = "meergo_session"
 	sessionCookiePath = "/api/"
 )
 
