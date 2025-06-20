@@ -7,7 +7,7 @@ const toJSDate = (dateString: string): Date | null => {
 			// It's in seconds.
 			date = new Date(timestamp * 1000);
 		} else {
-			new Date(timestamp);
+			date = new Date(timestamp);
 		}
 		return date;
 	}
