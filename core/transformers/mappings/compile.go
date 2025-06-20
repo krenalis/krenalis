@@ -125,8 +125,8 @@ func checkEq(args [][]part, schema, dt types.Type, nullable bool, properties map
 			return types.Type{}, err
 		}
 	}
-	t0 := typesOf(args[0])
-	t1 := typesOf(args[1])
+	t0 := typeOf(args[0])
+	t1 := typeOf(args[1])
 	if !t0.Valid() || !t1.Valid() {
 		return types.Boolean(), nil
 	}
@@ -235,8 +235,8 @@ func checkNe(args [][]part, schema, dt types.Type, nullable bool, properties map
 			return types.Type{}, err
 		}
 	}
-	t0 := typesOf(args[0])
-	t1 := typesOf(args[1])
+	t0 := typeOf(args[0])
+	t1 := typeOf(args[1])
 	if !t0.Valid() || !t1.Valid() {
 		return types.Boolean(), nil
 	}
@@ -494,7 +494,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 }
 
 // typeOf returns the type of the expression expr.
-func typesOf(expr []part) types.Type {
+func typeOf(expr []part) types.Type {
 	p := expr[0]
 	if len(expr) > 0 || p.value != nil && p.path.elements != nil {
 		return types.Text()

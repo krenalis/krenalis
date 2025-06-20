@@ -348,7 +348,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 			length = digitCountUint(uint64(v))
 		case float64:
 			bitSize := 64
-			if t := typesOf(p.args[0]); t.Kind() == types.FloatKind && t.BitSize() == 32 {
+			if t := typeOf(p.args[0]); t.Kind() == types.FloatKind && t.BitSize() == 32 {
 				bitSize = 32
 			}
 			length = len(strconv.FormatFloat(v, 'g', -1, bitSize))
@@ -357,7 +357,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		case string:
 			length = utf8.RuneCountInString(v)
 		case time.Time:
-			t := typesOf(p.args[0])
+			t := typeOf(p.args[0])
 			switch t.Kind() {
 			case types.DateTimeKind:
 				length = 20
