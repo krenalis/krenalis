@@ -122,7 +122,7 @@ func TestSendEvents(t *testing.T) {
 			// request must also be copied to the memory location specified via
 			// 'req', so its content can be verified in tests.
 			var req http.Request
-			ctx = context.WithValue(ctx, gaTestString("storeSentHTTPRequest"), &req)
+			ctx = context.WithValue(ctx, connectorTestString("storeSentHTTPRequest"), &req)
 
 			// Create an iterator over the test events.
 			events := testutils.NewEventsIterator(test.events)
