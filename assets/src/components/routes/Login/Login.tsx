@@ -110,7 +110,7 @@ const Login = () => {
 		setEmail(e.currentTarget.value);
 	};
 
-	const onPaswordChange = (e) => {
+	const onPasswordChange = (e) => {
 		setPassword(e.currentTarget.value);
 	};
 
@@ -152,7 +152,7 @@ const Login = () => {
 					<input
 						type='password'
 						className='login__password'
-						onInput={onPaswordChange}
+						onInput={onPasswordChange}
 						name='password'
 						value={password}
 						placeholder='Your password'
