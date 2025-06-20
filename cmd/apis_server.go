@@ -219,6 +219,9 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 					return
 				default:
 				}
+				if err == errInvalidSessionCookie {
+					_, _ = s.logout(w, r)
+				}
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)
 					return
