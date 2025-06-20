@@ -474,13 +474,9 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	c := &http.Cookie{
-		Name:  sessionCookieName,
-		Value: value,
-		Path:  sessionCookiePath,
-		// TODO(Gianluca): disabling Secure for HTTP connections is necessary
-		// because we currently have only a loing mecanism based on cookies,
-		// that would not work on HTTP connections.
-		// See the issue https://github.com/meergo/meergo/issues/1153.
+		Name:     sessionCookieName,
+		Value:    value,
+		Path:     sessionCookiePath,
 		Secure:   s.runsOnHTTPS,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
@@ -510,13 +506,9 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 	}
 	// Remove the session.
 	c := &http.Cookie{
-		Name:  sessionCookieName,
-		Value: "",
-		Path:  sessionCookiePath,
-		// TODO(Gianluca): disabling Secure for HTTP connections is necessary
-		// because we currently have only a loing mecanism based on cookies,
-		// that would not work on HTTP connections.
-		// See the issue https://github.com/meergo/meergo/issues/1153.
+		Name:     sessionCookieName,
+		Value:    "",
+		Path:     sessionCookiePath,
 		Secure:   s.runsOnHTTPS,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
