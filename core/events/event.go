@@ -539,7 +539,7 @@ type rawEventContextScreen struct {
 }
 
 func (c rawEventContextScreen) Width() int {
-	return c.screen["id"].(int)
+	return c.screen["width"].(int)
 }
 
 func (c rawEventContextScreen) Height() int {
