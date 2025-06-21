@@ -86,7 +86,7 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 					continue;
 				}
 				if (isDot(c)) {
-					if (expr.slice(start, end).includes('.')) {
+					if (expr.slice(start, i).includes('.')) {
 						return null;
 					}
 					continue;
