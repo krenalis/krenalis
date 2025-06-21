@@ -16,10 +16,10 @@ const Login = () => {
 	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, logout, setIsPasswordless } =
 		useContext(AppContext);
 
-	const [searchParms, setSearchParams] = useSearchParams();
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	useEffect(() => {
-		const status = searchParms.get('status');
+		const status = searchParams.get('status');
 		if (status == null) {
 			return;
 		}
