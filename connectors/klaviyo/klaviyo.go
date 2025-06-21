@@ -554,7 +554,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		body.WriteString(`,"metric":{"data":{"type":"metric","attributes":{"name":`)
 		_ = body.Encode(event.Properties["metric_name"].(string))
 		body.WriteString(`}}}}}]}}}`)
-		if n > maxBodyEventsBytes {
+		if body.Len()+len(`]}}}}`) > maxBodyEventsBytes {
 			body.Truncate(n)
 			events.Skip()
 			break
