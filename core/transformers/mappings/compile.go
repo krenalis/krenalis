@@ -475,6 +475,8 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 		if err != nil {
 			if p.value == nil {
 				return fmt.Errorf("cannot convert null to %s", dt)
+			} else if p.typ.Kind() == types.TextKind {
+				return fmt.Errorf("cannot convert %q (type %s) to %s", p.value, p.typ, dt)
 			}
 			return fmt.Errorf("cannot convert %v (type %s) to %s", p.value, p.typ, dt)
 		}

@@ -81,7 +81,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "jsonNil", dt: types.JSON(), nullable: false, expected: nil},
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expected: nil},
 
-		{expr: "''", dt: types.Map(types.Text()), compileErr: errors.New("cannot convert  (type text) to map")},
+		{expr: "''", dt: types.Map(types.Text()), compileErr: errors.New("cannot convert \"\" (type text) to map")},
 		{expr: "' '   '  '", dt: types.Text(), expected: "   "},
 		{expr: "''", dt: types.JSON(), expected: json.Value(`""`)},
 		{expr: "'100'", dt: types.JSON(), expected: json.Value(`"100"`)},
@@ -327,8 +327,8 @@ func Test_Compile(t *testing.T) {
 		{expr: "substring('Hello World', null)", dt: types.Text(), expected: nil},
 		{expr: "substring('Hello World', 3, -2)", dt: types.Text(), evalErr: errors.New("substring: negative substring length is not allowed")},
 		{expr: "substring(250, 2, 2)", dt: types.Int(32), expected: 50},
-		{expr: "substring('Hello World', 'a', 2)", dt: types.Int(32), compileErr: errors.New("cannot convert a (type text) to int(32)")},
-		{expr: "substring('Hello World', 0, 'b')", dt: types.Int(32), compileErr: errors.New("cannot convert b (type text) to int(32)")},
+		{expr: "substring('Hello World', 'a', 2)", dt: types.Int(32), compileErr: errors.New(`cannot convert "a" (type text) to int(32)`)},
+		{expr: "substring('Hello World', 0, 'b')", dt: types.Int(32), compileErr: errors.New(`cannot convert "b" (type text) to int(32)`)},
 		{expr: "substring()", dt: types.Int(32), compileErr: errors.New("'substring' function requires two or three arguments")},
 		{expr: "substring('a', 3, 6, 8)", dt: types.Int(32), compileErr: errors.New("'substring' function requires two or three arguments")},
 
