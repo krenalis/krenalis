@@ -262,7 +262,8 @@ type Records interface {
 	All() iter.Seq2[int, Record]
 
 	// First returns the first record. The record's properties may be modified.
-	// First può essere chiamato al posto di All e Some se l'app consente di aggiornare o creare un solo record alla volta.
+	// Use it instead of All or Some when the app only needs to create or update one
+	// record at a time.
 	First() Record
 
 	// Peek retrieves the next record without advancing the iterator. It returns the
