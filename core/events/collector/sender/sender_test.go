@@ -333,29 +333,31 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 		return nil
 	}
 
-	var seq iter.Seq2[int, *meergo.Event]
+	var seq iter.Seq[*meergo.Event]
 	if rng.Int()%3 == 0 {
 		seq = events.SameUser()
 	} else {
 		seq = events.All()
 	}
 
+	var n int
 	var delivered []string
-	for i, event := range seq {
+	for event := range seq {
 		app.validateEvent(event)
-		if i%4 == 0 {
+		if n%4 == 0 {
 			if p, ok := events.Peek(); ok {
 				app.validateEvent(p)
 			}
 		}
-		if i > 0 && rng.Int()%3 == 0 {
+		if n > 0 && rng.Int()%3 == 0 {
 			events.Skip()
 		} else {
 			delivered = append(delivered, event.ID)
 		}
-		if i == rng.Int()/2 {
+		if n == rng.Int()/2 {
 			break
 		}
+		n++
 	}
 
 	time.Sleep(time.Duration(rng.Int()%10) * time.Microsecond)

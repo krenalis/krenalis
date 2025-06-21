@@ -381,6 +381,7 @@ func (s *Sender) queueOrDiscardEvent(event *Event, discard bool) {
 
 // read reads an event from the queue. If consume is true, the event is removed;
 // otherwise, subsequent calls to read will return the same event.
+// consume indicates if the event should be consumed.
 func (s *Sender) read(consume bool) (*meergo.Event, bool) {
 	var event *Event
 	s.mu.Lock()

@@ -331,18 +331,20 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 
 	dummy.simulateHTTPDelay()
 
-	recordsError := make(meergo.RecordsError, 0)
+	recordsError := make(meergo.RecordsError)
 
 	customersLock.Lock()
 	defer customersLock.Unlock()
 
-	for i, record := range records.All() {
+	n := 0
+	for record := range records.All() {
 
 		metrics.Increment("Dummy.Upsert.records_read_from_iterator", 1)
 
 		if dummy.customerExportRandomlyFails() {
 			metrics.Increment("Dummy.Upsert.export_failed", 1)
-			recordsError[i] = errors.New("writing of customer record failed (due to a causal failure probability configured in Dummy)")
+			recordsError[n] = errors.New("writing of customer record failed (due to a causal failure probability configured in Dummy)")
+			n++
 			continue
 		}
 
@@ -375,7 +377,8 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 			customer, ok := allCustomers[record.ID]
 			if !ok {
 				metrics.Increment("Dummy.Upsert.updated_customers_not_found", 1)
-				recordsError[i] = errors.New("the customer to update does not exist in Dummy")
+				recordsError[n] = errors.New("the customer to update does not exist in Dummy")
+				n++
 				continue
 			}
 			metrics.Increment("Dummy.Upsert.updated_customers", 1)
@@ -384,6 +387,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 		}
 
 		customersLastChangeTimes[id] = time.Now().UTC().Truncate(time.Microsecond)
+		n++
 
 	}
 

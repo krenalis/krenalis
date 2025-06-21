@@ -285,8 +285,9 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 	var body json.Buffer
 	body.WriteString(`{"inputs":[`)
 
-	for i, record := range records.Same() {
-		if i > 0 {
+	n := 0
+	for record := range records.Same() {
+		if n > 0 {
 			body.WriteByte(',')
 		}
 		body.WriteByte('{')
@@ -295,7 +296,8 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		}
 		_ = body.EncodeKeyValue("properties", record.Properties)
 		body.WriteByte('}')
-		if i+1 == 100 {
+		n++
+		if n == 100 {
 			break
 		}
 	}

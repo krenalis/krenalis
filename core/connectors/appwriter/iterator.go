@@ -29,7 +29,7 @@ func newIterator(w *Writer) *iterator {
 	return &it
 }
 
-func (it *iterator) All() iter.Seq2[int, meergo.Record] {
+func (it *iterator) All() iter.Seq[meergo.Record] {
 	if it.consumed {
 		panic(it.writer.name + " connector: Upsert method called Records.All after the records were consumed")
 	}
@@ -45,7 +45,7 @@ func (it *iterator) First() meergo.Record {
 	if trace {
 		fmt.Printf("iterator.First: iterator %p reads only the first record\n", it)
 	}
-	record, ok := it.writer.read(opAll, 0)
+	record, ok := it.writer.read(opAll, true)
 	it.writer.complete()
 	if !ok {
 		panic("core/connectors/appwriter: iterator has called Writer.read, but no records are available")
@@ -60,20 +60,20 @@ func (it *iterator) Peek() (meergo.Record, bool) {
 	if trace {
 		fmt.Printf("iterator.Peek: iterator %p peek a record\n", it)
 	}
-	record, ok := it.writer.read(opAll, dontConsume)
+	record, ok := it.writer.read(opAll, false)
 	if !ok {
 		return meergo.Record{}, false
 	}
 	return record, true
 }
 
-func (it *iterator) Same() iter.Seq2[int, meergo.Record] {
+func (it *iterator) Same() iter.Seq[meergo.Record] {
 	if it.consumed {
 		panic(it.writer.name + " connector: Upsert method called Records.Some after the records were consumed")
 	}
 	it.consumed = true
 	op := opUpdate
-	if record, _ := it.writer.read(opAll, dontConsume); record.ID == "" {
+	if record, _ := it.writer.read(opAll, false); record.ID == "" {
 		op = opCreate
 	}
 	return it.seq(op)
@@ -95,30 +95,26 @@ func (it *iterator) Skip() {
 
 // seq returns a sequence of records. If op is not opAll, it restricts the
 // sequence to records of type creation (opCreate) or update (opUpdate).
-func (it *iterator) seq(op op) iter.Seq2[int, meergo.Record] {
-	return func(yield func(i int, record meergo.Record) bool) {
+func (it *iterator) seq(op op) iter.Seq[meergo.Record] {
+	return func(yield func(record meergo.Record) bool) {
 		if trace {
 			fmt.Printf("iterator.seq: iterator %p starting to read %s records\n", it, op)
 		}
 		it.iterating = true
-		i := 0
 		for {
 			it.skipped = false
-			record, ok := it.writer.read(op, i)
+			record, ok := it.writer.read(op, true)
 			if !ok {
 				if trace {
 					fmt.Printf("iterator.seq: iterator %p finished reading the records; no more are available\n", it)
 				}
 				break
 			}
-			if !yield(i, record) {
+			if !yield(record) {
 				if trace {
 					fmt.Printf("iterator.seq: iterator %p broke out of the loop while reading records\n", it)
 				}
 				break
-			}
-			if !it.skipped {
-				i++
 			}
 		}
 		it.iterating = false

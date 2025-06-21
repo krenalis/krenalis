@@ -231,8 +231,8 @@ func (err RecordsError) Error() string {
 // To iterate over records, call either All, Same, or First — only one of these
 // can be used per Records value:
 //   - All returns an iterator over all records.
-//   - Same returns an iterator over records with the same operation type (create
-//     or update) as the first record.
+//   - Same returns an iterator over records with the same operation type
+//     (create or update) as the first record.
 //   - First returns the first record.
 //
 // Records are consumed as they are yielded by the iterator. A record is
@@ -240,17 +240,18 @@ func (err RecordsError) Error() string {
 //
 // Example:
 //
-//	for i, rec := range records.All() {
-//	    // rec is now consumed unless Skip is called here
-//	    if i > 0 && !shouldProcess(rec) {
-//	        records.Skip()
-//	        continue
-//	    }
-//	    process(rec)
+//	for record := range records.All() {
+//		...
+//		// record is now consumed unless Skip is called here
+//		if skip {
+//			records.Skip()
+//			continue
+//		}
+//		...
 //	}
 //
-// Calling Skip during iteration marks the current record as not consumed,
-// so it will be available in subsequent Upsert calls.
+// Calling Skip during iteration marks the current record as not consumed, so it
+// will be available in subsequent Upsert calls.
 //
 // Only one iteration (using All or Same) or call to First may be active on a
 // Records value. After an iteration completes or First is called, the Records
@@ -259,7 +260,7 @@ type Records interface {
 
 	// All returns an iterator to read all records. Properties of the records in the
 	// sequence may be modified unless the record is subsequently skipped.
-	All() iter.Seq2[int, Record]
+	All() iter.Seq[Record]
 
 	// First returns the first record. The record's properties may be modified.
 	// Use it instead of All or Some when the app only needs to create or update one
@@ -276,12 +277,11 @@ type Records interface {
 	// (if the first record is for update) or all records to create
 	// (if the first record is for creation). Properties of the records in the
 	// sequence may be modified unless the record is subsequently skipped.
-	Same() iter.Seq2[int, Record]
+	Same() iter.Seq[Record]
 
-	// Skip skips the current record in the iteration and marks it as unread. The
-	// subsequent iteration will resume at the next record while preserving the same
-	// index. Skip may only be called during iterations from All or Same, and only
-	// if the record's properties have not been modified.
+	// Skip skips the current record in the iteration and marks it as unread. Skip
+	// may only be called during iterations from All or Same, and only if the
+	// record's properties have not been modified.
 	//
 	// The first event must always be consumed. Calling Skip on it will cause a
 	// panic. It is safe to call Skip multiple times on the same record.
@@ -346,14 +346,20 @@ type Event struct {
 	Raw        RawEvent       // original, untransformed event data as it was received.
 }
 
-// EventsError is returned by the SendEvents method of an app connector when
-// some events have been consumed, but they cannot be included in the current or
-// any future requests. It maps the event indices to the errors related to those
-// events.
+// EventsError can be returned by the SendEvents and PreviewSendEvents methods
+// of an app connector when one or more events are rejected by the destination
+// app due to validation issues—such as schema mismatches, missing required
+// fields, or invalid values. It maps the index of each failed event (starting
+// from 0) to the corresponding error.
 //
-// The EventsRequest method may return both a request with the events that were
-// included in the request and an EventsError error with the events that could
-// not be included in any request.
+// This error type only reports validation-related failures. Other kinds of
+// errors (e.g., network issues or internal failures) may be returned
+// separately.
+//
+// For example, if the third event is rejected due to a validation error while
+// all other events are accepted, the returned error would be:
+//
+// EventsError{2: errors.New("event is not valid")}
 type EventsError map[int]error
 
 func (err EventsError) Error() string {
@@ -364,16 +370,42 @@ func (err EventsError) Error() string {
 	return msg
 }
 
-// Events represents a collection of events to be sent to an app. The collection
-// is guaranteed to contain at least one event.
+// Events provides access to a non-empty sequence of events to be sent to an
+// app.
 //
-// After calling First or once the iterator returned by All or SameUser stops,
-// no further method calls on Events are allowed.
+// To iterate over events, call either All, SameUser, or First — only one of
+// these can be used per Events value:
+//   - All returns an iterator over all events.
+//   - SameUser returns an iterator over events with the same user (events with
+//     the same anonymous ID) as the first event.
+//   - First returns the first event.
+//
+// Events are consumed as they are yielded by the iterator. An event is
+// considered consumed once produced by the iterator, unless Skip is called.
+//
+// Example:
+//
+//	for event := range events.All() {
+//		...
+//		// event is now consumed unless Skip is called here
+//		if skip {
+//			events.Skip()
+//			continue
+//		}
+//		...
+//	}
+//
+// Calling Skip during iteration marks the current event as not consumed, so it
+// will be available in subsequent SendEvents or PreviewSendEvents calls.
+//
+// Only one iteration (using All or SameUser) or call to First may be active on
+// an Events value. After an iteration completes or First is called, the Events
+// value must not be used again.
 type Events interface {
 
 	// All returns an iterator to read all events. Properties of the events in the
 	// sequence may be modified unless the event is subsequently skipped.
-	All() iter.Seq2[int, *Event]
+	All() iter.Seq[*Event]
 
 	// First returns the first event. The event's properties may be modified.
 	// After First is called, no further method calls on Events are allowed.
@@ -387,12 +419,11 @@ type Events interface {
 	// SameUser returns an iterator over the events of the same user. Properties of
 	// the events in the sequence may be modified unless the event is subsequently
 	// skipped.
-	SameUser() iter.Seq2[int, *Event]
+	SameUser() iter.Seq[*Event]
 
-	// Skip skips the current event in the iteration and marks it as unread. The
-	// subsequent iteration will resume at the next event while preserving the same
-	// index. Skip may only be called during iterations from All or SameUser, and only
-	// if the event's properties have not been modified.
+	// Skip skips the current event in the iteration and marks it as unread. Skip
+	// may only be called during iterations from All or SameUser, and only if the
+	// event's properties have not been modified.
 	Skip()
 }
 

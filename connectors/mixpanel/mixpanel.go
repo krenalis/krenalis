@@ -201,7 +201,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	// nlDelimitedEvents is a bytes.Buffer that contains newline-delimited JSON
 	// objects representing the events to send to Mixpanel.
 	var nlDelimitedEvents bytes.Buffer
-	for _, event := range events.All() {
+	for event := range events.All() {
 
 		if event.Properties["event"].(string) == "" {
 			return nil, errors.New("event cannot be empty")

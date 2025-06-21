@@ -40,7 +40,7 @@ func NewEventsIterator(events []*meergo.Event) meergo.Events {
 	return &it
 }
 
-func (it *iterator) All() iter.Seq2[int, *meergo.Event] {
+func (it *iterator) All() iter.Seq[*meergo.Event] {
 	if it.consumed {
 		panic("SendEvents method called Events.All after the events were consumed")
 	}
@@ -73,7 +73,7 @@ func (it *iterator) Peek() (*meergo.Event, bool) {
 	return event, true
 }
 
-func (it *iterator) SameUser() iter.Seq2[int, *meergo.Event] {
+func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
 	if it.consumed {
 		panic("SendEvents method called Events.SameUser after the events were consumed")
 	}
@@ -98,8 +98,8 @@ func (it *iterator) Skip() {
 }
 
 // seq returns a sequence of events.
-func (it *iterator) seq() iter.Seq2[int, *meergo.Event] {
-	return func(yield func(i int, event *meergo.Event) bool) {
+func (it *iterator) seq() iter.Seq[*meergo.Event] {
+	return func(yield func(event *meergo.Event) bool) {
 		if it.sameUser.on {
 			trace("iterator.seq: iterator %p starting to read the events of a single user\n", it)
 		} else {
@@ -107,7 +107,7 @@ func (it *iterator) seq() iter.Seq2[int, *meergo.Event] {
 		}
 		it.iterating = true
 		it.first = true
-		i := 0
+		n := 0
 		for {
 			it.skipped = false
 			e, ok := it.read(true)
@@ -115,16 +115,16 @@ func (it *iterator) seq() iter.Seq2[int, *meergo.Event] {
 				trace("iterator.seq: iterator %p finished reading the events; no more are available\n", it)
 				break
 			}
-			if it.sameUser.on && i == 0 {
+			if it.sameUser.on && n == 0 {
 				u := e.Raw.UserId()
 				it.sameUser.user = &u
 			}
-			if !yield(i, e) {
+			if !yield(e) {
 				trace("iterator.seq: iterator %p broke out of the loop while reading events\n", it)
 				break
 			}
 			if !it.skipped {
-				i++
+				n++
 			}
 			it.first = false
 		}

@@ -369,14 +369,14 @@ func newSingleEventIterator(event *meergo.Event, app string) *singleEventIterato
 	return &singleEventIterator{app: app, event: event}
 }
 
-func (iter *singleEventIterator) All() iter.Seq2[int, *meergo.Event] {
+func (iter *singleEventIterator) All() iter.Seq[*meergo.Event] {
 	if iter.consumed {
 		panic(iter.app + " connector: SendEvents method called Events.All after the events were consumed")
 	}
 	iter.consumed = true
-	return func(yield func(i int, Event *meergo.Event) bool) {
+	return func(yield func(event *meergo.Event) bool) {
 		iter.iterating = true
-		yield(0, iter.event)
+		yield(iter.event)
 	}
 }
 
@@ -398,14 +398,14 @@ func (iter *singleEventIterator) Peek() (*meergo.Event, bool) {
 	return iter.event, true
 }
 
-func (iter *singleEventIterator) SameUser() iter.Seq2[int, *meergo.Event] {
+func (iter *singleEventIterator) SameUser() iter.Seq[*meergo.Event] {
 	if iter.consumed {
 		panic(iter.app + " connector: SendEvents method called Events.Some after the events were consumed")
 	}
 	iter.consumed = true
-	return func(yield func(i int, Event *meergo.Event) bool) {
+	return func(yield func(event *meergo.Event) bool) {
 		iter.iterating = true
-		yield(0, iter.event)
+		yield(iter.event)
 	}
 }
 

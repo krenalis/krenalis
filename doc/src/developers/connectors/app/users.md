@@ -147,8 +147,8 @@ Meergo considers a record processed as soon as it has been read from the `Record
 // To iterate over records, call either All, Same, or First — only one of these
 // can be used per Records value:
 //   - All returns an iterator over all records.
-//   - Same returns an iterator over records with the same operation type (create
-//     or update) as the first record.
+//   - Same returns an iterator over records with the same operation type
+//     (create or update) as the first record.
 //   - First returns the first record.
 //
 // Records are consumed as they are yielded by the iterator. A record is
@@ -156,17 +156,18 @@ Meergo considers a record processed as soon as it has been read from the `Record
 //
 // Example:
 //
-//	for i, rec := range records.All() {
-//	    // rec is now consumed unless Skip is called here
-//	    if i > 0 && !shouldProcess(rec) {
-//	        records.Skip()
-//	        continue
-//	    }
-//	    process(rec)
+//	for record := range records.All() {
+//		...
+//		// record is now consumed unless Skip is called here
+//		if skip {
+//			records.Skip()
+//			continue
+//		}
+//		...
 //	}
 //
-// Calling Skip during iteration marks the current record as not consumed,
-// so it will be available in subsequent Upsert calls.
+// Calling Skip during iteration marks the current record as not consumed, so it
+// will be available in subsequent Upsert calls.
 //
 // Only one iteration (using All or Same) or call to First may be active on a
 // Records value. After an iteration completes or First is called, the Records
@@ -175,7 +176,7 @@ type Records interface {
 
 	// All returns an iterator to read all records. Properties of the records in the
 	// sequence may be modified unless the record is subsequently skipped.
-	All() iter.Seq2[int, Record]
+	All() iter.Seq[Record]
 
 	// First returns the first record. The record's properties may be modified.
 	// Use it instead of All or Some when the app only needs to create or update one
@@ -192,17 +193,17 @@ type Records interface {
 	// (if the first record is for update) or all records to create
 	// (if the first record is for creation). Properties of the records in the
 	// sequence may be modified unless the record is subsequently skipped.
-	Same() iter.Seq2[int, Record]
+	Same() iter.Seq[Record]
 
-	// Skip skips the current record in the iteration and marks it as unread. The
-	// subsequent iteration will resume at the next record while preserving the same
-	// index. Skip may only be called during iterations from All or Same, and only
-	// if the record's properties have not been modified.
+	// Skip skips the current record in the iteration and marks it as unread. Skip
+	// may only be called during iterations from All or Same, and only if the
+	// record's properties have not been modified.
 	//
 	// The first event must always be consumed. Calling Skip on it will cause a
 	// panic. It is safe to call Skip multiple times on the same record.
 	Skip()
 }
+
 ```
 
 #### Sending one record at a time
@@ -283,8 +284,10 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
     // Prepare request body.
     var body bytes.Buffer
     body.WriteString(`{"customers":[`)
-    for i, record := range records.Same() {
-        if i > 0 {
+
+    n := 0	
+    for record := range records.Same() {
+        if n > 0 {
             body.WriteString(`,`)
         }
         body.WriteString(`{`)
@@ -296,7 +299,8 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
         body.WriteString(`"properties":`)
         json.Encode(&body, record.Properties)
         body.WriteString(`}`)
-        if i+1 == bodyMaxRecords {
+		n++
+        if n == bodyMaxRecords {
             break
         }
     }
@@ -348,8 +352,10 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
     // Prepare request body.
     var body bytes.Buffer
     body.WriteString(`{"customers":[`)
-    for i, record := range records.All() {
-        if i > 0 {
+	
+    n := 0
+    for record := range records.All() {
+        if n > 0 {
             body.WriteString(`,`)
         }
         body.WriteString(`{`)
@@ -361,11 +367,12 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
         body.WriteString(`"properties":`)
         json.Encode(&body, record.Properties)
         body.WriteString(`}`)
-        if i+1 == bodyMaxRecords {
+        n++
+        if n == bodyMaxRecords {
             break
         }
     }
-    body.WriteString(`}]`)
+    body.WriteString(`]}`)
 
     // Create the HTTP request.
     req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/customers/batch", &body)
@@ -406,14 +413,18 @@ In the previous examples, the loop stops when the number of records reaches the 
 Below is an example implementation:
 
 ```go
-    for i, record := range records.All() {
+    body.WriteString(`{"records":[`)
+
+    first := true
+    for record := range records.All() {
 
         // Track length before adding the record.
-        n = body.Len()
+        size := body.Len()
 
-        if i > 0 {
+        if !first {
             body.WriteString(`,`)
         }
+        first = false
 
         // Build the record JSON object.
         body.WriteString(`{`)
@@ -427,22 +438,24 @@ Below is an example implementation:
         body.WriteString(`}`)
 
         // Stop if body exceeds app size limit.
-        if body.Len() > bodySizeLimit {
-            body.Truncate(n)
+        if body.Len() + len(`]}`) > bodySizeLimit {
+            body.Truncate(size)
             records.Skip()
             break
         }
 
     }
+
+    body.WriteString(`]}`)
 ```
 
 #### Key concepts:
 
 * **Tracking body size**\
-  Before adding a record to the request body, the current length of the body is tracked using `body.Len()`. This allows for easy truncation if the body size limit is exceeded.
+  Before adding a record to the request body, the current size of the body is tracked using `body.Len()`. This allows for easy truncation if the body size limit is exceeded.
 
 * **Truncating the body**\
-  To ensure the request is valid, the `body.Truncate(n)` method removes the last added record from the body. This prevents the body from exceeding the size limit while maintaining a valid JSON structure.
+  To ensure the request is valid, the `body.Truncate(size)` method removes the last added record from the body. This prevents the body from exceeding the size limit while maintaining a valid JSON structure.
 
 * **Using `Skip` to reprocess records**\
   When the body size exceeds the limit:
@@ -459,20 +472,12 @@ When records are sent in a batch, some APIs respond with specific error messages
 // some records have failed or when the method can distinguish errors based on
 // individual records. It maps record indices to their respective errors.
 type RecordsError map[int]error
-
-func (err RecordsError) Error() string {
-    var msg string
-    for i, e := range err {
-        msg += fmt.Sprintf("record %d: %v\n", i, e)
-    }
-    return msg
-}
 ```
 
 ### Key concepts:
 
 * **Error handling for individual records**\
-   Instead of returning a single error for the entire batch, you can return an error specific to each record that failed. This helps identify exactly which record(s) caused the issue.
+   Instead of returning a single error for the entire batch, you can return an error specific to each record that failed. This makes it possible to identify exactly which record(s) have issues.
 
 * **Mapping errors by record index**\
    The key of the `RecordsError` type is the index of the record in the iteration, which corresponds to the position of the record in the request body (assuming the records were written in the same order). The value is the error associated with that specific record.

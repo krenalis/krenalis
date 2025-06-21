@@ -187,11 +187,11 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 	u += "mp/collect?api_secret=" + url.QueryEscape(secret) + "&measurement_id=" + url.QueryEscape(ga.settings.MeasurementID)
 
 	var eventsWriter json.Buffer
-
-	eventsPerRequest := 0
 	var userID, anonymousId string
-	for i, event := range events.SameUser() {
-		if i == 0 {
+
+	n := 0
+	for event := range events.SameUser() {
+		if n == 0 {
 			// Note that 'userID' may also be empty after this assignment, which
 			// means that only events with empty 'userID' will be sent in this
 			// batch.
@@ -215,8 +215,8 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		}
 		eventsWriter.EncodeKeyValue("timestamp_micros", event.Raw.Timestamp().UnixMicro())
 		eventsWriter.WriteByte('}')
-		eventsPerRequest++
-		if eventsPerRequest == 25 {
+		n++
+		if n == 25 {
 			// From the Google Analytics documentation: «Requests can have a maximum of 25 events.»
 			// https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
 			break

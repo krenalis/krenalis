@@ -363,9 +363,10 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 	var body json.Buffer
 	body.WriteString(`{"operations":[`)
 
-	for i, record := range records.All() {
-		n := body.Len()
-		if i > 0 {
+	n := 0
+	for record := range records.All() {
+		size := body.Len()
+		if n > 0 {
 			body.WriteByte(',')
 		}
 		method := "PUT"
@@ -384,11 +385,12 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		_ = body.EncodeQuoted(record.Properties)
 		body.WriteByte('}')
 		if body.Len()+len(`]}`) > maxBodyRecordsBytes {
-			body.Truncate(n)
+			body.Truncate(size)
 			records.Skip()
 			break
 		}
-		if i+1 == maxBodyRecords {
+		n++
+		if n == maxBodyRecords {
 			break
 		}
 	}

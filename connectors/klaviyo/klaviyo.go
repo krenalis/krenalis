@@ -539,9 +539,10 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 	var body json.Buffer
 	body.WriteString(`{"data":{"type":"event-bulk-create-job","attributes":{"events-bulk-create":{"data":[`)
 
-	for i, event := range events.All() {
-		n := body.Len()
-		if i > 0 {
+	n := 0
+	for event := range events.All() {
+		size := body.Len()
+		if n > 0 {
 			body.WriteByte(',')
 		}
 		body.WriteString(`{"type":"event-bulk-create","attributes":{"profile":{"data":{"type":"profile","attributes":{`)
@@ -555,11 +556,12 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		_ = body.Encode(event.Properties["metric_name"].(string))
 		body.WriteString(`}}}}}]}}}`)
 		if body.Len()+len(`]}}}}`) > maxBodyEventsBytes {
-			body.Truncate(n)
+			body.Truncate(size)
 			events.Skip()
 			break
 		}
-		if i+1 == maxBodyEvents {
+		n++
+		if n == maxBodyEvents {
 			break
 		}
 	}

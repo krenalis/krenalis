@@ -159,36 +159,61 @@ The `events` parameter is a collection of events to send. **You don’t need to 
 Meergo considers a event processed as soon as it has been read from the `Events` collection. To better understand how this works, let’s first explore the methods provided by the `Events` interface. Afterward, we’ll review how to use these methods effectively in various scenarios.
 
 ```go
-// Events represents a collection of events to be sent to an app. The collection
-// is guaranteed to contain at least one event.
+// Events provides access to a non-empty sequence of events to be sent to an
+// app.
 //
-// After calling First or once the iterator returned by All or SameUser stops,
-// no further method calls on Events are allowed.
+// To iterate over events, call either All, SameUser, or First — only one of
+// these can be used per Events value:
+//   - All returns an iterator over all events.
+//   - SameUser returns an iterator over events with the same user (events with
+//     the same anonymous ID) as the first event.
+//   - First returns the first event.
+//
+// Events are consumed as they are yielded by the iterator. An event is
+// considered consumed once produced by the iterator, unless Skip is called.
+//
+// Example:
+//
+//	for event := range events.All() {
+//		...
+//		// event is now consumed unless Skip is called here
+//		if skip {
+//			events.Skip()
+//			continue
+//		}
+//		...
+//	}
+//
+// Calling Skip during iteration marks the current event as not consumed, so it
+// will be available in subsequent SendEvents or PreviewSendEvents calls.
+//
+// Only one iteration (using All or SameUser) or call to First may be active on
+// an Events value. After an iteration completes or First is called, the Events
+// value must not be used again.
 type Events interface {
 
-    // All returns an iterator to read all events. Properties of the events in the
-    // sequence may be modified unless the event is subsequently skipped.
-    All() iter.Seq2[int, *Event]
+	// All returns an iterator to read all events. Properties of the events in the
+	// sequence may be modified unless the event is subsequently skipped.
+	All() iter.Seq[*Event]
 
-    // First returns the first event. The event's properties may be modified.
-    // After First is called, no further method calls on Events are allowed.
-    First() *Event
+	// First returns the first event. The event's properties may be modified.
+	// After First is called, no further method calls on Events are allowed.
+	First() *Event
 
-    // Peek retrieves the next event without advancing the iterator. It returns the
-    // event and true if an event is available, or false if there are no further
-    // events. The returned event must not be modified.
-    Peek() (*Event, bool)
+	// Peek retrieves the next event without advancing the iterator. It returns the
+	// event and true if an event is available, or false if there are no further
+	// events. The returned event must not be modified.
+	Peek() (*Event, bool)
 
-    // SameUser returns an iterator over the events of the same user. Properties of
-    // the events in the sequence may be modified unless the event is subsequently
-    // skipped.
-    SameUser() iter.Seq2[int, *Event]
+	// SameUser returns an iterator over the events of the same user. Properties of
+	// the events in the sequence may be modified unless the event is subsequently
+	// skipped.
+	SameUser() iter.Seq[*Event]
 
-    // Skip skips the current event in the iteration and marks it as unread. The
-    // subsequent iteration will resume at the next event while preserving the same
-    // index. Skip may only be called during iterations from All or SameUser, and only
-    // if the event's properties have not been modified.
-    Skip()
+	// Skip skips the current event in the iteration and marks it as unread. Skip
+	// may only be called during iterations from All or SameUser, and only if the
+	// event's properties have not been modified.
+	Skip()
 }
 ```
 
@@ -227,9 +252,16 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
     req.Body = body.Bytes()
 
-	// send the events.
-	
-    return req, nil
+    // Send the events.
+    res, err := my.httpClient.DoIdempotent(req, true)
+    if err != nil {
+        return err
+    }
+
+    // Handle the response.
+    // ...
+
+    return nil
 }
 ```
 
@@ -242,7 +274,7 @@ This method ensures that only one event is processed per request, in accordance 
 
 ### Batch of events from the same user
 
-If the application supports processing multiple events in a batch but requires them to belong to the same user, you can iterate over `events.SameUser()` to retrieve only the events associated with the first event's user.
+If the application supports processing multiple events in a batch but requires them to belong to the same user (events with the same anonymous ID), you can iterate over `events.SameUser()` to retrieve only the events associated with the first event's user.
 
 Below is an example implementation:
 
@@ -267,14 +299,17 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     // Add the body.
     var body json.Buffer
     body.WriteString(`{"events":[`)
-    for i, event := range events.SameUser() {
-        if i > 0 {
+
+    n := 0
+    for event := range events.SameUser() {
+        if n > 0 {
             body.WriteByte(',')
         }
         body.WriteString(`{"properties":`)
         body.Encode(event.Properties)
         body.WriteString(`}`)
-        if i+1 == bodyMaxEvents {
+        n++
+        if n == bodyMaxEvents {
             break
         }
     }
@@ -282,14 +317,23 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
     req.Body = body.Bytes()
 
-    return req, nil
+    // Send the events.
+    res, err := my.conf.HTTPClient.DoIdempotent(req, true)
+    if err != nil {
+        return err
+    }
+
+    // Handle the response.
+    // ...
+
+    return nil
 }
 ```
 
 #### Key concepts:
 
 * **Iterate over events**\
-  Use `events.SameUser()` to read only the events belonging to the same user as the first event. This ensures that all events in the batch come from the same user.
+  Use `events.SameUser()` to read only the events belonging to the same user (events with the same anonymous ID) as the first event. This ensures that all events in the batch come from the same user.
 
 * **Batch size limitation**\
   The example demonstrates breaking the loop once the maximum number of events (`bodyMaxEvents`) is reached. This ensures the request complies with the application's API limits.
@@ -321,14 +365,17 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     // Add the body.
     var body json.Buffer
     body.WriteString(`{"events":[`)
-    for i, event := range events.All() {
-        if i > 0 {
+
+    n := 0	
+    for event := range events.All() {
+        if n > 0 {
             body.WriteByte(',')
         }
         body.WriteString(`{"properties":`)
         body.Encode(event.Properties)
         body.WriteString(`}`)
-        if i+1 == bodyMaxEvents {
+        n++
+        if n == bodyMaxEvents {
             break
         }
     }
@@ -336,7 +383,16 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
     req.Body = body.Bytes()
 
-    return req, nil
+    // Send the events.
+    res, err := my.conf.HTTPClient.DoIdempotent(req, true)
+    if err != nil {
+        return err
+    }
+	
+    // Handle the response.
+    // ...
+
+    return nil
 }
 ```
 
@@ -357,14 +413,18 @@ In the previous examples, the loop stops when the number of events reaches the A
 Below is an example implementation:
 
 ```go
-    for i, event := range events.All() {
+    body.WriteString(`{"events":[`)
 
-        // Track length before adding the event.
-        n := body.Len()
+    first := true
+    for event := range events.All() {
 
-        if i > 0 {
+        // Track size before adding the event.
+        size := body.Len()
+
+        if !first {
             body.WriteString(`,`)
         }
+        first = false
 
         // Build the event JSON object.
         body.WriteString(`{"properties":`)
@@ -372,13 +432,15 @@ Below is an example implementation:
         body.WriteString(`}`)
 
         // Stop if body exceeds app size limit.
-        if body.Len() > bodySizeLimit {
-            body.Truncate(n)
+        if body.Len() + len(`]}`) > bodySizeLimit {
+            body.Truncate(size)
             events.Skip()
             break
         }
 
     }
+
+    body.WriteString(`]}`)
 ```
 
 #### Key concepts:
@@ -397,41 +459,32 @@ Below is an example implementation:
 
 ### Differentiating errors by event
 
-When the `EventsRequest` method returns an error, the error applies to all consumed events. These events will not be sent to the app and will no longer be available in future `EventsRequest` calls.
+When the `SendEvents` and `PreviewSendEvents` methods return an error, it applies to all consumed events. None of these events will be available in future calls.
 
-However, if you need to report an error for specific events while still returning a request with the other events, you can return both a request and an `EventsError`. The `EventsError` value contains only the events that could not be added to the returned request, along with their corresponding error messages.
-
-The `EventsError` type is a map where:
-
-* The key is the index of the event as it was read from the iterator.
-* The value is a string that explains why the event could not be sent to the app.
+However, if you need to report errors for specific events—such as validation failures—you can return an `EventsError`. This type allows you to indicate which events failed and why:
 
 ```go
-// EventsError is returned by the EventsRequest method of an app connector when
-// some events have been consumed, but they cannot be included in the current or
-// any future requests. It maps the event indices to the errors related to those
-// events.
+// EventsError can be returned by the SendEvents and PreviewSendEvents methods
+// of an app connector when one or more events are rejected by the destination
+// app due to validation issues—such as schema mismatches, missing required
+// fields, or invalid values. It maps the index of each failed event (starting
+// from 0) to the corresponding error.
 //
-// The EventsRequest method may return both a request with the events that were
-// included in the request and an EventsError error with the events that could
-// not be included in any request.
+// This error type only reports validation-related failures. Other kinds of
+// errors (e.g., network issues or internal failures) may be returned
+// separately.
+//
+// For example, if the third event is rejected due to a validation error while
+// all other events are accepted, the returned error would be:
+//
+// EventsError{2: errors.New("event is not valid")}
 type EventsError map[int]error
-
-func (err EventsError) Error() string {
-    var msg string
-    for i, e := range err {
-        msg += fmt.Sprintf("event %d: %v\n", i, e)
-    }
-    return msg
-}
 ```
 
 ### Key concepts:
 
 * **Error Handling for individual events**\
-  Instead of returning a single error for the entire batch, you can return a specific error for each event that fails to be sent. This allows you to pinpoint exactly which event(s) encountered an issue.
+  If validation errors occur on individual events, you can return a specific error for each failed event instead of a single error for the entire request. This makes it possible to identify exactly which event(s) have issues.
 
 * **Mapping errors by event index**\
-  In the `EventsError` type, the key represents the index of the event within the iteration, and the value is the error associated with that specific event.
-
-This approach enables you to handle errors individually for each event, rather than dealing with a single error for the entire batch.
+  In the `EventsError` type, each key is the index of an event (assuming the events were added to the HTTP request in the same order they were consumed), and the value is the corresponding error.

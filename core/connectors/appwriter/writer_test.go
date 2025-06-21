@@ -151,16 +151,17 @@ func (app *app) Upsert(ctx context.Context, target meergo.Targets, records meerg
 		return nil
 	}
 
-	var seq iter.Seq2[int, meergo.Record]
+	var seq iter.Seq[meergo.Record]
 	if app.rng.Int()%3 == 0 {
 		seq = records.Same()
 	} else {
 		seq = records.All()
 	}
 
-	for i, r := range seq {
+	n := 0
+	for r := range seq {
 		app.validateRecord(r)
-		if i%4 == 0 {
+		if n%4 == 0 {
 			if p, ok := records.Peek(); ok {
 				app.validateRecord(p)
 			}
@@ -168,9 +169,10 @@ func (app *app) Upsert(ctx context.Context, target meergo.Targets, records meerg
 		if app.rng.Int()%3 == 0 {
 			records.Skip()
 		}
-		if i == app.rng.Int()/2 {
+		if n == app.rng.Int()/2 {
 			break
 		}
+		n++
 	}
 
 	time.Sleep(time.Duration(app.rng.Int()%10) * time.Microsecond)

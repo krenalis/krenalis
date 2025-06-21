@@ -38,7 +38,7 @@ func newIterator(s *Sender) *iterator {
 	return &it
 }
 
-func (it *iterator) All() iter.Seq2[int, *meergo.Event] {
+func (it *iterator) All() iter.Seq[*meergo.Event] {
 	if it.consumed {
 		panic(it.sender.connector + " connector: SendEvents method called Events.All after the events were consumed")
 	}
@@ -72,7 +72,7 @@ func (it *iterator) Peek() (*meergo.Event, bool) {
 	return event, true
 }
 
-func (it *iterator) SameUser() iter.Seq2[int, *meergo.Event] {
+func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
 	if it.consumed {
 		panic(it.sender.connector + " connector: SendEvents method called Events.SameUser after the events were consumed")
 	}
@@ -97,8 +97,8 @@ func (it *iterator) Skip() {
 }
 
 // seq returns a sequence of events.
-func (it *iterator) seq() iter.Seq2[int, *meergo.Event] {
-	return func(yield func(i int, event *meergo.Event) bool) {
+func (it *iterator) seq() iter.Seq[*meergo.Event] {
+	return func(yield func(event *meergo.Event) bool) {
 		if it.sameUser.enabled {
 			trace("iterator.seq: iterator %p starting to read the events of a single user\n", it)
 		} else {
@@ -106,7 +106,6 @@ func (it *iterator) seq() iter.Seq2[int, *meergo.Event] {
 		}
 		it.iterating = true
 		it.firstEvent = true
-		i := 0
 		for {
 			it.skipped = false
 			e, ok := it.sender.read(true)
@@ -114,12 +113,9 @@ func (it *iterator) seq() iter.Seq2[int, *meergo.Event] {
 				trace("iterator.seq: iterator %p finished reading the events; no more are available\n", it)
 				break
 			}
-			if !yield(i, e) {
+			if !yield(e) {
 				trace("iterator.seq: iterator %p broke out of the loop while reading events\n", it)
 				break
-			}
-			if !it.skipped {
-				i++
 			}
 			it.firstEvent = false
 		}

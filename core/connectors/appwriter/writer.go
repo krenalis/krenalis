@@ -232,9 +232,9 @@ func (w *Writer) complete() {
 
 // read reads an available record and returns it. Returns false if no record is
 // available. If op is not opAll, it restricts the returned record to those of
-// type creation (opCreate) or update (opUpdate). index is the range index, or
-// dontConsume if the record should not be consumed.
-func (w *Writer) read(op op, index int) (meergo.Record, bool) {
+// type creation (opCreate) or update (opUpdate). consume indicates if the
+// record should be consumed.
+func (w *Writer) read(op op, consume bool) (meergo.Record, bool) {
 	var ok bool
 	var record meergo.Record
 	w.mu.Lock()
@@ -252,7 +252,7 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 		}
 	}
 	w.iterator.index = i
-	if ok && index != dontConsume {
+	if ok && consume {
 		w.available--
 		w.records[i].iterator = w.iterator
 		w.iterator.index++
@@ -262,17 +262,16 @@ func (w *Writer) read(op op, index int) (meergo.Record, bool) {
 	}
 	if trace {
 		if ok {
-			if index == dontConsume {
-				fmt.Printf("Writer.read: iterator %p read ID %q, without consuming, at index %d (%d remaining)\n", w.iterator, record.ID, i, w.available)
-			} else {
+			if consume {
 				fmt.Printf("Writer.read: iterator %p read and consumed ID %q at index %d (%d remaining)\n", w.iterator, record.ID, i, w.available)
-
+			} else {
+				fmt.Printf("Writer.read: iterator %p read ID %q, without consuming, at index %d (%d remaining)\n", w.iterator, record.ID, i, w.available)
 			}
 		} else {
-			if index == dontConsume {
-				fmt.Printf("Writer.read: iterator %p tried to read, without consuming, at index %d, but no record available\n", w.iterator, i)
-			} else {
+			if consume {
 				fmt.Printf("Writer.read: iterator %p tried to read, with consuming, at index %d, but no record available\n", w.iterator, i)
+			} else {
+				fmt.Printf("Writer.read: iterator %p tried to read, without consuming, at index %d, but no record available\n", w.iterator, i)
 			}
 		}
 	}
