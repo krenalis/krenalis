@@ -373,7 +373,8 @@ func (v Value) Uint() (uint, error) {
 func (v Value) Unmarshal(out any) error {
 	err := json.Unmarshal(v, out)
 	if _, ok := err.(*jsontext.SyntacticError); ok {
-		return fmt.Errorf("%s", err)
+		return &SyntaxError{err: err}
+
 	}
 	return err
 }
