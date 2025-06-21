@@ -81,6 +81,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "jsonNil", dt: types.JSON(), nullable: false, expected: nil},
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expected: nil},
 
+		{expr: "''", dt: types.Map(types.Text()), compileErr: errors.New("cannot convert  (type text) to map")},
 		{expr: "' '   '  '", dt: types.Text(), expected: "   "},
 		{expr: "''", dt: types.JSON(), expected: json.Value(`""`)},
 		{expr: "'100'", dt: types.JSON(), expected: json.Value(`"100"`)},

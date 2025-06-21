@@ -28,14 +28,14 @@ which holds information about valid conversions.
 
 ### From `nil`
 
-If the destination type is **JSON**, `nil` is converted to **JSON** `null`; otherwise, if the destination property is nullable, `nil` is converted to `nil`; otherwise, it is converted to `void`.
+If the destination type is **json**, `nil` is converted to **json** `null`; otherwise, if the destination property is nullable, `nil` is converted to `nil`; otherwise, it is converted to `void`.
 
 ### To `nil`
 
 A value `v` is converted to `nil` if the destination property is nullable and one of the following conditions is true:
 
 * `v` is `nil`
-* `v` is **JSON** `null`, and the destination type is not **JSON**
-* `v` is an empty **Text**, and the destination type is not **Text**
-* `v` is an empty **Text**, and the destination type is **Text** with enums
-* `v` is an empty **Text**, and the destination type is **Text** with a regular expression, and `v` does not match
+* `v` is **json** `null`, and the destination type is not **json**
+* `v` is an empty **text**, and `v` is not constant, and the destination type is neither **text** nor **json** 
+* `v` is an empty **text**, and the destination type is **text** with enums
+* `v` is an empty **text**, and the destination type is **text** with a regular expression, and `v` does not match

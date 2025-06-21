@@ -468,6 +468,9 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 func asType(expr []part, dt types.Type, nullable bool) error {
 	p := expr[0]
 	if len(expr) == 1 && p.path.elements == nil {
+		if s, ok := p.value.(string); ok && s == "" {
+			nullable = false
+		}
 		v, err := convert(p.value, p.typ, dt, nullable, false, nil, None)
 		if err != nil {
 			if p.value == nil {
