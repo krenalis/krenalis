@@ -31,7 +31,7 @@ func newIterator(w *Writer) *iterator {
 
 func (it *iterator) All() iter.Seq[meergo.Record] {
 	if it.consumed {
-		panic(it.writer.name + " connector: Upsert method called Records.All after the records were consumed")
+		panic(it.writer.connector + " connector: Upsert method called Records.All after the records were consumed")
 	}
 	it.consumed = true
 	return it.seq(opAll)
@@ -39,7 +39,7 @@ func (it *iterator) All() iter.Seq[meergo.Record] {
 
 func (it *iterator) First() meergo.Record {
 	if it.consumed {
-		panic(it.writer.name + " connector: Upsert method called Records.First after the records were consumed")
+		panic(it.writer.connector + " connector: Upsert method called Records.First after the records were consumed")
 	}
 	it.consumed = true
 	if trace {
@@ -55,7 +55,7 @@ func (it *iterator) First() meergo.Record {
 
 func (it *iterator) Peek() (meergo.Record, bool) {
 	if it.consumed && !it.iterating {
-		panic(it.writer.name + " connector: Upsert method called Records.Peek outside of an iteration")
+		panic(it.writer.connector + " connector: Upsert method called Records.Peek outside of an iteration")
 	}
 	if trace {
 		fmt.Printf("iterator.Peek: iterator %p peek a record\n", it)
@@ -69,7 +69,7 @@ func (it *iterator) Peek() (meergo.Record, bool) {
 
 func (it *iterator) Same() iter.Seq[meergo.Record] {
 	if it.consumed {
-		panic(it.writer.name + " connector: Upsert method called Records.Some after the records were consumed")
+		panic(it.writer.connector + " connector: Upsert method called Records.Some after the records were consumed")
 	}
 	it.consumed = true
 	op := opUpdate
@@ -81,7 +81,7 @@ func (it *iterator) Same() iter.Seq[meergo.Record] {
 
 func (it *iterator) Skip() {
 	if !it.iterating {
-		panic(it.writer.name + " connector: Upsert method called Records.Skip outside an iteration")
+		panic(it.writer.connector + " connector: Upsert method called Records.Skip outside an iteration")
 	}
 	if it.skipped {
 		return

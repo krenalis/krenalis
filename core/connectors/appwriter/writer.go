@@ -18,43 +18,30 @@ import (
 	"github.com/meergo/meergo/core/state"
 )
 
-const assert = true // enable during development for assertions
-const trace = false // set to true to trace execution flow
+const assert = false // enable during development for assertions
+const trace = false  // set to true to trace execution flow
 
-type AckFunc func(ids []string, err error)
+type AcksFunc func(ids []string, err error)
 
-const maxAvailable = 1000
-const maxTimeBetweenIterations = 200 * time.Millisecond
-const dontConsume = -1
+// UpsertFunc is a function that updates or creates records in the app for the
+// specified target.
+type UpsertFunc func(ctx context.Context, target meergo.Targets, records meergo.Records) error
 
-// UpsertableApp is an interface implemented by app connectors that support
-// upserting records.
-type UpsertableApp interface {
-	// Upsert updates or creates records in the app for the specified target.
-	//
-	// Upsert is expected to make a single call to the app per invocation.
-	// It processes one or more records, depending on the app's API capabilities.
-	//
-	// If it returns an error, all read records are considered failed. If it returns
-	// a RecordsError value, only the records with indices as keys in the error
-	// value are considered failed, along with the respective error. All read
-	// records, whether failed or not, will no longer be available in successive
-	// invocations of the same export.
-	Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error
-}
+const minBatchSize = 1000
+const maxQueueDelay = 200 * time.Millisecond
 
 // Writer represents a writer for app records.
 // It implements the connectors.Writer interface.
 //
 // By calling the Write method for each record to be written, the records are
-// sent to the application, potentially in batches, and the ack function is
+// sent to the application, potentially in batches, and the acks function is
 // called for confirmation. To ensure that all records are successfully sent to
-// the app, the Close method must be called after all writes.
+// the app, the Close method must be called once all Write calls have completed.
 type Writer struct {
-	target meergo.Targets // target, can be TargetUser or TargetGroup
-	app    UpsertableApp  // app connector
-	name   string         // name of the app connector
-	ack    AckFunc        // ack function
+	connector string         // app connector.
+	target    meergo.Targets // target, can be TargetUser or TargetGroup
+	upsert    UpsertFunc     // function that updates or creates records in the app.
+	acks      AcksFunc       // ack function
 
 	mu        sync.Mutex  // mutex for iterator, records, index, and available fields
 	iterator  *iterator   // current iterator, if any; protected by mu
@@ -78,16 +65,17 @@ type record struct {
 	properties map[string]any // user or group properties
 }
 
-// New returns a new writer for the provided target and app. name is the name of
-// the app connector.
-func New(ack AckFunc, target state.Target, app UpsertableApp, name string) *Writer {
+// New returns a new Writer. connector is the app's connector, target is the
+// record target, upsert is the function that creates or updates records in the
+// app, and acks acknowledges both successes and failures.
+func New(connector string, target state.Target, upsert UpsertFunc, acks AcksFunc) *Writer {
 	w := &Writer{
-		target:  meergo.Targets(target),
-		app:     app,
-		name:    name,
-		ack:     ack,
-		records: make([]record, 0, 100),
-		timer:   time.NewTimer(maxTimeBetweenIterations),
+		connector: connector,
+		target:    meergo.Targets(target),
+		upsert:    upsert,
+		acks:      acks,
+		records:   make([]record, 0, 100),
+		timer:     time.NewTimer(maxQueueDelay),
 	}
 	w.close.completed.L = &w.mu
 	w.close.ctx, w.close.cancel = context.WithCancel(context.Background())
@@ -102,7 +90,7 @@ func New(ack AckFunc, target state.Target, app UpsertableApp, name string) *Writ
 					iter = newIterator(w)
 					w.iterator = iter
 				}
-				w.timer.Reset(maxTimeBetweenIterations)
+				w.timer.Reset(maxQueueDelay)
 				w.mu.Unlock()
 				if iter != nil {
 					w.close.iterators.Add(1)
@@ -174,8 +162,8 @@ func (w *Writer) Write(_ context.Context, id string, properties map[string]any) 
 	w.mu.Lock()
 	w.records = append(w.records, record{id: id, properties: properties})
 	w.available++
-	if w.available == maxAvailable {
-		w.timer.Reset(time.Nanosecond)
+	if w.available == minBatchSize {
+		w.timer.Reset(0)
 	}
 	if trace {
 		fmt.Printf("Writer.Write: write record id=%q, properties=%p, available=%d\n", id, properties, w.available)
@@ -223,8 +211,8 @@ func (w *Writer) complete() {
 		fmt.Printf("Writer.complete: iteration of iterator %p is completed\n", w.iterator)
 	}
 	w.iterator = nil
-	if w.available >= maxAvailable {
-		w.timer.Reset(time.Nanosecond)
+	if w.available >= minBatchSize {
+		w.timer.Reset(0)
 	}
 	w.mu.Unlock()
 	w.close.completed.Signal()
@@ -310,7 +298,7 @@ func (w *Writer) consume(iter *iterator) {
 	if trace {
 		fmt.Printf("Writer.consume: iterator %p started\n", iter)
 	}
-	err := w.app.Upsert(w.close.ctx, w.target, iter)
+	err := w.upsert(w.close.ctx, w.target, iter)
 	errors, _ := err.(meergo.RecordsError)
 	var errorOf map[error][]string
 	w.mu.Lock()
@@ -350,7 +338,7 @@ func (w *Writer) consume(iter *iterator) {
 		if trace {
 			fmt.Printf("Writer.consume: send ack for iterator %p with ids %#v and error %#v\n", iter, ids, err)
 		}
-		w.ack(ids, err)
+		w.acks(ids, err)
 	}
 	w.close.iterators.Done()
 	w.compact()

@@ -107,9 +107,9 @@ type Sender struct {
 	}
 }
 
-// New returns a new sender for the provided app. connector is app's connector,
-// sendEvents is the function that sends the events to the app, and acks is the
-// function that acknowledges successful delivery of events.
+// New returns a new Sender. connector is the app's connector, sendEvents is the
+// function that sends the events to the app, and acks acknowledges both
+// successes and failures.
 func New(connector string, sendEvents SendEventsFunc, acks AcksFunc) *Sender {
 	s := &Sender{
 		connector:       connector,

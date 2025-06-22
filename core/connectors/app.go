@@ -319,7 +319,8 @@ func (app *App) Writer(ctx context.Context, outSchema types.Type, exportMode sta
 	if err != nil {
 		return nil, err
 	}
-	writer := appwriter.New(appwriter.AckFunc(ack), target, app.inner.(appwriter.UpsertableApp), app.connector)
+	inner := app.inner.(meergo.RecordUpserter)
+	writer := appwriter.New(app.connector, target, inner.Upsert, appwriter.AcksFunc(ack))
 	return writer, nil
 }
 

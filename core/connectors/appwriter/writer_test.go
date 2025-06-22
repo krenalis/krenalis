@@ -32,15 +32,15 @@ func Test_Writer(t *testing.T) {
 		{num: 0, seed: 0, create: 1},
 		{num: 1, seed: 25, create: 1},
 		{num: 1, seed: 92, create: 0},
-		{num: maxAvailable / 2, seed: 63, create: 0.16},
-		{num: maxAvailable * 3, seed: 47, create: 0.75},
+		{num: minBatchSize / 2, seed: 63, create: 0.16},
+		{num: minBatchSize * 3, seed: 47, create: 0.75},
 	}
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d/%d/%f", test.num, test.seed, test.create), func(t *testing.T) {
 
 			app := newApp(t, test.seed)
-			w := New(app.ack, state.TargetUser, app, "test")
+			w := New("test", state.TargetUser, app.Upsert, app.ack)
 
 			ctx := context.Background()
 
