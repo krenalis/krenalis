@@ -75,46 +75,19 @@ type destinationActionQueue struct {
 }
 
 // newDestinationAction returns a new destination action for the provided
-// destinations, action, and sender.
-func newDestinationAction(d *destinations, action *state.Action, sender *sender.Sender) *destinationAction {
-
-	ctx, cancel := context.WithCancelCause(d.close.ctx)
-
-	app := d.connectors.App(action.Connection())
-	schema, err := app.Schema(ctx, state.TargetEvent, action.EventType)
-	if err != nil {
-		panic("TODO")
-	}
-	// TODO(marco): Check schema alignment.
+// action with the provided schema, provider, and queue.
+func newDestinationAction(action *state.Action, schema types.Type, provider transformers.FunctionProvider, queue *destinationActionQueue) *destinationAction {
 	da := &destinationAction{
 		id:             action.ID,
 		eventType:      action.EventType,
 		filter:         action.Filter,
 		schema:         schema,
 		transformation: action.Transformation,
-	}
-	da.queue = &destinationActionQueue{
-		metrics: d.metrics,
-		sender:  sender,
-		ctx:     ctx,
-		cancel:  cancel,
-		timer:   newStoppedTimer(),
+		queue:          queue,
 	}
 	if t := da.transformation; t.Mapping != nil || t.Function != nil {
-		da.transformer, _ = transformers.New(action, d.provider, nil)
+		da.transformer, _ = transformers.New(action, provider, nil)
 	}
-
-	go func() {
-		for {
-			select {
-			case <-da.queue.timer.C:
-				go da.transform()
-			case <-da.queue.ctx.Done():
-				return
-			}
-		}
-	}()
-
 	return da
 }
 

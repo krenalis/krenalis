@@ -84,7 +84,7 @@ func newDestinations(st *state.State, connectors *connectors.Connectors, provide
 			if !a.Enabled || a.Target != state.TargetEvent {
 				continue
 			}
-			action := d.newDestinationAction(a, sender)
+			action := d.createDestinationAction(a, sender)
 			actions = append(actions, action)
 		}
 		d.senders[c.ID] = sender
@@ -106,10 +106,57 @@ func (d *destinations) QueueEvent(connection int, event events.Event) {
 	d.mu.Unlock()
 }
 
-// newDestinationAction returns a new destination action for the provided action
+// createDestinationAction creates a destination action for the provided action
 // with the provided sender.
-func (d *destinations) newDestinationAction(action *state.Action, sender *sender.Sender) *destinationAction {
-	return newDestinationAction(d, action, sender)
+func (d *destinations) createDestinationAction(action *state.Action, sender *sender.Sender) *destinationAction {
+
+	ctx, cancel := context.WithCancelCause(d.close.ctx)
+
+	connection := action.Connection()
+	app := d.connectors.App(connection)
+	schema, err := app.Schema(ctx, state.TargetEvent, action.EventType)
+	if err != nil {
+		panic("TODO")
+	}
+	// TODO(marco): Check schema alignment.
+
+	queue := &destinationActionQueue{
+		metrics: d.metrics,
+		sender:  sender,
+		ctx:     ctx,
+		cancel:  cancel,
+		timer:   newStoppedTimer(),
+	}
+
+	go func(connection, action int) {
+		for {
+			select {
+			case <-queue.timer.C:
+				var found bool
+				var da *destinationAction
+				d.mu.Lock()
+				actions, ok := d.actions[connection]
+				if !ok {
+					continue
+				}
+				for _, da = range actions {
+					if da.id == action {
+						found = true
+						break
+					}
+				}
+				d.mu.Unlock()
+				if !found {
+					continue
+				}
+				go da.transform()
+			case <-queue.ctx.Done():
+				return
+			}
+		}
+	}(connection.ID, action.ID)
+
+	return newDestinationAction(action, schema, d.provider, queue)
 }
 
 // onCreateAction is called when an action is created.
@@ -124,7 +171,7 @@ func (d *destinations) onCreateAction(n state.CreateAction) {
 	}
 	// No lock is needed for reading d.senders since the state is frozen,
 	// ensuring there are no concurrent writes.
-	action := d.newDestinationAction(a, d.senders[c.ID])
+	action := d.createDestinationAction(a, d.senders[c.ID])
 	d.mu.Lock()
 	d.actions[c.ID] = append(d.actions[c.ID], action)
 	d.mu.Unlock()
@@ -159,10 +206,10 @@ func (d *destinations) onDeleteAction(n state.DeleteAction) {
 		return
 	}
 	var i int
-	var action *destinationAction
+	var da *destinationAction
 	actions := d.actions[c.ID]
-	for i, action = range actions {
-		if action.id == a.ID {
+	for i, da = range actions {
+		if da.id == a.ID {
 			break
 		}
 	}
@@ -172,7 +219,7 @@ func (d *destinations) onDeleteAction(n state.DeleteAction) {
 	d.mu.Lock()
 	d.actions[c.ID] = slices.Delete(actions, i, i+1)
 	d.mu.Unlock()
-	go action.Discard(errors.New("action has been deleted"))
+	go da.Discard(errors.New("action has been deleted"))
 }
 
 // onDeleteConnection is called when a connection is deleted.
@@ -237,7 +284,7 @@ func (d *destinations) onSetActionStatus(n state.SetActionStatus) {
 	actions := d.actions[c.ID]
 	if n.Enabled {
 		// Add the action.
-		action := d.newDestinationAction(a, d.senders[c.ID])
+		action := d.createDestinationAction(a, d.senders[c.ID])
 		d.mu.Lock()
 		d.actions[c.ID] = append(actions, action)
 		d.mu.Unlock()
@@ -245,9 +292,9 @@ func (d *destinations) onSetActionStatus(n state.SetActionStatus) {
 	}
 	// Remove the action.
 	var i int
-	var action *destinationAction
-	for i, action = range actions {
-		if action.id == a.ID {
+	var da *destinationAction
+	for i, da = range actions {
+		if da.id == a.ID {
 			break
 		}
 	}
@@ -258,7 +305,7 @@ func (d *destinations) onSetActionStatus(n state.SetActionStatus) {
 	actions = slices.Delete(actions, i, i+1)
 	d.actions[c.ID] = actions
 	d.mu.Unlock()
-	go action.Discard(errors.New("action has been disabled"))
+	go da.Discard(errors.New("action has been disabled"))
 }
 
 // onUpdateAction is called when an action is updated.
@@ -274,9 +321,9 @@ func (d *destinations) onUpdateAction(n state.UpdateAction) {
 	actions := d.actions[c.ID]
 	var current *destinationAction
 	var index int
-	for i, action := range actions {
-		if action.id == a.ID {
-			current = action
+	for i, da := range actions {
+		if da.id == a.ID {
+			current = da
 			index = i
 			break
 		}
@@ -293,7 +340,7 @@ func (d *destinations) onUpdateAction(n state.UpdateAction) {
 	}
 	// Adds it if it wasn't present.
 	if current == nil {
-		action := d.newDestinationAction(a, d.senders[c.ID])
+		action := d.createDestinationAction(a, d.senders[c.ID])
 		d.mu.Lock()
 		d.actions[c.ID] = append(actions, action)
 		d.mu.Unlock()
