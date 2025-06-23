@@ -294,7 +294,7 @@ func (core *Core) AddOrganization(ctx context.Context, name string) (int, error)
 		return 0, errors.BadRequest("%s", err)
 	}
 	var id int
-	err := core.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1)").Scan(&id)
+	err := core.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1) RETURNING id", name).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
