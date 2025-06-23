@@ -45,7 +45,7 @@ func newEventWriter(store *Store, ack EventWriterAckFunc) *EventWriter {
 		done := ew.close.ctx.Done()
 		for {
 			select {
-			case _ = <-ticker.C:
+			case <-ticker.C:
 				ew.flush()
 			case <-done:
 				ticker.Stop()

@@ -417,8 +417,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			continue
 		}
 
-		var actions []int
-
 		// Store the events into the data warehouse.
 		if action, ok := c.importEventsAction(connection); ok {
 			c.metrics.ReceivePassed(action.ID, 1)
@@ -438,8 +436,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					eventErr = errServiceUnavailable
 				}
 				continue
-			} else {
-				actions = append(actions, action.ID)
 			}
 		}
 
@@ -466,7 +462,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 						}
 						continue
 					}
-					actions = append(actions, action.ID)
 				}
 			}
 		}

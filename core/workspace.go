@@ -158,7 +158,7 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 		return nil, errors.New("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return nil, errors.New("end date date is too far in the future")
+		return nil, errors.New("end date is too far in the future")
 	}
 	if end.Before(start) {
 		return nil, fmt.Errorf("end date cannot be earlier than start date")
@@ -253,7 +253,7 @@ func (this *Workspace) ActionMetricsPerDate(ctx context.Context, start, end time
 		return ActionMetrics{}, errors.BadRequest("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return ActionMetrics{}, errors.BadRequest("end date date is too far in the future")
+		return ActionMetrics{}, errors.BadRequest("end date is too far in the future")
 	}
 	if !end.After(start) {
 		return ActionMetrics{}, errors.BadRequest("day of the end date must be after the day of the start date")

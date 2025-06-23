@@ -142,16 +142,16 @@ func decodeNotification(n notification, e any) bool {
 // replaceAccount calls the function f passing a copy of the account with
 // identifier id. After f is returned, it replaces the account with its copy in
 // the workspace and returns the latter.
-func (ws *Workspace) replaceAccount(id int, f func(*Account)) *Account {
-	a := ws.accounts[id]
+func (workspace *Workspace) replaceAccount(id int, f func(*Account)) *Account {
+	a := workspace.accounts[id]
 	aa := new(Account)
 	*aa = *a
 	f(aa)
-	ws.mu.Lock()
-	ws.accounts[id] = aa
-	ws.mu.Unlock()
+	workspace.mu.Lock()
+	workspace.accounts[id] = aa
+	workspace.mu.Unlock()
 	// Update the connections.
-	for _, connection := range ws.connections {
+	for _, connection := range workspace.connections {
 		if connection.account == a {
 			connection.mu.Lock()
 			connection.account = aa

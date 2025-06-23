@@ -231,7 +231,7 @@ func validateRePaths(rePaths map[string]any) error {
 		switch old := old.(type) {
 		case string:
 			if !types.IsValidPropertyPath(old) {
-				return fmt.Errorf("invalid property path: %q", new)
+				return fmt.Errorf("invalid property path: %q", old)
 			}
 			if new == old {
 				return fmt.Errorf("rePath key cannot match with its value")

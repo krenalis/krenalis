@@ -165,14 +165,13 @@ func andExpressions(expr meergo.Expr, base *meergo.BaseExpr) meergo.Expr {
 
 // Records represents records read from the data warehouse.
 type Records struct {
-	columns   []meergo.Column
-	normalize meergo.NormalizeFunc
-	unflat    unflatRowFunc
-	rows      meergo.Rows
-	matching  *Matching
-	last      bool
-	err       error
-	closed    bool
+	columns  []meergo.Column
+	unflat   unflatRowFunc
+	rows     meergo.Rows
+	matching *Matching
+	last     bool
+	err      error
+	closed   bool
 }
 
 // All returns an iterator to iterate over the records. After All completes, it

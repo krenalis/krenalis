@@ -130,9 +130,6 @@ func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, ac
 
 	rows, err := c.db.Query(ctx, query.String(), tsStart, tsEnd)
 	if err != nil {
-		var a any
-		a = err
-		print(a)
 		return Metrics{}, err
 	}
 	defer rows.Close()

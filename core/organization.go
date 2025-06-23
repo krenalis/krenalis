@@ -777,7 +777,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	// Normalize the warehouse settings.
 	settings, err := this.core.datastore.NormalizeWarehouseSettings(whType, whSettings)
 	if err != nil {
-		if err == datastore.WarehouseTypeNotExist {
+		if err == datastore.ErrWarehouseTypeNotExist {
 			return nil, errors.Unprocessable(WarehouseTypeNotExist, "warehouse type %q does not exist", whType)
 		}
 		if err, ok := err.(*meergo.WarehouseSettingsError); ok {

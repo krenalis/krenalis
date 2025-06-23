@@ -22,9 +22,10 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// WarehouseTypeNotExist is returned by the Datastore.NormalizeWarehouseSettings
-// method when the provided warehouse type does not exist.
-var WarehouseTypeNotExist = errors.New("warehouse type does not exist")
+// ErrWarehouseTypeNotExist is returned by the
+// Datastore.NormalizeWarehouseSettings method when the provided warehouse type
+// does not exist.
+var ErrWarehouseTypeNotExist = errors.New("warehouse type does not exist")
 
 // ConnectionFailed is the error returned when a connection to a data warehouse
 // cannot be established.
@@ -134,13 +135,13 @@ func (ds *Datastore) Initialize(ctx context.Context, typ string, settings []byte
 // NormalizeWarehouseSettings returns data warehouse settings in a canonical
 // form.
 //
-// It returns the WarehouseTypeNotExist error if a warehouse type with the
+// It returns the ErrWarehouseTypeNotExist error if a warehouse type with the
 // provided name does not exist, and it returns a SettingsError error if the
 // settings are not valid.
 func (ds *Datastore) NormalizeWarehouseSettings(name string, settings []byte) ([]byte, error) {
 	ds.mustBeOpen()
 	if _, ok := ds.state.WarehouseType(name); !ok {
-		return nil, WarehouseTypeNotExist
+		return nil, ErrWarehouseTypeNotExist
 	}
 	dw, err := getWarehouseInstance(name, settings)
 	if err != nil {

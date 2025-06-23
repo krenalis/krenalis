@@ -9,7 +9,6 @@ package core
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 
 	"github.com/meergo/meergo/json"
@@ -80,10 +79,10 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 }
 
 // Errors returned to and handled by the ServeWebhook method.
-var (
-	errBadRequest = errors.New("bad request")
-	errNotFound   = errors.New("not found")
-)
+//var (
+//	errBadRequest = errors.New("bad request")
+//	errNotFound   = errors.New("not found")
+//)
 
 // TODO(marco): implement webhooks
 //// ServeWebhook serves a webhook request. The request path starts with

@@ -324,11 +324,9 @@ WHERE ctid = ANY (SELECT unnest(row_ctids) FROM aggregated)`
 		if err == nil {
 			break
 		}
-		var a any
-		a = err
-		print(a)
 		if msg := err.Error(); msg != loggedMsg {
 			slog.Error("core/metrics: failed to aggregate the metrics on action", "err", msg)
+			loggedMsg = msg
 		}
 	}
 
