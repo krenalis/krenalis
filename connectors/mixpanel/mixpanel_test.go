@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/testutils"
@@ -31,6 +32,11 @@ func TestSendEvents(t *testing.T) {
 
 	now := time.Now().UTC()
 
+	eventID := uuid.NewString()
+	rawEventID := uuid.NewString()
+	messageID := uuid.NewString()
+	anonymousID := uuid.NewString()
+
 	tests := []struct {
 		events              []*meergo.Event
 		expectedRequestBody map[string]any
@@ -38,7 +44,7 @@ func TestSendEvents(t *testing.T) {
 		{
 			events: []*meergo.Event{
 				{
-					ID:   "7ba8676a-3182-4d76-bf6e-21483fc63893",
+					ID:   eventID,
 					Type: "track",
 					Schema: types.Object([]types.Property{
 						{Name: "event", Placeholder: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
@@ -51,7 +57,7 @@ func TestSendEvents(t *testing.T) {
 						},
 					},
 					Raw: events.RawEvent(map[string]any{
-						"anonymousId": "17fba6ee-8673-4ebc-afd6-69e62124e017",
+						"anonymousId": anonymousID,
 						"connection":  1323607634,
 						"context": map[string]any{
 							"browser": map[string]any{
@@ -66,8 +72,8 @@ func TestSendEvents(t *testing.T) {
 							},
 							"userAgent": "python-requests/2.32.4",
 						},
-						"id":                "03a7b3f6-7e5a-5933-96d8-81fcc9fdf696",
-						"messageId":         "1427b912-438f-46a8-ae7f-b276ee5345ee",
+						"id":                rawEventID,
+						"messageId":         messageID,
 						"originalTimestamp": now,
 						"previousId":        "IAJVLPBEZJ",
 						"receivedAt":        now,
@@ -82,11 +88,11 @@ func TestSendEvents(t *testing.T) {
 				"properties": map[string]any{
 					"$browser":         "Other",
 					"$browser_version": "0.0",
-					"$device_id":       "17fba6ee-8673-4ebc-afd6-69e62124e017",
-					"$insert_id":       "1427b912-438f-46a8-ae7f-b276ee5345ee",
+					"$device_id":       anonymousID,
+					"$insert_id":       messageID,
 					"$os":              "Other",
 					"X":                json.Number("42"),
-					"distinct_id":      "17fba6ee-8673-4ebc-afd6-69e62124e017",
+					"distinct_id":      anonymousID,
 					"ip":               "127.0.0.1",
 					"time":             json.Number(strconv.FormatInt(now.UnixMilli(), 10)),
 				},
