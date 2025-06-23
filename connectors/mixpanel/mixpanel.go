@@ -13,9 +13,9 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -60,8 +60,7 @@ type Mixpanel struct {
 
 type innerSettings struct {
 	ProjectID           string
-	Username            string
-	Secret              string
+	ProjectToken        string
 	UseEuropeanEndpoint bool
 }
 
@@ -148,8 +147,7 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Val
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
-			&meergo.Input{Name: "Username", Label: "Service Account Username", Placeholder: "youraccount.82us7b.mp-service-account", Type: "text", MinLength: 20, MaxLength: 100},
-			&meergo.Input{Name: "Secret", Label: "Service Account Secret", Placeholder: "OfCknZXmL1shKB7qhxdpvkwqQYwn4PQr", Type: "text", MinLength: 32, MaxLength: 100},
+			&meergo.Input{Name: "ProjectToken", Label: "Project Token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
 			&meergo.Switch{Name: "UseEuropeanEndpoint", Label: "Use the European Endpoint"},
 		},
 		Settings: settings,
@@ -166,17 +164,20 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 		return err
 	}
 	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
-		return meergo.NewInvalidSettingsError("project ID must be a positive number")
+		return meergo.NewInvalidSettingsError("Project ID must be a positive number")
 	}
-	if n := len(s.Username); n < 20 || n > 100 {
-		return meergo.NewInvalidSettingsError("username length must be in range [20, 100]")
+	if n := len(s.ProjectToken); n < 1 || n > 100 {
+		return meergo.NewInvalidSettingsError("Project Token length must be in range [1,100]")
 	}
-	// TODO(Gianluca): this validation could be improved and/or standardized
-	// with the others across connectors, but it's not worth the effort since
-	// the project token will likely be deprecated and/or removed in future
-	// commits in favor of more modern authentication methods.
-	if n := len(s.Secret); n < 32 || n > 100 {
-		return meergo.NewInvalidSettingsError("secret length must be in range [32, 100]")
+	for i := 0; i < len(s.ProjectToken); i++ {
+		c := s.ProjectToken[i]
+		// ASCII characters with decimal codes from 33 (!) to 126 (~),
+		// inclusive, are printable characters. The space character, having
+		// decimal code 32, is therefore excluded from the range of accepted
+		// characters, and this is intentional.
+		if c < 33 || c > 126 {
+			return meergo.NewInvalidSettingsError("Project Token must contain only valid characters")
+		}
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -190,44 +191,59 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 	return nil
 }
 
+const (
+	// For more details, see:
+	// https://developer.mixpanel.com/reference/import-events.
+	maxEventsPerRequest = 2_000            // 2000 events per request.
+	maxRequestSize      = 10 * 1024 * 1024 // 10 MB (uncompressed) per request.
+)
+
 // sendEvents sends the given events to the app, returning the HTTP request and
 // any error in sending the request or in the app server's response. If preview
 // is true, the HTTP request is built but not sent, so it is only returned.
 func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
-	// TODO(Gianluca): handle the limits imposed by Mixpanel, see
-	// https://developer.mixpanel.com/reference/import-events.
-
 	// nlDelimitedEvents is a bytes.Buffer that contains newline-delimited JSON
 	// objects representing the events to send to Mixpanel.
 	var nlDelimitedEvents bytes.Buffer
+	var eventsWritten int
 	for event := range events.All() {
+
+		// Check if the request exceeds the limits imposed by Mixpanel. For more
+		// details, see the constants documentation.
+		if eventsWritten >= maxEventsPerRequest || nlDelimitedEvents.Len() > maxRequestSize {
+			events.Skip()
+			break
+		}
 
 		if event.Properties["event"].(string) == "" {
 			return nil, errors.New("event cannot be empty")
 		}
 
-		body := event.Properties["properties"].(map[string]any)
-		body["$insert_id"] = event.Raw.MessageId()
-		body["time"] = formatTimestamp(event.Raw.Timestamp())
+		properties := event.Properties["properties"].(map[string]any)
+		properties["$insert_id"] = event.Raw.MessageId()
+		properties["time"] = event.Raw.Timestamp().UnixMilli()
+		if sendBadRequest, _ := ctx.Value(connectorTestString("sendBadRequest")).(bool); sendBadRequest {
+			delete(properties, "time")
+		}
 		distinctID := event.Raw.AnonymousId()
 		if userId := event.Raw.UserId(); userId != "" {
 			distinctID = userId
 		}
-		body["distinct_id"] = distinctID
-		body["$device_id"] = event.Raw.AnonymousId()
+		properties["distinct_id"] = distinctID
+		properties["$device_id"] = event.Raw.AnonymousId()
 		context := event.Raw.Context()
 		if ip := context.IP(); ip == "" {
 			if location, ok := context.Location(); ok {
 				if country := location.Country(); country != "" {
-					body["mp_country_code"] = country
+					properties["mp_country_code"] = country
 				}
 				if city := location.City(); city != "" {
-					body["$city"] = city
+					properties["$city"] = city
 				}
 			}
 		} else {
-			body["ip"] = context.IP()
+			properties["ip"] = context.IP()
 			// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
 			// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
 			// enrichment occurs for all or none of them.
@@ -236,57 +252,62 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 				city := location.City()
 				if country != "" || city != "" {
 					if country != "" {
-						body["mp_country_code"] = country
+						properties["mp_country_code"] = country
 					} else {
-						body["mp_country_code"] = nil
+						properties["mp_country_code"] = nil
 					}
 					if city != "" {
-						body["$city"] = city
+						properties["$city"] = city
 					} else {
-						body["$city"] = nil
+						properties["$city"] = nil
 					}
 				}
 			}
 		}
 		if os, ok := context.OS(); ok && os.Name() != "" {
-			body["$os"] = os.Name()
+			properties["$os"] = os.Name()
 		}
 		if browser, ok := context.Browser(); ok {
 			if browser.Name() != "" {
-				body["$browser"] = browser.Name()
+				properties["$browser"] = browser.Name()
 			} else if browser.Other() != "" {
-				body["$browser"] = browser.Other()
+				properties["$browser"] = browser.Other()
 			}
 			if browser.Version() != "" {
-				body["$browser_version"] = browser.Version()
+				properties["$browser_version"] = browser.Version()
 			}
 		}
 		if page, ok := context.Page(); ok {
 			if referrer := page.Referrer(); referrer != "" {
 				u, err := url.Parse(referrer)
 				if err == nil {
-					body["$referrer"] = referrer
-					body["$referring_domain"] = u.Hostname()
+					properties["$referrer"] = referrer
+					properties["$referring_domain"] = u.Hostname()
 				}
 			}
 			if pageURL := page.URL(); pageURL != "" {
-				body["$current_url"] = pageURL
-				body["current_page_title"] = page.Title()
+				properties["$current_url"] = pageURL
+				properties["current_page_title"] = page.Title()
 				u, err := url.Parse(pageURL)
 				if err == nil {
-					body["current_domain"] = u.Hostname()
-					body["current_url_path"] = u.Path
-					body["current_url_protocol"] = u.Scheme + ":"
+					properties["current_domain"] = u.Hostname()
+					properties["current_url_path"] = u.Path
+					properties["current_url_protocol"] = u.Scheme + ":"
 				}
 			}
 		}
 		if screen, ok := context.Screen(); ok {
 			if w := screen.Width(); w != 0 {
-				body["$screen_width"] = w
+				properties["$screen_width"] = w
 			}
 			if h := screen.Height(); h != 0 {
-				body["$screen_height"] = h
+				properties["$screen_height"] = h
 			}
+		}
+
+		body := map[string]any{
+			"event":      event.Properties["event"].(string),
+			"properties": properties,
 		}
 
 		err := json.Encode(&nlDelimitedEvents, body)
@@ -295,6 +316,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		}
 
 		nlDelimitedEvents.WriteByte('\n')
+		eventsWritten++
 	}
 
 	u := "https://api.mixpanel.com/"
@@ -308,11 +330,14 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-ndjson")
-	authorization := base64.StdEncoding.EncodeToString([]byte(mp.settings.Username + ":" + mp.settings.Secret))
+
 	if preview {
-		authorization = "[REDACTED]"
+		req.Header.Set("Authorization", "Basic [REDACTED]")
+	} else {
+		req.SetBasicAuth(mp.settings.ProjectToken, "")
 	}
-	req.Header.Set("Authorization", "Basic "+authorization)
+
+	storeHTTPRequestWhenTesting(ctx, req)
 
 	if preview {
 		return req, nil
@@ -339,7 +364,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 			Message  string `json:"message"`
 		} `json:"failed_records"`
 	}
-	err = json.Decode(res.Body, out)
+	err = json.Decode(res.Body, &out)
 	if err != nil {
 		return req, fmt.Errorf("cannot decode Mixpanel response: %v", err)
 	}
@@ -354,12 +379,22 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	return req, errors
 }
 
-// formatTimestamp formats the timestamp t of an event as expected by Mixpanel.
-func formatTimestamp(t time.Time) string {
-	ms := strconv.FormatInt(t.UnixMilli(), 10)
-	l := len(ms)
-	if l <= 3 {
-		return "0." + ms
+// connectorTestString is a defined type used solely to pass a typed key to the
+// context. This is to avoid any kind of collisions with other values that may
+// be inserted into the context.
+type connectorTestString string
+
+// storeHTTPRequestWhenTesting stores the HTTP request if requested by tests.
+//
+// To enable saving the HTTP request, the context must include, under the key
+// 'connectorTestString("storeSentHTTPRequest")', a pointer to an http.Request
+// memory location where the sent request will be written.
+func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) {
+	if stored := ctx.Value(connectorTestString("storeSentHTTPRequest")); stored != nil {
+		clonedReq := req.Clone(req.Context())
+		bodyBytes, _ := io.ReadAll(req.Body)
+		clonedReq.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		*(stored.(*http.Request)) = *clonedReq
 	}
-	return ms[:l-3] + "." + ms[l-3:]
 }
