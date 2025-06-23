@@ -172,6 +172,11 @@ type rawEvent struct {
 	event Event
 }
 
+// RawEvent wraps an Event and returns a value that implements the
+// meergo.RawEvent interface.
+//
+// The provided event must conform to the event schema (Schema), otherwise
+// calling methods on the returned value may cause a panic.
 func RawEvent(event Event) meergo.RawEvent {
 	return rawEvent{event}
 }
