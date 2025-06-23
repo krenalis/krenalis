@@ -30,12 +30,10 @@ func TestSendEvents(t *testing.T) {
 
 	ctx := context.Background()
 
-	now := time.Now().UTC()
-
-	eventID := uuid.NewString()
-	rawEventID := uuid.NewString()
 	messageID := uuid.NewString()
 	anonymousID := uuid.NewString()
+
+	now := time.Now().UTC()
 
 	tests := []struct {
 		events              []*meergo.Event
@@ -43,46 +41,7 @@ func TestSendEvents(t *testing.T) {
 	}{
 		{
 			events: []*meergo.Event{
-				{
-					ID:   eventID,
-					Type: "track",
-					Schema: types.Object([]types.Property{
-						{Name: "event", Placeholder: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
-						{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
-					}),
-					Properties: map[string]any{
-						"event": "Test Event",
-						"properties": map[string]any{
-							"X": 42,
-						},
-					},
-					Raw: events.RawEvent(map[string]any{
-						"anonymousId": anonymousID,
-						"connection":  1323607634,
-						"context": map[string]any{
-							"browser": map[string]any{
-								"name":    "Other",
-								"other":   "Unknown",
-								"version": "0.0",
-							},
-							"ip": "127.0.0.1",
-							"os": map[string]any{
-								"name":    "Other",
-								"version": "0.0",
-							},
-							"userAgent": "python-requests/2.32.4",
-						},
-						"id":                rawEventID,
-						"messageId":         messageID,
-						"originalTimestamp": now,
-						"previousId":        "IAJVLPBEZJ",
-						"receivedAt":        now,
-						"sentAt":            now.Add(-10 * time.Millisecond),
-						"timestamp":         now,
-						"type":              "alias",
-						"userId":            nil,
-					}),
-				},
+				newEventForTest("track", anonymousID, messageID, now),
 			},
 			expectedRequestBody: map[string]any{"event": "Test Event",
 				"properties": map[string]any{
@@ -171,4 +130,54 @@ func initMixpanelForTests(t *testing.T) *Mixpanel {
 	}
 
 	return app.(*Mixpanel)
+}
+
+// newEventForTest returns a new *meergo.Event that can be used in tests.
+// This utility function helps reduce test code and makes it easier to extend.
+// The choice of parameters is convenience-driven and may change over time
+// depending on how each test is parameterized.
+func newEventForTest(eventType, anonymousID, messageID string, now time.Time) *meergo.Event {
+	eventID := uuid.NewString()
+	rawEventID := uuid.NewString()
+
+	return &meergo.Event{
+		ID:   eventID,
+		Type: "track",
+		Schema: types.Object([]types.Property{
+			{Name: "event", Placeholder: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+			{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
+		}),
+		Properties: map[string]any{
+			"event": "Test Event",
+			"properties": map[string]any{
+				"X": 42,
+			},
+		},
+		Raw: events.RawEvent(map[string]any{
+			"anonymousId": anonymousID,
+			"connection":  1323607634,
+			"context": map[string]any{
+				"browser": map[string]any{
+					"name":    "Other",
+					"other":   "Unknown",
+					"version": "0.0",
+				},
+				"ip": "127.0.0.1",
+				"os": map[string]any{
+					"name":    "Other",
+					"version": "0.0",
+				},
+				"userAgent": "python-requests/2.32.4",
+			},
+			"id":                rawEventID,
+			"messageId":         messageID,
+			"originalTimestamp": now,
+			"previousId":        "IAJVLPBEZJ",
+			"receivedAt":        now,
+			"sentAt":            now.Add(-10 * time.Millisecond),
+			"timestamp":         now,
+			"type":              "alias",
+			"userId":            nil,
+		}),
+	}
 }
