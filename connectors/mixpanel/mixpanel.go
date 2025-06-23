@@ -325,7 +325,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 	u += "import?strict=1&project_id=" + mp.settings.ProjectID
 
-	req, err := http.NewRequest("POST", u, &nlDelimitedEvents)
+	req, err := http.NewRequestWithContext(ctx, "POST", u, &nlDelimitedEvents)
 	if err != nil {
 		return nil, err
 	}

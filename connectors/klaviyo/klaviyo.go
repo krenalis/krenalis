@@ -567,7 +567,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 	}
 	body.WriteString(`]}}}}`)
 
-	req, err := http.NewRequest("POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(body.Bytes()))
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(body.Bytes()))
 	if err != nil {
 		return nil, err
 	}

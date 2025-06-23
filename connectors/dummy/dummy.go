@@ -461,7 +461,7 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, previe
 	if dummy.settings.URLForDispatchingEvents != "" {
 		u = dummy.settings.URLForDispatchingEvents
 	}
-	req, err := http.NewRequest("POST", u, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

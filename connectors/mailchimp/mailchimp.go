@@ -113,7 +113,7 @@ type innerSettings struct {
 // OAuthAccount returns the app's account associated with the OAuth
 // authorization.
 func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
-	_, account, err := mc.metadata()
+	_, account, err := mc.metadata(ctx)
 	return account, err
 }
 
@@ -550,7 +550,7 @@ func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) erro
 	if !found {
 		return meergo.NewInvalidSettingsError("audience does not exist")
 	}
-	dataCenter, _, err := mc.metadata()
+	dataCenter, _, err := mc.metadata(ctx)
 	if err != nil {
 		return err
 	}
@@ -600,7 +600,7 @@ func (mc *MailChimp) call(ctx context.Context, method, path string, params url.V
 	var dataCenter string
 	if mc.settings == nil {
 		var err error
-		dataCenter, _, err = mc.metadata()
+		dataCenter, _, err = mc.metadata(ctx)
 		if err != nil {
 			return err
 		}
@@ -715,10 +715,10 @@ func (mc *MailChimp) webhooks(ctx context.Context, audience string) ([]webhook, 
 }
 
 // metadata returns the datacenter and the account id.
-func (mc *MailChimp) metadata() (string, string, error) {
+func (mc *MailChimp) metadata(ctx context.Context) (string, string, error) {
 	// Retrieve the datacenter calling the Metadata endpoint.
 	// https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/#implement-the-oauth-2-workflow-on-your-server
-	req, err := http.NewRequest("GET", "https://login.mailchimp.com/oauth2/metadata", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://login.mailchimp.com/oauth2/metadata", nil)
 	if err != nil {
 		return "", "", err
 	}

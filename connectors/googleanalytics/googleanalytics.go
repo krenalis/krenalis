@@ -244,7 +244,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 	body.Write(eventsWriter.Bytes())
 	body.WriteString("]}")
 
-	req, err := http.NewRequest("POST", u, bytes.NewReader(body.Bytes()))
+	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
 	if err != nil {
 		return nil, err
 	}
