@@ -118,6 +118,8 @@ func TestEvents(t *testing.T) {
 				},
 			},
 		})
+		// Wait 1ms to ensure distinct timestamps and preserve event order.
+		time.Sleep(time.Millisecond)
 	}
 
 	time.Sleep(time.Second)
