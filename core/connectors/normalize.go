@@ -143,7 +143,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				return nil, nil
 			}
 			var err error
-			value, err = strconv.ParseInt(string(src), 10, 64)
+			v, err = strconv.ParseInt(string(src), 10, 64)
 			valid = err == nil
 		}
 		if valid {

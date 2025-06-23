@@ -56,6 +56,7 @@ func Test_normalize(t *testing.T) {
 		{types.Int(32), -9261, -9261, false, nil},
 		{types.Int(32), -9261.0, -9261, false, nil},
 		{types.Int(32), []byte(nil), nil, true, nil},
+		{types.Int(32), []byte("-57"), -57, true, nil},
 		// uint(8).
 		{types.Uint(8), uint(3), uint(3), false, nil},
 		{types.Uint(8), 3.0, uint(3), false, nil},
