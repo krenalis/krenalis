@@ -208,25 +208,23 @@ func (db *DB) QueryScan(ctx context.Context, query string, args ...any) error {
 		return fmt.Errorf("missing scan function")
 	}
 	args, arg := args[:len(args)-1], args[len(args)-1]
-	switch arg.(type) {
-	case func(*Rows) error:
-	default:
+	scan, ok := arg.(func(*Rows) error)
+	if !ok {
 		return fmt.Errorf("cannot use a %T value as scan function", arg)
 	}
-	rows, err := db.db.Query(ctx, query, args...)
+	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return convertErr(err)
 	}
 	defer rows.Close()
-	switch scan := arg.(type) {
-	case func(*Rows) error:
-		err = scan(&Rows{rows})
-	}
+	err = scan(rows)
 	if err != nil {
 		return convertErr(err)
 	}
-	rows.Close()
-	return convertErr(rows.Err())
+	if err = rows.Close(); err != nil {
+		return convertErr(err)
+	}
+	return nil
 }
 
 // Transaction begins a new transaction and executes the provided function, f.
@@ -310,9 +308,8 @@ func (c *Conn) QueryScan(ctx context.Context, query string, args ...any) error {
 		return fmt.Errorf("missing scan function")
 	}
 	args, arg := args[:len(args)-1], args[len(args)-1]
-	switch arg.(type) {
-	case func(*Rows) error:
-	default:
+	scan, ok := arg.(func(*Rows) error)
+	if !ok {
 		return fmt.Errorf("cannot use a %T value as scan function", arg)
 	}
 	rows, err := c.Query(ctx, query, args...)
@@ -320,15 +317,14 @@ func (c *Conn) QueryScan(ctx context.Context, query string, args ...any) error {
 		return convertErr(err)
 	}
 	defer rows.Close()
-	switch scan := arg.(type) {
-	case func(*Rows) error:
-		err = scan(rows)
-	}
+	err = scan(rows)
 	if err != nil {
 		return convertErr(err)
 	}
-	rows.Close()
-	return convertErr(rows.Err())
+	if err = rows.Close(); err != nil {
+		return convertErr(err)
+	}
+	return nil
 }
 
 // QueryRow implements the [Connection.QueryRow] method.
@@ -407,9 +403,8 @@ func (tx *Tx) QueryScan(ctx context.Context, query string, args ...any) error {
 		return fmt.Errorf("missing scan function")
 	}
 	args, arg := args[:len(args)-1], args[len(args)-1]
-	switch arg.(type) {
-	case func(*Rows) error:
-	default:
+	scan, ok := arg.(func(*Rows) error)
+	if !ok {
 		return fmt.Errorf("cannot use a %T value as scan function", arg)
 	}
 	rows, err := tx.Query(ctx, query, args...)
@@ -417,15 +412,14 @@ func (tx *Tx) QueryScan(ctx context.Context, query string, args ...any) error {
 		return convertErr(err)
 	}
 	defer rows.Close()
-	switch scan := arg.(type) {
-	case func(*Rows) error:
-		err = scan(rows)
-	}
+	err = scan(rows)
 	if err != nil {
 		return convertErr(err)
 	}
-	rows.Close()
-	return convertErr(rows.Err())
+	if err = rows.Close(); err != nil {
+		return convertErr(err)
+	}
+	return nil
 }
 
 // QueryRow implements the [Connection.QueryRow] method.
