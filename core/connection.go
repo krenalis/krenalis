@@ -1323,7 +1323,7 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 func (this *Connection) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {
 	this.core.mustBeOpen()
 	if first < 0 {
-		return nil, 0, errors.BadRequest("first %d is not valid", limit)
+		return nil, 0, errors.BadRequest("first %d is not valid", first)
 	}
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
