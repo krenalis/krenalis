@@ -320,7 +320,7 @@ func (c rawEventContext) Screen() (meergo.RawEventContextScreen, bool) {
 }
 
 func (c rawEventContext) Session() (meergo.RawEventContextSession, bool) {
-	if session, ok := c.context["Session"].(map[string]any); ok {
+	if session, ok := c.context["session"].(map[string]any); ok {
 		return rawEventContextSession{session}, true
 	}
 	return nil, false
