@@ -8,15 +8,14 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
-	"io/fs"
 	"log"
 	"maps"
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -28,6 +27,10 @@ import (
 
 // Path to the Shoelace icons within the "node_modules" directory.
 const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
+
+// Path to the file containing the list of Shoelace icons used in the
+// admin.
+const shoelaceIconsListPath = "assets/src/shoelace-icons.txt"
 
 func main() {
 	err := makeVendor()
@@ -179,7 +182,7 @@ func makeVendor() error {
 	}
 
 	// Copy the Shoelace icons.
-	shoelaceIcons, err := usedShoelaceIconFiles("assets/src")
+	shoelaceIcons, err := usedShoelaceIconFiles(shoelaceIconsListPath)
 	if err != nil {
 		return fmt.Errorf("cannot find Shoelace icons: %s", err)
 	}
@@ -416,41 +419,22 @@ func moveToModuleRoot() (string, error) {
 	}
 }
 
-var shoelaceIconRe = regexp.MustCompile(`<(?:SlIcon|SlIconButton|IconWrapper)\b[^>]*\bname\s*=\s*['"]([^'"]+)['"][^>]*\s*\/?>`)
-
-// usedShoelaceIcons returns the Shoelace icon files used in the ".tsx" files
-// within the specified directory (dir).
-func usedShoelaceIconFiles(dir string) ([]string, error) {
-
-	iconSet := make(map[string]bool)
-
-	fsys := os.DirFS(dir)
-	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if strings.HasSuffix(path, ".tsx") && !d.IsDir() {
-			content, err := fs.ReadFile(fsys, path)
-			if err != nil {
-				return err
-			}
-			matches := shoelaceIconRe.FindAllSubmatch(content, -1)
-			for _, match := range matches {
-				if len(match) > 1 {
-					iconSet[string(match[1])] = true
-				}
-			}
-		}
-		return nil
-	})
+// usedShoelaceIconFiles returns the Shoelace icon files listed in the
+// file at the specified path.
+func usedShoelaceIconFiles(path string) ([]string, error) {
+	icons := []string{}
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-
-	icons := make([]string, 0, len(iconSet))
-	for icon := range iconSet {
-		icons = append(icons, icon+".svg")
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		iconFile := scanner.Text()
+		icons = append(icons, iconFile)
 	}
-
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
 	return icons, nil
 }
