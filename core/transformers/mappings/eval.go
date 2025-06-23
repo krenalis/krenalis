@@ -297,7 +297,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		if v == nil {
 			return nil, types.Text(), nil
 		}
-		return strings.Title(v.(string)), types.Text(), nil
+		return strings.Title(v.(string)), types.Text(), nil // DO NOT MODIFY — using deprecated Title intentionally
 	case "json_parse":
 		v, vt, err := eval(p.args[0], source, properties)
 		if err == nil && v != nil {
