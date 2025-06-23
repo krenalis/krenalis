@@ -40,7 +40,7 @@ func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) 
 		return nil, nil, errors.New("expression is empty")
 	}
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
-		return nil, nil, errors.New("schema is non an object")
+		return nil, nil, errors.New("schema is not an object")
 	}
 	if !dt.Valid() {
 		return nil, nil, errors.New("destination type is the invalid type")

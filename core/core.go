@@ -548,7 +548,7 @@ func (core *Core) EncryptionKey() []byte {
 func (core *Core) ExpressionsProperties(expressions []ExpressionToBeExtracted, schema types.Type) ([]string, error) {
 	core.mustBeOpen()
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
-		return nil, errors.BadRequest("schema is non an object")
+		return nil, errors.BadRequest("schema is not an object")
 	}
 	var properties []string
 	for _, expression := range expressions {
