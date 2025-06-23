@@ -137,7 +137,7 @@ If a field in the schema is mandatory, set the `Required` field in the `types.Pr
 >    - [identify](/events/identify#prefilled-traits)
 >    - [group](/events/group#prefilled-traits)
 
-Now, let's move on to sending events to the app using the `EventsRequest` method.
+Now, let's move on to sending events to the app using the `SendEvents` method.
 
 ## Send events
 
@@ -229,11 +229,16 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     // Read only the first event.
     event := events.First()
 
-    // Prepare request.
-    req := &meergo.EventsRequest{
-        Method: "POST",
-        URL:    "https://api.myapp.com/v1/event",
-        Header: http.Header{},
+    // Prepare the body.
+    var body json.Buffer
+    body.WriteString(`{"properties":`)
+    body.Encode(event.Properties)
+    body.WriteString(`}`)
+
+    // Create the HTTP request.
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/event", &body)
+    if err != nil {
+        return err
     }
 
     // Add the headers.
@@ -243,14 +248,6 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     }
     req.Header.Set("Authorization", "Bearer "+auth)
     req.Header.Set("Content-Type", "application/json")
-
-    // Add the body.
-    var body json.Buffer
-    body.WriteString(`{"properties":`)
-    body.Encode(event.Properties)
-    body.WriteString(`}`)
-
-    req.Body = body.Bytes()
 
     // Send the events.
     res, err := my.httpClient.DoIdempotent(req, true)
@@ -281,22 +278,7 @@ Below is an example implementation:
 ```go
 func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
-    // Prepare request.
-    req := &meergo.EventsRequest{
-        Method: "POST",
-        URL:    "https://api.myapp.com/v1/events",
-        Header: http.Header{},
-    }
-
-    // Add the headers.
-    auth := my.settings.auth
-    if redacted {
-        auth = "[REDACTED]"
-    }
-    req.Header.Set("Authorization", "Bearer "+auth)
-    req.Header.Set("Content-Type", "application/json")
-
-    // Add the body.
+    // Prepare the body.
     var body json.Buffer
     body.WriteString(`{"events":[`)
 
@@ -315,7 +297,19 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     }
     body.WriteString(`]}`)
 
-    req.Body = body.Bytes()
+    // Create the HTTP request.
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost,  "https://api.myapp.com/v1/events", &body)
+    if err != nil {
+        return err
+    }
+	
+    // Add the headers.
+    auth := my.settings.auth
+    if redacted {
+        auth = "[REDACTED]"
+    }
+    req.Header.Set("Authorization", "Bearer "+auth)
+    req.Header.Set("Content-Type", "application/json")
 
     // Send the events.
     res, err := my.conf.HTTPClient.DoIdempotent(req, true)
@@ -347,22 +341,7 @@ Here is an example implementation:
 ```go
 func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
-    // Prepare request.
-    req := &meergo.EventsRequest{
-        Method: "POST",
-        URL:    "https://api.myapp.com/v1/events",
-        Header: http.Header{},
-    }
-
-    // Add the headers.
-    auth := my.settings.auth
-    if redacted {
-        auth = "[REDACTED]"
-    }
-    req.Header.Set("Authorization", "Bearer "+auth)
-    req.Header.Set("Content-Type", "application/json")
-
-    // Add the body.
+    // Prepare the body.
     var body json.Buffer
     body.WriteString(`{"events":[`)
 
@@ -381,7 +360,19 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     }
     body.WriteString(`]}`)
 
-    req.Body = body.Bytes()
+    // Create the HTTP request.
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/events", &body)	
+    if err != nil {
+        return err
+    }
+
+    // Add the headers.
+    auth := my.settings.auth
+    if redacted {
+        auth = "[REDACTED]"
+    }
+    req.Header.Set("Authorization", "Bearer "+auth)
+    req.Header.Set("Content-Type", "application/json")
 
     // Send the events.
     res, err := my.conf.HTTPClient.DoIdempotent(req, true)
@@ -408,7 +399,7 @@ This approach enables efficient processing of mixed events from different users 
 
 ### Handling body size limits
 
-In the previous examples, the loop stops when the number of events reaches the API's maximum limit. However, if the API imposes a body size limit rather than an event count limit, you can use the `Skip` method to skip an event after it has been read. This ensures that the event remains unprocessed and can be included in a subsequent call to the `EventsRequest` method.
+In the previous examples, the loop stops when the number of events reaches the API's maximum limit. However, if the API imposes a body size limit rather than an event count limit, you can use the `Skip` method to skip an event after it has been read. This ensures that the event remains unprocessed and can be included in a subsequent call to the `SendEvents` method.
 
 Below is an example implementation:
 
@@ -455,7 +446,7 @@ Below is an example implementation:
   When the body size exceeds the limit:
     - The `Skip` method is called to notify Meergo that the last processed event has been skipped.
     - The processed events remain unchanged, meaning they can potentially be skipped later.
-    - This skipped event will remain unprocessed and will be included in the next call to the `EventsRequest` method.
+    - This skipped event will remain unprocessed and will be included in the next call to the `SendEvents` method.
 
 ### Differentiating errors by event
 
