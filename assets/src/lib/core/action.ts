@@ -669,8 +669,8 @@ const transformInActionToSet = async (
 			mapping = mappingToSave;
 		}
 
-		inSchema = inputSchema;
-		outSchema = outputSchema;
+		inSchema = sortPropertiesByOriginalSchema(inputSchema, actionType.inputSchema);
+		outSchema = sortPropertiesByOriginalSchema(outputSchema, actionType.outputSchema);
 	} else if (action.transformation.function != null) {
 		const inputSchema: ObjectType = { kind: 'object', properties: [] };
 		const outputSchema: ObjectType = { kind: 'object', properties: [] };
@@ -767,8 +767,8 @@ const transformInActionToSet = async (
 			outPaths: outPaths,
 		};
 
-		inSchema = inputSchema;
-		outSchema = outputSchema;
+		inSchema = sortPropertiesByOriginalSchema(inputSchema, actionType.inputSchema);
+		outSchema = sortPropertiesByOriginalSchema(outputSchema, actionType.outputSchema);
 	} else if (isDestinationFileOnUsers) {
 		inSchema = actionType.inputSchema;
 		outSchema = null; // TODO(Gianluca): it this necessary?
@@ -1319,6 +1319,31 @@ const addPropertyToSchema = (
 		}
 	}
 };
+
+function sortPropertiesByOriginalSchema(schema: ObjectType, original: ObjectType): ObjectType {
+	const originalIndexMap = new Map(original.properties.map((prop, index) => [prop.name, index]));
+
+	const sortedProps = [...schema.properties].sort(
+		(a, b) => originalIndexMap.get(a.name)! - originalIndexMap.get(b.name)!,
+	);
+
+	const properties = sortedProps.map((p) => {
+		if (p.type.kind === 'object' && Array.isArray(p.type.properties)) {
+			// Sort the nested properties too.
+			const prop = original.properties.find((op) => op.name === p.name);
+			return {
+				...p,
+				type: sortPropertiesByOriginalSchema(p.type, prop.type as ObjectType),
+			};
+		}
+		return p;
+	});
+
+	return {
+		kind: 'object',
+		properties: properties,
+	};
+}
 
 interface hierarchicalPaths {
 	ancestors: string[];
