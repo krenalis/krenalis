@@ -25,8 +25,6 @@ import (
 
 func TestEvents(t *testing.T) {
 
-	t.Skip() // TODO: see https://github.com/meergo/meergo/issues/1598.
-
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()

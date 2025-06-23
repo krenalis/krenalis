@@ -415,11 +415,13 @@ func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
+	cb := sendEventCallback{ch: make(chan error, 1)}
 	client, err := analytics.NewWithConfig(
 		writeKey,
 		analytics.Config{
 			Endpoint:  endpoint,
 			Transport: tr,
+			Callback:  cb,
 		},
 	)
 	if err != nil {
@@ -431,8 +433,26 @@ func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
 	}
 	err = client.Close()
 	if err != nil {
+		c.t.Fatalf("cannot send event: %s", err)
+	}
+	err = <-cb.ch
+	if err != nil {
 		c.t.Fatalf("cannot close client when sending events: %s", err)
 	}
+}
+
+// sendEventCallback is used to handle the result of sending an event.
+// It communicates success or failure through an error channel.
+type sendEventCallback struct {
+	ch chan error
+}
+
+func (s sendEventCallback) Success(msg analytics.Message) {
+	s.ch <- nil
+}
+
+func (s sendEventCallback) Failure(msg analytics.Message, err error) {
+	s.ch <- err
 }
 
 func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.RawMessage) []string {
