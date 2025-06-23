@@ -676,18 +676,18 @@ func validateLastChangeTime(t time.Time) error {
 // webhookURL returns the URL of the webhook for the provided connection and
 // account.
 // If the connector does not support webhooks, it returns an empty string.
-func webhookURL(connection *state.Connection, account int) string {
-	connector := connection.Connector()
-	u := "https://localhost:9090/webhook/"
-	switch connector.WebhooksPer {
-	case state.WebhooksPerNone:
-		return ""
-	case state.WebhooksPerAccount:
-		return u + "a/" + strconv.Itoa(account) + "/"
-	case state.WebhooksPerConnection:
-		return u + "s/" + strconv.Itoa(connection.ID) + "/"
-	case state.WebhooksPerConnector:
-		return u + "c/" + url.PathEscape(connector.Name) + "/"
-	}
-	panic("unexpected webhooksPer value")
-}
+//func webhookURL(connection *state.Connection, account int) string {
+//	connector := connection.Connector()
+//	u := "https://localhost:9090/webhook/"
+//	switch connector.WebhooksPer {
+//	case state.WebhooksPerNone:
+//		return ""
+//	case state.WebhooksPerAccount:
+//		return u + "a/" + strconv.Itoa(account) + "/"
+//	case state.WebhooksPerConnection:
+//		return u + "s/" + strconv.Itoa(connection.ID) + "/"
+//	case state.WebhooksPerConnector:
+//		return u + "c/" + url.PathEscape(connector.Name) + "/"
+//	}
+//	panic("unexpected webhooksPer value")
+//}

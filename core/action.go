@@ -1113,19 +1113,6 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	}
 }
 
-// isLanguageSupported reports whether the transformation language of the action
-// is supported. If the action does not have a transformation, it returns true.
-func (this *Action) isLanguageSupported() bool {
-	transformation := this.action.Transformation.Function
-	if transformation == nil {
-		return true
-	}
-	if this.core.functionProvider != nil && this.core.functionProvider.SupportLanguage(transformation.Language) {
-		return true
-	}
-	return false
-}
-
 // setExecutionCursor sets the cursor of the action execution.
 func (this *Action) setExecutionCursor(ctx context.Context, cursor time.Time) error {
 	execution, _ := this.action.Execution()
