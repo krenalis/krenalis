@@ -57,7 +57,6 @@ func Marshal(b []byte, schema types.Type, records []Record, language state.Langu
 		} else {
 			b = append(b, "{}"...)
 		}
-		i++
 	}
 	return append(b, ']'), nil
 }
