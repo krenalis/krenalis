@@ -332,7 +332,7 @@ func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, action int
 	if err != nil {
 		return snowflake(err)
 	}
-	return err
+	return nil
 }
 
 // connector returns a driver.Connector from the settings.
