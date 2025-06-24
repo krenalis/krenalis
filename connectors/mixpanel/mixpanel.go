@@ -203,16 +203,16 @@ const (
 // is true, the HTTP request is built but not sent, so it is only returned.
 func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
-	// nlDelimitedEvents is a bytes.Buffer that contains newline-delimited JSON
-	// objects representing the events to send to Mixpanel.
-	var nlDelimitedEvents bytes.Buffer
+	// body is a bytes.Buffer that contains newline-delimited JSON objects
+	// representing the events to send to Mixpanel.
+	var body bytes.Buffer
 
 	n := 0
 	for event := range events.All() {
 
 		// Check if the request exceeds the limits imposed by Mixpanel. For more
 		// details, see the constants documentation.
-		if n >= maxEventsPerRequest || nlDelimitedEvents.Len() > maxRequestSize {
+		if n >= maxEventsPerRequest || body.Len() > maxRequestSize {
 			events.Skip()
 			break
 		}
@@ -306,17 +306,15 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 			}
 		}
 
-		body := map[string]any{
+		err := json.Encode(&body, map[string]any{
 			"event":      event.Properties["event"].(string),
 			"properties": properties,
-		}
-
-		err := json.Encode(&nlDelimitedEvents, body)
+		})
 		if err != nil {
 			return nil, err
 		}
 
-		nlDelimitedEvents.WriteByte('\n')
+		body.WriteByte('\n')
 		n++
 	}
 
@@ -326,7 +324,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 	u += "import?strict=1&project_id=" + mp.settings.ProjectID
 
-	req, err := http.NewRequestWithContext(ctx, "POST", u, &nlDelimitedEvents)
+	req, err := http.NewRequestWithContext(ctx, "POST", u, &body)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +343,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 
 	// Send the request.
-	res, err := mp.conf.HTTPClient.DoIdempotent(req, true)
+	res, err := mp.conf.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
