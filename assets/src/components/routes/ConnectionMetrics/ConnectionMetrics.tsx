@@ -523,11 +523,12 @@ const ConnectionMetrics = () => {
 						{c.actions?.length > 1 && (
 							<SlSelect
 								size='small'
+								label='Action'
 								onSlChange={onChangeSelectedAction}
 								value={selectedAction == null ? '' : String(selectedAction)}
-								className='connection-metrics__actions'
+								className={`connection-metrics__actions${selectedAction != null ? ' connection-metrics__actions--filtered' : ''}`}
+								clearable
 							>
-								<SlOption value=''>All {selectedTarget.toLowerCase()} actions</SlOption>
 								{c.actions?.map((a) => {
 									if (a.target == selectedTarget) {
 										return <SlOption value={String(a.id)}>{a.name}</SlOption>;

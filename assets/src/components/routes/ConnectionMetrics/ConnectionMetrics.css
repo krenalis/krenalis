@@ -46,11 +46,40 @@
 	opacity: 1;
 }
 
+.connection-metrics__actions::part(form-control) {
+	display: flex;
+	align-items: center;
+}
+
+.connection-metrics__actions::part(form-control-label) {
+	padding-bottom: 0;
+	margin-bottom: 0;
+	font-size: 0.75rem;
+	font-weight: 500;
+	transition: color 0.3s;
+	border: 1px solid var(--sl-input-border-color);
+	border-top-left-radius: 10px;
+	border-bottom-left-radius: 10px;
+	border-right: 0;
+	min-height: var(--sl-input-height-small);
+	padding-left: 10px;
+	padding-right: 10px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.connection-metrics__actions--filtered::part(form-control-label) {
+	color: var(--sl-color-primary-600);
+}
+
 .connection-metrics__actions::part(combobox) {
 	font-size: 0.75rem;
 	transition: border 0.5s;
 	box-shadow: none !important;
 	border: solid var(--sl-input-border-width) var(--sl-input-border-color) !important;
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
 }
 
 .connection-metrics__actions::part(display-input) {
