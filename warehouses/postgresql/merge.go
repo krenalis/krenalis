@@ -162,19 +162,19 @@ func merge(ctx context.Context, conn *pgxpool.Conn, table meergo.Table, rows [][
 
 // copyForDeleteFrom implements the pgx.CopyFromSource interface.
 type copyForDeleteFrom struct {
-	deleted []any
-	row     []any
+	keys []any
+	row  []any
 }
 
 // newCopyForDeleteFrom returns a pgx.CopyFromSource implementation used to
-// delete rows from a table. Rows are read from deleted, where each row contains
-// numColumns consecutive elements from deleted and true at the end.
-func newCopyForDeleteFrom(numColumns int, deleted []any) pgx.CopyFromSource {
+// delete rows from a table. Rows are read from keys, where each row contains
+// numTableKeys consecutive elements from keys and true at the end.
+func newCopyForDeleteFrom(numTableKeys int, keys []any) pgx.CopyFromSource {
 	c := &copyForDeleteFrom{
-		deleted: deleted,
-		row:     make([]any, numColumns+1),
+		keys: keys,
+		row:  make([]any, numTableKeys+1),
 	}
-	c.row[numColumns] = true
+	c.row[numTableKeys] = true
 	return c
 }
 
@@ -183,15 +183,15 @@ func (c *copyForDeleteFrom) Err() error {
 }
 
 func (c *copyForDeleteFrom) Next() bool {
-	return len(c.deleted) > 0
+	return len(c.keys) > 0
 }
 
 func (c *copyForDeleteFrom) Values() ([]any, error) {
-	numKeys := len(c.row) - 1
-	for i := 0; i < numKeys; i++ {
-		c.row[i] = c.deleted[i]
+	n := len(c.row) - 1
+	for i := 0; i < n; i++ {
+		c.row[i] = c.keys[i]
 	}
-	c.deleted = c.deleted[numKeys:]
+	c.keys = c.keys[n:]
 	return c.row, nil
 }
 
