@@ -50,3 +50,11 @@ Meergo supports all events from Google Analytics' Measurement Protocol. For each
 [Here](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events) is a complete list of these events, including documentation for each one as well as for every field associated with each type of event.
 
 Once the type of event you want to send has been determined, you can add the corresponding action from the Meergo interface.
+
+## What to do if events don't show up
+
+If the Google Analytics connector on Meergo sends events but you don't see them in your Google Analytics dashboard, try the following checks:
+
+* Verify that the connector settings (Measurement ID and API secret) are correct. Google Analytics doesn’t validate credentials, so incorrect settings won’t trigger any error messages;
+
+* Enter the action’s testing mode and try previewing some events. In testing mode, Google Analytics uses the Measurement Protocol debug server to check the request format (but not the credentials). If any errors are reported, fix them by adjusting the event transformation. Then exit testing mode, save the action, and try sending some events again.
