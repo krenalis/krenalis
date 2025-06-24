@@ -17,6 +17,7 @@ test(`Add schema property`, async ({ page }) => {
 
 	await page.locator('sl-input >> input[name="name"]').fill('foo');
 	await page.click('.property-dialog__type-select');
+	await page.locator('sl-option', { hasText: 'text' }).scrollIntoViewIfNeeded();
 	await page.locator('sl-option', { hasText: 'text' }).click();
 	await page.locator('sl-textarea >> textarea[name="description"]').fill('Foo property');
 
@@ -81,6 +82,7 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.click('.schema-edit__add-property');
 	await page.locator('sl-input >> input[name="name"]').fill('bar');
 	await page.click('.property-dialog__type-select');
+	await page.locator('sl-option', { hasText: 'text' }).scrollIntoViewIfNeeded();
 	await page.locator('sl-option', { hasText: 'text' }).click();
 	await page.click('.property-dialog__save');
 
@@ -111,6 +113,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 
 	await page.locator('sl-input >> input[name="name"]').fill('test_obj');
 	await page.click('.property-dialog__type-select');
+	await page.locator('sl-option', { hasText: 'object' }).scrollIntoViewIfNeeded();
 	await page.locator('sl-option', { hasText: 'object' }).click();
 
 	await page.click('.property-dialog__save');
@@ -118,6 +121,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.click('.grid__row[data-id="test_obj"] .schema-edit__editable-object-cell sl-button');
 	await page.locator('sl-input >> input[name="name"]').fill('test_sub_prop_1');
 	await page.click('.property-dialog__type-select');
+	await page.locator('sl-option', { hasText: 'text' }).scrollIntoViewIfNeeded();
 	await page.locator('sl-option', { hasText: 'text' }).click();
 	await page.click('.property-dialog__save');
 	await expect(page.locator('.grid__row--children[data-id="test_obj.test_sub_prop_1"]')).toBeAttached();
