@@ -219,8 +219,8 @@ func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, tes
 		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
-	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidSettingsError("port must be in range [1,65536]")
+	if s.Port < 1 || s.Port > 65535 {
+		return meergo.NewInvalidSettingsError("port must be in range [1,65535]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n > 64 {

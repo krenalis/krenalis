@@ -193,8 +193,8 @@ func (kafka *Kafka) saveSettings(ctx context.Context, settings json.Value, test 
 			return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
-		if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
-			return meergo.NewInvalidSettingsError("port must be in range [1,65536]")
+		if s.Kafka.Port < 1 || s.Kafka.Port > 65535 {
+			return meergo.NewInvalidSettingsError("port must be in range [1,65535]")
 		}
 	case s.Confluent != nil:
 		// Validate Server.
@@ -205,8 +205,8 @@ func (kafka *Kafka) saveSettings(ctx context.Context, settings json.Value, test 
 		if n := len(host); n == 0 || n > 253 {
 			return meergo.NewInvalidSettingsError("server host length in bytes must be in range [1,253]")
 		}
-		if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
-			return meergo.NewInvalidSettingsError("server port must be in range [1,65536]")
+		if p, _ := strconv.Atoi(port); p < 1 || p > 65535 {
+			return meergo.NewInvalidSettingsError("server port must be in range [1,65535]")
 		}
 		// Validate Key.
 		if utf8.RuneCountInString(s.Confluent.Key) != 16 {
