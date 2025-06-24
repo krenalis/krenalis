@@ -189,8 +189,8 @@ func TestEvents(t *testing.T) {
 		if !reflect.DeepEqual(event["properties"], expectedProperties) {
 			t.Fatalf("expected properties %#v, got %#v", expectedProperties, event["properties"])
 		}
-		if source, err := strconv.Atoi(string(event["connection"].(json.Number))); err != nil || source != javaScriptID {
-			t.Fatalf("expected source %d, got %#v", javaScriptID, event["source"])
+		if connection, err := strconv.Atoi(string(event["connection"].(json.Number))); err != nil || connection != javaScriptID {
+			t.Fatalf("expected connection %d, got %#v", javaScriptID, event["connection"])
 		}
 		if !reflect.DeepEqual(event["traits"], expectedTraits) {
 			t.Fatalf("expected traits %#v, got %#v", expectedTraits, event["traits"])

@@ -261,6 +261,6 @@ func getIdentityByConnection(t *testing.T, identities []meergotester.UserIdentit
 			return identity
 		}
 	}
-	t.Fatalf("identity with connection %q not found among provided identities", connection)
+	t.Fatalf("identity with connection %d not found among provided identities", connection)
 	return meergotester.UserIdentity{}
 }
