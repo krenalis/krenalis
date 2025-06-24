@@ -59,11 +59,11 @@ github.com/Azure/go-ansiterm/winterm
 ## explicit; go 1.18
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
-# github.com/ClickHouse/ch-go v0.66.0
+# github.com/ClickHouse/ch-go v0.66.1
 ## explicit; go 1.23.0
 github.com/ClickHouse/ch-go/compress
 github.com/ClickHouse/ch-go/proto
-# github.com/ClickHouse/clickhouse-go/v2 v2.37.1
+# github.com/ClickHouse/clickhouse-go/v2 v2.37.2
 ## explicit; go 1.23.0
 github.com/ClickHouse/clickhouse-go/v2
 github.com/ClickHouse/clickhouse-go/v2/contributors
