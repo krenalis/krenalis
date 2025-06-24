@@ -195,7 +195,7 @@ const (
 	// For more details, see:
 	// https://developer.mixpanel.com/reference/import-events.
 	maxEventsPerRequest = 2_000            // 2000 events per request.
-	maxRequestSize      = 10 * 1024 * 1024 // 10 MB (uncompressed) per request.
+	maxBodyEventsBytes  = 10 * 1024 * 1024 // 10 MB (uncompressed) per request.
 )
 
 // sendEvents sends the given events to the app, returning the HTTP request and
@@ -210,12 +210,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	n := 0
 	for event := range events.All() {
 
-		// Check if the request exceeds the limits imposed by Mixpanel. For more
-		// details, see the constants documentation.
-		if n >= maxEventsPerRequest || body.Len() > maxRequestSize {
-			events.Skip()
-			break
-		}
+		size := body.Len()
 
 		if event.Properties["event"].(string) == "" {
 			return nil, errors.New("event cannot be empty")
@@ -315,7 +310,17 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		}
 
 		body.WriteByte('\n')
+
+		if body.Len() > maxBodyEventsBytes {
+			body.Truncate(size)
+			events.Skip()
+			break
+		}
+
 		n++
+		if n == maxEventsPerRequest {
+			break
+		}
 	}
 
 	u := "https://api.mixpanel.com/"

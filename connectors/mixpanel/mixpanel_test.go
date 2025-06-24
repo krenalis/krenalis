@@ -17,11 +17,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/testutils"
 	"github.com/meergo/meergo/types"
+
+	"github.com/google/uuid"
 )
 
 func TestSendEvents(t *testing.T) {
@@ -43,7 +44,8 @@ func TestSendEvents(t *testing.T) {
 			events: []*meergo.Event{
 				newEventForTest("track", anonymousID, messageID, now),
 			},
-			expectedRequestBody: map[string]any{"event": "Test Event",
+			expectedRequestBody: map[string]any{
+				"event": "Test Event",
 				"properties": map[string]any{
 					"$browser":         "Other",
 					"$browser_version": "0.0",
