@@ -206,12 +206,13 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	// nlDelimitedEvents is a bytes.Buffer that contains newline-delimited JSON
 	// objects representing the events to send to Mixpanel.
 	var nlDelimitedEvents bytes.Buffer
-	var eventsWritten int
+
+	n := 0
 	for event := range events.All() {
 
 		// Check if the request exceeds the limits imposed by Mixpanel. For more
 		// details, see the constants documentation.
-		if eventsWritten >= maxEventsPerRequest || nlDelimitedEvents.Len() > maxRequestSize {
+		if n >= maxEventsPerRequest || nlDelimitedEvents.Len() > maxRequestSize {
 			events.Skip()
 			break
 		}
@@ -316,7 +317,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		}
 
 		nlDelimitedEvents.WriteByte('\n')
-		eventsWritten++
+		n++
 	}
 
 	u := "https://api.mixpanel.com/"
