@@ -127,7 +127,7 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Text{Label: "Warning", Text: "The Filesystem connector exposes you local filesystem to Meergo for read and write operations. Use this with caution."},
+			&meergo.Text{Label: "Warning", Text: "The Filesystem connector exposes your local filesystem to Meergo for read and write operations. Use this with caution."},
 			&meergo.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
 			&meergo.Checkbox{Name: "SimulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
 		},
