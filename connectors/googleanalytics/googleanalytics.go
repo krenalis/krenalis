@@ -30,13 +30,6 @@ var icon = "<svg></svg>"
 //go:embed documentation/overview.md
 var overview string
 
-// sendToDebugServer controls whether the events should be sent to the debug
-// server instead of the production server.
-//
-// See
-// https://developers.google.com/analytics/devguides/collection/protocol/ga4/validating-events?client_type=firebase
-const sendToDebugServer = false
-
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:       "Google Analytics",
@@ -175,17 +168,6 @@ const maxEventRequestSize = 130 * 1024 // from https://developers.google.com/ana
 // is true, the HTTP request is built but not sent, so it is only returned.
 func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
-	u := "https://www.google-analytics.com/"
-	if sendToDebugServer {
-		u += "debug/"
-	}
-
-	secret := ga.settings.APISecret
-	if preview {
-		secret = "REDACTED"
-	}
-	u += "mp/collect?api_secret=" + url.QueryEscape(secret) + "&measurement_id=" + url.QueryEscape(ga.settings.MeasurementID)
-
 	var eventsWriter json.Buffer
 	var userID, anonymousId string
 
@@ -244,18 +226,56 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 	body.Write(eventsWriter.Bytes())
 	body.WriteString("]}")
 
-	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
+	bodyBytes := body.Bytes()
+
+	if preview {
+		// First, it performs an actual send to the Google Analytics debug
+		// server to validate the request, returning an error in case of
+		// validation issues.
+		u := requestURL(ga.settings.APISecret, true, false, ga.settings.MeasurementID)
+		req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(bodyBytes))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := ga.conf.HTTPClient.DoIdempotent(req, true)
+		if err != nil {
+			return req, err
+		}
+		var validationResponse struct {
+			ValidationMessages []json.Value `json:"validationMessages"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&validationResponse)
+		if err != nil {
+			return req, err
+		}
+		if len(validationResponse.ValidationMessages) > 0 {
+			msg := "the Google Analytics debug server has returned validation messages:\n"
+			for _, m := range validationResponse.ValidationMessages {
+				msg += string(m)
+			}
+			return req, errors.New(msg)
+		}
+		// Next, build a new request to be returned to Meergo, in which
+		// sensitive information (such as the API secret) is redacted.
+		u = requestURL(ga.settings.APISecret, true, true, ga.settings.MeasurementID)
+		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(bodyBytes))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		return req, nil
+	}
+
+	// Build the request to send to Google Analytics.
+	u := requestURL(ga.settings.APISecret, false, false, ga.settings.MeasurementID)
+	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, err
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 
 	storeHTTPRequestWhenTesting(ctx, req)
-
-	if preview {
-		return req, nil
-	}
 
 	_, err = ga.conf.HTTPClient.DoIdempotent(req, true)
 	if err != nil {
@@ -265,6 +285,20 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 	// TODO: handle errors
 
 	return req, nil
+}
+
+// requestURL builds and returns the request URL to which the events request
+// should be sent, based on the given parameters.
+func requestURL(apiSecret string, toDebugServer bool, redactSensitiveInfo bool, measurementID string) string {
+	u := "https://www.google-analytics.com/"
+	if toDebugServer {
+		u += "debug/"
+	}
+	if redactSensitiveInfo {
+		apiSecret = "REDACTED"
+	}
+	u += "mp/collect?api_secret=" + url.QueryEscape(apiSecret) + "&measurement_id=" + url.QueryEscape(measurementID)
+	return u
 }
 
 // connectorTestString is a defined type used solely to pass a typed key to the
