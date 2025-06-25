@@ -590,6 +590,7 @@ func (r *Row) Scan(dest ...any) error {
 	if r.closed {
 		return errors.New("already closed")
 	}
+	r.closed = true
 	err := r.Row.Scan(dest...)
 	return convertErr(err)
 }
