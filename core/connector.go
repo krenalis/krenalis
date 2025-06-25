@@ -126,7 +126,7 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	case "Stream":
 		t = Stream
 	default:
-		return fmt.Errorf("json: invalid core.ConnectionType: %s", s)
+		return fmt.Errorf("json: invalid core.ConnectorType: %s", s)
 	}
 	*typ = t
 	return nil
