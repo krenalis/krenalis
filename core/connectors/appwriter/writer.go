@@ -307,8 +307,8 @@ func (w *Writer) consume(iter *iterator) {
 		if trace {
 			fmt.Printf("Writer.consume: Upsert of iterator %p has returned without starting an iteration, with error %#v\n", iter, err)
 		}
-		w.iterator = nil
 		w.iterator.index = 0
+		w.iterator = nil
 		w.close.completed.Signal()
 	} else {
 		// Upsert has completed the iteration.
