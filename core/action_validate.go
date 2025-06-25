@@ -143,7 +143,12 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	}
 	// Validate the filter.
 	var usedInPaths []string
+	filtersAllowed := !(v.connection.role == state.Source &&
+		v.connection.connector.typ == state.Database && v.target == state.TargetUser)
 	if action.Filter != nil {
+		if !filtersAllowed {
+			return errors.BadRequest("filters are not allowed")
+		}
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
@@ -441,15 +446,6 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		}
 	}
 
-	// Check if the filters are allowed.
-	// Note that filters are always allowed except for actions that import users
-	// from databases.
-	filtersAllowed := !(v.connection.role == state.Source &&
-		v.connection.connector.typ == state.Database && v.target == state.TargetUser)
-	if action.Filter != nil && !filtersAllowed {
-		return errors.BadRequest("filters are not allowed")
-	}
-
 	// Check if the path and the sheet are allowed.
 	if v.connection.connector.typ == state.FileStorage {
 		if action.Path == "" {
@@ -542,8 +538,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if outSchema.Valid() {
 			return errors.BadRequest("output schema must be invalid when exporting users to file")
 		}
-		// Check that OrderBy is defined and exists in the out
-		// schema.
+		// Check that OrderBy is defined and exists in the input schema.
 		if action.OrderBy == "" {
 			return errors.BadRequest("order by property cannot be empty when exporting users to file")
 		}
@@ -552,9 +547,8 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			return errors.BadRequest("order by property cannot be found in action's input schema: %s", err)
 		}
 		// Check the allowed types.
-		// Regarding the allowed types, we can use the same criterion used for
-		// the allowed types of the workspace identifiers, so as to simplify the
-		// specifications for the warehouse drivers.
+		// We can use the same criteria as for the allowed types of workspace identifiers,
+		// to simplify the specifications for warehouse drivers.
 		switch p.Type.Kind() {
 		case types.IntKind, types.UintKind, types.UUIDKind, types.InetKind, types.TextKind:
 			// Ok.
