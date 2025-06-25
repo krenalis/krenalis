@@ -467,10 +467,15 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	// Mark the request as idempotent.
+	req.Header["Idempotency-Key"] = nil
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(body)), nil
+	}
 	if preview {
 		return req, nil
 	}
-	_, err = dummy.conf.HTTPClient.DoIdempotent(req, true)
+	_, err = dummy.conf.HTTPClient.Do(req)
 	if err != nil {
 		return req, err
 	}

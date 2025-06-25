@@ -8,7 +8,6 @@
 package httpclient
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -122,42 +121,26 @@ func (c *Client) ClientSecret() (string, error) {
 	return connector.OAuth.ClientSecret, nil
 }
 
-// Do sends an HTTP request with an Authorization header if required. It returns
-// the response and ensures that the request body is closed, even in the case of
-// errors. Redirects are not followed.
+// Do sends an HTTP request and returns the corresponding HTTP response.
 //
-// If an error occurs during GET, PUT, DELETE, or HEAD requests, it retries
-// using the client's backoff policy or a default policy if the client has no
-// policy.
+// If the client supports OAuth, it adds the Authorization header automatically.
+//
+// It retries the request on network errors or when the client's backoff policy
+// applies. A request is retried only if it is idempotent
+// (see http.Transport for details), which is defined as:
+//
+//   - method is GET, HEAD, OPTIONS, or TRACE and Request.GetBody is set, or
+//   - Request.Header contains an Idempotency-Key or X-Idempotency-Key key.
+//
+// An empty header value is considered idempotent but is not sent.
+//
+// It always closes the request body, even if an error occurs.
+// It does not follow redirects.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	idempotent := false
-	switch req.Method {
-	case "GET", "PUT", "DELETE", "HEAD":
-		idempotent = true
-	}
-	return c.DoIdempotent(req, idempotent)
-}
-
-// DoIdempotent behaves like Do, but unlike Do, which assumes GET, PUT, DELETE,
-// and HEAD requests are idempotent by default, it allows to explicitly specify
-// idempotency.
-//
-// If an error occurs during an idempotent request, it retries using the
-// client's backoff policy or a default policy if the client has no policy.
-func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Response, error) {
 
 	ctx := req.Context()
 
-	var body []byte
-	if idempotent && req.Body != nil {
-		var err error
-		body, err = io.ReadAll(req.Body)
-		_ = req.Body.Close()
-		if err != nil {
-			return nil, err
-		}
-		req.Body = io.NopCloser(bytes.NewBuffer(body))
-	}
+	retriable := isRetriable(req)
 
 	retries := 0
 	netRetries := false // indicates if the last retry was triggered by a network error.
@@ -177,7 +160,7 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		// Sent the request.
 		res, err := c.http.transport.RoundTrip(req)
 		if err != nil {
-			if idempotent {
+			if retriable {
 				// Wait before retrying.
 				if !netRetries {
 					retries = 0
@@ -195,7 +178,7 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 			return nil, err
 		}
 
-		if !idempotent {
+		if !retriable {
 			return res, nil
 		}
 		if status := res.StatusCode; status == 200 || status == 201 {
@@ -234,9 +217,14 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 			return nil, ctx.Err()
 		}
 
-		// Restore the request body.
-		if req.Body != nil {
-			req.Body = io.NopCloser(bytes.NewBuffer(body))
+		// Restore the request's body.
+		if req.Body != nil && req.Body != http.NoBody {
+			req = req.Clone(ctx)
+			body, err := req.GetBody()
+			if err != nil {
+				return nil, err
+			}
+			req.Body = body
 		}
 
 		retries++
@@ -296,4 +284,22 @@ func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error
 		d += time.Duration(float64(d) * rand.Float64() * 0.5)
 	}
 	return d, nil
+}
+
+// isRetriable reports whether the given HTTP request is retriable.
+func isRetriable(req *http.Request) bool {
+	if req.Body != nil && req.Body != http.NoBody && req.GetBody == nil {
+		return false
+	}
+	switch req.Method {
+	case "", "GET", "HEAD", "OPTIONS", "TRACE":
+		return true
+	}
+	if _, ok := req.Header["Idempotency-Key"]; ok {
+		return true
+	}
+	if _, ok := req.Header["X-Idempotency-Key"]; ok {
+		return true
+	}
+	return false
 }

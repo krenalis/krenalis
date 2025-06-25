@@ -95,22 +95,23 @@ type TimeLayouts struct {
 // connectors.
 type HTTPClient interface {
 
-	// Do sends an HTTP request with an Authorization header if required. It returns
-	// the response and ensures that the request body is closed, even in the case of
-	// errors. Redirects are not followed.
+	// Do sends an HTTP request and returns the corresponding HTTP response.
 	//
-	// If an error occurs during GET, PUT, DELETE, or HEAD requests, it retries
-	// using the client's backoff policy or a default policy if the client has no
-	// policy.
+	// If the connector supports OAuth, it adds the Authorization header
+	// automatically.
+	//
+	// It retries the request on network errors or when the connector's backoff
+	// policy applies. A request is retried only if it is idempotent
+	// (see http.Transport for details), which is defined as:
+	//
+	//   - method is GET, HEAD, OPTIONS, or TRACE and Request.GetBody is set, or
+	//   - Request.Header contains an Idempotency-Key or X-Idempotency-Key key.
+	//
+	// An empty header value is considered idempotent but is not sent.
+	//
+	// It always closes the request body, even if an error occurs.
+	// It does not follow redirects.
 	Do(req *http.Request) (res *http.Response, err error)
-
-	// DoIdempotent behaves like Do, but unlike Do, which assumes GET, PUT, DELETE,
-	// and HEAD requests are idempotent by default, it allows to explicitly specify
-	// idempotency.
-	//
-	// If an error occurs during an idempotent request, it retries using the
-	// client's backoff policy or a default policy if the client has no policy.
-	DoIdempotent(req *http.Request, idempotent bool) (*http.Response, error)
 
 	// ClientSecret returns the OAuth client secret of the HTTP client.
 	ClientSecret() (string, error)

@@ -24,11 +24,63 @@ The `BackoffPolicy` field specifies the backoff policy for the connector. It map
 
 You can use the strategies provided by Meergo, so you do not have to implement it, or create your own. If the app documentation does not specify how to handle errors, do not set a backoff policy. Meergo will use a default policy in that case.
 
-## Idempotency
+## Retriable requests
 
-As mentioned earlier, only idempotent requests can be retried. The `Do` method of the provided HTTP client automatically treats GET, PUT, DELETE, and HEAD requests as idempotent. If you need to explicitly specify idempotency, use the `DoIdempotent` method. It remains your responsibility to ensure that the request is idempotent. When you need to generate an idempotency key for an HTTP request, you can use the `meergo.UUID` function, which returns a random version 4 UUID.
+Only idempotent requests can be retried. The `Do` method of the HTTP client passed to a connector decides whether a request is retriable using the same rules as Go's standard library (see [http.Transport](https://pkg.go.dev/net/http#Transport)).
 
-## Strategies
+A request is considered retriable if:
+
+* it is **idempotent**, and
+* it either **has no body** or provides a `Request.GetBody` function to recreate the body if needed.
+
+A request is idempotent if:
+
+* its HTTP method is `GET`, `HEAD`, `OPTIONS`, or `TRACE`, or
+* it includes the header `Idempotency-Key` or `X-Idempotency-Key`.
+
+If the idempotency header is present but is empty (nil or empty slice), the request is still treated as idempotent — but the header won't be sent over the network.
+
+### Example
+
+If your app supports idempotency and requires an idempotency key in the header called `Idempotency-Key`, you can do this:
+
+```go
+// Mark the request as idempotent.
+req.Header.Set("Idempotency-Key", key)
+req.GetBody = func() (io.ReadCloser, error) {
+    return io.NopCloser(bytes.NewReader(body)), nil
+}
+```
+
+The `Request.GetBody` function is called if the request needs to be retried and must return the original request body.
+
+If you want a random UUID to use as the idempotency key, you can use:  
+
+```go
+// Mark the request as idempotent.
+req.Header.Set("Idempotency-Key", meergo.UUID())
+req.GetBody = func() (io.ReadCloser, error) {
+    return io.NopCloser(bytes.NewReader(body)), nil
+}
+```
+
+### Idempotent events
+
+Events are usually idempotent, meaning apps don't require an idempotency key to receive them. Instead, an app generally uses each event's unique ID for deduplication.
+
+However, even if an idempotency key is not needed, the request must still be marked as idempotent. You can mark the request as idempotent without sending the header like this:
+
+```go
+// Mark the request as idempotent.
+req.Header["Idempotency-Key"] = nil
+req.GetBody = func() (io.ReadCloser, error) {
+    return io.NopCloser(bytes.NewReader(body)), nil
+}
+```
+
+Setting the header value to `nil` tells the HTTP client that the request is idempotent and should be retried on failure, but the header itself will not be sent to the app.
+
+## Backoff strategies
 
 Meergo offers Constant, Exponential, RetryAfter, and Header strategies for managing retries. Jitter is automatically added to the wait time calculated by strategies to introduce variability.
 

@@ -236,7 +236,8 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     body.WriteString(`}`)
 
     // Create the HTTP request.
-    req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/event", &body)
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+        "https://api.myapp.com/v1/event", bytes.NewReader(body.Bytes()))
     if err != nil {
         return err
     }
@@ -249,8 +250,14 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     req.Header.Set("Authorization", "Bearer "+auth)
     req.Header.Set("Content-Type", "application/json")
 
+    // Mark the request as idempotent.
+    req.Header["Idempotency-Key"] = nil
+    req.GetBody = func() (io.ReadCloser, error) {
+        return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+    }
+
     // Send the events.
-    res, err := my.httpClient.DoIdempotent(req, true)
+    res, err := my.httpClient.Do(req)
     if err != nil {
         return err
     }
@@ -311,8 +318,14 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     req.Header.Set("Authorization", "Bearer "+auth)
     req.Header.Set("Content-Type", "application/json")
 
+    // Mark the request as idempotent.
+    req.Header["Idempotency-Key"] = nil
+    req.GetBody = func() (io.ReadCloser, error) {
+        return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+    }
+
     // Send the events.
-    res, err := my.conf.HTTPClient.DoIdempotent(req, true)
+    res, err := my.conf.HTTPClient.Do(req)
     if err != nil {
         return err
     }
@@ -361,7 +374,8 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     body.WriteString(`]}`)
 
     // Create the HTTP request.
-    req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/events", &body)	
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+        "https://api.myapp.com/v1/events", bytes.NewReader(body.Bytes()))	
     if err != nil {
         return err
     }
@@ -374,8 +388,14 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     req.Header.Set("Authorization", "Bearer "+auth)
     req.Header.Set("Content-Type", "application/json")
 
+    // Mark the request as idempotent.
+    req.Header["Idempotency-Key"] = nil
+    req.GetBody = func() (io.ReadCloser, error) {
+        return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+    }
+
     // Send the events.
-    res, err := my.conf.HTTPClient.DoIdempotent(req, true)
+    res, err := my.conf.HTTPClient.Do(req)
     if err != nil {
         return err
     }

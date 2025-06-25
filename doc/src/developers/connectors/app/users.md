@@ -89,22 +89,22 @@ The client implements the `HTTPClient` interface:
 // connectors.
 type HTTPClient interface {
 
-	// Do sends an HTTP request with an Authorization header if required. It returns
-	// the response and ensures that the request body is closed, even in the case of
-	// errors. Redirects are not followed.
+	// Do sends an HTTP request and returns the response.
 	//
-	// If an error occurs during GET, PUT, DELETE, or HEAD requests, it retries
-	// using the client's backoff policy or a default policy if the client has no
-	// policy.
+	// If authentication is needed, it adds an Authorization header automatically.
+	// It always closes the request body after the call, even if an error happens.
+	// This method does *not* follow redirects.
+	//
+	// A request is retriable if it is idempotent and either has no body or provides
+	// a GetBody function to regenerate the body.
+	// A request is considered idempotent if its method is GET, HEAD, OPTIONS, or
+	// TRACE, or if it includes the header "Idempotency-Key" or "X-Idempotency-Key".
+	// (If the header’s value is an empty slice, the request is still treated as
+	// idempotent, but the header is not sent over the network.)
+	//
+	// See also the `http.Transport` documentation:
+	// https://pkg.go.dev/net/http#Transport.
 	Do(req *http.Request) (res *http.Response, err error)
-
-	// DoIdempotent behaves like Do, but unlike Do, which assumes GET, PUT, DELETE,
-	// and HEAD requests are idempotent by default, it allows to explicitly specify
-	// idempotency.
-	//
-	// If an error occurs during an idempotent request, it retries using the
-	// client's backoff policy or a default policy if the client has no policy.
-	DoIdempotent(req *http.Request, idempotent bool) (*http.Response, error)
 
 	// ClientSecret returns the OAuth client secret of the HTTP client.
 	ClientSecret() (string, error)
@@ -237,7 +237,16 @@ func (my *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meer
     }
 
     // Create the HTTP request.
-    req, _ := http.NewRequestWithContext(ctx, method, "https://api.myapp.com"+path, &body)
+    req, _ := http.NewRequestWithContext(ctx, method,
+        "https://api.myapp.com"+path, bytes.NewReader(body.Bytes()))
+
+    // Mark the request as idempotent for updates.
+    if method == http.MethodPut {
+        req.Header["Idempotency-Key"] = nil
+        req.GetBody = func() (io.ReadCloser, error) {
+            return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+        }		
+    }
 
     // Send the HTTP request.
     res, err := my.httpClient.Do(req)
@@ -307,8 +316,17 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
     body.WriteString(`]}`)
 
     // Create the HTTP request.
-    req, _ := http.NewRequestWithContext(ctx, method, "https://api.myapp.com/v1/customers/batch", &body)
+    req, _ := http.NewRequestWithContext(ctx, method,
+        "https://api.myapp.com/v1/customers/batch", bytes.NewReader(body.Bytes()))
 
+    // Mark the request as idempotent for updates.
+    if method == http.MethodPut {
+        req.Header["Idempotency-Key"] = nil
+        req.GetBody = func() (io.ReadCloser, error) {
+            return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+        }		
+    }
+	
     // Send the HTTP request.
     res, err := m.httpClient.Do(req)
     if err != nil {
@@ -375,7 +393,8 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
     body.WriteString(`]}`)
 
     // Create the HTTP request.
-    req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/customers/batch", &body)
+    req, _ := http.NewRequestWithContext(ctx, http.MethodPost,
+        "https://api.myapp.com/v1/customers/batch", &body)
 
     // Send the HTTP request.
     res, err := m.httpClient.Do(req)

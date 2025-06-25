@@ -329,7 +329,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 	u += "import?strict=1&project_id=" + mp.settings.ProjectID
 
-	req, err := http.NewRequestWithContext(ctx, "POST", u, &body)
+	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -339,6 +339,12 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		req.Header.Set("Authorization", "Basic [REDACTED]")
 	} else {
 		req.SetBasicAuth(mp.settings.ProjectToken, "")
+	}
+
+	// Mark the request as idempotent.
+	req.Header["Idempotency-Key"] = nil
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(body.Bytes())), nil
 	}
 
 	storeHTTPRequestWhenTesting(ctx, req)

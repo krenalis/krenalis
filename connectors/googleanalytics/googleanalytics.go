@@ -226,19 +226,23 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 	body.Write(eventsWriter.Bytes())
 	body.WriteString("]}")
 
-	bodyBytes := body.Bytes()
-
 	if preview {
 		// First, it performs an actual send to the Google Analytics debug
 		// server to validate the request, returning an error in case of
 		// validation issues.
 		u := requestURL(ga.settings.APISecret, true, false, ga.settings.MeasurementID)
-		req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(bodyBytes))
+		req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := ga.conf.HTTPClient.DoIdempotent(req, true)
+		// Mark the request as idempotent.
+		req.Header["Idempotency-Key"] = nil
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+		}
+		// Do the request.
+		resp, err := ga.conf.HTTPClient.Do(req)
 		if err != nil {
 			return req, err
 		}
@@ -259,7 +263,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		// Next, build a new request to be returned to Meergo, in which
 		// sensitive information (such as the API secret) is redacted.
 		u = requestURL(ga.settings.APISecret, true, true, ga.settings.MeasurementID)
-		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(bodyBytes))
+		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
 		if err != nil {
 			return nil, err
 		}
@@ -269,15 +273,21 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 
 	// Build the request to send to Google Analytics.
 	u := requestURL(ga.settings.APISecret, false, false, ga.settings.MeasurementID)
-	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(bodyBytes))
+	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	// Mark the request as idempotent.
+	req.Header["Idempotency-Key"] = nil
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+	}
+
 	storeHTTPRequestWhenTesting(ctx, req)
 
-	_, err = ga.conf.HTTPClient.DoIdempotent(req, true)
+	_, err = ga.conf.HTTPClient.Do(req)
 	if err != nil {
 		return req, err
 	}

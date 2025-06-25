@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -108,12 +107,12 @@ func (stripe *Stripe) RecordSchema(ctx context.Context, target meergo.Targets, r
 // Records returns the records of the specified target.
 func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, _ []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
-	var body io.Reader
+	var body []byte
 	if cursor != "" {
 		form := url.Values{
 			"starting_after": {cursor},
 		}
-		body = strings.NewReader(form.Encode())
+		body = []byte(form.Encode())
 	}
 
 	var response struct {
@@ -180,21 +179,24 @@ func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records
 	if record.ID != "" {
 		u += "/" + record.ID
 	}
-	return stripe.call(ctx, "POST", u, &body, 200, nil)
+	return stripe.call(ctx, "POST", u, body.Bytes(), 200, nil)
 }
 
-func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
-	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, body)
+func (stripe *Stripe) call(ctx context.Context, method, path string, body []byte, expectedStatus int, response any) error {
+	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
-	client := stripe.conf.HTTPClient
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
 	if req.Method == "POST" {
+		// Mark the request as idempotent.
 		req.Header.Set("Idempotency-Key", meergo.UUID())
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(body)), nil
+		}
 	}
-	res, err := client.DoIdempotent(req, true)
+	res, err := stripe.conf.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

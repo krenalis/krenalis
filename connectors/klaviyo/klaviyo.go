@@ -580,11 +580,17 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Revision", apiRevision)
 
+	// Mark the request as idempotent.
+	req.Header["Idempotency-Key"] = nil
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+	}
+
 	if preview {
 		return req, nil
 	}
 
-	_, err = ky.conf.HTTPClient.DoIdempotent(req, true)
+	_, err = ky.conf.HTTPClient.Do(req)
 	if err != nil {
 		return req, err
 	}
