@@ -9,8 +9,6 @@ package util
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -82,18 +80,24 @@ func PropertiesToColumns(t types.Type) []meergo.Column {
 //   - The string s contains invalid UTF-8 runes.
 //   - The string s contains a NUL byte.
 //   - The string s exceeds maxLen runes.
-func ValidateStringField(name string, s string, maxLen int) error {
-	if s == "" {
+func ValidateStringField(name, s string, maxLen int) error {
+	if len(s) == 0 {
 		return fmt.Errorf("%s is empty", name)
 	}
-	if !utf8.ValidString(s) {
-		return fmt.Errorf("%s contains invalid UTF-8 encoded characters", name)
-	}
-	if strings.ContainsRune(s, '\x00') {
-		return fmt.Errorf("%s contains the NUL byte", name)
-	}
-	if utf8.RuneCountInString(s) > maxLen {
-		return fmt.Errorf("%s is longer than %s runes", name, strings.ReplaceAll(strconv.Itoa(maxLen), ".", ","))
+	var count int
+	for i := 0; i < len(s); {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && size == 1 {
+			return fmt.Errorf("%s contains invalid UTF-8 encoded characters", name)
+		}
+		if r == '\x00' {
+			return fmt.Errorf("%s contains the NUL byte", name)
+		}
+		count++
+		if count > maxLen {
+			return fmt.Errorf("%s is longer than %d runes", name, maxLen)
+		}
+		i += size
 	}
 	return nil
 }
