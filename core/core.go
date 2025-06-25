@@ -1306,7 +1306,7 @@ func (core *Core) onStartAlterUserSchema(n state.StartAlterUserSchema) {
 	go core.executeAlterUserSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.Operations)
 }
 
-// onElectLeader is called when the identity resolution is started.
+// onStartIdentityResolution is called when the identity resolution is started.
 func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 	if !core.state.IsLeader() {
 		return
