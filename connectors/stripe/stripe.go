@@ -183,7 +183,11 @@ func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records
 }
 
 func (stripe *Stripe) call(ctx context.Context, method, path string, body []byte, expectedStatus int, response any) error {
-	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, bytes.NewReader(body))
+	var b io.Reader
+	if body != nil {
+		b = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, b)
 	if err != nil {
 		return err
 	}
@@ -192,8 +196,10 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, body []byte
 	if req.Method == "POST" {
 		// Mark the request as idempotent.
 		req.Header.Set("Idempotency-Key", meergo.UUID())
-		req.GetBody = func() (io.ReadCloser, error) {
-			return io.NopCloser(bytes.NewReader(body)), nil
+		if body != nil {
+			req.GetBody = func() (io.ReadCloser, error) {
+				return io.NopCloser(bytes.NewReader(body)), nil
+			}
 		}
 	}
 	res, err := stripe.conf.HTTPClient.Do(req)
