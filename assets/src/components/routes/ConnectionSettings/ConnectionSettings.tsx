@@ -3,7 +3,6 @@ import './ConnectionSettings.css';
 import ConnectionGeneralSettings from './ConnectionGeneralSettings';
 import ConnectionConnectorSettings from './ConnectionConnectorSettings';
 import ConnectionKeys from './ConnectionKeys';
-import ConnectionSnippet from './ConnectionSnippet';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
@@ -13,6 +12,7 @@ import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import { ConnectorUIResponse } from '../../../lib/api/types/responses';
 import { debounce } from '../../../utils/debounce';
 import { isSourceEventConnection } from '../../../lib/core/connection';
+import { Snippet } from '../../base/Snippet/Snippet';
 
 type TabName = 'general' | 'snippet' | 'connection' | 'keys';
 
@@ -85,7 +85,7 @@ const ConnectionSettings = () => {
 	const tabs = useMemo(() => {
 		const tabs: TabName[] = ['general'];
 
-		if (c.connector.hasSnippet) {
+		if (c.connector.name === 'JavaScript') {
 			tabs.push('snippet');
 		}
 
@@ -132,7 +132,10 @@ const ConnectionSettings = () => {
 						</SlTab>
 						<SlTabPanel name='snippet'>
 							<div className='connection-settings__panel-title'>Snippet</div>
-							<ConnectionSnippet />
+							<div className='connection-settings__snippet-copy'>
+								<div>Embed the snippet in your website to start sending events:</div>
+								<Snippet connectorName={c.connector.name} connectionID={c.id} />
+							</div>
 						</SlTabPanel>
 					</>
 				)}

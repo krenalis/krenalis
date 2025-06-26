@@ -113,21 +113,7 @@ const ConnectionActions = () => {
 			className={`connection-actions${connection.actions!.length === 0 ? ' connection-actions--no-action' : ''}`}
 		>
 			{connection.connector.hasSnippet && (
-				<Section
-					title='Add Meergo to your website'
-					className='connection-actions__instructions'
-					description={
-						<div className='connection-actions__instructions-text'>
-							Copy this snippet and paste it into your website to receive events
-							<a target='_blank' href='http://localhost:8080/developers/javascript-sdk'>
-								See documentation
-							</a>
-						</div>
-					}
-					annotated={true}
-				>
-					<Snippet connectionID={connection.id} />
-				</Section>
+				<Snippet connectorName={connection.connector.name} connectionID={connection.id} />
 			)}
 			{/* Linked connections are shown: before the actions, in the case of destination actions; after the actions,
 			in the case of source actions. This is to better suggest the usability flow. */}

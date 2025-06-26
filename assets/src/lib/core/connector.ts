@@ -54,7 +54,7 @@ class TransformedConnector {
 	}
 
 	get hasSnippet() {
-		return this.name === 'JavaScript';
+		return this.type === 'SDK' && this.name !== 'Meergo API';
 	}
 
 	get isApp() {

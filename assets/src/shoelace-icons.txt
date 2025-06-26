@@ -68,6 +68,7 @@ search.svg
 send.svg
 shuffle.svg
 sliders2.svg
+terminal.svg
 three-dots-vertical.svg
 three-dots.svg
 trash3.svg

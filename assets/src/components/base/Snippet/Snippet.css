@@ -1,18 +1,16 @@
 .snippet {
 	position: relative;
 	margin-top: 0;
-	padding: 20px 20px 0 0;
-	box-shadow: var(--sl-shadow-small);
-	border-radius: 10px;
-	background-color: #f4f2fd !important;
 }
 
-.snippet .syntax-highlight pre {
-	padding-bottom: 17px !important;
-	padding-left: 20px !important;
+.syntax-highlight--install-command + sl-copy-button {
+	position: absolute;
+	width: max-content !important;
+	top: 10px;
+	right: 20px;
 }
 
-.snippet sl-copy-button {
+.syntax-highlight--snippet + sl-copy-button {
 	margin-top: 20px;
 	position: absolute;
 	width: max-content !important;
@@ -22,16 +20,11 @@
 
 .snippet sl-copy-button::part(button) {
 	gap: 8px;
-	background-color: var(--color-primary-600);
-	color: var(--text-onaccent);
+	background-color: transparent;
 	padding: 9px 13px;
 	margin-left: auto;
 	font-size: 12px;
-	font-weight: 600;
-}
-
-.snippet sl-copy-button::part(button)::after {
-	content: 'Copy';
+	border: 1px solid var(--sl-color-neutral-300);
 }
 
 .snippet .syntax-highlight pre::-webkit-scrollbar {
@@ -55,4 +48,37 @@
 
 .snippet .syntax-highlight pre::-webkit-scrollbar-thumb:hover {
 	background: #555;
+}
+
+.snippet .syntax-highlight {
+	padding: 15px 20px !important;
+	padding-right: 80px !important;
+}
+
+.snippet .syntax-highlight--snippet {
+	padding-bottom: 0 !important;
+}
+
+.snippet .syntax-highlight--snippet > pre {
+	padding-bottom: 20px !important;
+}
+
+.snippet .syntax-highlight--install-command {
+	background-color: var(--sl-color-neutral-50);
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	border: 1px solid var(--sl-color-primary-200);
+	border-bottom: 1px solid var(--sl-color-primary-200);
+}
+
+.snippet .syntax-highlight--snippet {
+	border-radius: 10px;
+	background-color: #f4f2fd !important;
+	border: 1px solid var(--sl-color-primary-200);
+}
+
+.snippet--command .syntax-highlight--snippet {
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+	border-top: 0;
 }

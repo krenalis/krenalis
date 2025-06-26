@@ -1,3 +1,15 @@
+.syntax-highlight--icon {
+	display: flex;
+	gap: 7px;
+}
+
+.syntax-highlight--icon sl-icon {
+	position: relative;
+	top: 1.5px;
+	font-size: 15px !important;
+	min-width: 16px !important;
+}
+
 .syntax-highlight pre {
 	background-color: transparent !important;
 	padding: 0 !important;

@@ -11,9 +11,9 @@ esbuild
 	})
 	.then((result) => {
 		const text = result.outputFiles[0].text;
-		let transformed = text.replace(/meergo\.load\([^)]*\)/, '\n\t$&;\n\t');
-		const snippet = `export const SNIPPET = \`<script>\n\t${transformed}</script>\`;\n`;
-		fs.writeFileSync('src/constants/javascriptSnippet.ts', snippet);
+		let transformed = text.replace(/meergo\.load\([^)]*\)/, '\n  $&;\n  ');
+		const snippet = `export const SNIPPET = \`<script>\n  ${transformed}</script>\`;\n\nexport const DOCUMENTATION_LINK = 'http://localhost:8080/developers/javascript-sdk';`;
+		fs.writeFileSync('src/constants/snippets/javascript.ts', snippet);
 	})
 	.catch((err) => {
 		console.error(err);

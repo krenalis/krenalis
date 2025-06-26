@@ -130,9 +130,13 @@
 	width: 100%;
 }
 
+.connection-settings__snippet-copy .section__heading {
+	display: none;
+}
+
 .connection-settings__snippet-copy > div:first-child {
 	margin-left: 3px;
-	margin-bottom: 8px;
+	margin-bottom: 10px;
 }
 
 .connection-settings__snippet-copy .snippet {
