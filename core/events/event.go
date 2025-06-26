@@ -186,11 +186,17 @@ func (e rawEvent) AnonymousId() string {
 }
 
 func (e rawEvent) Channel() string {
-	return e.event["channel"].(string)
+	if channel, ok := e.event["channel"]; ok {
+		return channel.(string)
+	}
+	return ""
 }
 
 func (e rawEvent) Category() string {
-	return e.event["category"].(string)
+	if category, ok := e.event["category"]; ok {
+		return category.(string)
+	}
+	return ""
 }
 
 func (e rawEvent) Context() meergo.RawEventContext {
@@ -198,12 +204,17 @@ func (e rawEvent) Context() meergo.RawEventContext {
 }
 
 func (e rawEvent) Event() string {
-	return e.event["event"].(string)
+	if event, ok := e.event["event"]; ok {
+		return event.(string)
+	}
+	return ""
 }
 
 func (e rawEvent) GroupId() string {
-	groupId, _ := e.event["groupId"].(string)
-	return groupId
+	if groupId, ok := e.event["groupId"]; ok {
+		return groupId.(string)
+	}
+	return ""
 }
 
 func (e rawEvent) MessageId() string {
@@ -211,7 +222,10 @@ func (e rawEvent) MessageId() string {
 }
 
 func (e rawEvent) Name() string {
-	return e.event["name"].(string)
+	if name, ok := e.event["name"]; ok {
+		return name.(string)
+	}
+	return ""
 }
 
 func (e rawEvent) ReceivedAt() time.Time {
@@ -231,8 +245,10 @@ func (e rawEvent) Type() string {
 }
 
 func (e rawEvent) UserId() string {
-	userId, _ := e.event["userId"].(string)
-	return userId
+	if userId := e.event["userId"]; userId != nil {
+		return userId.(string)
+	}
+	return ""
 }
 
 type rawEventContext struct {
@@ -268,7 +284,10 @@ func (c rawEventContext) Device() (meergo.RawEventContextDevice, bool) {
 }
 
 func (c rawEventContext) IP() string {
-	return c.context["ip"].(string)
+	if ip, ok := c.context["ip"]; ok {
+		return ip.(string)
+	}
+	return ""
 }
 
 func (c rawEventContext) Library() (meergo.RawEventContextLibrary, bool) {
@@ -279,7 +298,10 @@ func (c rawEventContext) Library() (meergo.RawEventContextLibrary, bool) {
 }
 
 func (c rawEventContext) Locale() string {
-	return c.context["locale"].(string)
+	if locale, ok := c.context["locale"]; ok {
+		return locale.(string)
+	}
+	return ""
 }
 
 func (c rawEventContext) Location() (meergo.RawEventContextLocation, bool) {
@@ -332,11 +354,17 @@ func (c rawEventContext) Session() (meergo.RawEventContextSession, bool) {
 }
 
 func (c rawEventContext) Timezone() string {
-	return c.context["timezone"].(string)
+	if timezone, ok := c.context["timezone"]; ok {
+		return timezone.(string)
+	}
+	return ""
 }
 
 func (c rawEventContext) UserAgent() string {
-	return c.context["userAgent"].(string)
+	if userAgent, ok := c.context["userAgent"]; ok {
+		return userAgent.(string)
+	}
+	return ""
 }
 
 type rawEventContextApp struct {
