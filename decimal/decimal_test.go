@@ -768,6 +768,108 @@ func Test_Decimal_WriteTo(t *testing.T) {
 
 }
 
+func Test_MustParse_Panic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic")
+		}
+	}()
+	_ = MustParse("not-a-number")
+}
+
+func Test_Decimal_Binary_Panic(t *testing.T) {
+	d := MustInt(1)
+	cases := []int{-1, MaxScale + 1}
+	for _, scale := range cases {
+		func() {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("expected panic for scale %d", scale)
+				}
+			}()
+			_, _ = d.Binary(scale)
+		}()
+	}
+}
+
+func Test_New_Panic(t *testing.T) {
+	cases := []int{MinScale - 1, MaxScale + 1}
+	for _, scale := range cases {
+		func() {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("expected panic for scale %d", scale)
+				}
+			}()
+			_ = New(1, scale)
+		}()
+	}
+}
+
+func Test_Range_Panic(t *testing.T) {
+	cases := []struct{ p, s int }{
+		{MaxPrecision + 1, 0},
+		{0, MaxScale + 1},
+		{1, 2},
+		{1, MinScale - 1},
+	}
+	for _, c := range cases {
+		func() {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("expected panic for p=%d s=%d", c.p, c.s)
+				}
+			}()
+			Range(c.p, c.s)
+		}()
+	}
+}
+
+func Test_validPrecisionScale(t *testing.T) {
+	cases := []struct{ p, s int }{
+		{MaxPrecision + 1, 0},
+		{MinPrecision - 1, 0},
+		{0, MaxScale + 1},
+		{0, MinScale - 1},
+		{1, 2},
+	}
+	for _, c := range cases {
+		if err := validPrecisionScale(c.p, c.s); !errors.Is(err, ErrRange) {
+			t.Errorf("expected ErrRange for %v, got %v", c, err)
+		}
+	}
+	if err := validPrecisionScale(1, 0); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+type failWriter struct{}
+
+func (failWriter) Write(p []byte) (int, error)       { return 0, errors.New("fail") }
+func (failWriter) WriteString(s string) (int, error) { return 0, errors.New("fail") }
+
+func Test_Decimal_WriteTo_Error(t *testing.T) {
+	d1 := MustParse("5")
+	n, err := d1.WriteTo(failWriter{})
+	if err == nil || n != 0 {
+		t.Fatalf("expected error writing decimal with string, got n=%d err=%v", n, err)
+	}
+
+	d2 := New(0, 0)
+	n, err = d2.WriteTo(failWriter{})
+	if err == nil || n != 0 {
+		t.Fatalf("expected error writing zero decimal, got n=%d err=%v", n, err)
+	}
+}
+
+func Test_Append_NoString(t *testing.T) {
+	d := MustInt(123)
+	got := d.Append([]byte("x:"))
+	if string(got) != "x:123" {
+		t.Fatalf("expected x:123, got %s", string(got))
+	}
+}
+
 func Test_alloc(t *testing.T) {
 
 	var err error
