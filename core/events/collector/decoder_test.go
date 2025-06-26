@@ -301,8 +301,8 @@ func Test_Decoder(t *testing.T) {
 		// meergo.track('click'); meergo.track('click');
 		{
 			body: `{"batch":[` +
-				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:06.050Z","properties":{},"userId":null,"messageId":"8071f50d-5a69-45f7-bb31-70e111aa8aed","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","search":"","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":true},"integrations":{}},` +
-				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:12.319Z","properties":{},"userId":null,"messageId":"1935c955-45f8-44a3-b835-ced93138e8b3","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","search":"","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":false},"integrations":{}}` +
+				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:06.050Z","properties":{},"userId":null,"messageId":"8071f50d-5a69-45f7-bb31-70e111aa8aed","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"browser":{"name":"Chrome","version":"138.0"},"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","search":"","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":true},"integrations":{}},` +
+				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:12.319Z","properties":{},"userId":null,"messageId":"1935c955-45f8-44a3-b835-ced93138e8b3","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"os":{"name":"macOS","version":"15"},"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","search":"","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":false},"integrations":{}}` +
 				`],"sentAt":"2024-10-31T14:39:12.647Z","writeKey":"qWqwaP3zGZOazQUmuFRuRMfW3lMCqjUa"}`,
 			connection: 830163006,
 			expected: []expectedEvent{{
@@ -319,9 +319,9 @@ func Test_Decoder(t *testing.T) {
 							"url":      "https://sample.com/catalog/",
 						},
 						"browser": map[string]any{
-							"name":    "Firefox",
+							"name":    "Chrome",
 							"other":   "",
-							"version": "132.0",
+							"version": "138.0",
 						},
 						"ip": ip,
 						"os": map[string]any{
@@ -364,8 +364,8 @@ func Test_Decoder(t *testing.T) {
 						},
 						"ip": ip,
 						"os": map[string]any{
-							"name":    "Linux",
-							"version": "0.0",
+							"name":    "macOS",
+							"version": "15",
 						},
 						"screen":    map[string]any{"width": 2816, "height": 1584, "density": 1.36},
 						"userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0",

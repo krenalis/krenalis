@@ -18,6 +18,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -492,7 +493,9 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	// Browser and OS.
 	if ua := context["userAgent"].(string); ua != "" {
 		contextBrowser, contextOS := parseUserAgent(ua)
-		context["browser"] = contextBrowser
+		if _, ok := context["browser"]; !ok {
+			context["browser"] = contextBrowser
+		}
 		if _, ok := context["os"]; !ok {
 			context["os"] = contextOS
 		}
@@ -688,7 +691,7 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 		}
 		name = tok.String()
 		if _, ok := context[name]; ok {
-			return nil, errors.BadRequest("property 'context.%s' is is specified multiple times", name)
+			return nil, errors.BadRequest("property 'context.%s' is specified multiple times", name)
 		}
 		kind = d.dec.PeekKind()
 		switch name {
@@ -787,6 +790,14 @@ var contextSections = map[string]*contextSection{
 			{name: "namespace", typ: types.Text()},
 		},
 	},
+	"browser": {
+		name: "browser",
+		properties: []contextProperty{
+			{name: "name", typ: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
+			{name: "other", typ: types.Text()},
+			{name: "version", typ: types.Text()},
+		},
+	},
 	"campaign": {
 		name: "campaign",
 		properties: []contextProperty{
@@ -800,7 +811,7 @@ var contextSections = map[string]*contextSection{
 	"device": {
 		name: "device",
 		properties: []contextProperty{
-			{name: "ID", typ: types.Text()},
+			{name: "id", typ: types.Text()},
 			{name: "advertisingId", typ: types.Text()},
 			{name: "adTrackingEnabled", typ: types.Boolean()},
 			{name: "manufacturer", typ: types.Text()},
@@ -839,7 +850,7 @@ var contextSections = map[string]*contextSection{
 	"os": {
 		name: "os",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text()},
+			{name: "name", typ: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
 			{name: "version", typ: types.Text()},
 		},
 	},
@@ -856,7 +867,7 @@ var contextSections = map[string]*contextSection{
 	"referrer": {
 		name: "referrer",
 		properties: []contextProperty{
-			{name: "ID", typ: types.Text()},
+			{name: "id", typ: types.Text()},
 			{name: "type", typ: types.Text()},
 		},
 	},
@@ -871,7 +882,7 @@ var contextSections = map[string]*contextSection{
 	"session": {
 		name: "session",
 		properties: []contextProperty{
-			{name: "ID", typ: types.Int(64)},
+			{name: "id", typ: types.Int(64)},
 			{name: "start", typ: types.Boolean(), readOptional: true},
 		},
 	},
@@ -916,10 +927,14 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 			if tok.Kind() != '"' {
 				return nil, errors.BadRequest("property 'context.%s.%s' is not a string", section.name, name)
 			}
-			v = tok.String()
-			if v == "" {
+			s := tok.String()
+			if s == "" {
 				continue
 			}
+			if values := typ.Values(); values != nil && !slices.Contains(values, s) {
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a valid value among the allowed options", section.name, name)
+			}
+			v = s
 		case types.BooleanKind:
 			switch tok.Kind() {
 			case 'f':
