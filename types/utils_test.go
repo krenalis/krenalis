@@ -292,6 +292,19 @@ func Test_NumProperties(t *testing.T) {
 	}
 }
 
+func Test_ParseUUID(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		id, ok := ParseUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
+		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
+			t.Fatalf("unexpected result %q %t", id, ok)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		if id, ok := ParseUUID("invalid"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+}
 func Test_Properties_Func(t *testing.T) {
 	properties := []Property{
 		{Name: "a", Type: Text()},
@@ -504,6 +517,14 @@ func Test_PropertyExists(t *testing.T) {
 				t.Fatalf("expected %t, got %t", test.exists, got)
 			}
 		})
+	}
+}
+
+func Test_PropertyNames(t *testing.T) {
+	obj := Object([]Property{{Name: "a", Type: Text()}, {Name: "b", Type: Int(8)}})
+	names := PropertyNames(obj)
+	if len(names) != 2 || names[0] != "a" || names[1] != "b" {
+		t.Fatalf("unexpected names %#v", names)
 	}
 }
 

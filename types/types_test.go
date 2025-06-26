@@ -34,6 +34,31 @@ func Test_BitSize(t *testing.T) {
 
 }
 
+func Test_Parameter(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		p := Parameter("custom")
+		if !p.Generic() || p.Kind() != InvalidKind {
+			t.Fatalf("unexpected parameter type: %#v", p)
+		}
+	})
+	t.Run("invalid name", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+		Parameter("1invalid")
+	})
+	t.Run("kind name", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+		Parameter("int")
+	})
+}
+
 func Test_Ranges(t *testing.T) {
 
 	for _, s := range []int{8, 16, 24, 32, 64} {
@@ -163,6 +188,80 @@ func Test_Properties(t *testing.T) {
 		}
 		i++
 	}
+}
+
+func Test_Unique(t *testing.T) {
+	t.Run("array unique", func(t *testing.T) {
+		a := Array(Text()).WithUnique()
+		if !a.Unique() {
+			t.Fatal("expected unique true")
+		}
+	})
+	t.Run("non array unique", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+		Text().Unique()
+	})
+	t.Run("invalid element type", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+		Array(JSON()).WithUnique()
+	})
+}
+
+func Test_WithUintRange(t *testing.T) {
+	t.Run("uint8 range", func(t *testing.T) {
+		u := Uint(8).WithUintRange(10, 20)
+		min, max := u.UintRange()
+		if min != 10 || max != 20 {
+			t.Fatalf("expected [10,20], got [%d,%d]", min, max)
+		}
+	})
+	t.Run("uint64 same range", func(t *testing.T) {
+		u := Uint(64)
+		u2 := u.WithUintRange(0, math.MaxUint64)
+		if !Equal(u, u2) {
+			t.Fatalf("expected unchanged type")
+		}
+	})
+	t.Run("invalid min", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+		Uint(8).WithUintRange(300, 301)
+	})
+	t.Run("max less than min", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+		Uint(8).WithUintRange(5, 4)
+	})
+	t.Run("max greater than max", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+		Uint(8).WithUintRange(0, math.MaxUint16)
+	})
+	t.Run("wrong kind", func(t *testing.T) {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected panic")
+			}
+		}()
+		Int(8).WithUintRange(0, 1)
+	})
 }
 
 // sameType reports whether t1 and t2 are the same type. It compares t2 against

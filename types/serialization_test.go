@@ -15,6 +15,26 @@ import (
 	"github.com/meergo/meergo/decimal"
 )
 
+func TestParseErrors(t *testing.T) {
+	tests := []struct {
+		data string
+		err  string
+	}{
+		{"null", "invalid type syntax"},
+		{"[]", "invalid type syntax"},
+		{"{\"kind\":\"text\"}{", "invalid token { after top-level value"},
+		{"{\"bitSize\":8}", "missing 'kind' key"},
+		{"{\"kind\":\"int\",\"bitSize\":8,\"bitSize\":16}", "repeated 'bitSize' key"},
+		{"{\"kind\":\"text\",\"regexp\":\"a\",\"values\":[\"b\"]}", "values cannot be provided if regular expression is provided"},
+	}
+	for _, tc := range tests {
+		_, err := Parse(tc.data)
+		if err == nil || err.Error() != tc.err {
+			t.Fatalf("%s: expected %q, got %v", tc.data, tc.err, err)
+		}
+	}
+}
+
 func TestPropertySerialization(t *testing.T) {
 	tests := []struct {
 		Property Property
