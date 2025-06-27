@@ -9,6 +9,7 @@ package filters
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/meergo/meergo/json"
 )
 
+// Test_Applies exercises the Applies function with various operators and
+// values.
 func Test_Applies(t *testing.T) {
 
 	var n670 = decimal.MustInt(670)
@@ -285,6 +288,10 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpContains, v: []any{5, 12, 7}, v0: 7, expected: true},
 		{op: state.OpContains, v: []any{"foo", "boo"}, v0: "foo", expected: true},
 		{op: state.OpContains, v: []any{"foo", "boo"}, v0: "moo", expected: false},
+		{op: state.OpContains, v: []any{decimal.MustInt(1), decimal.MustInt(2)}, v0: decimal.MustInt(2), expected: true},
+		{op: state.OpContains, v: []any{decimal.MustInt(1)}, v0: decimal.MustInt(2), expected: false},
+		{op: state.OpContains, v: []any{time.Unix(0, 0), time.Unix(10, 0)}, v0: time.Unix(0, 0), expected: true},
+		{op: state.OpContains, v: []any{time.Unix(0, 0)}, v0: time.Unix(5, 0), expected: false},
 		{op: state.OpContains, v: json.Value(`"foo"`), v0: vFoo, expected: true},
 		{op: state.OpContains, v: json.Value(`"boo"`), v0: vFoo, expected: false},
 		{op: state.OpContains, v: json.Value(`""`), v0: vFoo, expected: false},
@@ -307,6 +314,10 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpDoesNotContain, v: []any{5, 12, 7}, v0: 7, expected: false},
 		{op: state.OpDoesNotContain, v: []any{"foo", "boo"}, v0: "foo", expected: false},
 		{op: state.OpDoesNotContain, v: []any{"foo", "boo"}, v0: "moo", expected: true},
+		{op: state.OpDoesNotContain, v: []any{decimal.MustInt(1), decimal.MustInt(2)}, v0: decimal.MustInt(2), expected: false},
+		{op: state.OpDoesNotContain, v: []any{decimal.MustInt(1)}, v0: decimal.MustInt(2), expected: true},
+		{op: state.OpDoesNotContain, v: []any{time.Unix(0, 0), time.Unix(10, 0)}, v0: time.Unix(0, 0), expected: false},
+		{op: state.OpDoesNotContain, v: []any{time.Unix(0, 0)}, v0: time.Unix(5, 0), expected: true},
 		{op: state.OpDoesNotContain, v: json.Value(`"foo"`), v0: vFoo, expected: false},
 		{op: state.OpDoesNotContain, v: json.Value(`"boo"`), v0: vFoo, expected: true},
 		{op: state.OpDoesNotContain, v: json.Value(`""`), v0: vFoo, expected: true},
@@ -528,4 +539,73 @@ func Test_Applies(t *testing.T) {
 		}
 	})
 
+}
+
+// Test_AppliesWithNestedPath ensures Applies handles filters with property
+// paths.
+func Test_AppliesWithNestedPath(t *testing.T) {
+	filter := &state.Where{
+		Logical: state.OpAnd,
+		Conditions: []state.WhereCondition{
+			{Property: []string{"n1", "b"}, Operator: state.OpIs, Values: []any{5}},
+			{Property: []string{"n2", "b"}, Operator: state.OpIs, Values: []any{func() *state.JSONConditionValue {
+				d := decimal.MustInt(5)
+				return &state.JSONConditionValue{Number: &d, String: "5"}
+			}()}},
+		},
+	}
+
+	props := map[string]any{
+		"n1": map[string]any{"b": 5},
+		"n2": json.Value(`{"b":5}`),
+	}
+
+	if !Applies(filter, props) {
+		t.Fatal("expected true, got false")
+	}
+
+	delete(props, "n1")
+	if Applies(filter, props) {
+		t.Fatal("expected false when missing n1")
+	}
+}
+
+// Test_readPropertyFrom verifies retrieving nested properties from maps and
+// JSON.
+func Test_readPropertyFrom(t *testing.T) {
+	jsonObj := json.Value(`{"b":{"c":4}}`)
+	m := map[string]any{
+		"a": 5,
+		"nested": map[string]any{
+			"b": map[string]any{"c": "foo"},
+		},
+		"json": jsonObj,
+	}
+
+	cases := []struct {
+		path     []string
+		expected any
+		ok       bool
+	}{
+		{[]string{"a"}, 5, true},
+		{[]string{"nested", "b", "c"}, "foo", true},
+		{[]string{"nested", "x"}, nil, false},
+		{[]string{"a", "b"}, nil, false},
+		{[]string{"json", "b", "c"}, json.Value("4"), true},
+		{[]string{"json", "x"}, json.Value(nil), false},
+	}
+
+	for _, cas := range cases {
+		got, ok := readPropertyFrom(m, cas.path)
+		if ok != cas.ok || !reflect.DeepEqual(got, cas.expected) {
+			t.Fatalf("%v: expected (%v,%v) got (%v,%v)", cas.path, cas.expected, cas.ok, got, ok)
+		}
+	}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic with empty path")
+		}
+	}()
+	readPropertyFrom(m, []string{})
 }
