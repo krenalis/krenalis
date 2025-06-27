@@ -121,10 +121,10 @@ func (h *HTTP) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code, 
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", auth.TokenURL, strings.NewReader(v.Encode()))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
