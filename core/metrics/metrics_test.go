@@ -77,7 +77,7 @@ func Test_StepString_invalid(t *testing.T) {
 			t.Fatalf("expected panic for invalid step")
 		}
 	}()
-	Step(99).String()
+	_ = Step(99).String()
 }
 
 // Test_TimeSlot checks round-trip conversion between time slots and times.
