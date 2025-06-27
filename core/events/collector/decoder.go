@@ -49,9 +49,8 @@ type decoder struct {
 
 	receivedAt time.Time
 	remoteAddr struct {
-		address string
-		ip      net.IP
-		str     string
+		ip  net.IP
+		str string
 	}
 	userAgent  string
 	sentAt     time.Time
@@ -162,7 +161,32 @@ func (d *decoder) Reset(r *http.Request) error {
 
 	d.batch = nil
 	d.receivedAt = time.Now().UTC()
-	d.remoteAddr.address = r.RemoteAddr
+
+	// If an 'X-Forwarded-For' header was provided, get the request address from
+	// there.
+	if ff := r.Header.Get("X-Forwarded-For"); ff != "" {
+		clientIP, _, _ := strings.Cut(ff, ",")
+		clientIP = strings.TrimSpace(clientIP)
+		ip, str, err := parseIP(clientIP)
+		if err != nil {
+			return errors.BadRequest("the address specified in the 'X-Forwarded-For' header is not a valid IPv4 address")
+		}
+		d.remoteAddr.ip = ip
+		d.remoteAddr.str = str
+	}
+
+	// If the address wasn't provided through the 'X-Forwarded-For' header, get
+	// it from the request's RemoteAddr field.
+	if d.remoteAddr.ip == nil {
+		host, _, _ := net.SplitHostPort(r.RemoteAddr)
+		ip, str, err := parseIP(host)
+		if err != nil {
+			return errors.BadRequest("only IP version 4 is supported")
+		}
+		d.remoteAddr.ip = ip
+		d.remoteAddr.str = str
+	}
+
 	d.userAgent = r.Header.Get("User-Agent")
 	d.sentAt = time.Time{}
 	d.writeKey = ""
@@ -509,15 +533,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 			return nil, errors.BadRequest("property 'ip' is not a valid IP address")
 		}
 	} else {
-		if d.remoteAddr.str == "" {
-			host, _, _ := net.SplitHostPort(d.remoteAddr.address)
-			if ip, str, err := parseIP(host); err == nil {
-				d.remoteAddr.ip, d.remoteAddr.str = ip, str
-				requestIP, context["ip"] = d.remoteAddr.ip, d.remoteAddr.str
-			}
-		} else {
-			requestIP, context["ip"] = d.remoteAddr.ip, d.remoteAddr.str
-		}
+		requestIP, context["ip"] = d.remoteAddr.ip, d.remoteAddr.str
 	}
 
 	// Location.
