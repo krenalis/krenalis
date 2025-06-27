@@ -17,6 +17,8 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// Test_renderExpr converts various expressions to SQL and compares with the
+// expected query strings.
 func Test_renderExpr(t *testing.T) {
 	tests := []struct {
 		expr    meergo.Expr
@@ -185,5 +187,21 @@ func Test_renderExpr(t *testing.T) {
 				t.Fatalf("\nexpected query:  %s\ngot:             %s", test.query, got)
 			}
 		})
+	}
+}
+
+// Test_renderExpr_errors ensures that invalid expressions trigger an error
+// during SQL rendering.
+func Test_renderExpr_errors(t *testing.T) {
+	invalidColumn := meergo.NewBaseExpr(meergo.Column{Name: "bad name", Type: types.Text()}, meergo.OpIs, "v")
+	var b strings.Builder
+	if err := renderExpr(&b, invalidColumn); err == nil {
+		t.Fatal("expected error for invalid column name")
+	}
+
+	badOp := meergo.NewMultiExpr(meergo.LogicalOperator(99), []meergo.Expr{invalidColumn})
+	b.Reset()
+	if err := renderExpr(&b, badOp); err == nil {
+		t.Fatal("expected error for invalid operator")
 	}
 }

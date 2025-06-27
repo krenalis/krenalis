@@ -17,6 +17,8 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// Test_alterUserSchemaQueries checks that alterUserSchema generates the
+// expected set of SQL statements for a variety of operations.
 func Test_alterUserSchemaQueries(t *testing.T) {
 
 	tests := []struct {
@@ -281,6 +283,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 
 }
 
+// Test_typeToPostgresType verifies the mapping between Meergo types and the
+// PostgreSQL type strings returned by typeToPostgresType.
 func Test_typeToPostgresType(t *testing.T) {
 
 	tests := []struct {

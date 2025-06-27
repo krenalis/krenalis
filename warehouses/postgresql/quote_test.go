@@ -12,6 +12,26 @@ import (
 	"testing"
 )
 
+// Test_quoteIdent verifies that identifiers containing quotes are quoted
+// properly for PostgreSQL.
+func Test_quoteIdent(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{"simple", "\"simple\""},
+		{"a\"b", "\"a\"\"b\""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := quoteIdent(tt.name)
+			if got != tt.expected {
+				t.Fatalf("expected %q, got %q", tt.expected, got)
+			}
+		})
+	}
+}
+
 func Test_quoteString(t *testing.T) {
 	tests := []struct {
 		s        string

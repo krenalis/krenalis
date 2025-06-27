@@ -298,6 +298,8 @@ func Test_Merge(t *testing.T) {
 	}
 }
 
+// Test_rowEncoder verifies that rows are encoded according to the column
+// definitions and that non-encodable rows produce errors when expected.
 func Test_rowEncoder(t *testing.T) {
 	tests := []struct {
 		columns  []meergo.Column
@@ -370,6 +372,35 @@ func Test_rowEncoder(t *testing.T) {
 	}
 }
 
+// Test_newRowEncoder_noColumns ensures that newRowEncoder returns nil when the
+// column set does not require encoding.
+func Test_newRowEncoder_noColumns(t *testing.T) {
+	enc, ok := newRowEncoder([]meergo.Column{{Name: "a", Type: types.Int(32)}})
+	if enc != nil || ok {
+		t.Fatalf("expected nil encoder and false, got %#v %t", enc, ok)
+	}
+}
+
+// Test_rowEncoder_mapZeroBytes tests map encoding and ensures embedded zero
+// bytes are stripped from string values.
+func Test_rowEncoder_mapZeroBytes(t *testing.T) {
+	columns := []meergo.Column{{Name: "m", Type: types.Map(types.Text())}}
+	enc, ok := newRowEncoder(columns)
+	if !ok {
+		t.Fatal("expected encoder")
+	}
+	row := []any{map[string]any{"foo": "bar\x00baz"}}
+	if err := enc.encode(row); err != nil {
+		t.Fatal(err)
+	}
+	expected := json.Value(`{"foo":"barbaz"}`)
+	if !reflect.DeepEqual(row[0], expected) {
+		t.Fatalf("expected %v, got %#v", expected, row[0])
+	}
+}
+
+// Test_stripZeroBytes removes zero bytes from strings and ensures the output is
+// correct.
 func Test_stripZeroBytes(t *testing.T) {
 	tests := []struct {
 		s        string
