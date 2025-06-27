@@ -70,7 +70,7 @@ func TestParquetImport(t *testing.T) {
 			{Name: "parquet_id", Type: types.Int(64), ReadOptional: true},
 			{Name: "parquet_imported", Type: types.JSON(), ReadOptional: true},
 		}),
-		// Define a transformazion function that imports the Parquet row IDs in
+		// Define a transformation function that imports the Parquet row IDs in
 		// "parquet_id" (it is used for sorting the users before comparing them)
 		// and any other property into the JSON property "parquet_imported".
 		Transformation: &meergotester.Transformation{
