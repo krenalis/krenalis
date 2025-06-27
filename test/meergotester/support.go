@@ -18,9 +18,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/meergo/meergo/analytics-go"
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/test/analytics-go"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
