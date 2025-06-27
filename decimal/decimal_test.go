@@ -678,6 +678,35 @@ func Test_Parse(t *testing.T) {
 
 }
 
+// TestParse_NamedTypes ensures Parse works for user defined types whose
+// underlying type is string or []byte.
+func TestParse_NamedTypes(t *testing.T) {
+	type ISO string
+	type RawBytes []byte
+
+	dec, err := Parse(ISO("123.45"), 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dec.String() != "123.45" {
+		t.Fatalf("expected 123.45, got %s", dec.String())
+	}
+	if dec.s != "123.45" {
+		t.Fatalf(`expected s="123.45", got s=%q`, dec.s)
+	}
+
+	dec2, err := Parse(RawBytes("678.90"), 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dec2.String() != "678.9" {
+		t.Fatalf("expected 678.9, got %q", dec2.String())
+	}
+	if dec2.s != "" {
+		t.Fatalf(`expected s="", got s=%q`, dec2.s)
+	}
+}
+
 func Test_Range(t *testing.T) {
 
 	tests := []struct {
@@ -881,12 +910,11 @@ func Test_alloc(t *testing.T) {
 		t.Fatalf("Parse: expected 0 allocations, got %.0f", a)
 	}
 
-	// TODO(marco): Try to do fewer allocations. It should be possible to make 3 instead of 5.
 	a = testing.AllocsPerRun(1, func() { _, err = Parse("999999999999999999999999999999999999999999999999999999999999", 0, 0) })
 	if err != nil {
 		t.Fatal(err)
 	}
-	if a != 5 {
+	if a != 3 {
 		t.Fatalf("Parse: expected 0 allocations, got %.0f", a)
 	}
 

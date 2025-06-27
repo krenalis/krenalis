@@ -599,23 +599,34 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 	if str[0] == '-' {
 		x.b.SetSignbit(true)
 	}
-	if reflect.TypeFor[T]().Kind() == reflect.String {
-		x.s = string(str)
-		if dot != 0 {
-			if x.s[len(x.s)-zeros-1] == '0' {
-				zeros--
-			}
-			if zeros > 0 {
-				x.s = x.s[:len(x.s)-zeros]
-			}
-			x.s = strings.TrimSuffix(x.s, ".")
+	switch v := any(str).(type) {
+	case string:
+		x.s = v
+	default:
+		rv := reflect.ValueOf(v)
+		if rv.Kind() == reflect.String {
+			x.s = rv.String()
 		}
+	}
+	if x.s != "" && dot != 0 {
+		if x.s[len(x.s)-zeros-1] == '0' {
+			zeros--
+		}
+		if zeros > 0 {
+			x.s = x.s[:len(x.s)-zeros]
+		}
+		x.s = strings.TrimSuffix(x.s, ".")
 	}
 	return x, nil
 }
 
 var one = big.NewInt(1)
 var base = big.NewInt(10)
+var bigTen = big.NewInt(10)
+var bigDigits = [...]*big.Int{
+	big.NewInt(0), big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4),
+	big.NewInt(5), big.NewInt(6), big.NewInt(7), big.NewInt(8), big.NewInt(9),
+}
 
 // Range returns the minimum and maximum decimal values based on the provided
 // precision and scale, where precision > 0 and scale <= precision.
@@ -663,9 +674,7 @@ func Uint(i uint, precision, scale int) (Decimal, error) {
 type mantissa struct {
 	B big.Int
 	I uint64
-	v big.Int // value to add
-	f big.Int // factor, is 10 when B is not 0
-	d int     // number of decimal digits
+	d int // number of decimal digits
 }
 
 // add adds a digit to the mantissa.
@@ -677,15 +686,12 @@ func (m *mantissa) add(d uint64) {
 			return
 		}
 		m.B.SetUint64(m.I)
-		m.f.SetInt64(10)
 		m.I = 0
 	}
-	m.B.Mul(&m.B, &m.f)
-	if d == 0 {
-		return
+	m.B.Mul(&m.B, bigTen)
+	if d != 0 {
+		m.B.Add(&m.B, bigDigits[d])
 	}
-	m.v.SetUint64(d)
-	m.B.Add(&m.B, &m.v)
 }
 
 // digits returns the number of digit of the mantissa.
