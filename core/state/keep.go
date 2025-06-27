@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/analytics-go"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -26,6 +27,18 @@ const logNotifications = false // Set to true to enable logging of received noti
 // keep keeps the state updated and in sync with the database.
 // It is called in its own goroutine.
 func (state *State) keep() {
+
+	// If sending statistics is enabled, initialize the Meergo analytics client.
+	var client analytics.Client
+	if state.sendStats {
+		client = analytics.New("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", "https://chichi.open2b.net/api/v1/events")
+		defer func() {
+			err := client.Close()
+			if err != nil {
+				slog.Error("error while closing analytics.Client", "err", err)
+			}
+		}()
+	}
 
 	defer state.close.Done()
 
@@ -124,6 +137,9 @@ func (state *State) keep() {
 			if ack, ok := state.notifications.acks.LoadAndDelete(n.ID); ok {
 				ack.(chan struct{}) <- struct{}{}
 			}
+		}
+		if state.sendStats {
+			state.sendNotificationStats(client, n)
 		}
 	}
 

@@ -52,6 +52,7 @@ type State struct {
 	connectors     map[string]*Connector
 	warehouseTypes map[string]WarehouseType
 	metadata       metadata
+	sendStats      bool
 
 	mu               *sync.Mutex            // for the 'actions', ..., and 'workspaces' fields
 	actions          map[int]*Action        // protected by mu
@@ -83,7 +84,8 @@ type ConnectorOAuth struct {
 
 // New returns a state given the database, and the OAuth client credentials for
 // connectors.
-func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, error) {
+// sendStats indicates whether the state should send statistics or not.
+func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth, sendStats bool) (*State, error) {
 
 	id, err := uuid.NewUUID()
 	if err != nil {
@@ -101,6 +103,7 @@ func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, error) 
 		connections:      map[int]*Connection{},
 		connectionsByKey: map[string]*Connection{},
 		actions:          map[int]*Action{},
+		sendStats:        sendStats,
 	}
 
 	// Init the notifier.

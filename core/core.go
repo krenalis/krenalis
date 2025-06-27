@@ -184,7 +184,9 @@ func New(conf *Config) (*Core, error) {
 	}
 
 	// Instantiate the state.
-	core.state, err = state.New(db, conf.ConnectorsOAuth)
+	sendStats := conf.SentryTelemetryLevel == TelemetryLevelAll ||
+		conf.SentryTelemetryLevel == TelemetryLevelStats
+	core.state, err = state.New(db, conf.ConnectorsOAuth, sendStats)
 	if err != nil {
 		return nil, err
 	}
