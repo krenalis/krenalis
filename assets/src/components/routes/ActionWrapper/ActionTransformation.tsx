@@ -906,16 +906,7 @@ const TransformationBox = ({
 			const typeName = toMeergoStringType(property.full.type);
 
 			mappings.push(
-				<div
-					key={k}
-					className='action__transformation-mapping'
-					data-key={k}
-					style={
-						{
-							'--mapping-indentation': `${action.transformation.mapping![k].indentation! * 30}px`,
-						} as React.CSSProperties
-					}
-				>
+				<React.Fragment key={k}>
 					<Combobox
 						onInput={onUpdateMapping}
 						value={
@@ -959,6 +950,11 @@ const TransformationBox = ({
 						className={`action__transformation-output-property${
 							property?.indentation! > 0 ? ' action__transformation-output-property--indented' : ''
 						}`}
+						style={
+							{
+								'--mapping-indentation': `${action.transformation.mapping![k].indentation! * 30}px`,
+							} as React.CSSProperties
+						}
 					>
 						<PropertyTooltip propertyName={k} typeName={typeName} type={property.full.type}>
 							<span className='action__transformation-output-property-key'>{property.full.name}</span>
@@ -968,21 +964,22 @@ const TransformationBox = ({
 							<span className='action__transformation-output-property-required'>required</span>
 						)}
 					</div>
-				</div>,
+				</React.Fragment>,
 			);
 		}
 		let [leftHeader, rightHeader] = transformationHeaders(connection, action);
 		body = (
 			<div className='action__transformation-mappings'>
 				{!isCompletelyOpen && (
-					<div className='action__mapping-headers'>
+					<>
 						<div className='action__mapping-left-header'>
 							{leftHeader[0]} {leftHeader[1]}
 						</div>
+						<div></div>
 						<div className='action__mapping-right-header'>
 							{rightHeader[0]} {rightHeader[1]}
 						</div>
-					</div>
+					</>
 				)}
 				{mappings}
 			</div>

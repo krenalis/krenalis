@@ -340,12 +340,15 @@
 	opacity: 1;
 }
 
-.action__transformation-mapping {
+.action__transformation-mappings {
 	display: grid;
 	grid-template-columns: 1fr 30px 1fr;
 	gap: 20px;
 	align-items: center;
-	margin-bottom: 20px;
+}
+
+.fullscreen-transformation .action__transformation-mappings {
+	grid-template-columns: minmax(200px, 600px) 30px 1fr;
 }
 
 .action__transformation-mapping:last-child {
@@ -1627,17 +1630,12 @@ inherit the disabled style */
 	border-bottom: 0;
 }
 
-.action__mapping-headers {
-	margin-bottom: 16px;
-	margin-top: -10px;
-	display: flex;
-	gap: 70px;
-}
-
 .action__mapping-left-header,
 .action__mapping-right-header {
 	font-size: 14px;
 	border-bottom: 1px solid #e4e4e7;
 	padding-bottom: 4px;
 	width: 100%;
+	margin-top: -10px;
+	margin-bottom: -4px;
 }
