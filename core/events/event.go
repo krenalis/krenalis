@@ -468,7 +468,7 @@ type rawEventContextLibrary struct {
 }
 
 func (c rawEventContextLibrary) Name() string {
-	return c.library["id"].(string)
+	return c.library["name"].(string)
 }
 
 func (c rawEventContextLibrary) Version() string {
