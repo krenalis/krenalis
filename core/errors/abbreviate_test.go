@@ -11,6 +11,8 @@ import (
 	"testing"
 )
 
+// Test_abbreviate checks that Abbreviate correctly shortens strings of varying
+// lengths and handles multi-byte characters.
 func Test_abbreviate(t *testing.T) {
 	tests := []struct {
 		s        string
@@ -45,4 +47,17 @@ func Test_abbreviate(t *testing.T) {
 			t.Errorf("Abbreviate(%q, %d): expected %q, got %q", test.s, test.n, test.expected, got)
 		}
 	}
+}
+
+// Test_abbreviate_panic verifies that Abbreviate panics when asked to
+// abbreviate below the minimum length of three runes.
+func Test_abbreviate_panic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("expected panic")
+		} else if r != "cannot abbreviate to fewer than 3 rune" {
+			t.Fatalf("unexpected panic: %v", r)
+		}
+	}()
+	Abbreviate("abc", 2)
 }
