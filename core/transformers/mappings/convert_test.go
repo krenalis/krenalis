@@ -298,3 +298,73 @@ func TestConvert(t *testing.T) {
 	}
 
 }
+
+// TestConvertTextToDate checks parsing of various date formats.
+func TestConvertTextToDate(t *testing.T) {
+	tests := []struct {
+		in  string
+		t   time.Time
+		err error
+	}{
+		{"2023-05-24", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"05/24/2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"05.24.2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"44927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"60.0", time.Time{}, errParseConversion},
+		{"2023-13-01", time.Time{}, errParseConversion},
+		{"0000-01-01", time.Time{}, errYearRangeConversion},
+		{"2000-02-30", time.Time{}, errParseConversion},
+		{"abc", time.Time{}, errParseConversion},
+	}
+	for _, tt := range tests {
+		got, err := convertTextToDate(tt.in)
+		if tt.err != err {
+			t.Fatalf("%s: expected error %v, got %v", tt.in, tt.err, err)
+		}
+		if !tt.t.Equal(got) {
+			t.Fatalf("%s: expected %v, got %v", tt.in, tt.t, got)
+		}
+	}
+}
+
+// TestIsSimpleFloat validates detection of simple floating point strings.
+func TestIsSimpleFloat(t *testing.T) {
+	tests := []struct {
+		s  string
+		ok bool
+	}{
+		{"1.2", true},
+		{"123", true},
+		{"12", false},
+		{"1.2.3", false},
+		{".5", false},
+		{"5.", false},
+		{"1a2", false},
+		{"12.34", true},
+	}
+	for _, tt := range tests {
+		if got := isSimpleFloat(tt.s); got != tt.ok {
+			t.Fatalf("%s: expected %t, got %t", tt.s, tt.ok, got)
+		}
+	}
+}
+
+// TestParseUint verifies integer parsing with edge cases.
+func TestParseUint(t *testing.T) {
+	tests := []struct {
+		in string
+		n  int
+	}{
+		{"0", 0},
+		{"0010", 10},
+		{"123", 123},
+		{"9223372036854775807", 9223372036854775807},
+		{"9223372036854775808", -1},
+		{"1a2", -1},
+	}
+	for _, tt := range tests {
+		if got := parseUint(tt.in); got != tt.n {
+			t.Fatalf("%s: expected %d, got %d", tt.in, tt.n, got)
+		}
+	}
+}

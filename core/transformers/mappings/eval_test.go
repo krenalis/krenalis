@@ -10,12 +10,74 @@ package mappings
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
+// TestErrorHelpers checks formatting of conversion error messages.
+func TestErrorHelpers(t *testing.T) {
+	bErr := errBooleanConversion("and", "x", "foo", types.Text())
+	if bErr.Error() != "«x» (type text) does not represent a boolean when passed to the «and» function" {
+		t.Fatalf("unexpected boolean error: %v", bErr)
+	}
+	jb := json.Value("true")
+	bErr = errBooleanConversion("and", "x", jb, types.JSON())
+	if bErr.Error() != "«x», of type JSON true, cannot be passed as boolean to the «and» function" {
+		t.Fatalf("unexpected boolean json error: %v", bErr)
+	}
+	iErr := errInt32Conversion("fn", "x", 5.5, types.Float(64))
+	if iErr.Error() != "«x», with a value of %!s(float64=5.5), cannot be passed as a 32-bit int to the «fn» function" {
+		t.Fatalf("unexpected int error: %v", iErr)
+	}
+	ji := json.Value("\"foo\"")
+	iErr = errInt32Conversion("fn", "x", ji, types.JSON())
+	if iErr.Error() != "«x», of type JSON string, cannot be passed as an int to the «fn» function" {
+		t.Fatalf("unexpected int json error: %v", iErr)
+	}
+	tErr := errTextConversion("up", "x", json.Value("[1]"))
+	if tErr.Error() != "«x» (a JSON array) cannot be converted to a text value to be passed to the «up» function" {
+		t.Fatalf("unexpected text error: %v", tErr)
+	}
+}
+
+// Test_appendAsString ensures values are appended correctly as strings.
+func Test_appendAsString(t *testing.T) {
+	t0 := time.Date(2023, 1, 2, 3, 4, 5, 0, time.UTC)
+	tests := []struct {
+		v   any
+		typ types.Type
+		out string
+		err error
+	}{
+		{nil, types.Text(), "start", nil},
+		{"foo", types.Text(), "startfoo", nil},
+		{true, types.Boolean(), "start", errInvalidConversion},
+		{int(3), types.Int(32), "start3", nil},
+		{uint(4), types.Uint(16), "start4", nil},
+		{1.5, types.Float(64), "start1.5", nil},
+		{decimal.MustParse("2.7"), types.Decimal(2, 1), "start2.7", nil},
+		{t0, types.DateTime(), "start2023-01-02T03:04:05Z", nil},
+		{t0, types.Date(), "start2023-01-02", nil},
+		{t0, types.Time(), "start03:04:05", nil},
+		{json.Value("\"bar\""), types.JSON(), "startbar", nil},
+		{json.Value("123"), types.JSON(), "start123", nil},
+		{json.Value("true"), types.JSON(), "starttrue", nil},
+		{json.Value("null"), types.JSON(), "startnull", nil},
+		{json.Value("[1,2]"), types.JSON(), "start", errInvalidConversion},
+	}
+	for _, tt := range tests {
+		buf, err := appendAsString([]byte("start"), tt.v, tt.typ)
+		if err != tt.err {
+			t.Fatalf("%v: expected err %v, got %v", tt.v, tt.err, err)
+		}
+		if string(buf) != tt.out {
+			t.Fatalf("%v: expected %q, got %q", tt.v, tt.out, string(buf))
+		}
+	}
+}
 func Test_digitCountInt(t *testing.T) {
 
 	tests := []struct {
