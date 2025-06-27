@@ -271,12 +271,12 @@ func buildAssets() error {
 			return fmt.Errorf("cannot open file %q: %s", srcPath, err)
 		}
 
-		out, err := os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+		out, err = os.OpenFile(dstPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 		if err != nil {
 			return fmt.Errorf("cannot open file %q: %s", dstPath, err)
 		}
 
-		bw := brotli.NewWriter(out)
+		bw = brotli.NewWriter(out)
 
 		_, err = io.Copy(bw, in)
 		if err != nil {
