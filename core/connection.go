@@ -641,7 +641,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 // anymore, and returns an errors.UnprocessableError error with code
 //
 //   - ConnectionNotExist, if the connection does not exist.
-//   - EventTypeNotExists, if the event type does not exist for the connection.
+//   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the action does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - TargetExist, if an action already exists for a target for the connection.
