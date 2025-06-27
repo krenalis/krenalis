@@ -99,7 +99,7 @@ func makeVendor() error {
 					}
 					value, ok := strings.CutPrefix(result.Path, nodeModulesDir)
 					if !ok {
-						return api.OnResolveResult{}, fmt.Errorf("esbuild has resolved %s to a path that is not in 'node_packages' directory: %s", key, result.Path)
+						return api.OnResolveResult{}, fmt.Errorf("esbuild has resolved %s to a path that is not in 'node_modules' directory: %s", key, result.Path)
 					}
 					value = filepath.ToSlash(value)
 					resolve.AddImport(key, value, result.SideEffects)
