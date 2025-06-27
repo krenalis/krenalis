@@ -564,6 +564,90 @@ func Test_Unmarshal(t *testing.T) {
 
 }
 
+// Test_UnmarshalEdgeCases checks error scenarios and boundary cases for Unmarshal.
+func Test_UnmarshalEdgeCases(t *testing.T) {
+	simple := types.Object([]types.Property{{Name: "a", Type: types.Int(32)}})
+	buf := strings.NewReader(`{"records":[{"value":{}}]}`)
+
+	t.Run("nil reader", func(t *testing.T) {
+		err := Unmarshal(nil, make([]Record, 1), simple, state.JavaScript, false)
+		if err == nil || err.Error() != "core/transformers: r is nil" {
+			t.Fatalf("expected r nil error, got %v", err)
+		}
+	})
+
+	t.Run("schema not object", func(t *testing.T) {
+		err := Unmarshal(buf, make([]Record, 1), types.Text(), state.JavaScript, false)
+		if err == nil || err.Error() != "core/transformers: schema is not an object" {
+			t.Fatalf("expected schema error, got %v", err)
+		}
+	})
+
+	t.Run("invalid language", func(t *testing.T) {
+		err := Unmarshal(buf, make([]Record, 1), simple, state.Language(7), false)
+		if err == nil || err.Error() != "core/transformers: language is not valid" {
+			t.Fatalf("expected language error, got %v", err)
+		}
+	})
+
+	t.Run("more results than expected", func(t *testing.T) {
+		data := strings.NewReader(`{"records":[{"value":{}},{"value":{}}]}`)
+		err := Unmarshal(data, make([]Record, 1), simple, state.JavaScript, false)
+		want := "core/transformers: expected 1 results got more"
+		if err == nil || err.Error() != want {
+			t.Fatalf("expected %q, got %v", want, err)
+		}
+	})
+
+	t.Run("fewer results than expected", func(t *testing.T) {
+		data := strings.NewReader(`{"records":[{"value":{}}]}`)
+		err := Unmarshal(data, make([]Record, 2), simple, state.JavaScript, false)
+		want := "core/transformers: expected 2 results got 1"
+		if err == nil || err.Error() != want {
+			t.Fatalf("expected %q, got %v", want, err)
+		}
+	})
+
+	t.Run("array unique duplicated", func(t *testing.T) {
+		sch := types.Object([]types.Property{{Name: "a", Type: types.Array(types.Text()).WithUnique()}})
+		rec := []Record{{}}
+		data := strings.NewReader(`{"records":[{"value":{"a":["x","x"]}}]}`)
+		err := Unmarshal(data, rec, sch, state.JavaScript, false)
+		if err != errSyntaxInvalid {
+			t.Fatalf("expected errSyntaxInvalid, got %v", err)
+		}
+		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains a duplicated value" {
+			t.Fatalf("unexpected record error: %v", rec[0].Err)
+		}
+	})
+
+	t.Run("array element bounds", func(t *testing.T) {
+		sch := types.Object([]types.Property{{Name: "a", Type: types.Array(types.Int(32)).WithMinElements(2).WithMaxElements(3)}})
+		rec := []Record{{}}
+		less := strings.NewReader(`{"records":[{"value":{"a":[1]}}]}`)
+		err := Unmarshal(less, rec, sch, state.JavaScript, false)
+		if err != errSyntaxInvalid {
+			t.Fatalf("expected errSyntaxInvalid for less elements, got %v", err)
+		}
+		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains less than 2 elements" {
+			t.Fatalf("unexpected error for less elements: %v", rec[0].Err)
+		}
+		rec[0].Err = nil
+		rec[0].Properties = nil
+		more := strings.NewReader(`{"records":[{"value":{"a":[1,2,3,4]}}]}`)
+		err = Unmarshal(more, rec, sch, state.JavaScript, false)
+		if err != nil {
+			t.Fatalf("unexpected error for more elements: %v", err)
+		}
+		if rec[0].Err != nil {
+			t.Fatalf("did not expect record error for more elements: %v", rec[0].Err)
+		}
+		if got := rec[0].Properties["a"]; got == nil || len(got.([]any)) != 4 {
+			t.Fatalf("expected 4 elements, got %v", got)
+		}
+	})
+}
+
 // equalValues reports whether v1 and v2 are equal according to the type t.
 // v1 is supposed to conform to type t, and v2 is checked for equality with v1.
 // If t is a datetime, date, or time type, v1 is truncated to a multiple of

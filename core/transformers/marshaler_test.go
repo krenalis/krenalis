@@ -196,6 +196,44 @@ var records = []Record{{Properties: map[string]any{
 },
 }}
 
+// Test_MarshalAppend checks that Marshal appends to the provided buffer.
+func Test_MarshalAppend(t *testing.T) {
+	schema := types.Object([]types.Property{{Name: "a", Type: types.Int(32)}})
+	record := []Record{{Properties: map[string]any{"a": 5}}}
+	b := []byte("pre")
+	got, err := Marshal(b, schema, record, state.JavaScript, false)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if !bytes.HasPrefix(got, b) {
+		t.Fatalf("expected prefix %q, got %q", string(b), string(got))
+	}
+	wantSuffix := "[{a:5}]"
+	if !bytes.HasSuffix(got, []byte(wantSuffix)) {
+		t.Fatalf("expected suffix %q, got %q", wantSuffix, string(got))
+	}
+}
+
+// Test_MarshalErrors verifies that Marshal returns errors for invalid input.
+func Test_MarshalErrors(t *testing.T) {
+	schema := types.Object([]types.Property{{Name: "a", Type: types.Int(32)}})
+	record := []Record{{Properties: map[string]any{"a": 1}}}
+
+	t.Run("invalid language", func(t *testing.T) {
+		_, err := Marshal(nil, schema, record, state.Language(42), false)
+		if err == nil || err.Error() != "core/transformers: language is not valid" {
+			t.Fatalf("expected language error, got %v", err)
+		}
+	})
+
+	t.Run("schema not object", func(t *testing.T) {
+		_, err := Marshal(nil, types.Text(), record, state.JavaScript, false)
+		if err == nil || err.Error() != "core/transformers: schema is not an object" {
+			t.Fatalf("expected schema error, got %v", err)
+		}
+	})
+}
+
 var mapValue = map[string]any{"Map": map[string]any{"a": 1, "b": 2, "c": 3}}
 var mapArrayValue = map[string]any{"MapArray": map[string]any{"x": []any{"boo", "foo"}, "y": []any{}}}
 
