@@ -389,44 +389,6 @@ func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) 
 	return nil, nil
 }
 
-// memberCredentials is like credentials but only accepts a session cookie.
-// It returns the associated organization and member.
-//
-// If the request is not authorized, an errors.UnauthorizedError is returned.
-func (s *apisServer) memberCredentials(r *http.Request) (*core.Organization, *core.Member, error) {
-
-	// Get the session.
-	cookie, _ := r.Cookie(sessionCookieName)
-	if cookie == nil {
-		return nil, nil, errors.Unauthorized("the Authorization header with the API key is not present in the request")
-	}
-	session := &sessionCookie{}
-	err := s.secureCookie.Decode(sessionCookieName, cookie.Value, session)
-	if err != nil {
-		return nil, nil, errInvalidSessionCookie
-	}
-
-	// Get the organization.
-	organization, err := s.core.Organization(r.Context(), session.Organization)
-	if err != nil {
-		if _, ok := err.(*errors.NotFoundError); ok {
-			return nil, nil, errInvalidSessionCookie
-		}
-		return nil, nil, err
-	}
-
-	// Get the member.
-	member, err := organization.Member(r.Context(), session.Member)
-	if err != nil {
-		if _, ok := err.(*errors.NotFoundError); ok {
-			err = errInvalidSessionCookie
-		}
-		return nil, nil, err
-	}
-
-	return organization, member, nil
-}
-
 // login logs a user in.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
 
@@ -525,6 +487,44 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 		header.Add("Set-Cookie", v+"; Priority=High")
 	}
 	return nil, nil
+}
+
+// memberCredentials is like credentials but only accepts a session cookie.
+// It returns the associated organization and member.
+//
+// If the request is not authorized, an errors.UnauthorizedError is returned.
+func (s *apisServer) memberCredentials(r *http.Request) (*core.Organization, *core.Member, error) {
+
+	// Get the session.
+	cookie, _ := r.Cookie(sessionCookieName)
+	if cookie == nil {
+		return nil, nil, errors.Unauthorized("the Authorization header with the API key is not present in the request")
+	}
+	session := &sessionCookie{}
+	err := s.secureCookie.Decode(sessionCookieName, cookie.Value, session)
+	if err != nil {
+		return nil, nil, errInvalidSessionCookie
+	}
+
+	// Get the organization.
+	organization, err := s.core.Organization(r.Context(), session.Organization)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			return nil, nil, errInvalidSessionCookie
+		}
+		return nil, nil, err
+	}
+
+	// Get the member.
+	member, err := organization.Member(r.Context(), session.Member)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			err = errInvalidSessionCookie
+		}
+		return nil, nil, err
+	}
+
+	return organization, member, nil
 }
 
 type bodyWriter struct {
