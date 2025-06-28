@@ -99,16 +99,12 @@ func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) m
 }
 
 func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, int) {
-	req := map[string]any{
-		"first": first,
-		"limit": limit,
-	}
 	var response struct {
 		Identities []UserIdentity `json:"identities"`
 		Total      int            `json:"total"`
 	}
-	path := fmt.Sprintf("/api/v1/connections/%d/identities", conn)
-	c.MustCall("POST", path, req, &response)
+	path := fmt.Sprintf("/api/v1/connections/%d/identities?first=%d&limit=%d", conn, first, limit)
+	c.MustCall("GET", path, nil, &response)
 	return response.Identities, response.Total
 }
 

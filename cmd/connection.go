@@ -222,15 +222,22 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		First int `json:"first"`
-		Limit int `json:"limit"`
+	var first = 0
+	var limit = 100
+	query := r.URL.Query()
+	if v, ok := query["first"]; ok {
+		first, err = strconv.Atoi(v[0])
+		if err != nil {
+			return nil, errors.BadRequest("first is not valid")
+		}
 	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
+	if v, ok := query["limit"]; ok {
+		limit, err = strconv.Atoi(v[0])
+		if err != nil {
+			return nil, errors.BadRequest("limit is not valid")
+		}
 	}
-	identities, total, err := c.Identities(r.Context(), body.First, body.Limit)
+	identities, total, err := c.Identities(r.Context(), first, limit)
 	if err != nil {
 		return nil, err
 	}

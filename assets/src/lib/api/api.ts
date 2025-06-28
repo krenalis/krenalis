@@ -292,13 +292,9 @@ class Connections {
 
 	identities = async (connection: number, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/identities`,
-			http.POST,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/identities?first=${first}&limit=${limit}`,
+			http.GET,
 			this.workspaceID,
-			{
-				first,
-				limit,
-			},
 		);
 	};
 
