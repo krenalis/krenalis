@@ -50,14 +50,14 @@ func init() {
 		UpdateRequired: true,
 		Nullable:       true,
 		Description: "The mode for sending events. It can be one of the sending modes supported by the app.\n\n" +
-			"It is required and can only be provided with destination app connections that supports it.",
+			"It is required and can only be provided with destination app connections that support it.",
 	}
 	linkedConnectionsParameter := types.Property{
 		Name:        "linkedConnections",
 		Type:        types.Array(types.Int(32)),
 		Nullable:    true,
 		Placeholder: "null",
-		Description: "The IDs of of the connections to which events are sent or from which events are received.\n\n" +
+		Description: "The IDs of the connections to which events are sent or from which events are received.\n\n" +
 			"For source connections (SDK), the linked connections are the destination app connections where the received events are forwarded. " +
 			"On the other hand, for destination app connections, the linked connections are the source SDK connections from which events are received.\n\n" +
 			"If this field is null, it means there are no linked connections, or the connection type does not match any of the types mentioned above.",
@@ -77,7 +77,7 @@ func init() {
 		{
 			Name:        "connector",
 			Type:        types.Text(),
-			Placeholder: `"Website"`,
+			Placeholder: `"JavaScript"`,
 			Description: "The name of the connection's [connector](/connectors/).",
 		},
 		{
@@ -93,7 +93,7 @@ func init() {
 			Placeholder: `"Conversion"`,
 			Nullable:    true,
 			Description: "The [strategy](/identity-resolution/anonymous-users-strategies) for anonymous users. " +
-				"It is `null` if the connection is not a SDK source connection, or if the connection's connector does not support strategies.",
+				"It is `null` if the connection is not an SDK source connection, or if the connection's connector does not support strategies.",
 		},
 		{
 			Name:        "sendingMode",
@@ -145,7 +145,7 @@ func init() {
 			Nullable: true,
 			Description: "The type of events that can be sent to a destination app connection.\n\n" +
 				"It has a null value if the connection is not a destination connection of type app or if it does not support events.\n\n" +
-				"Once you have retrieved an event type and its ID, you can obtain its schema through the method [`/connections/:id/schemas/event/:type`](connection-app#get-event-type-schema).",
+				"Once you have retrieved an event type and its ID, you can obtain its schema through the method [`/connections/:id/schemas/event/:type`](app-connections#get-event-schema).",
 		},
 	)
 
@@ -171,7 +171,7 @@ func init() {
 						Name:           "connector",
 						Type:           types.Text(),
 						CreateRequired: true,
-						Placeholder:    `"WebSite"`,
+						Placeholder:    `"JavaScript"`,
 						Description: "The name of the [connector](/connectors/) for which to create the connection. " +
 							"It can be an app, database, file storage or SDK connector, " +
 							"but cannot be a file connector or a stream connector.\n\nStream connections will be available soon.",
@@ -215,21 +215,21 @@ func init() {
 						Name:           "connector",
 						Type:           types.Text(),
 						CreateRequired: true,
-						Placeholder:    `"HubSpot"`,
+						Placeholder:    `HubSpot`,
 						Description:    "The connector's name. It must be an app connector that requires authorization.",
 					},
 					{
 						Name:           "role",
 						Type:           types.Text().WithValues("Source", "Destination"),
 						CreateRequired: true,
-						Placeholder:    `"Source"`,
+						Placeholder:    `Source`,
 						Description:    "The role for which to request authorization.",
 					},
 					{
 						Name:           "redirectURI",
 						Type:           types.Text(),
 						CreateRequired: true,
-						Placeholder:    `"https://example.com/oauth"`,
+						Placeholder:    `https://example.com/oauth`,
 						Description:    "The URL to which redirect after granting permissions.",
 					},
 				},
@@ -257,18 +257,21 @@ func init() {
 						Name:           "connector",
 						Type:           types.Text(),
 						CreateRequired: true,
+						Placeholder:    `HubSpot`,
 						Description:    "The name of the connector for which the connection will be created.",
 					},
 					{
 						Name:           "redirectURI",
 						Type:           types.Text(),
 						CreateRequired: true,
+						Placeholder:    `https://example.com/oauth`,
 						Description:    "The URI where the user will be redirected after authorization.",
 					},
 					{
 						Name:           "oauthCode",
 						Type:           types.Text(),
 						CreateRequired: true,
+						Placeholder:    `8aa112345`,
 						Description:    "The authorization code to complete the authorization process.",
 					},
 				},

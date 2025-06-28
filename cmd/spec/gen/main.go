@@ -11,20 +11,22 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/meergo/meergo/cmd/spec"
 	"github.com/meergo/meergo/json"
 )
 
 func main() {
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatal("unable to determine caller")
 	}
-	destPath := filepath.Join(filepath.Dir(filepath.Dir(wd)), "doc", "src", "api", "spec.json")
+	destPath := filepath.Join(filepath.Dir(filename), "..", "..", "..", "doc", "src", "api", "spec.json")
+	destPath = filepath.Clean(destPath)
 
 	var b json.Buffer
-	err = b.EncodeIndent(spec.Specification, "", "    ")
+	err := b.EncodeIndent(spec.Specification, "", "    ")
 	if err != nil {
 		log.Fatal(err)
 	}

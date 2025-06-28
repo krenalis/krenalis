@@ -32,7 +32,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-events",
 		Name: "Import events",
-		Description: "This type of action imports events into the workspace’s data warehouse. " +
+		Description: "This type of action imports events into the workspace's data warehouse. " +
 			"It operates on an SDK connection.",
 		Endpoints: []*Endpoint{
 			{
@@ -60,7 +60,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					filterParameter,
 				},
@@ -91,7 +91,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the source action on event.",
+						Description:    "The ID of the source event action.",
 					},
 					nameParameter,
 					{
@@ -118,7 +118,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the source action on event.",
+						Description:    "The ID of the source event action.",
 					},
 				},
 				Response: &Response{
@@ -127,7 +127,7 @@ func init() {
 							Name:        "id",
 							Type:        types.Int(32),
 							Placeholder: "705981339",
-							Description: "The ID of the source action on event.",
+							Description: "The ID of the source event action.",
 						},
 						nameParameter,
 						{

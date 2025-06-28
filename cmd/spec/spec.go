@@ -65,10 +65,14 @@ type Error struct {
 }
 
 type Property struct {
-	Name           string
+	Name string
+	// Placeholder holds an example value for documentation purposes.
+	// When the parameter is passed in the body, it contains JSON code.
+	// When passed in the query string it contains the value directly or,
+	// if the property is an array, the values separated by a comma.
 	Placeholder    string
 	Type           Type
-	CreateRequired bool // true is the parameter is required.
+	CreateRequired bool // true if the parameter is required.
 	UpdateRequired bool // true if the parameter is conditionally required.
 	ReadOptional   bool
 	Nullable       bool
@@ -83,7 +87,7 @@ type Type struct {
 	Maximum int
 	Real    bool
 
-	ElementType    []Type
+	ElementType    *Type
 	MinElements    int
 	MaxElements    int
 	UniqueElements bool
@@ -112,7 +116,6 @@ const (
 	EmailSendFailed               = "EmailSendFailed"
 	EventNotExist                 = "EventNotExist"
 	EventTypeNotExist             = "EventTypeNotExist"
-	EventTypeNotExists            = "EventTypeNotExists"
 	ExecutionInProgress           = "ExecutionInProgress"
 	FormatNotExist                = "FormatNotExist"
 	IdentityResolutionInExecution = "IdentityResolutionInExecution"
@@ -178,7 +181,7 @@ var filterType = types.Object([]types.Property{
 		Name:           "logical",
 		Type:           types.Text().WithValues("and", "or"),
 		CreateRequired: true,
-		Placeholder:    "and",
+		Placeholder:    `"and"`,
 	},
 	{
 		Name: "conditions",
@@ -202,7 +205,7 @@ var filterType = types.Object([]types.Property{
 			},
 		})),
 		CreateRequired: true,
-		Placeholder:    "and",
+		Placeholder:    `[ { "property": "name", "operator": "is", "values": [ "Mary" ] } ]`,
 		Description:    "A filter's condition.",
 	},
 })

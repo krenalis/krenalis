@@ -14,9 +14,10 @@ import (
 func init() {
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "system",
-		Name:        "System",
-		Description: "...",
+		ID:   "system",
+		Name: "System",
+		Description: "System endpoints provide generic information about the server. " +
+			"Currently they expose the languages supported for transformation functions.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "List supported languages",
@@ -27,7 +28,7 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name: "languages",
-							Type: types.Object([]types.Property{
+							Type: types.Array(types.Object([]types.Property{
 								{
 									Name:        "name",
 									Type:        types.Text(),
@@ -40,7 +41,7 @@ func init() {
 									Placeholder: `"<svg icon>"`,
 									Description: "The icon of the supported language.",
 								},
-							}),
+							})),
 							Placeholder: "...",
 						},
 					},

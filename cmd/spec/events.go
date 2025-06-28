@@ -167,7 +167,7 @@ func init() {
 		{Name: "user", Type: types.UUID(), ReadOptional: true, Placeholder: `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`},
 		{Name: "connection", Type: types.Int(32), Placeholder: "1371036433"},
 	}, eventProperties...)))
-	observedEventsParameter := types.Object(eventProperties)
+	observedEventsParameter := types.Array(types.Object(eventProperties))
 	idParameter := types.Property{
 		Name:           "id",
 		Type:           types.Int(32),
@@ -180,17 +180,17 @@ func init() {
 		ID:   "events",
 		Name: "Events",
 		Description: "Events are customer behavioral events (such as page views, clicks, or purchases) received from websites, mobile apps, and servers. " +
-			"They can be stored in the workspace’s data warehouse and forwarded to apps. You can also import customer data for identity resolution and unification.\n\n" +
+			"They can be stored in the workspace's data warehouse and forwarded to apps. You can also import customer data for identity resolution and unification.\n\n" +
 			"These endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.\n\n" +
 			"You can also use one of the available [SDKs to send events](/developers/), instead of interacting with these API endpoints directly.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Ingest events",
-				Description: "This endpoint allows to ingest a batch of events.\n" +
+				Description: "This endpoint allows you to ingest a batch of events.\n" +
 					"### Authentication\n" +
 					"It supports authentication with both an [API key](authentication) and an [event write key](authentication#event-write-keys):\n" +
 					"* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n" +
-					"* For a server application, using an event write key is recommended if you don’t need access to other endpoints.\n" +
+					"* For a server application, using an event write key is recommended if you don't need access to other endpoints.\n" +
 					"### Alternative payloads\n" +
 					"Alternatively, when using an event write key, you can also pass the array of events directly in the request body.\n\n" +
 					"If there is a single event to ingest, you can pass the event object directly, similar to the [Ingest event](events#ingest-event) endpoint, " +
@@ -457,7 +457,7 @@ func init() {
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Placeholder:    `properties=connection&properties=anonymousId`,
+						Placeholder:    `connection,anonymousId`,
 						Description: "The event properties to return. " +
 							"The properties can be specified in the query string in this way:\n" +
 							"```\nproperties=user&properties=connection&properties=anonymousId\n```",
@@ -468,14 +468,14 @@ func init() {
 						Description: "The filter applied to the events. Only the events that match the filter will be returned.\n\n" +
 							"It must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n" +
 							"`" + `{"logical":"and","conditions":[{"property":"user","operator":"is","values":["960ae86c-fc6e-438a-ae03-838fa6c94946"]}]}` + "`\n\n" +
-							"must be then be escaped and passed in the query string as:\n\n" +
+							"must then be escaped and passed in the query string as:\n\n" +
 							"`filter=%7B%22logical%22%3A%22and%22%2C%22conditions\n%22%3A%5B%7B%22property%22%3A%22user%22%2C%22\n" +
 							"operator%22%3A%22is%22%2C%22values%22%3A%5B%22\n960ae86c-fc6e-438a-ae03-838fa6c94946%22%5D%7D%5D%7D`",
 					},
 					{
 						Name:        "order",
 						Type:        types.Text().WithValues("id", "user", "connection", "anonymousId", "channel", "category", "event", "groupId", "messageId", "name", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type", "userId"),
-						Placeholder: `"..."`,
+						Placeholder: `id`,
 						Description: "The name of the property by which to sort the events to be returned.",
 					},
 					{
@@ -494,7 +494,7 @@ func init() {
 						Name:           "limit",
 						Type:           types.Int(32).WithIntRange(1, 1000),
 						CreateRequired: true,
-						Placeholder:    `limit=1000`,
+						Placeholder:    `1000`,
 						Description:    "The maximum number of events to return. The value must be within the range [1, 1000].",
 					},
 				},
@@ -522,7 +522,7 @@ func init() {
 						{
 							Name:        "schema",
 							Placeholder: "{ ... }",
-							Type:        types.Parameter("Schema"),
+							Type:        types.Parameter("schema"),
 						},
 					},
 				},
@@ -532,7 +532,7 @@ func init() {
 			},
 			{
 				Name:        "Create event listener",
-				Description: "Creates an event listener to the workspace that listens to events and returns its identifier.",
+				Description: "Creates an event listener for the workspace that listens to events and returns its identifier.",
 				Method:      POST,
 				URL:         "/v1/events/listeners",
 				Parameters: []types.Property{
@@ -573,7 +573,7 @@ func init() {
 						{
 							Name:        "events",
 							Type:        observedEventsParameter,
-							Placeholder: "902647263",
+							Placeholder: "...",
 							Description: "The observed events.",
 						},
 						{

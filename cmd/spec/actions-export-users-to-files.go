@@ -30,10 +30,10 @@ func init() {
 	}
 	formatParameter := types.Property{
 		Name:           "format",
-		Type:           types.Text().WithValues("CVS", "Excel", "Parquet", "JSON"),
+		Type:           types.Text().WithValues("CSV", "Excel", "Parquet", "JSON"),
 		CreateRequired: true,
 		Placeholder:    `"Excel"`,
-		Description:    "The file format. It correspond to the name of a file connector.",
+		Description:    "The file format. It corresponds to the name of a file connector.",
 	}
 	pathParameter := types.Property{
 		Name:           "path",
@@ -82,8 +82,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-files",
 		Name: "Export users to files",
-		Description: "This type of action exports user data from the workspace’s data warehouse to a newly created file. " +
-			"It operates on a destination file store connection.",
+		Description: "This type of action exports user data from the workspace's data warehouse to a newly created file. " +
+			"It operates on a destination file storage connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
@@ -97,7 +97,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The ID of the connection to which the file will be written. It must be a destination file storage.",
+						Description:    "The ID of the connection to which the file will be written. It must be a destination file storage connection.",
 					},
 					{
 						Name:           "target",
@@ -110,7 +110,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					formatParameter,
 					pathParameter,

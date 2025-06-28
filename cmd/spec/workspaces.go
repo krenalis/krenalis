@@ -29,7 +29,7 @@ func init() {
 	}
 	userSchemaParameter := types.Property{
 		Name:           "userSchema",
-		Type:           types.Parameter("Schema"),
+		Type:           types.Parameter("schema"),
 		CreateRequired: true,
 		Description:    "The user schema, defining the structure and properties of a user in the customer model of the workspace.",
 	}
@@ -90,7 +90,7 @@ func init() {
 						Name:        "firstName",
 						Type:        types.Text().WithCharLen(100),
 						Placeholder: `"first_name"`,
-						Description: "The path of the property to in the user schema to display as first name in the profile header.",
+						Description: "The path of the property in the user schema to display as the first name in the profile header.",
 					},
 					{
 						Name:        "lastName",

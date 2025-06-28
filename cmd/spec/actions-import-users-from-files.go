@@ -30,10 +30,10 @@ func init() {
 	}
 	formatParameter := types.Property{
 		Name:           "format",
-		Type:           types.Text().WithValues("CVS", "Excel", "Parquet", "JSON"),
+		Type:           types.Text().WithValues("CSV", "Excel", "Parquet", "JSON"),
 		CreateRequired: true,
 		Placeholder:    `"Excel"`,
-		Description:    "The file format. It correspond to the name of a file connector.",
+		Description:    "The file format. It corresponds to the name of a file connector.",
 	}
 	pathParameter := types.Property{
 		Name:           "path",
@@ -54,7 +54,7 @@ func init() {
 		Name:        "compression",
 		Type:        types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
 		Placeholder: `"Gzip"`,
-		Description: "The compression format of the file. It is an empty if the file is not compressed.\n\n" +
+		Description: "The compression format of the file. It is empty if the file is not compressed.\n\n" +
 			"Note that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed.",
 	}
 	formatSettingsParameter := types.Property{
@@ -77,7 +77,7 @@ func init() {
 		Name:        "lastChangeTimeColumn",
 		Type:        types.Text().WithCharLen(1024),
 		Placeholder: `"updated_at"`,
-		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\n" +
+		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user's data, helping to identify when changes occurred.\n\n" +
 			"The value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\n" +
 			"Only columns with types corresponding to the following Meergo types can be used as the last change time: `datetime`, `date`, `json`, and `text`.",
 	}
@@ -86,7 +86,7 @@ func init() {
 		Type:           types.Text().WithCharLen(64),
 		UpdateRequired: true,
 		Placeholder:    `"ISO8601"`,
-		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format, and if the format is `\"Excel\"`, can also be set to `\"Excel\"`. " +
+		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. If `format` is `\"Excel\"`, it can also be set to `\"Excel\"`. " +
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
 			"This field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `json` or `text`.",
 	}
@@ -116,14 +116,14 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Placeholder:    `const transform = (user) => { ... }`,
+						Placeholder:    `"const transform = (user) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
 					{
 						Name:           "language",
 						Type:           types.Text().WithValues("JavaScript", "Python"),
-						Placeholder:    "JavaScript",
+						Placeholder:    `"JavaScript"`,
 						CreateRequired: true,
 						Description:    "The language of the function.",
 					},
@@ -155,6 +155,7 @@ func init() {
 		}),
 		Placeholder:    `...`,
 		CreateRequired: true,
+		UpdateRequired: true,
 		Description: "The mapping or function responsible for transforming file users into user identities linked to the action. " +
 			"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
@@ -207,7 +208,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					formatParameter,
 					pathParameter,
@@ -397,13 +398,13 @@ func init() {
 										{
 											Name:        "source",
 											Type:        types.Text().WithCharLen(50_000),
-											Placeholder: `const transform = (user) => { ... }`,
+											Placeholder: `"const transform = (user) => { ... }"`,
 											Description: "The source code of the JavaScript or Python function.",
 										},
 										{
 											Name:        "language",
 											Type:        types.Text().WithValues("JavaScript", "Python"),
-											Placeholder: "JavaScript",
+											Placeholder: `"JavaScript"`,
 											Description: "The language of the function.",
 										},
 										{

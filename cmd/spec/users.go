@@ -47,14 +47,14 @@ func init() {
 		{
 			Name:        "lastChangeTime",
 			Type:        types.DateTime(),
-			Description: "The identity’s most recent change time.",
+			Description: "The identity's most recent change time.",
 		},
 	})
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "users",
 		Name:        "Users",
-		Description: "Users are those imported from external sources and events, unified through identity resolution, and stored in the workspace’s data warehouse.",
+		Description: "Users are those imported from external sources and events, unified through identity resolution, and stored in the workspace's data warehouse.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Retrieve all users",
@@ -67,7 +67,7 @@ func init() {
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Placeholder:    `properties=first_name&properties=last_name`,
+						Placeholder:    `first_name,last_name`,
 						Description: "The names of the properties to return. At least one property must be included.\n\n" +
 							"The properties can be specified in query string in this way:\n" +
 							"```\nproperties=first_name&properties=last_name&properties=email\n```",
@@ -85,8 +85,8 @@ func init() {
 					{
 						Name:        "order",
 						Type:        types.Text(),
-						Placeholder: `"email"`,
-						Description: "The name of the property by which to sort the users to be returned. It can be any property from the user schema with an sortable type, meaning it cannot be of type `json`, `array`, `object`, or `map`.",
+						Placeholder: `email`,
+						Description: "The name of the property by which to sort the users to be returned. It can be any property from the user schema with a sortable type, meaning it cannot be of type `json`, `array`, `object`, or `map`.",
 					},
 					{
 						Name:        "orderDesc",
@@ -136,7 +136,7 @@ func init() {
 						},
 						{
 							Name:        "schema",
-							Type:        types.Parameter("Schema"),
+							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
 							Description: "The schema of the returned traits. It corresponds to the user schema but includes only the properties that were explicitly requested.",
 						},
@@ -165,7 +165,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.UUID(),
-						Placeholder:    `"02bc2281-f801-4f59-9c56-b96ff81df84f"`,
+						Placeholder:    `02bc2281-f801-4f59-9c56-b96ff81df84f`,
 						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
@@ -196,13 +196,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.UUID(),
-						Placeholder:    `"02bc2281-f801-4f59-9c56-b96ff81df84f"`,
+						Placeholder:    `02bc2281-f801-4f59-9c56-b96ff81df84f`,
 						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
 					{
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
+						Placeholder:    `timestamp,event`,
 						CreateRequired: true,
 						Description: "The names of the event properties to return. At least one property must be included.\n\n" +
 							"The properties can be specified in the query string in two ways:\n" +
@@ -239,7 +240,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.UUID(),
-						Placeholder:    `"86de98fe-8f26-49ac-87dc-8a14997a97d9"`,
+						Placeholder:    `86de98fe-8f26-49ac-87dc-8a14997a97d9`,
 						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
@@ -260,7 +261,7 @@ func init() {
 							Name:        "identities",
 							Type:        types.Array(identityType),
 							Placeholder: `{ ... }`,
-							Description: "The user’s identities, containing at least one identity.",
+							Description: "The user's identities, containing at least one identity.",
 						},
 						{
 							Name:        "total",

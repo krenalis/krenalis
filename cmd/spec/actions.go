@@ -63,26 +63,26 @@ func init() {
 		{
 			Name:        "startTime",
 			Type:        types.DateTime(),
-			Placeholder: `"2024/11/27T18:22:47.937Z"`,
+			Placeholder: `"2024-11-27T18:22:47.937Z"`,
 			Description: "The start time in ISO 8601 format.",
 		},
 		{
 			Name:        "endTime",
 			Type:        types.DateTime(),
 			Nullable:    true,
-			Placeholder: `"2024/11/27T18:49:07.150Z"`,
+			Placeholder: `"2024-11-27T18:49:07.150Z"`,
 			Description: "The end time in ISO 8601 format. It is null if the execution has not yet finished.",
 		},
 		{
 			Name:        "passed",
 			Type:        types.Array(types.Int(32)),
-			Placeholder: "[ 6029, 6029, 5974, 5974, 5974 ]",
+			Placeholder: "[ 6029, 6029, 5974, 5974, 5974, 5974 ]",
 			Description: "The number of users or events that successfully passed each step. All values will be 0 if the execution has not yet finished.",
 		},
 		{
 			Name:        "failed",
 			Type:        types.Array(types.Int(32)),
-			Placeholder: "[ 0, 0, 55, 0, 0 ]",
+			Placeholder: "[ 0, 0, 55, 0, 0, 0 ]",
 			Description: "The number of users or events that failed at each step. All values will be 0 if the execution has not yet finished.",
 		},
 		{
@@ -146,7 +146,7 @@ func init() {
 						CreateRequired: true,
 						Placeholder:    `"1h"`,
 						Nullable:       true,
-						Description:    "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic execution will be executed.",
+						Description:    "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic executions will occur.",
 					},
 				},
 				Errors: []Error{
@@ -156,7 +156,7 @@ func init() {
 			},
 			{
 				Name: "Execute action",
-				Description: "Starts an action execution to import its users into the data warehouse or export the user in the data warehouse to the app, applying the action's filter and transformation.\n\n" +
+				Description: "Starts an action execution to import its users into the data warehouse or export the users in the data warehouse to the app, applying the action's filter and transformation.\n\n" +
 					"It returns immediately without waiting for the execution to complete. To track the progress, call the [Get execution](#get-execution) endpoint using the returned execution ID.\n\n" +
 					"The action must be enabled.",
 				Method: POST,
@@ -226,6 +226,15 @@ func init() {
 					"Actions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
 				Method: GET,
 				URL:    "/v1/actions/executions/:id",
+				Parameters: []types.Property{
+					{
+						Name:           "id",
+						Type:           types.Int(32),
+						CreateRequired: true,
+						Placeholder:    "609461413",
+						Description:    "The ID of the execution.",
+					},
+				},
 				Response: &Response{
 					Parameters: executionParameters,
 				},

@@ -77,7 +77,7 @@ func init() {
 			{
 				Name: "Test warehouse update",
 				Description: "Tests the update of the warehouse of the current workspace.\n\n" +
-					"If the settings are incorrect or the warehouse can’t be accessed with the given settings, an error will be returned. " +
+					"If the settings are incorrect or the warehouse can't be accessed with the given settings, an error will be returned. " +
 					"If no error occurs, the settings are valid.",
 				Method: PUT,
 				URL:    "/v1/warehouse/test",
@@ -106,7 +106,7 @@ func init() {
 			{
 				Name: "Repair warehouse",
 				Description: "Repairs the current workspace's warehouse.\n\n" +
-					"This endpoint can be called when no identity resolution and alter schema operations are running on the data warehouse.",
+					"This endpoint can be called when neither identity resolution nor alter schema operations are running on the data warehouse.",
 				Method: POST,
 				URL:    "/v1/warehouse/repair",
 				Errors: []Error{
@@ -115,7 +115,7 @@ func init() {
 			},
 			{
 				Name:        "List warehouse types",
-				Description: "Returns a list of warehouse types than can be used for a workspace warehouse.",
+				Description: "Returns a list of warehouse types that can be used for a workspace warehouse.",
 				Method:      GET,
 				URL:         "/v1/warehouse/types",
 				Response: &Response{

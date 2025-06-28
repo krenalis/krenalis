@@ -49,7 +49,7 @@ func init() {
 							Placeholder: `"2025-01-12T09:37:22"`,
 							Nullable:    true,
 							Description: "Start timestamp (UTC) of the latest identity resolution, either running or completed.\n\n" +
-								"If null, no identity resolutions have never been executed for the workspace.",
+								"If null, no identity resolutions have ever been executed for the workspace.",
 						},
 						{
 							Name:        "endTime",
@@ -57,7 +57,7 @@ func init() {
 							Placeholder: `"2025-01-12T09:42:51"`,
 							Nullable:    true,
 							Description: "End timestamp (UTC) for the latest identity resolution.\n\n" +
-								"If null, it means that the identity resolution is still in progress, or that no identity resolution have never been executed on the workspace.",
+								"If null, it means that the identity resolution is still in progress, or that no identity resolution has ever been executed on the workspace.",
 						},
 					},
 				},
@@ -75,7 +75,7 @@ func init() {
 						Type:        types.Boolean(),
 						Placeholder: `true`,
 						Description: "Indicates if identity resolution is automatically run when a batch import is completed." +
-							" By default is false.",
+							" The default is false.",
 					},
 					{
 						Name:        "identifiers",
@@ -107,7 +107,7 @@ func init() {
 							Type:        types.Boolean(),
 							Placeholder: `true`,
 							Description: "Indicates if identity resolution is automatically run when a batch import is completed." +
-								" By default is false.",
+								" The default is false.",
 						},
 						{
 							Name:        "identifiers",

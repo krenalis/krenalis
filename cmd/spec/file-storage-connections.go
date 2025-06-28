@@ -24,7 +24,7 @@ func init() {
 		Name:           "path",
 		Type:           types.Text(),
 		CreateRequired: true,
-		Placeholder:    `"users.csv"`,
+		Placeholder:    `users.csv`,
 		Description: "The file path relative to the root of the file storage. " +
 			"For details on the required format, refer to the file storage connector documentation.\n\n" +
 			"The path must not be empty and cannot exceed 1,024 characters in length.\n\n" +
@@ -32,15 +32,15 @@ func init() {
 	}
 	formatParameter := types.Property{
 		Name:           "format",
-		Type:           types.Text().WithValues("CVS", "Excel", "Parquet", "JSON"),
+		Type:           types.Text().WithValues("CSV", "Excel", "Parquet", "JSON"),
 		CreateRequired: true,
-		Placeholder:    `format=Excel`,
+		Placeholder:    `Excel`,
 		Description:    "The file format. Note that it corresponds to the name of the file connector used to read the file.",
 	}
 	compressionParameter := types.Property{
 		Name:        "compression",
 		Type:        types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
-		Placeholder: `"Gzip"`,
+		Placeholder: `Gzip`,
 		Description: "The method used to compress the file, if applicable.\n\n" +
 			"**Note:** An Excel file is inherently compressed, so no compression method needs to be specified unless the file has been further compressed.",
 	}
@@ -48,7 +48,7 @@ func init() {
 		Name:        "formatSettings",
 		Type:        types.Parameter("Settings"),
 		Nullable:    true,
-		Placeholder: `{ "HasColumnNames": true }`,
+		Placeholder: `{"HasColumnNames":true}`,
 		Description: "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
 			"If the file format does not require any settings, the `formatSettings` parameter must be either omitted or set to `null`.",
 	}
@@ -70,7 +70,7 @@ func init() {
 					{
 						Name:           "sheet",
 						Type:           types.Text(),
-						Placeholder:    `sheet=Sheet1`,
+						Placeholder:    `Sheet1`,
 						UpdateRequired: true,
 						Description: "The sheet name. It can only be used with the Excel format, where it is required.\n\n" +
 							"When provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",
@@ -88,7 +88,7 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name:        "schema",
-							Type:        types.Parameter("Schema"),
+							Type:        types.Parameter("schema"),
 							Nullable:    true,
 							Placeholder: `{ ... }`,
 							Description: "The file's schema. It will be null if there are no supported columns.",
@@ -117,7 +117,7 @@ func init() {
 			},
 			{
 				Name:        "Read sheets",
-				Description: "Returns the list of sheets in a file, applicable to file formats that supports sheets.",
+				Description: "Returns the list of sheets in a file, applicable to file formats that support sheets.",
 				Method:      GET,
 				URL:         "/v1/connections/:id/files/:path/sheets",
 				Parameters: []types.Property{
@@ -148,7 +148,7 @@ func init() {
 			{
 				Name: "Get absolute path",
 				Description: "Returns the file path relative to the root of the file storage.\n\n" +
-					"While this absolute path isn’t used directly by other API endpoints, it can help confirm that the relative path points to the correct file.",
+					"While this absolute path isn't used directly by other API endpoints, it can help confirm that the relative path points to the correct file.",
 				Method: GET,
 				URL:    "/v1/connections/:id/files/:path/absolute",
 				Parameters: []types.Property{

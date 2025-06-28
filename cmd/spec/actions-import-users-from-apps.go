@@ -53,14 +53,14 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Placeholder:    `const transform = (user) => { ... }`,
+						Placeholder:    `"const transform = (user) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
 					{
 						Name:           "language",
 						Type:           types.Text().WithValues("JavaScript", "Python"),
-						Placeholder:    "JavaScript",
+						Placeholder:    `"JavaScript"`,
 						CreateRequired: true,
 						Description:    "The language of the function.",
 					},
@@ -92,6 +92,7 @@ func init() {
 		}),
 		Placeholder:    `...`,
 		CreateRequired: true,
+		UpdateRequired: true,
 		Description: "The mapping or function responsible for transforming app users into user identities linked to the action. " +
 			"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
@@ -102,7 +103,7 @@ func init() {
 		CreateRequired: true,
 		Placeholder:    `{...}`,
 		Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\n" +
-			"When importing users from apps, this should be a subset of the app’s destination schema.",
+			"When importing users from apps, this should be a subset of the app's destination schema.",
 	}
 	outSchemaParameter := types.Property{
 		Name:           "outSchema",
@@ -131,7 +132,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The ID of the connection from which to read the users. It must be a source app that can imports users.",
+						Description:    "The ID of the connection from which to read the users. It must be a source app that can import users.",
 					},
 					{
 						Name:           "target",
@@ -144,7 +145,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					filterParameter,
 					incrementalParameter,
@@ -285,13 +286,13 @@ func init() {
 										{
 											Name:        "source",
 											Type:        types.Text().WithCharLen(50_000),
-											Placeholder: `const transform = (user) => { ... }`,
+											Placeholder: `"const transform = (user) => { ... }"`,
 											Description: "The source code of the JavaScript or Python function.",
 										},
 										{
 											Name:        "language",
 											Type:        types.Text().WithValues("JavaScript", "Python"),
-											Placeholder: "JavaScript",
+											Placeholder: `"JavaScript"`,
 											Description: "The language of the function.",
 										},
 										{

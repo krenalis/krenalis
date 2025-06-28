@@ -29,17 +29,17 @@ func init() {
 		{
 			Name:        "categories",
 			Type:        types.Array(types.Text()),
-			Placeholder: `["CRM"]`,
-			Description: "The categories of the connector. There is always at least one category.",
+			Placeholder: `[ "CRM" ]`,
+			Description: "The categories of the connector. There is always at least one.",
 		},
 		{
 			Name: "asSource",
 			Type: types.Object([]types.Property{
 				{
 					Name:        "targets",
-					Type:        types.Array(types.Text().WithValues("Event", "User", "Group")),
-					Placeholder: `[ "User", "Group" ]`,
-					Description: "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Event\"`, `\"User\"`, and `\"Group\"`",
+					Type:        types.Array(types.Text().WithValues("Event", "User")),
+					Placeholder: `[ "User" ]`,
+					Description: "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Event\"` and `\"User\"`",
 				},
 				{
 					Name:        "hasSettings",
@@ -77,9 +77,9 @@ func init() {
 			Type: types.Object([]types.Property{
 				{
 					Name:        "targets",
-					Type:        types.Array(types.Text().WithValues("Event", "User", "Group")),
-					Placeholder: `[ "User", "Group" ]`,
-					Description: "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Event\"`, `\"User\"`, and `\"Group\"`",
+					Type:        types.Array(types.Text().WithValues("Event", "User")),
+					Placeholder: `[ "User" ]`,
+					Description: "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Event\"`, and `\"User\"`",
 				},
 				{
 					Name:        "hasSettings",
@@ -92,7 +92,7 @@ func init() {
 					Type:        types.Text().WithValues("Cloud", "Device", "Combined"),
 					Nullable:    true,
 					Placeholder: `null`,
-					Description: "The mode used by app connectors to send the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events.",
+					Description: "The mode used by app connectors to send the events to the app, if the app supports events. It is empty if the connector is not an app or it does not handle events.",
 				},
 				{
 					Name:        "summary",
@@ -187,7 +187,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "connectors",
 		Name:        "Connectors",
-		Description: "Connectors allows to instantiate [connections](connections) to interface Meergo with external data.",
+		Description: "Connectors allow you to instantiate [connections](connections) to interface Meergo with external data.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "List all connectors",
@@ -213,7 +213,7 @@ func init() {
 					{
 						Name:           "name",
 						Type:           types.Text(),
-						Placeholder:    `"HubSpot"`,
+						Placeholder:    `HubSpot`,
 						CreateRequired: true,
 						Description:    "The connector's name.",
 					},
@@ -234,7 +234,7 @@ func init() {
 					{
 						Name:           "name",
 						Type:           types.Text(),
-						Placeholder:    `"HubSpot"`,
+						Placeholder:    `HubSpot`,
 						CreateRequired: true,
 						Description:    "The connector's name.",
 					},

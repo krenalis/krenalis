@@ -45,14 +45,14 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Placeholder:    `const transform = (event) => { ... }`,
+						Placeholder:    `"const transform = (event) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
 					{
 						Name:           "language",
 						Type:           types.Text().WithValues("JavaScript", "Python"),
-						Placeholder:    "JavaScript",
+						Placeholder:    `"JavaScript"`,
 						CreateRequired: true,
 						Description:    "The language of the function.",
 					},
@@ -82,9 +82,11 @@ func init() {
 				Description:    "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app.",
 			},
 		}),
-		Placeholder: `...`,
-		Nullable:    true,
-		Description: "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\n" +
+		Placeholder:    `...`,
+		Nullable:       true,
+		CreateRequired: true,
+		UpdateRequired: true,
+		Description: "This mapping or function is responsible for transforming events into the values required for sending the event to the app.\n\n" +
 			"If the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\n" +
 			"If a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null.",
 	}
@@ -106,7 +108,7 @@ func init() {
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
-				Description: "Create a destination action that send events to an app.",
+				Description: "Create a destination action that sends events to an app.",
 				Method:      POST,
 				URL:         "/v1/actions",
 				Parameters: []types.Property{
@@ -116,7 +118,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "753166510",
-						Description:    "The ID of the connection to which the events will be sent. It must be a source app that supports events.",
+						Description:    "The ID of the connection to which the events will be sent. It must be a destination app that supports events.",
 					},
 					{
 						Name:           "target",
@@ -129,7 +131,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					{
 						Name:           "eventType",
@@ -156,14 +158,14 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, ConnectionNotExist, "connection does not exist"},
-					{422, EventTypeNotExists, "connection does not have event type"},
+					{422, EventTypeNotExist, "connection does not have event type"},
 					{422, ConnectorNotExist, "connector does not exist"},
 					{422, UnsupportedLanguage, "transformation language is not supported"},
 				},
 			},
 			{
 				Name:        "Update action",
-				Description: "Update a destination action that send events to an app.",
+				Description: "Update a destination action that sends events to an app.",
 				Method:      PUT,
 				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
@@ -172,7 +174,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the destination app action on event.",
+						Description:    "The ID of the destination app event action.",
 					},
 					nameParameter,
 					{
@@ -193,7 +195,7 @@ func init() {
 			},
 			{
 				Name:        "Get action",
-				Description: "Get a destination action that send events to an app.",
+				Description: "Get a destination action that sends events to an app.",
 				Method:      GET,
 				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
@@ -202,7 +204,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the destination app action on event.",
+						Description:    "The ID of the destination app event action.",
 					},
 				},
 				Response: &Response{
@@ -211,7 +213,7 @@ func init() {
 							Name:        "id",
 							Type:        types.Int(32),
 							Placeholder: "705981339",
-							Description: "The ID of the destination app action on event.",
+							Description: "The ID of the destination app event action.",
 						},
 						nameParameter,
 						{
@@ -223,8 +225,8 @@ func init() {
 						{
 							Name:        "connectorType",
 							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
-							Placeholder: `"SDK"`,
-							Description: "The type of the connection's connector. It is always `\"SDK\"` when the action sends events to an app.",
+							Placeholder: `"App"`,
+							Description: "The type of the connection's connector. It is always `\"App\"` when the action sends events to an app.",
 						},
 						{
 							Name:        "connection",
@@ -254,7 +256,7 @@ func init() {
 							Name:           "eventType",
 							Type:           types.Text().WithCharLen(100),
 							CreateRequired: true,
-							Placeholder:    `"send_add_to_cart"`,
+							Placeholder:    `send_add_to_cart`,
 							Description:    "The action's event type.",
 						},
 						filterParameter,
@@ -274,13 +276,13 @@ func init() {
 										{
 											Name:        "source",
 											Type:        types.Text().WithCharLen(50_000),
-											Placeholder: `const transform = (event) => { ... }`,
+											Placeholder: `"const transform = (event) => { ... }"`,
 											Description: "The source code of the JavaScript or Python function.",
 										},
 										{
 											Name:        "language",
 											Type:        types.Text().WithValues("JavaScript", "Python"),
-											Placeholder: "JavaScript",
+											Placeholder: `"JavaScript"`,
 											Description: "The language of the function.",
 										},
 										{
@@ -308,7 +310,7 @@ func init() {
 							}),
 							Placeholder: `...`,
 							Nullable:    true,
-							Description: "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\n" +
+							Description: "This mapping or function is responsible for transforming events into the values required for sending them to the app.\n\n" +
 								"If there is no mapping, it is null. Otherwise one of either a mapping or a function is present, but not both. The one that is not present is null.",
 						},
 						{

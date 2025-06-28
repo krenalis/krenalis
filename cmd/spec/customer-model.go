@@ -22,7 +22,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "customer-model",
 		Name:        "Customer model",
-		Description: "",
+		Description: "Endpoints for reading and modifying the workspace's user schema.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Get schema",
@@ -33,7 +33,7 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name:        "schema",
-							Type:        types.Parameter("Schema"),
+							Type:        types.Parameter("schema"),
 							Placeholder: "...",
 						},
 					},
@@ -50,7 +50,7 @@ func init() {
 				Parameters: []types.Property{
 					{
 						Name:           "schema",
-						Type:           types.Parameter("Schema"),
+						Type:           types.Parameter("schema"),
 						CreateRequired: true,
 						Description:    "The new user schema. It must include at least one property.",
 					},
@@ -86,7 +86,7 @@ func init() {
 				Parameters: []types.Property{
 					{
 						Name:           "schema",
-						Type:           types.Parameter("Schema"),
+						Type:           types.Parameter("schema"),
 						CreateRequired: true,
 						Description:    "The new user schema. It must include at least one property.",
 					},
@@ -113,12 +113,12 @@ func init() {
 				},
 			},
 			{
-				Name: "Get information about latest alter user schema",
+				Name: "Get information about the latest user schema alteration",
 				Description: "Returns information about the latest altering of the user schema.\n\n" +
 					"Depending on the returned values:\n" +
-					"- If neither `startTime` nor `endTime` are returned, it means that no altering of user schema has never been performed for the workspace.\n" +
-					"- If only `startTime` is returned, it means that the workspace is currently running a user schema altering.\n" +
-					"- If both `startTime` and `endTime` are returned, it means that a user schema altering has been performed and there are no user schema altering currently running.",
+					"- If neither `startTime` nor `endTime` are returned, it means that no alteration of the user schema has ever been performed for the workspace.\n" +
+					"- If only `startTime` is returned, it means that the workspace is currently running a user schema alteration.\n" +
+					"- If both `startTime` and `endTime` are returned, it means that a user schema alteration has been performed and no user schema alteration is currently running.",
 				Method: GET,
 				URL:    "/v1/users/schema/latest-alter",
 				Response: &Response{
@@ -129,7 +129,7 @@ func init() {
 							Placeholder: `"2025-01-12T09:37:22"`,
 							Nullable:    true,
 							Description: "Start timestamp (UTC) of the latest user schema update, either running or completed.\n\n" +
-								"If null, no user schema update has never been started for the workspace.",
+								"If null, no user schema update has ever been started for the workspace.",
 						},
 						{
 							Name:        "endTime",
@@ -137,7 +137,7 @@ func init() {
 							Placeholder: `"2025-01-12T09:37:25"`,
 							Nullable:    true,
 							Description: "End timestamp (UTC) for the latest user schema update.\n\n" +
-								"If null, it means that the user schema update is still in progress, or that no schema update has never been performed for the workspace.",
+								"If null, it means that the user schema update is still in progress, or that no schema update has ever been performed for the workspace.",
 						},
 						{
 							Name:        "error",
@@ -145,7 +145,7 @@ func init() {
 							Placeholder: "null",
 							Nullable:    true,
 							Description: "A possible error in the execution of the latest update of the user schema.\n\n" +
-								"If null, it means that no update of the user schema has never been executed, or that one is in progress, or that the last one executed completed without errors.",
+								"If null, it means that no update of the user schema has ever been executed, or that one is in progress, or that the last one executed completed without errors.",
 						},
 					},
 				},

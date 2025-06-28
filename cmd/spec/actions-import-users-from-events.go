@@ -36,7 +36,7 @@ func init() {
 				Placeholder:    `{ "first_name": "firstName" }`,
 				UpdateRequired: true,
 				Nullable:       true,
-				Description:    "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property path from the event schema.",
+				Description:    "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the event schema.",
 			},
 			{
 				Name: "function",
@@ -44,14 +44,14 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Placeholder:    `const transform = (event) => { ... }`,
+						Placeholder:    `"const transform = (event) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
 					{
 						Name:           "language",
 						Type:           types.Text().WithValues("JavaScript", "Python"),
-						Placeholder:    "JavaScript",
+						Placeholder:    `"JavaScript"`,
 						CreateRequired: true,
 						Description:    "The language of the function.",
 					},
@@ -102,7 +102,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "actions-import-users-from-events",
 		Name:        "Import users from events",
-		Description: "This type of action imports user data into the workspace’s data warehouse from events received from websites, mobile apps, and servers.",
+		Description: "This type of action imports user data into the workspace's data warehouse from events received from websites, mobile apps, and servers.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
@@ -129,7 +129,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					filterParameter,
 					transformationParameter,
@@ -248,7 +248,7 @@ func init() {
 									Type:        types.Map(types.Text()),
 									Placeholder: `{ "first_name": "firstName" }`,
 									Nullable:    true,
-									Description: "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property path from the event schema.",
+									Description: "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the event schema.",
 								},
 								{
 									Name: "function",
@@ -256,13 +256,13 @@ func init() {
 										{
 											Name:        "source",
 											Type:        types.Text().WithCharLen(50_000),
-											Placeholder: `const transform = (event) => { ... }`,
+											Placeholder: `"const transform = (event) => { ... }"`,
 											Description: "The source code of the JavaScript or Python function.",
 										},
 										{
 											Name:        "language",
 											Type:        types.Text().WithValues("JavaScript", "Python"),
-											Placeholder: "JavaScript",
+											Placeholder: `"JavaScript"`,
 											Description: "The language of the function.",
 										},
 										{

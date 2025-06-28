@@ -15,7 +15,7 @@ func init() {
 
 	actionsParameter := types.Property{
 		Name:           "actions",
-		Placeholder:    "actions=705981339&actions=1360924687",
+		Placeholder:    "705981339,1360924687",
 		Type:           types.Array(types.Int(32)),
 		CreateRequired: true,
 		Description: "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\n" +
@@ -37,13 +37,13 @@ func init() {
 		{
 			Name:        "passed",
 			Type:        types.Array(types.Array(types.Int(32))),
-			Placeholder: `[ [ 6029, 6029, 5974, 5974, 5974 ] ]`,
+			Placeholder: `[ [ 6029, 6029, 5974, 5974, 5974, 5974 ] ]`,
 			Description: "The number of users or events that successfully passed each step on each hour within the start and end dates.",
 		},
 		{
 			Name:        "failed",
 			Type:        types.Array(types.Array(types.Int(32))),
-			Placeholder: `[ [ 0, 0, 55, 0, 0 ] ]`,
+			Placeholder: `[ [ 0, 0, 55, 0, 0, 0 ] ]`,
 			Description: "The number of users or events that failed at each step on each hour within the start and end dates.",
 		},
 	}
@@ -91,7 +91,7 @@ func init() {
 				Parameters: []types.Property{
 					{
 						Name:           "days",
-						Type:           types.Int(32),
+						Type:           types.Int(32).WithIntRange(1, 30),
 						CreateRequired: true,
 						Description:    "The number of days, ranging from 1 to 30. By default, it is 30.",
 					},
@@ -112,7 +112,7 @@ func init() {
 				Parameters: []types.Property{
 					{
 						Name:           "hours",
-						Type:           types.Int(32),
+						Type:           types.Int(32).WithIntRange(1, 48),
 						CreateRequired: true,
 						Description:    "The number of hours, ranging from 1 to 48. By default, it is 48.",
 					},
@@ -133,7 +133,7 @@ func init() {
 				Parameters: []types.Property{
 					{
 						Name:           "minutes",
-						Type:           types.Int(32),
+						Type:           types.Int(32).WithIntRange(1, 60),
 						CreateRequired: true,
 						Description:    "The number of minutes, ranging from 1 to 60. By default, it is 60.",
 					},
@@ -168,7 +168,7 @@ func init() {
 					},
 					{
 						Name:           "actions",
-						Placeholder:    "actions=705981339&actions=1360924687",
+						Placeholder:    "705981339,1360924687",
 						Type:           types.Array(types.Int(32)),
 						CreateRequired: true,
 						Description: "The IDs of the actions for which errors should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\n" +
@@ -181,13 +181,13 @@ func init() {
 					},
 					{
 						Name:        "first",
-						Type:        types.Int(32),
+						Type:        types.Int(32).WithIntRange(0, 9999),
 						Description: "The number of errors to skip before starting to return errors. It must be between 0 and 9999, with a default value of 0.",
 					},
 					{
 						Name:        "limit",
-						Type:        types.Int(32),
-						Description: "The maximum number of errors to return. It must be between 0 and 100, with a default value of 100.",
+						Type:        types.Int(32).WithIntRange(1, 100),
+						Description: "The maximum number of errors to return. It must be between 1 and 100, with a default value of 100.",
 					},
 				},
 				Response: &Response{

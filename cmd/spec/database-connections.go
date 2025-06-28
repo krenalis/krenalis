@@ -50,7 +50,7 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name:        "schema",
-							Type:        types.Parameter("Schema"),
+							Type:        types.Parameter("schema"),
 							Nullable:    true,
 							Placeholder: `{ ... }`,
 							Description: "The schema of the query. It will be null if there are no supported columns.",
@@ -92,7 +92,7 @@ func init() {
 					{
 						Name:           "name",
 						Type:           types.Text(),
-						Placeholder:    `"users"`,
+						Placeholder:    `users`,
 						CreateRequired: true,
 						Description:    "The name of the table.",
 					},
@@ -101,7 +101,7 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name:        "schema",
-							Type:        types.Parameter("Schema"),
+							Type:        types.Parameter("schema"),
 							Nullable:    true,
 							Placeholder: `{ ... }`,
 							Description: "The schema of the table. It will be null if there are no supported columns.",

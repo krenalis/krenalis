@@ -34,15 +34,15 @@ func init() {
 					},
 					{
 						Name:           "schema",
-						Type:           types.Parameter("Schema"),
-						Placeholder:    `{ ... }`,
+						Type:           types.Parameter("schema"),
+						Placeholder:    `{...}`,
 						CreateRequired: true,
 						Description:    "The schema that the returned users must satisfy",
 					},
 					{
 						Name:        "cursor",
 						Type:        types.Text(),
-						Placeholder: `"..."`,
+						Placeholder: `...`,
 						Description: "The cursor used to fetch the next set of users. If empty, it returns the first set of users.",
 					},
 				},
@@ -104,7 +104,7 @@ func init() {
 					},
 					{
 						Name:        "outSchema",
-						Type:        types.Parameter("Schema"),
+						Type:        types.Parameter("schema"),
 						Placeholder: `{...}`,
 						Description: "The output schema.",
 					},
@@ -139,13 +139,13 @@ func init() {
 							Type: types.Object([]types.Property{
 								{
 									Name:        "source",
-									Type:        types.Parameter("Schema"),
+									Type:        types.Parameter("schema"),
 									Placeholder: `{ ... }`,
 									Description: "The source schema.",
 								},
 								{
 									Name:        "destination",
-									Type:        types.Parameter("Schema"),
+									Type:        types.Parameter("schema"),
 									Placeholder: `{ ... }`,
 									Description: "The destination schema. It is null for source connections.",
 								},
@@ -176,7 +176,7 @@ func init() {
 					{
 						Name:           "type",
 						Type:           types.Text(),
-						Placeholder:    `"page_view"`,
+						Placeholder:    `page_view`,
 						CreateRequired: true,
 						Description:    "The ID of the event type.",
 					},
@@ -185,7 +185,7 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name:        "schema",
-							Type:        types.Parameter("Schema"),
+							Type:        types.Parameter("schema"),
 							Placeholder: `{ ... }`,
 							Description: "The schema of the event type. It is null if the event type does not have a schema.",
 						},

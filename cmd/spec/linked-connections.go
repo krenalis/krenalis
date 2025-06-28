@@ -45,7 +45,6 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
-					{422, LinkedConnectionNotExist, "linked connection does not exist"},
 				},
 			},
 			{
@@ -60,7 +59,6 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
-					{422, LinkedConnectionNotExist, "linked connection does not exist"},
 				},
 			},
 		},

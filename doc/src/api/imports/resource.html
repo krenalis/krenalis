@@ -207,8 +207,15 @@
           <div>  --json '<span>{{ requestToHTML(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</span>'</div>
           {% end if %}
           {% if queryString %}
-            {% for i, p := range queryString %}<div>  -d "{{ p.placeholder }}"{% if i != len(queryString) - 1 %} \{% end if %}</div>{% end %}
-          {% end %}
+            {% for i, p := range queryString %}
+            {% if typ := p["type"].(map[string]any); typ.kind == "array" %}
+            {% placeholders := split(p.placeholder.(string), ",") %}
+            <div>   -d "{% for i, v := range placeholders %}{% if i > 0 %}&{% end if %}{{ p.name}}={{ v }}{% end for %}"{% if i != len(queryString) - 1 %} \{% end if %}</div>
+            {% else %}
+            <div>   -d "{{ p.name}}={{ p.placeholder }}"{% if i != len(queryString) - 1 %} \{% end if %}</div>
+            {% end if %}
+            {% end for %}
+          {% end if %}
         </code>
       </div>
       {% if response, ok := endpoint.response.(map[string]any); ok %}

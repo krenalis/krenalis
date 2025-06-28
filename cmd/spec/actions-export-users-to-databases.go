@@ -62,14 +62,14 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Placeholder:    `const transform = (user) => { ... }`,
+						Placeholder:    `"const transform = (user) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
 					{
 						Name:        "language",
 						Type:        types.Text().WithValues("JavaScript", "Python"),
-						Placeholder: "JavaScript",
+						Placeholder: `"JavaScript"`,
 						Description: "The language of the function.",
 					},
 					{
@@ -101,6 +101,7 @@ func init() {
 		}),
 		Placeholder:    `...`,
 		CreateRequired: true,
+		UpdateRequired: true,
 		Description: "The mapping or function responsible for transforming unified users into database users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
@@ -153,7 +154,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					tableNameParameter,
 					tableKeyParameter,
@@ -285,7 +286,7 @@ func init() {
 							Description: "The name of the table column that contains a value identifying a user within the table.\n\n" +
 								"Typically, this is the column used as the table's primary key. However, it can also be a column with a unique constraint, or one that is guaranteed to contain only unique values.\n\n" +
 								"If a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\n" +
-								"The type of this column match one of the following Meergo types: `int`, `uint`, `uuid`, or `text`.",
+								"The type of this column must match one of the following Meergo types: `int`, `uint`, `uuid`, or `text`.",
 						},
 						{
 							Name: "transformation",
@@ -303,14 +304,14 @@ func init() {
 										{
 											Name:           "source",
 											Type:           types.Text().WithCharLen(50_000),
-											Placeholder:    `const transform = (user) => { ... }`,
+											Placeholder:    `"const transform = (user) => { ... }"`,
 											CreateRequired: true,
 											Description:    "The source code of the JavaScript or Python function.",
 										},
 										{
 											Name:        "language",
 											Type:        types.Text().WithValues("JavaScript", "Python"),
-											Placeholder: "JavaScript",
+											Placeholder: `"JavaScript"`,
 											Description: "The language of the function.",
 										},
 										{

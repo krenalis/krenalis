@@ -44,7 +44,7 @@ func init() {
 		Name:        "lastChangeTimeColumn",
 		Type:        types.Text().WithCharLen(1024),
 		Placeholder: `"updated_at"`,
-		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\n" +
+		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user's data, helping to identify when changes occurred.\n\n" +
 			"The value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\n" +
 			"Only columns with types corresponding to the following Meergo types can be used as the last change time: `datetime`, `date`, `json`, and `text`.",
 	}
@@ -84,14 +84,14 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Placeholder:    `const transform = (user) => { ... }`,
+						Placeholder:    `"const transform = (user) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
 					{
 						Name:           "language",
 						Type:           types.Text().WithValues("JavaScript", "Python"),
-						Placeholder:    "JavaScript",
+						Placeholder:    `"JavaScript"`,
 						CreateRequired: true,
 						Description:    "The language of the function.",
 					},
@@ -123,6 +123,7 @@ func init() {
 		}),
 		Placeholder:    `...`,
 		CreateRequired: true,
+		UpdateRequired: true,
 		Description: "The mapping or function responsible for transforming database users into user identities linked to the action. " +
 			"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
@@ -175,7 +176,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					queryParameter,
 					identityColumnParameter,
@@ -349,13 +350,13 @@ func init() {
 										{
 											Name:        "source",
 											Type:        types.Text().WithCharLen(50_000),
-											Placeholder: `const transform = (user) => { ... }`,
+											Placeholder: `"const transform = (user) => { ... }"`,
 											Description: "The source code of the JavaScript or Python function.",
 										},
 										{
 											Name:        "language",
 											Type:        types.Text().WithValues("JavaScript", "Python"),
-											Placeholder: "JavaScript",
+											Placeholder: `"JavaScript"`,
 											Description: "The language of the function.",
 										},
 										{

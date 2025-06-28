@@ -52,7 +52,7 @@ func init() {
 	}
 	exportModeParameter := types.Property{
 		Name:           "exportMode",
-		Type:           types.Text(),
+		Type:           types.Text().WithValues("CreateOnly", "UpdateOnly", "CreateOrUpdate"),
 		CreateRequired: true,
 		Placeholder:    `"CreateOnly"`,
 		Description: "The mode in which users are exported:\n\n" +
@@ -64,7 +64,7 @@ func init() {
 	updateOnDuplicatesParameter := types.Property{
 		Name:        "updateOnDuplicates",
 		Type:        types.Boolean(),
-		Placeholder: `true`,
+		Placeholder: `false`,
 		Description: "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
 			"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false\n\n" +
 			"This field does not affect user creation.",
@@ -86,14 +86,14 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Placeholder:    `const transform = (user) => { ... }`,
+						Placeholder:    `"const transform = (user) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
 					{
 						Name:           "language",
 						Type:           types.Text().WithValues("JavaScript", "Python"),
-						Placeholder:    "JavaScript",
+						Placeholder:    `"JavaScript"`,
 						CreateRequired: true,
 						Description:    "The language of the function.",
 					},
@@ -125,6 +125,7 @@ func init() {
 		}),
 		Placeholder:    `...`,
 		CreateRequired: true,
+		UpdateRequired: true,
 		Description: "The mapping or function responsible for transforming unified users into app users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
@@ -176,7 +177,7 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
+						Description: "Indicates if the action is enabled once created.",
 					},
 					filterParameter,
 					matchingParameter,
@@ -321,7 +322,7 @@ func init() {
 						},
 						{
 							Name:           "exportMode",
-							Type:           types.Text(),
+							Type:           types.Text().WithValues("CreateOnly", "UpdateOnly", "CreateOrUpdate"),
 							CreateRequired: true,
 							Placeholder:    `"CreateOnly"`,
 							Description: "The mode in which users are exported:\n\n" +
@@ -332,7 +333,7 @@ func init() {
 						{
 							Name:        "updateOnDuplicates",
 							Type:        types.Boolean(),
-							Placeholder: `true`,
+							Placeholder: `false`,
 							Description: "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
 								"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged.\n\n" +
 								"This field does not affect user creation.",
@@ -353,13 +354,13 @@ func init() {
 										{
 											Name:        "source",
 											Type:        types.Text().WithCharLen(50_000),
-											Placeholder: `const transform = (user) => { ... }`,
+											Placeholder: `"const transform = (user) => { ... }"`,
 											Description: "The source code of the JavaScript or Python function.",
 										},
 										{
 											Name:        "language",
 											Type:        types.Text().WithValues("JavaScript", "Python"),
-											Placeholder: "JavaScript",
+											Placeholder: `"JavaScript"`,
 											Description: "The language of the function.",
 										},
 										{
