@@ -109,15 +109,17 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 		"GET    /actions/executions":                             workspace.Executions,
 		"GET    /actions/executions/{id}":                        workspace.Execution,
 		"GET    /actions/metrics/dates/{start}/{end}":            workspace.ActionMetricsPerDate,
-		"GET    /actions/{id}":                                   workspace.Action,
 		"GET    /actions/metrics/days/{days}":                    workspace.ActionMetricsPerDay,
 		"GET    /actions/metrics/hours/{hours}":                  workspace.ActionMetricsPerHour,
 		"GET    /actions/metrics/minutes/{minutes}":              workspace.ActionMetricsPerMinute,
+		"GET    /actions/{id}":                                   workspace.Action,
 		"GET    /connections":                                    workspace.Connections,
+		"GET    /connections/auth-token":                         workspace.AuthToken,
+		"GET    /connections/auth-url":                           connector.AuthCodeURL,
 		"GET    /connections/{id}":                               workspace.Connection,
 		"GET    /connections/{id}/action-types":                  connection.ActionTypes,   /* only admin */
-		"GET    /connections/{id}/actions/schemas/{target}":      connection.ActionSchemas, /* only admin */
 		"GET    /connections/{id}/actions/schemas/Events/{type}": connection.ActionSchemas, /* only admin */
+		"GET    /connections/{id}/actions/schemas/{target}":      connection.ActionSchemas, /* only admin */
 		"GET    /connections/{id}/event-write-keys":              connection.EventWriteKeys,
 		"GET    /connections/{id}/files/{path}":                  connection.File,
 		"GET    /connections/{id}/files/{path}/absolute":         connection.AbsolutePath,
@@ -127,8 +129,6 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 		"GET    /connections/{id}/tables/{name}":                 connection.TableSchema,
 		"GET    /connections/{id}/ui":                            connection.ServeUI, /* only admin */
 		"GET    /connections/{id}/users":                         connection.AppUsers,
-		"GET    /connections/auth-token":                         workspace.AuthToken,
-		"GET    /connections/auth-url":                           connector.AuthCodeURL,
 		"GET    /connectors":                                     api.Connectors,
 		"GET    /connectors/{name}":                              api.Connector,
 		"GET    /connectors/{name}/documentation":                api.ConnectorDocumentation,
