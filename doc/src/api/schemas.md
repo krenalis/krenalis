@@ -6,7 +6,7 @@
 
 Schemas are used by multiple endpoints to define the structure of users, events, and the source and destination schemas for apps, databases, and files.
 
-Below is an example of a user schema with the properties: `email`, `date_of_birth` and `ip_addresses`. 
+Below is an example of a user schema with the properties: `email`, `date_of_birth`, and `ip_addresses`. 
 
 ```json
 {
