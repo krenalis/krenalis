@@ -151,7 +151,7 @@ class API {
 	};
 
 	transformationLanguages = async (): Promise<TransformationLanguagesResponse> => {
-		return await call(`${this.apiURL}/transformation-languages`, http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/system/transformations/languages`, http.GET, this.workspaceID);
 	};
 
 	transformData = async (

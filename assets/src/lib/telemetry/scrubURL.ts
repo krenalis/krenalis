@@ -88,7 +88,7 @@ const REQUEST_PATTERNS = [
 	'/members/reset-password/!token',
 	'/reporting/errors/enabled',
 	'/skip-member-email-verification',
-	'/transformation-languages',
+	'/system/transformations/languages',
 	'/users',
 	'/users/schema',
 	'/users/schema/latest-alter',

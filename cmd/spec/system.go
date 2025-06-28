@@ -20,10 +20,10 @@ func init() {
 			"Currently they expose the languages supported for transformation functions.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "List supported languages",
+				Name:        "List transformation languages",
 				Description: "Returns a list of supported languages that can be used for transformation functions.",
 				Method:      GET,
-				URL:         "/v1/system/languages",
+				URL:         "/v1/system/transformations/languages",
 				Response: &Response{
 					Parameters: []types.Property{
 						{

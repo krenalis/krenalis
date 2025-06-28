@@ -14918,10 +14918,10 @@
             "description": "System endpoints provide generic information about the server. Currently they expose the languages supported for transformation functions.",
             "endpoints": [
                 {
-                    "name": "List supported languages",
+                    "name": "List transformation languages",
                     "description": "Returns a list of supported languages that can be used for transformation functions.",
                     "method": "GET",
-                    "url": "/v1/system/languages",
+                    "url": "/v1/system/transformations/languages",
                     "parameters": null,
                     "moreParameters": null,
                     "response": {

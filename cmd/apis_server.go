@@ -148,8 +148,8 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool,
 		"GET    /members/invitations/{token}":                    api.MemberInvitation,                 /* only admin */
 		"GET    /members/reset-password/{token}":                 api.ValidateMemberPasswordResetToken, /* only admin */
 		"GET    /skip-member-email-verification":                 api.SkipMemberEmailVerification,      /* only admin */
-		"GET    /telemetry/level":                                api.SentryTelemetryLevel,             /* only admin */
-		"GET    /transformation-languages":                       api.TransformationLanguages,
+		"GET    /system/transformations/languages":               api.TransformationLanguages,
+		"GET    /telemetry/level":                                api.SentryTelemetryLevel, /* only admin */
 		"GET    /users":                                          workspace.Users,
 		"GET    /users/schema":                                   workspace.UserSchema,
 		"GET    /users/schema/latest-alter":                      workspace.LatestAlterUserSchema,
