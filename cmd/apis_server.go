@@ -38,9 +38,6 @@ var resetPasswordEmail string
 // sessionMaxAge contains the max age property for the session cookie (6 hours).
 const sessionMaxAge = 6 * 60 * 60
 
-// LoginRequired is the error code returned by the API when login is required.
-const LoginRequired errors.Code = "LoginRequired"
-
 type sessionCookie struct {
 	Organization int
 	Member       int
