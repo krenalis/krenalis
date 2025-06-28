@@ -904,7 +904,7 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 			return nil, err
 		}
 		if count == maxKeysPerConnection {
-			return nil, errors.Unprocessable(TooManyEventWriteKeys, "connection %d has already %d event write keys", n.Connection, maxKeysPerConnection)
+			return nil, errors.Unprocessable(TooManyEventWriteKeys, "connection %d already has %d event write keys", n.Connection, maxKeysPerConnection)
 		}
 		_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, created_at) VALUES ($1, $2, $3)",
 			n.Connection, n.Key, n.CreatedAt)
