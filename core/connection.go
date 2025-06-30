@@ -1591,7 +1591,29 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			}
 		case "application/x-ndjson":
 			if utf8.Valid(body) {
-				b.Write(body)
+				dec := json.NewDecoder(bytes.NewReader(body))
+				firstValue := true
+				for {
+					value, err := dec.ReadValue()
+					if err != nil {
+						if err == io.EOF {
+							if !firstValue {
+								bodyWritten = true
+							}
+						}
+						break
+					}
+					if !firstValue {
+						b.WriteByte('\n')
+					}
+					indented, err := json.Indent(value, "", "    ")
+					if err == nil {
+						b.Write(indented)
+					} else {
+						b.Write(value)
+					}
+					firstValue = false
+				}
 				bodyWritten = true
 			}
 		}
