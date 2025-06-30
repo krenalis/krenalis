@@ -2006,7 +2006,7 @@ func (this *Connection) storage() *connectors.FileStorage {
 // errors.UnprocessableError error with code EventTypeNotExist, if the
 // connection does not have the event type.
 func (this *Connection) validateTargetAndEventType(ctx context.Context, target Target, eventType string) (types.Type, error) {
-	// Perform a formal validation.
+	// Perform a formal validation first.
 	if target != TargetUser && target != TargetGroup && target != TargetEvent {
 		return types.Type{}, errors.BadRequest("target %d is not valid", int(target))
 	}
@@ -2022,7 +2022,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 			return types.Type{}, errors.BadRequest("source connections do not have an event type")
 		}
 		if c.Role == state.Destination && eventType == "" {
-			return types.Type{}, errors.BadRequest("destination connections want an event type")
+			return types.Type{}, errors.BadRequest("destination connections require an event type")
 		}
 	}
 	// Check if the target is supported by the connection.

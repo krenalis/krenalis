@@ -16,8 +16,7 @@ import (
 	"github.com/meergo/meergo/json"
 )
 
-// Applies determines whether where applies to the provided properties. Returns
-// an error if any property in the where is not found in the properties map.
+// Applies reports whether where matches the given properties.
 func Applies(where *state.Where, properties map[string]any) bool {
 	if where == nil {
 		return true

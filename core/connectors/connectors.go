@@ -402,7 +402,7 @@ func connectorError(err error) error {
 }
 
 // formatLastChangeTimeColumn formats a time.Time value with the given format.
-// Excel formal is not allowed.
+// Excel format is not allowed.
 //
 // format must be a valid change time format; for accepted formats, refer to the
 // 'core.validateLastChangeTimeFormat' function.

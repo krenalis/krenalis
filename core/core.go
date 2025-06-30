@@ -678,7 +678,7 @@ func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
-// If a password reset request with the the given password reset token does not
+// If a password reset request with the given password reset token does not
 // exist or if the token is expired, it returns a NotFoundError error.
 func (core *Core) ValidateMemberPasswordResetToken(ctx context.Context, token string) error {
 	core.mustBeOpen()

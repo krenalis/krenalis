@@ -617,11 +617,11 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			}
 			if values := typ.Values(); values != nil {
 				if !slices.Contains(values, v) {
-					return nil, inputValidationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
+					return nil, inputValidationErrorf(name, "contains an unsupported value %q", errors.Abbreviate(v, 20))
 				}
 			} else if rx := typ.Regexp(); rx != nil {
 				if !rx.MatchString(v) {
-					return nil, inputValidationErrorf(name, "has a not allowed value of %q", errors.Abbreviate(v, 20))
+					return nil, inputValidationErrorf(name, "contains an unsupported value %q", errors.Abbreviate(v, 20))
 				}
 			} else {
 				if l, ok := typ.ByteLen(); ok && len(v) > l {

@@ -176,7 +176,7 @@ func Test_Records(t *testing.T) {
 				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "name": "Jake Thompson"}},
 				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "name": "Sophia Harris"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
 				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Properties: map[string]any{"age": 58, "id": "2", "name": "Emily Davis"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
-				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Properties: map[string]any{"age": 31, "id": "3", "name": "Michael Carter"}, Err: errors.New("duplicates found for the matching property \"id\" in the the app users")},
+				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Properties: map[string]any{"age": 31, "id": "3", "name": "Michael Carter"}, Err: errors.New("duplicates found for the matching property \"id\" in the app users")},
 			},
 		},
 		{
@@ -197,7 +197,7 @@ func Test_Records(t *testing.T) {
 				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "name": "Jake Thompson"}},
 				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "name": "Sophia Harris"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
 				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Properties: map[string]any{"age": 58, "id": "2", "name": "Emily Davis"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
-				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Properties: map[string]any{"age": 31, "id": "3", "name": "Michael Carter"}, Err: errors.New("duplicates found for the matching property \"id\" in the the app users")},
+				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Properties: map[string]any{"age": 31, "id": "3", "name": "Michael Carter"}, Err: errors.New("duplicates found for the matching property \"id\" in the app users")},
 				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", ExternalID: "", Properties: map[string]any{"age": 25, "id": "6", "name": "Emily Johnson"}},
 				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Properties: map[string]any{"age": 12, "id": "7", "name": "Daniel Brown"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
 				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Properties: map[string]any{"age": 77, "id": "7", "name": "James Williams"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},

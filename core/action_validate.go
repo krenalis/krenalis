@@ -128,7 +128,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		return errors.BadRequest("target is not supported by the file format")
 	}
 
-	// First, do formal validations.
+	// First, perform formal validations.
 
 	// Validate the name.
 	if err := util.ValidateStringField("name", action.Name, 60); err != nil {
@@ -357,7 +357,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	// Validate the last change time column.
 	if action.LastChangeTimeColumn != "" {
 		if !types.IsValidPropertyName(action.LastChangeTimeColumn) {
-			return errors.BadRequest("last change time column is a not valid property name")
+			return errors.BadRequest("last change time column is not a valid property name")
 		}
 		if utf8.RuneCountInString(action.LastChangeTimeColumn) > 1024 {
 			return errors.BadRequest("last change time column is longer than 1024 runes")
