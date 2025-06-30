@@ -33,7 +33,7 @@ type SyntaxError struct {
 	offset int64
 }
 
-// NewSyntaxError returns a new SyntaxError with the provided error and offer.
+// NewSyntaxError returns a new SyntaxError with the provided error and offset.
 func NewSyntaxError(err error, offset int64) *SyntaxError {
 	return &SyntaxError{err: err, offset: offset}
 }
@@ -67,7 +67,7 @@ func Compact(data []byte) ([]byte, error) {
 	return v, nil
 }
 
-// Decode deserialize JSON read from r into the value pointed by out.
+// Decode deserializes JSON read from r into the value pointed to by out.
 // It returns an error if out is nil or is not a pointer.
 func Decode(r io.Reader, out any) error {
 	err := json.UnmarshalRead(r, out)
@@ -89,7 +89,7 @@ func Encode(out io.Writer, v any) error {
 // Indent returns a copy of data with the JSON code indented and object keys
 // sorted. Each element in a JSON object or array begins on a new line with the
 // specified prefix followed by copies of the indent string, added according to
-// nesting depth. The returned does not start or end with the prefix or any
+// nesting depth. The returned data does not start or end with the prefix or any
 // indentation.
 //
 // Example usage:
@@ -215,9 +215,9 @@ func Valid(data []byte) bool {
 	return jsontext.Value(data).IsValid()
 }
 
-// Validate validates data and returns a SyntaxError error if data is not valid
-// JSON encoding and properly encoded in UTF-8. For a simple boolean check, see
-// the Valid function.
+// Validate checks data and returns a *SyntaxError if it is not valid JSON or is
+// not properly encoded in UTF-8. For a simple boolean check, see the Valid
+// function.
 func Validate(data []byte) error {
 	dec := getDecoder(data)
 	defer putDecoder(dec)

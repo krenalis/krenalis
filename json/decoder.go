@@ -37,8 +37,8 @@ func (d *Decoder) ByteOffset() int64 {
 }
 
 // Decode reads the next value, unmarshals it into the value pointed to by out,
-// and advancing the read offset. If the read value cannot be stored into out,
-// it returns an error.
+// and advances the read offset. If the read value cannot be stored into out, it
+// returns an error.
 func (d *Decoder) Decode(out any) error {
 	return json.UnmarshalDecode(&d.dec, out)
 }

@@ -119,7 +119,6 @@ func (b *Buffer) EncodeKeyValue(key string, value any) error {
 	return nil
 }
 
-// EncodeQuoted is like [Encode] but wraps the resulting JSON in quotes as
 // EncodeQuoted is like [Encode] but wraps the resulting JSON in quotes as a
 // JSON string.
 func (b *Buffer) EncodeQuoted(value any) error {

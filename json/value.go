@@ -236,7 +236,7 @@ func (v Value) Kind() Kind {
 
 // Lookup returns the value at the specified path in v as a sub-slice of v.
 //
-// If any part of the path does not exist, it returns a NotFoundError. The error
+// If any part of the path does not exist, it returns a NotExistError. The error
 // contains the Index, which indicates the position in the path where the lookup
 // failed, and Kind, representing the kind of the JSON value where the property
 // was expected but not found.
@@ -367,7 +367,7 @@ func (v Value) Uint() (uint, error) {
 	return uint(n), nil
 }
 
-// Unmarshal unmarshals v into the value pointed by out.
+// Unmarshal unmarshals v into the value pointed to by out.
 // It returns an error if out is nil or is not a pointer, or if v cannot be
 // decoded into out.
 func (v Value) Unmarshal(out any) error {
