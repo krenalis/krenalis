@@ -224,6 +224,38 @@ func checkLTrim(args [][]part, schema, dt types.Type, nullable bool, properties 
 	return types.Text(), nil
 }
 
+// checkMap type checks a call to 'map' with the given arguments.
+func checkMap(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	if len(args)%2 != 0 {
+		return types.Type{}, errors.New("'map' function requires an even number of arguments")
+	}
+
+	keys := make(map[string]struct{}, len(args)/2)
+	for i := 0; i < len(args); i += 2 {
+		if len(args[i]) != 1 || args[i][0].path.elements != nil {
+			return types.Type{}, errors.New("'map' key is not constant")
+		}
+		if args[i][0].typ.Kind() != types.TextKind {
+			return types.Type{}, errors.New("'map' key is not text")
+		}
+
+		if err := typeCheck(args[i], schema, types.Text(), false, properties); err != nil {
+			return types.Type{}, err
+		}
+		if err := typeCheck(args[i+1], schema, types.JSON(), false, properties); err != nil {
+			return types.Type{}, err
+		}
+
+		key := args[i][0].value.(string)
+		if _, ok := keys[key]; ok {
+			return types.Type{}, errors.New("duplicate key in 'map' function")
+		}
+		keys[key] = struct{}{}
+	}
+
+	return types.Map(types.JSON()), nil
+}
+
 // checkNe type checks a call to 'ne' with the given arguments.
 func checkNe(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	if len(args) != 2 {
@@ -430,6 +462,8 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 			expr[i].typ, err = checkLower(p.args, schema, typ, n, properties)
 		case "ltrim":
 			expr[i].typ, err = checkLTrim(p.args, schema, typ, n, properties)
+		case "map":
+			expr[i].typ, err = checkMap(p.args, schema, typ, n, properties)
 		case "ne":
 			expr[i].typ, err = checkNe(p.args, schema, typ, n, properties)
 		case "not":

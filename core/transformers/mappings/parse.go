@@ -41,6 +41,7 @@ var numArguments = map[string]int{
 	"len":        1,
 	"lower":      1,
 	"ltrim":      1,
+	"map":        2,
 	"ne":         2,
 	"not":        1,
 	"or":         2,

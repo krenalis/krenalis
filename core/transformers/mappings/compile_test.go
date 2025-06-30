@@ -286,6 +286,16 @@ func Test_Compile(t *testing.T) {
 		{expr: "ltrim(null)", dt: types.Text(), expected: nil},
 		{expr: "ltrim(12.67)", dt: types.Text(), expected: "12.67"},
 
+		// map.
+		{expr: "map()", dt: types.Map(types.JSON()), expected: map[string]any{}},
+		{expr: "map('a', 5)", dt: types.Map(types.JSON()), expected: map[string]any{"a": json.Value("5")}},
+		{expr: "map('foo', 'bar', 'baz', true)", dt: types.Map(types.JSON()), expected: map[string]any{"foo": json.Value(`"bar"`), "baz": json.Value("true")}},
+		{expr: "map('a', 1, 'b')", dt: types.Map(types.JSON()), compileErr: errors.New("'map' function requires an even number of arguments")},
+		{expr: "map(1, true)", dt: types.Map(types.JSON()), compileErr: errors.New("'map' key is not text")},
+		{expr: "map('f' 'o' 'o', 1)", dt: types.Map(types.JSON()), expected: map[string]any{"foo": json.Value("1")}},
+		{expr: "map(a, 5)", dt: types.Map(types.JSON()), compileErr: errors.New("'map' key is not constant")},
+		{expr: "map('a', 1, 'a', 2)", dt: types.Map(types.JSON()), compileErr: errors.New("duplicate key in 'map' function")},
+
 		// ne.
 		{expr: "ne(1, 2)", dt: types.Boolean(), expected: true},
 		{expr: "ne(1, 1)", dt: types.Boolean(), expected: false},

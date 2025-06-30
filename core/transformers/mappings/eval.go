@@ -416,6 +416,39 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 			return nil, types.Text(), nil
 		}
 		return strings.TrimLeftFunc(v.(string), unicode.IsSpace), types.Text(), nil
+	case "map":
+		m := make(map[string]any, len(p.args)/2)
+		for i := 0; i < len(p.args); i += 2 {
+			key := p.args[i][0].value.(string)
+
+			valExpr := p.args[i+1]
+			v, _, err := eval(valExpr, source, properties)
+			if err != nil {
+				return nil, types.Type{}, err
+			}
+
+			if v == nil && len(valExpr) == 1 && valExpr[0].value == nil && valExpr[0].args == nil &&
+				valExpr[0].path.elements != nil {
+				// Single property path with no value: omit the key.
+				continue
+			}
+
+			switch v.(type) {
+			case nil:
+				v = json.Value("null")
+			case json.Value:
+			default:
+				if encodeSorted {
+					var b json.Buffer
+					_ = b.EncodeSorted(v)
+					v, _ = b.Value()
+				} else {
+					v, _ = json.Marshal(v)
+				}
+			}
+			m[key] = v
+		}
+		return m, types.Map(types.JSON()), nil
 	case "ne":
 		v0, t0, err := eval(p.args[0], source, properties)
 		if err != nil {

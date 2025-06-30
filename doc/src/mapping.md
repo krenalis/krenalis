@@ -387,6 +387,24 @@ ltrim(null)  -> null
 
 Both the argument and the result of the  `trim` function have type `text`.
 
+#### **map** function
+
+The `map` function builds a `map` from the provided key-value pairs. It must be
+called with an even number of arguments where text keys and values
+alternate. Keys are case-insensitive, must be constant `text`, and must be unique
+(though they can be empty); duplicate keys cause a compile error. For example:
+```
+┌────────────────────────────────────────────┐
+│ map('foo', traits.name, 'active', true)    │ ->  customer_attributes
+└────────────────────────────────────────────┘
+```
+
+Calling `map()` with no arguments returns an empty map.
+
+If a value is just a single property that has no value, the corresponding key is omitted from the resulting map.
+
+The result of the `map` function has type `map(json)`.
+
 #### **ne** function
 
 The `ne` function takes two values and returns `true` if they are not equal; otherwise, it returns `false`. For example:

@@ -67,6 +67,12 @@ const MEERGO_FUNCTIONS: MeergoFunction[] = [
 		description: 'Removes all leading Unicode whitespace from s',
 	},
 	{
+		name: 'map',
+		params: ['...pairs: text,any'],
+		return: 'map(json)',
+		description: 'Builds a map from text keys and values',
+	},
+	{
 		name: 'ne',
 		params: ['a: any', 'b: any'],
 		return: 'boolean',

@@ -200,7 +200,18 @@ func Test_Transform(t *testing.T) {
 			name:        `A property with a nil value assigned to a non-nullable json property -> nil as JSON`,
 			expressions: map[string]string{"C": "c.z"},
 			properties:  map[string]any{"c.z": nil},
-			expected:    map[string]any{}, // TODO(marco): review.
+			expected:    map[string]any{},
+		},
+		{
+			name:        `A property without a value assigned to a map(json) key -> no properties`,
+			expressions: map[string]string{"C": "map('k', a, 'h', 5)"},
+			expected:    map[string]any{"C": json.Value(`{"h":5}`)},
+		},
+		{
+			name:        `A property with a nil value assigned to a map(json) key -> no properties`,
+			expressions: map[string]string{"C": "map('k', c.z, 'h', 5)"},
+			properties:  map[string]any{"c.z": nil},
+			expected:    map[string]any{"C": json.Value(`{"h":5}`)},
 		},
 		{
 			name:        `A property with an empty string assigned to a non-nullable json property -> the empty string as JSON`,
