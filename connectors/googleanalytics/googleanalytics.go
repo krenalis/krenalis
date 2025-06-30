@@ -186,6 +186,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			}
 			eventsWriter.WriteByte(',')
 		}
+		size := eventsWriter.Len()
 		eventsWriter.WriteByte('{')
 		eventsWriter.EncodeKeyValue("name", event.Type)
 		if event.Schema.Valid() {
@@ -197,12 +198,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		}
 		eventsWriter.EncodeKeyValue("timestamp_micros", event.Raw.Timestamp().UnixMicro())
 		eventsWriter.WriteByte('}')
-		n++
-		if n == 25 {
-			// From the Google Analytics documentation: «Requests can have a maximum of 25 events.»
-			// https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
-			break
-		}
+
 		if eventsWriter.Len()+300 > maxEventRequestSize {
 			// From the Google Analytics documentation: «The post body must be smaller than 130kB.»
 			// https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
@@ -211,6 +207,15 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			// the body, which will be built later, the JSON Object that
 			// encloses "events" (so the various keys "client_id", "user_id",
 			// etc.).
+			eventsWriter.Truncate(size)
+			events.Skip()
+			break
+		}
+
+		n++
+		if n == 25 {
+			// From the Google Analytics documentation: «Requests can have a maximum of 25 events.»
+			// https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
 			break
 		}
 	}
