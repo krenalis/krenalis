@@ -86,10 +86,11 @@ func Encode(out io.Writer, v any) error {
 	return err
 }
 
-// Indent returns a copy of data with the JSON code indented. Each element in a
-// JSON object or array begins on a new line with the specified prefix followed
-// by copies of the indent string, added according to nesting depth. The
-// returned does not start or end with the prefix or any indentation.
+// Indent returns a copy of data with the JSON code indented and object keys
+// sorted. Each element in a JSON object or array begins on a new line with the
+// specified prefix followed by copies of the indent string, added according to
+// nesting depth. The returned does not start or end with the prefix or any
+// indentation.
 //
 // Example usage:
 //
@@ -99,12 +100,22 @@ func Encode(out io.Writer, v any) error {
 // It panics if prefix or indent strings do not contain only spaces or tabs
 // (' ' or '\t').
 func Indent(data []byte, prefix, indent string) ([]byte, error) {
-	if !Valid(data) {
+	var v any
+	if err := json.Unmarshal(data, &v); err != nil {
 		return nil, ErrInvalidJSON
 	}
-	v := jsontext.Value(slices.Clone(data))
-	_ = v.Indent(jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent))
-	return v, nil
+	var buf bytes.Buffer
+	enc := jsontext.NewEncoder(&buf, jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent))
+	err := json.MarshalEncode(enc, v,
+		json.Deterministic(true),
+		json.FormatNilMapAsNull(true),
+		json.FormatNilSliceAsNull(true),
+	)
+	if err != nil {
+		return nil, err
+	}
+	buf.Truncate(buf.Len() - 1)
+	return slices.Clone(buf.Bytes()), nil
 }
 
 // Marshal encodes the given data.

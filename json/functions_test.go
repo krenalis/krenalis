@@ -45,7 +45,7 @@ func Test_Indent(t *testing.T) {
 	}{
 		{`null`, `null`, nil},
 		{" 56.23\t", `56.23`, nil},
-		{"\n\t    { \"foo\": true, \"boo\" : [ 1,2, 3 ]}\n ", "{\n \t\"foo\": true,\n \t\"boo\": [\n \t\t1,\n \t\t2,\n \t\t3\n \t]\n }", nil},
+		{"\n\t    { \"foo\": true, \"boo\" : [ 1,2, 3 ]}\n ", "{\n \t\"boo\": [\n \t\t1,\n \t\t2,\n \t\t3\n \t],\n \t\"foo\": true\n }", nil},
 		{" [ \"a\", \"b\" ]", "[\n \t\"a\",\n \t\"b\"\n ]", nil},
 		{"", "", ErrInvalidJSON},
 		{"\"\xFF\"", "", ErrInvalidJSON},
