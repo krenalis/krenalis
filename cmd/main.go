@@ -9,6 +9,7 @@ package cmd
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -36,6 +37,14 @@ import (
 //	    cmd.Main(assets)
 //	}
 func Main(assets fs.FS) {
+
+	var help bool
+	flag.BoolVar(&help, "help", false, "print the help for meergo and exit")
+	flag.Parse()
+	if help {
+		flag.Usage()
+		os.Exit(0)
+	}
 
 	if assets != nil {
 		var err error
