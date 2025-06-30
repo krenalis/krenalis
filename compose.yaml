@@ -36,6 +36,7 @@ services:
       MEERGO_DB_USERNAME: meergo
       MEERGO_DB_PASSWORD: meergo
       MEERGO_DB_DATABASE: meergo
+      MEERGO_DB_SCHEMA:
 
       # These settings configure Meergo to run optimally within Docker, so it is
       # not recommended that you change them.
