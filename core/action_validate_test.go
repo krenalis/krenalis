@@ -459,6 +459,34 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.App,
 		},
 		{
+			name: "GOOD: Destination/App/User - update on duplicates allowed",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out",
+				},
+				UpdateOnDuplicates: true,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+		},
+		{
 			name: "GOOD: Destination/App/User - with transformation",
 			action: ActionToSet{
 				Name: "Export users",
@@ -3025,6 +3053,28 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
 			err:                     "table name is not allowed",
+		},
+		{
+			name: "BAD: Source/App/User - update on duplicates is not allowed",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				UpdateOnDuplicates: true,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			err:                     "update on duplicates is not allowed",
 		},
 	}
 

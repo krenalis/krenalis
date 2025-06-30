@@ -633,8 +633,16 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		}
 	}
 
-	// Check the connections for which the transformation is prohibited.
 	targetUsersOrGroups := v.target == state.TargetUser || v.target == state.TargetGroup
+
+	// Check that UpdateOnDuplicates is allowed.
+	updateOnDuplicatesAllowed := v.connection.connector.typ == state.App &&
+		v.connection.role == state.Destination && targetUsersOrGroups
+	if !updateOnDuplicatesAllowed && action.UpdateOnDuplicates {
+		return errors.BadRequest("update on duplicates is not allowed")
+	}
+
+	// Check the connections for which the transformation is prohibited.
 	transformationProhibited :=
 		(v.connection.role == state.Source && v.connection.connector.typ == state.SDK && v.target == state.TargetEvent) ||
 			(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
