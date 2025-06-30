@@ -6,7 +6,7 @@ This file contains information useful to Meergo developers.
 
 - [Before Pushing Commits to `main`](#before-pushing-commits-to-main)
 - [How to run tests using GitHub Action](#how-to-run-tests-using-github-action)
-- [Sentry and Mixpanel Telemetry](#sentry-and-mixpanel-telemetry)
+- [Telemetry](#telemetry)
 - [Expose and see Meergo metrics](#expose-and-see-meergo-metrics)
 - [Local Testing Cookbook](#local-testing-cookbook)
   - [Testing Snowflake](#testing-snowflake)
@@ -57,29 +57,28 @@ go run ./commit --help
 
 > ⌛ Note that this may take some time, even something on the order of about ten minutes.
 
-## Sentry and Mixpanel Telemetry
+## Telemetry
 
 Telemetry can be enabled at various levels, depending on the value of the environment variable `MEERGO_TELEMETRY_LEVEL`:
 
-| Value for `MEERGO_TELEMETRY_LEVEL` | Data sent to Sentry            | Data sent to Mixpanel |
-|------------------------------------|--------------------------------|-----------------------|
-| `none`                             | *(none)*                       | *(none)*              |
-| `errors`                           | Go server panics, admin errors | *(none)*              |
-| `stats`                            | *(none)*                       | State changes         |
-| `all` or empty string/not set      | Go server panics, admin errors | State changes         |
+| Value for `MEERGO_TELEMETRY_LEVEL` | Data sent to Sentry            | Data sent to chichi.open2b.net |
+|------------------------------------|--------------------------------|--------------------------------|
+| `none`                             | *(none)*                       | *(none)*                       |
+| `errors`                           | Go server panics, admin errors | *(none)*                       |
+| `stats`                            | *(none)*                       | State changes                  |
+| `all` or empty string/not set      | Go server panics, admin errors | State changes                  |
 
-The `MEERGO_TELEMETRY_LEVEL` environment variable is the only thing that can enable or disable telemetry. Anything else (how Meergo is compiled, build flags, availability of Debug IDs, etc...) does not impact the sending of data to Sentry and/or Mixpanel.
+The `MEERGO_TELEMETRY_LEVEL` environment variable is the only thing that can enable or disable telemetry. Anything else (how Meergo is compiled, build flags, availability of Debug IDs, etc...) does not impact the sending of data to Sentry and/or chichi.open2b.net.
 
 Also, note that:
 
-* **Personal data is never sent**. All error and statistics data sent to Sentry and Mixpanel contain no personal information. For example, this is why only panic errors are eventually sent to Sentry, and not slog errors—because panics have been verified not to include personal data, while this cannot currently be guaranteed for slog.
+* **Personal data is never sent**. All error and statistics data sent to Sentry and chichi.open2b.net contain no personal information. For example, this is why only panic errors are eventually sent to Sentry, and not slog errors—because panics have been verified not to include personal data, while this cannot currently be guaranteed for slog.
 
 * **Admin stack traces are available only under certain conditions**. The ability to see stack traces of admin errors in Sentry only exists if (1) Meergo is running in production mode (i.e., non-dev mode) and (2) the Meergo assets are unchanged from any commit in the repository, for which the GitHub Action sent source maps with Debug IDs to sentry. So, in any other case, the errors displayed on Sentry may not show a correct stack trace.
 
 * **Admin errors are sent to Sentry through a server tunnel**. This avoids the problem of adblockers blocking data from being sent directly to Sentry. This does not cause any inconvenience to the user, as they can disable telemetry at any time through the environment variable.
 
-* **Statistics are sent to Mixpanel through a Meergo proxy**. Statistics are sent to Mixpanel through a Meergo instance running on chichi.open2b.net, which acts as a proxy for the requests and does not store any data, but forwards it to Mixpanel in real time.
-
+* **About chichi.open2b.net**. chichi.open2b.net is an instance of Meergo that receives data sent from various Meergo instances, with the purpose of obtaining anonymous statistics on Meergo usage.
 
 ## Expose and see Meergo metrics
 
