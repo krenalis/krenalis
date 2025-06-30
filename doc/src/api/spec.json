@@ -708,7 +708,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false\n\nThis field does not affect user creation."
+                            "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
                         },
                         {
                             "name": "transformation",
@@ -1031,7 +1031,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false\n\nThis field does not affect user creation."
+                            "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
                         },
                         {
                             "name": "transformation",

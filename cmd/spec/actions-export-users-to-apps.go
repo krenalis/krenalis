@@ -66,7 +66,7 @@ func init() {
 		Type:        types.Boolean(),
 		Placeholder: `false`,
 		Description: "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
-			"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false\n\n" +
+			"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\n" +
 			"This field does not affect user creation.",
 	}
 	transformationParameter := types.Property{
