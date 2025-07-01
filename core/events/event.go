@@ -42,7 +42,7 @@ var Schema = types.Object([]types.Property{
 			{
 				Name: "browser",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
+					{Name: "name", Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
 					{Name: "other", Type: types.Text()},
 					{Name: "version", Type: types.Text()},
 				}),
@@ -107,7 +107,7 @@ var Schema = types.Object([]types.Property{
 			{
 				Name: "os",
 				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+					{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
 					{Name: "version", Type: types.Text()},
 				}),
 				ReadOptional: true,

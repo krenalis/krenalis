@@ -116,6 +116,9 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 	} else {
 		row[9], row[10], row[11] = "", "", ""
 	}
+	if row[9] == "" {
+		row[9] = "None"
+	}
 
 	// campaign
 	if campaign, ok := eventContext["campaign"].(map[string]any); ok {
@@ -191,6 +194,9 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 		row[39] = os["version"]
 	} else {
 		row[38], row[39] = "", ""
+	}
+	if row[38] == "" {
+		row[38] = "None"
 	}
 
 	// page

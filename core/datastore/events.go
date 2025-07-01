@@ -112,6 +112,11 @@ func init() {
 		name := eventColumnNameFromPropertyPath[path]
 		c := meergo.Column{Name: name, Type: p.Type, Nullable: p.Nullable}
 		eventColumnByProperty[path] = c
+		if name == "context_browser_name" || name == "context_os_name" {
+			values := append(c.Type.Values(), "None")
+			typ := types.Text().WithValues(values...)
+			eventColumnByProperty[path] = meergo.Column{Name: name, Type: typ, Nullable: p.Nullable}
+		}
 		if path != "user" {
 			eventsColumnsForMerge[i] = c
 			i++

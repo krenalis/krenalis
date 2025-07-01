@@ -510,7 +510,16 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	}
 
 	// UserAgent.
-	if _, ok := context["userAgent"].(string); !ok {
+	if ua, ok := context["userAgent"].(string); ok {
+		// If the user agent is set to "N/A", this means that the user agent is
+		// not applicable to this event, so it should not be taken from the HTTP
+		// request either and the event should remain without a user agent.
+		if ua == "N/A" {
+			context["userAgent"] = ""
+		}
+	} else {
+		// User agent not provided in context, so it must be read from the
+		// request.
 		context["userAgent"] = d.userAgent
 	}
 
@@ -809,7 +818,7 @@ var contextSections = map[string]*contextSection{
 	"browser": {
 		name: "browser",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
+			{name: "name", typ: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
 			{name: "other", typ: types.Text()},
 			{name: "version", typ: types.Text()},
 		},
@@ -866,7 +875,7 @@ var contextSections = map[string]*contextSection{
 	"os": {
 		name: "os",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+			{name: "name", typ: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
 			{name: "version", typ: types.Text()},
 		},
 	},

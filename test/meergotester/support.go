@@ -243,6 +243,15 @@ func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSe
 	return id
 }
 
+func (c *Meergo) CreateMeergoAPISource(name string, linkedConnections []int) int {
+	return c.CreateConnection(ConnectionToCreate{
+		Name:              name,
+		Role:              Source,
+		Connector:         "Meergo API",
+		LinkedConnections: linkedConnections,
+	})
+}
+
 func (c *Meergo) CreateJavaScriptSource(name string, linkedConnections []int) int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
@@ -298,6 +307,21 @@ func (c *Meergo) EventURL() string {
 	var url string
 	c.MustCall("GET", "/api/v1/event-url", nil, &url)
 	return url
+}
+
+func (c *Meergo) Events(properties []string) []map[string]any {
+	queryString := url.Values{
+		"properties": properties,
+		"order":      []string{"timestamp"},
+		"orderDesc":  []string{"true"},
+		"first":      []string{"0"},
+		"limit":      []string{"10"},
+	}
+	var response struct {
+		Events []map[string]any `json:"events"`
+	}
+	c.MustCall("GET", "/api/v1/events"+"?"+queryString.Encode(), nil, &response)
+	return response.Events
 }
 
 func (c *Meergo) Execution(id int) Execution {
