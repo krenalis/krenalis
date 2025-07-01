@@ -178,9 +178,9 @@ func (app *App) Schema(ctx context.Context, target state.Target, eventType strin
 // SchemaAsRole is like Schema but returns the schema as the provided role,
 // instead of the role of the app's connection.
 //
-// If the target is state.TargetEvent and the event type refers to an app event for
-// which no schema is expected, this method returns the invalid type and no
-// errors.
+// If the target is state.TargetEvent and the event type refers to an app event
+// for which no schema is expected, this method returns an invalid type with no
+// error.
 //
 // If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
 // error. If the connector returns an error, it returns a *UnavailableError

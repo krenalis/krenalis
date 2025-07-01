@@ -157,7 +157,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			req.Header.Set("Authorization", "Bearer "+accessToken)
 		}
 
-		// Sent the request.
+		// Send the request.
 		res, err := c.http.transport.RoundTrip(req)
 		if err != nil {
 			if retriable {
@@ -209,7 +209,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			return nil, ctx.Err()
 		}
 
-		// Wait that the response's body is closed.
+		// Wait for the response body to close.
 		select {
 		case <-closed:
 		case <-ctx.Done():

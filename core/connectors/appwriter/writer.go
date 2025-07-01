@@ -290,7 +290,7 @@ func (w *Writer) skip() {
 //
 //  1. Calls the connector's Upsert method.
 //  2. Collects consumed IDs and associated errors.
-//  3. Sends acknowledgements (acks).
+//  3. Sends acknowledgments (acks).
 //  4. Compacts records.
 //
 // It runs in its own goroutine when records are available.

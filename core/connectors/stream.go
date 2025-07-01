@@ -26,8 +26,8 @@ type streamConnector interface {
 	// notify that the event has been received. The connector resends the event if
 	// not acknowledged.
 	//
-	// Caller do not modify the event data, even temporarily, and event is not
-	// retained after the ack function has been called.
+	// Callers must not modify the event data, even temporarily, and the event is
+	// not retained after the ack function has been called.
 	//
 	// Receive can be used by multiple goroutines at the same time.
 	Receive(ctx context.Context) (event []byte, ack func(), err error)
@@ -35,8 +35,8 @@ type streamConnector interface {
 	// Send sends an event to the stream. If ack is not nil, connector calls ack
 	// when the event has been stored or when an error occurred.
 	//
-	// Send can modify the event data, but event is not retained after the ack
-	// function has been called.
+	// Send may modify the event data, but the event slice is not retained after the
+	// ack function has been called.
 	//
 	// Send can be used by multiple goroutines at the same time.
 	Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error
@@ -108,7 +108,7 @@ func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), er
 // Send sends an event to the stream. If ack is not nil, the stream calls ack
 // when the event has been stored or when an error occurred.
 //
-// Send can modify the event data, but the event slice is not retained after the
+// Send may modify the event data, but the event slice is not retained after the
 // ack function has been called.
 //
 // If the connector returns an error, it returns a *UnavailableError error.

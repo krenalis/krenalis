@@ -34,9 +34,9 @@ type uiHandlerConnector interface {
 	ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error)
 }
 
-// ServeActionUI serves the user interface of the provided file action and
-// returns the new serialized interface to be sent back to the client. event is
-// the event to be served, and settings are the format settings.
+// ServeActionUI serves the user interface of the specified file action and
+// returns the serialized interface to send back to the client. event indicates
+// the event to serve and settings are the format settings.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
 // *InvalidSettingsError error if the settings are not valid, and an
@@ -61,8 +61,8 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 }
 
 // ServeConnectionUI serves the user interface of the provided connection and
-// returns the new serialized interface to be sent back to the client. event
-// is the event to be served, and settings are the settings.
+// returns the serialized interface to send back to the client. event specifies
+// the event to serve, and settings are the connection settings.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
 // *InvalidSettingsError error if the settings are not valid, and an
@@ -131,8 +131,8 @@ type ConnectorConfig struct {
 }
 
 // ServeConnectorUI serves the user interface of the provided connector and
-// returns the new serialized interface to be sent back to the client. event
-// is the event to be served, and settings are the settings.
+// returns the serialized interface to send back to the client. event specifies
+// the event to serve, and settings are the connector settings.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
 // *InvalidSettingsError error if the settings are not valid, and an

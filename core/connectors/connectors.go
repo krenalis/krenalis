@@ -36,9 +36,9 @@ import (
 // maxSettingsLen is the maximum length of settings in runes.
 const maxSettingsLen = 10_000
 
-// AckFunc is the function called when a write of one or more records
-// terminates. ids represents the ack identifiers, and the parameter err
-// represents the error that occurred while writing the records, if any.
+// AckFunc is the function invoked when a write of one or more records
+// terminates. ids represents the acknowledgment identifiers and err is the
+// error that occurred while writing the records, if any.
 type AckFunc func(ids []string, err error)
 
 // Authorization represents a granted OAuth authorization.
@@ -46,7 +46,7 @@ type Authorization struct {
 	AccountCode  string    // code of the account.
 	AccessToken  string    // access token.
 	RefreshToken string    // refresh token.
-	ExpiresIn    time.Time // expire time of the access token.
+	ExpiresIn    time.Time // expiration time of the access token.
 }
 
 // CommittableWriter is the interface implemented by writers that support
@@ -76,7 +76,7 @@ type LastChangeTimeColumn struct {
 // PlaceholderError is an error representing a placeholder error.
 type PlaceholderError string
 
-// Error implements the interface "error" for PlaceholderError.
+// Error implements the error interface for PlaceholderError.
 func (e *PlaceholderError) Error() string {
 	return string(*e)
 }
@@ -98,10 +98,10 @@ func (err *UnavailableError) Error() string {
 	return err.Err.Error()
 }
 
-// PlaceholderReplacer is the type of functions accepted by ReplacePlaceholders,
-// where name is the name of the placeholder, and the returned values are the
-// value to replace (if any, otherwise the empty string) and a boolean
-// indicating if a placeholder with that name is allowed or not.
+// PlaceholderReplacer is the type of functions accepted by ReplacePlaceholders.
+// name is the placeholder's name and the returned values are the replacement
+// value (if any, otherwise the empty string) and a boolean indicating whether
+// the placeholder is allowed.
 type PlaceholderReplacer func(name string) (string, bool)
 
 // Records is the iterator interface used to iterate over the records read from
@@ -173,8 +173,8 @@ type Writer interface {
 	Write(ctx context.Context, id string, properties map[string]any) bool
 }
 
-// Connectors allows to interact with the apps, databases, files, file storages,
-// SDK and streams connectors.
+// Connectors provides access to app, database, file, file storage, SDK, and
+// stream connectors.
 type Connectors struct {
 	state *state.State
 	http  *httpclient.HTTP
@@ -187,18 +187,18 @@ func New(state *state.State) *Connectors {
 }
 
 // AuthorizationEndpoint returns the OAuth authorization endpoint URI for the
-// provided app connector. This URI is used to redirect users to the consent
-// page of the OAuth provider, where they can grant explicit permissions for the
-// specified role's scopes. After granting permissions, the provider redirects
-// the user to the URI specified by redirectionURI.
+// provided app connector. This URI is used to redirect users to the OAuth
+// provider's consent page, where they can grant permissions for the scopes of
+// the specified role. After granting permissions, the provider redirects the
+// user to the URI specified by redirectionURI.
 //
-// After acquiring the authorization code, call GrantAuthorization to obtain the
-// resulting account code, access token, refresh token, and expiration time.
+// After obtaining the authorization code, call GrantAuthorization to retrieve
+// the account code, access token, refresh token, and expiration time.
 //
-// If the connector is not configured for OAuth (i.e., ClientID or ClientSecret
-// is empty), it returns an UnavailableError.
+// If the connector is not configured for OAuth (that is, ClientID or
+// ClientSecret is empty), it returns an *UnavailableError.
 //
-// Panics if the connector does not support OAuth.
+// It panics if the connector does not support OAuth.
 func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
 	if oauth.ClientID == "" || oauth.ClientSecret == "" {
@@ -228,8 +228,8 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 	return b.String(), nil
 }
 
-// GrantAuthorization grants an OAuth authorization from an app connector
-// provided an authorization code and a redirection URI.
+// GrantAuthorization grants an OAuth authorization for an app connector, using
+// the provided authorization code and redirection URI.
 //
 // This method can only be called on a connector that implements OAuth.
 func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
@@ -342,10 +342,10 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //	return payload, nil
 //}
 
-// ReplacePlaceholders replaces the placeholders in s with the values read
-// calling the f function (that must be non-nil) with the name of each
-// placeholder as argument.
-// In case of error, returns "" and a PlaceholderError error.
+// ReplacePlaceholders replaces the placeholders in s by calling the non-nil
+// function f with the name of each placeholder. It returns the string with the
+// placeholders replaced. In case of error it returns an empty string and a
+// *PlaceholderError.
 func ReplacePlaceholders(s string, f PlaceholderReplacer) (string, error) {
 	var b strings.Builder
 	var name string
@@ -401,8 +401,8 @@ func connectorError(err error) error {
 	return err
 }
 
-// formatLastChangeTimeColumn formats a time.Time value with the given format.
-// Excel format is not allowed.
+// formatLastChangeTimeColumn formats a time.Time value using the provided
+// format. The Excel format is not allowed here.
 //
 // format must be a valid change time format; for accepted formats, refer to the
 // 'core.validateLastChangeTimeFormat' function.
@@ -412,13 +412,13 @@ func formatLastChangeTimeColumn(format string, t time.Time) string {
 		return t.Format(time.RFC3339)
 	case "Excel":
 		panic("unexpected Excel format")
-	default: // a format compatible with strptime, for example: '%Y-%m-%d'.
+	default: // any format compatible with strptime, for example '%Y-%m-%d'.
 		return timefmt.Format(t, format)
 	}
 }
 
-// isExcelSimpleFloat reports whether s is a string representing a float value
-// encoding an Excel date / datetime value.
+// isExcelSimpleFloat reports whether s is a string representing an Excel date or
+// datetime encoded as a floating-point number.
 func isExcelSimpleFloat(s string) bool {
 	if len(s) < 3 {
 		return false
@@ -578,7 +578,7 @@ func parseLastChangeTimeColumnWithFormat(format, v string) (time.Time, error) {
 		d := time.Duration(days * 24 * 3600 * 1e9)
 		t := excelEpoch.Add(d)
 		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC), nil
-	default: // a format compatible with strptime, for example: '%Y-%m-%d'.
+	default: // any format compatible with strptime, for example '%Y-%m-%d'.
 		t, err := timefmt.Parse(v, format)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("last change time does not conform to the %q format", format)
@@ -653,7 +653,7 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 	return err
 }
 
-// setSettingsFunc returns a connector.SetSettingsFunc function that sets the
+// setConnectionSettingsFunc returns a meergo.SetSettingsFunc that sets the
 // settings for the connection.
 func setConnectionSettingsFunc(st *state.State, c *state.Connection) meergo.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {

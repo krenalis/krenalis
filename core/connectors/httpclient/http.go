@@ -92,7 +92,7 @@ func (h *HTTP) GrantAuthorization(ctx context.Context, auth *state.OAuth, code, 
 	return h.retrieveOAuthToken(ctx, auth, code, redirectionURI, "")
 }
 
-// SetTrace sets w as the output destination for tracing HTTP request and
+// SetTrace sets w as the output destination for tracing HTTP requests and
 // responses in HTTP clients.
 func (h *HTTP) SetTrace(w io.Writer) {
 	h.trace = w
@@ -163,7 +163,7 @@ func (h *HTTP) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code, 
 	expiresIn := auth.ExpiresIn
 	if expiresIn <= 0 {
 		if tokens.ExpiresIn == nil {
-			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s did not returned expires_in", auth.TokenURL)
+			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s did not return expires_in", auth.TokenURL)
 		}
 		s := *tokens.ExpiresIn
 		if s < 1 {

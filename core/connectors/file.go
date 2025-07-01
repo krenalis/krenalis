@@ -91,29 +91,29 @@ func (file *File) Connector() string {
 	return file.connector
 }
 
-// Records returns an iterator to iterate over the file's records that are not
-// older of the provided starting time. If the starting time is the zero time,
-// it iterates over all the records.
+// Records returns an iterator over the file's records that are not older than
+// the provided starting time. If the starting time is the zero value, it
+// iterates over all the records.
 //
 // file must support reading of records, otherwise this method panics.
 //
-// record will contain, in the Properties field, the properties of the input
-// schema of the action passed to the constructor of File, with the same types.
+// Each returned record contains, in its Properties field, the properties of the
+// action's input schema with the same types.
 //
 // If the action's input schema does not align with the file's schema, the
 // iterator, not Records, will return a *schemas.Error error.
 //
-// If the identity column specified in the action of the file is found within
-// the file schema but its type is different, the iterator will return an error.
-// The same applies for the last change time column, if specified.
+// If the identity column specified in the action exists in the file schema but
+// its type differs, the iterator returns an error. The same applies to the last
+// change time column, if specified.
 //
 // If the action's sheet is not found in the file, the All method of the
-// iterator returns immediately, and a subsequent call to the Err method will
-// return the meergo.ErrSheetNotExist error. The same occurs if the file has no
-// columns; in this case, the error is ErrNoColumnsFound.
+// iterator returns immediately and a subsequent call to Err returns
+// meergo.ErrSheetNotExist. The same happens if the file has no columns; in that
+// case Err returns ErrNoColumnsFound.
 //
-// It returns an error if a non-zero start time is provided and the action has
-// no last change property.
+// It returns an error if a non-zero starting time is provided and the action
+// has no last change property.
 func (file *File) Records(ctx context.Context, startTime time.Time) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
@@ -148,14 +148,13 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 // of the file's action. schema contains the properties of the records to be
 // written.
 //
-// This method panics if the FileStorage or the file do not support writing
-// operations.
+// This method panics if either the FileStorage or the file does not support
+// writing operations.
 //
-// If pathReplacer is not nil, then the placeholders in path are replaced using
-// it; in this case, a *PlaceholderError error may be returned in case of an
-// error with placeholders.
+// If pathReplacer is not nil, placeholders in path are replaced using it; in
+// this case a *PlaceholderError may be returned when placeholders are invalid.
 //
-// It returns an *UnavailableError error if the connector returns an error.
+// It returns an *UnavailableError if the connector returns an error.
 func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, ack AckFunc) (Writer, error) {
 	if file.err != nil {
 		return nil, file.err
@@ -249,7 +248,7 @@ func newCompressedStorage(s any, c state.Compression) *compressorStorage {
 //
 // The storage must support read operations, otherwise this method panics.
 //
-// It returns an *UnavailableError error if the connector returns an error.
+// It returns an *UnavailableError if the connector returns an error.
 // It is the caller's responsibility to close the returned reader.
 func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	r, t, err := cs.storage.(fileStorageReaderConnector).Reader(ctx, name)
@@ -844,9 +843,8 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 	return nil
 }
 
-// RecordStrings writes a record represented as a string slice.
-// The record's length must be less than or equal to the number of columns, and
-// record cannot be nil.
+// RecordStrings writes a record represented as a slice of strings. The slice
+// length must not exceed the number of columns, and record must not be nil.
 //
 // RecordStrings may modify the elements of the record.
 func (rw *recordWriter) RecordStrings(record []string) error {
@@ -948,7 +946,7 @@ func (rw *recordWriter) setYieldFunc(yield func(Record) bool) {
 }
 
 // newTimeoutReader returns a TimeoutReader that reads from r. If more than
-// timeout time elapses between two Read method calls, it calls the f function.
+// the specified timeout elapses between two Read calls, it invokes f.
 // The caller must close the returned reader using the Close method when no
 // further calls to the Read method are expected.
 func newTimeoutReader(r io.Reader, timeout time.Duration, f func()) io.ReadCloser {
@@ -978,8 +976,8 @@ func (c storageWriteCloser) Close() error {
 	return c.close(nil)
 }
 
-// CloseWithError closes the underlying writer. Storage will receive err as
-// error from a read, or io.EOF is err is nil.
+// CloseWithError closes the underlying writer. Storage will receive err as the
+// error from a read, or io.EOF if err is nil.
 // It returns the error returned by the storage if any.
 func (c storageWriteCloser) CloseWithError(err error) error {
 	return c.close(err)

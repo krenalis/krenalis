@@ -72,14 +72,14 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 }
 
 // AbsolutePath returns the absolute representation of the provided path name or
-// an InvalidPathError value if name is not valid for use in calls to Read and
-// Write. name's length in runes must be in range [1, 1024].
+// an InvalidPathError if name is not valid for use in calls to Read and Write.
+// The length of name in runes must be within [1, 1024].
 //
 // If nameReplacer is not nil, then the placeholders in name are replaced using
 // it; in this case, a *PlaceholderError error may be returned in case of an
 // error with placeholders.
 //
-// If the connector returns an error, it returns a *UnavailableError error.
+// If the connector returns an error, it returns an *UnavailableError.
 func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
 	if storage.err != nil {
 		return "", storage.err
@@ -103,9 +103,9 @@ func (storage *FileStorage) Connector() string {
 	return storage.connector
 }
 
-// Read reads the records from file in the storage at the provided path name and
-// returns the columns and the records. name must be UTF-8 encoded with a length
-// in range [1, 1024].
+// Read reads the records from the file located in the storage at the provided
+// path and returns the columns and records. name must be UTF-8 encoded with a
+// length in the range [1, 1024].
 //
 // This method can only be called if both the FileStorage and the file allow
 // reading; otherwise, it will panic.
@@ -116,20 +116,18 @@ func (storage *FileStorage) Connector() string {
 // the range [1, 31], does not start or end with "'", and does not contain any
 // of "*", "/", ":", "?", "[", "\", and "]". Sheet names are case-insensitive.
 //
-// settings, if the file connector has settings, represents its settings.
-// compression indicates if the file is compressed and how, and limit restricts
-// the number of records to return. If limit is negative, there is no upper
-// limit on the number of records returned.
+// settings contains the file connector settings, if any. compression indicates
+// whether and how the file is compressed, and limit restricts the number of
+// records returned. If limit is negative, there is no upper bound.
 //
 // The method may also return issues encountered during the reading process that
 // did not prevent the file from being processed. These issues are reported as a
 // slice of strings. The slice will be nil if there are no issues.
 //
-// If the settings are not valid, it returns a *meergo.InvalidSettingsError
-// error. If the file has no columns, it returns the ErrNoColumnsFound error. If
-// the file does not have the provided sheet, it returns the
-// meergo.ErrSheetNotExist error. If the connector returns an error, it returns
-// a *UnavailableError error.
+// If the settings are invalid, it returns a *meergo.InvalidSettingsError. If
+// the file has no columns, it returns ErrNoColumnsFound. If the file does not
+// have the specified sheet, it returns meergo.ErrSheetNotExist. If the
+// connector returns an error, it returns an *UnavailableError.
 func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings json.Value, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, issues []string, err error) {
 	if storage.err != nil {
 		return nil, nil, nil, storage.err
@@ -191,17 +189,17 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	return rw.properties, records, issues, nil
 }
 
-// Sheets returns the sheets of the file with the provided name. Sheet names
-// are case-insensitive.
+// Sheets returns the sheets of the file with the given name. Sheet names are
+// case-insensitive.
 //
 // If the file does not have sheets, this method panics.
 //
 // settings, if the file connector has settings, represents its settings.
 // compression indicates if the file is compressed and how.
 //
-// If the settings are not valid, it returns a *meergo.InvalidSettingsError
-// error. If the connector returns an error, it returns a *UnavailableError
-// error. It panics if the file connector does not support sheets.
+// If the settings are invalid, it returns a *meergo.InvalidSettingsError. If
+// the connector returns an error, it returns an *UnavailableError. This method
+// panics if the file connector does not support sheets.
 func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, settings json.Value, compression state.Compression) ([]string, error) {
 	if storage.err != nil {
 		return nil, storage.err
