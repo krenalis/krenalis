@@ -208,12 +208,12 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 		}
 		if ctx, ok := record["context"].(map[string]any); ok {
 			for name, value := range ctx {
-				// In the case of "context.browser.name" and "context.os.name",
-				// the "None" values — that we use in the warehouse to represent
-				// an "unset" enum — must instead be hidden externally by
-				// omitting the key entirely, since "None" isn't a valid value
-				// in the event schema.
 				if value, ok := value.(map[string]any); ok {
+					// In the case of "context.browser.name" and "context.os.name",
+					// the "None" values — that we use in the warehouse to represent
+					// an "unset" enum — must instead be hidden externally by
+					// omitting the key entirely, since "None" isn't a valid value
+					// in the event schema.
 					if name == "browser" || name == "os" {
 						for k, v := range value {
 							if k == "name" && v == "None" {
