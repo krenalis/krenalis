@@ -208,6 +208,12 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 		}
 		if ctx, ok := record["context"].(map[string]any); ok {
 			for name, value := range ctx {
+				// On the data warehouse, IP "0.0.0.0" means no IP is associated
+				// with the event, so it must be removed entirely.
+				if name == "ip" && value == "0.0.0.0" {
+					delete(ctx, "ip")
+					continue
+				}
 				if value, ok := value.(map[string]any); ok {
 					// In the case of "context.browser.name" and "context.os.name",
 					// the "None" values — that we use in the warehouse to represent

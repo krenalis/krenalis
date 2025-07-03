@@ -9,6 +9,7 @@ package test
 
 import (
 	"context"
+	"net"
 	"reflect"
 	"testing"
 
@@ -74,11 +75,23 @@ func TestEventsContext(t *testing.T) {
 			},
 		},
 	})
+	c.SendEvent(meergoAPIKey, analytics.Track{
+		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
+		Event:       "Test Event 5",
+		Context: &analytics.Context{
+			IP:        net.IPv4zero,
+			UserAgent: "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
+			OS: analytics.OSInfo{
+				Name:    "Linux",
+				Version: "1",
+			},
+		},
+	})
 
 	// Wait until all events have been stored in the data warehouse, then
 	// retrieve them.
 	ctx := context.Background()
-	const expectedEventsCount = 4
+	const expectedEventsCount = 5
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 	events := c.Events([]string{"event", "context"})
 	if len(events) != expectedEventsCount {
@@ -131,6 +144,19 @@ func TestEventsContext(t *testing.T) {
 					"version": "47.0",
 				},
 				"ip": "127.0.0.1",
+				"os": map[string]any{
+					"name":    "Linux",
+					"version": "1",
+				},
+			}
+		case "Test Event 5":
+			expectedContext = map[string]any{
+				"userAgent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
+				"browser": map[string]any{
+					"name":    "Firefox",
+					"other":   "",
+					"version": "47.0",
+				},
 				"os": map[string]any{
 					"name":    "Linux",
 					"version": "1",
