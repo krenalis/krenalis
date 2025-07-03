@@ -128,7 +128,8 @@ func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) i
 	}
 }
 
-// Reset parses a request with events.
+// Reset resets the decoder, preparing it to parse a new request, and parses the
+// given request.
 //
 // In case of an error, it returns the following errors:
 //   - errMethodNotAllowed: if the HTTP method is not allowed,
