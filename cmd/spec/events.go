@@ -14,7 +14,156 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-var eventContextType = types.Object([]types.Property{
+// eventPostContextType is a types.Type representing the context of an event
+// passed to the API methods that POST events, i.e. ingestion.
+var eventPostContextType = types.Object([]types.Property{
+	{
+		Name: "app",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text()},
+			{Name: "version", Type: types.Text()},
+			{Name: "build", Type: types.Text()},
+			{Name: "namespace", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "browser",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
+			{Name: "other", Type: types.Text()},
+			{Name: "version", Type: types.Text()},
+		}),
+		ReadOptional: true,
+		Description: "Browser from which the event originates.\n\n" +
+			"If not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\n" +
+			"To intentionally leave the event browser unspecified (e.g., for server-generated events where the browser is not applicable), do **not** set a value for `context.browser` and set `context.userAgent` to `N/A`.",
+	},
+	{
+		Name: "campaign",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text()},
+			{Name: "source", Type: types.Text()},
+			{Name: "medium", Type: types.Text()},
+			{Name: "term", Type: types.Text()},
+			{Name: "content", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "device",
+		Type: types.Object([]types.Property{
+			{Name: "id", Type: types.Text()},
+			{Name: "advertisingId", Type: types.Text()},
+			{Name: "adTrackingEnabled", Type: types.Boolean()},
+			{Name: "manufacturer", Type: types.Text()},
+			{Name: "model", Type: types.Text()},
+			{Name: "name", Type: types.Text()},
+			{Name: "type", Type: types.Text()},
+			{Name: "token", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name:         "ip",
+		Type:         types.Inet(),
+		ReadOptional: true,
+		Description: "IP is the IP address associated with the event.\n\n" +
+			"If `context.ip` is explicitly set, its value will be used. Otherwise, the IP will be inferred from the HTTP request of the event.\n\n" +
+			"To deliberately avoid associating any IP with the event, set `context.ip` to `0.0.0.0`.\n" +
+			"This can be useful for server-side events where the originating IP is irrelevant or where no client IP can be meaningfully assigned (e.g. background jobs, internal system events).",
+	},
+	{
+		Name: "library",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text()},
+			{Name: "version", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{Name: "locale", Type: types.Text(), ReadOptional: true},
+	{
+		Name: "location",
+		Type: types.Object([]types.Property{
+			{Name: "city", Type: types.Text()},
+			{Name: "country", Type: types.Text()},
+			{Name: "latitude", Type: types.Float(64)},
+			{Name: "longitude", Type: types.Float(64)},
+			{Name: "speed", Type: types.Float(64)},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "network",
+		Type: types.Object([]types.Property{
+			{Name: "bluetooth", Type: types.Boolean()},
+			{Name: "carrier", Type: types.Text()},
+			{Name: "cellular", Type: types.Boolean()},
+			{Name: "wifi", Type: types.Boolean()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "os",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+			{Name: "version", Type: types.Text()},
+		}),
+		ReadOptional: true,
+		Description: "OS of the device from which the event originates.\n\n" +
+			"If not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\n" +
+			"To intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`.",
+	},
+	{
+		Name: "page",
+		Type: types.Object([]types.Property{
+			{Name: "path", Type: types.Text()},
+			{Name: "referrer", Type: types.Text()},
+			{Name: "search", Type: types.Text()},
+			{Name: "title", Type: types.Text()},
+			{Name: "url", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "referrer",
+		Type: types.Object([]types.Property{
+			{Name: "id", Type: types.Text()},
+			{Name: "type", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "screen",
+		Type: types.Object([]types.Property{
+			{Name: "width", Type: types.Int(16)},
+			{Name: "height", Type: types.Int(16)},
+			{Name: "density", Type: types.Decimal(3, 2)},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "session",
+		Type: types.Object([]types.Property{
+			{Name: "id", Type: types.Int(64)},
+			{Name: "start", Type: types.Boolean(), ReadOptional: true},
+		}),
+		ReadOptional: true,
+	},
+	{Name: "timezone", Type: types.Text(), ReadOptional: true},
+	{
+		Name:         "userAgent",
+		Type:         types.Text(),
+		ReadOptional: true,
+		Description: "User Agent is the device identifier from which the event originates.\n\n" +
+			"If not provided, Meergo derives it from the event's HTTP request.\n\n" +
+			"To explicitly assign no User Agent to the event (useful in cases where events are generated by backend systems or scheduled jobs), set this field to `N/A` (not applicable).",
+	},
+})
+
+// eventGetContextType is a types.Type representing the context of an event
+// returned by the API methods that GET events.
+var eventGetContextType = types.Object([]types.Property{
 	{
 		Name: "app",
 		Type: types.Object([]types.Property{
@@ -138,13 +287,15 @@ var eventContextType = types.Object([]types.Property{
 	{Name: "userAgent", Type: types.Text(), ReadOptional: true},
 })
 
-var eventProperties = []types.Property{
+// eventGetProperties is a types.Type representing the properties of an event
+// returned by the API methods that GET events.
+var eventGetProperties = []types.Property{
 	{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
 	{Name: "channel", Type: types.Text(), ReadOptional: true},
 	{Name: "category", Type: types.Text(), ReadOptional: true},
 	{
 		Name: "context",
-		Type: eventContextType,
+		Type: eventGetContextType,
 	},
 	{Name: "event", Type: types.Text(), ReadOptional: true},
 	{Name: "groupId", Type: types.Text(), ReadOptional: true},
@@ -162,12 +313,12 @@ var eventProperties = []types.Property{
 
 func init() {
 
-	eventsParameter := types.Array(types.Object(append([]types.Property{
+	eventsGetParameter := types.Array(types.Object(append([]types.Property{
 		{Name: "id", Type: types.UUID(), Placeholder: `"b1d868f3-43f6-4965-bbd2-85ca8dd609b3"`},
 		{Name: "user", Type: types.UUID(), ReadOptional: true, Placeholder: `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`},
 		{Name: "connection", Type: types.Int(32), Placeholder: "1371036433"},
-	}, eventProperties...)))
-	observedEventsParameter := types.Array(types.Object(eventProperties))
+	}, eventGetProperties...)))
+	observedEventsParameter := types.Array(types.Object(eventGetProperties))
 	idParameter := types.Property{
 		Name:           "id",
 		Type:           types.Int(32),
@@ -230,7 +381,7 @@ func init() {
 							},
 							{
 								Name: "context",
-								Type: eventContextType,
+								Type: eventPostContextType,
 							},
 							{
 								Name:           "event",
@@ -316,7 +467,7 @@ func init() {
 					},
 					{
 						Name:        "context",
-						Type:        eventContextType,
+						Type:        eventPostContextType,
 						Description: "The global context. If present, the context for each event is merged with this global context.",
 					},
 					{
@@ -369,7 +520,7 @@ func init() {
 					},
 					{
 						Name: "context",
-						Type: eventContextType,
+						Type: eventPostContextType,
 					},
 					{
 						Name:           "event",
@@ -502,7 +653,7 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name:        "events",
-							Type:        eventsParameter,
+							Type:        eventsGetParameter,
 							Placeholder: "...",
 						},
 					},

@@ -17,7 +17,7 @@ func init() {
 		{Name: "id", Type: types.UUID(), Placeholder: `"b1d868f3-43f6-4965-bbd2-85ca8dd609b3"`},
 		{Name: "user", Type: types.UUID(), ReadOptional: true, Placeholder: `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`},
 		{Name: "connection", Type: types.Int(32), Placeholder: "1371036433"},
-	}, eventProperties...)))
+	}, eventGetProperties...)))
 
 	identityType := types.Object([]types.Property{
 		{
