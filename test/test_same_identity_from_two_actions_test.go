@@ -23,6 +23,10 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
+	// Prevents Identity Resolution from running automatically and ensures there
+	// are no identifiers.
+	c.UpdateIdentityResolution(false, nil)
+
 	dummy := c.CreateDummy("Dummy", meergotester.Source)
 
 	// Import the "first_name" property from the first action.
@@ -61,9 +65,13 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 		},
 	})
 
+	// Executes the two actions and waits for them to complete.
 	exec1 := c.ExecuteAction(action1)
 	exec2 := c.ExecuteAction(action2)
 	c.WaitForExecutionsCompletion(dummy, exec1, exec2)
+
+	// Run the Identity Resolution and wait for its completion.
+	c.RunIdentityResolution()
 
 	// Check that there are 10 users.
 	users, _, total := c.Users([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
