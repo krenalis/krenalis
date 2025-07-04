@@ -11119,6 +11119,13 @@
                                                                     "description": ""
                                                                 },
                                                                 {
+                                                                    "name": "other",
+                                                                    "type": {
+                                                                        "kind": "text"
+                                                                    },
+                                                                    "description": ""
+                                                                },
+                                                                {
                                                                     "name": "version",
                                                                     "type": {
                                                                         "kind": "text"
@@ -11746,6 +11753,13 @@
                                                     "description": ""
                                                 },
                                                 {
+                                                    "name": "other",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
                                                     "name": "version",
                                                     "type": {
                                                         "kind": "text"
@@ -12323,6 +12337,13 @@
                                                             "Chrome OS",
                                                             "Other"
                                                         ]
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "other",
+                                                    "type": {
+                                                        "kind": "text"
                                                     },
                                                     "description": ""
                                                 },
@@ -13162,6 +13183,13 @@
                                                                         "description": ""
                                                                     },
                                                                     {
+                                                                        "name": "other",
+                                                                        "type": {
+                                                                            "kind": "text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
                                                                         "name": "version",
                                                                         "type": {
                                                                             "kind": "text"
@@ -13996,6 +14024,13 @@
                                                                                 "Chrome OS",
                                                                                 "Other"
                                                                             ]
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "other",
+                                                                        "type": {
+                                                                            "kind": "text"
                                                                         },
                                                                         "description": ""
                                                                     },
@@ -15675,6 +15710,13 @@
                                                                                 "Chrome OS",
                                                                                 "Other"
                                                                             ]
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "other",
+                                                                        "type": {
+                                                                            "kind": "text"
                                                                         },
                                                                         "description": ""
                                                                     },

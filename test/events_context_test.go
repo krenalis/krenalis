@@ -118,6 +118,7 @@ func TestEventsContext(t *testing.T) {
 				"ip": "127.0.0.1",
 				"os": map[string]any{
 					"name":    "Other",
+					"other":   "Unknown",
 					"version": "0.0",
 				},
 			}
@@ -132,6 +133,7 @@ func TestEventsContext(t *testing.T) {
 				"ip": "127.0.0.1",
 				"os": map[string]any{
 					"name":    "Windows",
+					"other":   "",
 					"version": "6.1",
 				},
 			}
@@ -146,6 +148,7 @@ func TestEventsContext(t *testing.T) {
 				"ip": "127.0.0.1",
 				"os": map[string]any{
 					"name":    "Linux",
+					"other":   "",
 					"version": "1",
 				},
 			}
@@ -159,6 +162,7 @@ func TestEventsContext(t *testing.T) {
 				},
 				"os": map[string]any{
 					"name":    "Linux",
+					"other":   "",
 					"version": "1",
 				},
 			}

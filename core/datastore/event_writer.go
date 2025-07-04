@@ -71,7 +71,7 @@ func (ew *EventWriter) Close(ctx context.Context) {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (ew *EventWriter) Write(event events.Event, action int) error {
 
-	row := make([]any, 65)
+	row := make([]any, 66)
 
 	// id
 	row[0] = event["id"]
@@ -191,9 +191,10 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 	// os
 	if os, ok := eventContext["os"].(map[string]any); ok {
 		row[38] = os["name"]
-		row[39] = os["version"]
+		row[39] = os["other"]
+		row[40] = os["version"]
 	} else {
-		row[38], row[39] = "", ""
+		row[38], row[39], row[40] = "", "", ""
 	}
 	if row[38] == "" {
 		row[38] = "None"
@@ -201,109 +202,109 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 
 	// page
 	if page, ok := eventContext["page"].(map[string]any); ok {
-		row[40] = page["path"]
-		row[41] = page["referrer"]
-		row[42] = page["search"]
-		row[43] = page["title"]
-		row[44] = page["url"]
+		row[41] = page["path"]
+		row[42] = page["referrer"]
+		row[43] = page["search"]
+		row[44] = page["title"]
+		row[45] = page["url"]
 	} else {
-		row[40], row[41], row[42], row[43], row[44] = "", "", "", "", ""
+		row[41], row[42], row[43], row[44], row[45] = "", "", "", "", ""
 	}
 
 	// referrer
 	if referrer, ok := eventContext["referrer"].(map[string]any); ok {
-		row[45] = referrer["name"]
-		row[46] = referrer["version"]
+		row[46] = referrer["name"]
+		row[47] = referrer["version"]
 	} else {
-		row[45], row[46] = "", ""
+		row[46], row[47] = "", ""
 	}
 
 	// screen
 	if screen, ok := eventContext["screen"].(map[string]any); ok {
-		row[47] = screen["width"]
-		row[48] = screen["height"]
-		row[49] = screen["density"]
+		row[48] = screen["width"]
+		row[49] = screen["height"]
+		row[50] = screen["density"]
 	} else {
-		row[47], row[48], row[49] = int16(0), int16(0), decimal.Decimal{}
+		row[48], row[49], row[50] = int16(0), int16(0), decimal.Decimal{}
 	}
 
 	// session
 	if session, ok := eventContext["session"].(map[string]any); ok {
-		row[50] = session["id"]
-		row[51] = session["start"]
+		row[51] = session["id"]
+		row[52] = session["start"]
 	} else {
-		row[50], row[51] = 0, false
+		row[51], row[52] = 0, false
 	}
 
 	// timezone
 	if timezone, ok := eventContext["timezone"]; ok {
-		row[52] = timezone
-	} else {
-		row[52] = ""
-	}
-
-	// userAgent
-	if userAgent, ok := eventContext["userAgent"]; ok {
-		row[53] = userAgent
+		row[53] = timezone
 	} else {
 		row[53] = ""
 	}
 
-	// event
-	if event, ok := event["event"]; ok {
-		row[54] = event
+	// userAgent
+	if userAgent, ok := eventContext["userAgent"]; ok {
+		row[54] = userAgent
 	} else {
 		row[54] = ""
 	}
 
-	// groupId
-	if groupId, ok := event["groupId"]; ok {
-		row[55] = groupId
+	// event
+	if event, ok := event["event"]; ok {
+		row[55] = event
 	} else {
 		row[55] = ""
 	}
 
+	// groupId
+	if groupId, ok := event["groupId"]; ok {
+		row[56] = groupId
+	} else {
+		row[56] = ""
+	}
+
 	// messageId
-	row[56] = event["messageId"]
+	row[57] = event["messageId"]
 
 	// name
 	if name, ok := eventContext["name"]; ok {
-		row[57] = name
+		row[58] = name
 	} else {
-		row[57] = ""
+		row[58] = ""
 	}
 
 	// properties
 	if properties, ok := event["properties"]; ok {
-		row[58] = properties
+		row[59] = properties
 	} else {
-		row[58] = emptyJSONObject
+		row[59] = emptyJSONObject
 	}
 
 	// receivedAt
-	row[59] = event["receivedAt"]
+	row[60] = event["receivedAt"]
 
 	// sentAt
-	row[60] = event["sentAt"]
+	row[61] = event["sentAt"]
 
 	// timestamp
-	row[61] = event["timestamp"]
+	row[62] = event["timestamp"]
 
 	// traits
 	if traits, ok := event["traits"]; ok {
-		row[62] = traits
+		row[63] = traits
 	} else {
-		row[62] = emptyJSONObject
+		row[63] = emptyJSONObject
 	}
 
 	// type
-	row[63] = event["type"]
+	row[64] = event["type"]
 
 	// userId
 	if userId := event["userId"]; userId != nil {
-		row[64] = userId
+		row[65] = userId
 	} else {
-		row[64] = ""
+		row[65] = ""
 	}
 
 	ew.mu.Lock()

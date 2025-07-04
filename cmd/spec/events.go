@@ -107,6 +107,7 @@ var eventPostContextType = types.Object([]types.Property{
 		Name: "os",
 		Type: types.Object([]types.Property{
 			{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+			{Name: "other", Type: types.Text()},
 			{Name: "version", Type: types.Text()},
 		}),
 		ReadOptional: true,
@@ -243,6 +244,7 @@ var eventGetContextType = types.Object([]types.Property{
 		Name: "os",
 		Type: types.Object([]types.Property{
 			{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+			{Name: "other", Type: types.Text()},
 			{Name: "version", Type: types.Text()},
 		}),
 		ReadOptional: true,

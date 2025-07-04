@@ -32,7 +32,7 @@ func Test_Decoder(t *testing.T) {
 	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
 	browser := map[string]any{"name": "Chrome", "other": "", "version": "117.0"}
 	ip := "192.168.1.1"
-	os := map[string]any{"name": "Windows", "version": "10.0"}
+	os := map[string]any{"name": "Windows", "other": "", "version": "10.0"}
 	library := map[string]any{"name": "meergo.js", "version": "0.0.0"}
 	context := map[string]any{"browser": browser, "ip": ip, "os": os, "userAgent": userAgent}
 
@@ -326,6 +326,7 @@ func Test_Decoder(t *testing.T) {
 						"ip": ip,
 						"os": map[string]any{
 							"name":    "Linux",
+							"other":   "",
 							"version": "0.0",
 						},
 						"screen":    map[string]any{"width": 2816, "height": 1584, "density": 1.36},
@@ -365,6 +366,7 @@ func Test_Decoder(t *testing.T) {
 						"ip": ip,
 						"os": map[string]any{
 							"name":    "macOS",
+							"other":   "",
 							"version": "15",
 						},
 						"screen":    map[string]any{"width": 2816, "height": 1584, "density": 1.36},

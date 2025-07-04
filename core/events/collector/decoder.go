@@ -888,6 +888,7 @@ var contextSections = map[string]*contextSection{
 		name: "os",
 		properties: []contextProperty{
 			{name: "name", typ: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+			{name: "other", typ: types.Text()},
 			{name: "version", typ: types.Text()},
 		},
 	},
@@ -1106,7 +1107,11 @@ func parseIP(ip string) (net.IP, string, error) {
 
 // parseUserAgent parses a user agent and returns context's browser and os.
 func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
+
+	// Parse the user agent.
 	ua := uasurfer.Parse(userAgent)
+
+	// Determine the browser.
 	var name, other, version string
 	switch ua.Browser.Name {
 	default:
@@ -1144,7 +1149,15 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 		"other":   other,
 		"version": version,
 	}
+
+	// Determine the OS.
 	switch ua.OS.Name {
+	default:
+		name = "Other"
+		ot := ua.OS.Name.StringTrimPrefix()
+		if n := utf8.RuneCountInString(ot); n <= 25 {
+			other = ot
+		}
 	case uasurfer.OSMacOSX:
 		name = "macOS"
 	case uasurfer.OSAndroid:
@@ -1157,8 +1170,6 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 		name = "Linux"
 	case uasurfer.OSChromeOS:
 		name = "ChromeOS"
-	default:
-		name = "Other"
 	}
 	major, minor := strconv.Itoa(ua.OS.Version.Major), ""
 	if len(major) < 9 {
@@ -1171,7 +1182,9 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 	}
 	os := map[string]any{
 		"name":    name,
+		"other":   other,
 		"version": version,
 	}
+
 	return browser, os
 }

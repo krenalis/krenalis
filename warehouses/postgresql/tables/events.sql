@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS events (
     "context_network_cellular" boolean NOT NULL,
     "context_network_wifi" boolean NOT NULL,
     "context_os_name" event_os_name NOT NULL,
+    "context_os_other" character varying NOT NULL,
     "context_os_version" character varying NOT NULL,
     "context_page_path" character varying NOT NULL,
     "context_page_referrer" character varying NOT NULL,

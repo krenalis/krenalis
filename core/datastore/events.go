@@ -59,6 +59,7 @@ var eventColumnNameFromPropertyPath = map[string]string{
 	"context.network.cellular":         "context_network_cellular",
 	"context.network.wifi":             "context_network_wifi",
 	"context.os.name":                  "context_os_name",
+	"context.os.other":                 "context_os_other",
 	"context.os.version":               "context_os_version",
 	"context.page.path":                "context_page_path",
 	"context.page.referrer":            "context_page_referrer",
