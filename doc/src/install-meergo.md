@@ -4,13 +4,16 @@
 
 # Install Meergo
 
-There are several ways to get started with Meergo:
+There are several ways to install Meergo or simply try out its features. Choose the one that suits you best:
 
-* [Docker](#docker). This method is ideal for local development, testing, and prototyping. 
-* [Pre-packaged binaries](#pre-packaged-binaries). A convenient method for quickly setting up Meergo without the need to compile from source.
-* [Source code](#source-code). Recommended if you wish to customize the executable or contribute to the project by building Meergo directly from the source.
+* [**Run locally with Docker**](#run-locally-with-docker). This method is ideal for local development, testing, and prototyping. 
+* [**Run packaged binaries**](#run-packaged-binaries). A convenient method for quickly setting up Meergo without the need to compile from source.
+* [**Compile and run Meergo from source code**](#compile-and-run-meergo-from-source-code). Recommended if you wish to customize the executable or contribute to the project by building Meergo directly from the source.
+* [**Run Meergo on a virtual server**](#run-meergo-on-a-virtual-server). Instructions for deploying Meergo on a virtual server.
 
-## Docker
+## Run locally with Docker
+
+This is the easiest and fastest way to start using Meergo on your PC. It's ideal for local development, testing, and exploring its features.
 
 > 🚧 It will be simplified in the future, as a version of the Meergo image will already need to be available on platforms like Docker Hub.
 
@@ -38,7 +41,7 @@ For this installation method you need to have [Git](https://git-scm.com/download
 
 Initially, login is not required with the Docker installation. To enable login, create a new member with their email and password.
 
-## Pre-packaged binaries
+## Run packaged binaries
 
 For this installation method you need to have [PostgreSQL](https://www.postgresql.org/download/) 13 or higher.
 
@@ -48,7 +51,7 @@ You can download a build of Meergo from the [releases page of the repository](ht
 
 Then you can proceed with the [configuration](#configuration).
 
-## Source code
+## Compile and run Meergo from source code
 
 There are two ways to install Meergo from the source:
 
@@ -121,6 +124,10 @@ For this installation method you need to have [Git](https://git-scm.com/download
    Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
 
 Then you can proceed with the [configuration](#configuration).
+
+## Run Meergo on a virtual server
+
+> 🚧 This section still needs to be developed.
 
 ## Configuration
 
