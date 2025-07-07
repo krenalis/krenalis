@@ -328,12 +328,12 @@ func (ew *EventWriter) flush() {
 		return
 	}
 
+	done := ew.close.ctx.Done()
 	for {
 		metrics.Increment("EventWriter.flush.for_loop_iterations", 1)
 		err := ew.store.warehouse().Merge(ew.close.ctx, eventsMergeTable, rows, nil)
 		if err != nil {
-			done := ew.close.ctx.Done()
-			if _, ok := <-done; ok {
+			if ew.close.ctx.Err() != nil {
 				return
 			}
 			slog.Error("core/datastore: cannot flush the event queue", "err", err)
