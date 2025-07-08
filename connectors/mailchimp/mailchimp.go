@@ -75,9 +75,14 @@ func init() {
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",
 			ExpiresIn: math.MaxInt32,
 		},
-		BackoffPolicy: meergo.BackoffPolicy{
+		RateLimits: meergo.RateLimits{
+			// https://mailchimp.com/developer/marketing/docs/fundamentals/#throttling
+			"/": {RequestsPerSecond: 20, Burst: 20, MaxConcurrentRequests: 10},
+		},
+		RetryPolicy: meergo.RetryPolicy{
 			// https://mailchimp.com/developer/marketing/docs/fundamentals/#api-limits
-			"403 429 500": meergo.ExponentialStrategy(50 * time.Millisecond),
+			"403 429": meergo.ExponentialStrategy(meergo.Slowdown, 50*time.Millisecond),
+			"500":     meergo.ExponentialStrategy(meergo.NetFailure, 50*time.Millisecond),
 		},
 	}, New)
 }

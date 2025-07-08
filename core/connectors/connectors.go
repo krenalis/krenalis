@@ -238,7 +238,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 		return nil, err
 	}
 	app, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{
-		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken, connector.BackoffPolicy),
+		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken, connector.RetryPolicy),
 	})
 	if err != nil {
 		return nil, err
@@ -272,7 +272,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //		OAuthAccount: account.Code,
 //	}
 //	if connector.OAuth != nil {
-//		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken, connector.BackoffPolicy)
+//		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken, connector.RetryPolicy)
 //	}
 //	inner, err := meergo.RegisteredApp(connector.Name).New(config)
 //	if err != nil {

@@ -386,6 +386,22 @@ func validateAppConnector(app AppInfo) {
 		}
 	}
 
+	if len(app.RateLimits) == 0 {
+		panic(fmt.Sprintf("connector %s: RateLimits cannot be empty", app.Name))
+	}
+	// Patterns are checked for validity when rate limiters are created; invalid patterns will cause construction to panic.
+	for _, limit := range app.RateLimits {
+		if limit.RequestsPerSecond <= 0 {
+			panic(fmt.Sprintf("connector %s: RateLimit.RequestsPerSecond must be > 0", app.Name))
+		}
+		if limit.Burst <= 0 {
+			panic(fmt.Sprintf("connector %s: RateLimit.Burst must be > 0", app.Name))
+		}
+		if limit.MaxConcurrentRequests < 0 {
+			panic(fmt.Sprintf("connector %s: RateLimit.MaxConcurrentRequests must be >= 0", app.Name))
+		}
+	}
+
 }
 
 // validateDatabaseConnector validates the passed database connector, performing

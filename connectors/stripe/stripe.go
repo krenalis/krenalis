@@ -37,15 +37,6 @@ var destinationOverview string
 
 var baseURL = "https://api.stripe.com"
 
-type innerSettings struct {
-	APIKey string
-}
-
-type Stripe struct {
-	conf     *meergo.AppConfig
-	settings *innerSettings
-}
-
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:       "Stripe",
@@ -70,9 +61,14 @@ func init() {
 			User:  "customer",
 			Users: "customers",
 		},
-		BackoffPolicy: meergo.BackoffPolicy{
+		RateLimits: meergo.RateLimits{
+			// https://docs.stripe.com/rate-limits
+			"/": {RequestsPerSecond: 100, Burst: 200},
+		},
+		RetryPolicy: meergo.RetryPolicy{
 			// https://docs.stripe.com/api/errors
-			"429 500 502 503 504": meergo.ExponentialStrategy(200 * time.Millisecond),
+			"429":             meergo.ExponentialStrategy(meergo.Slowdown, 200*time.Millisecond),
+			"500 502 503 504": meergo.ExponentialStrategy(meergo.NetFailure, 200*time.Millisecond),
 		},
 		Icon: icon,
 	}, New)
@@ -88,6 +84,15 @@ func New(conf *meergo.AppConfig) (*Stripe, error) {
 		}
 	}
 	return &c, nil
+}
+
+type Stripe struct {
+	conf     *meergo.AppConfig
+	settings *innerSettings
+}
+
+type innerSettings struct {
+	APIKey string
 }
 
 // RecordSchema returns the schema of the specified target and role.
@@ -246,7 +251,6 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 			return meergo.NewInvalidSettingsError("API key must contain only valid characters")
 		}
 	}
-
 	b, err := json.Marshal(s)
 	if err != nil {
 		return err

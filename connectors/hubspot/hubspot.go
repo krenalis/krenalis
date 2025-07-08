@@ -68,11 +68,15 @@ func init() {
 			SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
 			DestinationScopes: []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
-		BackoffPolicy: meergo.BackoffPolicy{
+		RateLimits: meergo.RateLimits{
+			// https://developers.hubspot.com/docs/guides/apps/api-usage/usage-details#public-apps
+			"/": {RequestsPerSecond: 11, Burst: 110},
+		},
+		RetryPolicy: meergo.RetryPolicy{
 			// https://developers.hubspot.com/docs/reference/api/other-resources/error-handling
-			"429":                         meergo.HeaderStrategy("X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
+			"429":                         meergo.HeaderStrategy(meergo.RateLimited, "X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
 			"477":                         meergo.RetryAfterStrategy(),
-			"500 502 503 504 521 523 524": meergo.ExponentialStrategy(time.Second),
+			"500 502 503 504 521 523 524": meergo.ExponentialStrategy(meergo.NetFailure, time.Second),
 		},
 	}, New)
 }

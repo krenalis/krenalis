@@ -23,7 +23,7 @@ import (
 // panics.
 func NewAppConnectorForTests(connectorName string, settings []byte) (any, error) {
 	registeredApp := meergo.RegisteredApp(connectorName)
-	httpClient := httpclient.New(nil, http.DefaultTransport).Client("", "", registeredApp.BackoffPolicy)
+	httpClient := httpclient.New(nil, http.DefaultTransport).Client("", "", registeredApp.RetryPolicy)
 	app, err := registeredApp.New(&meergo.AppConfig{
 		Settings:    settings,
 		SetSettings: func(ctx context.Context, b []byte) error { return nil },

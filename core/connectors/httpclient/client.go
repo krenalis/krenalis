@@ -29,18 +29,22 @@ const backoffBase = 100 * time.Millisecond
 // backoffJitterEnabled controls whether jitter is applied in backoff.
 var backoffJitterEnabled = true
 
-// netBackoff is the backoff strategy applied when a network error occurs.
-var netBackoff = meergo.ExponentialStrategy(50 * time.Millisecond)
+// netBackoff is the retry strategy applied when a network error occurs.
+var netBackoff = meergo.ExponentialStrategy(meergo.NetFailure, 50*time.Millisecond)
 
 var errUnsupportedOAuth = errors.New("OAuth is not supported")
 
 // Client implements the connector.HTTPClient interface.
 type Client struct {
-	http          *HTTP
-	connection    int
-	clientSecret  string
-	accessToken   string
-	backoffPolicy meergo.BackoffPolicy
+	http         *HTTP
+	connection   int    // connection identifier; it is 0 if the client is not relative to a connection
+	clientSecret string // client secret; only if connection == 0
+	accessToken  string // access token; only if connection == 0
+	rateLimiters struct {
+		mux       *http.ServeMux
+		byPattern map[string]*rateLimiter // rate limiter by pattern
+	}
+	retryPolicy meergo.RetryPolicy // retry policy
 }
 
 // AccessToken returns an OAuth access token.
@@ -125,7 +129,7 @@ func (c *Client) ClientSecret() (string, error) {
 //
 // If the client supports OAuth, it adds the Authorization header automatically.
 //
-// It retries the request on network errors or when the client's backoff policy
+// It retries the request on network errors or when the client's retry policy
 // applies. A request is retried only if it is idempotent
 // (see http.Transport for details), which is defined as:
 //
@@ -140,15 +144,25 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	ctx := req.Context()
 
+	limiter, err := c.rateLimiter(req)
+	if err != nil {
+		return nil, err
+	}
+
+	hasBody := req.Body != nil && req.Body != http.NoBody
 	retriable := isRetriable(req)
 
 	retries := 0
 	netRetries := false // indicates if the last retry was triggered by a network error.
 
+	// Send the request.
 	for {
 
-		// Set the Authorization header if OAuth is supported.
-		accessToken, err := c.AccessToken(req.Context())
+		if err := limiter.Wait(ctx); err != nil {
+			return nil, err
+		}
+
+		accessToken, err := c.AccessToken(ctx)
 		if err != nil {
 			if err != errUnsupportedOAuth {
 				return nil, err
@@ -160,66 +174,51 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		// Send the request.
 		res, err := c.http.transport.RoundTrip(req)
 		if err != nil {
-			if retriable {
-				// Wait before retrying.
-				if !netRetries {
-					retries = 0
-					netRetries = true
-				}
-				wt, _ := netBackoff(nil, retries)
-				select {
-				case <-time.After(wt):
-				case <-ctx.Done():
-					return nil, ctx.Err()
-				}
-				retries++
-				continue
+			limiter.OnFailure(meergo.NetFailure, 0)
+			if !retriable {
+				return res, err
 			}
-			return nil, err
+			if !netRetries {
+				retries = 0
+				netRetries = true
+			}
+			_, waitTime := netBackoff(nil, retries)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(waitTime):
+			}
+			retries++
+			continue
 		}
 
-		if !retriable {
-			return res, nil
-		}
 		if status := res.StatusCode; status == 200 || status == 201 {
+			limiter.OnSuccess()
 			return res, nil
 		}
 
-		// Wait before retrying.
+		reason, waitTime := c.retryStrategy(res, retries)
+		limiter.OnFailure(reason, waitTime)
+		if reason == meergo.PermanentFailure || !retriable {
+			return res, nil
+		}
+
 		if netRetries {
 			retries = 0
 			netRetries = false
 		}
-		wt, err := c.waitTime(res, retries)
-		if err != nil {
-			return res, nil
+
+		if reason == meergo.NetFailure {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(waitTime):
+			}
 		}
-		// Drain and close the response body.
-		closed := make(chan struct{})
-		go func() {
+
+		if hasBody {
 			_, _ = io.Copy(io.Discard, res.Body)
 			_ = res.Body.Close()
-			close(closed)
-		}()
-		// Wait.
-		select {
-		case <-time.After(wt):
-		case <-ctx.Done():
-			_ = res.Body.Close()
-			return nil, ctx.Err()
-		}
-
-		// Wait for the response body to close.
-		select {
-		case <-closed:
-		case <-ctx.Done():
-			_ = res.Body.Close()
-			return nil, ctx.Err()
-		}
-
-		// Restore the request's body.
-		if req.Body != nil && req.Body != http.NoBody {
-			req = req.Clone(ctx)
 			body, err := req.GetBody()
 			if err != nil {
 				return nil, err
@@ -227,22 +226,31 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			req.Body = body
 		}
 
-		retries++
-
 	}
-
 }
 
-// waitTime calculates the duration to wait before retrying a failed request,
-// based on the backoff policy in c.backoffPolicy and the response's status
-// code. If c.backoffPolicy is nil, it checks the Retry-After header for status
-// code 429 (Too Many Requests); for status codes 500 (Internal Server Error)
-// and 503 (Service Unavailable), it applies exponential backoff with an initial
-// delay of 100ms. If the response status code does not warrant a retry, it
-// returns the meergo.NoRetry error.
-func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error) {
-	var primaryStrategy, secondaryStrategy meergo.BackoffStrategy
-	if c.backoffPolicy != nil {
+// rateLimiter returns the appropriate rate limiter for the given request.
+// Returns an error if no suitable rate limiter is found.
+func (c *Client) rateLimiter(req *http.Request) (*rateLimiter, error) {
+	_, pattern := c.rateLimiters.mux.Handler(req)
+	if pattern == "" {
+		return nil, fmt.Errorf(`there is no rate limit that matches the request "%s %s%s"`, req.Method, req.Host, req.URL.Path)
+	}
+	return c.rateLimiters.byPattern[pattern], nil
+}
+
+// retryStrategy determines the failure reason and how long to wait before
+// retrying a failed request, based on c.retryPolicy and the response status
+// code.
+//
+// If c.retryPolicy is nil, it checks the Retry-After header for status code 429
+// (Too Many Requests). For status codes 500 (Internal Server Error) and 503
+// (Service Unavailable), it uses exponential backoff starting at 100ms.
+//
+// If the status code is not eligible for a retry, it returns PermanentFailure.
+func (c *Client) retryStrategy(res *http.Response, retries int) (meergo.FailureReason, time.Duration) {
+	var primaryStrategy, secondaryStrategy meergo.RetryStrategy
+	if c.retryPolicy != nil {
 		// Use the client's policy.
 		var status string
 		if len(res.Status) >= 3 {
@@ -250,7 +258,7 @@ func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error
 		} else {
 			status = strconv.Itoa(res.StatusCode)
 		}
-		for statuses, strategy := range c.backoffPolicy {
+		for statuses, strategy := range c.retryPolicy {
 			if strings.Contains(statuses, status) {
 				primaryStrategy = strategy
 				break
@@ -261,29 +269,29 @@ func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error
 		switch res.StatusCode {
 		case 429:
 			primaryStrategy = meergo.RetryAfterStrategy()
-			secondaryStrategy = meergo.ExponentialStrategy(backoffBase)
+			secondaryStrategy = meergo.ExponentialStrategy(meergo.Slowdown, backoffBase)
 		case 500, 503, 502, 504:
-			primaryStrategy = meergo.ExponentialStrategy(backoffBase)
+			primaryStrategy = meergo.ExponentialStrategy(meergo.NetFailure, backoffBase)
 		}
 	}
 	if primaryStrategy == nil {
-		return 0, meergo.NoRetry
+		return meergo.PermanentFailure, 0
 	}
-	d, err := primaryStrategy(res, retries)
-	if err == meergo.NoRetry && secondaryStrategy != nil {
-		d, err = secondaryStrategy(res, retries)
+	reason, wt := primaryStrategy(res, retries)
+	if reason == meergo.PermanentFailure && secondaryStrategy != nil {
+		reason, wt = secondaryStrategy(res, retries)
 	}
-	if err != nil {
-		return 0, err
+	if reason == meergo.PermanentFailure {
+		return meergo.PermanentFailure, 0
 	}
-	if d <= 0 {
-		return 0, nil
+	if wt <= 0 {
+		return reason, 0
 	}
 	// Add a jitter to introduce variability to the delay.
 	if backoffJitterEnabled {
-		d += time.Duration(float64(d) * rand.Float64() * 0.5)
+		wt += time.Duration(float64(wt) * rand.Float64() * 0.5)
 	}
-	return d, nil
+	return reason, wt
 }
 
 // isRetriable reports whether the given HTTP request is retriable.

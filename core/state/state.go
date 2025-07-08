@@ -652,7 +652,8 @@ type Connector struct {
 	SampleQuery            string
 	WebhooksPer            WebhooksPer
 	OAuth                  *OAuth
-	BackoffPolicy          meergo.BackoffPolicy
+	RateLimits             meergo.RateLimits
+	RetryPolicy            meergo.RetryPolicy
 	Strategies             bool
 	Documentation          meergo.ConnectorDocumentation
 }

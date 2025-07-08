@@ -51,10 +51,11 @@ type AppInfo struct {
 	AsDestination   *AsAppDestination
 	Terms           AppTerms
 	IdentityIDLabel string
-	OAuth           OAuth         // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
-	BackoffPolicy   BackoffPolicy // backoff policy. It controls retry timing using provided strategies or custom ones.
-	TimeLayouts     TimeLayouts   // layouts for time values. If left empty, it is ISO 8601.
-	Icon            string        // icon in SVG format.
+	OAuth           OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
+	RateLimits      RateLimits  // rate limits for HTTP requests.
+	RetryPolicy     RetryPolicy // retry policy. It controls retry timing using provided strategies or custom ones.
+	TimeLayouts     TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
+	Icon            string      // icon in SVG format.
 
 	newFunc reflect.Value
 	ct      reflect.Type
@@ -130,6 +131,39 @@ type AppConfig struct {
 
 // AppNewFunc represents functions that create new app connector instances.
 type AppNewFunc[T any] func(*AppConfig) (T, error)
+
+// RateLimits maps HTTP request patterns to their associated rate limits. Each
+// key is a pattern following the syntax used by http.ServeMux
+// (https://pkg.go.dev/net/http#ServeMux).
+//
+// When handling a request, the pattern that most closely matches the request's
+// method, host, and path determines which rate limit applies. This allows
+// different rate limits to be enforced for different endpoints or groups of
+// requests within the same connector.
+//
+// If no pattern matches a request, the request fails with an error.
+type RateLimits map[string]RateLimit
+
+// RateLimit defines the maximum requests per second, burst capacity, and the
+// limit on simultaneous in-flight requests.
+type RateLimit struct {
+
+	// RequestsPerSecond specifies the maximum number of requests allowed per
+	// second. Must be > 0.
+	RequestsPerSecond float64
+
+	// Burst specifies how many requests can be sent in a burst without waiting.
+	// When requests are sent below RequestsPerSecond, the unused quota accumulates
+	// up to Burst. This means, after a period of inactivity or low usage, you can
+	// send a burst of up to Burst requests instantly, temporarily exceeding the
+	// per-second limit. Must be > 0.
+	Burst int
+
+	// MaxConcurrentRequests limits the maximum number of concurrent (simultaneous)
+	// in-flight requests. Must be >= 0. If set to 0, there is no limit on the
+	// number of concurrent requests.
+	MaxConcurrentRequests int
+}
 
 // EventType represents a type of event that can be sent to an app.
 type EventType struct {

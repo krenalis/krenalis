@@ -17,12 +17,15 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 )
+
+func noOpHandler(http.ResponseWriter, *http.Request) {}
 
 // HTTP allows creating HTTP clients for connections and enables granting,
 // retrieving, and refreshing OAuth access tokens.
@@ -35,6 +38,12 @@ type HTTP struct {
 
 	transport http.RoundTripper
 	trace     io.Writer
+
+	// muxByConnector maps each connector name to the corresponding ServeMux
+	// handling its rate limits. A connector is added only if it doesn't already
+	// exist, when ConnectionClient is called.
+	mu             sync.Mutex                // protect muxByConnector
+	muxByConnector map[string]*http.ServeMux // nil if state is nil; protected by mu
 }
 
 // New returns an HTTP instance given the state and the transport to use for
@@ -44,10 +53,14 @@ type HTTP struct {
 // will be restricted and will not allow invocation of OAuth-related methods, as
 // their behavior may be unexpected or may cause a panic.
 func New(state *state.State, transport http.RoundTripper) *HTTP {
-	return &HTTP{
+	h := &HTTP{
 		state:     state,
 		transport: transport,
 	}
+	if state != nil {
+		h.muxByConnector = map[string]*http.ServeMux{}
+	}
+	return h
 }
 
 // Client returns an HTTP client with the provided OAuth client secret and
@@ -59,30 +72,70 @@ func New(state *state.State, transport http.RoundTripper) *HTTP {
 // OAuth-related Client methods cannot be invoked, as their behavior may be
 // undefined or cause a panic.
 //
-// backoffPolicy is the backoff policy. If it is nil, the client will use a
-// default policy.
-func (h *HTTP) Client(clientSecret, accessToken string, backoffPolicy meergo.BackoffPolicy) *Client {
+// retryPolicy is the retry policy. If it is nil, the client will use a default
+// policy.
+func (h *HTTP) Client(clientSecret, accessToken string, retryPolicy meergo.RetryPolicy) *Client {
 	if h.state == nil && (clientSecret != "" || accessToken != "") {
 		panic("when the HTTP state is nil, the clientSecret and accessToken cannot be provided")
 	}
-	return &Client{
-		http:          h,
-		clientSecret:  clientSecret,
-		accessToken:   accessToken,
-		backoffPolicy: backoffPolicy,
+	c := &Client{
+		http:         h,
+		clientSecret: clientSecret,
+		accessToken:  accessToken,
+		retryPolicy:  retryPolicy,
 	}
+	c.rateLimiters.mux = http.NewServeMux()
+	c.rateLimiters.mux.HandleFunc("/", noOpHandler)
+	c.rateLimiters.byPattern = map[string]*rateLimiter{
+		"/": newRateLimiter(5, 5, 0),
+	}
+	return c
 }
 
-// ConnectionClient returns an HTTP client capable of retrieving OAuth
-// credentials from the provided connection if it supports OAuth. The client's
-// backoff policy is the connector's policy.
-func (h *HTTP) ConnectionClient(connection int) *Client {
-	c, _ := h.state.Connection(connection)
-	return &Client{
-		http:          h,
-		connection:    connection,
-		backoffPolicy: c.Connector().BackoffPolicy,
+// ConnectionClient returns an HTTP client for the provided connection.
+// If the connection supports OAuth, the client is capable of retrieving
+// OAuth credentials from it. The client's rate limits and retry policy
+// are inherited from the connector.
+//
+// ConnectionClient must be called only once per connection.
+func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
+
+	if h.state == nil {
+		panic("core/connectors/httpclient: HTTP.ConnectionClient called while state is nil")
 	}
+
+	connector := connection.Connector()
+	c := &Client{
+		http:        h,
+		connection:  connection.ID,
+		retryPolicy: connector.RetryPolicy,
+	}
+	c.rateLimiters.byPattern = map[string]*rateLimiter{}
+	for pattern, r := range connector.RateLimits {
+		c.rateLimiters.byPattern[pattern] = newRateLimiter(r.RequestsPerSecond, r.Burst, r.MaxConcurrentRequests)
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	mux, ok := h.muxByConnector[connector.Name]
+	if !ok {
+		defer func() {
+			// Handles any panic raised by ServeMux.HandleFunc if an invalid pattern is provided.
+			if r := recover(); r != nil {
+				msg := r.(error).Error()
+				msg = strings.TrimPrefix(msg, "http: ")
+				panic(fmt.Errorf("core/connectors/httpclient: connector %s: %s", connector.Name, msg))
+			}
+		}()
+		mux = http.NewServeMux()
+		for pattern := range connector.RateLimits {
+			mux.HandleFunc(pattern, noOpHandler)
+		}
+		h.muxByConnector[connector.Name] = mux
+	}
+	c.rateLimiters.mux = mux
+
+	return c
 }
 
 // GrantAuthorization grants an OAuth authorization code and returns the access

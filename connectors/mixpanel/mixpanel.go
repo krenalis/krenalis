@@ -46,9 +46,14 @@ func init() {
 			},
 		},
 		Icon: icon,
-		BackoffPolicy: meergo.BackoffPolicy{
+		RateLimits: meergo.RateLimits{
+			// https://developer.mixpanel.com/reference/import-events
+			"/": {RequestsPerSecond: 15, Burst: 20, MaxConcurrentRequests: 20},
+		},
+		RetryPolicy: meergo.RetryPolicy{
 			// https://developer.mixpanel.com/reference/import-events#rate-limits
-			"429 502 503": meergo.ExponentialStrategy(2 * time.Second),
+			"429":     meergo.ExponentialStrategy(meergo.Slowdown, 2*time.Second),
+			"502 503": meergo.ExponentialStrategy(meergo.NetFailure, 2*time.Second),
 		},
 	}, New)
 }

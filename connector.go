@@ -100,7 +100,7 @@ type HTTPClient interface {
 	// If the connector supports OAuth, it adds the Authorization header
 	// automatically.
 	//
-	// It retries the request on network errors or when the connector's backoff
+	// It retries the request on network errors or when the connector's retry
 	// policy applies. A request is retried only if it is idempotent
 	// (see http.Transport for details), which is defined as:
 	//

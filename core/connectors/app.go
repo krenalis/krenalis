@@ -70,7 +70,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		connector:   connector.Name,
 		role:        connection.Role,
 		timeLayouts: &connector.TimeLayouts,
-		httpClient:  connectors.http.ConnectionClient(connection.ID),
+		httpClient:  connectors.http.ConnectionClient(connection),
 		users:       schema{lock: make(chan struct{}, 1)},
 		targets:     targets,
 	}

@@ -62,10 +62,14 @@ func init() {
 			Users: "clients",
 		},
 		Icon: icon,
-		BackoffPolicy: meergo.BackoffPolicy{
+		RateLimits: meergo.RateLimits{
+			"/api/event-bulk-create-jobs": {RequestsPerSecond: 2.5, Burst: 10},
+			"/api/profiles/":              {RequestsPerSecond: 11.6, Burst: 75},
+		},
+		RetryPolicy: meergo.RetryPolicy{
 			// https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling
 			"429":     meergo.RetryAfterStrategy(),
-			"500 503": meergo.ExponentialStrategy(100 * time.Millisecond),
+			"500 503": meergo.ExponentialStrategy(meergo.NetFailure, 100*time.Millisecond),
 		},
 	}, New)
 }
