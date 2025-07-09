@@ -71,7 +71,7 @@ func TestRateLimiter_BasicStates(t *testing.T) {
 	l.mu.Unlock()
 }
 
-// Test that rate limiter correctly enters rateLimit and pause is respected.
+// Test that rate limiter correctly enters rateLimited and pause is respected.
 func TestRateLimiter_RateLimitPause(t *testing.T) {
 
 	l := newRateLimiter(10, 3, 0)
@@ -79,8 +79,8 @@ func TestRateLimiter_RateLimitPause(t *testing.T) {
 	// Pause for a long time to guarantee the pause is in effect during Wait
 	l.OnFailure(meergo.RateLimited, 1*time.Second)
 	l.mu.Lock()
-	if l.state != rateLimit {
-		t.Errorf("RateLimit: got %v, want rateLimit", l.state)
+	if l.state != rateLimited {
+		t.Errorf("RateLimit: got %v, want rateLimited", l.state)
 	}
 	l.mu.Unlock()
 
@@ -294,7 +294,7 @@ func TestRateLimiter_StateTransitions(t *testing.T) {
 		t.Errorf("expected state=slowdown, got %v", state)
 	}
 
-	// Bring to rateLimit state
+	// Bring to rateLimited state
 	if err := l.Wait(ctx); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestRateLimiter_StateTransitions(t *testing.T) {
 	l.mu.Lock()
 	state = l.state
 	l.mu.Unlock()
-	if state != rateLimit {
-		t.Errorf("expected state=rateLimit, got %v", state)
+	if state != rateLimited {
+		t.Errorf("expected state=rateLimited, got %v", state)
 	}
 }

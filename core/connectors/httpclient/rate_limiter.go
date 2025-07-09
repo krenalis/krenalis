@@ -20,9 +20,9 @@ import (
 type rateLimiterState int
 
 const (
-	normal    rateLimiterState = iota // operating at full rate
-	slowdown                          // throttling due to increased errors
-	rateLimit                         // paused due to server rate limiting
+	normal      rateLimiterState = iota // operating at full rate
+	slowdown                            // throttling due to increased errors
+	rateLimited                         // paused due to server rate limiting
 )
 
 const minScale = 0.2             // minimum rate scale factor during slowdown
@@ -90,7 +90,7 @@ func (b *rateLimiter) OnFailure(reason meergo.FailureReason, waitTime time.Durat
 	case meergo.Slowdown:
 		b.onSlowdown()
 	case meergo.RateLimited:
-		b.onRateLimit(waitTime)
+		b.onRateLimited(waitTime)
 	default:
 		panic(fmt.Errorf("core/connectors/httpclient: unexpected FailureReason %d", reason))
 	}
@@ -113,7 +113,7 @@ func (b *rateLimiter) OnSuccess() {
 			// slowdown -> normal
 			b.state = normal
 		}
-	case rateLimit:
+	case rateLimited:
 	}
 	b.mu.Unlock()
 }
@@ -137,16 +137,16 @@ func (b *rateLimiter) onNetFailure() {
 	switch b.state {
 	case normal, slowdown:
 		b.errorRate.Failure()
-	case rateLimit:
+	case rateLimited:
 	}
 }
 
-func (b *rateLimiter) onRateLimit(wt time.Duration) {
+func (b *rateLimiter) onRateLimited(wt time.Duration) {
 	switch b.state {
-	case rateLimit:
+	case rateLimited:
 	default:
-		// normal/slowdown -> rateLimit
-		b.state = rateLimit
+		// normal/slowdown -> rateLimited
+		b.state = rateLimited
 	}
 	b.tokens.Pause(wt)
 }
@@ -163,7 +163,7 @@ func (b *rateLimiter) onSlowdown() {
 		}
 	case slowdown:
 		b.errorRate.Failure()
-	case rateLimit:
+	case rateLimited:
 	}
 }
 
