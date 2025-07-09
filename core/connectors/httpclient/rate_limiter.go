@@ -81,6 +81,8 @@ func (b *rateLimiter) OnFailure(reason meergo.FailureReason, waitTime time.Durat
 	if b.inFlight != nil {
 		<-b.inFlight
 	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	switch reason {
 	case meergo.PermanentFailure:
 	case meergo.NetFailure:
@@ -101,21 +103,19 @@ func (b *rateLimiter) OnSuccess() {
 	if b.inFlight != nil {
 		<-b.inFlight
 	}
+	b.mu.Lock()
 	switch b.state {
 	case normal:
-		b.mu.Lock()
 		b.errorRate.Success()
-		b.mu.Unlock()
 	case slowdown:
-		b.mu.Lock()
 		b.errorRate.Success()
 		if b.errorRate.rate < 0.1 {
 			// slowdown -> normal
 			b.state = normal
 		}
-		b.mu.Unlock()
 	case rateLimit:
 	}
+	b.mu.Unlock()
 }
 
 // Wait blocks until a token and (if enabled) a concurrency slot are available.
@@ -136,15 +136,12 @@ func (b *rateLimiter) Wait(ctx context.Context) error {
 func (b *rateLimiter) onNetFailure() {
 	switch b.state {
 	case normal, slowdown:
-		b.mu.Lock()
 		b.errorRate.Failure()
-		b.mu.Unlock()
 	case rateLimit:
 	}
 }
 
 func (b *rateLimiter) onRateLimit(wt time.Duration) {
-	b.mu.Lock()
 	switch b.state {
 	case rateLimit:
 	default:
@@ -152,25 +149,20 @@ func (b *rateLimiter) onRateLimit(wt time.Duration) {
 		b.state = rateLimit
 	}
 	b.tokens.Pause(wt)
-	b.mu.Unlock()
 }
 
 func (b *rateLimiter) onSlowdown() {
 	switch b.state {
 	case normal:
 		// normal -> slowdown
-		b.mu.Lock()
 		b.state = slowdown
 		if b.errorRate.rate < minSlowdownErrorRate {
 			b.errorRate.Set(minSlowdownErrorRate) // set to mid-error to force partial slowdown
 		} else {
 			b.errorRate.Failure()
 		}
-		b.mu.Unlock()
 	case slowdown:
-		b.mu.Lock()
 		b.errorRate.Failure()
-		b.mu.Unlock()
 	case rateLimit:
 	}
 }
