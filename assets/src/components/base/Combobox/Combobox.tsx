@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect, useContext } from 'react';
 import './Combobox.css';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
@@ -11,16 +11,23 @@ import { ComboboxItem } from './Combobox.types';
 import { ExpressionFragment, parseMapExpression } from '../../../utils/parseMapExpression';
 import { autocompleteExpression } from './Combobox.helpers';
 import { MEERGO_FUNCTIONS, MeergoFunction } from '../../../constants/function';
+import appContext from '../../../context/AppContext';
+import { debounceWithAbort } from '../../../utils/debounce';
+import ConnectionContext from '../../../context/ConnectionContext';
+import actionContext from '../../../context/ActionContext';
+import Type from '../../../lib/api/types/types';
 
 const CONSTANT_REGEX = /"([^"]*)"/;
 
 interface ComboboxProps {
 	value: string;
 	items: ComboboxItem[];
-	onInput: (name: string, value: string) => void;
-	onSelect: (name: string, value: string) => void;
+	onInput: (path: string, value: string) => void;
+	onSelect: (path: string, value: string) => void;
 	name: string;
 	isExpression: boolean;
+	updateError?: (path: string, errorMessage: string) => void;
+	type?: Type;
 	enumValues?: string[];
 	size?: 'small' | 'medium' | 'large';
 	className?: string;
@@ -29,6 +36,7 @@ interface ComboboxProps {
 	controlled?: boolean;
 	autoResize?: boolean;
 	disabled?: boolean;
+	indentation?: number;
 	children?: ReactNode;
 	[key: string]: any;
 }
@@ -44,6 +52,8 @@ const Combobox = ({
 	onSelect: onSelectFunc,
 	name,
 	isExpression,
+	updateError,
+	type,
 	enumValues,
 	size = 'medium',
 	className,
@@ -52,6 +62,7 @@ const Combobox = ({
 	controlled = false,
 	autoResize,
 	disabled,
+	indentation,
 	children,
 	...rest
 }: ComboboxProps) => {
@@ -64,6 +75,10 @@ const Combobox = ({
 	const inputRef = useRef<any>();
 	const listRef = useRef<any>();
 	const tabGroupRef = useRef<any>();
+
+	const { api, handleError } = useContext(appContext);
+	const { connection } = useContext(ConnectionContext);
+	const { actionType } = useContext(actionContext);
 
 	const updateCursorPosition = (setStart?: boolean) => {
 		const inputElement = inputRef.current?.input;
@@ -262,6 +277,41 @@ const Combobox = ({
 		};
 	}, []);
 
+	const validateExpression = async (name: string, value: string, signal: AbortSignal) => {
+		if (!isExpression || connection == null || type == null || actionType == null) {
+			return;
+		}
+		let errorMessage = '';
+		if (value !== '') {
+			try {
+				errorMessage = await api.validateExpression(value, actionType.inputSchema.properties, type, signal);
+			} catch (err) {
+				if (err.name === 'AbortError') {
+					return;
+				}
+				handleError(err);
+				return;
+			}
+		}
+		let doesNotExist = errorMessage.endsWith('does not exist');
+		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.target === 'User';
+		const isAppEventsExport = connection.isApp && connection.isDestination && actionType.target === 'Event';
+		if (doesNotExist) {
+			if (isEventBasedUserImport) {
+				errorMessage += `, perhaps you meant "traits.${value}"?`;
+			} else if (isAppEventsExport) {
+				errorMessage += `, perhaps you meant "properties.${value}" or "traits.${value}"?`;
+			}
+		}
+		updateError(name, errorMessage);
+	};
+
+	const debouncedValidateExpression = useMemo(() => debounceWithAbort(validateExpression, 500), [actionType, type]);
+
+	const validate = async (name: string, value: string) => {
+		debouncedValidateExpression(name, value);
+	};
+
 	const onInput = (e) => {
 		if (!isOpen) {
 			// if the user has closed the list via escape button.
@@ -292,6 +342,7 @@ const Combobox = ({
 			updateCursorPosition();
 		});
 		onInputFunc(name, newValue);
+		validate(name, newValue);
 	};
 
 	const resizeCombobox = () => {
@@ -382,6 +433,7 @@ const Combobox = ({
 				}
 			});
 			onSelectFunc(name, v);
+			validate(name, v);
 			setIsOpen(false);
 			return;
 		}
@@ -445,6 +497,7 @@ const Combobox = ({
 			updateCursorPosition();
 		});
 		onSelectFunc(name, v);
+		validate(name, v);
 	};
 
 	const onTabClick = (e: any) => {
@@ -466,6 +519,7 @@ const Combobox = ({
 								: size === 'large'
 									? '3.125rem'
 									: '0px',
+					'--combobox-indentation': indentation != null ? `${indentation}px` : '0px',
 				} as React.CSSProperties
 			}
 		>
@@ -493,6 +547,7 @@ const Combobox = ({
 			</div>
 			{isOpen && (
 				<SlMenu
+					tabIndex={-1}
 					data-is-combobox-list
 					className='combobox-list'
 					ref={listRef}

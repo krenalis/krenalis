@@ -62,7 +62,7 @@ const ActionWrapper = () => {
 
 	const isLoading = selectedActionType == null && selectedAction == null;
 	return (
-		<Fullscreen onClose={onClose} isLoading={isLoading}>
+		<Fullscreen onClose={onClose} isLoading={isLoading} className='fullscreen-action'>
 			<Action actionType={selectedActionType} action={selectedAction} />
 		</Fullscreen>
 	);

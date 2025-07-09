@@ -606,19 +606,19 @@ const transformInActionToSet = async (
 			// The property must be mapped if it is required and it is a
 			// first-level property, or if one of its siblings has been
 			// mapped.
-			const pair = action.transformation.mapping[k];
-			const isFirstLevel = pair.indentation === 0;
-			if (pair.value === '') {
+			const property = action.transformation.mapping[k];
+			const isFirstLevel = property.indentation === 0;
+			if (property.value === '') {
 				const hasRequired =
-					(actionType.target === 'Event' && (pair.createRequired || pair.updateRequired)) ||
+					(actionType.target === 'Event' && (property.createRequired || property.updateRequired)) ||
 					(action.exportMode != null &&
-						((pair.createRequired && action.exportMode.includes('Create')) ||
-							(pair.updateRequired && action.exportMode.includes('Update'))));
+						((property.createRequired && action.exportMode.includes('Create')) ||
+							(property.updateRequired && action.exportMode.includes('Update'))));
 
 				const siblings: string[] = [];
 				for (const key of keys) {
 					const p = action.transformation.mapping[key];
-					if (p.root === pair.root && p.indentation === pair.indentation && key !== k) {
+					if (p.root === property.root && p.indentation === property.indentation && key !== k) {
 						siblings.push(key);
 					}
 				}
@@ -634,17 +634,17 @@ const transformInActionToSet = async (
 			}
 
 			// Check if there are UI errors in the mapping.
-			if (pair.error && pair.error !== '') {
+			if (property.error && property.error !== '') {
 				throw new Error(`Please fix the errors in the mapping`);
 			}
 
 			const mapped = flattenedOutputSchema![k].full;
 			expressions.push({
-				value: pair.value,
+				value: property.value,
 				type: mapped!.type,
 			});
 
-			mappingToSave[k] = pair.value;
+			mappingToSave[k] = property.value;
 
 			addPropertyToSchema(k, mapped, outputSchema, flattenedOutputSchema, isFirstLevel);
 		}
@@ -1345,6 +1345,33 @@ function sortPropertiesByOriginalSchema(schema: ObjectType, original: ObjectType
 	};
 }
 
+function parseMapString(mapString: string) {
+	const params = mapString
+		.trim()
+		.replace(/^map\s*\(/, '')
+		.replace(/\)$/, '');
+
+	let paramList = params.split(', ');
+	const pairs = [];
+	for (let i = 0; i < paramList.length; i += 2) {
+		pairs.push([paramList[i].trim().replace(/^"|"$/g, ''), paramList[i + 1].trim()]);
+	}
+	return pairs;
+}
+
+function stringifyMapPairs(pairs: Array<[string, string]>) {
+	const format = (v: string | number) => (typeof v === 'string' ? `"${v}"` : String(v));
+	const values: string[] = [];
+	for (const [key, value] of pairs) {
+		if (key === '' && value === '') {
+			// Skip empty pairs.
+			continue;
+		}
+		values.push(format(key), value);
+	}
+	return `map(${values.join(', ')})`;
+}
+
 interface hierarchicalPaths {
 	ancestors: string[];
 	descendants: string[];
@@ -1557,6 +1584,8 @@ export {
 	getTransformationFunctionParameterName,
 	validateMatching,
 	propertyTypesAreEqual,
+	parseMapString,
+	stringifyMapPairs,
 };
 
 export type { TransformedMapping, TransformedProperty, TransformedActionType, TransformedAction, ActionTypeField };

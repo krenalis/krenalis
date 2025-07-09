@@ -56,6 +56,17 @@ const updateMappingProperty = (
 	return a;
 };
 
+const updateMappingPropertyError = (action: TransformedAction, path: string, error: string): TransformedAction => {
+	const a = { ...action };
+	const mapping = a.transformation.mapping;
+	if (mapping == null) {
+		return a;
+	}
+	mapping[path].error = error;
+	a.transformation.mapping = mapping;
+	return a;
+};
+
 const checkIfPropertyExists = (property: string, schema: TransformedMapping): string => {
 	if (schema == null || property === '' || property == null) {
 		return '';
@@ -122,4 +133,4 @@ const getSampleIdentifiers = (sample: Record<string, any>): SampleIdentifiers | 
 	};
 };
 
-export { updateMappingProperty, checkIfPropertyExists, getSampleIdentifiers };
+export { updateMappingProperty, updateMappingPropertyError, checkIfPropertyExists, getSampleIdentifiers };

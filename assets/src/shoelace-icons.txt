@@ -73,5 +73,6 @@ three-dots-vertical.svg
 three-dots.svg
 trash3.svg
 type-bold.svg
+x-circle.svg
 x-lg.svg
 x.svg

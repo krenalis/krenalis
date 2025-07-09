@@ -1,5 +1,10 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
-import { checkIfPropertyExists, updateMappingProperty, getSampleIdentifiers } from './Action.helpers';
+import {
+	checkIfPropertyExists,
+	updateMappingProperty,
+	getSampleIdentifiers,
+	updateMappingPropertyError,
+} from './Action.helpers';
 import {
 	getSchemaComboboxItems,
 	getIdentityColumnComboboxItems,
@@ -9,11 +14,14 @@ import {
 	TransformedAction,
 	TransformedActionType,
 	TransformedMapping,
+	TransformedProperty,
 	doesLastChangeTimeColumnNeedFormat,
 	flattenSchema,
 	getTransformationFunctionParameterName,
 	isRecursiveType,
+	parseMapString,
 	propertyTypesAreEqual,
+	stringifyMapPairs,
 	transformInActionToSet,
 } from '../../../lib/core/action';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
@@ -58,13 +66,13 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
 import { ActionToSet, ExportMode, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/action';
-import { debounceWithAbort } from '../../../utils/debounce';
 import TransformedConnector from '../../../lib/core/connector';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
 import JSONbig from 'json-bigint';
 import actionContext from '../../../context/ActionContext';
 import TransformedConnection from '../../../lib/core/connection';
+import appContext from '../../../context/AppContext';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -207,8 +215,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, [actionType.inputSchema]);
 
 	useEffect(() => {
-		// validate mapping expressions when the action is opened or
-		// when the schema changes.
+		// validate mapping expressions when the action is opened and
+		// revalidate them when the schema changes.
 		const validateExpressions = async () => {
 			let a = action;
 			const keys = Object.keys(action.transformation.mapping);
@@ -293,46 +301,18 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		setAction(a);
 	};
 
-	const updateMapping = async (name: string, value: string, signal?: AbortSignal) => {
-		let errorMessage = '';
-		if (value !== '') {
-			try {
-				errorMessage = await api.validateExpression(
-					value,
-					actionType.inputSchema.properties,
-					action.transformation.mapping![name].full.type,
-					signal,
-				);
-			} catch (err) {
-				if (err.name === 'AbortError') {
-					return;
-				}
-				handleError(err);
-				return;
-			}
-		}
-		let doesNotExist = errorMessage.endsWith('does not exist');
-		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.target === 'User';
-		const isAppEventsExport = connection.isApp && connection.isDestination && actionType.target === 'Event';
-		if (doesNotExist) {
-			if (isEventBasedUserImport) {
-				errorMessage += `, perhaps you meant "traits.${value}"?`;
-			} else if (isAppEventsExport) {
-				errorMessage += `, perhaps you meant "properties.${value}" or "traits.${value}"?`;
-			}
-		}
-		const updatedAction = updateMappingProperty(action, name, value, errorMessage);
+	const updateMapping = (path: string, value: string) => {
+		const updatedAction = updateMappingProperty(action, path, value, '');
 		setAction(updatedAction);
 	};
 
-	const debouncedUpdateMapping = useMemo(() => debounceWithAbort(updateMapping, 500), [actionType, action]);
-
-	const onUpdateMapping = async (name: string, value: string) => {
-		debouncedUpdateMapping(name, value);
+	const updateMappingError = (path: string, errorMessage: string) => {
+		const updatedAction = updateMappingPropertyError(action, path, errorMessage);
+		setAction(updatedAction);
 	};
 
-	const onSelectProperty = async (name: string, value: string) => {
-		if (name === 'identityColumn') {
+	const onSelectProperty = (path: string, value: string) => {
+		if (path === 'identityColumn') {
 			const a = { ...action };
 			a.identityColumn = value;
 			setAction(a);
@@ -340,7 +320,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				isFirstCompilation.current = false;
 			}
 			return;
-		} else if (name === 'lastChangeTimeColumn') {
+		} else if (path === 'lastChangeTimeColumn') {
 			const a = { ...action };
 			a.lastChangeTimeColumn = value;
 			if (value === '' || !doesLastChangeTimeColumnNeedFormat(value, actionType.inputSchema)) {
@@ -349,10 +329,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			setAction(a);
 			return;
 		}
-		await updateMapping(name, value);
+		updateMapping(path, value);
 	};
 
-	const onUpdateIdentityColumn = async (_: string, value: string) => {
+	const onUpdateIdentityColumn = (_: string, value: string) => {
 		const a = { ...action };
 		a.identityColumn = value;
 		setAction(a);
@@ -361,7 +341,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	};
 
-	const onUpdateLastChangeTimeColumn = async (_: string, value: string) => {
+	const onUpdateLastChangeTimeColumn = (_: string, value: string) => {
 		const a = { ...action };
 		const oldValue = a.lastChangeTimeColumn;
 		a.lastChangeTimeColumn = value;
@@ -441,7 +421,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			selectedWorkspace={selectedWorkspace}
 			action={action}
 			setAction={setAction}
-			onUpdateMapping={onUpdateMapping}
+			updateMapping={updateMapping}
+			updateMappingError={updateMappingError}
 			mappingItems={mappingList}
 			onSelectMappingItem={onSelectProperty}
 			isTransformationDisabled={isTransformationDisabled}
@@ -591,6 +572,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				description='The relation between the event properties and the action type properties'
 				padded={false}
 				annotated={true}
+				className='action__transformation-section'
 			>
 				{box}
 				<FullscreenTransformation
@@ -613,9 +595,10 @@ interface TransformationBoxProps {
 	selectedWorkspace: number;
 	action: TransformedAction;
 	setAction: React.Dispatch<React.SetStateAction<TransformedAction>>;
-	onUpdateMapping: (name: string, value: string) => void;
+	updateMapping: (path: string, value: string) => void;
+	updateMappingError: (path: string, errorMessage: string) => void;
 	mappingItems: ComboboxItem[];
-	onSelectMappingItem: (name: string, value: string) => void;
+	onSelectMappingItem: (path: string, value: string) => void;
 	isTransformationDisabled: boolean;
 	transformationLanguages: string[];
 	selectedLanguage: string;
@@ -676,7 +659,8 @@ const TransformationBox = ({
 	setAction,
 	mappingItems,
 	onSelectMappingItem,
-	onUpdateMapping,
+	updateMapping,
+	updateMappingError,
 	isTransformationDisabled,
 	transformationLanguages,
 	selectedLanguage,
@@ -799,13 +783,13 @@ const TransformationBox = ({
 	if (transformationType === 'mappings') {
 		const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 		const mappings: ReactNode[] = [];
-		for (const k in action.transformation.mapping) {
-			const property = action.transformation.mapping[k];
+		for (const path in action.transformation.mapping) {
+			const property = action.transformation.mapping[path];
 
-			const isIdentifier = isImport && workspace.identifiers.includes(k);
-			const isOutMatchingProperty = !!action.matching?.out && action.matching.out === k;
+			const isIdentifier = isImport && workspace.identifiers.includes(path);
+			const isOutMatchingProperty = !!action.matching?.out && action.matching.out === path;
 			const showMatchingIn = isOutMatchingProperty && property.value === '';
-			const isTableKey = !!action.tableKey && action.tableKey === k;
+			const isTableKey = !!action.tableKey && action.tableKey === path;
 			const isDisabled =
 				isTransformationDisabled ||
 				property.disabled === true ||
@@ -815,7 +799,7 @@ const TransformationBox = ({
 
 			const parents: string[] = [];
 			for (const key of keys) {
-				if (k.startsWith(`${key}.`)) {
+				if (path.startsWith(`${key}.`)) {
 					parents.push(key);
 				}
 			}
@@ -831,20 +815,26 @@ const TransformationBox = ({
 				}
 			}
 
-			let automaticallyMapped: string;
+			let automaticMapping: string | undefined;
 			if (closestMappedParent != null) {
+				// If there is a mapped parent, and the property that is
+				// mapped on it has a sub-property that has the same
+				// name and type of the current property, show the
+				// automatic mapping between the two.
 				const mapping = action.transformation.mapping[closestMappedParent];
 				const indentationDifference = property.indentation - mapping.indentation;
 				const mappingProperty = flatInputSchema[mapping.value];
-				const flat = flattenSchema(mappingProperty.full.type as ObjectType);
-				let key = Object.keys(flat).find(
-					(k) =>
-						flat[k].full.name === property.full.name &&
-						flat[k].indentation === indentationDifference - 1 &&
-						propertyTypesAreEqual(flat[k].full.type, property.full.type),
-				);
-				if (key != null) {
-					automaticallyMapped = `${mapping.value}.${key}`;
+				if (mappingProperty.full.type.kind === 'object') {
+					const flat = flattenSchema(mappingProperty.full.type as ObjectType);
+					let key = Object.keys(flat).find(
+						(k) =>
+							flat[k].full.name === property.full.name &&
+							flat[k].indentation === indentationDifference - 1 &&
+							propertyTypesAreEqual(flat[k].full.type, property.full.type),
+					);
+					if (key != null) {
+						automaticMapping = `${mapping.value}.${key}`;
+					}
 				}
 			}
 
@@ -874,7 +864,7 @@ const TransformationBox = ({
 								if (
 									prop.root === property.root &&
 									prop.indentation === property.indentation &&
-									key !== k
+									key !== path
 								) {
 									siblings.push(key);
 								}
@@ -905,67 +895,87 @@ const TransformationBox = ({
 
 			const typeName = toMeergoStringType(property.full.type);
 
-			mappings.push(
-				<React.Fragment key={k}>
-					<Combobox
-						onInput={onUpdateMapping}
-						value={
-							showMatchingIn
-								? action.matching.in
-								: automaticallyMapped != null
-									? automaticallyMapped
-									: property.value
-						}
-						controlled={true}
-						name={k}
-						disabled={isDisabled}
-						className='action__transformation-input-property'
-						size='small'
-						error={
-							isOutMatchingProperty && property.value !== ''
-								? 'Please leave this input empty, as the mapping is automatic in this case'
-								: property.error
-						}
-						autocompleteExpressions={true}
-						isExpression={true}
-						enumValues={enumValues.length > 0 ? enumValues : undefined}
-						items={mappingItems}
+			if (property.type === 'map') {
+				mappings.push(
+					<MapMapping
+						property={property}
+						propertyPath={path}
+						mappingItems={mappingItems}
+						updateMapping={updateMapping}
 						onSelect={onSelectMappingItem}
-					>
-						{isIdentifier && (
-							<div className='action__transformation-property-icon' slot='prefix'>
-								<SlTooltip content='Used as identifier' hoist>
-									<SlIcon
-										name='person-check'
-										className='action__transformation-property-identifier'
-									/>
-								</SlTooltip>
-							</div>
-						)}
-					</Combobox>
-					<div className='action__transformation-mapping-arrow'>
-						<SlIcon name='arrow-right' />
-					</div>
-					<div
-						className={`action__transformation-output-property${
-							property?.indentation! > 0 ? ' action__transformation-output-property--indented' : ''
-						}`}
-						style={
-							{
-								'--mapping-indentation': `${action.transformation.mapping![k].indentation! * 30}px`,
-							} as React.CSSProperties
-						}
-					>
-						<PropertyTooltip propertyName={k} typeName={typeName} type={property.full.type}>
-							<span className='action__transformation-output-property-key'>{property.full.name}</span>
-							<span className='action__transformation-output-property-type'>{typeName}</span>
-						</PropertyTooltip>
-						{showRequired && (
-							<span className='action__transformation-output-property-required'>required</span>
-						)}
-					</div>
-				</React.Fragment>,
-			);
+						updateMappingError={updateMappingError}
+						automaticMapping={automaticMapping}
+						isFullscreenTransformationOpen={isFullscreenTransformationOpen}
+						isDisabled={isDisabled}
+						indentation={action.transformation.mapping![path].indentation!}
+						showRequired={showRequired}
+					/>,
+				);
+			} else {
+				mappings.push(
+					<React.Fragment key={path}>
+						<Combobox
+							onInput={updateMapping}
+							value={
+								showMatchingIn
+									? action.matching.in
+									: automaticMapping != null
+										? automaticMapping
+										: property.value
+							}
+							controlled={true}
+							name={path}
+							disabled={isDisabled}
+							className='action__transformation-input-property'
+							size='small'
+							error={
+								isOutMatchingProperty && property.value !== ''
+									? 'Please leave this input empty, as the mapping is automatic in this case'
+									: property.error
+							}
+							autocompleteExpressions={true}
+							updateError={updateMappingError}
+							type={property.full.type}
+							isExpression={true}
+							enumValues={enumValues.length > 0 ? enumValues : undefined}
+							items={mappingItems}
+							onSelect={onSelectMappingItem}
+						>
+							{isIdentifier && (
+								<div className='action__transformation-property-icon' slot='prefix'>
+									<SlTooltip content='Used as identifier' hoist>
+										<SlIcon
+											name='person-check'
+											className='action__transformation-property-identifier'
+										/>
+									</SlTooltip>
+								</div>
+							)}
+						</Combobox>
+						<div className='action__transformation-mapping-arrow'>
+							<SlIcon name='arrow-right' />
+						</div>
+						<div
+							className={`action__transformation-output-property${
+								property?.indentation! > 0 ? ' action__transformation-output-property--indented' : ''
+							}`}
+							style={
+								{
+									'--mapping-indentation': `${action.transformation.mapping![path].indentation! * 30}px`,
+								} as React.CSSProperties
+							}
+						>
+							<PropertyTooltip propertyName={path} typeName={typeName} type={property.full.type}>
+								<span className='action__transformation-output-property-key'>{property.full.name}</span>
+								<span className='action__transformation-output-property-type'>{typeName}</span>
+							</PropertyTooltip>
+							{showRequired && (
+								<span className='action__transformation-output-property-required'>required</span>
+							)}
+						</div>
+					</React.Fragment>,
+				);
+			}
 		}
 		let [leftHeader, rightHeader] = transformationHeaders(connection, action);
 		body = (
@@ -2307,6 +2317,493 @@ const FullscreenTransformation = ({
 			</SlSplitPanel>
 		</div>
 	);
+};
+
+interface MapMappingProps {
+	property: TransformedProperty;
+	propertyPath: string;
+	mappingItems: ComboboxItem[];
+	updateMapping: (path: string, value: string) => void;
+	updateMappingError: (patah: string, errorMessage: string) => void;
+	onSelect: (path: string, value: string) => void;
+	automaticMapping: string | undefined;
+	isFullscreenTransformationOpen: boolean;
+	isDisabled: boolean;
+	indentation: number;
+	showRequired: boolean;
+}
+
+const MapMapping = ({
+	property,
+	propertyPath,
+	mappingItems,
+	updateMapping,
+	updateMappingError,
+	onSelect,
+	automaticMapping,
+	isFullscreenTransformationOpen,
+	isDisabled,
+	indentation,
+	showRequired,
+}: MapMappingProps) => {
+	const [pairs, setPairs] = useState<Array<[string, string]>>([['', '']]);
+	const [logicalErrors, setLogicalErrors] = useState<Record<number, string>>({});
+	const [validationErrors, setValidationErrors] = useState<Record<number, string>>({});
+	const [reloadLogicalErrors, setReloadLogicalErrors] = useState<boolean>(false);
+	const [isResetting, setIsResetting] = useState<boolean>(false);
+
+	const { api, handleError } = useContext(appContext);
+	const { actionType } = useContext(actionContext);
+
+	const hasFilledPairs = pairs.findIndex((p) => p[0] !== '' || p[1] !== '') > -1;
+	const hasMultiplePairs = pairs.length > 1;
+	const isParentMappingDisabled = isDisabled || hasFilledPairs || hasMultiplePairs;
+	const areChildrenMappingDisabled =
+		isDisabled ||
+		automaticMapping != null ||
+		(property.value !== '' && !hasFilledPairs && !hasMultiplePairs && !isResetting);
+
+	useEffect(() => {
+		// At first render, compute the pairs based on the property
+		// value. Automatically convert filled out "map()" expressions
+		// into corresponding pairs. Also reload the pairs when the
+		// testing mode is open/closed to trigger the re-render of the
+		// component and synchronize the changes between the two modes.
+		const isMapExpression = property.value.startsWith('map(') && property.value !== 'map()';
+		if (isMapExpression) {
+			const p = parseMapString(property.value);
+			setPairs(p);
+			// Validate expressions when the action is opened.
+			validatePairExpressions(p);
+			setReloadLogicalErrors(true);
+		}
+	}, [isFullscreenTransformationOpen]);
+
+	useEffect(() => {
+		// Revalidate expressions when the schema changes.
+		if (actionType.inputSchema != null) {
+			validatePairExpressions(pairs);
+		}
+	}, [actionType.inputSchema]);
+
+	useEffect(() => {
+		if (property.value === '' && isResetting) {
+			// The property value has been succesfully emptied in the
+			// action.
+			setIsResetting(false);
+		}
+	}, [property.value]);
+
+	useEffect(() => {
+		if (!hasFilledPairs) {
+			return;
+		}
+		if (Object.keys(logicalErrors).length > 0 || Object.keys(validationErrors).length > 0) {
+			// Propagate the error in the mapping property so that it's
+			// not possible to save the action.
+			updateMappingError(propertyPath, "There are errors in the map's mapping");
+		} else {
+			updateMappingError(propertyPath, '');
+		}
+	}, [property.value, logicalErrors, validationErrors]);
+
+	useEffect(() => {
+		const mappingContainers = document.querySelectorAll('.action__transformation-mappings');
+
+		const onFocusOut = () => {
+			// Add a short delay to reload the logical errors only after
+			// the focus has fully shifted (The computation of logical
+			// errors checks the focus to decide whether to show or hide
+			// certain messages).
+			setTimeout(() => {
+				setReloadLogicalErrors(true);
+			}, 50);
+		};
+
+		for (const container of Array.from(mappingContainers)) {
+			container.addEventListener('focusout', onFocusOut);
+		}
+
+		return () => {
+			for (const container of Array.from(mappingContainers)) {
+				container.removeEventListener('focusout', onFocusOut);
+			}
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!reloadLogicalErrors) {
+			return;
+		}
+		// Check if the pairs have logical errors (e.g. non-mapped or
+		// duplicated keys).
+		let err = {};
+		let index = 0;
+		for (const pair of pairs) {
+			let combobox: HTMLElement;
+			if (isFullscreenTransformationOpen) {
+				combobox = document.querySelector(
+					`.action__transformation-input-property[data-id="${propertyPath}"] ~ .action__transformation-input-property[data-id="${index}"]`,
+				) as HTMLElement;
+			} else {
+				combobox = document.querySelector(
+					`.action__body .action__transformation-section > .section__content .action__transformation-mappings .action__transformation-input-property[data-id="${propertyPath}"] ~ .action__transformation-input-property[data-id="${index}"]`,
+				);
+			}
+			const comboboxInput = combobox.querySelector('sl-input');
+			const keyInput = combobox.nextElementSibling.nextElementSibling.querySelector('sl-input') as HTMLElement;
+			const hasAlreadyError = logicalErrors[index] != null;
+			const hasFocus = comboboxInput.shadowRoot.activeElement !== null || document.activeElement === keyInput;
+			if (hasFocus && !hasAlreadyError) {
+				continue;
+			}
+			let [key, value] = pair;
+			if (key !== '' && value === '') {
+				err[index] = 'Key must be mapped';
+			}
+			const sameKeyIndex = pairs.findIndex((p, i) => i !== index && p[0] === key);
+			if (sameKeyIndex > -1) {
+				if (key === '') {
+					const hasMappedEmptyKey = pairs.findIndex((p) => p[0] === '' && p[1] !== '') > -1;
+					if (hasMappedEmptyKey) {
+						err[index] = `Key "${key}" is duplicated`;
+					}
+				} else {
+					err[index] = `Key "${key}" is duplicated`;
+				}
+			}
+			index++;
+		}
+		setReloadLogicalErrors(false);
+		setLogicalErrors(err);
+	}, [reloadLogicalErrors]);
+
+	const validatePairExpressions = async (pairs: Array<[string, string]>) => {
+		let i = 0;
+		for (const pair of pairs) {
+			const value = pair[1];
+			if (value === '') {
+				i++;
+				continue;
+			}
+			let errorMessage = '';
+			try {
+				errorMessage = await api.validateExpression(
+					value,
+					actionType.inputSchema.properties,
+					(property.full.type as MapType).elementType,
+				);
+			} catch (err) {
+				handleError(err);
+				return;
+			}
+			if (errorMessage !== '') {
+				updatePairValidationError(String(i), errorMessage);
+			}
+			i++;
+		}
+	};
+
+	const updatePairValidationError = (i: string, errorMessage: string) => {
+		const index = Number(i);
+		setValidationErrors((prev) => {
+			const err = structuredClone(prev);
+			if (errorMessage === '') {
+				delete err[index];
+			} else {
+				err[index] = errorMessage;
+			}
+			return err;
+		});
+	};
+
+	const onUpdatePair = (index: number, part: 'key' | 'value', val: string) => {
+		let newPairs = [
+			...pairs.slice(0, index),
+			[part === 'key' ? val : pairs[index][0], part === 'value' ? val : pairs[index][1]] as ['', ''],
+			...pairs.slice(index + 1, pairs.length),
+		];
+		setPairs(newPairs);
+		let value = stringifyMapPairs(newPairs);
+		if (value === 'map()') {
+			// The user has emptied all inputs so we must empty the
+			// value of the mapping without automatically setting the
+			// "map()" value.
+			value = '';
+			setIsResetting(true);
+		}
+		updateMapping(propertyPath, value);
+	};
+
+	const onSelectPairValue = (index: number, val: string) => {
+		let newPairs = [
+			...pairs.slice(0, index),
+			[pairs[index][0], val] as ['', ''],
+			...pairs.slice(index + 1, pairs.length),
+		];
+		setPairs(newPairs);
+		let value = stringifyMapPairs(newPairs);
+		updateMapping(propertyPath, value);
+		setReloadLogicalErrors(true);
+	};
+
+	const onAddPair = (index: number) => {
+		let newPairs = [...pairs.slice(0, index + 1), ['', ''] as ['', ''], ...pairs.slice(index + 1, pairs.length)];
+		setPairs(newPairs);
+		let value = stringifyMapPairs(newPairs);
+		if (value === 'map()') {
+			// Avoid automatically setting the "map()"" value in the
+			// action if all the inputs are empty.
+			value = '';
+		}
+
+		// Shift the errors.
+		setLogicalErrors(shiftErrors(logicalErrors, index));
+		setValidationErrors(shiftErrors(validationErrors, index));
+
+		updateMapping(propertyPath, value);
+		setReloadLogicalErrors(true);
+
+		setTimeout(() => {
+			let panel: HTMLElement;
+			let newPairCombobox: HTMLElement;
+			if (isFullscreenTransformationOpen) {
+				panel = document.querySelector('.fullscreen-transformation__right-panel') as HTMLElement;
+				newPairCombobox = panel.querySelector(
+					`.action__transformation-input-property[data-id="${propertyPath}"] ~ .action__transformation-input-property[data-id="${index + 1}"]`,
+				) as HTMLElement;
+			} else {
+				panel = document.querySelector('.fullscreen-action') as HTMLElement;
+				newPairCombobox = document.querySelector(
+					`.action__body .action__transformation-section > .section__content .action__transformation-mappings .action__transformation-input-property[data-id="${propertyPath}"] ~ .action__transformation-input-property[data-id="${index + 1}"]`,
+				);
+			}
+			const focusKey = () => {
+				const keyContainer = newPairCombobox.nextElementSibling.nextElementSibling;
+				const keyInput = keyContainer.querySelector('sl-input') as HTMLElement;
+				keyInput.focus();
+			};
+			const panelBottom = panel.scrollTop + panel.clientHeight;
+			const elementBottom = newPairCombobox.offsetTop + newPairCombobox.offsetHeight;
+			if (elementBottom > panelBottom) {
+				const scrollAmount = elementBottom - panel.clientHeight;
+				panel.scrollTo({
+					top: scrollAmount + 20,
+					behavior: 'smooth',
+				});
+				setTimeout(focusKey, 200);
+			} else {
+				focusKey();
+			}
+		}, 300);
+	};
+
+	const onRemovePair = (index: number) => {
+		if (pairs.length === 1) {
+			// Prevent the last pair from being removed.
+			return;
+		}
+		let newPairs = [...pairs.slice(0, index), ...pairs.slice(index + 1, pairs.length)];
+		setPairs(newPairs);
+		let value = stringifyMapPairs(newPairs);
+		if (value === 'map()') {
+			const isAlreadyEmpty = property.value === '';
+			if (isAlreadyEmpty) {
+				return;
+			}
+			// The user has emptied all inputs so we must empty the
+			// value of the mapping without automatically setting the
+			// "map()" value.
+			value = '';
+			setIsResetting(true);
+		}
+
+		// Remove the errors related to the pair.
+		const logicalErr = { ...logicalErrors };
+		delete logicalErr[index];
+		const validationErr = { ...validationErrors };
+		delete validationErr[index];
+
+		// Unshift the errors.
+		setLogicalErrors(unshiftErrors(logicalErr, index));
+		setValidationErrors(unshiftErrors(validationErr, index));
+
+		updateMapping(propertyPath, value);
+		setReloadLogicalErrors(true);
+	};
+
+	const onClearPair = () => {
+		let newPairs = [['', '']] as Array<[string, string]>;
+		setPairs(newPairs);
+		setLogicalErrors({});
+		setValidationErrors({});
+		updateMapping(propertyPath, '');
+		setIsResetting(true);
+	};
+
+	const typeName = toMeergoStringType(property.full.type);
+
+	return (
+		<>
+			<Combobox
+				onInput={updateMapping}
+				value={
+					automaticMapping != null ? automaticMapping : hasFilledPairs || isResetting ? '' : property.value
+				}
+				controlled={true}
+				name={propertyPath}
+				disabled={isParentMappingDisabled}
+				className='action__transformation-input-property'
+				size='small'
+				error={hasFilledPairs || isResetting ? '' : property.error}
+				autocompleteExpressions={true}
+				updateError={updateMappingError}
+				type={property.full.type}
+				isExpression={true}
+				items={mappingItems}
+				onSelect={onSelect}
+			/>
+			<div className='action__transformation-mapping-arrow'>
+				<SlIcon name='arrow-right' />
+			</div>
+			<div
+				className={`action__transformation-output-property${
+					property?.indentation! > 0 ? ' action__transformation-output-property--indented' : ''
+				}`}
+				style={
+					{
+						'--mapping-indentation': `${indentation * 30}px`,
+					} as React.CSSProperties
+				}
+			>
+				<PropertyTooltip propertyName={propertyPath} typeName={typeName} type={property.full.type}>
+					<span className='action__transformation-output-property-key'>{property.full.name}</span>
+					<span className='action__transformation-output-property-type'>{typeName}</span>
+				</PropertyTooltip>
+				{showRequired && <span className='action__transformation-output-property-required'>required</span>}
+			</div>
+			{pairs.map(([key, value], i) => {
+				const elementType = (property.full.type as MapType).elementType;
+				const hasDuplicatedKey = logicalErrors[i] != null && logicalErrors[i].endsWith('duplicated');
+				return (
+					<React.Fragment key={i}>
+						<Combobox
+							onInput={(_: string, value: string) => {
+								onUpdatePair(i, 'value', value);
+							}}
+							value={value}
+							controlled={true}
+							name={String(i)}
+							disabled={areChildrenMappingDisabled}
+							className='action__transformation-input-property'
+							size='small'
+							error={
+								logicalErrors[i] != null && !hasDuplicatedKey
+									? logicalErrors[i]
+									: validationErrors[i] != null
+										? validationErrors[i]
+										: ''
+							}
+							autocompleteExpressions={true}
+							updateError={updatePairValidationError}
+							type={(property.full.type as MapType).elementType}
+							isExpression={true}
+							items={mappingItems}
+							onSelect={(_: string, value: string) => {
+								onSelectPairValue(i, value);
+							}}
+						/>
+						<div className='action__transformation-mapping-arrow'>
+							<SlIcon name='arrow-right' />
+						</div>
+						<div
+							className='action__transformation-output-property action__transformation-output-property--indented action__transformation-output-property--map'
+							style={
+								{
+									'--mapping-indentation': `${(indentation + 1) * 30}px`,
+								} as React.CSSProperties
+							}
+						>
+							"{' '}
+							<SlInput
+								size='small'
+								value={key}
+								disabled={areChildrenMappingDisabled}
+								onSlInput={(e: any) => {
+									onUpdatePair(i, 'key', e.target.value);
+								}}
+							/>{' '}
+							"
+							<PropertyTooltip propertyName={''} typeName={elementType.kind} type={elementType}>
+								<span className='action__transformation-output-property-type'>{elementType.kind}</span>
+							</PropertyTooltip>
+							<SlTooltip content='Add key'>
+								<SlButton
+									className='action__transformation-output-property-add'
+									size='small'
+									onClick={areChildrenMappingDisabled ? null : () => onAddPair(i)}
+									disabled={areChildrenMappingDisabled}
+								>
+									<SlIcon name='plus-circle' slot='prefix' />
+								</SlButton>
+							</SlTooltip>
+							<SlTooltip content={pairs.length === 1 ? 'Clear key' : 'Remove key'}>
+								<SlButton
+									className='action__transformation-output-property-remove'
+									size='small'
+									onClick={
+										areChildrenMappingDisabled
+											? null
+											: pairs.length > 1
+												? () => onRemovePair(i)
+												: hasFilledPairs
+													? () => onClearPair()
+													: null
+									}
+									disabled={areChildrenMappingDisabled || (pairs.length === 1 && !hasFilledPairs)}
+								>
+									<SlIcon name='x-circle' slot='prefix' />
+								</SlButton>
+							</SlTooltip>
+							{hasDuplicatedKey && (
+								<div className='action__transformation-output-property-error'>{logicalErrors[i]}</div>
+							)}
+						</div>
+					</React.Fragment>
+				);
+			})}
+		</>
+	);
+};
+
+const shiftErrors = (errors: Record<number, string>, afterIndex: number): Record<number, string> => {
+	const err = {};
+	const keys = Object.keys(errors);
+	for (const k of keys) {
+		const index = Number(k);
+		if (index <= afterIndex) {
+			err[index] = errors[index];
+		} else {
+			// Shift the error.
+			err[index + 1] = errors[index];
+		}
+	}
+	return err;
+};
+
+const unshiftErrors = (errors: Record<number, string>, afterIndex: number): Record<number, string> => {
+	const err = {};
+	const keys = Object.keys(errors);
+	for (const k of keys) {
+		const index = Number(k);
+		if (index < afterIndex) {
+			err[index] = errors[index];
+		} else {
+			// Unshift the error.
+			err[index - 1] = errors[index];
+		}
+	}
+	return err;
 };
 
 interface TransformationNestedPropertiesProps {

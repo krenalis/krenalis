@@ -453,9 +453,8 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 								size='small'
 								onClick={() => onRemoveCondition(i)}
 								disabled={isDisabled}
-								circle
 							>
-								<SlIcon name='x' />
+								<SlIcon name='x-circle' slot='prefix' />
 							</SlButton>
 						</div>
 					</div>

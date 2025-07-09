@@ -6,10 +6,11 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 interface FullscreenProps {
 	onClose: () => void;
 	isLoading: boolean;
+	className?: string;
 	children: ReactNode;
 }
 
-const Fullscreen = ({ onClose, isLoading, children }: FullscreenProps) => {
+const Fullscreen = ({ onClose, isLoading, className, children }: FullscreenProps) => {
 	const [isOpen, setIsOpen] = useState(true);
 
 	const onAnimationEnd = () => {
@@ -28,7 +29,7 @@ const Fullscreen = ({ onClose, isLoading, children }: FullscreenProps) => {
 	return (
 		<FullscreenContext.Provider value={{ closeFullscreen }}>
 			<div
-				className={`fullscreen${isOpen ? ' fullscreen--open' : ''}${isLoading ? ' fullscreen--loading' : ''}`}
+				className={`fullscreen${isOpen ? ' fullscreen--open' : ''}${isLoading ? ' fullscreen--loading' : ''}${className != null ? ' ' + className : ''}`}
 				style={{ animation: `${isOpen ? 'fullscreenFadeIn' : 'fullscreenFadeOut'} .3s` }}
 				onAnimationEnd={onAnimationEnd}
 			>
