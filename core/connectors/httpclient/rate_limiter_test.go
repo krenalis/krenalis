@@ -33,7 +33,7 @@ func TestRateLimiter_BasicStates(t *testing.T) {
 	l.mu.Unlock()
 
 	// OnSuccess in normal state should not change the state.
-	l.OnSuccess()
+	l.OnSuccess(0)
 	l.mu.Lock()
 	if l.state != normal {
 		t.Errorf("OnSuccess in normal: got %v, want normal", l.state)
@@ -41,7 +41,7 @@ func TestRateLimiter_BasicStates(t *testing.T) {
 	l.mu.Unlock()
 
 	// OnFailure with NetFailure and low error rate should not change state.
-	l.OnFailure(meergo.NetFailure, 0)
+	l.OnFailure(0, meergo.NetFailure, 0)
 	l.mu.Lock()
 	if l.state != normal {
 		t.Errorf("OnFailure at low errorRate: got %v, want normal", l.state)
@@ -49,7 +49,7 @@ func TestRateLimiter_BasicStates(t *testing.T) {
 	l.mu.Unlock()
 
 	// OnFailure with Slowdown should transition to slowdown state and set min error rate.
-	l.OnFailure(meergo.Slowdown, 0)
+	l.OnFailure(0, meergo.Slowdown, 0)
 	l.mu.Lock()
 	if l.state != slowdown {
 		t.Errorf("OnFailure with Slowdown: got %v, want slowdown", l.state)
@@ -63,7 +63,7 @@ func TestRateLimiter_BasicStates(t *testing.T) {
 	l.mu.Lock()
 	l.errorRate.Set(0)
 	l.mu.Unlock()
-	l.OnSuccess()
+	l.OnSuccess(0)
 	l.mu.Lock()
 	if l.state != normal {
 		t.Errorf("Did not return to normal after forced recovery, got %v", l.state)
@@ -77,7 +77,7 @@ func TestRateLimiter_RateLimitPause(t *testing.T) {
 	l := newRateLimiter(10, 3, 0)
 
 	// Pause for a long time to guarantee the pause is in effect during Wait
-	l.OnFailure(meergo.RateLimited, 1*time.Second)
+	l.OnFailure(0, meergo.RateLimited, 1*time.Second)
 	l.mu.Lock()
 	if l.state != rateLimited {
 		t.Errorf("RateLimit: got %v, want rateLimited", l.state)
@@ -173,7 +173,7 @@ func TestRateLimiter_ConcurrentAccess_SuccessOnly(t *testing.T) {
 					errCh <- fmt.Errorf("unexpected error: %s", err)
 					return
 				}
-				l.OnSuccess()
+				l.OnSuccess(0)
 			}
 		}()
 	}
@@ -242,7 +242,7 @@ func TestRateLimiter_MaxConcurrency(t *testing.T) {
 			}
 			time.Sleep(10 * time.Millisecond)
 			atomic.AddInt32(&running, -1)
-			l.OnSuccess()
+			l.OnSuccess(0)
 		}()
 	}
 	close(start)
@@ -260,7 +260,7 @@ func TestRateLimiter_TokenRefill(t *testing.T) {
 		if err := l.Wait(ctx); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		l.OnSuccess()
+		l.OnSuccess(0)
 	}
 	// Now the bucket is empty: the next call should block for ~0.5s.
 	start := time.Now()
@@ -268,7 +268,7 @@ func TestRateLimiter_TokenRefill(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	elapsed := time.Since(start)
-	l.OnSuccess()
+	l.OnSuccess(0)
 	if elapsed < 400*time.Millisecond {
 		t.Errorf("token bucket did not wait as expected, waited %v", elapsed)
 	}
@@ -285,7 +285,7 @@ func TestRateLimiter_StateTransitions(t *testing.T) {
 		if err := l.Wait(ctx); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		l.OnFailure(meergo.Slowdown, 0)
+		l.OnFailure(0, meergo.Slowdown, 0)
 	}
 	l.mu.Lock()
 	state := l.state
@@ -298,11 +298,61 @@ func TestRateLimiter_StateTransitions(t *testing.T) {
 	if err := l.Wait(ctx); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	l.OnFailure(meergo.RateLimited, time.Millisecond)
+	l.OnFailure(0, meergo.RateLimited, time.Millisecond)
 	l.mu.Lock()
 	state = l.state
 	l.mu.Unlock()
 	if state != rateLimited {
 		t.Errorf("expected state=rateLimited, got %v", state)
 	}
+}
+
+// Test the WaitTime method under various conditions.
+func TestRateLimiter_WaitTime(t *testing.T) {
+	l := newRateLimiter(1, 1, 0)
+
+	// With an available token and no pause, WaitTime should be zero.
+	if d := l.WaitTime(); d != 0 {
+		t.Fatalf("initial WaitTime = %v, want 0", d)
+	}
+
+	// Consume the only token so the bucket becomes empty.
+	if err := l.Wait(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	l.OnSuccess(0)
+
+	// Immediately after consuming, WaitTime should be close to 1 second.
+	if d := l.WaitTime(); d < 900*time.Millisecond || d > time.Second {
+		t.Fatalf("waitTime without tokens = %v, want about 1s", d)
+	}
+
+	// Enter rate limit state with a short pause.
+	l.OnFailure(0, meergo.RateLimited, 200*time.Millisecond)
+	if d := l.WaitTime(); d < 180*time.Millisecond {
+		t.Fatalf("waitTime during pause = %v, want >= 180ms", d)
+	}
+
+	// WaitTime should also account for concurrent requests in flight.
+	l2 := newRateLimiter(1000, 2, 1)
+	ctx := context.Background()
+
+	// Record an average latency of about 100ms.
+	if err := l2.Wait(ctx); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	l2.OnSuccess(100 * time.Millisecond)
+
+	// Start another request without completing it to fill the concurrency slot.
+	if err := l2.Wait(ctx); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// With the slot occupied, WaitTime should reflect the observed latency.
+	if d := l2.WaitTime(); d < 80*time.Millisecond {
+		t.Fatalf("waitTime with full concurrency = %v, want >= 80ms", d)
+	}
+
+	l2.OnSuccess(100 * time.Millisecond)
 }

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/connectors/httpclient"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/types"
 
@@ -46,6 +47,14 @@ type Ack struct {
 // AcksFunc is a function invoked by the sender to report the result of event
 // delivery.
 type AcksFunc func(acks []Ack, err error)
+
+// WaitTimeFunc is a function invoked by the sender to determine how long to
+// wait before starting an iteration, in order to reduce the risk of being
+// throttled by the rate limiter when sending an event.
+//
+// The suggested wait time is based on the rate limiter's state at the time of
+// the call, but there is no guarantee that the request won't still be limited.
+type WaitTimeFunc func(pattern string) (time.Duration, error)
 
 // SendEventsFunc is a function that sends events to apps.
 type SendEventsFunc func(ctx context.Context, events meergo.Events) error
@@ -81,22 +90,24 @@ type user struct {
 // To send an event, follow these steps:
 //  1. Call the CreateEvent method. The order in which this is called determines
 //     delivery order.
-//  2. (Optional) Transform the event and set the Event.Properties field.
+//  2. (Optional) Transform the event and set 0the Event.Properties field.
 //  3. Call the QueueEvent method.
 type Sender struct {
 	connector  string         // app connector.
+	waitTime   WaitTimeFunc   // function that returns an estimate of how long to wait before calling sendEvents.
 	sendEvents SendEventsFunc // function that sends the events to the app.
 	acks       AcksFunc       // ack function.
 
-	mu              sync.Mutex
-	events          []*Event           // events in the queue; protected by mu.
-	users           map[string]*user   // users by anonymous id; protected by mu.
-	releasableUsers map[*user]struct{} // users that have been iterated and are now ready to be released.
-	iterator        *iterator          // current iterator; protected by mu.
-	available       int                // number of available (non-read) records; protected by mu.
-	index           int                // index of the oldest available event; 0 if no event is available; protected by mu.
-	timer           *time.Timer        // timer to trigger an iterator every maxQueueDelay; protected by mu.
-	minBatchSize    int                // minimum number of events in the queue required to trigger a new iteration.
+	mu                 sync.Mutex
+	events             []*Event           // events in the queue; protected by mu.
+	users              map[string]*user   // users by anonymous id; protected by mu.
+	releasableUsers    map[*user]struct{} // users that have been iterated and are now ready to be released.
+	iterator           *iterator          // current iterator; protected by mu.
+	available          int                // number of available (non-read) records; protected by mu.
+	index              int                // index of the oldest available event; 0 if no event is available; protected by mu.
+	timer              *time.Timer        // timer to trigger an iterator every maxQueueDelay; protected by mu.
+	minBatchSize       int                // minimum number of events in the queue required to trigger a new iteration.
+	rateLimiterPattern string             // pattern of the rate limiter that defines how requests are throttled over time.
 
 	close struct {
 		closed    atomic.Bool        // indicates if the writer has been closed.
@@ -107,12 +118,14 @@ type Sender struct {
 	}
 }
 
-// New returns a new Sender. connector is the app's connector, sendEvents is the
-// function that sends the events to the app, and acks acknowledges both
-// successes and failures.
-func New(connector string, sendEvents SendEventsFunc, acks AcksFunc) *Sender {
+// New returns a new Sender. connector is the app's connector, waitTime is the
+// function used to estimate how long to wait before sending a batch of events,
+// sendEvents is the function that sends the events to the app, and acks
+// acknowledges both successes and failures.
+func New(connector string, waitTime WaitTimeFunc, sendEvents SendEventsFunc, acks AcksFunc) *Sender {
 	s := &Sender{
 		connector:       connector,
+		waitTime:        waitTime,
 		sendEvents:      sendEvents,
 		acks:            acks,
 		events:          make([]*Event, 0, 1000),
@@ -128,23 +141,35 @@ func New(connector string, sendEvents SendEventsFunc, acks AcksFunc) *Sender {
 		for {
 			select {
 			case <-s.timer.C:
-				var iter *iterator
-				s.mu.Lock()
-				if s.iterator == nil && s.available > 0 {
-					s.releaseUsers()
-					iter = newIterator(s)
-					iter.index = s.index
-					s.iterator = iter
-				}
-				s.resetTimerLocked()
-				s.mu.Unlock()
-				if iter != nil {
-					s.close.iterators.Add(1)
-					go s.send(iter)
-				}
 			case <-s.close.ctx.Done():
 				return
 			}
+			var iter *iterator
+			var pattern string
+			s.mu.Lock()
+			if s.iterator == nil && s.available > 0 {
+				s.releaseUsers()
+				iter = newIterator(s)
+				iter.index = s.index
+				s.iterator = iter
+				pattern = s.rateLimiterPattern
+			}
+			s.resetTimerLocked()
+			s.mu.Unlock()
+			if iter == nil {
+				continue
+			}
+			if pattern != "" {
+				if d, _ := s.waitTime(pattern); d > 0 {
+					select {
+					case <-time.After(d):
+					case <-s.close.ctx.Done():
+						return
+					}
+				}
+			}
+			s.close.iterators.Add(1)
+			go s.send(iter, pattern)
 		}
 	}()
 	return s
@@ -162,6 +187,7 @@ func (s *Sender) Close(ctx context.Context) error {
 	trace("Sender.Close: start closing down\n")
 	for {
 		var iter *iterator
+		var pattern string
 		s.mu.Lock()
 		if s.iterator != nil {
 			trace("Sender.Close: wait for the iteration of iterator %p to complete\n", s.iterator)
@@ -172,14 +198,26 @@ func (s *Sender) Close(ctx context.Context) error {
 			iter = newIterator(s)
 			iter.index = s.index
 			s.iterator = iter
+			pattern = s.rateLimiterPattern
 			trace("Sender.Close: %d events available; create new iterator %p\n", s.available, iter)
 		}
 		s.mu.Unlock()
 		if iter == nil {
 			break
 		}
+		if pattern != "" {
+			if d, _ := s.waitTime(pattern); d != 0 {
+				select {
+				case <-time.After(d):
+				case <-s.close.ctx.Done():
+				}
+				if s.close.ctx.Err() != nil {
+					break
+				}
+			}
+		}
 		s.close.iterators.Add(1)
-		go s.send(iter)
+		go s.send(iter, pattern)
 	}
 	trace("Writer.Close: wait for iterators to terminate\n")
 	s.close.iterators.Wait()
@@ -490,8 +528,10 @@ func (s *Sender) resetTimerLocked() {
 	}
 }
 
+const rateLimiterPatternContextKey = httpclient.RateLimiterPatternContextKey("RateLimiterPattern")
+
 // send sends events to the app by calling the connector's SendEvents method.
-func (s *Sender) send(iter *iterator) {
+func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 
 	trace("Sender.send: iterator %p started\n", iter)
 	if asserts {
@@ -503,7 +543,16 @@ func (s *Sender) send(iter *iterator) {
 	var errEvents meergo.EventsError
 	var errRequest error
 
-	err := s.sendEvents(s.close.ctx, iter)
+	// Adds a "RateLimiterPattern" value to the context to receive updates about
+	// the rate limiter used by the HTTP client.
+	ctx := context.WithValue(s.close.ctx,
+		rateLimiterPatternContextKey,
+		httpclient.RateLimiterPatternContextValue{
+			Pattern: rateLimiterPattern,
+			Set:     s.setRateLimiterPattern,
+		})
+
+	err := s.sendEvents(ctx, iter)
 	if err != nil {
 		if ee, ok := err.(meergo.EventsError); ok {
 			errEvents = ee
@@ -573,6 +622,15 @@ func (s *Sender) send(iter *iterator) {
 
 	s.close.iterators.Done()
 	s.compact()
+}
+
+// setRateLimiterPattern updates the rate limiter pattern.
+// It is called by the HTTP client when the rate limiter pattern used for the
+// request differs from the one provided in the request's context.
+func (s *Sender) setRateLimiterPattern(pattern string) {
+	s.mu.Lock()
+	s.rateLimiterPattern = pattern
+	s.mu.Unlock()
 }
 
 // skip marks the most recently read event as unread. It is invoked when an

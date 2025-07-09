@@ -23,6 +23,23 @@ import (
 	"github.com/meergo/meergo/core/state"
 )
 
+// Types used to propagate the rate limiter pattern through the request context.
+// If the request context contains this key, the HTTP client checks whether the
+// associated pattern matches the one used by the rate limiter for that request.
+// If it doesn't match, the client calls the Set function to inform the caller
+// about the actual pattern in use.
+//
+// This allows the caller to later call the HTTP client's Wait method with the
+// correct pattern, determining how long to wait before sending a request to
+// avoid being throttled.
+type (
+	RateLimiterPatternContextKey   string
+	RateLimiterPatternContextValue struct {
+		Pattern string               // latest known rate limiter pattern
+		Set     func(pattern string) // function to update the pattern
+	}
+)
+
 // backoffBase is the base for the default exponential backoff.
 const backoffBase = 100 * time.Millisecond
 
@@ -144,9 +161,22 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	ctx := req.Context()
 
-	limiter, err := c.rateLimiter(req)
+	limiter, pattern, err := c.rateLimiter(req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if the request context contains a rate limiter pattern value.
+	// If the stored pattern differs from the one currently used, update it
+	// so the caller can align future requests accordingly.
+	if v := ctx.Value(RateLimiterPatternContextKey("RateLimiterPattern")); v != nil {
+		v, ok := v.(RateLimiterPatternContextValue)
+		if !ok {
+			return nil, errors.New(`context key "RateLimiterPattern" must have a value of type RateLimiterPatternContextValue`)
+		}
+		if v.Pattern != pattern {
+			v.Set(pattern)
+		}
 	}
 
 	hasBody := req.Body != nil && req.Body != http.NoBody
@@ -172,9 +202,11 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		}
 
 		// Send the request.
+		start := time.Now()
 		res, err := c.http.transport.RoundTrip(req)
+		duration := time.Since(start)
 		if err != nil {
-			limiter.OnFailure(meergo.NetFailure, 0)
+			limiter.OnFailure(duration, meergo.NetFailure, 0)
 			if !retriable {
 				return res, err
 			}
@@ -193,12 +225,12 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		}
 
 		if status := res.StatusCode; status == 200 || status == 201 {
-			limiter.OnSuccess()
+			limiter.OnSuccess(duration)
 			return res, nil
 		}
 
 		reason, waitTime := c.retryStrategy(res, retries)
-		limiter.OnFailure(reason, waitTime)
+		limiter.OnFailure(duration, reason, waitTime)
 		if reason == meergo.PermanentFailure || !retriable {
 			return res, nil
 		}
@@ -229,14 +261,25 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	}
 }
 
-// rateLimiter returns the appropriate rate limiter for the given request.
+// WaitTime estimates how long a Do call would be throttled by the rate limiter
+// for the given pattern. Returns zero if the call can proceed immediately.
+// Returns an error if there is no rate limiter for the given pattern.
+func (c *Client) WaitTime(pattern string) (time.Duration, error) {
+	limiter, ok := c.rateLimiters.byPattern[pattern]
+	if !ok {
+		return 0, fmt.Errorf("rate limiter with pattern %q does not exist", pattern)
+	}
+	return limiter.WaitTime(), nil
+}
+
+// rateLimiter returns the rate limiter and its pattern for the given request.
 // Returns an error if no suitable rate limiter is found.
-func (c *Client) rateLimiter(req *http.Request) (*rateLimiter, error) {
+func (c *Client) rateLimiter(req *http.Request) (*rateLimiter, string, error) {
 	_, pattern := c.rateLimiters.mux.Handler(req)
 	if pattern == "" {
-		return nil, fmt.Errorf(`there is no rate limit that matches the request "%s %s%s"`, req.Method, req.Host, req.URL.Path)
+		return nil, "", fmt.Errorf(`there is no rate limit that matches the request "%s %s%s"`, req.Method, req.Host, req.URL.Path)
 	}
-	return c.rateLimiters.byPattern[pattern], nil
+	return c.rateLimiters.byPattern[pattern], pattern, nil
 }
 
 // retryStrategy determines the failure reason and how long to wait before

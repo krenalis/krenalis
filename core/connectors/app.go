@@ -295,6 +295,13 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	return records, nil
 }
 
+// WaitTime returns an estimate of how long to wait before sending an HTTP
+// request to the client, helping to avoid being queued.
+// pattern is the pattern of the rate limit.
+func (app *App) WaitTime(pattern string) (time.Duration, error) {
+	return app.httpClient.WaitTime(pattern)
+}
+
 // Writer returns a Writer for creating and updating users or groups in the app.
 // outSchema is the output schema of the action, exportMode is the export mode,
 // and target is the target of the action. ack is the function that will receive

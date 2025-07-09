@@ -43,10 +43,11 @@ type rateLimiter struct {
 
 	tokens *tokenBucket
 
-	mu        sync.Mutex       // protects state, errorRate, and refilling.
-	state     rateLimiterState // state; protected by mu
-	errorRate errorRate        // error rate; protected by mu
-	refilling struct {
+	mu         sync.Mutex       // protects state, errorRate, latencyAvg, and refilling.
+	state      rateLimiterState // state; protected by mu
+	errorRate  errorRate        // error rate; protected by mu
+	latencyAvg latencyAvg       // average time taken by requests; protected by mu
+	refilling  struct {
 		max  float64   // max allowed requests per second in normal state; protected by mu
 		last time.Time // last refill timestamp; protected by mu
 	}
@@ -77,12 +78,13 @@ func newRateLimiter(rate float64, capacity, maxConcurrency int) *rateLimiter {
 // OnFailure must be called after a request completes with an error or is
 // cancelled. For every call to Wait, either OnSuccess or OnFailure must be
 // called to avoid leaking concurrency slots.
-func (b *rateLimiter) OnFailure(reason meergo.FailureReason, waitTime time.Duration) {
+func (b *rateLimiter) OnFailure(duration time.Duration, reason meergo.FailureReason, waitTime time.Duration) {
 	if b.inFlight != nil {
 		<-b.inFlight
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	b.latencyAvg.Observe(duration)
 	switch reason {
 	case meergo.PermanentFailure:
 	case meergo.NetFailure:
@@ -94,16 +96,18 @@ func (b *rateLimiter) OnFailure(reason meergo.FailureReason, waitTime time.Durat
 	default:
 		panic(fmt.Errorf("core/connectors/httpclient: unexpected FailureReason %d", reason))
 	}
+
 }
 
 // OnSuccess must be called after a request completes successfully. For every
 // call to Wait, either OnSuccess or OnFailure must be called to avoid leaking
 // concurrency slots.
-func (b *rateLimiter) OnSuccess() {
+func (b *rateLimiter) OnSuccess(duration time.Duration) {
 	if b.inFlight != nil {
 		<-b.inFlight
 	}
 	b.mu.Lock()
+	b.latencyAvg.Observe(duration)
 	switch b.state {
 	case normal:
 		b.errorRate.Success()
@@ -131,6 +135,58 @@ func (b *rateLimiter) Wait(ctx context.Context) error {
 		}
 	}
 	return b.tokens.Take(ctx)
+}
+
+// WaitTime estimates how long Wait would block before a token or a free slot
+// for concurrent requests is available. Returns zero if you can proceed
+// immediately, and includes any pause for rate limiting.
+func (b *rateLimiter) WaitTime() time.Duration {
+
+	// Check if tokens are immediately available and the bucket is not paused.
+	if len(b.tokens.tokens) > 0 && !b.tokens.pause.Load() {
+		return 0
+	}
+
+	now := time.Now()
+	var wait time.Duration
+
+	// If paused, start waiting from the pause expiration time.
+	if b.tokens.pause.Load() {
+		b.tokens.pause.Lock()
+		if until := b.tokens.pause.until; now.Before(until) {
+			wait = max(wait, until.Sub(now))
+			now = until
+		}
+		b.tokens.pause.Unlock()
+	}
+
+	// If a token will already be available after the pause, we're done.
+	if len(b.tokens.tokens) > 0 {
+		return wait
+	}
+
+	b.mu.Lock()
+	// If the maximum number of in-flight requests has been reached, wait for one to complete.
+	if b.inFlight != nil && len(b.inFlight) == cap(b.inFlight) {
+		wait = max(wait, b.latencyAvg.latency)
+	}
+	rate := b.refilling.max * (1 - b.errorRate.rate*(1-minScale))
+	last := b.refilling.last
+	b.mu.Unlock()
+
+	if rate <= 0 {
+		return wait
+	}
+
+	elapsed := now.Sub(last).Seconds()
+	tokens := elapsed * rate
+	if tokens < 1 {
+		// Time remaining to generate the next token.
+		d := (1 - tokens) / rate
+		wait = max(wait, time.Duration(d*float64(time.Second)))
+	}
+
+	return wait
 }
 
 func (b *rateLimiter) onNetFailure() {

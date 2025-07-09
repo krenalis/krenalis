@@ -77,7 +77,7 @@ func newDestinations(st *state.State, connectors *connectors.Connectors, provide
 			continue
 		}
 		app := connectors.App(c)
-		sender := sender.New(c.Connector().Name, app.SendEvents, d.sentAcks)
+		sender := sender.New(c.Connector().Name, app.WaitTime, app.SendEvents, d.sentAcks)
 		actions := make([]*destinationAction, 0, 1)
 		// Keeps all actions active on the connection's events.
 		for _, a := range c.Actions() {
@@ -188,7 +188,7 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 		return
 	}
 	app := d.connectors.App(c)
-	d.senders[n.ID] = sender.New(connector.Name, app.SendEvents, d.sentAcks)
+	d.senders[n.ID] = sender.New(connector.Name, app.WaitTime, app.SendEvents, d.sentAcks)
 	actions := make([]*destinationAction, 0, 1)
 	d.mu.Lock()
 	d.actions[n.ID] = actions
