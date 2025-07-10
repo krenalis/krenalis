@@ -77,6 +77,12 @@ const ConnectorsList = () => {
 	const categories: string[] = useMemo(() => {
 		let categories = [];
 		for (const connector of [...connectors, ...additionalConnectorsInfo]) {
+			if (
+				(connectionRole === 'Source' && connector.asSource == null) ||
+				(connectionRole === 'Destination' && connector.asDestination == null)
+			) {
+				continue;
+			}
 			for (const category of connector.categories) {
 				const isAlreadyIncluded = categories.includes(category);
 				if (!isAlreadyIncluded) {
