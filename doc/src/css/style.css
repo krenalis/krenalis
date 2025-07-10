@@ -1,8 +1,10 @@
 
 *, *:before, *:after { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
 body { background: #fafaff; font-family: muli,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif; line-height: 1.45; margin: 0; }
 
+h1, h2, h3, h4, h5, h6 { scroll-margin-top: 50px; }
 a { text-decoration: none; }
 p { color: #444; line-height: 1.6; margin: 0.8em 0; }
 li { color: #444; line-height: 2; }

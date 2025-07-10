@@ -20,7 +20,7 @@ const buildTableOfContent = () => {
             const text = e.currentTarget.textContent;
             const heading = Array.from(headings).find((h) => h.textContent === text);
             if (heading != null) {
-                const offset = -70; // Prevent the title from being covered by the fixed header.
+                const offset = -50; // Prevent the heading from being covered by the fixed header.
                 const top = heading.getBoundingClientRect().top + window.scrollY + offset;
                 window.scrollTo({
                     top,
