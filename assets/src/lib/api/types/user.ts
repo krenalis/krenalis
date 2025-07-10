@@ -52,6 +52,7 @@ interface UserEventContextNetwork {
 
 interface UserEventContextOS {
 	name: string;
+	other: string;
 	version: string;
 }
 
