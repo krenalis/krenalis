@@ -64,9 +64,6 @@ func init() {
 		},
 		IdentityIDLabel: "Dummy Unique ID",
 		Icon:            icon,
-		RateLimits: meergo.RateLimits{
-			"/": {RequestsPerSecond: 1, Burst: 1},
-		},
 	}, New)
 }
 

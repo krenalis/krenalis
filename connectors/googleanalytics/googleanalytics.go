@@ -43,11 +43,11 @@ func init() {
 				Overview: overview,
 			},
 		},
-		Icon: icon,
-		RateLimits: meergo.RateLimits{
+		EndpointGroups: []meergo.EndpointGroup{{
 			// https://developers.hubspot.com/docs/guides/apps/api-usage/usage-details#public-apps
-			"/": {RequestsPerSecond: 11, Burst: 110},
-		},
+			RateLimit: meergo.RateLimit{RequestsPerSecond: 11, Burst: 110},
+		}},
+		Icon: icon,
 	}, New)
 }
 

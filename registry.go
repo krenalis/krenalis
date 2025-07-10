@@ -386,19 +386,19 @@ func validateAppConnector(app AppInfo) {
 		}
 	}
 
-	if len(app.RateLimits) == 0 {
-		panic(fmt.Sprintf("connector %s: RateLimits cannot be empty", app.Name))
-	}
 	// Patterns are checked for validity when rate limiters are created; invalid patterns will cause construction to panic.
-	for _, limit := range app.RateLimits {
-		if limit.RequestsPerSecond <= 0 {
-			panic(fmt.Sprintf("connector %s: RateLimit.RequestsPerSecond must be > 0", app.Name))
+	for _, group := range app.EndpointGroups {
+		if group.Patterns != nil && len(group.Patterns) == 0 {
+			panic(fmt.Sprintf("connector %s: Patterns must be nil or contain at least one pattern", app.Name))
 		}
-		if limit.Burst <= 0 {
-			panic(fmt.Sprintf("connector %s: RateLimit.Burst must be > 0", app.Name))
+		if group.RateLimit.RequestsPerSecond <= 0 {
+			panic(fmt.Sprintf("connector %s: RequestsPerSecond must be > 0", app.Name))
 		}
-		if limit.MaxConcurrentRequests < 0 {
-			panic(fmt.Sprintf("connector %s: RateLimit.MaxConcurrentRequests must be >= 0", app.Name))
+		if group.RateLimit.Burst <= 0 {
+			panic(fmt.Sprintf("connector %s: Burst must be > 0", app.Name))
+		}
+		if group.RateLimit.MaxConcurrentRequests < 0 {
+			panic(fmt.Sprintf("connector %s: MaxConcurrentRequests must be >= 0", app.Name))
 		}
 	}
 

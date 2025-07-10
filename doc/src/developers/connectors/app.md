@@ -49,12 +49,25 @@ func init() {
             User:  "client",
             Users: "clients",
         },
-        RateLimits: meergo.RateLimits{
-            "/api/event-bulk-create-jobs": {RequestsPerSecond: 2.5, Burst: 10},
-            "/api/profiles/":              {RequestsPerSecond: 11.6, Burst: 75},
+        EndpointGroups: []meergo.EndpointGroup{
+            {
+                Patterns:    []string{"/api/event-bulk-create-jobs"},
+                RateLimit:   meergo.RateLimit{RequestsPerSecond: 2.5, Burst: 10},
+                RetryPolicy: retryPolicy,
+            },
+            {
+                Patterns:    []string{"/api/profiles/"},
+                RateLimit:   meergo.RateLimit{RequestsPerSecond: 11.6, Burst: 75},
+                RetryPolicy: retryPolicy,
+            },
         },
         Icon: icon,
     }, New)
+}
+
+var retryPolicy = meergo.RetryPolicy{
+    "429":     meergo.RetryAfterStrategy(),
+    "500 503": meergo.ExponentialStrategy(meergo.NetFailure, 100*time.Millisecond),
 }
 
 type Klaviyo struct {
@@ -146,8 +159,7 @@ The `AppInfo` type describes information about the app connector:
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 {# - `WebhooksPer`: indicates if webhooks are per account, connection, or connector. #}
 - `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth).
-- `RateLimits`: Rate limits. It maps HTTP request patterns to their associated rate limits. See [Rate limits documentation](app/rate-limits).
-- `RetryPolicy`: Retry policy. It controls retry timing using provided strategies or custom ones. See [Retry documentation](app/retry-policy).
+- `EndpointGroups`: rate limiting and retry policies per endpoint group. See [Endpoint groups documentation](app/endpoint-groups).
 - `Layouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
 
@@ -176,9 +188,17 @@ func init() {
             User:  "client",
             Users: "clients",
         },
-        RateLimits: meergo.RateLimits{
-            "/api/event-bulk-create-jobs": {RequestsPerSecond: 2.5, Burst: 10},
-            "/api/profiles/":              {RequestsPerSecond: 11.6, Burst: 75},
+        EndpointGroups: []meergo.EndpointGroup{
+            {
+                Patterns:    []string{"/api/event-bulk-create-jobs"},
+                RateLimit:   meergo.RateLimit{RequestsPerSecond: 2.5, Burst: 10},
+                RetryPolicy: retryPolicy,
+            },
+            {
+                Patterns:    []string{"/api/profiles/"},
+                RateLimit:   meergo.RateLimit{RequestsPerSecond: 11.6, Burst: 75},
+                RetryPolicy: retryPolicy,
+            },
         },
         Icon: icon,
     }, New)
@@ -216,7 +236,6 @@ type AppConfig struct {
 ### Continue reading
 
 - [OAuth](app/oauth)
-- [Rate limits](app/rate-limits)
-- [Retry policy](app/retry-policy)
+- [Endpoint groups](app/endpoint-groups)
 - [Users](app/users)
 - [Send events](app/send-events)

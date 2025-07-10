@@ -51,11 +51,10 @@ type AppInfo struct {
 	AsDestination   *AsAppDestination
 	Terms           AppTerms
 	IdentityIDLabel string
-	OAuth           OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
-	RateLimits      RateLimits  // rate limits for HTTP requests.
-	RetryPolicy     RetryPolicy // retry policy. It controls retry timing using provided strategies or custom ones.
-	TimeLayouts     TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
-	Icon            string      // icon in SVG format.
+	OAuth           OAuth           // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
+	EndpointGroups  []EndpointGroup // rate limiting and retry policies per endpoint group.
+	TimeLayouts     TimeLayouts     // layouts for time values. If left empty, it is ISO 8601.
+	Icon            string          // icon in SVG format.
 
 	newFunc reflect.Value
 	ct      reflect.Type
@@ -132,17 +131,15 @@ type AppConfig struct {
 // AppNewFunc represents functions that create new app connector instances.
 type AppNewFunc[T any] func(*AppConfig) (T, error)
 
-// RateLimits maps HTTP request patterns to their associated rate limits. Each
-// key is a pattern following the syntax used by http.ServeMux
-// (https://pkg.go.dev/net/http#ServeMux).
-//
-// When handling a request, the pattern that most closely matches the request's
-// method, host, and path determines which rate limit applies. This allows
-// different rate limits to be enforced for different endpoints or groups of
-// requests within the same connector.
-//
-// If no pattern matches a request, the request fails with an error.
-type RateLimits map[string]RateLimit
+// EndpointGroup defines a group of API endpoints—specified by one or more
+// patterns using the same syntax as http.ServeMux. All HTTP requests matching
+// any of the given patterns will be subject to the specified rate limiting and
+// retry policies.
+type EndpointGroup struct {
+	Patterns    []string    // patterns (e.g. "GET /api/users/", "api.example.com/v1/items") matched by ServeMux-style matching
+	RateLimit   RateLimit   // rate limiting configuration applied to all matching requests
+	RetryPolicy RetryPolicy // retry policy for handling failed requests to these endpoints
+}
 
 // RateLimit defines the maximum requests per second, burst capacity, and the
 // limit on simultaneous in-flight requests.
@@ -163,6 +160,57 @@ type RateLimit struct {
 	// in-flight requests. Must be >= 0. If set to 0, there is no limit on the
 	// number of concurrent requests.
 	MaxConcurrentRequests int
+}
+
+// RetryPolicy defines a mapping between HTTP status codes and their
+// corresponding backoff strategies. Each key in the map is a string containing
+// one or more space-separated HTTP status codes. The associated value is the
+// strategy to apply when an HTTP response returns one of the specified status
+// codes.
+//
+// For example:
+//
+//	RetryPolicy{
+//	    "429":     meergo.RetryAfterStrategy(),
+//	    "500 503": meergo.ExponentialStrategy(meergo.NetFailure, time.Second),
+//	}
+type RetryPolicy map[string]RetryStrategy
+
+// RetryStrategy represents a strategy for determining retry behavior.
+// It returns a FailureReason and the duration to wait before the next attempt,
+// based on the HTTP response from the previous attempt and the number of
+// retries made. retries parameter starts at 0 before the first retry and
+// increments by 1 on each retry.
+//
+// If the returned waitTime is negative, it is considered zero.
+type RetryStrategy func(res *http.Response, retries int) (reason FailureReason, waitTime time.Duration)
+
+// FailureReason defines how the client should retry after a failed HTTP request.
+type FailureReason int
+
+const (
+	// PermanentFailure indicates a permanent failure that cannot be retried.
+	PermanentFailure FailureReason = iota
+	// NetFailure indicates a net failure.
+	NetFailure
+	// Slowdown indicates a slow-down.
+	Slowdown
+	// RateLimited indicates a rate limit.
+	RateLimited
+)
+
+func (r FailureReason) String() string {
+	switch r {
+	case PermanentFailure:
+		return "PermanentFailure"
+	case NetFailure:
+		return "NetFailure"
+	case Slowdown:
+		return "Slowdown"
+	case RateLimited:
+		return "RateLimited"
+	}
+	panic(fmt.Errorf("unexpected FailureReason %d", r))
 }
 
 // EventType represents a type of event that can be sent to an app.

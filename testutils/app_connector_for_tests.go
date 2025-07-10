@@ -13,6 +13,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors/httpclient"
+	"github.com/meergo/meergo/core/state"
 )
 
 // NewAppConnectorForTests returns an instance of the connector with the
@@ -23,7 +24,11 @@ import (
 // panics.
 func NewAppConnectorForTests(connectorName string, settings []byte) (any, error) {
 	registeredApp := meergo.RegisteredApp(connectorName)
-	httpClient := httpclient.New(nil, http.DefaultTransport).Client("", "", registeredApp.RetryPolicy)
+	connector := &state.Connector{
+		Name:           connectorName,
+		EndpointGroups: registeredApp.EndpointGroups,
+	}
+	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
 	app, err := registeredApp.New(&meergo.AppConfig{
 		Settings:    settings,
 		SetSettings: func(ctx context.Context, b []byte) error { return nil },

@@ -81,13 +81,10 @@ func Test_retryStrategy(t *testing.T) {
 		},
 	}
 
-	c := &Client{}
-
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			c.retryPolicy = test.policy
 			for retries := range len(test.times) {
-				reason, wt := c.retryStrategy(test.response, retries)
+				reason, wt := retryStrategy(test.policy, test.response, retries)
 				if reason != test.reason {
 					t.Fatalf("expected reason %s, got %s", test.reason, reason)
 				}
@@ -103,18 +100,16 @@ func Test_retryStrategy(t *testing.T) {
 }
 
 func Test_jitter(t *testing.T) {
-	c := &Client{
-		retryPolicy: meergo.RetryPolicy{
-			"500": func(res *http.Response, replies int) (meergo.FailureReason, time.Duration) {
-				return meergo.NetFailure, 0
-			}},
-	}
+	policy := meergo.RetryPolicy{
+		"500": func(res *http.Response, replies int) (meergo.FailureReason, time.Duration) {
+			return meergo.NetFailure, 0
+		}}
 	res := &http.Response{Status: "500 Internal Server Error", StatusCode: 500}
 	tests := []time.Duration{0, 1, 10 * time.Millisecond, 250 * time.Millisecond, 5 * time.Second}
 	for _, d := range tests {
 		t.Run(d.String(), func(t *testing.T) {
 			for range 10 {
-				reason, wt := c.retryStrategy(res, 0)
+				reason, wt := retryStrategy(policy, res, 0)
 				if reason != meergo.NetFailure {
 					t.Fatalf("unexpected reason %s", reason)
 				}
@@ -126,7 +121,7 @@ func Test_jitter(t *testing.T) {
 	}
 	t.Run("backoffJitterEnabled = false", func(t *testing.T) {
 		backoffJitterEnabled = false
-		reason, wt := c.retryStrategy(res, 0)
+		reason, wt := retryStrategy(policy, res, 0)
 		if reason != meergo.NetFailure {
 			t.Fatalf("unexpected reason %s", reason)
 		}

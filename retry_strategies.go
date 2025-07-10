@@ -8,7 +8,6 @@
 package meergo
 
 import (
-	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -19,57 +18,6 @@ import (
 var BackoffCap = 5 * time.Second
 
 var nowTestTime time.Time
-
-// RetryPolicy defines a mapping between HTTP status codes and their
-// corresponding backoff strategies. Each key in the map is a string containing
-// one or more space-separated HTTP status codes. The associated value is the
-// strategy to apply when an HTTP response returns one of the specified status
-// codes.
-//
-// For example:
-//
-//	RetryPolicy{
-//	    "429":     meergo.RetryAfterStrategy(),
-//	    "500 503": meergo.ExponentialStrategy(meergo.NetFailure, time.Second),
-//	}
-type RetryPolicy map[string]RetryStrategy
-
-// RetryStrategy represents a strategy for determining retry behavior.
-// It returns a FailureReason and the duration to wait before the next attempt,
-// based on the HTTP response from the previous attempt and the number of
-// retries made. retries parameter starts at 0 before the first retry and
-// increments by 1 on each retry.
-//
-// If the returned waitTime is negative, it is considered zero.
-type RetryStrategy func(res *http.Response, retries int) (reason FailureReason, waitTime time.Duration)
-
-// FailureReason defines how the client should retry after a failed HTTP request.
-type FailureReason int
-
-const (
-	// PermanentFailure indicates a permanent failure that cannot be retried.
-	PermanentFailure FailureReason = iota
-	// NetFailure indicates a net failure.
-	NetFailure
-	// Slowdown indicates a slow-down.
-	Slowdown
-	// RateLimited indicates a rate limit.
-	RateLimited
-)
-
-func (r FailureReason) String() string {
-	switch r {
-	case PermanentFailure:
-		return "PermanentFailure"
-	case NetFailure:
-		return "NetFailure"
-	case Slowdown:
-		return "Slowdown"
-	case RateLimited:
-		return "RateLimited"
-	}
-	panic(fmt.Errorf("unexpected FailureReason %d", r))
-}
 
 // ConstantStrategy returns a retry strategy implementing a constant backoff.
 func ConstantStrategy(reason FailureReason, waitTime time.Duration) RetryStrategy {

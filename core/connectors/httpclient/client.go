@@ -51,17 +51,24 @@ var netBackoff = meergo.ExponentialStrategy(meergo.NetFailure, 50*time.Milliseco
 
 var errUnsupportedOAuth = errors.New("OAuth is not supported")
 
+// endpointGroup represents an endpoint group with its rate limiter and retry
+// policy.
+type endpointGroup struct {
+	rateLimiter *rateLimiter       // rate limiter
+	retryPolicy meergo.RetryPolicy // retry policy
+}
+
 // Client implements the connector.HTTPClient interface.
 type Client struct {
-	http         *HTTP
-	connection   int    // connection identifier; it is 0 if the client is not relative to a connection
-	clientSecret string // client secret; only if connection == 0
-	accessToken  string // access token; only if connection == 0
-	rateLimiters struct {
+	http           *HTTP
+	connector      string // connector name
+	connection     int    // connection identifier; it is 0 if the client is not relative to a connection
+	clientSecret   string // client secret; only if connection == 0
+	accessToken    string // access token; only if connection == 0
+	endpointGroups struct {
 		mux       *http.ServeMux
-		byPattern map[string]*rateLimiter // rate limiter by pattern
+		byPattern map[string]endpointGroup // endpoint group by pattern
 	}
-	retryPolicy meergo.RetryPolicy // retry policy
 }
 
 // AccessToken returns an OAuth access token.
@@ -161,10 +168,13 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	ctx := req.Context()
 
-	limiter, pattern, err := c.rateLimiter(req)
-	if err != nil {
-		return nil, err
+	_, pattern := c.endpointGroups.mux.Handler(req)
+	if pattern == "" {
+		return nil, fmt.Errorf(`connector %s attempted to call the "%s %s%s" endpoint, but there is no endpoint group that matches this request`, c.connector, req.Method, req.Host, req.URL.Path)
 	}
+	endpointGroup := c.endpointGroups.byPattern[pattern]
+	limiter := endpointGroup.rateLimiter
+	policy := endpointGroup.retryPolicy
 
 	// Check if the request context contains a rate limiter pattern value.
 	// If the stored pattern differs from the one currently used, update it
@@ -229,7 +239,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			return res, nil
 		}
 
-		reason, waitTime := c.retryStrategy(res, retries)
+		reason, waitTime := retryStrategy(policy, res, retries)
 		limiter.OnFailure(duration, reason, waitTime)
 		if reason == meergo.PermanentFailure || !retriable {
 			return res, nil
@@ -265,35 +275,43 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 // for the given pattern. Returns zero if the call can proceed immediately.
 // Returns an error if there is no rate limiter for the given pattern.
 func (c *Client) WaitTime(pattern string) (time.Duration, error) {
-	limiter, ok := c.rateLimiters.byPattern[pattern]
+	group, ok := c.endpointGroups.byPattern[pattern]
 	if !ok {
-		return 0, fmt.Errorf("rate limiter with pattern %q does not exist", pattern)
+		return 0, fmt.Errorf("endpoint group with pattern %q does not exist", pattern)
 	}
-	return limiter.WaitTime(), nil
+	return group.rateLimiter.WaitTime(), nil
 }
 
-// rateLimiter returns the rate limiter and its pattern for the given request.
-// Returns an error if no suitable rate limiter is found.
-func (c *Client) rateLimiter(req *http.Request) (*rateLimiter, string, error) {
-	_, pattern := c.rateLimiters.mux.Handler(req)
-	if pattern == "" {
-		return nil, "", fmt.Errorf(`there is no rate limit that matches the request "%s %s%s"`, req.Method, req.Host, req.URL.Path)
+// isRetriable reports whether the given HTTP request is retriable.
+func isRetriable(req *http.Request) bool {
+	if req.Body != nil && req.Body != http.NoBody && req.GetBody == nil {
+		return false
 	}
-	return c.rateLimiters.byPattern[pattern], pattern, nil
+	switch req.Method {
+	case "", "GET", "HEAD", "OPTIONS", "TRACE":
+		return true
+	}
+	if _, ok := req.Header["Idempotency-Key"]; ok {
+		return true
+	}
+	if _, ok := req.Header["X-Idempotency-Key"]; ok {
+		return true
+	}
+	return false
 }
 
 // retryStrategy determines the failure reason and how long to wait before
-// retrying a failed request, based on c.retryPolicy and the response status
-// code.
+// retrying a failed request, based on the provided retry policy and the
+// response status code.
 //
-// If c.retryPolicy is nil, it checks the Retry-After header for status code 429
+// If policy is nil, it checks the Retry-After header for status code 429
 // (Too Many Requests). For status codes 500 (Internal Server Error) and 503
 // (Service Unavailable), it uses exponential backoff starting at 100ms.
 //
 // If the status code is not eligible for a retry, it returns PermanentFailure.
-func (c *Client) retryStrategy(res *http.Response, retries int) (meergo.FailureReason, time.Duration) {
+func retryStrategy(policy meergo.RetryPolicy, res *http.Response, retries int) (meergo.FailureReason, time.Duration) {
 	var primaryStrategy, secondaryStrategy meergo.RetryStrategy
-	if c.retryPolicy != nil {
+	if policy != nil {
 		// Use the client's policy.
 		var status string
 		if len(res.Status) >= 3 {
@@ -301,7 +319,7 @@ func (c *Client) retryStrategy(res *http.Response, retries int) (meergo.FailureR
 		} else {
 			status = strconv.Itoa(res.StatusCode)
 		}
-		for statuses, strategy := range c.retryPolicy {
+		for statuses, strategy := range policy {
 			if strings.Contains(statuses, status) {
 				primaryStrategy = strategy
 				break
@@ -335,22 +353,4 @@ func (c *Client) retryStrategy(res *http.Response, retries int) (meergo.FailureR
 		wt += time.Duration(float64(wt) * rand.Float64() * 0.5)
 	}
 	return reason, wt
-}
-
-// isRetriable reports whether the given HTTP request is retriable.
-func isRetriable(req *http.Request) bool {
-	if req.Body != nil && req.Body != http.NoBody && req.GetBody == nil {
-		return false
-	}
-	switch req.Method {
-	case "", "GET", "HEAD", "OPTIONS", "TRACE":
-		return true
-	}
-	if _, ok := req.Header["Idempotency-Key"]; ok {
-		return true
-	}
-	if _, ok := req.Header["X-Idempotency-Key"]; ok {
-		return true
-	}
-	return false
 }

@@ -62,8 +62,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					OAuth: connector.OAuth,
 				}
 			}
-			c.RateLimits = connector.RateLimits
-			c.RetryPolicy = connector.RetryPolicy
+			c.EndpointGroups = connector.EndpointGroups
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 			c.Icon = connector.Icon
 			if connectorsOAuth != nil {

@@ -238,7 +238,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 		return nil, err
 	}
 	app, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{
-		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken, connector.RetryPolicy),
+		HTTPClient: connectors.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
 		return nil, err

@@ -43,9 +43,6 @@ func init() {
 				Overview: overview,
 			},
 		},
-		RateLimits: meergo.RateLimits{
-			"/": {RequestsPerSecond: 1, Burst: 1},
-		},
 	}, New)
 }
 

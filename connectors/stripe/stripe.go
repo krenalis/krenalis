@@ -61,15 +61,15 @@ func init() {
 			User:  "customer",
 			Users: "customers",
 		},
-		RateLimits: meergo.RateLimits{
+		EndpointGroups: []meergo.EndpointGroup{{
 			// https://docs.stripe.com/rate-limits
-			"/": {RequestsPerSecond: 100, Burst: 200},
-		},
-		RetryPolicy: meergo.RetryPolicy{
+			RateLimit: meergo.RateLimit{RequestsPerSecond: 100, Burst: 200},
 			// https://docs.stripe.com/api/errors
-			"429":             meergo.ExponentialStrategy(meergo.Slowdown, 200*time.Millisecond),
-			"500 502 503 504": meergo.ExponentialStrategy(meergo.NetFailure, 200*time.Millisecond),
-		},
+			RetryPolicy: meergo.RetryPolicy{
+				"429":             meergo.ExponentialStrategy(meergo.Slowdown, 200*time.Millisecond),
+				"500 502 503 504": meergo.ExponentialStrategy(meergo.NetFailure, 200*time.Millisecond),
+			},
+		}},
 		Icon: icon,
 	}, New)
 }

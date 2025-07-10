@@ -61,23 +61,23 @@ func init() {
 			Users: "contacts",
 		},
 		IdentityIDLabel: "HubSpot ID",
-		Icon:            icon,
 		OAuth: meergo.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL:          "https://api.hubapi.com/oauth/v1/token",
 			SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
 			DestinationScopes: []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
-		RateLimits: meergo.RateLimits{
+		EndpointGroups: []meergo.EndpointGroup{{
 			// https://developers.hubspot.com/docs/guides/apps/api-usage/usage-details#public-apps
-			"/": {RequestsPerSecond: 11, Burst: 110},
-		},
-		RetryPolicy: meergo.RetryPolicy{
+			RateLimit: meergo.RateLimit{RequestsPerSecond: 11, Burst: 110},
 			// https://developers.hubspot.com/docs/reference/api/other-resources/error-handling
-			"429":                         meergo.HeaderStrategy(meergo.RateLimited, "X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
-			"477":                         meergo.RetryAfterStrategy(),
-			"500 502 503 504 521 523 524": meergo.ExponentialStrategy(meergo.NetFailure, time.Second),
-		},
+			RetryPolicy: meergo.RetryPolicy{
+				"429":                         meergo.HeaderStrategy(meergo.RateLimited, "X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
+				"477":                         meergo.RetryAfterStrategy(),
+				"500 502 503 504 521 523 524": meergo.ExponentialStrategy(meergo.NetFailure, time.Second),
+			},
+		}},
+		Icon: icon,
 	}, New)
 }
 

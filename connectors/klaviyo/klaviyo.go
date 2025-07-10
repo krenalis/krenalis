@@ -61,17 +61,26 @@ func init() {
 			User:  "client",
 			Users: "clients",
 		},
+		EndpointGroups: []meergo.EndpointGroup{
+			{
+				Patterns:    []string{"/api/event-bulk-create-jobs"},
+				RateLimit:   meergo.RateLimit{RequestsPerSecond: 2.5, Burst: 10},
+				RetryPolicy: retryPolicy,
+			},
+			{
+				Patterns:    []string{"/api/profiles/"},
+				RateLimit:   meergo.RateLimit{RequestsPerSecond: 11.6, Burst: 75},
+				RetryPolicy: retryPolicy,
+			},
+		},
 		Icon: icon,
-		RateLimits: meergo.RateLimits{
-			"/api/event-bulk-create-jobs": {RequestsPerSecond: 2.5, Burst: 10},
-			"/api/profiles/":              {RequestsPerSecond: 11.6, Burst: 75},
-		},
-		RetryPolicy: meergo.RetryPolicy{
-			// https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling
-			"429":     meergo.RetryAfterStrategy(),
-			"500 503": meergo.ExponentialStrategy(meergo.NetFailure, 100*time.Millisecond),
-		},
 	}, New)
+}
+
+var retryPolicy = meergo.RetryPolicy{
+	// https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling
+	"429":     meergo.RetryAfterStrategy(),
+	"500 503": meergo.ExponentialStrategy(meergo.NetFailure, 100*time.Millisecond),
 }
 
 // apiRevision is the API revision to use for calls to the Klaviyo API methods.

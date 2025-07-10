@@ -45,16 +45,17 @@ func init() {
 				Overview: overview,
 			},
 		},
-		Icon: icon,
-		RateLimits: meergo.RateLimits{
+		EndpointGroups: []meergo.EndpointGroup{{
 			// https://developer.mixpanel.com/reference/import-events
-			"/": {RequestsPerSecond: 15, Burst: 20, MaxConcurrentRequests: 20},
+			RateLimit: meergo.RateLimit{RequestsPerSecond: 15, Burst: 20, MaxConcurrentRequests: 20},
+			// https://mailchimp.com/developer/marketing/docs/fundamentals/#api-limits
+			RetryPolicy: meergo.RetryPolicy{
+				// https://developer.mixpanel.com/reference/import-events#rate-limits
+				"429":     meergo.ExponentialStrategy(meergo.Slowdown, 2*time.Second),
+				"502 503": meergo.ExponentialStrategy(meergo.NetFailure, 2*time.Second),
+			}},
 		},
-		RetryPolicy: meergo.RetryPolicy{
-			// https://developer.mixpanel.com/reference/import-events#rate-limits
-			"429":     meergo.ExponentialStrategy(meergo.Slowdown, 2*time.Second),
-			"502 503": meergo.ExponentialStrategy(meergo.NetFailure, 2*time.Second),
-		},
+		Icon: icon,
 	}, New)
 }
 
