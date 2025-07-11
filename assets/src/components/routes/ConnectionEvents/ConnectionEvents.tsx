@@ -6,6 +6,7 @@ import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import useEventListener from '../../../hooks/useEventListener';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import JSONbig from 'json-bigint';
+import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 
 const ConnectionEvents = () => {
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
@@ -101,9 +102,14 @@ const ConnectionEvents = () => {
 										}`}
 										onClick={() => onEventClick(e)}
 									>
-										<div className='connection-events__event-name'>{e.type}</div>
+										<div className='connection-events__event-type'>
+											{e.type}
+											{e.type === 'track' && (
+												<span className='connection-events__event-name'>{e.full.event}</span>
+											)}
+										</div>
 										<div className='connection-events__event-time'>
-											{new Date(e.time).toLocaleString()}
+											<SlRelativeTime date={e.time} sync lang='en-US' />
 										</div>
 									</div>
 								);

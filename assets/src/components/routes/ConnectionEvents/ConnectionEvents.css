@@ -118,20 +118,31 @@
 }
 
 .connection-events__event:hover,
-.connection-events__event:hover .connection-events__event-name,
+.connection-events__event:hover .connection-events__event-type,
 .connection-events__event:hover .connection-events__event-time,
 .connection-events__event--selected,
-.connection-events__event--selected .connection-events__event-name,
+.connection-events__event--selected .connection-events__event-type,
 .connection-events__event--selected .connection-events__event-time {
-	color: var(--sl-color-primary-950);
+	color: var(--sl-color-primary-900);
 }
 
 .connection-events__event--selected:last-child {
 	border-bottom-left-radius: var(--radius);
 }
 
-.connection-events__event-name {
+.connection-events__event-type {
 	font-weight: 600;
+}
+
+.connection-events__event-name {
+	font-weight: 400;
+	white-space: nowrap;
+	margin-left: 7px;
+	background-color: var(--sl-color-primary-100);
+	color: var(--sl-color-primary-600);
+	border-radius: 3px;
+	padding: 3px 10px;
+	font-size: 12px;
 }
 
 .connection-events__event-time {

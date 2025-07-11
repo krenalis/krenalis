@@ -1298,20 +1298,33 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__event:hover,
-.fullscreen-transformation__event:hover .fullscreen-transformation__event-name,
+.fullscreen-transformation__event:hover .fullscreen-transformation__event-type,
 .fullscreen-transformation__event:hover .fullscreen-transformation__event-time,
 .fullscreen-transformation__event--open,
-.fullscreen-transformation__event--open .fullscreen-transformation__event-name,
+.fullscreen-transformation__event--open .fullscreen-transformation__event-type,
 .fullscreen-transformation__event--open .fullscreen-transformation__event-time {
-	color: var(--sl-color-primary-950);
+	color: var(--sl-color-primary-900);
 }
 
 .fullscreen-transformation__event--open:last-child {
 	border-bottom-left-radius: var(--radius);
 }
 
-.fullscreen-transformation__event-name {
+.fullscreen-transformation__event-type {
 	font-weight: 600;
+	display: flex;
+	align-items: baseline;
+}
+
+.fullscreen-transformation__event-name {
+	font-weight: 400;
+	white-space: nowrap;
+	margin-left: 7px;
+	background-color: var(--sl-color-primary-100);
+	color: var(--sl-color-primary-600);
+	border-radius: 3px;
+	padding: 3px 10px;
+	font-size: 12px;
 }
 
 .fullscreen-transformation__event-time {

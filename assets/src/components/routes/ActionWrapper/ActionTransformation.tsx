@@ -49,6 +49,7 @@ import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
+import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 import {
 	AppUsersResponse,
 	ExecQueryResponse,
@@ -2073,9 +2074,16 @@ const FullscreenTransformation = ({
 												}`}
 												onClick={(evt) => onEventClick(evt, e)}
 											>
-												<div className='fullscreen-transformation__event-name'>{e.type}</div>
+												<div className='fullscreen-transformation__event-type'>
+													{e.type}{' '}
+													{e.type === 'track' && (
+														<span className='fullscreen-transformation__event-name'>
+															{e.full.event}
+														</span>
+													)}
+												</div>
 												<div className='fullscreen-transformation__event-time'>
-													{new Date(e.time).toLocaleString()}
+													<SlRelativeTime date={e.time} sync lang='en-US' />
 												</div>
 												<SlIconButton
 													className='fullscreen-transformation__event-run'
