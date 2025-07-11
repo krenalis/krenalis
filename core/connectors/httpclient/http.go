@@ -55,9 +55,7 @@ func New(state *state.State, transport http.RoundTripper) *HTTP {
 		state:     state,
 		transport: transport,
 	}
-	if state != nil {
-		h.muxes = map[string]*http.ServeMux{}
-	}
+	h.muxes = map[string]*http.ServeMux{}
 	return h
 }
 
