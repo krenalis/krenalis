@@ -89,6 +89,7 @@ func (b *rateLimiter) OnFailure(duration time.Duration, reason meergo.FailureRea
 	case meergo.PermanentFailure:
 	case meergo.NetFailure:
 		b.onNetFailure()
+	case meergo.Unauthorized:
 	case meergo.Slowdown:
 		b.onSlowdown()
 	case meergo.RateLimited:
