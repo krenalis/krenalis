@@ -16,7 +16,6 @@ interface ActionContext {
 	setActionType: React.Dispatch<React.SetStateAction<TransformedActionType | undefined>>;
 	isEditing: boolean;
 	isImport: boolean;
-	isTransformationFunctionSupported: boolean;
 	onClose: (cb?: (...args: any) => void) => void;
 	transformationSectionRef: React.MutableRefObject<any>;
 	handleEmptyMatchingError: () => void;

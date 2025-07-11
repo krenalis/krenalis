@@ -299,21 +299,6 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 		return null;
 	};
 
-	const isTransformationFunctionSupported = useMemo(() => {
-		if (isLoading) return false;
-		if (actionType.target === 'User' || actionType.target === 'Group') {
-			if (connection.isSource) {
-				return connection.isApp || connection.isDatabase || connection.isFileStorage || connection.isEventBased;
-			} else {
-				return connection.isApp || connection.isDatabase;
-			}
-		}
-		if (actionType.target == 'Event' && connection.isApp && connection.isDestination) {
-			return true;
-		}
-		return false;
-	}, [isLoading, actionType, connection]);
-
 	const { isTransformationHidden, isTransformationDisabled } = useMemo(() => {
 		if (isLoading) return { isTransformationHidden: false, isTransformationDisabled: false };
 		let isTransformationHidden: boolean = false;
@@ -386,7 +371,6 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 	return {
 		isEditing,
 		isImport,
-		isTransformationFunctionSupported,
 		action,
 		settings,
 		setSettings,

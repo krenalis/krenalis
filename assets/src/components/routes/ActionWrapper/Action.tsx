@@ -43,7 +43,6 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const {
 		isEditing,
 		isImport,
-		isTransformationFunctionSupported,
 		action,
 		settings,
 		setSettings,
@@ -107,7 +106,6 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				setActionType,
 				isEditing,
 				isImport,
-				isTransformationFunctionSupported,
 				onClose,
 				transformationSectionRef,
 				handleEmptyMatchingError,

@@ -648,6 +648,11 @@ inherit the disabled style */
 	padding-right: 10px;
 }
 
+.transformation-box__not-configured-tooltip::part(body) {
+	padding: 10px 12px;
+	max-width: 250px;
+}
+
 .transformation-box__header-right-buttons {
 	display: flex;
 	align-items: center;

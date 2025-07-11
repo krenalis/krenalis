@@ -89,7 +89,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const { connection } = useContext(ConnectionContext);
 	const {
 		isTransformationDisabled,
-		isTransformationFunctionSupported,
 		action,
 		setAction,
 		actionType,
@@ -434,7 +433,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			isFullscreenTransformationOpen={isFullscreenTransformationOpen}
 			onCloseFullscreenTransformation={onCloseFullscreenTransformation}
 			actionType={actionType}
-			isTransformationFunctionSupported={isTransformationFunctionSupported}
 			hasSchema={actionType.outputSchema != null}
 			flatInputSchema={flatInputSchema}
 		/>
@@ -608,7 +606,6 @@ interface TransformationBoxProps {
 	isFullscreenTransformationOpen: boolean;
 	onCloseFullscreenTransformation: () => void;
 	actionType: TransformedActionType;
-	isTransformationFunctionSupported: boolean;
 	hasSchema: boolean;
 	flatInputSchema: TransformedMapping;
 }
@@ -670,7 +667,6 @@ const TransformationBox = ({
 	isFullscreenTransformationOpen,
 	onCloseFullscreenTransformation,
 	actionType,
-	isTransformationFunctionSupported,
 	hasSchema,
 	flatInputSchema,
 }: TransformationBoxProps) => {
@@ -1028,9 +1024,7 @@ const TransformationBox = ({
 			<div className='transformation-box__header'>
 				{hasSchema && (
 					<div className='transformation-box__header-title'>
-						{isCompletelyOpen ||
-						!isTransformationFunctionSupported ||
-						transformationLanguages.length == 0 ? (
+						{isCompletelyOpen ? (
 							<>
 								<span className='transformation-box__header-icon'>
 									{transformationType === 'mappings' ? (
@@ -1053,8 +1047,10 @@ const TransformationBox = ({
 								>
 									Mappings
 								</SlButton>
-								{transformationLanguages.map((language) => {
-									return (
+								{['JavaScript', 'Python'].map((language) => {
+									const isConfigured = transformationLanguages.includes(language);
+									const isDisabled = isTransformationDisabled || !isConfigured;
+									const tab = (
 										<SlButton
 											key={language}
 											variant={
@@ -1062,12 +1058,24 @@ const TransformationBox = ({
 													? 'primary'
 													: 'default'
 											}
-											onClick={() => onTransformationTypeClick(language)}
-											disabled={isTransformationDisabled}
+											onClick={isDisabled ? null : () => onTransformationTypeClick(language)}
+											disabled={isDisabled}
 										>
 											{language}
 										</SlButton>
 									);
+									if (isConfigured) {
+										return tab;
+									} else {
+										return (
+											<SlTooltip
+												content={`It is not possible to use ${language} for the transformation because it needs to be configured first.`}
+												className='transformation-box__not-configured-tooltip'
+											>
+												{tab}
+											</SlTooltip>
+										);
+									}
 								})}
 							</SlButtonGroup>
 						)}
