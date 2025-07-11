@@ -138,6 +138,10 @@ func (h *HTTP) connectorMux(name string, groups []meergo.EndpointGroup) *http.Se
 		mux.HandleFunc("/", noOpHandler)
 	} else {
 		for _, group := range groups {
+			if group.Patterns == nil {
+				mux.HandleFunc("/", noOpHandler)
+				continue
+			}
 			for _, pattern := range group.Patterns {
 				mux.HandleFunc(pattern, noOpHandler)
 			}
