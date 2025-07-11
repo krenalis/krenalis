@@ -127,13 +127,11 @@ func TestEventsContext(t *testing.T) {
 				"userAgent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
 				"browser": map[string]any{
 					"name":    "Firefox",
-					"other":   "",
 					"version": "47.0",
 				},
 				"ip": "127.0.0.1",
 				"os": map[string]any{
 					"name":    "Windows",
-					"other":   "",
 					"version": "6.1",
 				},
 			}
@@ -142,13 +140,11 @@ func TestEventsContext(t *testing.T) {
 				"userAgent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
 				"browser": map[string]any{
 					"name":    "Firefox",
-					"other":   "",
 					"version": "47.0",
 				},
 				"ip": "127.0.0.1",
 				"os": map[string]any{
 					"name":    "Linux",
-					"other":   "",
 					"version": "1",
 				},
 			}
@@ -157,12 +153,10 @@ func TestEventsContext(t *testing.T) {
 				"userAgent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
 				"browser": map[string]any{
 					"name":    "Firefox",
-					"other":   "",
 					"version": "47.0",
 				},
 				"os": map[string]any{
 					"name":    "Linux",
-					"other":   "",
 					"version": "1",
 				},
 			}

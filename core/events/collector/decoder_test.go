@@ -30,9 +30,9 @@ func Test_Decoder(t *testing.T) {
 	writeKey := "vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"
 
 	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
-	browser := map[string]any{"name": "Chrome", "other": "", "version": "117.0"}
+	browser := map[string]any{"name": "Chrome", "version": "117.0"}
 	ip := "192.168.1.1"
-	os := map[string]any{"name": "Windows", "other": "", "version": "10.0"}
+	os := map[string]any{"name": "Windows", "version": "10.0"}
 	library := map[string]any{"name": "meergo.js", "version": "0.0.0"}
 	context := map[string]any{"browser": browser, "ip": ip, "os": os, "userAgent": userAgent}
 
@@ -100,9 +100,9 @@ func Test_Decoder(t *testing.T) {
 					"context":     context,
 					"messageId":   "90112b1f-1d2d-4566-a86f-27efae53530c",
 					"properties":  json.Value("{}"),
+					"traits":      json.Value("{}"),
 					"type":        "track",
 					"event":       "click",
-					"userId":      nil,
 				},
 			}},
 		},
@@ -115,9 +115,9 @@ func Test_Decoder(t *testing.T) {
 					"context":     context,
 					"messageId":   "90112b1f-1d2d-4566-a86f-27efae53530c",
 					"properties":  json.Value("{}"),
+					"traits":      json.Value("{}"),
 					"type":        "track",
 					"event":       "click",
-					"userId":      nil,
 				},
 			}},
 		},
@@ -131,9 +131,9 @@ func Test_Decoder(t *testing.T) {
 					"context":     context,
 					"messageId":   "90112b1f-1d2d-4566-a86f-27efae53530c",
 					"properties":  json.Value("{}"),
+					"traits":      json.Value("{}"),
 					"type":        "track",
 					"event":       "click",
-					"userId":      nil,
 				},
 			}},
 		},
@@ -185,8 +185,8 @@ func Test_Decoder(t *testing.T) {
 					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"anonymousId": "82281550-c0fc-4d69-bcf9-db1e43f9a76a",
 					"properties":  json.Value(`{}`),
+					"traits":      json.Value(`{}`),
 					"type":        "page",
-					"userId":      nil,
 				}},
 			},
 		},
@@ -197,8 +197,8 @@ func Test_Decoder(t *testing.T) {
 					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"anonymousId": "82281550-c0fc-4d69-bcf9-db1e43f9a76a",
 					"properties":  json.Value(`{}`),
+					"traits":      json.Value(`{}`),
 					"type":        "page",
-					"userId":      nil,
 				}},
 			},
 		},
@@ -210,8 +210,8 @@ func Test_Decoder(t *testing.T) {
 					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"anonymousId": "82281550-c0fc-4d69-bcf9-db1e43f9a76a",
 					"properties":  json.Value(`{}`),
+					"traits":      json.Value(`{}`),
 					"type":        "page",
-					"userId":      nil,
 				}},
 			},
 		},
@@ -266,9 +266,9 @@ func Test_Decoder(t *testing.T) {
 					"channel":    "web",
 					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
 					"type":       "screen",
 					"name":       "login",
-					"userId":     nil,
 				}},
 			},
 		},
@@ -278,9 +278,9 @@ func Test_Decoder(t *testing.T) {
 				event: events.Event{
 					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
 					"type":       "screen",
 					"name":       "login",
-					"userId":     nil,
 				}},
 			},
 		},
@@ -291,9 +291,9 @@ func Test_Decoder(t *testing.T) {
 				event: events.Event{
 					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
 					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
 					"type":       "screen",
 					"name":       "login",
-					"userId":     nil,
 				}},
 			},
 		},
@@ -301,8 +301,8 @@ func Test_Decoder(t *testing.T) {
 		// meergo.track('click'); meergo.track('click');
 		{
 			body: `{"batch":[` +
-				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:06.050Z","properties":{},"userId":null,"messageId":"8071f50d-5a69-45f7-bb31-70e111aa8aed","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"browser":{"name":"Chrome","version":"138.0"},"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","search":"","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":true},"integrations":{}},` +
-				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:12.319Z","properties":{},"userId":null,"messageId":"1935c955-45f8-44a3-b835-ced93138e8b3","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"os":{"name":"macOS","version":"15"},"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","search":"","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":false},"integrations":{}}` +
+				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:06.050Z","properties":{},"userId":null,"messageId":"8071f50d-5a69-45f7-bb31-70e111aa8aed","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"browser":{"name":"Chrome","version":"138.0"},"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":true},"integrations":{}},` +
+				`{"type":"track","event":"click","timestamp":"2024-10-31T14:39:12.319Z","properties":{},"userId":null,"messageId":"1935c955-45f8-44a3-b835-ced93138e8b3","anonymousId":"5d60ebba-cbf6-463c-8d55-fc7a6f66183f","context":{"os":{"name":"macOS","version":"15"},"library":{"name":"meergo.js","version":"0.0.0"},"locale":"it-IT","page":{"path":"/catalog/","referrer":"https://listing.sample.com/","title":"Test website","url":"https://sample.com/catalog/"},"screen":{"width":2816,"height":1584,"density":1.3636363636363635},"userAgent":"Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0","sessionId":1730384955277,"sessionStart":false},"integrations":{}}` +
 				`],"sentAt":"2024-10-31T14:39:12.647Z","writeKey":"qWqwaP3zGZOazQUmuFRuRMfW3lMCqjUa"}`,
 			connection: 830163006,
 			expected: []expectedEvent{{
@@ -314,19 +314,16 @@ func Test_Decoder(t *testing.T) {
 						"page": map[string]any{
 							"path":     "/catalog/",
 							"referrer": "https://listing.sample.com/",
-							"search":   "",
 							"title":    "Test website",
 							"url":      "https://sample.com/catalog/",
 						},
 						"browser": map[string]any{
 							"name":    "Chrome",
-							"other":   "",
 							"version": "138.0",
 						},
 						"ip": ip,
 						"os": map[string]any{
 							"name":    "Linux",
-							"other":   "",
 							"version": "0.0",
 						},
 						"screen":    map[string]any{"width": 2816, "height": 1584, "density": 1.36},
@@ -341,9 +338,9 @@ func Test_Decoder(t *testing.T) {
 					"integrations":      json.Value("{}"),
 					"messageId":         "8071f50d-5a69-45f7-bb31-70e111aa8aed",
 					"properties":        json.Value("{}"),
+					"traits":            json.Value("{}"),
 					"type":              "track",
 					"event":             "click",
-					"userId":            nil,
 				},
 			}, {
 				event: events.Event{
@@ -354,19 +351,16 @@ func Test_Decoder(t *testing.T) {
 						"page": map[string]any{
 							"path":     "/catalog/",
 							"referrer": "https://listing.sample.com/",
-							"search":   "",
 							"title":    "Test website",
 							"url":      "https://sample.com/catalog/",
 						},
 						"browser": map[string]any{
 							"name":    "Firefox",
-							"other":   "",
 							"version": "132.0",
 						},
 						"ip": ip,
 						"os": map[string]any{
 							"name":    "macOS",
-							"other":   "",
 							"version": "15",
 						},
 						"screen":    map[string]any{"width": 2816, "height": 1584, "density": 1.36},
@@ -380,9 +374,9 @@ func Test_Decoder(t *testing.T) {
 					"integrations":      json.Value("{}"),
 					"messageId":         "1935c955-45f8-44a3-b835-ced93138e8b3",
 					"properties":        json.Value("{}"),
+					"traits":            json.Value("{}"),
 					"type":              "track",
 					"event":             "click",
-					"userId":            nil,
 				},
 			}},
 		},
@@ -408,9 +402,9 @@ func Test_Decoder(t *testing.T) {
 						},
 					},
 					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
 					"type":       "screen",
 					"name":       "login",
-					"userId":     nil,
 				}},
 			},
 		},
@@ -432,6 +426,7 @@ func Test_Decoder(t *testing.T) {
 					"context":    context,
 					"type":       "page",
 					"properties": json.Value("{}"),
+					"traits":     json.Value("{}"),
 					"userId":     "bob",
 				},
 			}},

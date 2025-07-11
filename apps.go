@@ -512,18 +512,18 @@ type Events interface {
 // RawEvent represents a raw event as received from a source connector.
 type RawEvent interface {
 	AnonymousId() string
-	Channel() string
-	Category() string
-	Context() RawEventContext
-	Event() string
-	GroupId() string
+	Channel() (string, bool)
+	Category() (string, bool)
+	Context() (RawEventContext, bool)
+	Event() (string, bool)
+	GroupId() (string, bool)
 	MessageId() string
-	Name() string
+	Name() (string, bool)
 	ReceivedAt() time.Time
 	SentAt() time.Time
 	Timestamp() time.Time
 	Type() string
-	UserId() string
+	UserId() (string, bool)
 }
 
 type RawEventContext interface {
@@ -531,9 +531,9 @@ type RawEventContext interface {
 	Browser() (RawEventContextBrowser, bool)
 	Campaign() (RawEventContextCampaign, bool)
 	Device() (RawEventContextDevice, bool)
-	IP() string
+	IP() (string, bool)
 	Library() (RawEventContextLibrary, bool)
-	Locale() string
+	Locale() (string, bool)
 	Location() (RawEventContextLocation, bool)
 	Network() (RawEventContextNetwork, bool)
 	OS() (RawEventContextOS, bool)
@@ -541,84 +541,84 @@ type RawEventContext interface {
 	Referrer() (RawEventContextReferrer, bool)
 	Screen() (RawEventContextScreen, bool)
 	Session() (RawEventContextSession, bool)
-	Timezone() string
-	UserAgent() string
+	Timezone() (string, bool)
+	UserAgent() (string, bool)
 }
 
 type RawEventContextApp interface {
-	Name() string
-	Version() string
-	Build() string
-	Namespace() string
+	Name() (string, bool)
+	Version() (string, bool)
+	Build() (string, bool)
+	Namespace() (string, bool)
 }
 
 type RawEventContextBrowser interface {
-	Name() string
-	Other() string
-	Version() string
+	Name() (string, bool)
+	Other() (string, bool)
+	Version() (string, bool)
 }
 
 type RawEventContextCampaign interface {
-	Name() string
-	Source() string
-	Medium() string
-	Term() string
-	Content() string
+	Name() (string, bool)
+	Source() (string, bool)
+	Medium() (string, bool)
+	Term() (string, bool)
+	Content() (string, bool)
 }
 
 type RawEventContextDevice interface {
-	Id() string
-	AdvertisingId() string
-	AdTrackingEnabled() bool
-	Manufacturer() string
-	Model() string
-	Name() string
-	Type() string
-	Token() string
+	Id() (string, bool)
+	AdvertisingId() (string, bool)
+	AdTrackingEnabled() (bool, bool)
+	Manufacturer() (string, bool)
+	Model() (string, bool)
+	Name() (string, bool)
+	Type() (string, bool)
+	Token() (string, bool)
 }
 
 type RawEventContextLibrary interface {
-	Name() string
-	Version() string
+	Name() (string, bool)
+	Version() (string, bool)
 }
 type RawEventContextLocation interface {
-	City() string
-	Country() string
-	Latitude() float64
-	Longitude() float64
-	Speed() float64
+	City() (string, bool)
+	Country() (string, bool)
+	Latitude() (float64, bool)
+	Longitude() (float64, bool)
+	Speed() (float64, bool)
 }
 type RawEventContextNetwork interface {
-	Bluetooth() bool
-	Carrier() string
-	Cellular() bool
-	WiFi() bool
+	Bluetooth() (bool, bool)
+	Carrier() (string, bool)
+	Cellular() (bool, bool)
+	WiFi() (bool, bool)
 }
 type RawEventContextOS interface {
-	Name() string
-	Version() string
+	Name() (string, bool)
+	Version() (string, bool)
 }
 
 type RawEventContextPage interface {
-	Path() string
-	Referrer() string
-	Search() string
-	Title() string
-	URL() string
+	Path() (string, bool)
+	Referrer() (string, bool)
+	Search() (string, bool)
+	Title() (string, bool)
+	URL() (string, bool)
 }
 
 type RawEventContextReferrer interface {
-	Id() string
-	Type() string
+	Id() (string, bool)
+	Type() (string, bool)
 }
 
 type RawEventContextScreen interface {
-	Width() int
-	Height() int
-	Density() decimal.Decimal
+	Width() (int, bool)
+	Height() (int, bool)
+	Density() (decimal.Decimal, bool)
 }
 
 type RawEventContextSession interface {
-	Id() int
-	Start() bool
+	Id() (int, bool)
+	Start() (bool, bool)
 }

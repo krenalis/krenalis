@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/events"
-	"github.com/meergo/meergo/decimal"
-	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/metrics"
 )
 
@@ -31,8 +29,6 @@ type EventWriter struct {
 		cancelCtx context.CancelFunc
 	}
 }
-
-var emptyJSONObject = json.Value("{}")
 
 func newEventWriter(store *Store, ack EventWriterAckFunc) *EventWriter {
 	ew := &EventWriter{
@@ -83,203 +79,136 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 	row[2] = event["anonymousId"]
 
 	// channel
-	if channel, ok := event["channel"]; ok {
-		row[3] = channel
-	} else {
-		row[3] = ""
-	}
+	row[3] = event["channel"]
 
 	// category
-	if category, ok := event["category"]; ok {
-		row[4] = category
-	} else {
-		row[4] = ""
-	}
+	row[4] = event["category"]
 
-	eventContext := event["context"].(map[string]any)
+	// context.
+	if eventContext, ok := event["context"].(map[string]any); ok {
 
-	// app
-	if app, ok := eventContext["app"].(map[string]any); ok {
-		row[5] = app["name"]
-		row[6] = app["version"]
-		row[7] = app["build"]
-		row[8] = app["namespace"]
-	} else {
-		row[5], row[6], row[7], row[8] = "", "", "", ""
-	}
+		// app
+		if app, ok := eventContext["app"].(map[string]any); ok {
+			row[5] = app["name"]
+			row[6] = app["version"]
+			row[7] = app["build"]
+			row[8] = app["namespace"]
+		}
 
-	// browser
-	if browser, ok := eventContext["browser"].(map[string]any); ok {
-		row[9] = browser["name"]
-		row[10] = browser["other"]
-		row[11] = browser["version"]
-	} else {
-		row[9], row[10], row[11] = "", "", ""
-	}
-	if row[9] == "" {
-		row[9] = "None"
-	}
+		// browser
+		if browser, ok := eventContext["browser"].(map[string]any); ok {
+			row[9] = browser["name"]
+			row[10] = browser["other"]
+			row[11] = browser["version"]
+		}
 
-	// campaign
-	if campaign, ok := eventContext["campaign"].(map[string]any); ok {
-		row[12] = campaign["name"]
-		row[13] = campaign["source"]
-		row[14] = campaign["medium"]
-		row[15] = campaign["term"]
-		row[16] = campaign["content"]
-	} else {
-		row[12], row[13], row[14], row[15], row[16] = "", "", "", "", ""
-	}
+		// campaign
+		if campaign, ok := eventContext["campaign"].(map[string]any); ok {
+			row[12] = campaign["name"]
+			row[13] = campaign["source"]
+			row[14] = campaign["medium"]
+			row[15] = campaign["term"]
+			row[16] = campaign["content"]
+		}
 
-	// device
-	if device, ok := eventContext["device"].(map[string]any); ok {
-		row[17] = device["id"]
-		row[18] = device["advertisingId"]
-		row[19] = device["adTrackingEnabled"]
-		row[20] = device["manufacturer"]
-		row[21] = device["model"]
-		row[22] = device["name"]
-		row[23] = device["type"]
-		row[24] = device["token"]
-	} else {
-		row[17], row[18], row[19], row[20], row[21], row[22], row[23], row[24] = "", "", false, "", "", "", "", ""
-	}
+		// device
+		if device, ok := eventContext["device"].(map[string]any); ok {
+			row[17] = device["id"]
+			row[18] = device["advertisingId"]
+			row[19] = device["adTrackingEnabled"]
+			row[20] = device["manufacturer"]
+			row[21] = device["model"]
+			row[22] = device["name"]
+			row[23] = device["type"]
+			row[24] = device["token"]
+		}
 
-	// ip
-	if ip, ok := eventContext["ip"]; ok {
-		row[25] = ip
-	} else {
-		row[25] = "0.0.0.0"
-	}
+		// ip
+		row[25] = eventContext["ip"]
 
-	// library
-	if library, ok := eventContext["library"].(map[string]any); ok {
-		row[26] = library["name"]
-		row[27] = library["version"]
-	} else {
-		row[26], row[27] = "", ""
-	}
+		// library
+		if library, ok := eventContext["library"].(map[string]any); ok {
+			row[26] = library["name"]
+			row[27] = library["version"]
+		}
+		// locale
+		row[28] = eventContext["locale"]
 
-	// locale
-	if locale, ok := eventContext["locale"]; ok {
-		row[28] = locale
-	} else {
-		row[28] = ""
-	}
+		// location
+		if location, ok := eventContext["location"].(map[string]any); ok {
+			row[29] = location["city"]
+			row[30] = location["country"]
+			row[31] = location["latitude"]
+			row[32] = location["longitude"]
+			row[33] = location["speed"]
+		}
 
-	// location
-	if location, ok := eventContext["location"].(map[string]any); ok {
-		row[29] = location["city"]
-		row[30] = location["country"]
-		row[31] = location["latitude"]
-		row[32] = location["longitude"]
-		row[33] = location["speed"]
-	} else {
-		row[29], row[30], row[31], row[32], row[33] = "", "", 0.0, 0.0, 0.0
-	}
+		// network
+		if network, ok := eventContext["network"].(map[string]any); ok {
+			row[34] = network["bluetooth"]
+			row[35] = network["carrier"]
+			row[36] = network["cellular"]
+			row[37] = network["wifi"]
+		}
 
-	// network
-	if network, ok := eventContext["network"].(map[string]any); ok {
-		row[34] = network["bluetooth"]
-		row[35] = network["carrier"]
-		row[36] = network["cellular"]
-		row[37] = network["wifi"]
-	} else {
-		row[34], row[35], row[36], row[37] = false, "", false, false
-	}
+		// os
+		if os, ok := eventContext["os"].(map[string]any); ok {
+			row[38] = os["name"]
+			row[39] = os["other"]
+			row[40] = os["version"]
+		}
 
-	// os
-	if os, ok := eventContext["os"].(map[string]any); ok {
-		row[38] = os["name"]
-		row[39] = os["other"]
-		row[40] = os["version"]
-	} else {
-		row[38], row[39], row[40] = "", "", ""
-	}
-	if row[38] == "" {
-		row[38] = "None"
-	}
+		// page
+		if page, ok := eventContext["page"].(map[string]any); ok {
+			row[41] = page["path"]
+			row[42] = page["referrer"]
+			row[43] = page["search"]
+			row[44] = page["title"]
+			row[45] = page["url"]
+		}
 
-	// page
-	if page, ok := eventContext["page"].(map[string]any); ok {
-		row[41] = page["path"]
-		row[42] = page["referrer"]
-		row[43] = page["search"]
-		row[44] = page["title"]
-		row[45] = page["url"]
-	} else {
-		row[41], row[42], row[43], row[44], row[45] = "", "", "", "", ""
-	}
+		// referrer
+		if referrer, ok := eventContext["referrer"].(map[string]any); ok {
+			row[46] = referrer["name"]
+			row[47] = referrer["version"]
+		}
 
-	// referrer
-	if referrer, ok := eventContext["referrer"].(map[string]any); ok {
-		row[46] = referrer["name"]
-		row[47] = referrer["version"]
-	} else {
-		row[46], row[47] = "", ""
-	}
+		// screen
+		if screen, ok := eventContext["screen"].(map[string]any); ok {
+			row[48] = screen["width"]
+			row[49] = screen["height"]
+			row[50] = screen["density"]
+		}
 
-	// screen
-	if screen, ok := eventContext["screen"].(map[string]any); ok {
-		row[48] = screen["width"]
-		row[49] = screen["height"]
-		row[50] = screen["density"]
-	} else {
-		row[48], row[49], row[50] = int16(0), int16(0), decimal.Decimal{}
-	}
+		// session
+		if session, ok := eventContext["session"].(map[string]any); ok {
+			row[51] = session["id"]
+			row[52] = session["start"]
+		}
 
-	// session
-	if session, ok := eventContext["session"].(map[string]any); ok {
-		row[51] = session["id"]
-		row[52] = session["start"]
-	} else {
-		row[51], row[52] = 0, false
-	}
+		// timezone
+		row[53] = eventContext["timezone"]
 
-	// timezone
-	if timezone, ok := eventContext["timezone"]; ok {
-		row[53] = timezone
-	} else {
-		row[53] = ""
-	}
-
-	// userAgent
-	if userAgent, ok := eventContext["userAgent"]; ok {
-		row[54] = userAgent
-	} else {
-		row[54] = ""
+		// userAgent
+		row[54] = eventContext["userAgent"]
 	}
 
 	// event
-	if event, ok := event["event"]; ok {
-		row[55] = event
-	} else {
-		row[55] = ""
-	}
+	row[55] = event["event"]
 
 	// groupId
-	if groupId, ok := event["groupId"]; ok {
-		row[56] = groupId
-	} else {
-		row[56] = ""
-	}
+	row[56] = event["groupId"]
 
 	// messageId
 	row[57] = event["messageId"]
 
 	// name
-	if name, ok := eventContext["name"]; ok {
-		row[58] = name
-	} else {
-		row[58] = ""
+	if eventContext, ok := event["context"].(map[string]any); ok {
+		row[58] = eventContext["name"]
 	}
 
 	// properties
-	if properties, ok := event["properties"]; ok {
-		row[59] = properties
-	} else {
-		row[59] = emptyJSONObject
-	}
+	row[59] = event["properties"]
 
 	// receivedAt
 	row[60] = event["receivedAt"]
@@ -291,21 +220,13 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 	row[62] = event["timestamp"]
 
 	// traits
-	if traits, ok := event["traits"]; ok {
-		row[63] = traits
-	} else {
-		row[63] = emptyJSONObject
-	}
+	row[63] = event["traits"]
 
 	// type
 	row[64] = event["type"]
 
 	// userId
-	if userId := event["userId"]; userId != nil {
-		row[65] = userId
-	} else {
-		row[65] = ""
-	}
+	row[65] = event["userId"]
 
 	ew.mu.Lock()
 	ew.rows = append(ew.rows, row)

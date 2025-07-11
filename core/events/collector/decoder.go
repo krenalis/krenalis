@@ -487,14 +487,9 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		isTrack    = typ == "track"
 	)
 
-	// UserId.
-	if _, ok = event["userId"]; !ok {
-		event["userId"] = nil
-	}
-
 	// AnonymousId and UserId.
 	if _, ok := event["anonymousId"]; !ok {
-		if event["userId"] == nil {
+		if _, ok := event["userId"]; !ok {
 			if isIdentify || isAlias {
 				return nil, errors.BadRequest("property 'userId' is required for an %s event", typ)
 			}
@@ -512,11 +507,13 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 
 	// UserAgent.
 	if ua, ok := context["userAgent"].(string); ok {
-		// If the user agent is set to "N/A", this means that the user agent is
-		// not applicable to this event, so it should not be taken from the HTTP
-		// request either and the event should remain without a user agent.
 		if ua == "N/A" {
-			context["userAgent"] = ""
+			// If the user agent is set to "N/A", this means that the user agent is
+			// not applicable to this event, so it should not be taken from the HTTP
+			// request either and the event should remain without a user agent.
+			delete(context, "userAgent")
+		} else {
+			// Simply keep the user agent passed in the context.
 		}
 	} else {
 		// User agent not provided in context, so it must be read from the
@@ -525,7 +522,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	}
 
 	// Browser and OS.
-	if ua := context["userAgent"].(string); ua != "" {
+	if ua, ok := context["userAgent"].(string); ok {
 		contextBrowser, contextOS := parseUserAgent(ua)
 		if _, ok := context["browser"]; !ok {
 			context["browser"] = contextBrowser
@@ -591,14 +588,14 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 
 	// Screen.
 	if screen, ok := context["screen"].(map[string]any); ok {
-		w, _ := screen["width"].(int)
-		h, _ := screen["height"].(int)
-		if w <= 0 || w > math.MaxInt16 || h <= 0 || h > math.MaxInt16 {
-			screen["width"] = 0
-			screen["height"] = 0
+		if w, ok := screen["width"].(int); ok && (w <= 0 || w > math.MaxInt16) {
+			return nil, errors.BadRequest("screen width value is outside the allowed range [1, 32767]")
 		}
-		if d, ok := screen["density"].(decimal.Decimal); ok && d.Sign() == -1 {
-			screen["density"] = decimal.Decimal{}
+		if h, ok := screen["height"].(int); ok && (h <= 0 || h > math.MaxInt16) {
+			return nil, errors.BadRequest("screen height value is outside the allowed range [1, 32767]")
+		}
+		if d, ok := screen["density"].(decimal.Decimal); ok && d.Sign() != 1 {
+			return nil, errors.BadRequest("screen density value must be a positive number")
 		}
 	}
 
@@ -702,7 +699,15 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		if traits, ok := context["traits"]; ok {
 			event["traits"] = traits
 			delete(context, "traits")
+		} else {
+			event["traits"] = json.Value("{}")
 		}
+	}
+
+	// The context must be treated like the other fields: if it contains no
+	// properties, the entire field must be removed.
+	if context, ok := event["context"].(map[string]any); ok && len(context) == 0 {
+		delete(event, "context")
 	}
 
 	return event, nil
@@ -821,106 +826,106 @@ var contextSections = map[string]*contextSection{
 	"app": {
 		name: "app",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text()},
-			{name: "version", typ: types.Text()},
-			{name: "build", typ: types.Text()},
-			{name: "namespace", typ: types.Text()},
+			{name: "name", typ: types.Text(), readOptional: true},
+			{name: "version", typ: types.Text(), readOptional: true},
+			{name: "build", typ: types.Text(), readOptional: true},
+			{name: "namespace", typ: types.Text(), readOptional: true},
 		},
 	},
 	"browser": {
 		name: "browser",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
-			{name: "other", typ: types.Text()},
-			{name: "version", typ: types.Text()},
+			{name: "name", typ: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"), readOptional: true},
+			{name: "other", typ: types.Text(), readOptional: true},
+			{name: "version", typ: types.Text(), readOptional: true},
 		},
 	},
 	"campaign": {
 		name: "campaign",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text()},
-			{name: "source", typ: types.Text()},
-			{name: "medium", typ: types.Text()},
-			{name: "term", typ: types.Text()},
-			{name: "content", typ: types.Text()},
+			{name: "name", typ: types.Text(), readOptional: true},
+			{name: "source", typ: types.Text(), readOptional: true},
+			{name: "medium", typ: types.Text(), readOptional: true},
+			{name: "term", typ: types.Text(), readOptional: true},
+			{name: "content", typ: types.Text(), readOptional: true},
 		},
 	},
 	"device": {
 		name: "device",
 		properties: []contextProperty{
-			{name: "id", typ: types.Text()},
-			{name: "advertisingId", typ: types.Text()},
-			{name: "adTrackingEnabled", typ: types.Boolean()},
-			{name: "manufacturer", typ: types.Text()},
-			{name: "model", typ: types.Text()},
-			{name: "name", typ: types.Text()},
-			{name: "type", typ: types.Text()},
-			{name: "token", typ: types.Text()},
+			{name: "id", typ: types.Text(), readOptional: true},
+			{name: "advertisingId", typ: types.Text(), readOptional: true},
+			{name: "adTrackingEnabled", typ: types.Boolean(), readOptional: true},
+			{name: "manufacturer", typ: types.Text(), readOptional: true},
+			{name: "model", typ: types.Text(), readOptional: true},
+			{name: "name", typ: types.Text(), readOptional: true},
+			{name: "type", typ: types.Text(), readOptional: true},
+			{name: "token", typ: types.Text(), readOptional: true},
 		},
 	},
 	"library": {
 		name: "library",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text()},
-			{name: "version", typ: types.Text()},
+			{name: "name", typ: types.Text(), readOptional: true},
+			{name: "version", typ: types.Text(), readOptional: true},
 		},
 	},
 	"location": {
 		name: "location",
 		properties: []contextProperty{
-			{name: "city", typ: types.Text()},
-			{name: "country", typ: types.Text()},
-			{name: "latitude", typ: types.Float(64)},
-			{name: "longitude", typ: types.Float(64)},
-			{name: "speed", typ: types.Float(64)},
+			{name: "city", typ: types.Text(), readOptional: true},
+			{name: "country", typ: types.Text(), readOptional: true},
+			{name: "latitude", typ: types.Float(64), readOptional: true},
+			{name: "longitude", typ: types.Float(64), readOptional: true},
+			{name: "speed", typ: types.Float(64), readOptional: true},
 		},
 	},
 	"network": {
 		name: "network",
 		properties: []contextProperty{
-			{name: "bluetooth", typ: types.Boolean()},
-			{name: "carrier", typ: types.Text()},
-			{name: "cellular", typ: types.Boolean()},
-			{name: "wifi", typ: types.Boolean()},
+			{name: "bluetooth", typ: types.Boolean(), readOptional: true},
+			{name: "carrier", typ: types.Text(), readOptional: true},
+			{name: "cellular", typ: types.Boolean(), readOptional: true},
+			{name: "wifi", typ: types.Boolean(), readOptional: true},
 		},
 	},
 	"os": {
 		name: "os",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
-			{name: "other", typ: types.Text()},
-			{name: "version", typ: types.Text()},
+			{name: "name", typ: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"), readOptional: true},
+			{name: "other", typ: types.Text(), readOptional: true},
+			{name: "version", typ: types.Text(), readOptional: true},
 		},
 	},
 	"page": {
 		name: "page",
 		properties: []contextProperty{
-			{name: "path", typ: types.Text()},
-			{name: "referrer", typ: types.Text()},
-			{name: "search", typ: types.Text()},
-			{name: "title", typ: types.Text()},
-			{name: "url", typ: types.Text()},
+			{name: "path", typ: types.Text(), readOptional: true},
+			{name: "referrer", typ: types.Text(), readOptional: true},
+			{name: "search", typ: types.Text(), readOptional: true},
+			{name: "title", typ: types.Text(), readOptional: true},
+			{name: "url", typ: types.Text(), readOptional: true},
 		},
 	},
 	"referrer": {
 		name: "referrer",
 		properties: []contextProperty{
-			{name: "id", typ: types.Text()},
-			{name: "type", typ: types.Text()},
+			{name: "id", typ: types.Text(), readOptional: true},
+			{name: "type", typ: types.Text(), readOptional: true},
 		},
 	},
 	"screen": {
 		name: "screen",
 		properties: []contextProperty{
-			{name: "width", typ: types.Int(16)},
-			{name: "height", typ: types.Int(16)},
-			{name: "density", typ: types.Decimal(3, 2)},
+			{name: "width", typ: types.Int(16), readOptional: true},
+			{name: "height", typ: types.Int(16), readOptional: true},
+			{name: "density", typ: types.Decimal(3, 2), readOptional: true},
 		},
 	},
 	"session": {
 		name: "session",
 		properties: []contextProperty{
-			{name: "id", typ: types.Int(64)},
+			{name: "id", typ: types.Int(64), readOptional: true},
 			{name: "start", typ: types.Boolean(), readOptional: true},
 		},
 	},
@@ -1106,6 +1111,9 @@ func parseIP(ip string) (net.IP, string, error) {
 }
 
 // parseUserAgent parses a user agent and returns context's browser and os.
+//
+// Note that in returned maps, if a value is empty or irrelevant, the
+// corresponding key is omitted.
 func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 
 	// Parse the user agent.
@@ -1145,9 +1153,13 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 		}
 	}
 	browser := map[string]any{
-		"name":    name,
-		"other":   other,
-		"version": version,
+		"name": name,
+	}
+	if other != "" {
+		browser["other"] = other
+	}
+	if version != "" {
+		browser["version"] = version
 	}
 
 	// Determine the OS.
@@ -1181,10 +1193,13 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 		version = major + "." + minor
 	}
 	os := map[string]any{
-		"name":    name,
-		"other":   other,
-		"version": version,
+		"name": name,
 	}
-
+	if other != "" {
+		os["other"] = other
+	}
+	if version != "" {
+		os["version"] = version
+	}
 	return browser, os
 }

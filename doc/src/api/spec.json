@@ -10817,7 +10817,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -10857,7 +10856,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": "Browser from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event browser unspecified (e.g., for server-generated events where the browser is not applicable), do **not** set a value for `context.browser` and set `context.userAgent` to `N/A`."
                                                     },
                                                     {
@@ -10902,7 +10900,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -10968,7 +10965,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -10976,7 +10972,6 @@
                                                         "type": {
                                                             "kind": "inet"
                                                         },
-                                                        "readOptional": true,
                                                         "description": "IP is the IP address associated with the event.\n\nIf `context.ip` is explicitly set, its value will be used. Otherwise, the IP will be inferred from the HTTP request of the event.\n\nTo deliberately avoid associating any IP with the event, set `context.ip` to `0.0.0.0`.\nThis can be useful for server-side events where the originating IP is irrelevant or where no client IP can be meaningfully assigned (e.g. background jobs, internal system events)."
                                                     },
                                                     {
@@ -11000,7 +10995,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -11056,7 +11050,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -11094,7 +11087,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -11134,7 +11126,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": "OS of the device from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
                                                     },
                                                     {
@@ -11179,7 +11170,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -11203,7 +11193,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -11238,7 +11227,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -11264,7 +11252,6 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "readOptional": true,
                                                         "description": ""
                                                     },
                                                     {
@@ -11280,7 +11267,6 @@
                                                         "type": {
                                                             "kind": "text"
                                                         },
-                                                        "readOptional": true,
                                                         "description": "User Agent is the device identifier from which the event originates.\n\nIf not provided, Meergo derives it from the event's HTTP request.\n\nTo explicitly assign no User Agent to the event (useful in cases where events are generated by backend systems or scheduled jobs), set this field to `N/A` (not applicable)."
                                                     }
                                                 ]
@@ -11451,7 +11437,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11491,7 +11476,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": "Browser from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event browser unspecified (e.g., for server-generated events where the browser is not applicable), do **not** set a value for `context.browser` and set `context.userAgent` to `N/A`."
                                     },
                                     {
@@ -11536,7 +11520,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11602,7 +11585,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11610,7 +11592,6 @@
                                         "type": {
                                             "kind": "inet"
                                         },
-                                        "readOptional": true,
                                         "description": "IP is the IP address associated with the event.\n\nIf `context.ip` is explicitly set, its value will be used. Otherwise, the IP will be inferred from the HTTP request of the event.\n\nTo deliberately avoid associating any IP with the event, set `context.ip` to `0.0.0.0`.\nThis can be useful for server-side events where the originating IP is irrelevant or where no client IP can be meaningfully assigned (e.g. background jobs, internal system events)."
                                     },
                                     {
@@ -11634,7 +11615,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11690,7 +11670,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11728,7 +11707,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11768,7 +11746,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": "OS of the device from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
                                     },
                                     {
@@ -11813,7 +11790,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11837,7 +11813,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11872,7 +11847,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11898,7 +11872,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -11914,7 +11887,6 @@
                                         "type": {
                                             "kind": "text"
                                         },
-                                        "readOptional": true,
                                         "description": "User Agent is the device identifier from which the event originates.\n\nIf not provided, Meergo derives it from the event's HTTP request.\n\nTo explicitly assign no User Agent to the event (useful in cases where events are generated by backend systems or scheduled jobs), set this field to `N/A` (not applicable)."
                                     }
                                 ]
@@ -12039,7 +12011,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12079,7 +12050,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": "Browser from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event browser unspecified (e.g., for server-generated events where the browser is not applicable), do **not** set a value for `context.browser` and set `context.userAgent` to `N/A`."
                                     },
                                     {
@@ -12124,7 +12094,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12190,7 +12159,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12198,7 +12166,6 @@
                                         "type": {
                                             "kind": "inet"
                                         },
-                                        "readOptional": true,
                                         "description": "IP is the IP address associated with the event.\n\nIf `context.ip` is explicitly set, its value will be used. Otherwise, the IP will be inferred from the HTTP request of the event.\n\nTo deliberately avoid associating any IP with the event, set `context.ip` to `0.0.0.0`.\nThis can be useful for server-side events where the originating IP is irrelevant or where no client IP can be meaningfully assigned (e.g. background jobs, internal system events)."
                                     },
                                     {
@@ -12222,7 +12189,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12278,7 +12244,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12316,7 +12281,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12356,7 +12320,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": "OS of the device from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
                                     },
                                     {
@@ -12401,7 +12364,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12425,7 +12387,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12460,7 +12421,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12486,7 +12446,6 @@
                                                 }
                                             ]
                                         },
-                                        "readOptional": true,
                                         "description": ""
                                     },
                                     {
@@ -12502,7 +12461,6 @@
                                         "type": {
                                             "kind": "text"
                                         },
-                                        "readOptional": true,
                                         "description": "User Agent is the device identifier from which the event originates.\n\nIf not provided, Meergo derives it from the event's HTTP request.\n\nTo explicitly assign no User Agent to the event (useful in cases where events are generated by backend systems or scheduled jobs), set this field to `N/A` (not applicable)."
                                     }
                                 ]
@@ -12856,6 +12814,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12863,6 +12822,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12870,6 +12830,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12877,6 +12838,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -12903,6 +12865,7 @@
                                                                                 "Other"
                                                                             ]
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12910,6 +12873,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12917,6 +12881,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -12934,6 +12899,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12941,6 +12907,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12948,6 +12915,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12955,6 +12923,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12962,6 +12931,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -12979,6 +12949,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12986,6 +12957,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -12993,6 +12965,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13000,6 +12973,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13007,6 +12981,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13014,6 +12989,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13021,6 +12997,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13028,6 +13005,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13053,6 +13031,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13060,6 +13039,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13085,6 +13065,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13092,6 +13073,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13100,6 +13082,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13108,6 +13091,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13116,6 +13100,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13133,6 +13118,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13140,6 +13126,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13147,6 +13134,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13154,6 +13142,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13180,6 +13169,7 @@
                                                                                 "Other"
                                                                             ]
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13187,6 +13177,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13194,6 +13185,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13211,6 +13203,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13218,6 +13211,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13225,6 +13219,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13232,6 +13227,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13239,6 +13235,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13256,6 +13253,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13263,6 +13261,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13281,6 +13280,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 16
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13289,6 +13289,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 16
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13298,6 +13299,7 @@
                                                                             "precision": 3,
                                                                             "scale": 2
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13316,6 +13318,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13349,6 +13352,7 @@
                                                         }
                                                     ]
                                                 },
+                                                "readOptional": true,
                                                 "description": ""
                                             },
                                             {
@@ -13423,7 +13427,6 @@
                                                 "type": {
                                                     "kind": "json"
                                                 },
-                                                "readOptional": true,
                                                 "description": ""
                                             },
                                             {
@@ -13446,7 +13449,7 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "nullable": true,
+                                                "readOptional": true,
                                                 "description": ""
                                             }
                                         ]
@@ -13701,6 +13704,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13708,6 +13712,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13715,6 +13720,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13722,6 +13728,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13748,6 +13755,7 @@
                                                                                 "Other"
                                                                             ]
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13755,6 +13763,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13762,6 +13771,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13779,6 +13789,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13786,6 +13797,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13793,6 +13805,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13800,6 +13813,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13807,6 +13821,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13824,6 +13839,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13831,6 +13847,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13838,6 +13855,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13845,6 +13863,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13852,6 +13871,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13859,6 +13879,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13866,6 +13887,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13873,6 +13895,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13898,6 +13921,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13905,6 +13929,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13930,6 +13955,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13937,6 +13963,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13945,6 +13972,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13953,6 +13981,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13961,6 +13990,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -13978,6 +14008,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13985,6 +14016,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13992,6 +14024,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -13999,6 +14032,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -14025,6 +14059,7 @@
                                                                                 "Other"
                                                                             ]
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14032,6 +14067,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14039,6 +14075,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -14056,6 +14093,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14063,6 +14101,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14070,6 +14109,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14077,6 +14117,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14084,6 +14125,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -14101,6 +14143,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14108,6 +14151,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -14126,6 +14170,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 16
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14134,6 +14179,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 16
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14143,6 +14189,7 @@
                                                                             "precision": 3,
                                                                             "scale": 2
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -14161,6 +14208,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -14194,6 +14242,7 @@
                                                         }
                                                     ]
                                                 },
+                                                "readOptional": true,
                                                 "description": ""
                                             },
                                             {
@@ -14268,7 +14317,6 @@
                                                 "type": {
                                                     "kind": "json"
                                                 },
-                                                "readOptional": true,
                                                 "description": ""
                                             },
                                             {
@@ -14291,7 +14339,7 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "nullable": true,
+                                                "readOptional": true,
                                                 "description": ""
                                             }
                                         ]
@@ -15387,6 +15435,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15394,6 +15443,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15401,6 +15451,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15408,6 +15459,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15434,6 +15486,7 @@
                                                                                 "Other"
                                                                             ]
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15441,6 +15494,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15448,6 +15502,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15465,6 +15520,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15472,6 +15528,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15479,6 +15536,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15486,6 +15544,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15493,6 +15552,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15510,6 +15570,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15517,6 +15578,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15524,6 +15586,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15531,6 +15594,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15538,6 +15602,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15545,6 +15610,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15552,6 +15618,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15559,6 +15626,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15584,6 +15652,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15591,6 +15660,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15616,6 +15686,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15623,6 +15694,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15631,6 +15703,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15639,6 +15712,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15647,6 +15721,7 @@
                                                                             "kind": "float",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15664,6 +15739,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15671,6 +15747,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15678,6 +15755,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15685,6 +15763,7 @@
                                                                         "type": {
                                                                             "kind": "boolean"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15711,6 +15790,7 @@
                                                                                 "Other"
                                                                             ]
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15718,6 +15798,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15725,6 +15806,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15742,6 +15824,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15749,6 +15832,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15756,6 +15840,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15763,6 +15848,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15770,6 +15856,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15787,6 +15874,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15794,6 +15882,7 @@
                                                                         "type": {
                                                                             "kind": "text"
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15812,6 +15901,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 16
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15820,6 +15910,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 16
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15829,6 +15920,7 @@
                                                                             "precision": 3,
                                                                             "scale": 2
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     }
                                                                 ]
@@ -15847,6 +15939,7 @@
                                                                             "kind": "int",
                                                                             "bitSize": 64
                                                                         },
+                                                                        "readOptional": true,
                                                                         "description": ""
                                                                     },
                                                                     {
@@ -15880,6 +15973,7 @@
                                                         }
                                                     ]
                                                 },
+                                                "readOptional": true,
                                                 "description": ""
                                             },
                                             {
@@ -15954,7 +16048,6 @@
                                                 "type": {
                                                     "kind": "json"
                                                 },
-                                                "readOptional": true,
                                                 "description": ""
                                             },
                                             {
@@ -15977,7 +16070,7 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "nullable": true,
+                                                "readOptional": true,
                                                 "description": ""
                                             }
                                         ]

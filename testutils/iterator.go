@@ -116,7 +116,7 @@ func (it *iterator) seq() iter.Seq[*meergo.Event] {
 				break
 			}
 			if it.sameUser.on && n == 0 {
-				u := e.Raw.UserId()
+				u, _ := e.Raw.UserId()
 				it.sameUser.user = &u
 			}
 			if !yield(e) {

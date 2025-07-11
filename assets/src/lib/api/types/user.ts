@@ -1,83 +1,83 @@
 interface UserEventContextApp {
-	name: string;
-	version: string;
-	build: string;
-	namespace: string;
+	name?: string;
+	version?: string;
+	build?: string;
+	namespace?: string;
 }
 
 interface UserEventContextBrowser {
-	name: string;
-	other: string;
-	version: string;
+	name?: string;
+	other?: string;
+	version?: string;
 }
 
 interface UserEventContextCampaign {
-	name: string;
-	source: string;
-	medium: string;
-	term: string;
-	content: string;
+	name?: string;
+	source?: string;
+	medium?: string;
+	term?: string;
+	content?: string;
 }
 
 interface UserEventContextDevice {
-	id: string;
-	advertisingId: string;
-	adTrackingEnabled: boolean;
-	manufacturer: string;
-	model: string;
-	name: string;
-	type: string;
-	token: string;
+	id?: string;
+	advertisingId?: string;
+	adTrackingEnabled?: boolean;
+	manufacturer?: string;
+	model?: string;
+	name?: string;
+	type?: string;
+	token?: string;
 }
 
 interface UserEventContextLibrary {
-	name: string;
-	version: string;
+	name?: string;
+	version?: string;
 }
 
 interface UserEventContextLocation {
-	city: string;
-	country: string;
-	latitude: number;
-	longitude: number;
-	speed: number;
+	city?: string;
+	country?: string;
+	latitude?: number;
+	longitude?: number;
+	speed?: number;
 }
 
 interface UserEventContextNetwork {
-	bluetooth: boolean;
-	carrier: string;
-	cellular: boolean;
-	wifi: boolean;
+	bluetooth?: boolean;
+	carrier?: string;
+	cellular?: boolean;
+	wifi?: boolean;
 }
 
 interface UserEventContextOS {
-	name: string;
-	other: string;
-	version: string;
+	name?: string;
+	other?: string;
+	version?: string;
 }
 
 interface UserEventContextPage {
-	path: string;
-	referrer: string;
-	search: string;
-	title: string;
-	url: string;
+	path?: string;
+	referrer?: string;
+	search?: string;
+	title?: string;
+	url?: string;
 }
 
 interface UserEventContextReferrer {
-	id: string;
-	type: string;
+	id?: string;
+	type?: string;
 }
 
 interface UserEventContextScreen {
-	width: number;
-	height: number;
-	density: number;
+	width?: number;
+	height?: number;
+	density?: number;
 }
 
 interface UserEventContextSession {
-	sessionId: number;
-	sessionStart: boolean;
+	sessionId?: number;
+	sessionStart?: boolean;
 }
 
 interface UserEventContext {
@@ -105,7 +105,7 @@ interface UserEvent {
 	connection?: number;
 	anonymousId?: string;
 	category?: string;
-	context: UserEventContext;
+	context?: UserEventContext;
 	event?: string;
 	groupId?: string;
 	messageId?: string;

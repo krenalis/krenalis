@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -21,7 +20,6 @@ import (
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/util"
-	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/opentelemetry"
 	"github.com/meergo/meergo/types"
 )
@@ -179,110 +177,47 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 	}
 	defer done()
 	query.table = "events"
-	var addedType bool
-	if !slices.Contains(query.Properties, "type") {
-		addedType = slices.ContainsFunc(query.Properties, func(name string) bool {
-			switch name {
-			case "category", "event", "groupId", "name", "properties":
-				return true
-			}
-			return false
-		})
-		if addedType {
-			properties := make([]string, len(query.Properties)+1)
-			copy(properties, query.Properties)
-			properties[len(properties)-1] = "type"
-			query.Properties = properties
-		}
-	}
-	records, _, err := store.query(ctx, query, eventColumnByProperty, false)
+	events, _, err := store.query(ctx, query, eventColumnByProperty, false)
 	if err != nil {
 		return nil, err
 	}
-	for _, record := range records {
-		if user, ok := record["user"]; ok && user == nil {
-			delete(record, "user")
-		}
-		if userId, ok := record["userId"]; ok && userId == "" {
-			record["userId"] = nil
-		}
-		if ctx, ok := record["context"].(map[string]any); ok {
+	for _, event := range events {
+		// If 'context' is present, remove all empty fields from it.
+		if ctx, ok := event["context"].(map[string]any); ok {
 			for name, value := range ctx {
-				// On the data warehouse, IP "0.0.0.0" means no IP is associated
-				// with the event, so it must be removed entirely.
-				if name == "ip" && value == "0.0.0.0" {
-					delete(ctx, "ip")
-					continue
-				}
-				if value, ok := value.(map[string]any); ok {
-					// In the case of "context.browser.name" and "context.os.name",
-					// the "None" values — that we use in the warehouse to represent
-					// an "unset" enum — must instead be hidden externally by
-					// omitting the key entirely, since "None" isn't a valid value
-					// in the event schema.
-					if name == "browser" || name == "os" {
-						for k, v := range value {
-							if k == "name" && v == "None" {
-								delete(value, "name")
-							}
+				// Case where the context field is an Object (e.g.
+				// 'context.app', 'context.browser', etc...).
+				if obj, ok := value.(map[string]any); ok {
+					for k, v := range obj {
+						if v == nil {
+							delete(obj, k)
 						}
 					}
-					zero := true
-					for _, v := range value {
-						if !isZero(v) {
-							zero = false
-							break
-						}
-					}
-					if zero {
+					if len(obj) == 0 {
 						delete(ctx, name)
-					} else if name == "session" && value["start"] == false {
-						delete(value, "start")
 					}
 					continue
 				}
-				if isZero(value) {
+				// Case where the context field is a scalar (e.g. 'context.ip',
+				// 'context.locale', etc...).
+				if value == nil {
 					delete(ctx, name)
 				}
 			}
 		}
-		if typ, ok := record["type"]; ok {
-			switch typ.(string) {
-			case "alias":
-				delete(record, "category")
-				delete(record, "event")
-				delete(record, "groupId")
-				delete(record, "name")
-				delete(record, "properties")
-			case "identify":
-				delete(record, "category")
-				delete(record, "event")
-				delete(record, "groupId")
-				delete(record, "name")
-				delete(record, "properties")
-			case "group":
-				delete(record, "category")
-				delete(record, "event")
-				delete(record, "name")
-				delete(record, "properties")
-			case "page":
-				delete(record, "event")
-				delete(record, "groupId")
-			case "screen":
-				delete(record, "category")
-				delete(record, "event")
-				delete(record, "groupId")
-			case "track":
-				delete(record, "category")
-				delete(record, "groupId")
-				delete(record, "name")
-			}
-			if addedType {
-				delete(record, "type")
+		// If all fields have been removed from the context, remove the context
+		// itself as well.
+		if ctx, ok := event["context"].(map[string]any); ok && len(ctx) == 0 {
+			delete(event, "context")
+		}
+		// Remove all top-level event fields that are nil.
+		for k, v := range event {
+			if v == nil {
+				delete(event, k)
 			}
 		}
 	}
-	return records, nil
+	return events, nil
 }
 
 // DestinationUser represents a user to be merged.
@@ -838,24 +773,4 @@ func (store *Store) userColumnByProperty() map[string]meergo.Column {
 // warehouse returns the store's warehouse.
 func (store *Store) warehouse() meergo.Warehouse {
 	return warehouse{inner: store.wh.Load().(meergo.Warehouse)}
-}
-
-// isZero reports whether v has its zero value. It supports only the types used
-// in the event schema.
-func isZero(v any) bool {
-	switch v := v.(type) {
-	case bool:
-		return !v
-	case int:
-		return v == 0
-	case float64:
-		return v == 0
-	case decimal.Decimal:
-		return v.Sign() == 0
-	case time.Time:
-		return v.IsZero()
-	case string:
-		return v == ""
-	}
-	panic(fmt.Sprintf("core/datastore: unexpected type %T", v))
 }

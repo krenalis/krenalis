@@ -80,14 +80,12 @@ func TestSendEvents(t *testing.T) {
 						"connection":  1323607634,
 						"context": map[string]any{
 							"browser": map[string]any{
-								"name":    "Other",
-								"other":   "Unknown",
-								"version": "0.0",
+								"name":  "Other",
+								"other": "Unknown",
 							},
 							"ip": "127.0.0.1",
 							"os": map[string]any{
-								"name":    "Other",
-								"version": "0.0",
+								"name": "Other",
 							},
 							"userAgent": "python-requests/2.32.4",
 						},

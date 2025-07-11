@@ -114,23 +114,23 @@ func Test_RawEvent(t *testing.T) {
 	if r.AnonymousId() != "anon1" {
 		t.Fatalf("unexpected AnonymousId %q", r.AnonymousId())
 	}
-	if r.Channel() != "web" {
-		t.Fatalf("unexpected Channel %q", r.Channel())
+	if channel, _ := r.Channel(); channel != "web" {
+		t.Fatalf("unexpected Channel %q", channel)
 	}
-	if r.Category() != "marketing" {
-		t.Fatalf("unexpected Category %q", r.Category())
+	if category, _ := r.Category(); category != "marketing" {
+		t.Fatalf("unexpected Category %q", category)
 	}
-	if r.Event() != "Login" {
-		t.Fatalf("unexpected Event %q", r.Event())
+	if event, _ := r.Event(); event != "Login" {
+		t.Fatalf("unexpected Event %q", event)
 	}
-	if r.GroupId() != "group1" {
-		t.Fatalf("unexpected GroupId %q", r.GroupId())
+	if groupId, _ := r.GroupId(); groupId != "group1" {
+		t.Fatalf("unexpected GroupId %q", groupId)
 	}
 	if r.MessageId() != "ca333bd6-38d8-4de5-8d7f-f49f14752e8f" {
 		t.Fatalf("unexpected MessageId %q", r.MessageId())
 	}
-	if r.Name() != "LoginName" {
-		t.Fatalf("unexpected Name %q", r.Name())
+	if name, _ := r.Name(); name != "LoginName" {
+		t.Fatalf("unexpected Name %q", name)
 	}
 	if r.ReceivedAt() != now.Add(time.Second) {
 		t.Fatalf("unexpected ReceivedAt %v", r.ReceivedAt())
@@ -144,58 +144,217 @@ func Test_RawEvent(t *testing.T) {
 	if r.Type() != "track" {
 		t.Fatalf("unexpected Type %q", r.Type())
 	}
-	if r.UserId() != "user1" {
-		t.Fatalf("unexpected UserId %q", r.UserId())
+	if userId, _ := r.UserId(); userId != "user1" {
+		t.Fatalf("unexpected UserId %q", userId)
 	}
 
-	ctx := r.Context()
-	if v, ok := ctx.App(); !ok || v.Name() != "app" || v.Version() != "1.0" || v.Build() != "100" || v.Namespace() != "ns" {
+	ctx, ok := r.Context()
+	if !ok {
+		t.Fatal("expected context")
+	}
+	appContext, ok := ctx.App()
+	if !ok {
 		t.Fatalf("unexpected app context")
 	}
-	if v, ok := ctx.Browser(); !ok || v.Name() != "Chrome" || v.Other() != "" || v.Version() != "123" {
+	if name, _ := appContext.Name(); name != "app" {
+		t.Fatalf("unexpected app context")
+	}
+	if version, _ := appContext.Version(); version != "1.0" {
+		t.Fatalf("unexpected app context")
+	}
+	if build, _ := appContext.Build(); build != "100" {
+		t.Fatalf("unexpected app context")
+	}
+	if ns, _ := appContext.Namespace(); ns != "ns" {
+		t.Fatalf("unexpected app context")
+	}
+
+	browser, ok := ctx.Browser()
+	if !ok {
 		t.Fatalf("unexpected browser context")
 	}
-	if v, ok := ctx.Campaign(); !ok || v.Name() != "cmp" || v.Source() != "src" || v.Medium() != "med" || v.Term() != "term" || v.Content() != "cont" {
+	if name, _ := browser.Name(); name != "Chrome" {
+		t.Fatalf("unexpected browser context")
+	}
+	if other, _ := browser.Other(); other != "" {
+		t.Fatalf("unexpected browser context")
+	}
+	if version, _ := browser.Version(); version != "123" {
+		t.Fatalf("unexpected browser context")
+	}
+
+	campaign, ok := ctx.Campaign()
+	if !ok {
 		t.Fatalf("unexpected campaign context")
 	}
-	if v, ok := ctx.Device(); !ok || v.Id() != "dev1" || v.AdvertisingId() != "ad1" || !v.AdTrackingEnabled() || v.Manufacturer() != "manu" || v.Model() != "model" || v.Name() != "dname" || v.Type() != "mobile" || v.Token() != "tok" {
+	if name, _ := campaign.Name(); name != "cmp" {
+		t.Fatalf("unexpected campaign context")
+	}
+	if source, _ := campaign.Source(); source != "src" {
+		t.Fatalf("unexpected campaign context")
+	}
+	if medium, _ := campaign.Medium(); medium != "med" {
+		t.Fatalf("unexpected campaign context")
+	}
+	if term, _ := campaign.Term(); term != "term" {
+		t.Fatalf("unexpected campaign context")
+	}
+	if content, _ := campaign.Content(); content != "cont" {
+		t.Fatalf("unexpected campaign context")
+	}
+
+	device, ok := ctx.Device()
+	if !ok {
 		t.Fatalf("unexpected device context")
 	}
-	if ctx.IP() != "192.0.2.1" {
-		t.Fatalf("unexpected IP %q", ctx.IP())
+	if id, _ := device.Id(); id != "dev1" {
+		t.Fatalf("unexpected device context")
 	}
-	if v, ok := ctx.Library(); !ok || v.Name() != "lib" || v.Version() != "v1" {
+	if advId, _ := device.AdvertisingId(); advId != "ad1" {
+		t.Fatalf("unexpected device context")
+	}
+	if enabled, _ := device.AdTrackingEnabled(); !enabled {
+		t.Fatalf("unexpected device context")
+	}
+	if manu, _ := device.Manufacturer(); manu != "manu" {
+		t.Fatalf("unexpected device context")
+	}
+	if model, _ := device.Model(); model != "model" {
+		t.Fatalf("unexpected device context")
+	}
+	if name, _ := device.Name(); name != "dname" {
+		t.Fatalf("unexpected device context")
+	}
+	if typ, _ := device.Type(); typ != "mobile" {
+		t.Fatalf("unexpected device context")
+	}
+	if tok, _ := device.Token(); tok != "tok" {
+		t.Fatalf("unexpected device context")
+	}
+
+	if ip, _ := ctx.IP(); ip != "192.0.2.1" {
+		t.Fatalf("unexpected IP %q", ip)
+	}
+
+	library, ok := ctx.Library()
+	if !ok {
 		t.Fatalf("unexpected library context")
 	}
-	if ctx.Locale() != "en-US" {
-		t.Fatalf("unexpected locale %q", ctx.Locale())
+	if name, _ := library.Name(); name != "lib" {
+		t.Fatalf("unexpected library context")
 	}
-	if v, ok := ctx.Location(); !ok || v.City() != "Rome" || v.Country() != "IT" || v.Latitude() != 12.3 || v.Longitude() != 45.6 || v.Speed() != 80.5 {
+	if version, _ := library.Version(); version != "v1" {
+		t.Fatalf("unexpected library context")
+	}
+
+	if locale, _ := ctx.Locale(); locale != "en-US" {
+		t.Fatalf("unexpected locale %q", locale)
+	}
+
+	location, ok := ctx.Location()
+	if !ok {
 		t.Fatalf("unexpected location context")
 	}
-	if v, ok := ctx.Network(); !ok || !v.Bluetooth() || v.Carrier() != "Vodafone" || v.Cellular() || !v.WiFi() {
+	if city, _ := location.City(); city != "Rome" {
+		t.Fatalf("unexpected location context")
+	}
+	if country, _ := location.Country(); country != "IT" {
+		t.Fatalf("unexpected location context")
+	}
+	if lat, _ := location.Latitude(); lat != 12.3 {
+		t.Fatalf("unexpected location context")
+	}
+	if lon, _ := location.Longitude(); lon != 45.6 {
+		t.Fatalf("unexpected location context")
+	}
+	if speed, _ := location.Speed(); speed != 80.5 {
+		t.Fatalf("unexpected location context")
+	}
+
+	network, ok := ctx.Network()
+	if !ok {
 		t.Fatalf("unexpected network context")
 	}
-	if v, ok := ctx.OS(); !ok || v.Name() != "Linux" || v.Version() != "5.0" {
+	if bt, _ := network.Bluetooth(); !bt {
+		t.Fatalf("unexpected network context")
+	}
+	if carrier, _ := network.Carrier(); carrier != "Vodafone" {
+		t.Fatalf("unexpected network context")
+	}
+	if cellular, _ := network.Cellular(); cellular {
+		t.Fatalf("unexpected network context")
+	}
+	if wifi, _ := network.WiFi(); !wifi {
+		t.Fatalf("unexpected network context")
+	}
+
+	os, ok := ctx.OS()
+	if !ok {
 		t.Fatalf("unexpected OS context")
 	}
-	if v, ok := ctx.Page(); !ok || v.Path() != "/home" || v.Referrer() != "https://example.com" || v.Search() != "?a=1" || v.Title() != "Home" || v.URL() != "https://example.com/home" {
+	if name, _ := os.Name(); name != "Linux" {
+		t.Fatalf("unexpected OS context")
+	}
+	if version, _ := os.Version(); version != "5.0" {
+		t.Fatalf("unexpected OS context")
+	}
+
+	page, ok := ctx.Page()
+	if !ok {
 		t.Fatalf("unexpected page context")
 	}
-	if v, ok := ctx.Referrer(); !ok || v.Id() != "ref1" || v.Type() != "link" {
+	if path, _ := page.Path(); path != "/home" {
+		t.Fatalf("unexpected page context")
+	}
+	if referrer, _ := page.Referrer(); referrer != "https://example.com" {
+		t.Fatalf("unexpected page context")
+	}
+	if search, _ := page.Search(); search != "?a=1" {
+		t.Fatalf("unexpected page context")
+	}
+	if title, _ := page.Title(); title != "Home" {
+		t.Fatalf("unexpected page context")
+	}
+	if url, _ := page.URL(); url != "https://example.com/home" {
+		t.Fatalf("unexpected page context")
+	}
+
+	referrer, ok := ctx.Referrer()
+	if !ok {
 		t.Fatalf("unexpected referrer context")
 	}
-	if v, ok := ctx.Screen(); !ok || v.Width() != 1080 || v.Height() != 1920 || v.Density().Cmp(decimal.MustUint(2)) != 0 {
-		t.Fatalf("unexpected screen context")
+	if id, _ := referrer.Id(); id != "ref1" {
+		t.Fatalf("unexpected referrer context")
 	}
-	if v, ok := ctx.Session(); !ok || v.Id() != 1751031467043 || !v.Start() {
+	if typ, _ := referrer.Type(); typ != "link" {
+		t.Fatalf("unexpected referrer context")
+	}
+
+	if v, ok := ctx.Screen(); !ok {
+		t.Fatalf("unexpected screen context")
+	} else {
+		w, _ := v.Width()
+		h, _ := v.Height()
+		d, _ := v.Density()
+		if w != 1080 || h != 1920 || d.Cmp(decimal.MustUint(2)) != 0 {
+			t.Fatalf("unexpected screen context")
+		}
+	}
+	session, ok := ctx.Session()
+	if !ok {
 		t.Fatalf("unexpected session context")
 	}
-	if ctx.Timezone() != "Europe/Rome" {
-		t.Fatalf("unexpected timezone %q", ctx.Timezone())
+	if id, _ := session.Id(); id != 1751031467043 {
+		t.Fatalf("unexpected session context")
 	}
-	if ctx.UserAgent() != "UA" {
-		t.Fatalf("unexpected user agent %q", ctx.UserAgent())
+	if start, _ := session.Start(); !start {
+		t.Fatalf("unexpected session context")
+	}
+	if tz, _ := ctx.Timezone(); tz != "Europe/Rome" {
+		t.Fatalf("unexpected timezone %q", tz)
+	}
+	if ua, _ := ctx.UserAgent(); ua != "UA" {
+		t.Fatalf("unexpected user agent %q", ua)
 	}
 }
 
@@ -217,22 +376,52 @@ func Test_RawEventMissingFields(t *testing.T) {
 
 	r := RawEvent(event)
 
-	if r.Channel() != "" || r.Category() != "" || r.Event() != "" || r.GroupId() != "" || r.Name() != "" || r.UserId() != "" {
-		t.Fatalf("unexpected values for optional fields")
+	if _, ok := r.Channel(); ok {
+		t.Fatal("expected no channel")
 	}
 
-	ctx := r.Context()
+	if _, ok := r.Category(); ok {
+		t.Fatal("expected no category")
+	}
+
+	if _, ok := r.Event(); ok {
+		t.Fatal("expected no 'event'")
+	}
+
+	if _, ok := r.GroupId(); ok {
+		t.Fatal("expected no groupId")
+	}
+
+	if _, ok := r.Name(); ok {
+		t.Fatalf("expected no name")
+	}
+
+	if _, ok := r.UserId(); ok {
+		t.Fatal("expected no userId")
+	}
+
+	ctx, ok := r.Context()
+	if !ok {
+		t.Fatal("expected content")
+	}
+
 	if _, ok := ctx.App(); ok {
 		t.Fatalf("expected no app context")
 	}
-	if ctx.IP() != "1.2.3.4" {
-		t.Fatalf("unexpected IP %q", ctx.IP())
+	if ip, _ := ctx.IP(); ip != "1.2.3.4" {
+		t.Fatalf("unexpected IP %q", ip)
 	}
 	if _, ok := ctx.Session(); ok {
 		t.Fatalf("expected no session context")
 	}
-	if ctx.Locale() != "" || ctx.Timezone() != "" || ctx.UserAgent() != "" {
-		t.Fatalf("unexpected non-empty context values")
+	if _, ok := ctx.Locale(); ok {
+		t.Fatal("expected no locale")
+	}
+	if _, ok := ctx.Timezone(); ok {
+		t.Fatal("expected no timezone")
+	}
+	if _, ok := ctx.UserAgent(); ok {
+		t.Fatal("expected no user agent")
 	}
 }
 

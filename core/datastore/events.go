@@ -111,13 +111,17 @@ func init() {
 			continue
 		}
 		name := eventColumnNameFromPropertyPath[path]
-		c := meergo.Column{Name: name, Type: p.Type, Nullable: p.Nullable}
-		eventColumnByProperty[path] = c
-		if name == "context_browser_name" || name == "context_os_name" {
-			values := append(c.Type.Values(), "None")
-			typ := types.Text().WithValues(values...)
-			eventColumnByProperty[path] = meergo.Column{Name: name, Type: typ, Nullable: p.Nullable}
+		c := meergo.Column{
+			Name: name,
+			Type: p.Type,
+			// In the database, nullable properties are those marked as read
+			// optional in the event schema, meaning they may or may not be
+			// present when the event is written and then retrieved. The others,
+			// which are not read optional and thus always present, are NOT NULL
+			// in the database.
+			Nullable: p.ReadOptional,
 		}
+		eventColumnByProperty[path] = c
 		if path != "user" {
 			eventsColumnsForMerge[i] = c
 			i++

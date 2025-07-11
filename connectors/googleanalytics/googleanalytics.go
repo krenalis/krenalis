@@ -181,10 +181,10 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			// Note that 'userID' may also be empty after this assignment, which
 			// means that only events with empty 'userID' will be sent in this
 			// batch.
-			userID = event.Raw.UserId()
+			userID, _ = event.Raw.UserId()
 			anonymousId = event.Raw.AnonymousId()
 		} else {
-			if event.Raw.UserId() != userID {
+			if uId, _ := event.Raw.UserId(); uId != userID {
 				events.Skip()
 				continue
 			}

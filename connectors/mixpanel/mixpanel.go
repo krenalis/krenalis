@@ -229,81 +229,83 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 			delete(properties, "time")
 		}
 		distinctID := event.Raw.AnonymousId()
-		if userId := event.Raw.UserId(); userId != "" {
+		if userId, ok := event.Raw.UserId(); ok {
 			distinctID = userId
 		}
 		properties["distinct_id"] = distinctID
 		properties["$device_id"] = event.Raw.AnonymousId()
-		context := event.Raw.Context()
-		if ip := context.IP(); ip == "" {
-			if location, ok := context.Location(); ok {
-				if country := location.Country(); country != "" {
-					properties["mp_country_code"] = country
-				}
-				if city := location.City(); city != "" {
-					properties["$city"] = city
-				}
-			}
-		} else {
-			properties["ip"] = context.IP()
-			// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
-			// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
-			// enrichment occurs for all or none of them.
-			if location, ok := context.Location(); ok {
-				country := location.Country()
-				city := location.City()
-				if country != "" || city != "" {
-					if country != "" {
-						properties["mp_country_code"] = country
-					} else {
-						properties["mp_country_code"] = nil
+		if context, ok := event.Raw.Context(); ok {
+			if ip, ok := context.IP(); ok {
+				properties["ip"] = ip
+				// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
+				// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
+				// enrichment occurs for all or none of them.
+				if location, ok := context.Location(); ok {
+					country, hasCountry := location.Country()
+					city, hasCity := location.City()
+					if hasCountry || hasCity {
+						if hasCountry {
+							properties["mp_country_code"] = country
+						} else {
+							properties["mp_country_code"] = nil
+						}
+						if hasCity {
+							properties["$city"] = city
+						} else {
+							properties["$city"] = nil
+						}
 					}
-					if city != "" {
-						properties["$city"] = city
-					} else {
-						properties["$city"] = nil
+				} else {
+					if location, ok := context.Location(); ok {
+						if country, ok := location.Country(); ok {
+							properties["mp_country_code"] = country
+						}
+						if city, ok := location.City(); ok {
+							properties["$city"] = city
+						}
 					}
 				}
 			}
-		}
-		if os, ok := context.OS(); ok && os.Name() != "" {
-			properties["$os"] = os.Name()
-		}
-		if browser, ok := context.Browser(); ok {
-			if browser.Name() != "" {
-				properties["$browser"] = browser.Name()
-			} else if browser.Other() != "" {
-				properties["$browser"] = browser.Other()
-			}
-			if browser.Version() != "" {
-				properties["$browser_version"] = browser.Version()
-			}
-		}
-		if page, ok := context.Page(); ok {
-			if referrer := page.Referrer(); referrer != "" {
-				u, err := url.Parse(referrer)
-				if err == nil {
-					properties["$referrer"] = referrer
-					properties["$referring_domain"] = u.Hostname()
+			if os, ok := context.OS(); ok {
+				if osName, ok := os.Name(); ok {
+					properties["$os"] = osName
 				}
 			}
-			if pageURL := page.URL(); pageURL != "" {
-				properties["$current_url"] = pageURL
-				properties["current_page_title"] = page.Title()
-				u, err := url.Parse(pageURL)
-				if err == nil {
-					properties["current_domain"] = u.Hostname()
-					properties["current_url_path"] = u.Path
-					properties["current_url_protocol"] = u.Scheme + ":"
+			if browser, ok := context.Browser(); ok {
+				if name, ok := browser.Name(); ok {
+					properties["$browser"] = name
+				} else if other, ok := browser.Other(); ok {
+					properties["$browser"] = other
+				} else if version, ok := browser.Version(); ok {
+					properties["$browser"] = version
 				}
 			}
-		}
-		if screen, ok := context.Screen(); ok {
-			if w := screen.Width(); w != 0 {
-				properties["$screen_width"] = w
+			if page, ok := context.Page(); ok {
+				if referrer, ok := page.Referrer(); ok {
+					u, err := url.Parse(referrer)
+					if err == nil {
+						properties["$referrer"] = referrer
+						properties["$referring_domain"] = u.Hostname()
+					}
+				}
+				if pageURL, ok := page.URL(); ok {
+					properties["$current_url"] = pageURL
+					properties["current_page_title"], _ = page.Title()
+					u, err := url.Parse(pageURL)
+					if err == nil {
+						properties["current_domain"] = u.Hostname()
+						properties["current_url_path"] = u.Path
+						properties["current_url_protocol"] = u.Scheme + ":"
+					}
+				}
 			}
-			if h := screen.Height(); h != 0 {
-				properties["$screen_height"] = h
+			if screen, ok := context.Screen(); ok {
+				if w, ok := screen.Width(); ok {
+					properties["$screen_width"] = w
+				}
+				if h, ok := screen.Height(); ok {
+					properties["$screen_height"] = h
+				}
 			}
 		}
 
