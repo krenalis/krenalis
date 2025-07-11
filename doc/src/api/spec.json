@@ -10767,7 +10767,7 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": ""
+                                            "description": "The channel from which the event originates."
                                         },
                                         {
                                             "name": "category",
@@ -11050,7 +11050,7 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "description": ""
+                                                        "description": "Device location from which the event originated. If not explicitly provided with this field, Meergo attempts to determine it automatically based on the event's IP."
                                                     },
                                                     {
                                                         "name": "network",
@@ -11087,7 +11087,7 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "description": ""
+                                                        "description": "Network to which the device originating the event is connected."
                                                     },
                                                     {
                                                         "name": "os",
@@ -11126,7 +11126,7 @@
                                                                 }
                                                             ]
                                                         },
-                                                        "description": "OS of the device from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
+                                                        "description": "OS of the device from which the event originated.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
                                                     },
                                                     {
                                                         "name": "page",
@@ -11271,7 +11271,7 @@
                                                     }
                                                 ]
                                             },
-                                            "description": ""
+                                            "description": "Additional contextual information for the event."
                                         },
                                         {
                                             "name": "event",
@@ -11670,7 +11670,7 @@
                                                 }
                                             ]
                                         },
-                                        "description": ""
+                                        "description": "Device location from which the event originated. If not explicitly provided with this field, Meergo attempts to determine it automatically based on the event's IP."
                                     },
                                     {
                                         "name": "network",
@@ -11707,7 +11707,7 @@
                                                 }
                                             ]
                                         },
-                                        "description": ""
+                                        "description": "Network to which the device originating the event is connected."
                                     },
                                     {
                                         "name": "os",
@@ -11746,7 +11746,7 @@
                                                 }
                                             ]
                                         },
-                                        "description": "OS of the device from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
+                                        "description": "OS of the device from which the event originated.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
                                     },
                                     {
                                         "name": "page",
@@ -11961,7 +11961,7 @@
                             "type": {
                                 "kind": "text"
                             },
-                            "description": ""
+                            "description": "The channel from which the event originates."
                         },
                         {
                             "name": "category",
@@ -12244,7 +12244,7 @@
                                                 }
                                             ]
                                         },
-                                        "description": ""
+                                        "description": "Device location from which the event originated. If not explicitly provided with this field, Meergo attempts to determine it automatically based on the event's IP."
                                     },
                                     {
                                         "name": "network",
@@ -12281,7 +12281,7 @@
                                                 }
                                             ]
                                         },
-                                        "description": ""
+                                        "description": "Network to which the device originating the event is connected."
                                     },
                                     {
                                         "name": "os",
@@ -12320,7 +12320,7 @@
                                                 }
                                             ]
                                         },
-                                        "description": "OS of the device from which the event originates.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
+                                        "description": "OS of the device from which the event originated.\n\nIf not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\nTo intentionally leave the event OS unspecified (e.g., for server-generated events where the OS is irrelevant), do **not** set a value for `context.os` and set `context.userAgent` to `N/A`."
                                     },
                                     {
                                         "name": "page",
@@ -12465,7 +12465,7 @@
                                     }
                                 ]
                             },
-                            "description": ""
+                            "description": "Additional contextual information for the event."
                         },
                         {
                             "name": "event",
@@ -12755,7 +12755,7 @@
                                                 "type": {
                                                     "kind": "uuid"
                                                 },
-                                                "description": ""
+                                                "description": "ID that uniquely identifies the event. Automatically generated by Meergo when the event is received.\n\nUnlike `messageId`, which uniquely identifies the event within the context of a specific connection, this identifies the event across all connections."
                                             },
                                             {
                                                 "name": "user",
@@ -12764,7 +12764,7 @@
                                                     "kind": "uuid"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "The Meergo user associated with the event, if any; otherwise, this field is absent.\n\n`user` is set for each event by the Identity Resolution process, and its value may change over time depending on how users are unified and associated with events."
                                             },
                                             {
                                                 "name": "connection",
@@ -12773,7 +12773,7 @@
                                                     "kind": "int",
                                                     "bitSize": 32
                                                 },
-                                                "description": ""
+                                                "description": "The connection from which the event originates. Automatically set by Meergo when the event is received."
                                             },
                                             {
                                                 "name": "anonymousId",
@@ -12789,7 +12789,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "The channel from which the event originates."
                                             },
                                             {
                                                 "name": "category",
@@ -13106,7 +13106,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Device location from which the event originated."
                                                         },
                                                         {
                                                             "name": "network",
@@ -13148,7 +13148,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Network to which the device originating the event was connected."
                                                         },
                                                         {
                                                             "name": "os",
@@ -13191,7 +13191,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "OS of the device from which the event originated."
                                                         },
                                                         {
                                                             "name": "page",
@@ -13353,7 +13353,7 @@
                                                     ]
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Additional contextual information for the event. If there's no information in the context, this field is not returned."
                                             },
                                             {
                                                 "name": "event",
@@ -13361,7 +13361,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Field that identifies a track-type event, for example with a value like `Product Purchased`. For any other event type, it is never returned."
                                             },
                                             {
                                                 "name": "groupId",
@@ -13376,7 +13376,7 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "description": ""
+                                                "description": "ID that uniquely identifies the event for a given connection. Automatically generated by Meergo when the event is received.\n\nUnlike `id`, which uniquely identifies the event across all connections, this identifies the event uniquely only for a specific connection."
                                             },
                                             {
                                                 "name": "name",
@@ -13384,7 +13384,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "It is returned only for screen and page events."
                                             },
                                             {
                                                 "name": "properties",
@@ -13392,21 +13392,21 @@
                                                     "kind": "json"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "A JSON Object representing the properties associated with the event. Returned only for page, screen, and track events."
                                             },
                                             {
                                                 "name": "receivedAt",
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Event reception timestamp. Automatically set by Meergo when the event is received."
                                             },
                                             {
                                                 "name": "sentAt",
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Event send timestamp. If not provided with the event, one is automatically generated by Meergo upon event receipt."
                                             },
                                             {
                                                 "name": "originalTimestamp",
@@ -13450,7 +13450,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "ID of the user who generated the event, if available; otherwise, this field is not returned. Not to be confused with user, which refers to the internal Meergo user ID associated with the event by the Identity Resolution."
                                             }
                                         ]
                                     }
@@ -13679,7 +13679,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "The channel from which the event originates."
                                             },
                                             {
                                                 "name": "category",
@@ -13996,7 +13996,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Device location from which the event originated."
                                                         },
                                                         {
                                                             "name": "network",
@@ -14038,7 +14038,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Network to which the device originating the event was connected."
                                                         },
                                                         {
                                                             "name": "os",
@@ -14081,7 +14081,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "OS of the device from which the event originated."
                                                         },
                                                         {
                                                             "name": "page",
@@ -14243,7 +14243,7 @@
                                                     ]
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Additional contextual information for the event. If there's no information in the context, this field is not returned."
                                             },
                                             {
                                                 "name": "event",
@@ -14251,7 +14251,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Field that identifies a track-type event, for example with a value like `Product Purchased`. For any other event type, it is never returned."
                                             },
                                             {
                                                 "name": "groupId",
@@ -14266,7 +14266,7 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "description": ""
+                                                "description": "ID that uniquely identifies the event for a given connection. Automatically generated by Meergo when the event is received.\n\nUnlike `id`, which uniquely identifies the event across all connections, this identifies the event uniquely only for a specific connection."
                                             },
                                             {
                                                 "name": "name",
@@ -14274,7 +14274,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "It is returned only for screen and page events."
                                             },
                                             {
                                                 "name": "properties",
@@ -14282,21 +14282,21 @@
                                                     "kind": "json"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "A JSON Object representing the properties associated with the event. Returned only for page, screen, and track events."
                                             },
                                             {
                                                 "name": "receivedAt",
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Event reception timestamp. Automatically set by Meergo when the event is received."
                                             },
                                             {
                                                 "name": "sentAt",
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Event send timestamp. If not provided with the event, one is automatically generated by Meergo upon event receipt."
                                             },
                                             {
                                                 "name": "originalTimestamp",
@@ -14340,7 +14340,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "ID of the user who generated the event, if available; otherwise, this field is not returned. Not to be confused with user, which refers to the internal Meergo user ID associated with the event by the Identity Resolution."
                                             }
                                         ]
                                     }
@@ -15410,7 +15410,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "The channel from which the event originates."
                                             },
                                             {
                                                 "name": "category",
@@ -15727,7 +15727,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Device location from which the event originated."
                                                         },
                                                         {
                                                             "name": "network",
@@ -15769,7 +15769,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Network to which the device originating the event was connected."
                                                         },
                                                         {
                                                             "name": "os",
@@ -15812,7 +15812,7 @@
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "OS of the device from which the event originated."
                                                         },
                                                         {
                                                             "name": "page",
@@ -15974,7 +15974,7 @@
                                                     ]
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Additional contextual information for the event. If there's no information in the context, this field is not returned."
                                             },
                                             {
                                                 "name": "event",
@@ -15982,7 +15982,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Field that identifies a track-type event, for example with a value like `Product Purchased`. For any other event type, it is never returned."
                                             },
                                             {
                                                 "name": "groupId",
@@ -15997,7 +15997,7 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "description": ""
+                                                "description": "ID that uniquely identifies the event for a given connection. Automatically generated by Meergo when the event is received.\n\nUnlike `id`, which uniquely identifies the event across all connections, this identifies the event uniquely only for a specific connection."
                                             },
                                             {
                                                 "name": "name",
@@ -16005,7 +16005,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "It is returned only for screen and page events."
                                             },
                                             {
                                                 "name": "properties",
@@ -16013,21 +16013,21 @@
                                                     "kind": "json"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "A JSON Object representing the properties associated with the event. Returned only for page, screen, and track events."
                                             },
                                             {
                                                 "name": "receivedAt",
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Event reception timestamp. Automatically set by Meergo when the event is received."
                                             },
                                             {
                                                 "name": "sentAt",
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Event send timestamp. If not provided with the event, one is automatically generated by Meergo upon event receipt."
                                             },
                                             {
                                                 "name": "originalTimestamp",
@@ -16071,7 +16071,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "ID of the user who generated the event, if available; otherwise, this field is not returned. Not to be confused with user, which refers to the internal Meergo user ID associated with the event by the Identity Resolution."
                                             }
                                         ]
                                     }
