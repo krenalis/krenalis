@@ -233,7 +233,7 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 //
 // This method can only be called on a connector that implements OAuth.
 func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
-	accessToken, refreshToken, expiresIn, err := connectors.http.GrantAuthorization(ctx, connector.OAuth, code, redirectionURI)
+	accessToken, refreshToken, expiresIn, err := connectors.http.GrantAuthorization(ctx, connector, code, redirectionURI)
 	if err != nil {
 		return nil, err
 	}

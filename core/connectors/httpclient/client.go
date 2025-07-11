@@ -11,8 +11,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"math/rand/v2"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +23,7 @@ import (
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/json"
 )
 
 type contextKey byte
@@ -104,7 +107,7 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 		}
 	}
 
-	accessToken, refreshToken, expiresIn, err := c.http.retrieveOAuthToken(ctx, connector.OAuth, "", "", a.RefreshToken)
+	accessToken, refreshToken, expiresIn, err := c.retrieveOAuthToken(ctx, connector.OAuth, "", "", a.RefreshToken)
 	if err != nil {
 		return "", err
 	}
@@ -168,32 +171,38 @@ func (c *Client) ClientSecret() (string, error) {
 // It always closes the request body, even if an error occurs.
 // It does not follow redirects.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	return c.do(req, false)
+}
+
+func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response, error) {
 
 	ctx := req.Context()
 
 	_, pattern := c.endpointGroups.mux.Handler(req)
 	if pattern == "" {
-		return nil, fmt.Errorf(`connector %s attempted to call the "%s %s%s" endpoint, but there is no endpoint group that matches this request`, c.connector, req.Method, req.Host, req.URL.Path)
+		return nil, fmt.Errorf(`connector %s attempted to call the '%s %s%s' endpoint, but there is no endpoint group that matches this request`, c.connector, req.Method, req.Host, req.URL.Path)
 	}
 	endpointGroup := c.endpointGroups.byPattern[pattern]
 	limiter := endpointGroup.rateLimiter
 	policy := endpointGroup.retryPolicy
 
-	// Check if the request context contains a rate limiter pattern value.
-	// If the stored pattern differs from the one currently used, update it
-	// so the caller can align future requests accordingly.
-	if v := ctx.Value(RateLimiterPatternContextKey); v != nil {
-		v, ok := v.(RateLimiterPatternContextValue)
-		if !ok {
-			return nil, errors.New(`context key "RateLimiterPattern" must have a value of type RateLimiterPatternContextValue`)
-		}
-		if v.Pattern != pattern {
-			v.Set(pattern)
+	if !isRetriveOAuthToken {
+		// Check if the request context contains a rate limiter pattern value.
+		// If the stored pattern differs from the one currently used, update it
+		// so the caller can align future requests accordingly.
+		if v := ctx.Value(RateLimiterPatternContextKey); v != nil {
+			v, ok := v.(RateLimiterPatternContextValue)
+			if !ok {
+				return nil, errors.New(`context key "RateLimiterPattern" must have a value of type RateLimiterPatternContextValue`)
+			}
+			if v.Pattern != pattern {
+				v.Set(pattern)
+			}
 		}
 	}
 
 	hasBody := req.Body != nil && req.Body != http.NoBody
-	retriable := isRetriable(req)
+	retriable := isBodyRetriable(req) && isIdempotent(req)
 
 	retries := 0
 	netRetries := false // indicates if the last retry was triggered by a network error.
@@ -201,17 +210,22 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	// Send the request.
 	for {
 
-		if err := limiter.Wait(ctx); err != nil {
-			return nil, err
+		// Add Authorization header.
+		var accessToken string
+		if !isRetriveOAuthToken {
+			var err error
+			accessToken, err = c.AccessToken(ctx)
+			if err != nil {
+				if err != errUnsupportedOAuth {
+					return nil, err
+				}
+			} else {
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+			}
 		}
 
-		accessToken, err := c.AccessToken(ctx)
-		if err != nil {
-			if err != errUnsupportedOAuth {
-				return nil, err
-			}
-		} else {
-			req.Header.Set("Authorization", "Bearer "+accessToken)
+		if err := limiter.Wait(ctx); err != nil {
+			return nil, err
 		}
 
 		// Send the request.
@@ -244,8 +258,15 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 		reason, waitTime := retryStrategy(policy, res, retries)
 		limiter.OnFailure(duration, reason, waitTime)
-		if reason == meergo.PermanentFailure || !retriable {
+		if reason == meergo.PermanentFailure {
 			return res, nil
+		}
+		if !retriable {
+			// For unauthorized requests to OAuth connectors, we assume by default that
+			// the request was not consumed, so if the body is retriable, it will be retried.
+			if canBeRetried := isBodyRetriable(req) && reason == meergo.Unauthorized && accessToken != ""; !canBeRetried {
+				return res, nil
+			}
 		}
 
 		if netRetries {
@@ -285,11 +306,16 @@ func (c *Client) WaitTime(pattern string) (time.Duration, error) {
 	return group.rateLimiter.WaitTime(), nil
 }
 
-// isRetriable reports whether the given HTTP request is retriable.
-func isRetriable(req *http.Request) bool {
+// isBodyRetriable reports whether the request body can be retried.
+func isBodyRetriable(req *http.Request) bool {
 	if req.Body != nil && req.Body != http.NoBody && req.GetBody == nil {
 		return false
 	}
+	return true
+}
+
+// isRetriable reports whether the given HTTP request is idempotent.
+func isIdempotent(req *http.Request) bool {
 	switch req.Method {
 	case "", "GET", "HEAD", "OPTIONS", "TRACE":
 		return true
@@ -301,6 +327,86 @@ func isRetriable(req *http.Request) bool {
 		return true
 	}
 	return false
+}
+
+// retrieveOAuthToken retrieves an OAuth token and returns the access token,
+// refresh token, and expiration time of the access token for the provided
+// connector.
+//
+// To retrieve an authorization code for the first time, both code and
+// redirectionURI are required. To refresh the token, only the refreshToken is
+// required.
+func (c *Client) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code, redirectionURI, refreshToken string) (string, string, time.Time, error) {
+
+	v := url.Values{
+		"client_id":     {auth.ClientID},
+		"client_secret": {auth.ClientSecret},
+	}
+	if code == "" {
+		v.Set("grant_type", "refresh_token")
+		v.Set("refresh_token", refreshToken)
+	} else {
+		v.Set("grant_type", "authorization_code")
+		v.Set("code", code)
+		v.Set("redirect_uri", redirectionURI)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", auth.TokenURL, strings.NewReader(v.Encode()))
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.do(req, true)
+	if err != nil {
+		return "", "", time.Time{}, fmt.Errorf("cannot retrieve the refresh and access tokens from %s: %s", auth.TokenURL, err)
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode != 200 {
+		return "", "", time.Time{}, fmt.Errorf("cannot retrieve the refresh and access tokens from %s: server responded with status %d", auth.TokenURL, resp.StatusCode)
+	}
+
+	tokens := struct {
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"` // TODO(carlo): validate the value
+		ExpiresIn    *int   `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+	}{}
+	err = json.Decode(resp.Body, &tokens)
+	if err != nil {
+		return "", "", time.Time{}, fmt.Errorf("cannot decode response from %s: %s", auth.TokenURL, err)
+	}
+
+	// TODO(carlo): compute the token type to use
+
+	var expiration time.Time
+	if date := resp.Header.Get("date"); date != "" {
+		expiration, _ = time.Parse(time.RFC1123, date)
+	}
+	expiration = expiration.UTC()
+	if now := time.Now().UTC(); expiration.IsZero() || expiration.After(now.Add(time.Hour)) {
+		expiration = now
+	}
+	expiresIn := auth.ExpiresIn
+	if expiresIn <= 0 {
+		if tokens.ExpiresIn == nil {
+			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s did not return expires_in", auth.TokenURL)
+		}
+		s := *tokens.ExpiresIn
+		if s < 1 {
+			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s returned an invalid expires_in = %v", auth.TokenURL, tokens.ExpiresIn)
+		}
+		expiresIn = int32(s)
+		if s > math.MaxInt32 {
+			expiresIn = math.MaxInt32
+		}
+	}
+	expiration = expiration.Add(time.Duration(expiresIn) * time.Second)
+
+	return tokens.AccessToken, tokens.RefreshToken, expiration, nil
 }
 
 // retryStrategy determines the failure reason and how long to wait before
@@ -339,6 +445,9 @@ func retryStrategy(policy meergo.RetryPolicy, res *http.Response, retries int) (
 		}
 	}
 	if primaryStrategy == nil {
+		if res.StatusCode == 401 {
+			return meergo.Unauthorized, 0
+		}
 		return meergo.PermanentFailure, 0
 	}
 	reason, wt := primaryStrategy(res, retries)

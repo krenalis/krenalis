@@ -13,16 +13,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/json"
 )
 
 func noOpHandler(http.ResponseWriter, *http.Request) {}
@@ -106,8 +103,9 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessT
 // GrantAuthorization grants an OAuth authorization code and returns the access
 // token, the refresh token and the expiration time. redirectionURI is the
 // redirection URI.
-func (h *HTTP) GrantAuthorization(ctx context.Context, auth *state.OAuth, code, redirectionURI string) (string, string, time.Time, error) {
-	return h.retrieveOAuthToken(ctx, auth, code, redirectionURI, "")
+func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (string, string, time.Time, error) {
+	client := h.ConnectorClient(connector, "", "")
+	return client.retrieveOAuthToken(ctx, connector.OAuth, code, redirectionURI, "")
 }
 
 // SetTrace sets w as the output destination for tracing HTTP requests and
@@ -149,87 +147,6 @@ func (h *HTTP) connectorMux(name string, groups []meergo.EndpointGroup) *http.Se
 	}
 	h.muxes[name] = mux
 	return mux
-}
-
-// retrieveOAuthToken retrieves an OAuth token and returns the access token,
-// refresh token, and expiration time of the access token for the provided
-// connector.
-//
-// To retrieve an authorization code for the first time, both code and
-// redirectionURI are required. To refresh the token, only the refreshToken is
-// required.
-func (h *HTTP) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code, redirectionURI, refreshToken string) (string, string, time.Time, error) {
-
-	v := url.Values{
-		"client_id":     {auth.ClientID},
-		"client_secret": {auth.ClientSecret},
-	}
-	if code == "" {
-		v.Set("grant_type", "refresh_token")
-		v.Set("refresh_token", refreshToken)
-	} else {
-		v.Set("grant_type", "authorization_code")
-		v.Set("code", code)
-		v.Set("redirect_uri", redirectionURI)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", auth.TokenURL, strings.NewReader(v.Encode()))
-	if err != nil {
-		return "", "", time.Time{}, err
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", "", time.Time{}, fmt.Errorf("cannot retrieve the refresh and access tokens from %s: %s", auth.TokenURL, err)
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-	}()
-	if resp.StatusCode != 200 {
-		return "", "", time.Time{}, fmt.Errorf("cannot retrieve the refresh and access tokens from %s: server responded with status %d", auth.TokenURL, resp.StatusCode)
-	}
-
-	tokens := struct {
-		AccessToken  string `json:"access_token"`
-		TokenType    string `json:"token_type"` // TODO(carlo): validate the value
-		ExpiresIn    *int   `json:"expires_in"`
-		RefreshToken string `json:"refresh_token"`
-	}{}
-	err = json.Decode(resp.Body, &tokens)
-	if err != nil {
-		return "", "", time.Time{}, fmt.Errorf("cannot decode response from %s: %s", auth.TokenURL, err)
-	}
-
-	// TODO(carlo): compute the token type to use
-
-	var expiration time.Time
-	if date := resp.Header.Get("date"); date != "" {
-		expiration, _ = time.Parse(time.RFC1123, date)
-	}
-	expiration = expiration.UTC()
-	if now := time.Now().UTC(); expiration.IsZero() || expiration.After(now.Add(time.Hour)) {
-		expiration = now
-	}
-	expiresIn := auth.ExpiresIn
-	if expiresIn <= 0 {
-		if tokens.ExpiresIn == nil {
-			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s did not return expires_in", auth.TokenURL)
-		}
-		s := *tokens.ExpiresIn
-		if s < 1 {
-			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s returned an invalid expires_in = %v", auth.TokenURL, tokens.ExpiresIn)
-		}
-		expiresIn = int32(s)
-		if s > math.MaxInt32 {
-			expiresIn = math.MaxInt32
-		}
-	}
-	expiration = expiration.Add(time.Duration(expiresIn) * time.Second)
-
-	return tokens.AccessToken, tokens.RefreshToken, expiration, nil
 }
 
 // endpointGroupByPattern returns a map associating each pattern from the

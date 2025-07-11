@@ -191,11 +191,13 @@ type FailureReason int
 const (
 	// PermanentFailure indicates a permanent failure that cannot be retried.
 	PermanentFailure FailureReason = iota
-	// NetFailure indicates a net failure.
+	// NetFailure indicates a network failure.
 	NetFailure
-	// Slowdown indicates a slow-down.
+	// Unauthorized indicates an unauthorized request.
+	Unauthorized
+	// Slowdown indicates that the client should slow down its request rate.
 	Slowdown
-	// RateLimited indicates a rate limit.
+	// RateLimited indicates that the request was rejected due to rate limiting.
 	RateLimited
 )
 
@@ -205,6 +207,8 @@ func (r FailureReason) String() string {
 		return "PermanentFailure"
 	case NetFailure:
 		return "NetFailure"
+	case Unauthorized:
+		return "Unauthorized"
 	case Slowdown:
 		return "Slowdown"
 	case RateLimited:
