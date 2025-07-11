@@ -22,8 +22,11 @@ Before you can add a Klaviyo data destination, you need to create a private key 
 3. On the **Settings** page, click **Account > API Keys**.
 4. On the **API Keys** page, click **Create Private API Key**.
 5. In the **Private API Key Name** field, enter a name for the new key, for example, “Meergo data destination.”
-6. With the *Custom Key* option enabled, under the API scope **Profiles**, select **Read Access**.
-7. Copy your **Private Key**.
+6. With the *Custom Key* option enable:
+    * Under the API scope **Events**, select **Full Access**.
+    * Under the API scope **Profiles**, select **Full Access**.
+7. Click **Create**.
+8. Copy your **Private Key**.
 
 Now proceed to add a Klaviyo data destination:
 
