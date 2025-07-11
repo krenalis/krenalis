@@ -528,8 +528,6 @@ func (s *Sender) resetTimerLocked() {
 	}
 }
 
-const rateLimiterPatternContextKey = httpclient.RateLimiterPatternContextKey("RateLimiterPattern")
-
 // send sends events to the app by calling the connector's SendEvents method.
 func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 
@@ -546,7 +544,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 	// Adds a "RateLimiterPattern" value to the context to receive updates about
 	// the rate limiter used by the HTTP client.
 	ctx := context.WithValue(s.close.ctx,
-		rateLimiterPatternContextKey,
+		httpclient.RateLimiterPatternContextKey,
 		httpclient.RateLimiterPatternContextValue{
 			Pattern: rateLimiterPattern,
 			Set:     s.setRateLimiterPattern,

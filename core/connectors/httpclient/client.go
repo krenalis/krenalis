@@ -23,22 +23,25 @@ import (
 	"github.com/meergo/meergo/core/state"
 )
 
-// Types used to propagate the rate limiter pattern through the request context.
-// If the request context contains this key, the HTTP client checks whether the
-// associated pattern matches the one used by the rate limiter for that request.
-// If it doesn't match, the client calls the Set function to inform the caller
-// about the actual pattern in use.
+type contextKey byte
+
+// RateLimiterPatternContextKey is the key used to propagate the rate limiter
+// pattern through the request context. If the request context contains this
+// key, the HTTP client checks whether the associated pattern matches the one
+// used by the rate limiter for that request. If it doesn't match, the client
+// calls the Set function to inform the caller about the actual pattern in use.
 //
 // This allows the caller to later call the HTTP client's Wait method with the
 // correct pattern, determining how long to wait before sending a request to
 // avoid being throttled.
-type (
-	RateLimiterPatternContextKey   string
-	RateLimiterPatternContextValue struct {
-		Pattern string               // latest known rate limiter pattern
-		Set     func(pattern string) // function to update the pattern
-	}
-)
+const RateLimiterPatternContextKey contextKey = 0
+
+// RateLimiterPatternContextValue is the type of the value associated with the
+// RateLimiterPatternContextKey.
+type RateLimiterPatternContextValue struct {
+	Pattern string               // latest known rate limiter pattern
+	Set     func(pattern string) // function to update the pattern
+}
 
 // backoffBase is the base for the default exponential backoff.
 const backoffBase = 100 * time.Millisecond
@@ -179,7 +182,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	// Check if the request context contains a rate limiter pattern value.
 	// If the stored pattern differs from the one currently used, update it
 	// so the caller can align future requests accordingly.
-	if v := ctx.Value(RateLimiterPatternContextKey("RateLimiterPattern")); v != nil {
+	if v := ctx.Value(RateLimiterPatternContextKey); v != nil {
 		v, ok := v.(RateLimiterPatternContextValue)
 		if !ok {
 			return nil, errors.New(`context key "RateLimiterPattern" must have a value of type RateLimiterPatternContextValue`)
