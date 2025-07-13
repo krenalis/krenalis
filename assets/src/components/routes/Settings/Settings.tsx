@@ -50,7 +50,7 @@ const Settings = () => {
 						className='settings__setting'
 						icon={<SlIcon name='database' />}
 						name={'Data Warehouse'}
-						description='Connect a data warehouse to store the users and events or update its current configuration'
+						description='Manage data warehouse mode and settings'
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
