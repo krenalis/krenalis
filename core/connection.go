@@ -1581,44 +1581,54 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 		b.WriteByte('\n')
 		ct := req.Header.Get("Content-Type")
-		bodyWritten := false
+		if !utf8.Valid(body) {
+			ct = "application/octet-stream"
+		}
 		switch ct {
 		case "application/json":
 			indented, err := json.Indent(body, "", "    ")
-			if err == nil {
-				b.Write(indented)
-				bodyWritten = true
+			if err != nil {
+				b.Write(body)
+				break
 			}
+			b.Write(indented)
 		case "application/x-ndjson":
-			if utf8.Valid(body) {
-				dec := json.NewDecoder(bytes.NewReader(body))
-				firstValue := true
-				for {
-					value, err := dec.ReadValue()
-					if err != nil {
-						if err == io.EOF {
-							if !firstValue {
-								bodyWritten = true
-							}
+			n := b.Len()
+			dec := json.NewDecoder(bytes.NewReader(body))
+			first := true
+			for {
+				var value json.Value
+				value, err = dec.ReadValue()
+				if err != nil {
+					if err == io.EOF {
+						if !first {
+							err = nil
 						}
-						break
 					}
-					if !firstValue {
-						b.WriteByte('\n')
-					}
-					indented, err := json.Indent(value, "", "    ")
-					if err == nil {
-						b.Write(indented)
-					} else {
-						b.Write(value)
-					}
-					firstValue = false
+					break
 				}
-				bodyWritten = true
+				if !first {
+					b.WriteByte('\n')
+				}
+				indented, err := json.Indent(value, "", "    ")
+				if err != nil {
+					break
+				}
+				if err == nil {
+					b.Write(indented)
+				} else {
+					b.Write(value)
+				}
+				first = false
 			}
-		}
-		if !bodyWritten {
-			_, _ = fmt.Fprintf(&b, "[%d bytes body]", len(body))
+			if err != nil {
+				b.Truncate(n)
+				b.Write(body)
+			}
+		case "application/octet-stream":
+			_, _ = fmt.Fprintf(&b, "[A binary body of %d bytes]", len(body))
+		default:
+			b.Write(body)
 		}
 	}
 
