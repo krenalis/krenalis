@@ -12,6 +12,7 @@ const ConnectionEvents = () => {
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
 	const [selectedEvent, setSelectedEvent] = useState<EventListenerEvent>(null);
 	const [omitted, setOmitted] = useState<number>(0);
+	const [hideContent, setHideContent] = useState<boolean>(false);
 
 	const { connection: c } = useContext(ConnectionContext);
 
@@ -35,17 +36,27 @@ const ConnectionEvents = () => {
 	}, []);
 
 	const onEventClick = (event: EventListenerEvent) => {
-		setSelectedEvent(null);
+		if (event.id === selectedEvent?.id) {
+			// The user has clicked on the same event that is already
+			// selected.
+			return;
+		}
+		// Show the event content with a fade-in animation to highlight
+		// the transition from one event to the other.
+		setHideContent(true);
+		setSelectedEvent(event);
 		setTimeout(() => {
-			setSelectedEvent(event);
-		}, 100);
+			setHideContent(false);
+		}, 200);
 	};
 
 	let rightPanel: ReactNode;
 	if (selectedEvent !== null) {
 		const fullEventMessage = JSONbig.stringify(selectedEvent.full, null, 4);
 		rightPanel = (
-			<div className='connection-events__full-event'>
+			<div
+				className={`connection-events__full-event${hideContent ? ' connection-events__full-event--hide' : ''}`}
+			>
 				<SyntaxHighlight>{fullEventMessage}</SyntaxHighlight>
 			</div>
 		);
