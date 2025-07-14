@@ -571,18 +571,22 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 			} `maxminddb:"location"`
 		}
 		if err := d.maxmind.Lookup(requestIP, &record); err == nil {
-			loc := map[string]any{
-				"city":      record.City.Names.EN,
-				"latitude":  record.Location.Latitude,
-				"longitude": record.Location.Longitude,
-				"speed":     0.0,
+			loc := map[string]any{}
+			if city := record.City.Names.EN; city != "" {
+				loc["city"] = city
+			}
+			if lat := record.Location.Latitude; lat != 0 {
+				loc["latitude"] = lat
+			}
+			if long := record.Location.Longitude; long != 0 {
+				loc["longitude"] = long
 			}
 			if code, ok := countryCode(record.Country.IsoCode); ok {
 				loc["country"] = code
-			} else {
-				loc["country"] = ""
 			}
-			context["location"] = loc
+			if len(loc) > 0 {
+				context["location"] = loc
+			}
 		}
 	}
 
