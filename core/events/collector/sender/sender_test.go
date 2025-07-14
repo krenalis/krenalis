@@ -68,16 +68,16 @@ func Test_iterator_invalidUsage(t *testing.T) {
 		f()
 	}
 
-	t.Run("SkipOutsideIteration", func(t *testing.T) {
+	t.Run("PostponeOutsideIteration", func(t *testing.T) {
 		it := newIterator(s)
-		expectPanic(func() { it.Skip() })
+		expectPanic(func() { it.Postpone() })
 	})
 
-	t.Run("SkipFirstEvent", func(t *testing.T) {
+	t.Run("PostponeFirstEvent", func(t *testing.T) {
 		it := newIterator(s)
 		it.iterating = true
 		it.firstEvent = true
-		expectPanic(func() { it.Skip() })
+		expectPanic(func() { it.Postpone() })
 	})
 
 	t.Run("PeekAfterConsumed", func(t *testing.T) {
@@ -352,7 +352,7 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 			}
 		}
 		if n > 0 && rng.Int()%3 == 0 {
-			events.Skip()
+			events.Postpone()
 		} else {
 			delivered = append(delivered, event.ID)
 		}

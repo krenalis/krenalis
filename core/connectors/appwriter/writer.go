@@ -218,6 +218,25 @@ func (w *Writer) complete() {
 	w.close.completed.Signal()
 }
 
+// postpone postpones the most recently read record, marking it as unread. It
+// can only be called after a successful read operation.
+func (w *Writer) postpone() {
+	w.mu.Lock()
+	i := w.iterator.index - 1
+	for w.records[i].iterator != w.iterator {
+		i--
+	}
+	w.records[i].iterator = nil
+	w.available++
+	if trace {
+		fmt.Printf("Writer.postpone: iterator %p; postpone index %d, current %d\n", w.iterator, i, w.iterator.index)
+	}
+	if assert {
+		w._assertAvailable(w.available)
+	}
+	w.mu.Unlock()
+}
+
 // read reads an available record and returns it. Returns false if no record is
 // available. If op is not opAll, it restricts the returned record to those of
 // type creation (opCreate) or update (opUpdate). consume indicates if the
@@ -265,25 +284,6 @@ func (w *Writer) read(op op, consume bool) (meergo.Record, bool) {
 	}
 	w.mu.Unlock()
 	return record, ok
-}
-
-// skip skips the most recently read record, marking it as unread. It can only
-// be called after a successful read operation.
-func (w *Writer) skip() {
-	w.mu.Lock()
-	i := w.iterator.index - 1
-	for w.records[i].iterator != w.iterator {
-		i--
-	}
-	w.records[i].iterator = nil
-	w.available++
-	if trace {
-		fmt.Printf("Writer.skip: iterator %p; skip index %d, current %d\n", w.iterator, i, w.iterator.index)
-	}
-	if assert {
-		w._assertAvailable(w.available)
-	}
-	w.mu.Unlock()
 }
 
 // consume consumes the available records:

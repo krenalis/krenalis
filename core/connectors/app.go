@@ -368,7 +368,7 @@ type singleEventIterator struct {
 	event     *meergo.Event
 	consumed  bool
 	iterating bool
-	skipped   bool
+	postponed bool
 }
 
 // newSingleEventIterator returns a singleEventIterator with the provided event.
@@ -406,6 +406,16 @@ func (iter *singleEventIterator) Peek() (*meergo.Event, bool) {
 	return iter.event, true
 }
 
+func (iter *singleEventIterator) Postpone() {
+	if !iter.iterating {
+		panic(iter.app + " connector: SendEvents method called Events.Postpone outside an iteration")
+	}
+	if iter.postponed {
+		return
+	}
+	iter.postponed = true
+}
+
 func (iter *singleEventIterator) SameUser() iter.Seq[*meergo.Event] {
 	if iter.consumed {
 		panic(iter.app + " connector: SendEvents method called Events.Some after the events were consumed")
@@ -415,16 +425,6 @@ func (iter *singleEventIterator) SameUser() iter.Seq[*meergo.Event] {
 		iter.iterating = true
 		yield(iter.event)
 	}
-}
-
-func (iter *singleEventIterator) Skip() {
-	if !iter.iterating {
-		panic(iter.app + " connector: SendEvents method called Events.Skip outside an iteration")
-	}
-	if iter.skipped {
-		return
-	}
-	iter.skipped = true
 }
 
 // sameValue checks if v and v2 have the same value, with t being the type of v.

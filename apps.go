@@ -322,21 +322,21 @@ func (err RecordsError) Error() string {
 //   - First returns the first record.
 //
 // Records are consumed as they are yielded by the iterator. A record is
-// considered consumed once produced by the iterator, unless Skip is called.
+// considered consumed once produced by the iterator, unless Postpone is called.
 //
 // Example:
 //
 //	for record := range records.All() {
 //		...
-//		// record is now consumed unless Skip is called here
-//		if skip {
-//			records.Skip()
+//		// record is now consumed unless Postpone is called here
+//		if postpone {
+//			records.Postpone()
 //			continue
 //		}
 //		...
 //	}
 //
-// Calling Skip during iteration marks the current record as not consumed, so it
+// Calling Postpone during iteration marks the current record as not consumed, so it
 // will be available in subsequent Upsert calls.
 //
 // Only one iteration (using All or Same) or call to First may be active on a
@@ -345,7 +345,7 @@ func (err RecordsError) Error() string {
 type Records interface {
 
 	// All returns an iterator to read all records. Properties of the records in the
-	// sequence may be modified unless the record is subsequently skipped.
+	// sequence may be modified unless the record is subsequently postponed.
 	All() iter.Seq[Record]
 
 	// First returns the first record. The record's properties may be modified.
@@ -359,19 +359,19 @@ type Records interface {
 	// The returned record must not be modified.
 	Peek() (Record, bool)
 
+	// Postpone postpones the current record in the iteration and marks it as
+	// unread. Postpone may only be called during iterations from All or Same, and
+	// only if the record's properties have not been modified.
+	//
+	// The first event must always be consumed. Calling Postpone on it will cause a
+	// panic. It is safe to call Postpone multiple times on the same record.
+	Postpone()
+
 	// Same returns an iterator for records: either all records to update
 	// (if the first record is for update) or all records to create
 	// (if the first record is for creation). Properties of the records in the
-	// sequence may be modified unless the record is subsequently skipped.
+	// sequence may be modified unless the record is subsequently postponed.
 	Same() iter.Seq[Record]
-
-	// Skip skips the current record in the iteration and marks it as unread. Skip
-	// may only be called during iterations from All or Same, and only if the
-	// record's properties have not been modified.
-	//
-	// The first event must always be consumed. Calling Skip on it will cause a
-	// panic. It is safe to call Skip multiple times on the same record.
-	Skip()
 }
 
 // EventSender is implemented by app connectors that support event sending.
@@ -467,21 +467,21 @@ func (err EventsError) Error() string {
 //   - First returns the first event.
 //
 // Events are consumed as they are yielded by the iterator. An event is
-// considered consumed once produced by the iterator, unless Skip is called.
+// considered consumed once produced by the iterator, unless Postpone is called.
 //
 // Example:
 //
 //	for event := range events.All() {
 //		...
-//		// event is now consumed unless Skip is called here
-//		if skip {
-//			events.Skip()
+//		// event is now consumed unless Postpone is called here
+//		if postpone {
+//			events.Postpone()
 //			continue
 //		}
 //		...
 //	}
 //
-// Calling Skip during iteration marks the current event as not consumed, so it
+// Calling Postpone during iteration marks the current event as not consumed, so it
 // will be available in subsequent SendEvents or PreviewSendEvents calls.
 //
 // Only one iteration (using All or SameUser) or call to First may be active on
@@ -490,7 +490,7 @@ func (err EventsError) Error() string {
 type Events interface {
 
 	// All returns an iterator to read all events. Properties of the events in the
-	// sequence may be modified unless the event is subsequently skipped.
+	// sequence may be modified unless the event is subsequently postponed.
 	All() iter.Seq[*Event]
 
 	// First returns the first event. The event's properties may be modified.
@@ -502,15 +502,15 @@ type Events interface {
 	// events. The returned event must not be modified.
 	Peek() (*Event, bool)
 
+	// Postpone postpones the current event in the iteration and marks it as unread.
+	// Postpone may only be called during iterations from All or SameUser, and only
+	// if the event's properties have not been modified.
+	Postpone()
+
 	// SameUser returns an iterator over the events of the same user. Properties of
 	// the events in the sequence may be modified unless the event is subsequently
-	// skipped.
+	// postponed.
 	SameUser() iter.Seq[*Event]
-
-	// Skip skips the current event in the iteration and marks it as unread. Skip
-	// may only be called during iterations from All or SameUser, and only if the
-	// event's properties have not been modified.
-	Skip()
 }
 
 // RawEvent represents a raw event as received from a source connector.

@@ -574,7 +574,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		body.WriteString(`}}}}}]}}}`)
 		if body.Len()+len(`]}}}}`) > maxBodyEventsBytes {
 			body.Truncate(size)
-			events.Skip()
+			events.Postpone()
 			break
 		}
 		n++

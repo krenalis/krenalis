@@ -34,10 +34,10 @@ var tracesMu sync.Mutex
 // uuidDeterministicNS defines the namespace used to generate deterministic UUIDv5 values.
 var uuidDeterministicNS = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
-// skipMarker is assigned to a user when an iterator skips one of its events.
-// It prevents further events from that user being consumed by another iterator
-// until the skipped event is processed, preserving event order.
-var skipMarker = new(iterator)
+// postponeMarker is assigned to a user when an iterator postpones one of its
+// events. It prevents further events from that user being consumed by another
+// iterator until the postponed event is processed, preserving event order.
+var postponeMarker = new(iterator)
 
 type Ack struct {
 	Action int
@@ -381,6 +381,34 @@ func (s *Sender) complete() {
 	s.close.completed.Signal()
 }
 
+// postpone marks the most recently read event as unread. It is invoked when an
+// iterator calls Events.Postpone and must be executed with s.mu held.
+func (s *Sender) postpone() {
+	s.mu.Lock()
+	i := s.iterator.index - 1
+	var e *Event
+	for {
+		e = s.events[i]
+		if e != nil && e.iterator == s.iterator {
+			break
+		}
+		i--
+	}
+	e.iterator = nil
+	e.user.iterator = postponeMarker
+	e.user.numConsumed--
+	s.iterator.numConsumed--
+	// Mark the user as releasable if no events were consumed during this iteration.
+	if e.user.numConsumed == 0 {
+		s.releasableUsers[e.user] = struct{}{}
+	}
+	trace("Sender.postpone: iterator %p; postpone index %d, current %d\n", s.iterator, i, s.iterator.index)
+	if asserts {
+		s._assertAvailable(s.available)
+	}
+	s.mu.Unlock()
+}
+
 // queueOrDiscardEvent queues the event if discard is false; otherwise, it
 // discards the event.
 func (s *Sender) queueOrDiscardEvent(event *Event, discard bool) {
@@ -628,34 +656,6 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 func (s *Sender) setRateLimiterPattern(pattern string) {
 	s.mu.Lock()
 	s.rateLimiterPattern = pattern
-	s.mu.Unlock()
-}
-
-// skip marks the most recently read event as unread. It is invoked when an
-// iterator calls Events.Skip and must be executed with s.mu held.
-func (s *Sender) skip() {
-	s.mu.Lock()
-	i := s.iterator.index - 1
-	var e *Event
-	for {
-		e = s.events[i]
-		if e != nil && e.iterator == s.iterator {
-			break
-		}
-		i--
-	}
-	e.iterator = nil
-	e.user.iterator = skipMarker
-	e.user.numConsumed--
-	s.iterator.numConsumed--
-	// Mark the user as releasable if no events were consumed during this iteration.
-	if e.user.numConsumed == 0 {
-		s.releasableUsers[e.user] = struct{}{}
-	}
-	trace("Sender.skip: iterator %p; skip index %d, current %d\n", s.iterator, i, s.iterator.index)
-	if asserts {
-		s._assertAvailable(s.available)
-	}
 	s.mu.Unlock()
 }
 

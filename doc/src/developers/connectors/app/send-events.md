@@ -170,22 +170,22 @@ Meergo considers a event processed as soon as it has been read from the `Events`
 //   - First returns the first event.
 //
 // Events are consumed as they are yielded by the iterator. An event is
-// considered consumed once produced by the iterator, unless Skip is called.
+// considered consumed once produced by the iterator, unless Postpone is called.
 //
 // Example:
 //
 //	for event := range events.All() {
 //		...
-//		// event is now consumed unless Skip is called here
-//		if skip {
-//			events.Skip()
+//		// event is now consumed unless Postpone is called here
+//		if postpone {
+//			events.Postpone()
 //			continue
 //		}
 //		...
 //	}
 //
-// Calling Skip during iteration marks the current event as not consumed, so it
-// will be available in subsequent SendEvents or PreviewSendEvents calls.
+// Calling Postpone during iteration marks the current event as not consumed, so
+// it will be available in subsequent SendEvents or PreviewSendEvents calls.
 //
 // Only one iteration (using All or SameUser) or call to First may be active on
 // an Events value. After an iteration completes or First is called, the Events
@@ -193,7 +193,7 @@ Meergo considers a event processed as soon as it has been read from the `Events`
 type Events interface {
 
 	// All returns an iterator to read all events. Properties of the events in the
-	// sequence may be modified unless the event is subsequently skipped.
+	// sequence may be modified unless the event is subsequently postponed.
 	All() iter.Seq[*Event]
 
 	// First returns the first event. The event's properties may be modified.
@@ -205,15 +205,15 @@ type Events interface {
 	// events. The returned event must not be modified.
 	Peek() (*Event, bool)
 
+	// Postpone postpones the current event in the iteration and marks it as unread.
+	// Postpone may only be called during iterations from All or SameUser, and only
+	// if the event's properties have not been modified.
+	Postpone()
+
 	// SameUser returns an iterator over the events of the same user. Properties of
 	// the events in the sequence may be modified unless the event is subsequently
-	// skipped.
+	// postponed.
 	SameUser() iter.Seq[*Event]
-
-	// Skip skips the current event in the iteration and marks it as unread. Skip
-	// may only be called during iterations from All or SameUser, and only if the
-	// event's properties have not been modified.
-	Skip()
 }
 ```
 
@@ -419,7 +419,7 @@ This approach enables efficient processing of mixed events from different users 
 
 ### Handling body size limits
 
-In the previous examples, the loop stops when the number of events reaches the API's maximum limit. However, if the API imposes a body size limit rather than an event count limit, you can use the `Skip` method to skip an event after it has been read. This ensures that the event remains unprocessed and can be included in a subsequent call to the `SendEvents` method.
+In the previous examples, the loop stops when the number of events reaches the API's maximum limit. However, if the API imposes a body size limit rather than an event count limit, you can use the `Postpone` method to postpone an event after it has been read. This ensures that the event remains unprocessed and can be included in a subsequent call to the `SendEvents` method.
 
 Below is an example implementation:
 
@@ -445,7 +445,7 @@ Below is an example implementation:
         // Stop if body exceeds app size limit.
         if body.Len() + len(`]}`) > bodySizeLimit {
             body.Truncate(size)
-            events.Skip()
+            events.Postpone()
             break
         }
 
@@ -462,11 +462,11 @@ Below is an example implementation:
 * **Truncating the body**\
   To ensure the request is valid, the `body.Truncate(n)` method removes the last added event from the body. This prevents the body from exceeding the size limit while maintaining a valid JSON structure.
 
-* **Using `Skip` to reprocess events**\
+* **Using `Postpone` to reprocess events**\
   When the body size exceeds the limit:
-    - The `Skip` method is called to notify Meergo that the last processed event has been skipped.
-    - The processed events remain unchanged, meaning they can potentially be skipped later.
-    - This skipped event will remain unprocessed and will be included in the next call to the `SendEvents` method.
+    - The `Postpone` method is called to notify Meergo that the last processed event has been postponed.
+    - The processed events remain unchanged, meaning they can potentially be postponed later.
+    - This postponed event will remain unprocessed and will be included in the next call to the `SendEvents` method.
 
 ### Differentiating errors by event
 

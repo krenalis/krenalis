@@ -189,7 +189,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			anonymousId = event.Raw.AnonymousId()
 		} else {
 			if uId, _ := event.Raw.UserId(); uId != userID {
-				events.Skip()
+				events.Postpone()
 				continue
 			}
 			eventsWriter.WriteByte(',')
@@ -216,7 +216,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			// encloses "events" (so the various keys "client_id", "user_id",
 			// etc.).
 			eventsWriter.Truncate(size)
-			events.Skip()
+			events.Postpone()
 			break
 		}
 

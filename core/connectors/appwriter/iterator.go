@@ -21,7 +21,7 @@ type iterator struct {
 	index     int // read index in writer.records, set by the writer.
 	consumed  bool
 	iterating bool
-	skipped   bool
+	postponed bool
 }
 
 func newIterator(w *Writer) *iterator {
@@ -67,6 +67,20 @@ func (it *iterator) Peek() (meergo.Record, bool) {
 	return record, true
 }
 
+func (it *iterator) Postpone() {
+	if !it.iterating {
+		panic(it.writer.connector + " connector: Upsert method called Records.Postpone outside an iteration")
+	}
+	if it.postponed {
+		return
+	}
+	if trace {
+		fmt.Printf("iterator.Postpone: iterator %p postpones a record\n", it)
+	}
+	it.postponed = true
+	it.writer.postpone()
+}
+
 func (it *iterator) Same() iter.Seq[meergo.Record] {
 	if it.consumed {
 		panic(it.writer.connector + " connector: Upsert method called Records.Some after the records were consumed")
@@ -79,20 +93,6 @@ func (it *iterator) Same() iter.Seq[meergo.Record] {
 	return it.seq(op)
 }
 
-func (it *iterator) Skip() {
-	if !it.iterating {
-		panic(it.writer.connector + " connector: Upsert method called Records.Skip outside an iteration")
-	}
-	if it.skipped {
-		return
-	}
-	if trace {
-		fmt.Printf("iterator.Skip: iterator %p skips a record\n", it)
-	}
-	it.skipped = true
-	it.writer.skip()
-}
-
 // seq returns a sequence of records. If op is not opAll, it restricts the
 // sequence to records of type creation (opCreate) or update (opUpdate).
 func (it *iterator) seq(op op) iter.Seq[meergo.Record] {
@@ -102,7 +102,7 @@ func (it *iterator) seq(op op) iter.Seq[meergo.Record] {
 		}
 		it.iterating = true
 		for {
-			it.skipped = false
+			it.postponed = false
 			record, ok := it.writer.read(op, true)
 			if !ok {
 				if trace {

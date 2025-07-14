@@ -391,7 +391,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		body.WriteByte('}')
 		if body.Len()+len(`]}`) > maxBodyRecordsBytes {
 			body.Truncate(size)
-			records.Skip()
+			records.Postpone()
 			break
 		}
 		n++

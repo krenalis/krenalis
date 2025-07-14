@@ -29,7 +29,7 @@ type iterator struct {
 	consumed   bool // true if at least one event has been consumed
 	iterating  bool // true while iterating over events
 	firstEvent bool // true if the current event is the first in the sequence
-	skipped    bool // true if the last consumed event was skipped
+	postponed  bool // true if the last consumed event was postponed
 }
 
 // newIterator returns a new iterator.
@@ -72,6 +72,21 @@ func (it *iterator) Peek() (*meergo.Event, bool) {
 	return event, true
 }
 
+func (it *iterator) Postpone() {
+	if !it.iterating {
+		panic(it.sender.connector + " connector: SendEvents method called Events.Postpone outside an iteration")
+	}
+	if it.postponed {
+		return
+	}
+	if it.firstEvent {
+		panic(it.sender.connector + " connector: SendEvents method called Events.Postpone on the first event")
+	}
+	trace("iterator.Postpone: iterator %p postponed an event\n", it)
+	it.postponed = true
+	it.sender.postpone()
+}
+
 func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
 	if it.consumed {
 		panic(it.sender.connector + " connector: SendEvents method called Events.SameUser after the events were consumed")
@@ -79,21 +94,6 @@ func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
 	it.consumed = true
 	it.sameUser.enabled = true
 	return it.seq()
-}
-
-func (it *iterator) Skip() {
-	if !it.iterating {
-		panic(it.sender.connector + " connector: SendEvents method called Events.Skip outside an iteration")
-	}
-	if it.skipped {
-		return
-	}
-	if it.firstEvent {
-		panic(it.sender.connector + " connector: SendEvents method called Events.Skip on the first event")
-	}
-	trace("iterator.Skip: iterator %p skipped an event\n", it)
-	it.skipped = true
-	it.sender.skip()
 }
 
 // seq returns a sequence of events.
@@ -107,7 +107,7 @@ func (it *iterator) seq() iter.Seq[*meergo.Event] {
 		it.iterating = true
 		it.firstEvent = true
 		for {
-			it.skipped = false
+			it.postponed = false
 			e, ok := it.sender.read(true)
 			if !ok {
 				trace("iterator.seq: iterator %p finished reading the events; no more are available\n", it)

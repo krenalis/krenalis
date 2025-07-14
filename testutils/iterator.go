@@ -73,6 +73,20 @@ func (it *iterator) Peek() (*meergo.Event, bool) {
 	return event, true
 }
 
+func (it *iterator) Postpone() {
+	if !it.iterating {
+		panic("SendEvents method called Events.Postpone outside an iteration")
+	}
+	if it.skipped {
+		return
+	}
+	if it.first {
+		panic("SendEvents method called Events.Postpone on the first event")
+	}
+	trace("iterator.Postpone: iterator %p skipped an event\n", it)
+	it.skipped = true
+}
+
 func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
 	if it.consumed {
 		panic("SendEvents method called Events.SameUser after the events were consumed")
@@ -81,20 +95,6 @@ func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
 	it.sameUser.on = true
 	it.sameUser.user = nil
 	return it.seq()
-}
-
-func (it *iterator) Skip() {
-	if !it.iterating {
-		panic("SendEvents method called Events.Skip outside an iteration")
-	}
-	if it.skipped {
-		return
-	}
-	if it.first {
-		panic("SendEvents method called Events.Skip on the first event")
-	}
-	trace("iterator.Skip: iterator %p skipped an event\n", it)
-	it.skipped = true
 }
 
 // seq returns a sequence of events.

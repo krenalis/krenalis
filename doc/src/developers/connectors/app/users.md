@@ -152,22 +152,22 @@ Meergo considers a record processed as soon as it has been read from the `Record
 //   - First returns the first record.
 //
 // Records are consumed as they are yielded by the iterator. A record is
-// considered consumed once produced by the iterator, unless Skip is called.
+// considered consumed once produced by the iterator, unless Postpone is called.
 //
 // Example:
 //
 //	for record := range records.All() {
 //		...
-//		// record is now consumed unless Skip is called here
-//		if skip {
-//			records.Skip()
+//		// record is now consumed unless Postpone is called here
+//		if postpone {
+//			records.Postpone()
 //			continue
 //		}
 //		...
 //	}
 //
-// Calling Skip during iteration marks the current record as not consumed, so it
-// will be available in subsequent Upsert calls.
+// Calling Postpone during iteration marks the current record as not consumed,
+// so it will be available in subsequent Upsert calls.
 //
 // Only one iteration (using All or Same) or call to First may be active on a
 // Records value. After an iteration completes or First is called, the Records
@@ -175,13 +175,21 @@ Meergo considers a record processed as soon as it has been read from the `Record
 type Records interface {
 
 	// All returns an iterator to read all records. Properties of the records in the
-	// sequence may be modified unless the record is subsequently skipped.
+	// sequence may be modified unless the record is subsequently postponed.
 	All() iter.Seq[Record]
 
 	// First returns the first record. The record's properties may be modified.
 	// Use it instead of All or Some when the app only needs to create or update one
 	// record at a time.
 	First() Record
+
+	// Postpone postpones the current record in the iteration and marks it as
+	// unread. Postpone may only be called during iterations from All or Same, and
+	// only if the record's properties have not been modified.
+	//
+	// The first event must always be consumed. Calling Postpone on it will
+	// cause a panic. It is safe to call Postpone multiple times on the same record.
+	Postpone()
 
 	// Peek retrieves the next record without advancing the iterator. It returns the
 	// record and true if a record is available, or false if there are no further
@@ -192,16 +200,8 @@ type Records interface {
 	// Same returns an iterator for records: either all records to update
 	// (if the first record is for update) or all records to create
 	// (if the first record is for creation). Properties of the records in the
-	// sequence may be modified unless the record is subsequently skipped.
+	// sequence may be modified unless the record is subsequently postponed.
 	Same() iter.Seq[Record]
-
-	// Skip skips the current record in the iteration and marks it as unread. Skip
-	// may only be called during iterations from All or Same, and only if the
-	// record's properties have not been modified.
-	//
-	// The first event must always be consumed. Calling Skip on it will cause a
-	// panic. It is safe to call Skip multiple times on the same record.
-	Skip()
 }
 
 ```
@@ -427,7 +427,7 @@ This approach allows you to efficiently handle mixed record types (create and up
 
 ### Handling body size limits
 
-In the previous examples, the loop stops when the number of records reaches the API's maximum limit. However, if the API imposes a body size limit rather than a record count limit, you can use the `Skip` method to skip a record after it has been read. This ensures that the record remains unprocessed and can be included in a subsequent call to the `Upsert` method.
+In the previous examples, the loop stops when the number of records reaches the API's maximum limit. However, if the API imposes a body size limit rather than a record count limit, you can use the `Postpone` method to postpone a record after it has been read. This ensures that the record remains unprocessed and can be included in a subsequent call to the `Upsert` method.
 
 Below is an example implementation:
 
@@ -459,7 +459,7 @@ Below is an example implementation:
         // Stop if body exceeds app size limit.
         if body.Len() + len(`]}`) > bodySizeLimit {
             body.Truncate(size)
-            records.Skip()
+            records.Postpone()
             break
         }
 
@@ -476,11 +476,11 @@ Below is an example implementation:
 * **Truncating the body**\
   To ensure the request is valid, the `body.Truncate(size)` method removes the last added record from the body. This prevents the body from exceeding the size limit while maintaining a valid JSON structure.
 
-* **Using `Skip` to reprocess records**\
+* **Using `Postpone` to reprocess records**\
   When the body size exceeds the limit:
-    - The `Skip` method is called to notify Meergo that the last processed record has been skipped.
-    - The processed records remain unchanged, meaning they can potentially be skipped later.
-    - This skipped record will remain unprocessed and will be included in the next call to the `Upsert` method.
+    - The `Postpone` method is called to notify Meergo that the last processed record has been postponed.
+    - The processed records remain unchanged, meaning they can potentially be postponed later.
+    - This postponed record will remain unprocessed and will be included in the next call to the `Upsert` method.
 
 ### Differentiating errors by record
 

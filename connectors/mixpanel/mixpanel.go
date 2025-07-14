@@ -325,7 +325,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 
 		if body.Len() > maxBodyEventsBytes {
 			body.Truncate(size)
-			events.Skip()
+			events.Postpone()
 			break
 		}
 

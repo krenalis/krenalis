@@ -167,7 +167,7 @@ func (app *app) Upsert(ctx context.Context, target meergo.Targets, records meerg
 			}
 		}
 		if app.rng.Int()%3 == 0 {
-			records.Skip()
+			records.Postpone()
 		}
 		if n == app.rng.Int()/2 {
 			break
