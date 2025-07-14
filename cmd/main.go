@@ -224,6 +224,9 @@ func settingsFromEnv() (*Settings, error) {
 	settings.SMTP.Username = os.Getenv("MEERGO_SMTP_USERNAME")
 	settings.SMTP.Password = os.Getenv("MEERGO_SMTP_PASSWORD")
 
+	// MaxMind DB Path.
+	settings.MaxMindDBPath = os.Getenv("MEERGO_MAXMIND_DB_PATH")
+
 	// Transformations - Lambda.
 	settings.Transformations.Lambda.AccessKeyID = os.Getenv("MEERGO_TRANSFORMATIONS_LAMBDA_ACCESS_KEY_ID")
 	settings.Transformations.Lambda.SecretAccessKey = os.Getenv("MEERGO_TRANSFORMATIONS_LAMBDA_SECRET_ACCESS_KEY")

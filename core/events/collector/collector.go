@@ -12,7 +12,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -36,8 +35,6 @@ import (
 
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.
 const maxRequestSize = 500 * 1024
-
-const maxmindDBPath = "GeoLite2-City.mmdb"
 
 // Errors handled by the HTTP server of the collector.
 var (
@@ -70,7 +67,13 @@ type Collector struct {
 }
 
 // New returns a new collector.
-func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connectors.Connectors, provider transformers.FunctionProvider, metrics *metrics.Collector) (*Collector, error) {
+//
+// maxMindDBPath is the path to the MaxMind db file, used for enriching the
+// events with geolocation information; if not provided, the database file is
+// not opened and the geolocation information are not automatically added by
+// Meergo.
+func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connectors.Connectors,
+	provider transformers.FunctionProvider, metrics *metrics.Collector, maxMindDBPath string) (*Collector, error) {
 	var c = &Collector{
 		db:               db,
 		state:            st,
@@ -107,10 +110,12 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connec
 	}
 	st.Unfreeze()
 
-	var err error
-	c.maxmindDB, err = maxminddb.Open(maxmindDBPath)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", maxmindDBPath, err)
+	if maxMindDBPath != "" {
+		var err error
+		c.maxmindDB, err = maxminddb.Open(maxMindDBPath)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", maxMindDBPath, err)
+		}
 	}
 
 	return c, nil

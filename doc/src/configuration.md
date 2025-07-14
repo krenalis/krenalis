@@ -117,6 +117,13 @@ These settings are used to send transactional emails.
 - **`MEERGO_SMTP_PASSWORD`** \
   Password for SMTP authentication.
 
+## MaxMind configuration
+
+- **`MEERGO_MAXMIND_DB_PATH`** \
+  Path to the MaxMind database file (usually with extension '.mmdb') for automatically adding geolocation information to the events.
+
+  If not set, no geolocation information are automatically added to the events by Meergo, so it is only possibile to provide location information explicitly.
+
 ## Transformations
 
 Configuration for executing transformation functions via AWS Lambda or locally. Local execution should only be used for testing and not in production.

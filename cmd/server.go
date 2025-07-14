@@ -50,6 +50,7 @@ type Settings struct {
 		EventURL    string
 	}
 	DB              corepkg.DBConfig
+	MaxMindDBPath   string
 	MemberEmailFrom string
 	SMTP            struct {
 		Host     string
@@ -117,6 +118,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	config := corepkg.Config{
 		DB:                   settings.DB,
+		MaxMindDBPath:        settings.MaxMindDBPath,
 		MemberEmailFrom:      settings.MemberEmailFrom,
 		SMTP:                 settings.SMTP,
 		SentryTelemetryLevel: settings.SentryTelemetryLevel,

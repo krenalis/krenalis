@@ -73,6 +73,7 @@ var hasBeenCalled bool
 type Config struct {
 	DB                   DBConfig
 	FunctionProvider     any // must be a LambdaConfig or LocalConfig value
+	MaxMindDBPath        string
 	MemberEmailFrom      string
 	SMTP                 SMTPConfig
 	ConnectorsOAuth      map[string]*state.ConnectorOAuth
@@ -208,7 +209,7 @@ func New(conf *Config) (*Core, error) {
 	core.connectors = connectors.New(core.state)
 
 	// Init the event collector and observer.
-	core.events.collector, err = collector.New(db, core.state, core.datastore, core.connectors, core.functionProvider, core.metrics)
+	core.events.collector, err = collector.New(db, core.state, core.datastore, core.connectors, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		core.datastore.Close()
 		core.state.Close()
