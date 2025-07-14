@@ -711,7 +711,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					value={action.path!}
 					type='text'
 					onSlInput={onUpdatePath}
-					placeholder={`${actionType.target.toLowerCase()}.${fileExtension}`}
+					placeholder={`${actionType.target.toLowerCase() + 's'}.${fileExtension}`}
 					ref={pathInputRef}
 				>
 					<div className='action__file-path-label' slot='label'>
