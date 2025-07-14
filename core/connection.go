@@ -1586,7 +1586,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 		switch ct {
 		case "application/json":
-			indented, err := json.Indent(body, "", "    ")
+			indented, err := json.Indent(body, "", "  ")
 			if err != nil {
 				b.Write(body)
 				break
