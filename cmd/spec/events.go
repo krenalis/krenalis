@@ -506,11 +506,6 @@ func init() {
 								Nullable:       true,
 								Description:    "It is required and cannot be null or empty for identify and alias events. For other event types, either `anonymousId` or `userId` must be provided, and neither can be null or empty.",
 							},
-							{
-								Name:     "integrations",
-								Type:     types.JSON(),
-								Nullable: true,
-							},
 						})),
 						CreateRequired: true,
 						Description:    "The events to ingest.",
@@ -641,11 +636,6 @@ func init() {
 						UpdateRequired: true,
 						Nullable:       true,
 						Description:    "It is required and cannot be null or empty for identify and alias events. For other event types, either `anonymousId` or `userId` must be provided, and they cannot both be null or empty.",
-					},
-					{
-						Name:     "integrations",
-						Type:     types.JSON(),
-						Nullable: true,
 					},
 				},
 			},

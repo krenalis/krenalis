@@ -432,7 +432,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 			default:
 				event[name] = s
 			}
-		case "integrations", "traits", "properties":
+		case "traits", "properties":
 			if _, ok := event[name]; ok {
 				return nil, errors.BadRequest("property '%s' is specified multiple times", name)
 			}
