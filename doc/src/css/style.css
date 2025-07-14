@@ -114,7 +114,7 @@ nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
 .article h1 + .api-spec { padding-top: 0; }
 .article .api-spec:first-of-type { margin-top: 0; }
 .article .api-spec .spec { align-items: start; box-sizing: border-box; column-gap: min(3rem, 5vw); display: grid; grid-template-columns: repeat(2, 1fr); row-gap: 2.5vw; }
-.article .api-spec .spec > :nth-child(2) { box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 10px; }
+.article .api-spec .spec > :nth-child(2) { box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; position: sticky; top: calc(var(--header-height) + 10px); }
 
 .article .api-spec .endpoints-box { border-radius: 10px; border: 1px solid #d8dee4; background: #f5f6f8; font-size: .9em; width: 100%; }
 .article .api-spec .endpoints-box > :nth-child(1) { background: #ebeef1; border-bottom: 1px solid #d8dee4; border-top-left-radius: 10px; border-top-right-radius: 10px; text-transform: uppercase; font-size: .8em; padding: 10px 12px; font-weight: bold; width: 100%; }
