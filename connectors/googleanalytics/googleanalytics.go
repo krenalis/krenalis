@@ -167,9 +167,13 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 
 const maxEventRequestSize = 130 * 1024 // from https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
 
-// sendEvents sends the given events to the app, returning the HTTP request and
-// any error in sending the request or in the app server's response. If preview
-// is true, the HTTP request is built but not sent, so it is only returned.
+// sendEvents sends the given events to the app and returns the sent HTTP
+// request.
+// If preview is true, the HTTP request is built but not sent, so it is
+// only returned.
+//
+// If an error occurs while sending the events to the app, a nil *http.Request
+// and the error are returned.
 func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
 	var eventsWriter json.Buffer
@@ -253,21 +257,21 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		// Do the request.
 		resp, err := ga.conf.HTTPClient.Do(req)
 		if err != nil {
-			return req, err
+			return nil, err
 		}
 		var validationResponse struct {
 			ValidationMessages []json.Value `json:"validationMessages"`
 		}
 		err = json.NewDecoder(resp.Body).Decode(&validationResponse)
 		if err != nil {
-			return req, err
+			return nil, err
 		}
 		if len(validationResponse.ValidationMessages) > 0 {
 			msg := "the Google Analytics debug server has returned validation messages:\n"
 			for _, m := range validationResponse.ValidationMessages {
 				msg += string(m)
 			}
-			return req, errors.New(msg)
+			return nil, errors.New(msg)
 		}
 		// Next, build a new request to be returned to Meergo, in which
 		// sensitive information (such as the API secret) is redacted.
@@ -298,7 +302,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 
 	_, err = ga.conf.HTTPClient.Do(req)
 	if err != nil {
-		return req, err
+		return nil, err
 	}
 
 	// TODO: handle errors

@@ -444,9 +444,13 @@ func (dummy *Dummy) simulateHTTPDelay() {
 	metrics.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
 }
 
-// sendEvents sends the given events to the app, returning the HTTP request and
-// any error in sending the request or in the app server's response. If preview
-// is true, the HTTP request is built but not sent, so it is only returned.
+// sendEvents sends the given events to the app and returns the sent HTTP
+// request.
+// If preview is true, the HTTP request is built but not sent, so it is
+// only returned.
+//
+// If an error occurs while sending the events to the app, a nil *http.Request
+// and the error are returned.
 func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 	event := events.First()
 	var body []byte
@@ -477,7 +481,7 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 	_, err = dummy.conf.HTTPClient.Do(req)
 	if err != nil {
-		return req, err
+		return nil, err
 	}
 	// TODO: handle errors
 	return req, nil

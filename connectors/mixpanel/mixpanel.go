@@ -204,9 +204,13 @@ const (
 	maxBodyEventsBytes  = 10 * 1024 * 1024 // 10 MB (uncompressed) per request.
 )
 
-// sendEvents sends the given events to the app, returning the HTTP request and
-// any error in sending the request or in the app server's response. If preview
-// is true, the HTTP request is built but not sent, so it is only returned.
+// sendEvents sends the given events to the app and returns the sent HTTP
+// request.
+// If preview is true, the HTTP request is built but not sent, so it is
+// only returned.
+//
+// If an error occurs while sending the events to the app, a nil *http.Request
+// and the error are returned.
 func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
 	// body is a bytes.Buffer that contains newline-delimited JSON objects
@@ -372,7 +376,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 
 	// Handle the error.
 	if res.StatusCode != 400 {
-		return req, fmt.Errorf("Mixpanel server responded with %d error code", res.StatusCode)
+		return nil, fmt.Errorf("Mixpanel server responded with %d error code", res.StatusCode)
 	}
 	var out struct {
 		FailedRecords []struct {
@@ -384,17 +388,17 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 	err = json.Decode(res.Body, &out)
 	if err != nil {
-		return req, fmt.Errorf("cannot decode Mixpanel response: %v", err)
+		return nil, fmt.Errorf("cannot decode Mixpanel response: %v", err)
 	}
 	if len(out.FailedRecords) == 0 {
-		return req, errors.New("unexpected status 400 with empty 'failed_records' in response from Mixpanel")
+		return nil, errors.New("unexpected status 400 with empty 'failed_records' in response from Mixpanel")
 	}
 	errors := make(meergo.EventsError, len(out.FailedRecords))
 	for _, f := range out.FailedRecords {
 		errors[f.Index] = fmt.Errorf("sending event %q: %s", f.Field, f.Message)
 	}
 
-	return req, errors
+	return nil, errors
 }
 
 // connectorTestString is a defined type used solely to pass a typed key to the

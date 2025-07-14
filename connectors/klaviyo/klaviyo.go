@@ -544,9 +544,13 @@ func (ky *Klaviyo) call(ctx context.Context, method, url string, body io.Reader,
 const maxBodyEventsBytes = 5 * 1024 * 1024
 const maxBodyEvents = 1000
 
-// sendEvents sends the given events to the app, returning the HTTP request and
-// any error in sending the request or in the app server's response. If preview
-// is true, the HTTP request is built but not sent, so it is only returned.
+// sendEvents sends the given events to the app and returns the sent HTTP
+// request.
+// If preview is true, the HTTP request is built but not sent, so it is
+// only returned.
+//
+// If an error occurs while sending the events to the app, a nil *http.Request
+// and the error are returned.
 func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
 	var body json.Buffer
@@ -605,7 +609,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 
 	_, err = ky.conf.HTTPClient.Do(req)
 	if err != nil {
-		return req, err
+		return nil, err
 	}
 
 	// TODO: handle errors
