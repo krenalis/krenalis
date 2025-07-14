@@ -29,9 +29,19 @@ var eventPostContextType = types.Object([]types.Property{
 	{
 		Name: "browser",
 		Type: types.Object([]types.Property{
-			{Name: "name", Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
-			{Name: "other", Type: types.Text()},
-			{Name: "version", Type: types.Text()},
+			{
+				Name: "name",
+				Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"),
+			},
+			{
+				Name: "other",
+				Type: types.Text(),
+			},
+			{
+				Name:        "version",
+				Type:        types.Text(),
+				Description: "Version of the browser from which the event originated.",
+			},
 		}),
 		Description: "Browser from which the event originates.\n\n" +
 			"If not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\n" +
@@ -102,7 +112,11 @@ var eventPostContextType = types.Object([]types.Property{
 		Type: types.Object([]types.Property{
 			{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
 			{Name: "other", Type: types.Text()},
-			{Name: "version", Type: types.Text()},
+			{
+				Name:        "version",
+				Type:        types.Text(),
+				Description: "Version of the OS from which the event originated.",
+			},
 		}),
 		Description: "OS of the device from which the event originated.\n\n" +
 			"If not explicitly provided, Meergo will attempt to infer it from the User Agent.\n\n" +
@@ -168,7 +182,12 @@ var eventGetContextType = types.Object([]types.Property{
 		Type: types.Object([]types.Property{
 			{Name: "name", Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"), ReadOptional: true},
 			{Name: "other", Type: types.Text(), ReadOptional: true},
-			{Name: "version", Type: types.Text(), ReadOptional: true},
+			{
+				Name:         "version",
+				Type:         types.Text(),
+				ReadOptional: true,
+				Description:  "Version of the browser from which the event originated.",
+			},
 		}),
 		ReadOptional: true,
 	},

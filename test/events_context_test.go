@@ -111,15 +111,13 @@ func TestEventsContext(t *testing.T) {
 			expectedContext = map[string]any{
 				"userAgent": "analytics-go (version: 0.0.4)",
 				"browser": map[string]any{
-					"name":    "Other",
-					"other":   "Unknown",
-					"version": "0.0",
+					"name":  "Other",
+					"other": "Unknown",
 				},
 				"ip": "127.0.0.1",
 				"os": map[string]any{
-					"name":    "Other",
-					"other":   "Unknown",
-					"version": "0.0",
+					"name":  "Other",
+					"other": "Unknown",
 				},
 			}
 		case "Test Event 3":
@@ -127,12 +125,12 @@ func TestEventsContext(t *testing.T) {
 				"userAgent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
 				"browser": map[string]any{
 					"name":    "Firefox",
-					"version": "47.0",
+					"version": "47.0.0",
 				},
 				"ip": "127.0.0.1",
 				"os": map[string]any{
 					"name":    "Windows",
-					"version": "6.1",
+					"version": "6.1.0",
 				},
 			}
 		case "Test Event 4":
@@ -140,7 +138,7 @@ func TestEventsContext(t *testing.T) {
 				"userAgent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
 				"browser": map[string]any{
 					"name":    "Firefox",
-					"version": "47.0",
+					"version": "47.0.0",
 				},
 				"ip": "127.0.0.1",
 				"os": map[string]any{
@@ -153,7 +151,7 @@ func TestEventsContext(t *testing.T) {
 				"userAgent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
 				"browser": map[string]any{
 					"name":    "Firefox",
-					"version": "47.0",
+					"version": "47.0.0",
 				},
 				"os": map[string]any{
 					"name":    "Linux",

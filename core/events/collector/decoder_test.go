@@ -30,9 +30,9 @@ func Test_Decoder(t *testing.T) {
 	writeKey := "vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"
 
 	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
-	browser := map[string]any{"name": "Chrome", "version": "117.0"}
+	browser := map[string]any{"name": "Chrome", "version": "117.0.0"}
 	ip := "192.168.1.1"
-	os := map[string]any{"name": "Windows", "version": "10.0"}
+	os := map[string]any{"name": "Windows", "version": "10.0.0"}
 	library := map[string]any{"name": "meergo.js", "version": "0.0.0"}
 	context := map[string]any{"browser": browser, "ip": ip, "os": os, "userAgent": userAgent}
 
@@ -327,7 +327,7 @@ func Test_Decoder(t *testing.T) {
 						"ip": ip,
 						"os": map[string]any{
 							"name":    "Linux",
-							"version": "0.0",
+							"version": "132.0.0",
 						},
 						"screen":    map[string]any{"width": 2816, "height": 1584, "density": 1.36},
 						"userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0",
@@ -358,7 +358,7 @@ func Test_Decoder(t *testing.T) {
 						},
 						"browser": map[string]any{
 							"name":    "Firefox",
-							"version": "132.0",
+							"version": "132.0.0",
 						},
 						"ip": ip,
 						"os": map[string]any{
@@ -547,6 +547,159 @@ func Test_Decoder(t *testing.T) {
 			}
 			if i < len(test.expected) {
 				t.Fatalf("expected %d events, got %d", len(test.expected), i)
+			}
+		})
+	}
+
+}
+
+func Test_parseUserAgent(t *testing.T) {
+
+	tests := []struct {
+		ua              string
+		expectedBrowser map[string]any
+		expectedOS      map[string]any
+	}{
+		{
+			ua: "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1",
+			expectedBrowser: map[string]any{
+				"name":    "Firefox",
+				"version": "15.0.1",
+			},
+			expectedOS: map[string]any{
+				"name":    "Linux",
+				"version": "15.0.1",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472 Safari/537.36",
+			expectedBrowser: map[string]any{
+				"name":    "Chrome",
+				"version": "91.0.4472",
+			},
+			expectedOS: map[string]any{
+				"name":    "Windows",
+				"version": "10.0.0",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15",
+			expectedBrowser: map[string]any{
+				"name":    "Safari",
+				"version": "15.1.0",
+			},
+			expectedOS: map[string]any{
+				"name":    "macOS",
+				"version": "10.15.7",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+			expectedBrowser: map[string]any{
+				"name":    "Safari",
+				"version": "14.0.0",
+			},
+			expectedOS: map[string]any{
+				"name":    "iOS",
+				"version": "14.6.0",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36",
+			expectedBrowser: map[string]any{
+				"name":    "Chrome",
+				"version": "94.0.4606",
+			},
+			expectedOS: map[string]any{
+				"name":    "Android",
+				"version": "11.0.0",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (Linux; Android 1234123412341234123.0.864; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36",
+			expectedBrowser: map[string]any{
+				"name":    "Chrome",
+				"version": "94.0.4606",
+			},
+			expectedOS: map[string]any{
+				"name":    "Android",
+				"version": "1234123412341234123.0.864",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (Linux; Android 12341234123412341231.0.864; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36",
+			expectedBrowser: map[string]any{
+				"name":    "Chrome",
+				"version": "94.0.4606",
+			},
+			expectedOS: map[string]any{
+				"name": "Android",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/91.0.864",
+			expectedBrowser: map[string]any{
+				"name":    "Edge",
+				"version": "91.0.864",
+			},
+			expectedOS: map[string]any{
+				"name":    "Windows",
+				"version": "10.0.0",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/1234123412341234123.0.864",
+			expectedBrowser: map[string]any{
+				"name":    "Edge",
+				"version": "1234123412341234123.0.864",
+			},
+			expectedOS: map[string]any{
+				"name":    "Windows",
+				"version": "10.0.0",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/123412341234123412341.0.864",
+			expectedBrowser: map[string]any{
+				"name": "Edge",
+			},
+			expectedOS: map[string]any{
+				"name":    "Windows",
+				"version": "10.0.0",
+			},
+		},
+		{
+			ua: "Mozilla/5.0 (X11; CrOS x86_64 16181.61.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6998.198 Safari/537.36",
+			expectedBrowser: map[string]any{
+				"name":    "Chrome",
+				"version": "134.0.6998",
+			},
+			expectedOS: map[string]any{
+				"name":    "ChromeOS",
+				"version": "134.0.6998",
+			},
+		},
+		{
+			ua: "SomeUnknownAgent/1.0",
+			expectedBrowser: map[string]any{
+				"name":  "Other",
+				"other": "Unknown",
+			},
+			expectedOS: map[string]any{
+				"name":  "Other",
+				"other": "Unknown",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.ua, func(t *testing.T) {
+			gotBrowser, gotOS := parseUserAgent(test.ua)
+			if !reflect.DeepEqual(gotBrowser, test.expectedBrowser) {
+				t.Fatalf("expected browser %#v, got %#v", test.expectedBrowser, gotBrowser)
+			}
+			if !reflect.DeepEqual(gotOS, test.expectedOS) {
+				t.Fatalf("expected OS %#v, got %#v", test.expectedOS, gotOS)
 			}
 		})
 	}

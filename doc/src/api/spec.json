@@ -10852,7 +10852,7 @@
                                                                     "type": {
                                                                         "kind": "text"
                                                                     },
-                                                                    "description": ""
+                                                                    "description": "Version of the browser from which the event originated."
                                                                 }
                                                             ]
                                                         },
@@ -11122,7 +11122,7 @@
                                                                     "type": {
                                                                         "kind": "text"
                                                                     },
-                                                                    "description": ""
+                                                                    "description": "Version of the OS from which the event originated."
                                                                 }
                                                             ]
                                                         },
@@ -11464,7 +11464,7 @@
                                                     "type": {
                                                         "kind": "text"
                                                     },
-                                                    "description": ""
+                                                    "description": "Version of the browser from which the event originated."
                                                 }
                                             ]
                                         },
@@ -11734,7 +11734,7 @@
                                                     "type": {
                                                         "kind": "text"
                                                     },
-                                                    "description": ""
+                                                    "description": "Version of the OS from which the event originated."
                                                 }
                                             ]
                                         },
@@ -12038,7 +12038,7 @@
                                                     "type": {
                                                         "kind": "text"
                                                     },
-                                                    "description": ""
+                                                    "description": "Version of the browser from which the event originated."
                                                 }
                                             ]
                                         },
@@ -12308,7 +12308,7 @@
                                                     "type": {
                                                         "kind": "text"
                                                     },
-                                                    "description": ""
+                                                    "description": "Version of the OS from which the event originated."
                                                 }
                                             ]
                                         },
@@ -12866,7 +12866,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Version of the browser from which the event originated."
                                                                     }
                                                                 ]
                                                             },
@@ -13756,7 +13756,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Version of the browser from which the event originated."
                                                                     }
                                                                 ]
                                                             },
@@ -15487,7 +15487,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Version of the browser from which the event originated."
                                                                     }
                                                                 ]
                                                             },

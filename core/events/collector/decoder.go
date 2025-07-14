@@ -1141,15 +1141,15 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 	case uasurfer.BrowserOpera:
 		name = "Opera"
 	}
-	if name != "Other" || other != "" {
-		major, minor := strconv.Itoa(ua.Browser.Version.Major), ""
-		if len(major) < 9 {
-			minor = strconv.Itoa(ua.Browser.Version.Minor)
-		}
-		if minor == "" || len(major)+len(minor)+1 > 10 {
-			version = major
-		} else {
-			version = major + "." + minor
+	// If the browser has a name and its version has been parsed from the user
+	// agent, then set the browser version as a tuple "major.minor.patch".
+	if ver := ua.Browser.Version; (name != "Other" || other != "") && ver != (uasurfer.Version{}) {
+		version = strconv.Itoa(ver.Major) +
+			"." + strconv.Itoa(ver.Minor) +
+			"." + strconv.Itoa(ver.Patch)
+		// Discard versions longer than 25 characters.
+		if len(version) > 25 {
+			version = ""
 		}
 	}
 	browser := map[string]any{
@@ -1183,14 +1183,16 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 	case uasurfer.OSChromeOS:
 		name = "ChromeOS"
 	}
-	major, minor := strconv.Itoa(ua.OS.Version.Major), ""
-	if len(major) < 9 {
-		minor = strconv.Itoa(ua.OS.Version.Minor)
-	}
-	if minor == "" || len(major)+len(minor)+1 > 10 {
-		version = major
-	} else {
-		version = major + "." + minor
+	// If the OS version has been parsed from the user agent, then set the OS
+	// version as a tuple "major.minor.patch".
+	if ver := ua.OS.Version; ver != (uasurfer.Version{}) {
+		version = strconv.Itoa(ver.Major) +
+			"." + strconv.Itoa(ver.Minor) +
+			"." + strconv.Itoa(ver.Patch)
+		// Discard versions longer than 25 characters.
+		if len(version) > 25 {
+			version = ""
+		}
 	}
 	os := map[string]any{
 		"name": name,
