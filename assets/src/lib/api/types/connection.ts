@@ -29,7 +29,7 @@ type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
 
 type Strategy = 'Conversion' | 'Fusion' | 'Isolation' | 'Preservation';
 
-type SendingMode = 'Cloud' | 'Device' | 'Combined';
+type SendingMode = 'Client' | 'Server' | 'ClientAndServer';
 
 interface ConnectionToAdd {
 	name: string;

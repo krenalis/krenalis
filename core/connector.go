@@ -136,14 +136,14 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 type SendingMode string
 
 const (
-	Cloud    SendingMode = "Cloud"
-	Device   SendingMode = "Device"
-	Combined SendingMode = "Combined"
+	Client          SendingMode = "Client"
+	Server          SendingMode = "Server"
+	ClientAndServer SendingMode = "ClientAndServer"
 )
 
 func isValidSendingMode(sm SendingMode) bool {
 	switch sm {
-	case "Cloud", "Device", "Combined":
+	case "Client", "Server", "ClientAndServer":
 		return true
 	}
 	return false

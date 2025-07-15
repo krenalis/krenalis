@@ -51,7 +51,7 @@ func init() {
 		},
 		AsDestination: &meergo.AsAppDestination{
 			Targets:     meergo.TargetEvent | meergo.TargetUser,
-			SendingMode: meergo.Combined,
+			SendingMode: meergo.ClientAndServer,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Export users as customers and send events to Dummy",

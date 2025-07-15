@@ -8854,13 +8854,13 @@
                         },
                         {
                             "name": "sendingMode",
-                            "placeholder": "\"Cloud\"",
+                            "placeholder": "\"Server\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Cloud",
-                                    "Device",
-                                    "Combined"
+                                    "Client",
+                                    "Server",
+                                    "ClientAndServer"
                                 ]
                             },
                             "updateRequired": true,
@@ -9102,13 +9102,13 @@
                         },
                         {
                             "name": "sendingMode",
-                            "placeholder": "\"Cloud\"",
+                            "placeholder": "\"Server\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "Cloud",
-                                    "Device",
-                                    "Combined"
+                                    "Client",
+                                    "Server",
+                                    "ClientAndServer"
                                 ]
                             },
                             "updateRequired": true,
@@ -9222,13 +9222,13 @@
                                             },
                                             {
                                                 "name": "sendingMode",
-                                                "placeholder": "\"Cloud\"",
+                                                "placeholder": "\"Server\"",
                                                 "type": {
                                                     "kind": "text",
                                                     "values": [
-                                                        "Cloud",
-                                                        "Device",
-                                                        "Combined"
+                                                        "Client",
+                                                        "Server",
+                                                        "ClientAndServer"
                                                     ]
                                                 },
                                                 "nullable": true,
@@ -9365,13 +9365,13 @@
                             },
                             {
                                 "name": "sendingMode",
-                                "placeholder": "\"Cloud\"",
+                                "placeholder": "\"Server\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "Cloud",
-                                        "Device",
-                                        "Combined"
+                                        "Client",
+                                        "Server",
+                                        "ClientAndServer"
                                     ]
                                 },
                                 "nullable": true,
@@ -9721,9 +9721,9 @@
                                                             "type": {
                                                                 "kind": "text",
                                                                 "values": [
-                                                                    "Cloud",
-                                                                    "Device",
-                                                                    "Combined"
+                                                                    "Client",
+                                                                    "Server",
+                                                                    "ClientAndServer"
                                                                 ]
                                                             },
                                                             "nullable": true,
@@ -9988,9 +9988,9 @@
                                             "type": {
                                                 "kind": "text",
                                                 "values": [
-                                                    "Cloud",
-                                                    "Device",
-                                                    "Combined"
+                                                    "Client",
+                                                    "Server",
+                                                    "ClientAndServer"
                                                 ]
                                             },
                                             "nullable": true,

@@ -29,9 +29,9 @@ type SendingMode int
 
 const (
 	None SendingMode = iota
-	Cloud
-	Device
-	Combined
+	Client
+	Server
+	ClientAndServer
 )
 
 // Targets represents the targets.

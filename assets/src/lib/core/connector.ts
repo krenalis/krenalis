@@ -88,8 +88,8 @@ class TransformedConnector {
 		switch (this.asDestination.sendingMode) {
 			case null:
 				return [];
-			case 'Combined':
-				return ['Cloud', 'Device', 'Combined'];
+			case 'ClientAndServer':
+				return ['Client', 'Server', 'ClientAndServer'];
 			default:
 				return [this.asDestination.sendingMode];
 		}

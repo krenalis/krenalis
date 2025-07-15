@@ -89,7 +89,7 @@ func init() {
 				},
 				{
 					Name:        "sendingMode",
-					Type:        types.Text().WithValues("Cloud", "Device", "Combined"),
+					Type:        types.Text().WithValues("Client", "Server", "ClientAndServer"),
 					Nullable:    true,
 					Placeholder: `null`,
 					Description: "The mode used by app connectors to send the events to the app, if the app supports events. It is empty if the connector is not an app or it does not handle events.",

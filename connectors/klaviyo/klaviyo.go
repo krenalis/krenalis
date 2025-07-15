@@ -51,7 +51,7 @@ func init() {
 		AsDestination: &meergo.AsAppDestination{
 			Targets:     meergo.TargetEvent | meergo.TargetUser,
 			HasSettings: true,
-			SendingMode: meergo.Cloud,
+			SendingMode: meergo.Server,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Export users as profiles and send events to Klaviyo",
 				Overview: destinationOverview,

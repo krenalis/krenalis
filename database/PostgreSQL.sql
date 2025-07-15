@@ -62,7 +62,7 @@ CREATE TYPE compression AS ENUM ('', 'Zip', 'Gzip', 'Snappy');
 
 CREATE TYPE strategy AS ENUM ('Conversion', 'Fusion', 'Isolation', 'Preservation');
 
-CREATE TYPE sending_mode as ENUM ('Cloud', 'Device', 'Combined');
+CREATE TYPE sending_mode as ENUM ('Client', 'Server', 'ClientAndServer');
 
 CREATE TABLE connections (
     id integer NOT NULL,

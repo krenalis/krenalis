@@ -45,8 +45,8 @@ func init() {
 	}
 	sendingModeParameter := types.Property{
 		Name:           "sendingMode",
-		Type:           types.Text().WithValues("Cloud", "Device", "Combined"),
-		Placeholder:    `"Cloud"`,
+		Type:           types.Text().WithValues("Client", "Server", "ClientAndServer"),
+		Placeholder:    `"Server"`,
 		UpdateRequired: true,
 		Nullable:       true,
 		Description: "The mode for sending events. It can be one of the sending modes supported by the app.\n\n" +
@@ -97,8 +97,8 @@ func init() {
 		},
 		{
 			Name:        "sendingMode",
-			Type:        types.Text().WithValues("Cloud", "Device", "Combined"),
-			Placeholder: `"Cloud"`,
+			Type:        types.Text().WithValues("Client", "Server", "ClientAndServer"),
+			Placeholder: `"Server"`,
 			Nullable:    true,
 			Description: "The mode for sending events. It is null if the connection is not a destination app that supports sending mode.",
 		},

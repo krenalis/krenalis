@@ -228,9 +228,9 @@ func (role Role) String() string {
 type SendingMode string
 
 const (
-	Cloud    SendingMode = "Cloud"
-	Device   SendingMode = "Device"
-	Combined SendingMode = "Combined"
+	Client          SendingMode = "Client"
+	Server          SendingMode = "Server"
+	ClientAndServer SendingMode = "ClientAndServer"
 )
 
 type SchedulePeriod int

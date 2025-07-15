@@ -344,9 +344,9 @@ const ConnectorSettings = () => {
 									<div className='connector-settings__mode-value-icon' slot='prefix'>
 										<SlIcon
 											name={
-												sendingMode === 'Cloud'
+												sendingMode === 'Server'
 													? 'cloud'
-													: sendingMode === 'Device'
+													: sendingMode === 'Client'
 														? 'phone'
 														: 'send'
 											}
@@ -357,10 +357,10 @@ const ConnectorSettings = () => {
 											<div slot='prefix'>
 												<SlIcon
 													className='connector-settings__mode-icon'
-													name={m === 'Cloud' ? 'cloud' : m === 'Device' ? 'phone' : 'send'}
+													name={m === 'Server' ? 'cloud' : m === 'Client' ? 'phone' : 'send'}
 												/>
 											</div>
-											{m}
+											{m === 'ClientAndServer' ? 'Client and server' : m}
 										</SlOption>
 									))}
 								</SlSelect>

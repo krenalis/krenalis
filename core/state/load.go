@@ -45,14 +45,14 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			}
 			c.Terms = ConnectorTerms(connector.Terms)
 			switch connector.AsDestination.SendingMode {
-			case meergo.Cloud:
-				mode := Cloud
+			case meergo.Client:
+				mode := Client
 				c.SendingMode = &mode
-			case meergo.Device:
-				mode := Device
+			case meergo.Server:
+				mode := Server
 				c.SendingMode = &mode
-			case meergo.Combined:
-				mode := Combined
+			case meergo.ClientAndServer:
+				mode := ClientAndServer
 				c.SendingMode = &mode
 			}
 			c.IdentityIDLabel = connector.IdentityIDLabel
@@ -353,9 +353,9 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				c.account = ws.accounts[account]
 			}
 			if c.SendingMode == nil && c.Role == Destination && c.connector.SendingMode != nil {
-				mode := Cloud
-				if sm := *c.connector.SendingMode; sm == Device {
-					mode = Device
+				mode := Server
+				if sm := *c.connector.SendingMode; sm == Client {
+					mode = Client
 				}
 				c.SendingMode = &mode
 			}

@@ -1048,13 +1048,13 @@ func (role Role) Value() (driver.Value, error) {
 type SendingMode string
 
 const (
-	Cloud    SendingMode = "Cloud"
-	Device   SendingMode = "Device"
-	Combined SendingMode = "Combined"
+	Client          SendingMode = "Client"
+	Server          SendingMode = "Server"
+	ClientAndServer SendingMode = "ClientAndServer"
 )
 
 func (sm SendingMode) Contains(mode SendingMode) bool {
-	return sm == Combined || sm == mode
+	return sm == ClientAndServer || sm == mode
 }
 
 // Compression represents the compression of a file connection.

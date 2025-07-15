@@ -2,7 +2,7 @@ type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'SDK' | 'Stre
 
 // type WebhooksPer = 'None' | 'Account' | 'Connection' | 'Connector'; // TODO(marco): implement webhooks
 
-type SendingMode = 'Cloud' | 'Device' | 'Combined';
+type SendingMode = 'Client' | 'Server' | 'ClientAndServer';
 
 type ConnectorTarget = 'Event' | 'User' | 'Group';
 

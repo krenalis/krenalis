@@ -77,7 +77,7 @@ const addDummyDestination = async (page: Page): Promise<number> => {
 					role: 'Destination',
 					connector: 'Dummy',
 					strategy: null,
-					sendingMode: 'Cloud',
+					sendingMode: 'Server',
 					settings: { URLForDispatchingEvents: '' },
 					linkedConnections: null,
 				},

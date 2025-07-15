@@ -205,7 +205,7 @@ func (c *Meergo) CreateDummy(name string, role Role) int {
 		Settings:  []byte("{}"),
 	}
 	if role == Destination {
-		mode := Cloud
+		mode := Server
 		conn.SendingMode = &mode
 	}
 	return c.CreateConnection(conn)
@@ -219,7 +219,7 @@ func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummyS
 		Settings:  JSONEncodeSettings(settings),
 	}
 	if role == Destination {
-		mode := Cloud
+		mode := Server
 		conn.SendingMode = &mode
 	}
 	return c.CreateConnection(conn)

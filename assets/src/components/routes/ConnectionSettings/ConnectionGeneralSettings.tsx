@@ -126,9 +126,9 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					<div className='connection-settings__mode-value-icon' slot='prefix'>
 						<SlIcon
 							name={
-								connectionToSet.sendingMode === 'Cloud'
+								connectionToSet.sendingMode === 'Server'
 									? 'cloud'
-									: connectionToSet.sendingMode === 'Device'
+									: connectionToSet.sendingMode === 'Client'
 										? 'phone'
 										: 'send'
 							}
@@ -139,10 +139,10 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 							<div slot='prefix'>
 								<SlIcon
 									className='connection-settings__mode-icon'
-									name={m === 'Cloud' ? 'cloud' : m === 'Device' ? 'phone' : 'send'}
+									name={m === 'Server' ? 'cloud' : m === 'Client' ? 'phone' : 'send'}
 								/>
 							</div>
-							{m}
+							{m === 'ClientAndServer' ? 'Client and server' : m}
 						</SlOption>
 					))}
 				</SlSelect>

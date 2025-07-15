@@ -40,7 +40,7 @@ func init() {
         AsDestination: &meergo.AsAppDestination{
             Targets:       meergo.TargetEvent | meergo.TargetUser,
             HasSettings:   true,
-            SendingMode:   meergo.Cloud,
+            SendingMode:   meergo.Server,
             Documentation: meergo.ConnectorRoleDocumentation{
                 Summary: "Export users as profiles and send events to Klaviyo",	
             },
@@ -152,7 +152,7 @@ The `AppInfo` type describes information about the app connector:
 - `AsDestination`: information about the app connector when it used as destination. This should be set only when the app connector can be used as a destination, otherwise should be nil.
   - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `TargetEvent` and `TargetUser`.
   - `HasSettings`: indicates whether the connection has settings when used as destination
-  - `SendingMode`: mode used to send the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
+  - `SendingMode`: mode used to send the events to the app, if the app supports events. It can be `Client`, `Server`, or `ClientAndServer`.
   - `Description`: description of the connector when it is used as a destination.
   - `Terms`: singular and plural terms used by the app to refer to users—for example, "client"/"clients", "customer"/"customers", or "user"/"users".
 {# - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups". #}
@@ -179,7 +179,7 @@ func init() {
         AsDestination: &meergo.AsAppDestination{
             Targets:       meergo.TargetEvent | meergo.TargetUser,
             HasSettings:   true,
-            SendingMode:   meergo.Cloud,
+            SendingMode:   meergo.Server,
             Documentation: meergo.ConnectorRoleDocumentation{
                 Summary: "Export users as profiles and send events to Klaviyo",	
             },
