@@ -8,6 +8,37 @@ This document describes the available environment variables for configuring Meer
 
 These variables can be provided to Meergo when it starts, or they can be declared in a `.env` file located in the same directory where Meergo is started. You can check the example file [`meergo.example.env`](https://github.com/meergo/meergo/blob/experiment-with-env/cmd/meergo/meergo.example.env).
 
+## .env file syntax
+
+> This section applies if you configure Meergo via the .env file. If you pass environment variables directly to the Meergo process, you can skip this section and refer to the variables documentation below.
+
+The `.env` file is a simple list of key-value pairs used to configure environment variables. Here's how it works:
+
+* One variable per line: `KEY=VALUE`.
+* Strings with spaces or special characters should be quoted with double quotes.
+* Lines starting with `#` are comments and ignored.
+* Empty lines are ignored.
+* To insert a value that contains double quotes, enclose the entire string in single quotes, e.g.: `MY_VAR='"my-quoted-value"'`.
+* Use `true` or `false` for booleans. Don't use `1` or `0`.
+* File paths can be absolute or relative; relative paths are based on the working directory of the Meergo process.
+
+### Examples
+
+```ini
+# Server settings
+MEERGO_HTTP_HOST=127.0.0.1
+MEERGO_HTTP_PORT=9090
+
+# TLS settings
+MEERGO_HTTP_TLS_ENABLED=true
+MEERGO_HTTP_TLS_CERT_FILE="/etc/ssl/certs/my meergo cert.crt"
+MEERGO_HTTP_TLS_KEY_FILE='/etc/ssl/private/meergo.key'
+
+# Commented out value
+#MEERGO_HTTP_PORT=8080
+```
+
+
 ## General settings
 
 - **`MEERGO_TERMINATION_DELAY`** \
