@@ -302,13 +302,11 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	};
 
 	const updateMapping = (path: string, value: string) => {
-		const updatedAction = updateMappingProperty(action, path, value, '');
-		setAction(updatedAction);
+		setAction((prev) => updateMappingProperty(prev, path, value, ''));
 	};
 
 	const updateMappingError = (path: string, errorMessage: string) => {
-		const updatedAction = updateMappingPropertyError(action, path, errorMessage);
-		setAction(updatedAction);
+		setAction((prev) => updateMappingPropertyError(prev, path, errorMessage));
 	};
 
 	const onSelectProperty = (path: string, value: string) => {
