@@ -381,6 +381,47 @@ func (s *Sender) complete() {
 	s.close.completed.Signal()
 }
 
+// discard discards the most recently read event with the provided error. It is
+// invoked when an iterator calls Events.Discard and must be executed with s.mu
+// held.
+func (s *Sender) discard(err error) {
+	s.mu.Lock()
+	i := s.iterator.index - 1
+	var e *Event
+	for {
+		e = s.events[i]
+		if e != nil && e.iterator == s.iterator {
+			break
+		}
+		i--
+	}
+	// update the sender.
+	s.events[i] = nil
+	// Update the user.
+	e.user.events--
+	e.user.numConsumed--
+	if e.user.numConsumed == 0 {
+		e.user.iterator = nil
+		s.available += e.user.events
+	}
+	// Update the iterator.
+	s.iterator.numConsumed--
+	if s.iterator.numConsumed == 0 {
+		s.iterator.sameUser.user = nil
+	}
+	trace("Sender.discard: iterator %p; discard index %d, current %d\n", s.iterator, i, s.iterator.index)
+	if asserts {
+		s._assertAvailable(s.available)
+	}
+	ack := Ack{
+		Action: e.action,
+		Event:  e.ID,
+	}
+	trace("Sender.discard: send ack for iterator %p with ack %#v and error %#v\n", s.iterator, ack, err)
+	s.mu.Unlock()
+	s.acks([]Ack{ack}, err)
+}
+
 // postpone marks the most recently read event as unread. It is invoked when an
 // iterator calls Events.Postpone and must be executed with s.mu held.
 func (s *Sender) postpone() {

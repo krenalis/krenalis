@@ -196,6 +196,12 @@ type Events interface {
 	// sequence may be modified unless the event is subsequently postponed.
 	All() iter.Seq[*Event]
 
+	// Discard discards the current event in the iteration with the provided error.
+	// Discard may only be called during iterations from All or SameUser.
+	// It panics if err is nil, or if the record has already been postponed or
+	// discarded.
+	Discard(err error)
+
 	// First returns the first event. The event's properties may be modified.
 	// After First is called, no further method calls on Events are allowed.
 	First() *Event

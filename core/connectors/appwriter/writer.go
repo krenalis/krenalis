@@ -218,6 +218,30 @@ func (w *Writer) complete() {
 	w.close.completed.Signal()
 }
 
+// discard discards the most recently read event with the provided error. It is
+// invoked when an iterator calls Records.Discard and must be executed with w.mu
+// held.
+func (w *Writer) discard(err error) {
+	w.mu.Lock()
+	i := w.iterator.index - 1
+	for w.records[i].iterator != w.iterator {
+		i--
+	}
+	id := w.records[i].id
+	w.records[i] = record{}
+	if trace {
+		fmt.Printf("Writer.discard: iterator %p; discard index %d, current %d\n", w.iterator, i, w.iterator.index)
+	}
+	if assert {
+		w._assertAvailable(w.available)
+	}
+	if trace {
+		fmt.Printf("Writer.discard: send ack for iterator %p with id %q and error %#v\n", w.iterator, id, err)
+	}
+	w.mu.Unlock()
+	w.acks([]string{id}, err)
+}
+
 // postpone postpones the most recently read record, marking it as unread. It
 // can only be called after a successful read operation.
 func (w *Writer) postpone() {
@@ -303,7 +327,7 @@ func (w *Writer) consume(iter *iterator) {
 	var errorOf map[error][]string
 	w.mu.Lock()
 	if w.iterator == iter {
-		// Upsert hasn’t started the iteration; mark it as completed.
+		// Upsert hasn't started the iteration; mark it as completed.
 		if trace {
 			fmt.Printf("Writer.consume: Upsert of iterator %p has returned without starting an iteration, with error %#v\n", iter, err)
 		}

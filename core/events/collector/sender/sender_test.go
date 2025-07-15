@@ -10,6 +10,7 @@ package sender
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"iter"
 	"math"
@@ -80,6 +81,27 @@ func Test_iterator_invalidUsage(t *testing.T) {
 		expectPanic(func() { it.Postpone() })
 	})
 
+	t.Run("PostponeDiscardedEvent", func(t *testing.T) {
+		it := newIterator(s)
+		it.iterating = true
+		it.discarded = true
+		expectPanic(func() { it.Postpone() })
+	})
+
+	t.Run("DiscardDiscardedEvent", func(t *testing.T) {
+		it := newIterator(s)
+		it.iterating = true
+		it.discarded = true
+		expectPanic(func() { it.Discard(errors.New("event is invalid")) })
+	})
+
+	t.Run("DiscardPostponedEvent", func(t *testing.T) {
+		it := newIterator(s)
+		it.iterating = true
+		it.postponed = true
+		expectPanic(func() { it.Discard(errors.New("event is invalid")) })
+	})
+
 	t.Run("PeekAfterConsumed", func(t *testing.T) {
 		it := newIterator(s)
 		it.consumed = true
@@ -113,22 +135,25 @@ func Test_iterator_invalidUsage(t *testing.T) {
 func Test_Sender(t *testing.T) {
 
 	tests := []struct {
-		num     int    // number of records to process
-		seed    uint64 // seed value to deterministically pseudo-randomize the test
-		shuffle bool   // whether to shuffle the events
-		users   int    // number of users, must be > 0
+		num         int     // number of events to process
+		seed        uint64  // seed value to deterministically pseudo-randomize the test
+		shuffle     bool    // whether to shuffle the events
+		users       int     // number of users, must be > 0
+		discardRate float64 // rate [0,1] at which events are discarded
 	}{
 		{num: 0, seed: 0, users: 1},
+		{num: 0, seed: 0, users: 1, discardRate: 1},
 		{num: 1, seed: 25, users: 1},
-		{num: 1, seed: 92, users: 1},
+		{num: 1, seed: 92, users: 1, discardRate: 0.1},
 		{num: 4, seed: 40, users: 1},
-		{num: 4, seed: 40, shuffle: true, users: 1},
-		{num: 1000 / 2, seed: 63, shuffle: false, users: 1000 / 13},
-		{num: 1000 / 2, seed: 11, shuffle: true, users: 1000 / 18},
-		{num: 1000 / 3, seed: 47, shuffle: false, users: 1000 / 10},
-		{num: 1000 * 8, seed: 90, shuffle: true, users: 1000 / 9},
-		{num: 1000 * 15, seed: 142, shuffle: false, users: 1000 / 3},
-		{num: 1000 * 20, seed: 28, shuffle: true, users: 1000 / 5},
+		{num: 4, seed: 40, shuffle: true, users: 1, discardRate: 0.1},
+		{num: 4, seed: 40, shuffle: true, users: 1, discardRate: 1},
+		{num: 1000 / 2, seed: 63, shuffle: false, users: 1000 / 13, discardRate: 0.008},
+		{num: 1000 / 2, seed: 11, shuffle: true, users: 1000 / 18, discardRate: 0.12},
+		{num: 1000 / 3, seed: 47, shuffle: false, users: 1000 / 10, discardRate: 0.075},
+		{num: 1000 * 8, seed: 90, shuffle: true, users: 1000 / 9, discardRate: 0.187},
+		{num: 1000 * 15, seed: 142, shuffle: false, users: 1000 / 3, discardRate: 0.09},
+		{num: 1000 * 20, seed: 28, shuffle: true, users: 1000 / 5, discardRate: 0.045},
 	}
 
 	for _, test := range tests {
@@ -153,23 +178,32 @@ func Test_Sender(t *testing.T) {
 			}
 
 			userByEvent := map[string]string{}
-			eventsByUser := map[string][]string{}
+			validEventsByUser := map[string][]string{}
+			isValid := map[string]bool{}
 			receivedAck := map[string]bool{}
 
 			// Create the events.
 			var evs []*Event
 			for range test.num {
 				anonymousId := anonymousIds[rng.IntN(test.users)]
-				event := s.CreateEvent(1, "test", types.Type{}, events.Event{"anonymousId": anonymousId}, src)
+				valid := rng.Float64() >= test.discardRate
+				typ := "Valid"
+				if !valid {
+					typ = "Invalid"
+				}
+				event := s.CreateEvent(1, typ, types.Type{}, events.Event{"anonymousId": anonymousId}, src)
 				userByEvent[event.ID] = anonymousId
-				if ids, ok := eventsByUser[anonymousId]; ok {
-					eventsByUser[anonymousId] = append(ids, event.ID)
-				} else {
-					eventsByUser[anonymousId] = []string{event.ID}
+				if valid {
+					if ids, ok := validEventsByUser[anonymousId]; ok {
+						validEventsByUser[anonymousId] = append(ids, event.ID)
+					} else {
+						validEventsByUser[anonymousId] = []string{event.ID}
+					}
 				}
 				if _, ok := receivedAck[event.ID]; ok {
 					t.Fatal("CreateEvent has returned a duplicated ID")
 				}
+				isValid[event.ID] = valid
 				receivedAck[event.ID] = false
 				evs = append(evs, event)
 			}
@@ -198,37 +232,46 @@ func Test_Sender(t *testing.T) {
 				t.Fatalf("cannot close the sender: %s", err)
 			}
 
-			// Check that all events have been delivered and in the correct order.
+			// Check that all valid events have been consumed and in the correct order.
 			expectedByUser := map[string]int{}
-			for i, id := range app.Delivered() {
+			for i, id := range app.Consumed() {
 				u, ok := userByEvent[id]
 				if !ok {
 					t.Fatalf("ack %d/%d: unexpected non-existent event %q", i+1, test.num, id)
 				}
-				ids := eventsByUser[u]
+				ids := validEventsByUser[u]
 				expected := expectedByUser[u]
 				expectedByUser[u]++
+				if expected >= len(ids) {
+					t.Fatalf("ack %d/%d: unexpected consumed event %q", i+1, test.num, id)
+				}
 				if ids[expected] != id {
-					t.Fatalf("ack %d/%d: expected event %q, got %q", i+1, test.num, ids[expected], id)
+					t.Fatalf("ack %d/%d: expected consumed event %q, got %q", i+1, test.num, ids[expected], id)
 				}
 			}
-			for u, ids := range eventsByUser {
+			for u, ids := range validEventsByUser {
 				expected := expectedByUser[u]
 				if expected < len(ids) {
 					t.Fatalf("ack: ID %q has not been received", ids[0])
 				}
 			}
 
-			// Check that all acks have been received without errors.
+			// Check that all acks have been received.
 			for i, ack := range app.Acks() {
-				if ack.err != nil {
-					t.Fatalf("ack %d/%d: expected no error, got %#v", i+1, test.num, ack.err)
-				}
 				for _, id := range ack.ids {
 					if r, ok := receivedAck[id]; !ok {
 						t.Fatalf("ack %d/%d: unexpected ID %q", i+1, test.num, id)
 					} else if r {
 						t.Fatalf("ack %d/%d: ID %q has already been received", i+1, test.num, id)
+					}
+					if ack.err == nil {
+						if !isValid[id] {
+							t.Fatalf("ack %d/%d: expected error for ID %q, got none", i+1, test.num, id)
+						}
+					} else {
+						if isValid[id] {
+							t.Fatalf("ack %d/%d: expected no error for ID %q, got an error", i+1, test.num, id)
+						}
 					}
 					receivedAck[id] = true
 				}
@@ -260,7 +303,7 @@ type app struct {
 	mu        sync.Mutex
 	iteration uint64
 	n         int      // protected by mu
-	delivered []string // ids of the delivered events; protected by mu
+	consumed  []string // ids of the consumed events; protected by mu
 	acks      []ack    // protected by mu
 }
 
@@ -280,11 +323,11 @@ func (app *app) Acks() []ack {
 	return acks
 }
 
-func (app *app) Delivered() []string {
+func (app *app) Consumed() []string {
 	app.mu.Lock()
-	delivered := slices.Clone(app.delivered)
+	consumed := slices.Clone(app.consumed)
 	app.mu.Unlock()
-	return delivered
+	return consumed
 }
 
 func (app *app) N() int {
@@ -328,11 +371,14 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 	if rng.Int()%5 == 0 {
 		event := events.First()
 		app.validateEvent(event)
-		app.mu.Lock()
-		app.delivered = append(app.delivered, event.ID)
-		app.mu.Unlock()
-		time.Sleep(time.Duration(rng.Int()%10) * time.Nanosecond)
-		return nil
+		if event.Type == "Valid" {
+			app.mu.Lock()
+			app.consumed = append(app.consumed, event.ID)
+			app.mu.Unlock()
+			time.Sleep(time.Duration(rng.Int()%10) * time.Nanosecond)
+			return nil
+		}
+		return errors.New("event is not valid")
 	}
 
 	var seq iter.Seq[*meergo.Event]
@@ -343,7 +389,7 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 	}
 
 	var n int
-	var delivered []string
+	var consumed []string
 	for event := range seq {
 		app.validateEvent(event)
 		if n%4 == 0 {
@@ -353,8 +399,10 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 		}
 		if n > 0 && rng.Int()%3 == 0 {
 			events.Postpone()
+		} else if event.Type == "Invalid" {
+			events.Discard(errors.New("event is invalid"))
 		} else {
-			delivered = append(delivered, event.ID)
+			consumed = append(consumed, event.ID)
 		}
 		if n == rng.Int()/2 {
 			break
@@ -362,11 +410,14 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 		n++
 	}
 
-	time.Sleep(time.Duration(rng.Int()%10) * time.Microsecond)
+	if len(consumed) == 0 {
+		return nil
+	}
 
 	app.mu.Lock()
-	app.delivered = append(app.delivered, delivered...)
+	app.consumed = append(app.consumed, consumed...)
 	app.mu.Unlock()
+	time.Sleep(time.Duration(rng.Int()%10) * time.Microsecond)
 
 	return nil
 }
@@ -391,8 +442,8 @@ func (app *app) validateEvent(e *meergo.Event) {
 	if e.ID == "" {
 		app.t.Fatal("SendEvents: expected non-empty message ID, got empty")
 	}
-	if e.Type == "" {
-		app.t.Fatal("SendEvents: expected type, got empty")
+	if e.Type != "Valid" && e.Type != "Invalid" {
+		app.t.Fatalf(`SendEvents: expected type "Valid" or "Invalid", got %q`, e.Type)
 	}
 	if e.Schema.Valid() {
 		if e.Properties == nil {

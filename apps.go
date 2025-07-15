@@ -348,6 +348,12 @@ type Records interface {
 	// sequence may be modified unless the record is subsequently postponed.
 	All() iter.Seq[Record]
 
+	// Discard discards the current record in the iteration with the provided error.
+	// Discard may only be called during iterations from All or Same.
+	// It panics if err is nil, or if the record has already been postponed or
+	// discarded.
+	Discard(err error)
+
 	// First returns the first record. The record's properties may be modified.
 	// Use it instead of All or Some when the app only needs to create or update one
 	// record at a time.
@@ -365,6 +371,7 @@ type Records interface {
 	//
 	// The first event must always be consumed. Calling Postpone on it will cause a
 	// panic. It is safe to call Postpone multiple times on the same record.
+	// A panic occurs if the event has already been discarded.
 	Postpone()
 
 	// Same returns an iterator for records: either all records to update
@@ -493,6 +500,12 @@ type Events interface {
 	// sequence may be modified unless the event is subsequently postponed.
 	All() iter.Seq[*Event]
 
+	// Discard discards the current event in the iteration with the provided error.
+	// Discard may only be called during iterations from All or SameUser.
+	// It panics if err is nil, or if the event has already been postponed or
+	// discarded.
+	Discard(err error)
+
 	// First returns the first event. The event's properties may be modified.
 	// After First is called, no further method calls on Events are allowed.
 	First() *Event
@@ -505,6 +518,7 @@ type Events interface {
 	// Postpone postpones the current event in the iteration and marks it as unread.
 	// Postpone may only be called during iterations from All or SameUser, and only
 	// if the event's properties have not been modified.
+	// A panic occurs if the event has already been discarded.
 	Postpone()
 
 	// SameUser returns an iterator over the events of the same user. Properties of

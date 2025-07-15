@@ -22,6 +22,7 @@ type iterator struct {
 	consumed  bool
 	iterating bool
 	postponed bool
+	discarded bool
 }
 
 func newIterator(w *Writer) *iterator {
@@ -35,6 +36,26 @@ func (it *iterator) All() iter.Seq[meergo.Record] {
 	}
 	it.consumed = true
 	return it.seq(opAll)
+}
+
+func (it *iterator) Discard(err error) {
+	if !it.iterating {
+		panic(it.writer.connector + " connector: Upsert method called Records.Discard outside an iteration")
+	}
+	if it.postponed {
+		panic(it.writer.connector + " connector: Upsert method called Records.Discard on a postponed event")
+	}
+	if it.discarded {
+		panic(it.writer.connector + " connector: Upsert method called Records.Discard on a discarded event")
+	}
+	if err == nil {
+		panic(it.writer.connector + " connector: Upsert method called Records.Discard passing a nil error")
+	}
+	if trace {
+		fmt.Printf("iterator.Postpone: iterator %p discardes a record\n", it)
+	}
+	it.discarded = true
+	it.writer.discard(err)
 }
 
 func (it *iterator) First() meergo.Record {
@@ -71,6 +92,9 @@ func (it *iterator) Postpone() {
 	if !it.iterating {
 		panic(it.writer.connector + " connector: Upsert method called Records.Postpone outside an iteration")
 	}
+	if it.discarded {
+		panic(it.writer.connector + " connector: Upsert method called Records.Postpone on a discarded event")
+	}
 	if it.postponed {
 		return
 	}
@@ -103,6 +127,7 @@ func (it *iterator) seq(op op) iter.Seq[meergo.Record] {
 		it.iterating = true
 		for {
 			it.postponed = false
+			it.discarded = false
 			record, ok := it.writer.read(op, true)
 			if !ok {
 				if trace {

@@ -178,6 +178,12 @@ type Records interface {
 	// sequence may be modified unless the record is subsequently postponed.
 	All() iter.Seq[Record]
 
+	// Discard discards the current record in the iteration with the provided error.
+	// Discard may only be called during iterations from All or Same.
+	// It panics if err is nil, or if the record has already been postponed or
+	// discarded.
+	Discard(err error)
+
 	// First returns the first record. The record's properties may be modified.
 	// Use it instead of All or Some when the app only needs to create or update one
 	// record at a time.

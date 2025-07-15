@@ -9,6 +9,7 @@ package appwriter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"iter"
 	"math"
@@ -81,9 +82,6 @@ func Test_Writer(t *testing.T) {
 			defer app.mu.Unlock()
 
 			for i, ack := range app.acks {
-				if ack.err != nil {
-					t.Fatalf("ack %d/%d: expected no error, got %#v", i+1, test.num, ack.err)
-				}
 				for _, id := range ack.ids {
 					ids[id]--
 					if id != "" && ids[id] < 0 {
@@ -168,6 +166,8 @@ func (app *app) Upsert(ctx context.Context, target meergo.Targets, records meerg
 		}
 		if n > 0 && app.rng.Int()%3 == 0 {
 			records.Postpone()
+		} else if app.rng.Int()%16 == 0 {
+			records.Discard(errors.New("event is invalid"))
 		}
 		if n == app.rng.Int()/2 {
 			break

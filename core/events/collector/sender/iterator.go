@@ -30,6 +30,7 @@ type iterator struct {
 	iterating  bool // true while iterating over events
 	firstEvent bool // true if the current event is the first in the sequence
 	postponed  bool // true if the last consumed event was postponed
+	discarded  bool // true if the last consumed event was discarded
 }
 
 // newIterator returns a new iterator.
@@ -44,6 +45,24 @@ func (it *iterator) All() iter.Seq[*meergo.Event] {
 	}
 	it.consumed = true
 	return it.seq()
+}
+
+func (it *iterator) Discard(err error) {
+	if !it.iterating {
+		panic(it.sender.connector + " connector: SendEvents method called Events.Discard outside an iteration")
+	}
+	if it.postponed {
+		panic(it.sender.connector + " connector: SendEvents method called Events.Discard on a postponed event")
+	}
+	if it.discarded {
+		panic(it.sender.connector + " connector: SendEvents method called Events.Discard on a discarded event")
+	}
+	if err == nil {
+		panic(it.sender.connector + " connector: SendEvents method called Events.Discard passing a nil error")
+	}
+	trace("iterator.Discard: iterator %p discarded an event with error %q\n", it, err)
+	it.discarded = true
+	it.sender.discard(err)
 }
 
 func (it *iterator) First() *meergo.Event {
@@ -75,6 +94,9 @@ func (it *iterator) Peek() (*meergo.Event, bool) {
 func (it *iterator) Postpone() {
 	if !it.iterating {
 		panic(it.sender.connector + " connector: SendEvents method called Events.Postpone outside an iteration")
+	}
+	if it.discarded {
+		panic(it.sender.connector + " connector: SendEvents method called Events.Postpone on a discarded event")
 	}
 	if it.postponed {
 		return
@@ -108,6 +130,7 @@ func (it *iterator) seq() iter.Seq[*meergo.Event] {
 		it.firstEvent = true
 		for {
 			it.postponed = false
+			it.discarded = false
 			e, ok := it.sender.read(true)
 			if !ok {
 				trace("iterator.seq: iterator %p finished reading the events; no more are available\n", it)

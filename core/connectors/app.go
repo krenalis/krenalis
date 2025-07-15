@@ -369,6 +369,7 @@ type singleEventIterator struct {
 	consumed  bool
 	iterating bool
 	postponed bool
+	discarded bool
 }
 
 // newSingleEventIterator returns a singleEventIterator with the provided event.
@@ -386,6 +387,19 @@ func (iter *singleEventIterator) All() iter.Seq[*meergo.Event] {
 		iter.iterating = true
 		yield(iter.event)
 	}
+}
+
+func (iter *singleEventIterator) Discard(err error) {
+	if !iter.iterating {
+		panic(iter.app + " connector: SendEvents method called Events.Discard outside an iteration")
+	}
+	if iter.postponed {
+		panic(iter.app + " connector: SendEvents method called Events.Discard on a postponed event")
+	}
+	if iter.discarded {
+		panic(iter.app + " connector: SendEvents method called Events.Discard on a discarded event")
+	}
+	iter.discarded = true
 }
 
 func (iter *singleEventIterator) First() *meergo.Event {
@@ -412,6 +426,9 @@ func (iter *singleEventIterator) Postpone() {
 	}
 	if iter.postponed {
 		return
+	}
+	if iter.discarded {
+		panic(iter.app + " connector: SendEvents method called Events.Postpone on a discarded event")
 	}
 	iter.postponed = true
 }
