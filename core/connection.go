@@ -24,6 +24,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
+
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
@@ -1447,7 +1449,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
+	id, _ := uuid.NewV7() // safe to ignore error in Go 1.24+
 	ev := meergo.Event{
+		ID:     id.String(),
 		Type:   typ,
 		Schema: outSchema,
 		Raw:    events.RawEvent(properties),
