@@ -520,7 +520,7 @@ const ConnectionMetrics = () => {
 								Users
 							</SlButton>
 						</SlButtonGroup>
-						{c.actions?.length > 1 && (
+						{c.actions?.length > 1 && !(c.isSDK && c.isSource && selectedTarget === 'Event') && (
 							<SlSelect
 								size='small'
 								label='Action'
