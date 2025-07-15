@@ -24,8 +24,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
-
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
@@ -40,6 +38,7 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
+	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
 )
 
