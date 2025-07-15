@@ -166,7 +166,7 @@ func (app *app) Upsert(ctx context.Context, target meergo.Targets, records meerg
 				app.validateRecord(p)
 			}
 		}
-		if app.rng.Int()%3 == 0 {
+		if n > 0 && app.rng.Int()%3 == 0 {
 			records.Postpone()
 		}
 		if n == app.rng.Int()/2 {
