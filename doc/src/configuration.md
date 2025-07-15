@@ -6,7 +6,7 @@
 
 This document describes the available environment variables for configuring Meergo.
 
-These variables can be provided to Meergo when it starts, or they can be declared in a `.env` file located in the same directory where Meergo is started. You can check the example file [`meergo.example.env`](https://github.com/meergo/meergo/blob/experiment-with-env/cmd/meergo/meergo.example.env).
+These variables can be provided to Meergo when it starts, or they can be declared in a `.env` file located in the same directory where Meergo is started. You can check the example file [`meergo.example.env`](https://github.com/meergo/meergo/blob/main/cmd/meergo/meergo.example.env).
 
 ## .env file syntax
 

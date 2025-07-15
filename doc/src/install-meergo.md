@@ -134,7 +134,7 @@ Then you can proceed with the [configuration](#configuration).
 Once you have obtained the `meergo` executable, follow these steps to configure the application:
 
 1. **Choose a directory** on your filesystem — this will be the working directory where you will run Meergo.
-2. Download the example configuration file [`meergo.example.env`](https://github.com/meergo/meergo/blob/experiment-with-env/cmd/meergo/meergo.example.env) and copy it into the chosen directory as `.env`.
+2. Download the example configuration file [`meergo.example.env`](https://github.com/meergo/meergo/blob/main/cmd/meergo/meergo.example.env) and copy it into the chosen directory as `.env`.
 3. Edit `.env` to match your environment and requirements.
 
 > The `.env` file contains the definition of environment variables and is sourced by Meergo at startup. It is therefore possible, alternatively and according to the needs of the environment in which Meergo is to be run, to define the environment variables before starting Meergo, without using the `.env` file.
