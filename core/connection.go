@@ -1451,10 +1451,10 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 
 	id, _ := uuid.NewV7() // safe to ignore error in Go 1.24+
 	ev := meergo.Event{
-		ID:     id.String(),
-		Type:   typ,
-		Schema: outSchema,
-		Raw:    events.RawEvent(properties),
+		ID:       id.String(),
+		Type:     typ,
+		Schema:   outSchema,
+		Received: events.ReceivedEvent(properties),
 	}
 
 	if transformation.Mapping != nil || transformation.Function != nil {

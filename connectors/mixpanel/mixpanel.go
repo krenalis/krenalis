@@ -227,18 +227,18 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		}
 
 		properties := event.Properties["properties"].(map[string]any)
-		properties["$insert_id"] = event.Raw.MessageId()
-		properties["time"] = event.Raw.Timestamp().UnixMilli()
+		properties["$insert_id"] = event.Received.MessageId()
+		properties["time"] = event.Received.Timestamp().UnixMilli()
 		if sendBadRequest, _ := ctx.Value(connectorTestString("sendBadRequest")).(bool); sendBadRequest {
 			delete(properties, "time")
 		}
-		distinctID := event.Raw.AnonymousId()
-		if userId, ok := event.Raw.UserId(); ok {
+		distinctID := event.Received.AnonymousId()
+		if userId, ok := event.Received.UserId(); ok {
 			distinctID = userId
 		}
 		properties["distinct_id"] = distinctID
-		properties["$device_id"] = event.Raw.AnonymousId()
-		if context, ok := event.Raw.Context(); ok {
+		properties["$device_id"] = event.Received.AnonymousId()
+		if context, ok := event.Received.Context(); ok {
 			if ip, ok := context.IP(); ok {
 				properties["ip"] = ip
 				// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city

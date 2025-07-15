@@ -173,22 +173,22 @@ var Schema = types.Object([]types.Property{
 	{Name: "userId", Type: types.Text()},
 })
 
-// rawEvent implements the meergo.RawEvent interface. A RawEvent is passed to
-// the SendEvents method of an app connector.
-type rawEvent struct {
+// receivedEvent implements the meergo.ReceivedEvent interface. A ReceivedEvent
+// is passed to the SendEvents method of an app connector.
+type receivedEvent struct {
 	event Event
 }
 
-// RawEvent wraps an Event and returns a value that implements the
-// meergo.RawEvent interface.
+// ReceivedEvent wraps a meergo.Event and returns a value that implements the
+// meergo.ReceivedEvent interface.
 //
 // The provided event must conform to the event schema (Schema), otherwise
 // calling methods on the returned value may cause a panic.
-func RawEvent(event Event) meergo.RawEvent {
-	return rawEvent{event}
+func ReceivedEvent(event Event) meergo.ReceivedEvent {
+	return receivedEvent{event}
 }
 
-func (e rawEvent) User() (string, bool) {
+func (e receivedEvent) User() (string, bool) {
 	// The 'user' field of an event is populated by Identity Resolution only for
 	// events stored in the data warehouse.
 	// For events received from a source and then forwarded to a connector for
@@ -199,444 +199,444 @@ func (e rawEvent) User() (string, bool) {
 	return "", false
 }
 
-func (e rawEvent) AnonymousId() string {
+func (e receivedEvent) AnonymousId() string {
 	return e.event["anonymousId"].(string)
 }
 
-func (e rawEvent) Channel() (string, bool) {
+func (e receivedEvent) Channel() (string, bool) {
 	channel, ok := e.event["channel"].(string)
 	return channel, ok
 }
 
-func (e rawEvent) Category() (string, bool) {
+func (e receivedEvent) Category() (string, bool) {
 	category, ok := e.event["category"].(string)
 	return category, ok
 }
 
-func (e rawEvent) Context() (meergo.RawEventContext, bool) {
+func (e receivedEvent) Context() (meergo.ReceivedEventContext, bool) {
 	if context, ok := e.event["context"].(map[string]any); ok {
-		return rawEventContext{context}, true
+		return receivedEventContext{context}, true
 	}
 	return nil, false
 }
 
-func (e rawEvent) Event() (string, bool) {
+func (e receivedEvent) Event() (string, bool) {
 	event, ok := e.event["event"].(string)
 	return event, ok
 }
 
-func (e rawEvent) GroupId() (string, bool) {
+func (e receivedEvent) GroupId() (string, bool) {
 	groupId, ok := e.event["groupId"].(string)
 	return groupId, ok
 }
 
-func (e rawEvent) MessageId() string {
+func (e receivedEvent) MessageId() string {
 	return e.event["messageId"].(string)
 }
 
-func (e rawEvent) Name() (string, bool) {
+func (e receivedEvent) Name() (string, bool) {
 	name, ok := e.event["name"].(string)
 	return name, ok
 }
 
-func (e rawEvent) ReceivedAt() time.Time {
+func (e receivedEvent) ReceivedAt() time.Time {
 	return e.event["receivedAt"].(time.Time)
 }
 
-func (e rawEvent) SentAt() time.Time {
+func (e receivedEvent) SentAt() time.Time {
 	return e.event["sentAt"].(time.Time)
 }
 
-func (e rawEvent) Timestamp() time.Time {
+func (e receivedEvent) Timestamp() time.Time {
 	return e.event["timestamp"].(time.Time)
 }
 
-func (e rawEvent) Type() string {
+func (e receivedEvent) Type() string {
 	return e.event["type"].(string)
 }
 
-func (e rawEvent) UserId() (string, bool) {
+func (e receivedEvent) UserId() (string, bool) {
 	userId, ok := e.event["userId"].(string)
 	return userId, ok
 }
 
-type rawEventContext struct {
+type receivedEventContext struct {
 	context map[string]any
 }
 
-func (c rawEventContext) App() (meergo.RawEventContextApp, bool) {
+func (c receivedEventContext) App() (meergo.ReceivedEventContextApp, bool) {
 	if app, ok := c.context["app"].(map[string]any); ok {
-		return rawEventContextApp{app}, true
+		return receivedEventContextApp{app}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Browser() (meergo.RawEventContextBrowser, bool) {
+func (c receivedEventContext) Browser() (meergo.ReceivedEventContextBrowser, bool) {
 	if browser, ok := c.context["browser"].(map[string]any); ok {
-		return rawEventContextBrowser{browser}, true
+		return receivedEventContextBrowser{browser}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Campaign() (meergo.RawEventContextCampaign, bool) {
+func (c receivedEventContext) Campaign() (meergo.ReceivedEventContextCampaign, bool) {
 	if campaign, ok := c.context["campaign"].(map[string]any); ok {
-		return rawEventContextCampaign{campaign}, true
+		return receivedEventContextCampaign{campaign}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Device() (meergo.RawEventContextDevice, bool) {
+func (c receivedEventContext) Device() (meergo.ReceivedEventContextDevice, bool) {
 	if campaign, ok := c.context["device"].(map[string]any); ok {
-		return rawEventContextDevice{campaign}, true
+		return receivedEventContextDevice{campaign}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) IP() (string, bool) {
+func (c receivedEventContext) IP() (string, bool) {
 	ip, ok := c.context["ip"].(string)
 	return ip, ok
 }
 
-func (c rawEventContext) Library() (meergo.RawEventContextLibrary, bool) {
+func (c receivedEventContext) Library() (meergo.ReceivedEventContextLibrary, bool) {
 	if library, ok := c.context["library"].(map[string]any); ok {
-		return rawEventContextLibrary{library}, true
+		return receivedEventContextLibrary{library}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Locale() (string, bool) {
+func (c receivedEventContext) Locale() (string, bool) {
 	locale, ok := c.context["locale"].(string)
 	return locale, ok
 }
 
-func (c rawEventContext) Location() (meergo.RawEventContextLocation, bool) {
+func (c receivedEventContext) Location() (meergo.ReceivedEventContextLocation, bool) {
 	if location, ok := c.context["location"].(map[string]any); ok {
-		return rawEventContextLocation{location}, true
+		return receivedEventContextLocation{location}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Network() (meergo.RawEventContextNetwork, bool) {
+func (c receivedEventContext) Network() (meergo.ReceivedEventContextNetwork, bool) {
 	if network, ok := c.context["network"].(map[string]any); ok {
-		return rawEventContextNetwork{network}, true
+		return receivedEventContextNetwork{network}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) OS() (meergo.RawEventContextOS, bool) {
+func (c receivedEventContext) OS() (meergo.ReceivedEventContextOS, bool) {
 	if os, ok := c.context["os"].(map[string]any); ok {
-		return rawEventContextOS{os}, true
+		return receivedEventContextOS{os}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Page() (meergo.RawEventContextPage, bool) {
+func (c receivedEventContext) Page() (meergo.ReceivedEventContextPage, bool) {
 	if page, ok := c.context["page"].(map[string]any); ok {
-		return rawEventContextPage{page}, true
+		return receivedEventContextPage{page}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Referrer() (meergo.RawEventContextReferrer, bool) {
+func (c receivedEventContext) Referrer() (meergo.ReceivedEventContextReferrer, bool) {
 	if referrer, ok := c.context["referrer"].(map[string]any); ok {
-		return rawEventContextReferrer{referrer}, true
+		return receivedEventContextReferrer{referrer}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Screen() (meergo.RawEventContextScreen, bool) {
+func (c receivedEventContext) Screen() (meergo.ReceivedEventContextScreen, bool) {
 	if screen, ok := c.context["screen"].(map[string]any); ok {
-		return rawEventContextScreen{screen}, true
+		return receivedEventContextScreen{screen}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Session() (meergo.RawEventContextSession, bool) {
+func (c receivedEventContext) Session() (meergo.ReceivedEventContextSession, bool) {
 	if session, ok := c.context["session"].(map[string]any); ok {
-		return rawEventContextSession{session}, true
+		return receivedEventContextSession{session}, true
 	}
 	return nil, false
 }
 
-func (c rawEventContext) Timezone() (string, bool) {
+func (c receivedEventContext) Timezone() (string, bool) {
 	timezone, ok := c.context["timezone"].(string)
 	return timezone, ok
 }
 
-func (c rawEventContext) UserAgent() (string, bool) {
+func (c receivedEventContext) UserAgent() (string, bool) {
 	userAgent, ok := c.context["userAgent"].(string)
 	return userAgent, ok
 }
 
-type rawEventContextApp struct {
+type receivedEventContextApp struct {
 	app map[string]any
 }
 
-func (c rawEventContextApp) Name() (string, bool) {
+func (c receivedEventContextApp) Name() (string, bool) {
 	name, ok := c.app["name"].(string)
 	return name, ok
 }
 
-func (c rawEventContextApp) Version() (string, bool) {
+func (c receivedEventContextApp) Version() (string, bool) {
 	version, ok := c.app["version"].(string)
 	return version, ok
 }
 
-func (c rawEventContextApp) Build() (string, bool) {
+func (c receivedEventContextApp) Build() (string, bool) {
 	build, ok := c.app["build"].(string)
 	return build, ok
 }
 
-func (c rawEventContextApp) Namespace() (string, bool) {
+func (c receivedEventContextApp) Namespace() (string, bool) {
 	namespace, ok := c.app["namespace"].(string)
 	return namespace, ok
 }
 
-type rawEventContextBrowser struct {
+type receivedEventContextBrowser struct {
 	browser map[string]any
 }
 
-func (c rawEventContextBrowser) Name() (string, bool) {
+func (c receivedEventContextBrowser) Name() (string, bool) {
 	name, ok := c.browser["name"].(string)
 	return name, ok
 }
 
-func (c rawEventContextBrowser) Other() (string, bool) {
+func (c receivedEventContextBrowser) Other() (string, bool) {
 	other, ok := c.browser["other"].(string)
 	return other, ok
 }
 
-func (c rawEventContextBrowser) Version() (string, bool) {
+func (c receivedEventContextBrowser) Version() (string, bool) {
 	version, ok := c.browser["version"].(string)
 	return version, ok
 }
 
-type rawEventContextCampaign struct {
+type receivedEventContextCampaign struct {
 	campaign map[string]any
 }
 
-func (c rawEventContextCampaign) Name() (string, bool) {
+func (c receivedEventContextCampaign) Name() (string, bool) {
 	name, ok := c.campaign["name"].(string)
 	return name, ok
 }
 
-func (c rawEventContextCampaign) Source() (string, bool) {
+func (c receivedEventContextCampaign) Source() (string, bool) {
 	source, ok := c.campaign["source"].(string)
 	return source, ok
 }
 
-func (c rawEventContextCampaign) Medium() (string, bool) {
+func (c receivedEventContextCampaign) Medium() (string, bool) {
 	medium, ok := c.campaign["medium"].(string)
 	return medium, ok
 }
 
-func (c rawEventContextCampaign) Term() (string, bool) {
+func (c receivedEventContextCampaign) Term() (string, bool) {
 	term, ok := c.campaign["term"].(string)
 	return term, ok
 }
 
-func (c rawEventContextCampaign) Content() (string, bool) {
+func (c receivedEventContextCampaign) Content() (string, bool) {
 	content, ok := c.campaign["content"].(string)
 	return content, ok
 }
 
-type rawEventContextDevice struct {
+type receivedEventContextDevice struct {
 	device map[string]any
 }
 
-func (c rawEventContextDevice) Id() (string, bool) {
+func (c receivedEventContextDevice) Id() (string, bool) {
 	id, ok := c.device["id"].(string)
 	return id, ok
 }
 
-func (c rawEventContextDevice) AdvertisingId() (string, bool) {
+func (c receivedEventContextDevice) AdvertisingId() (string, bool) {
 	advertisingId, ok := c.device["advertisingId"].(string)
 	return advertisingId, ok
 }
 
-func (c rawEventContextDevice) AdTrackingEnabled() (bool, bool) {
+func (c receivedEventContextDevice) AdTrackingEnabled() (bool, bool) {
 	adTrackingEnabled, ok := c.device["adTrackingEnabled"].(bool)
 	return adTrackingEnabled, ok
 }
 
-func (c rawEventContextDevice) Manufacturer() (string, bool) {
+func (c receivedEventContextDevice) Manufacturer() (string, bool) {
 	manufacturer, ok := c.device["manufacturer"].(string)
 	return manufacturer, ok
 }
 
-func (c rawEventContextDevice) Model() (string, bool) {
+func (c receivedEventContextDevice) Model() (string, bool) {
 	model, ok := c.device["model"].(string)
 	return model, ok
 }
 
-func (c rawEventContextDevice) Name() (string, bool) {
+func (c receivedEventContextDevice) Name() (string, bool) {
 	name, ok := c.device["name"].(string)
 	return name, ok
 }
 
-func (c rawEventContextDevice) Type() (string, bool) {
+func (c receivedEventContextDevice) Type() (string, bool) {
 	typ, ok := c.device["type"].(string)
 	return typ, ok
 }
 
-func (c rawEventContextDevice) Token() (string, bool) {
+func (c receivedEventContextDevice) Token() (string, bool) {
 	token, ok := c.device["token"].(string)
 	return token, ok
 }
 
-type rawEventContextLibrary struct {
+type receivedEventContextLibrary struct {
 	library map[string]any
 }
 
-func (c rawEventContextLibrary) Name() (string, bool) {
+func (c receivedEventContextLibrary) Name() (string, bool) {
 	name, ok := c.library["name"].(string)
 	return name, ok
 }
 
-func (c rawEventContextLibrary) Version() (string, bool) {
+func (c receivedEventContextLibrary) Version() (string, bool) {
 	version, ok := c.library["version"].(string)
 	return version, ok
 }
 
-type rawEventContextLocation struct {
+type receivedEventContextLocation struct {
 	location map[string]any
 }
 
-func (c rawEventContextLocation) City() (string, bool) {
+func (c receivedEventContextLocation) City() (string, bool) {
 	city, ok := c.location["city"].(string)
 	return city, ok
 }
 
-func (c rawEventContextLocation) Country() (string, bool) {
+func (c receivedEventContextLocation) Country() (string, bool) {
 	country, ok := c.location["country"].(string)
 	return country, ok
 }
 
-func (c rawEventContextLocation) Latitude() (float64, bool) {
+func (c receivedEventContextLocation) Latitude() (float64, bool) {
 	latitude, ok := c.location["latitude"].(float64)
 	return latitude, ok
 }
 
-func (c rawEventContextLocation) Longitude() (float64, bool) {
+func (c receivedEventContextLocation) Longitude() (float64, bool) {
 	longitude, ok := c.location["longitude"].(float64)
 	return longitude, ok
 }
 
-func (c rawEventContextLocation) Speed() (float64, bool) {
+func (c receivedEventContextLocation) Speed() (float64, bool) {
 	speed, ok := c.location["speed"].(float64)
 	return speed, ok
 }
 
-type rawEventContextNetwork struct {
+type receivedEventContextNetwork struct {
 	network map[string]any
 }
 
-func (c rawEventContextNetwork) Bluetooth() (bool, bool) {
+func (c receivedEventContextNetwork) Bluetooth() (bool, bool) {
 	bluetooth, ok := c.network["bluetooth"].(bool)
 	return bluetooth, ok
 }
 
-func (c rawEventContextNetwork) Carrier() (string, bool) {
+func (c receivedEventContextNetwork) Carrier() (string, bool) {
 	carrier, ok := c.network["carrier"].(string)
 	return carrier, ok
 }
 
-func (c rawEventContextNetwork) Cellular() (bool, bool) {
+func (c receivedEventContextNetwork) Cellular() (bool, bool) {
 	cellular, ok := c.network["cellular"].(bool)
 	return cellular, ok
 }
 
-func (c rawEventContextNetwork) WiFi() (bool, bool) {
+func (c receivedEventContextNetwork) WiFi() (bool, bool) {
 	wifi, ok := c.network["wifi"].(bool)
 	return wifi, ok
 }
 
-type rawEventContextOS struct {
+type receivedEventContextOS struct {
 	os map[string]any
 }
 
-func (c rawEventContextOS) Name() (string, bool) {
+func (c receivedEventContextOS) Name() (string, bool) {
 	name, ok := c.os["name"].(string)
 	return name, ok
 }
 
-func (c rawEventContextOS) Version() (string, bool) {
+func (c receivedEventContextOS) Version() (string, bool) {
 	version, ok := c.os["version"].(string)
 	return version, ok
 }
 
-type rawEventContextPage struct {
+type receivedEventContextPage struct {
 	page map[string]any
 }
 
-func (c rawEventContextPage) Path() (string, bool) {
+func (c receivedEventContextPage) Path() (string, bool) {
 	path, ok := c.page["path"].(string)
 	return path, ok
 }
 
-func (c rawEventContextPage) Referrer() (string, bool) {
+func (c receivedEventContextPage) Referrer() (string, bool) {
 	referrer, ok := c.page["referrer"].(string)
 	return referrer, ok
 }
 
-func (c rawEventContextPage) Search() (string, bool) {
+func (c receivedEventContextPage) Search() (string, bool) {
 	search, ok := c.page["search"].(string)
 	return search, ok
 }
 
-func (c rawEventContextPage) Title() (string, bool) {
+func (c receivedEventContextPage) Title() (string, bool) {
 	title, ok := c.page["title"].(string)
 	return title, ok
 }
 
-func (c rawEventContextPage) URL() (string, bool) {
+func (c receivedEventContextPage) URL() (string, bool) {
 	url, ok := c.page["url"].(string)
 	return url, ok
 }
 
-type rawEventContextReferrer struct {
+type receivedEventContextReferrer struct {
 	referrer map[string]any
 }
 
-func (c rawEventContextReferrer) Id() (string, bool) {
+func (c receivedEventContextReferrer) Id() (string, bool) {
 	id, ok := c.referrer["id"].(string)
 	return id, ok
 }
 
-func (c rawEventContextReferrer) Type() (string, bool) {
+func (c receivedEventContextReferrer) Type() (string, bool) {
 	typ, ok := c.referrer["type"].(string)
 	return typ, ok
 }
 
-type rawEventContextScreen struct {
+type receivedEventContextScreen struct {
 	screen map[string]any
 }
 
-func (c rawEventContextScreen) Width() (int, bool) {
+func (c receivedEventContextScreen) Width() (int, bool) {
 	width, ok := c.screen["width"].(int)
 	return width, ok
 }
 
-func (c rawEventContextScreen) Height() (int, bool) {
+func (c receivedEventContextScreen) Height() (int, bool) {
 	height, ok := c.screen["height"].(int)
 	return height, ok
 }
 
-func (c rawEventContextScreen) Density() (decimal.Decimal, bool) {
+func (c receivedEventContextScreen) Density() (decimal.Decimal, bool) {
 	density, ok := c.screen["density"].(decimal.Decimal)
 	return density, ok
 }
 
-type rawEventContextSession struct {
+type receivedEventContextSession struct {
 	session map[string]any
 }
 
-func (c rawEventContextSession) Id() (int, bool) {
+func (c receivedEventContextSession) Id() (int, bool) {
 	id, ok := c.session["id"].(int)
 	return id, ok
 }
 
-func (c rawEventContextSession) Start() (bool, bool) {
+func (c receivedEventContextSession) Start() (bool, bool) {
 	start, ok := c.session["start"].(bool)
 	return start, ok
 }

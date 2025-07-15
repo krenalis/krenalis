@@ -139,7 +139,7 @@ func initMixpanelForTests(t *testing.T) *Mixpanel {
 // depending on how each test is parameterized.
 func newEventForTest(eventType, anonymousID, messageID string, now time.Time) *meergo.Event {
 	eventID := uuid.NewString()
-	rawEventID := uuid.NewString()
+	receivedEventID := uuid.NewString()
 
 	return &meergo.Event{
 		ID:   eventID,
@@ -154,7 +154,7 @@ func newEventForTest(eventType, anonymousID, messageID string, now time.Time) *m
 				"X": 42,
 			},
 		},
-		Raw: events.RawEvent(map[string]any{
+		Received: events.ReceivedEvent(map[string]any{
 			"anonymousId": anonymousID,
 			"connection":  1323607634,
 			"context": map[string]any{
@@ -170,7 +170,7 @@ func newEventForTest(eventType, anonymousID, messageID string, now time.Time) *m
 				},
 				"userAgent": "python-requests/2.32.4",
 			},
-			"id":                rawEventID,
+			"id":                receivedEventID,
 			"messageId":         messageID,
 			"originalTimestamp": now,
 			"previousId":        "IAJVLPBEZJ",

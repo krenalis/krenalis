@@ -75,7 +75,7 @@ func TestSendEvents(t *testing.T) {
 						{Name: "value", Type: genericNumberType},
 					}),
 					Properties: map[string]any{},
-					Raw: events.RawEvent(map[string]any{
+					Received: events.ReceivedEvent(map[string]any{
 						"anonymousId": "17fba6ee-8673-4ebc-afd6-69e62124e017",
 						"connection":  1323607634,
 						"context": map[string]any{

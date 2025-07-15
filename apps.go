@@ -390,8 +390,8 @@ type EventSender interface {
 	// send an event of this type. Actions based on the specified event type
 	// will have a transformation that, given the received event, provides the
 	// properties required by the connector. These properties, along with the
-	// raw event, are passed to the connector's PreviewSendEvents and SendEvents
-	// methods.
+	// received event, are passed to the connector's PreviewSendEvents and
+	// SendEvents methods.
 	//
 	// If no extra information is needed for the event type, the returned schema
 	// is the invalid schema. If the event type does not exist, it returns the
@@ -436,7 +436,7 @@ type Event struct {
 	Type       string         // event type (e.g., "user.signup", "order.placed").
 	Schema     types.Type     // schema of the event type; may be the invalid schema.
 	Properties map[string]any // event data after transformation based on the schema; empty if no transformation exists.
-	Raw        RawEvent       // original, untransformed event data as it was received.
+	Received   ReceivedEvent  // event as it was received.
 }
 
 // EventsError can be returned by the SendEvents and PreviewSendEvents methods
@@ -527,13 +527,13 @@ type Events interface {
 	SameUser() iter.Seq[*Event]
 }
 
-// RawEvent represents a raw event as received from a source connector.
-type RawEvent interface {
+// ReceivedEvent represents an event as received from a source connector.
+type ReceivedEvent interface {
 	User() (string, bool)
 	AnonymousId() string
 	Channel() (string, bool)
 	Category() (string, bool)
-	Context() (RawEventContext, bool)
+	Context() (ReceivedEventContext, bool)
 	Event() (string, bool)
 	GroupId() (string, bool)
 	MessageId() string
@@ -545,39 +545,39 @@ type RawEvent interface {
 	UserId() (string, bool)
 }
 
-type RawEventContext interface {
-	App() (RawEventContextApp, bool)
-	Browser() (RawEventContextBrowser, bool)
-	Campaign() (RawEventContextCampaign, bool)
-	Device() (RawEventContextDevice, bool)
+type ReceivedEventContext interface {
+	App() (ReceivedEventContextApp, bool)
+	Browser() (ReceivedEventContextBrowser, bool)
+	Campaign() (ReceivedEventContextCampaign, bool)
+	Device() (ReceivedEventContextDevice, bool)
 	IP() (string, bool)
-	Library() (RawEventContextLibrary, bool)
+	Library() (ReceivedEventContextLibrary, bool)
 	Locale() (string, bool)
-	Location() (RawEventContextLocation, bool)
-	Network() (RawEventContextNetwork, bool)
-	OS() (RawEventContextOS, bool)
-	Page() (RawEventContextPage, bool)
-	Referrer() (RawEventContextReferrer, bool)
-	Screen() (RawEventContextScreen, bool)
-	Session() (RawEventContextSession, bool)
+	Location() (ReceivedEventContextLocation, bool)
+	Network() (ReceivedEventContextNetwork, bool)
+	OS() (ReceivedEventContextOS, bool)
+	Page() (ReceivedEventContextPage, bool)
+	Referrer() (ReceivedEventContextReferrer, bool)
+	Screen() (ReceivedEventContextScreen, bool)
+	Session() (ReceivedEventContextSession, bool)
 	Timezone() (string, bool)
 	UserAgent() (string, bool)
 }
 
-type RawEventContextApp interface {
+type ReceivedEventContextApp interface {
 	Name() (string, bool)
 	Version() (string, bool)
 	Build() (string, bool)
 	Namespace() (string, bool)
 }
 
-type RawEventContextBrowser interface {
+type ReceivedEventContextBrowser interface {
 	Name() (string, bool)
 	Other() (string, bool)
 	Version() (string, bool)
 }
 
-type RawEventContextCampaign interface {
+type ReceivedEventContextCampaign interface {
 	Name() (string, bool)
 	Source() (string, bool)
 	Medium() (string, bool)
@@ -585,7 +585,7 @@ type RawEventContextCampaign interface {
 	Content() (string, bool)
 }
 
-type RawEventContextDevice interface {
+type ReceivedEventContextDevice interface {
 	Id() (string, bool)
 	AdvertisingId() (string, bool)
 	AdTrackingEnabled() (bool, bool)
@@ -596,29 +596,32 @@ type RawEventContextDevice interface {
 	Token() (string, bool)
 }
 
-type RawEventContextLibrary interface {
+type ReceivedEventContextLibrary interface {
 	Name() (string, bool)
 	Version() (string, bool)
 }
-type RawEventContextLocation interface {
+
+type ReceivedEventContextLocation interface {
 	City() (string, bool)
 	Country() (string, bool)
 	Latitude() (float64, bool)
 	Longitude() (float64, bool)
 	Speed() (float64, bool)
 }
-type RawEventContextNetwork interface {
+
+type ReceivedEventContextNetwork interface {
 	Bluetooth() (bool, bool)
 	Carrier() (string, bool)
 	Cellular() (bool, bool)
 	WiFi() (bool, bool)
 }
-type RawEventContextOS interface {
+
+type ReceivedEventContextOS interface {
 	Name() (string, bool)
 	Version() (string, bool)
 }
 
-type RawEventContextPage interface {
+type ReceivedEventContextPage interface {
 	Path() (string, bool)
 	Referrer() (string, bool)
 	Search() (string, bool)
@@ -626,18 +629,18 @@ type RawEventContextPage interface {
 	URL() (string, bool)
 }
 
-type RawEventContextReferrer interface {
+type ReceivedEventContextReferrer interface {
 	Id() (string, bool)
 	Type() (string, bool)
 }
 
-type RawEventContextScreen interface {
+type ReceivedEventContextScreen interface {
 	Width() (int, bool)
 	Height() (int, bool)
 	Density() (decimal.Decimal, bool)
 }
 
-type RawEventContextSession interface {
+type ReceivedEventContextSession interface {
 	Id() (int, bool)
 	Start() (bool, bool)
 }

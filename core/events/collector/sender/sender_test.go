@@ -454,7 +454,7 @@ func (app *app) validateEvent(e *meergo.Event) {
 			app.t.Fatal("SendEvents: expected nil properties with an invalid schema, got non-nil")
 		}
 	}
-	if e.Raw == nil {
-		app.t.Fatal("SendEvents: expected non-nil raw event, got nil")
+	if e.Received == nil {
+		app.t.Fatal("SendEvents: expected non-nil received event, got nil")
 	}
 }

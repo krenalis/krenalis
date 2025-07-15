@@ -568,7 +568,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		body.WriteString(`{"type": "event","attributes":{"properties":`)
 		_ = body.Encode(event.Properties)
 		body.WriteString(`,"time":`)
-		_ = body.Encode(event.Raw.Timestamp())
+		_ = body.Encode(event.Received.Timestamp())
 		body.WriteString(`,"metric":{"data":{"type":"metric","attributes":{"name":`)
 		_ = body.Encode(event.Properties["metric_name"].(string))
 		body.WriteString(`}}}}}]}}}`)

@@ -137,7 +137,7 @@ func (it *iterator) seq() iter.Seq[*meergo.Event] {
 				break
 			}
 			if it.sameUser.on && it.first {
-				u, _ := e.Raw.UserId()
+				u, _ := e.Received.UserId()
 				it.sameUser.user = &u
 			}
 			if !yield(e) {
@@ -157,7 +157,7 @@ func (it *iterator) read(consume bool) (*meergo.Event, bool) {
 			return nil, false
 		}
 		event := it.events[it.index]
-		if it.sameUser.on && it.sameUser.user != nil && *it.sameUser.user != event.Raw.AnonymousId() {
+		if it.sameUser.on && it.sameUser.user != nil && *it.sameUser.user != event.Received.AnonymousId() {
 			if consume {
 				it.index += 1
 			}

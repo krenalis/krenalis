@@ -185,10 +185,10 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			// Note that 'userID' may also be empty after this assignment, which
 			// means that only events with empty 'userID' will be sent in this
 			// batch.
-			userID, _ = event.Raw.UserId()
-			anonymousId = event.Raw.AnonymousId()
+			userID, _ = event.Received.UserId()
+			anonymousId = event.Received.AnonymousId()
 		} else {
-			if uId, _ := event.Raw.UserId(); uId != userID {
+			if uId, _ := event.Received.UserId(); uId != userID {
 				events.Postpone()
 				continue
 			}
@@ -204,7 +204,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			}
 			eventsWriter.EncodeKeyValue("params", params)
 		}
-		eventsWriter.EncodeKeyValue("timestamp_micros", event.Raw.Timestamp().UnixMicro())
+		eventsWriter.EncodeKeyValue("timestamp_micros", event.Received.Timestamp().UnixMicro())
 		eventsWriter.WriteByte('}')
 
 		if eventsWriter.Len()+300 > maxEventRequestSize {

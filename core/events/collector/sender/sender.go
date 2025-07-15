@@ -263,10 +263,10 @@ func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event ev
 	s.mu.Unlock()
 	ev := &Event{
 		Event: meergo.Event{
-			ID:     id.String(),
-			Type:   typ,
-			Schema: schema,
-			Raw:    events.RawEvent(event),
+			ID:       id.String(),
+			Type:     typ,
+			Schema:   schema,
+			Received: events.ReceivedEvent(event),
 		},
 		CreatedAt: time.Now().UTC(),
 		action:    action,
@@ -530,9 +530,9 @@ func (s *Sender) read(consume bool) (*meergo.Event, bool) {
 	}
 	if event != nil {
 		if consume {
-			trace("Sender.read: iterator %p read and consumed event %q (anonymousId %q) at index %d (%d available)\n", s.iterator, event.ID, event.Raw.AnonymousId(), i, s.available)
+			trace("Sender.read: iterator %p read and consumed event %q (anonymousId %q) at index %d (%d available)\n", s.iterator, event.ID, event.Received.AnonymousId(), i, s.available)
 		} else {
-			trace("Sender.read: iterator %p read event %q (anonymousId %q), without consuming, at index %d (%d available)\n", s.iterator, event.Raw.AnonymousId(), event.ID, i, s.available)
+			trace("Sender.read: iterator %p read event %q (anonymousId %q), without consuming, at index %d (%d available)\n", s.iterator, event.Received.AnonymousId(), event.ID, i, s.available)
 		}
 	} else {
 		if consume {

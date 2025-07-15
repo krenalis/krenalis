@@ -15,8 +15,9 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// Test_RawEvent checks that RawEvent exposes all event fields correctly.
-func Test_RawEvent(t *testing.T) {
+// Test_ReceivedEvent checks that ReceivedEvent exposes all event fields
+// correctly.
+func Test_ReceivedEvent(t *testing.T) {
 	now := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
 	event := Event{
 		"anonymousId": "anon1",
@@ -109,7 +110,7 @@ func Test_RawEvent(t *testing.T) {
 		"userId":            "user1",
 	}
 
-	r := RawEvent(event)
+	r := ReceivedEvent(event)
 
 	if r.AnonymousId() != "anon1" {
 		t.Fatalf("unexpected AnonymousId %q", r.AnonymousId())
@@ -358,9 +359,9 @@ func Test_RawEvent(t *testing.T) {
 	}
 }
 
-// Test_RawEventMissingFields verifies default return values when fields are
-// absent.
-func Test_RawEventMissingFields(t *testing.T) {
+// Test_ReceivedEventMissingFields verifies default return values when fields
+// are absent.
+func Test_ReceivedEventMissingFields(t *testing.T) {
 	now := time.Now()
 	event := Event{
 		"anonymousId":       "a",
@@ -374,7 +375,7 @@ func Test_RawEventMissingFields(t *testing.T) {
 		"userId":            nil,
 	}
 
-	r := RawEvent(event)
+	r := ReceivedEvent(event)
 
 	if _, ok := r.Channel(); ok {
 		t.Fatal("expected no channel")
