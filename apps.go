@@ -529,6 +529,7 @@ type Events interface {
 
 // RawEvent represents a raw event as received from a source connector.
 type RawEvent interface {
+	User() (string, bool)
 	AnonymousId() string
 	Channel() (string, bool)
 	Category() (string, bool)

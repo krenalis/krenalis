@@ -13554,6 +13554,14 @@
                                         "kind": "object",
                                         "properties": [
                                             {
+                                                "name": "user",
+                                                "type": {
+                                                    "kind": "uuid"
+                                                },
+                                                "readOptional": true,
+                                                "description": "User associated with the event.\n\nPlease note that, currently, this value is set by the Identity Resolution on the events on the data warehouse, so this field is never returned for observed events."
+                                            },
+                                            {
                                                 "name": "anonymousId",
                                                 "placeholder": "\"3e93e10e-5ca0-4a8c-bef6-cf9197b37729\"",
                                                 "type": {

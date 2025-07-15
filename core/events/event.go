@@ -21,6 +21,11 @@ type Event map[string]any
 // Schema is the event schema.
 var Schema = types.Object([]types.Property{
 	{Name: "id", Type: types.UUID()},
+	// The "user" field may be set only by the Identity Resolution for events
+	// stored in the data warehouse.
+	// For all other events, it never has a value.
+	// For consistency, it is included in all event schemas to avoid having to
+	// differentiate between schemas.
 	{Name: "user", Type: types.UUID(), ReadOptional: true},
 	{Name: "connection", Type: types.Int(32)},
 	{Name: "anonymousId", Type: types.Text()},
@@ -181,6 +186,17 @@ type rawEvent struct {
 // calling methods on the returned value may cause a panic.
 func RawEvent(event Event) meergo.RawEvent {
 	return rawEvent{event}
+}
+
+func (e rawEvent) User() (string, bool) {
+	// The 'user' field of an event is populated by Identity Resolution only for
+	// events stored in the data warehouse.
+	// For events received from a source and then forwarded to a connector for
+	// sending, the 'user' is therefore never set.
+	// This method always returns an empty string and false, and exists solely
+	// to maintain consistency with the event schema, which always includes the
+	// 'user' field by definition.
+	return "", false
 }
 
 func (e rawEvent) AnonymousId() string {

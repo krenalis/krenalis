@@ -409,7 +409,16 @@ func init() {
 			Description: "The connection from which the event originates. Automatically set by Meergo when the event is received.",
 		},
 	}, eventGetProperties...)))
-	observedEventsParameter := types.Array(types.Object(eventGetProperties))
+	observedEventsParameter := types.Array(types.Object(
+		append([]types.Property{
+			{
+				Name:         "user",
+				Type:         types.UUID(),
+				ReadOptional: true,
+				Description:  "User associated with the event.\n\nPlease note that, currently, this value is set by the Identity Resolution on the events on the data warehouse, so this field is never returned for observed events.",
+			},
+		}, eventGetProperties...),
+	))
 	idParameter := types.Property{
 		Name:           "id",
 		Type:           types.Int(32),
