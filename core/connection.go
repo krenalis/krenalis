@@ -1452,9 +1452,15 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	id, _ := uuid.NewV7() // safe to ignore error in Go 1.24+
 	ev := meergo.Event{
 		ID:       id.String(),
-		Type:     typ,
-		Schema:   outSchema,
 		Received: events.ReceivedEvent(properties),
+		Type: struct {
+			ID     string
+			Schema types.Type
+			Values map[string]any
+		}{
+			ID:     typ,
+			Schema: outSchema,
+		},
 	}
 
 	if transformation.Mapping != nil || transformation.Function != nil {
@@ -1541,14 +1547,14 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		if err = records[0].Err; err != nil {
 			return nil, errors.Unprocessable(TransformationFailed, "%s", err)
 		}
-		ev.Properties = records[0].Properties
+		ev.Type.Values = records[0].Properties
 
 	} else {
 
 		if outSchema.Valid() {
 			return nil, errors.BadRequest("output schema is a valid schema, but no transformation has been provided")
 		}
-		ev.Properties = map[string]any{}
+		ev.Type.Values = map[string]any{}
 
 	}
 

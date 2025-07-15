@@ -454,9 +454,9 @@ func (dummy *Dummy) simulateHTTPDelay() {
 func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 	event := events.First()
 	var body []byte
-	if event.Schema.Valid() {
+	if event.Type.Schema.Valid() {
 		var err error
-		body, err = types.Marshal(event.Properties, event.Schema)
+		body, err = types.Marshal(event.Type.Values, event.Type.Schema)
 		if err != nil {
 			return nil, err
 		}

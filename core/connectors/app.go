@@ -131,7 +131,7 @@ func (app *App) PreviewSendEvent(ctx context.Context, event meergo.Event) (*http
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypeSchema, err := app.inner.(meergo.EventSender).EventTypeSchema(ctx, event.Type)
+	eventTypeSchema, err := app.inner.(meergo.EventSender).EventTypeSchema(ctx, event.Type.ID)
 	if err != nil {
 		if err == meergo.ErrEventTypeNotExist {
 			return nil, err
@@ -140,12 +140,12 @@ func (app *App) PreviewSendEvent(ctx context.Context, event meergo.Event) (*http
 	}
 	// Check that schema is aligned with the event type's schema.
 	createOnly := state.CreateOnly
-	err = schemas.CheckAlignment(event.Schema, eventTypeSchema, &createOnly)
+	err = schemas.CheckAlignment(event.Type.Schema, eventTypeSchema, &createOnly)
 	if err != nil {
 		return nil, err
 	}
 	// Pass the event type's schema to the connector.
-	event.Schema = eventTypeSchema
+	event.Type.Schema = eventTypeSchema
 	// Return the request that represents the event preview.
 	iterator := newSingleEventIterator(&event, app.connector)
 	req, err := app.inner.(meergo.EventSender).PreviewSendEvents(ctx, iterator)

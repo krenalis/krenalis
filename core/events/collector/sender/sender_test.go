@@ -371,7 +371,7 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 	if rng.Int()%5 == 0 {
 		event := events.First()
 		app.validateEvent(event)
-		if event.Type == "Valid" {
+		if event.Type.ID == "Valid" {
 			app.mu.Lock()
 			app.consumed = append(app.consumed, event.ID)
 			app.mu.Unlock()
@@ -399,7 +399,7 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 		}
 		if n > 0 && rng.Int()%3 == 0 {
 			events.Postpone()
-		} else if event.Type == "Invalid" {
+		} else if event.Type.ID == "Invalid" {
 			events.Discard(errors.New("event is invalid"))
 		} else {
 			consumed = append(consumed, event.ID)
@@ -442,16 +442,16 @@ func (app *app) validateEvent(e *meergo.Event) {
 	if e.ID == "" {
 		app.t.Fatal("SendEvents: expected non-empty message ID, got empty")
 	}
-	if e.Type != "Valid" && e.Type != "Invalid" {
+	if e.Type.ID != "Valid" && e.Type.ID != "Invalid" {
 		app.t.Fatalf(`SendEvents: expected type "Valid" or "Invalid", got %q`, e.Type)
 	}
-	if e.Schema.Valid() {
-		if e.Properties == nil {
-			app.t.Fatal("SendEvents: expected non-nil properties with a valid schema, got nil")
+	if e.Type.Schema.Valid() {
+		if e.Type.Values == nil {
+			app.t.Fatal("SendEvents: expected non-nil values with a valid schema, got nil")
 		}
 	} else {
-		if e.Properties != nil {
-			app.t.Fatal("SendEvents: expected nil properties with an invalid schema, got non-nil")
+		if e.Type.Values != nil {
+			app.t.Fatal("SendEvents: expected nil values with an invalid schema, got non-nil")
 		}
 	}
 	if e.Received == nil {

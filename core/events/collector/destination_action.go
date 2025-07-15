@@ -122,7 +122,7 @@ func (da *destinationAction) QueueEvent(event events.Event) {
 	if da.transformer == nil {
 		da.queue.metrics.TransformationPassed(da.id, 1)
 		da.queue.metrics.OutputValidationPassed(da.id, 1)
-		se.Properties = map[string]any{} // Properties cannot be nil.
+		se.Type.Values = map[string]any{} // Properties cannot be nil.
 		da.queue.sender.QueueEvent(se)
 		return
 	}
@@ -208,7 +208,7 @@ func (da *destinationAction) transform() {
 		}
 		da.queue.metrics.TransformationPassed(da.id, 1)
 		da.queue.metrics.OutputValidationPassed(da.id, 1)
-		events[i].senderEvent.Properties = record.Properties
+		events[i].senderEvent.Type.Values = record.Properties
 		da.queue.sender.QueueEvent(events[i].senderEvent)
 	}
 

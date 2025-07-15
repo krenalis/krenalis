@@ -264,9 +264,15 @@ func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event ev
 	ev := &Event{
 		Event: meergo.Event{
 			ID:       id.String(),
-			Type:     typ,
-			Schema:   schema,
 			Received: events.ReceivedEvent(event),
+			Type: struct {
+				ID     string
+				Schema types.Type
+				Values map[string]any
+			}{
+				ID:     typ,
+				Schema: schema,
+			},
 		},
 		CreatedAt: time.Now().UTC(),
 		action:    action,

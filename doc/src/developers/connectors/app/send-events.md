@@ -28,12 +28,11 @@ type EventSender interface {
 
 	// EventTypeSchema returns the schema of the specified event type.
 	//
-	// The returned schema describes properties required by the connector to
-	// send an event of this type. Actions based on the specified event type
-	// will have a transformation that, given the received event, provides the
-	// properties required by the connector. These properties, along with the
-	// received event, are passed to the connector's PreviewSendEvents and
-	// SendEvents methods.
+	// The returned schema describes values required by the connector to send an
+	// event of this type. Actions based on the specified event type will have a
+	// transformation that, given the received event, provides the values required
+	// by the connector. These values, along with the received event, are passed to
+	// the connector's PreviewSendEvents and SendEvents methods.
 	//
 	// If no extra information is needed for the event type, the returned schema
 	// is the invalid schema. If the event type does not exist, it returns the
@@ -125,7 +124,7 @@ In the action of the "share" event type, if a mapping is chosen as a transformat
 └─────────────────────────────────┘
 ```
 
-When sending the event, the `PreviewSendEvents` and `SendEvents` methods receives, as an argument, a sequence of events that should be sent. Each event of the sequence has the `Properties` field with the values of the three parameters "method," "content_type," and "item_id" conforming to the event type schema.
+When sending the event, the `PreviewSendEvents` and `SendEvents` methods receives, as an argument, a sequence of events that should be sent. Each event of the sequence has the `Type.Values` field with the values of the three parameters "method," "content_type," and "item_id" conforming to the event type schema.
 
 If a field in the schema is mandatory, set the `Required` field in the `types.Property` struct to `true`. Additionally, you can specify a placeholder using the `Placeholder` field for easier mapping compilation.
 
@@ -192,7 +191,7 @@ Meergo considers a event processed as soon as it has been read from the `Events`
 // value must not be used again.
 type Events interface {
 
-	// All returns an iterator to read all events. Properties of the events in the
+	// All returns an iterator to read all events. Type.Values of the events in the
 	// sequence may be modified unless the event is subsequently postponed.
 	All() iter.Seq[*Event]
 
@@ -202,7 +201,7 @@ type Events interface {
 	// discarded.
 	Discard(err error)
 
-	// First returns the first event. The event's properties may be modified.
+	// First returns the first event. The event's Type.Values may be modified.
 	// After First is called, no further method calls on Events are allowed.
 	First() *Event
 
@@ -213,10 +212,10 @@ type Events interface {
 
 	// Postpone postpones the current event in the iteration and marks it as unread.
 	// Postpone may only be called during iterations from All or SameUser, and only
-	// if the event's properties have not been modified.
+	// if the event's Type.Values have not been modified.
 	Postpone()
 
-	// SameUser returns an iterator over the events of the same user. Properties of
+	// SameUser returns an iterator over the events of the same user. Type.Values of
 	// the events in the sequence may be modified unless the event is subsequently
 	// postponed.
 	SameUser() iter.Seq[*Event]
@@ -237,8 +236,8 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
     // Prepare the body.
     var body json.Buffer
-    body.WriteString(`{"properties":`)
-    body.Encode(event.Properties)
+    body.WriteString(`{"values":`)
+    body.Encode(event.Type.Values)
     body.WriteString(`}`)
 
     // Create the HTTP request.
@@ -300,8 +299,8 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
         if n > 0 {
             body.WriteByte(',')
         }
-        body.WriteString(`{"properties":`)
-        body.Encode(event.Properties)
+        body.WriteString(`{"values":`)
+        body.Encode(event.Type.Values)
         body.WriteString(`}`)
         n++
         if n == bodyMaxEvents {
@@ -369,8 +368,8 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
         if n > 0 {
             body.WriteByte(',')
         }
-        body.WriteString(`{"properties":`)
-        body.Encode(event.Properties)
+        body.WriteString(`{"values":`)
+        body.Encode(event.Type.Values)
         body.WriteString(`}`)
         n++
         if n == bodyMaxEvents {
@@ -444,8 +443,8 @@ Below is an example implementation:
         first = false
 
         // Build the event JSON object.
-        body.WriteString(`{"properties":`)
-        body.Encode(event.Properties)
+        body.WriteString(`{"values":`)
+        body.Encode(event.Type.Values)
         body.WriteString(`}`)
 
         // Stop if body exceeds app size limit.

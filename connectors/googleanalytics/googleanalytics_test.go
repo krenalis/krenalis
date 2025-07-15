@@ -64,17 +64,7 @@ func TestSendEvents(t *testing.T) {
 		{
 			events: []*meergo.Event{
 				{
-					ID:   "7ba8676a-3182-4d76-bf6e-21483fc63893",
-					Type: "ad_impression",
-					Schema: types.Object([]types.Property{
-						{Name: "ad_platform", Type: types.Text()},
-						{Name: "ad_source", Type: types.Text()},
-						{Name: "ad_format", Type: types.Text()},
-						{Name: "ad_unit_name", Type: types.Text()},
-						{Name: "currency", Type: types.Text()},
-						{Name: "value", Type: genericNumberType},
-					}),
-					Properties: map[string]any{},
+					ID: "7ba8676a-3182-4d76-bf6e-21483fc63893",
 					Received: events.ReceivedEvent(map[string]any{
 						"anonymousId": "17fba6ee-8673-4ebc-afd6-69e62124e017",
 						"connection":  1323607634,
@@ -99,6 +89,22 @@ func TestSendEvents(t *testing.T) {
 						"type":              "alias",
 						"userId":            nil,
 					}),
+					Type: struct {
+						ID     string
+						Schema types.Type
+						Values map[string]any
+					}{
+						ID: "ad_impression",
+						Schema: types.Object([]types.Property{
+							{Name: "ad_platform", Type: types.Text()},
+							{Name: "ad_source", Type: types.Text()},
+							{Name: "ad_format", Type: types.Text()},
+							{Name: "ad_unit_name", Type: types.Text()},
+							{Name: "currency", Type: types.Text()},
+							{Name: "value", Type: genericNumberType},
+						}),
+						Values: map[string]any{},
+					},
 				},
 			},
 			expectedRequestBody: map[string]any{

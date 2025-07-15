@@ -563,14 +563,14 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 			body.WriteByte(',')
 		}
 		body.WriteString(`{"type":"event-bulk-create","attributes":{"profile":{"data":{"type":"profile","attributes":{`)
-		_ = body.EncodeKeyValue("email", event.Properties["email"])
+		_ = body.EncodeKeyValue("email", event.Type.Values["email"])
 		body.WriteString(`}}},{"events":{"data":[`)
 		body.WriteString(`{"type": "event","attributes":{"properties":`)
-		_ = body.Encode(event.Properties)
+		_ = body.Encode(event.Type.Values)
 		body.WriteString(`,"time":`)
 		_ = body.Encode(event.Received.Timestamp())
 		body.WriteString(`,"metric":{"data":{"type":"metric","attributes":{"name":`)
-		_ = body.Encode(event.Properties["metric_name"].(string))
+		_ = body.Encode(event.Type.Values["metric_name"].(string))
 		body.WriteString(`}}}}}]}}}`)
 		if body.Len()+len(`]}}}}`) > maxBodyEventsBytes {
 			body.Truncate(size)

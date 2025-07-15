@@ -30,18 +30,7 @@ func TestBadRequest(t *testing.T) {
 	now := time.Now().UTC()
 
 	event := &meergo.Event{
-		ID:   "7ba8676a-3182-4d76-bf6e-21483fc63893",
-		Type: "track",
-		Schema: types.Object([]types.Property{
-			{Name: "event", Placeholder: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
-			{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
-		}),
-		Properties: map[string]any{
-			"event": "Test Event",
-			"properties": map[string]any{
-				"X": 42,
-			},
-		},
+		ID: "7ba8676a-3182-4d76-bf6e-21483fc63893",
 		Received: events.ReceivedEvent(map[string]any{
 			"anonymousId": "17fba6ee-8673-4ebc-afd6-69e62124e017",
 			"connection":  1323607634,
@@ -68,6 +57,23 @@ func TestBadRequest(t *testing.T) {
 			"type":              "alias",
 			"userId":            nil,
 		}),
+		Type: struct {
+			ID     string
+			Schema types.Type
+			Values map[string]any
+		}{
+			ID: "track",
+			Schema: types.Object([]types.Property{
+				{Name: "event", Placeholder: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+				{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
+			}),
+			Values: map[string]any{
+				"event": "Test Event",
+				"properties": map[string]any{
+					"X": 42,
+				},
+			},
+		},
 	}
 
 	// Create an iterator over the test events.

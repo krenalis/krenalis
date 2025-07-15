@@ -142,18 +142,7 @@ func newEventForTest(eventType, anonymousID, messageID string, now time.Time) *m
 	receivedEventID := uuid.NewString()
 
 	return &meergo.Event{
-		ID:   eventID,
-		Type: "track",
-		Schema: types.Object([]types.Property{
-			{Name: "event", Placeholder: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
-			{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
-		}),
-		Properties: map[string]any{
-			"event": "Test Event",
-			"properties": map[string]any{
-				"X": 42,
-			},
-		},
+		ID: eventID,
 		Received: events.ReceivedEvent(map[string]any{
 			"anonymousId": anonymousID,
 			"connection":  1323607634,
@@ -180,5 +169,22 @@ func newEventForTest(eventType, anonymousID, messageID string, now time.Time) *m
 			"type":              "alias",
 			"userId":            nil,
 		}),
+		Type: struct {
+			ID     string
+			Schema types.Type
+			Values map[string]any
+		}{
+			ID: "track",
+			Schema: types.Object([]types.Property{
+				{Name: "event", Placeholder: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+				{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
+			}),
+			Values: map[string]any{
+				"event": "Test Event",
+				"properties": map[string]any{
+					"X": 42,
+				},
+			},
+		},
 	}
 }

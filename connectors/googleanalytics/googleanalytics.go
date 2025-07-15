@@ -197,8 +197,8 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		size := eventsWriter.Len()
 		eventsWriter.WriteByte('{')
 		eventsWriter.EncodeKeyValue("name", event.Type)
-		if event.Schema.Valid() {
-			params, err := types.Marshal(event.Properties, event.Schema)
+		if event.Type.Schema.Valid() {
+			params, err := types.Marshal(event.Type.Values, event.Type.Schema)
 			if err != nil {
 				return nil, err
 			}

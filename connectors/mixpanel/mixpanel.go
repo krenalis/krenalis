@@ -222,11 +222,11 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 
 		size := body.Len()
 
-		if event.Properties["event"].(string) == "" {
+		if event.Type.Values["event"].(string) == "" {
 			return nil, errors.New("event cannot be empty")
 		}
 
-		properties := event.Properties["properties"].(map[string]any)
+		properties := event.Type.Values["properties"].(map[string]any)
 		properties["$insert_id"] = event.Received.MessageId()
 		properties["time"] = event.Received.Timestamp().UnixMilli()
 		if sendBadRequest, _ := ctx.Value(connectorTestString("sendBadRequest")).(bool); sendBadRequest {
@@ -314,7 +314,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		}
 
 		err := json.Encode(&body, map[string]any{
-			"event":      event.Properties["event"].(string),
+			"event":      event.Type.Values["event"].(string),
 			"properties": properties,
 		})
 		if err != nil {

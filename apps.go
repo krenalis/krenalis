@@ -386,12 +386,11 @@ type EventSender interface {
 
 	// EventTypeSchema returns the schema of the specified event type.
 	//
-	// The returned schema describes properties required by the connector to
-	// send an event of this type. Actions based on the specified event type
-	// will have a transformation that, given the received event, provides the
-	// properties required by the connector. These properties, along with the
-	// received event, are passed to the connector's PreviewSendEvents and
-	// SendEvents methods.
+	// The returned schema describes values required by the connector to send an
+	// event of this type. Actions based on the specified event type will have a
+	// transformation that, given the received event, provides the values required
+	// by the connector. These values, along with the received event, are passed to
+	// the connector's PreviewSendEvents and SendEvents methods.
 	//
 	// If no extra information is needed for the event type, the returned schema
 	// is the invalid schema. If the event type does not exist, it returns the
@@ -432,11 +431,13 @@ type EventSender interface {
 
 // Event represents an event that will be sent to an app.
 type Event struct {
-	ID         string         // identifier for the event. Guaranteed to be unique per event within the same connection.
-	Type       string         // event type (e.g., "user.signup", "order.placed").
-	Schema     types.Type     // schema of the event type; may be the invalid schema.
-	Properties map[string]any // event data after transformation based on the schema; empty if no transformation exists.
-	Received   ReceivedEvent  // event as it was received.
+	ID       string        // identifier for the event. Guaranteed to be unique per event within the same connection.
+	Received ReceivedEvent // event as it was received.
+	Type     struct {
+		ID     string         // identifier of the event type (e.g., "user.signup", "order.placed").
+		Schema types.Type     // schema of the event type; may be the invalid schema.
+		Values map[string]any // values of the event type; empty if no transformation exists.
+	}
 }
 
 // EventsError can be returned by the SendEvents and PreviewSendEvents methods
@@ -496,7 +497,7 @@ func (err EventsError) Error() string {
 // value must not be used again.
 type Events interface {
 
-	// All returns an iterator to read all events. Properties of the events in the
+	// All returns an iterator to read all events. Type.Values of the events in the
 	// sequence may be modified unless the event is subsequently postponed.
 	All() iter.Seq[*Event]
 
@@ -506,7 +507,7 @@ type Events interface {
 	// discarded.
 	Discard(err error)
 
-	// First returns the first event. The event's properties may be modified.
+	// First returns the first event. The event's Type.Values may be modified.
 	// After First is called, no further method calls on Events are allowed.
 	First() *Event
 
@@ -517,11 +518,11 @@ type Events interface {
 
 	// Postpone postpones the current event in the iteration and marks it as unread.
 	// Postpone may only be called during iterations from All or SameUser, and only
-	// if the event's properties have not been modified.
+	// if the event's Type.Values have not been modified.
 	// A panic occurs if the event has already been discarded.
 	Postpone()
 
-	// SameUser returns an iterator over the events of the same user. Properties of
+	// SameUser returns an iterator over the events of the same user. Type.Values of
 	// the events in the sequence may be modified unless the event is subsequently
 	// postponed.
 	SameUser() iter.Seq[*Event]
