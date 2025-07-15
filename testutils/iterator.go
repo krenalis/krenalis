@@ -30,7 +30,7 @@ type iterator struct {
 	consumed  bool // true if the iterator has consumed at least one event
 	iterating bool // true if the iteration has started
 	first     bool // true if the current event is the first one in the iteration
-	skipped   bool // true if the last consumed event was skipped
+	postponed bool // true if the last consumed event was postponed
 }
 
 // NewEventsIterator returns a new iterator over events that can be used in
@@ -77,14 +77,14 @@ func (it *iterator) Postpone() {
 	if !it.iterating {
 		panic("SendEvents method called Events.Postpone outside an iteration")
 	}
-	if it.skipped {
+	if it.postponed {
 		return
 	}
 	if it.first {
 		panic("SendEvents method called Events.Postpone on the first event")
 	}
-	trace("iterator.Postpone: iterator %p skipped an event\n", it)
-	it.skipped = true
+	trace("iterator.Postpone: iterator %p postponed an event\n", it)
+	it.postponed = true
 }
 
 func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
@@ -107,24 +107,20 @@ func (it *iterator) seq() iter.Seq[*meergo.Event] {
 		}
 		it.iterating = true
 		it.first = true
-		n := 0
 		for {
-			it.skipped = false
+			it.postponed = false
 			e, ok := it.read(true)
 			if !ok {
 				trace("iterator.seq: iterator %p finished reading the events; no more are available\n", it)
 				break
 			}
-			if it.sameUser.on && n == 0 {
+			if it.sameUser.on && it.first {
 				u, _ := e.Raw.UserId()
 				it.sameUser.user = &u
 			}
 			if !yield(e) {
 				trace("iterator.seq: iterator %p broke out of the loop while reading events\n", it)
 				break
-			}
-			if !it.skipped {
-				n++
 			}
 			it.first = false
 		}
