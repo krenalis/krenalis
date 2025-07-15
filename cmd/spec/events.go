@@ -31,11 +31,9 @@ var eventPostContextType = types.Object([]types.Property{
 		Type: types.Object([]types.Property{
 			{
 				Name: "name",
-				Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"),
-			},
-			{
-				Name: "other",
 				Type: types.Text(),
+				Description: "Name of the browser from which the event originated.\n\n" +
+					"Meergo tries to normalize this field and store it with one of those names: `\"Chrome\"`, `\"Safari\"`, `\"Edge\"`, `\"Firefox\"`, `\"Samsung Internet\"` or `\"Opera\"`. Otherwise, if the passed browser name cannot be normalized, it is set to `\"Other\"` and the passed name is stored — as is — into `context.browser.other`.",
 			},
 			{
 				Name:        "version",
@@ -110,8 +108,12 @@ var eventPostContextType = types.Object([]types.Property{
 	{
 		Name: "os",
 		Type: types.Object([]types.Property{
-			{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
-			{Name: "other", Type: types.Text()},
+			{
+				Name: "name",
+				Type: types.Text(),
+				Description: "Name of the OS from which the event originated.\n\n" +
+					"Meergo tries to normalize this field and store it with one of those names: `\"macOS\"`, `\"Android\"`, `\"Windows\"`, `\"iOS\"`, `\"Linux\"` or `\"Chrome OS\"`. Otherwise, if the passed OS name cannot be normalized, it is set to `\"Other\"` and the passed name is stored — as is — into `context.os.other`.",
+			},
 			{
 				Name:        "version",
 				Type:        types.Text(),
@@ -180,8 +182,19 @@ var eventGetContextType = types.Object([]types.Property{
 	{
 		Name: "browser",
 		Type: types.Object([]types.Property{
-			{Name: "name", Type: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"), ReadOptional: true},
-			{Name: "other", Type: types.Text(), ReadOptional: true},
+			{
+				Name:         "name",
+				Type:         types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"),
+				ReadOptional: true,
+				Description: "Name of the browser from which the event originated.\n\n" +
+					"If the value is `\"Other\"`, then the field `other` is populated with the browser name.",
+			},
+			{
+				Name:         "other",
+				Type:         types.Text(),
+				ReadOptional: true,
+				Description:  "Name of the browser in case it is not one of those recognized by Meergo.\n\nThis field is present only when `name` is `\"Other\"`.",
+			},
 			{
 				Name:         "version",
 				Type:         types.Text(),
@@ -252,8 +265,19 @@ var eventGetContextType = types.Object([]types.Property{
 	{
 		Name: "os",
 		Type: types.Object([]types.Property{
-			{Name: "name", Type: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"), ReadOptional: true},
-			{Name: "other", Type: types.Text(), ReadOptional: true},
+			{
+				Name:         "name",
+				Type:         types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"),
+				ReadOptional: true,
+				Description: "Name of the OS from which the event originated.\n\n" +
+					"If the value is `\"Other\"`, then the field `other` is populated with the OS name.",
+			},
+			{
+				Name:         "other",
+				Type:         types.Text(),
+				ReadOptional: true,
+				Description:  "Name of the OS in case it is not one of those recognized by Meergo.\n\nThis field is present only when `name` is `\"Other\"`.",
+			},
 			{Name: "version", Type: types.Text(), ReadOptional: true},
 		}),
 		ReadOptional: true,

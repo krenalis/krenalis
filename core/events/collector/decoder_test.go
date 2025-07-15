@@ -705,3 +705,207 @@ func Test_parseUserAgent(t *testing.T) {
 	}
 
 }
+
+func Test_normalizeContextBrowser(t *testing.T) {
+	tests := []struct {
+		b        map[string]any
+		expected map[string]any
+	}{
+		{
+			b: map[string]any{
+				"name": "Chrome",
+			},
+			expected: map[string]any{
+				"name": "Chrome",
+			},
+		},
+		{
+			b: map[string]any{
+				"name":    "chrome",
+				"version": "123.456.789",
+			},
+			expected: map[string]any{
+				"name":    "Chrome",
+				"version": "123.456.789",
+			},
+		},
+		{
+			b: map[string]any{
+				"name":    "samsung internet",
+				"version": "123.456.789",
+			},
+			expected: map[string]any{
+				"name":    "Samsung Internet",
+				"version": "123.456.789",
+			},
+		},
+		{
+			b: map[string]any{
+				"name": "My Strange Browser",
+			},
+			expected: map[string]any{
+				"name":  "Other",
+				"other": "My Strange Browser",
+			},
+		},
+		{
+			b: map[string]any{
+				"name":    "My Strange Browser",
+				"version": "123.456.789",
+			},
+			expected: map[string]any{
+				"name":    "Other",
+				"other":   "My Strange Browser",
+				"version": "123.456.789",
+			},
+		},
+		{
+			b: map[string]any{
+				"name":  "Chrome",
+				"other": "X",
+			},
+			expected: map[string]any{
+				"name": "Chrome",
+			},
+		},
+		{
+			b: map[string]any{
+				"name":    "My Strange Browser",
+				"version": "123.456.789",
+				"other":   "x",
+			},
+			expected: map[string]any{
+				"name":    "Other",
+				"other":   "My Strange Browser",
+				"version": "123.456.789",
+			},
+		},
+		{
+			b: map[string]any{
+				"name": "CHROME FIREFOX",
+			},
+			expected: map[string]any{
+				"name":  "Other",
+				"other": "CHROME FIREFOX",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			normalizeContextBrowser(test.b)
+			if !reflect.DeepEqual(test.b, test.expected) {
+				t.Fatalf("expected %#v, got %#v", test.expected, test.b)
+			}
+		})
+	}
+}
+
+func Test_normalizeContextOS(t *testing.T) {
+	tests := []struct {
+		os       map[string]any
+		expected map[string]any
+	}{
+		{
+			os: map[string]any{
+				"name": "Android",
+			},
+			expected: map[string]any{
+				"name": "Android",
+			},
+		},
+		{
+			os: map[string]any{
+				"name":    "android",
+				"version": "123.456.789",
+			},
+			expected: map[string]any{
+				"name":    "Android",
+				"version": "123.456.789",
+			},
+		},
+		{
+			os: map[string]any{
+				"name":    "chrome os",
+				"version": "123.456.789",
+			},
+			expected: map[string]any{
+				"name":    "Chrome OS",
+				"version": "123.456.789",
+			},
+		},
+		{
+			os: map[string]any{
+				"name": "My Strange OS",
+			},
+			expected: map[string]any{
+				"name":  "Other",
+				"other": "My Strange OS",
+			},
+		},
+		{
+			os: map[string]any{
+				"name":    "My Strange OS",
+				"version": "123.456.789",
+			},
+			expected: map[string]any{
+				"name":    "Other",
+				"other":   "My Strange OS",
+				"version": "123.456.789",
+			},
+		},
+		{
+			os: map[string]any{
+				"name":  "Linux",
+				"other": "X",
+			},
+			expected: map[string]any{
+				"name": "Linux",
+			},
+		},
+		{
+			os: map[string]any{
+				"name":    "My Strange OS",
+				"version": "123.456.789",
+				"other":   "x",
+			},
+			expected: map[string]any{
+				"name":    "Other",
+				"other":   "My Strange OS",
+				"version": "123.456.789",
+			},
+		},
+		{
+			os: map[string]any{
+				"name": "LINUX BAD Android",
+			},
+			expected: map[string]any{
+				"name":  "Other",
+				"other": "LINUX BAD Android",
+			},
+		},
+		{
+			os: map[string]any{
+				"name": "macos",
+			},
+			expected: map[string]any{
+				"name": "macOS",
+			},
+		},
+		{
+			os: map[string]any{
+				"name": "darwin",
+			},
+			expected: map[string]any{
+				"name": "macOS",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			normalizeContextOS(test.os)
+			if !reflect.DeepEqual(test.os, test.expected) {
+				t.Fatalf("expected %#v, got %#v", test.expected, test.os)
+			}
+		})
+	}
+}

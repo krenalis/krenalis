@@ -522,7 +522,16 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	}
 
 	// Browser and OS.
-	if ua, ok := context["userAgent"].(string); ok {
+	var hasBrowser, hasOS bool
+	if browser, ok := context["browser"].(map[string]any); ok {
+		normalizeContextBrowser(browser)
+		hasBrowser = true
+	}
+	if os, ok := context["os"].(map[string]any); ok {
+		normalizeContextOS(os)
+		hasOS = true
+	}
+	if ua, ok := context["userAgent"].(string); ok && (!hasBrowser || !hasOS) {
 		contextBrowser, contextOS := parseUserAgent(ua)
 		if _, ok := context["browser"]; !ok {
 			context["browser"] = contextBrowser
@@ -839,8 +848,7 @@ var contextSections = map[string]*contextSection{
 	"browser": {
 		name: "browser",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text().WithValues("Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other"), readOptional: true},
-			{name: "other", typ: types.Text(), readOptional: true},
+			{name: "name", typ: types.Text(), readOptional: true},
 			{name: "version", typ: types.Text(), readOptional: true},
 		},
 	},
@@ -896,8 +904,7 @@ var contextSections = map[string]*contextSection{
 	"os": {
 		name: "os",
 		properties: []contextProperty{
-			{name: "name", typ: types.Text().WithValues("Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other"), readOptional: true},
-			{name: "other", typ: types.Text(), readOptional: true},
+			{name: "name", typ: types.Text(), readOptional: true},
 			{name: "version", typ: types.Text(), readOptional: true},
 		},
 	},
@@ -1208,4 +1215,84 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 		os["version"] = version
 	}
 	return browser, os
+}
+
+// normalizeContextBrowser normalizes the content of 'context.browser' in an
+// event, modifying the provided map.
+//
+// Specifically, it attempts to recognize the browser name and convert it into a
+// normalized form. If the browser name is not among the recognized ones, the
+// value for the 'name' key becomes 'Other' and an 'other' key is added with the
+// given name; in all other cases, the 'other' key is removed.
+//
+// The 'version' field, if present, is preserved as is.
+func normalizeContextBrowser(browser map[string]any) {
+	name, ok := browser["name"].(string)
+	if !ok {
+		return // no browser name, so there's nothing to normalize.
+	}
+	var other string
+	switch strings.ToLower(name) {
+	case "chrome":
+		name = "Chrome"
+	case "safari":
+		name = "Safari"
+	case "edge":
+		name = "Edge"
+	case "firefox":
+		name = "Firefox"
+	case "samsung internet":
+		name = "Samsung Internet"
+	case "opera":
+		name = "Opera"
+	default:
+		other = name
+		name = "Other"
+	}
+	browser["name"] = name
+	if other != "" {
+		browser["other"] = other
+	} else {
+		delete(browser, "other")
+	}
+}
+
+// normalizeContextOS normalizes the content of 'context.os' in an event,
+// modifying the provided map.
+//
+// Specifically, it attempts to recognize the OS name and convert it into a
+// normalized form. If the OS name is not among the recognized ones, the value
+// for the 'name' key becomes 'Other' and an 'other' key is added with the given
+// name; in all other cases, the 'other' key is removed.
+//
+// The 'version' field, if present, is preserved as is.
+func normalizeContextOS(os map[string]any) {
+	name, ok := os["name"].(string)
+	if !ok {
+		return // no os name, so there's nothing to normalize.
+	}
+	var other string
+	switch strings.ToLower(name) {
+	case "android":
+		name = "Android"
+	case "windows":
+		name = "Windows"
+	case "ios":
+		name = "iOS"
+	case "macos", "darwin":
+		name = "macOS"
+	case "linux":
+		name = "Linux"
+	case "chrome os":
+		name = "Chrome OS"
+	default:
+		other = name
+		name = "Other"
+	}
+	os["name"] = name
+	if other != "" {
+		os["other"] = other
+	} else {
+		delete(os, "other")
+	}
 }

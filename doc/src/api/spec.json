@@ -10827,25 +10827,9 @@
                                                                 {
                                                                     "name": "name",
                                                                     "type": {
-                                                                        "kind": "text",
-                                                                        "values": [
-                                                                            "Chrome",
-                                                                            "Safari",
-                                                                            "Edge",
-                                                                            "Firefox",
-                                                                            "Samsung Internet",
-                                                                            "Opera",
-                                                                            "Other"
-                                                                        ]
-                                                                    },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "other",
-                                                                    "type": {
                                                                         "kind": "text"
                                                                     },
-                                                                    "description": ""
+                                                                    "description": "Name of the browser from which the event originated.\n\nMeergo tries to normalize this field and store it with one of those names: `\"Chrome\"`, `\"Safari\"`, `\"Edge\"`, `\"Firefox\"`, `\"Samsung Internet\"` or `\"Opera\"`. Otherwise, if the passed browser name cannot be normalized, it is set to `\"Other\"` and the passed name is stored — as is — into `context.browser.other`."
                                                                 },
                                                                 {
                                                                     "name": "version",
@@ -11097,25 +11081,9 @@
                                                                 {
                                                                     "name": "name",
                                                                     "type": {
-                                                                        "kind": "text",
-                                                                        "values": [
-                                                                            "Android",
-                                                                            "Windows",
-                                                                            "iOS",
-                                                                            "macOS",
-                                                                            "Linux",
-                                                                            "Chrome OS",
-                                                                            "Other"
-                                                                        ]
-                                                                    },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "other",
-                                                                    "type": {
                                                                         "kind": "text"
                                                                     },
-                                                                    "description": ""
+                                                                    "description": "Name of the OS from which the event originated.\n\nMeergo tries to normalize this field and store it with one of those names: `\"macOS\"`, `\"Android\"`, `\"Windows\"`, `\"iOS\"`, `\"Linux\"` or `\"Chrome OS\"`. Otherwise, if the passed OS name cannot be normalized, it is set to `\"Other\"` and the passed name is stored — as is — into `context.os.other`."
                                                                 },
                                                                 {
                                                                     "name": "version",
@@ -11439,25 +11407,9 @@
                                                 {
                                                     "name": "name",
                                                     "type": {
-                                                        "kind": "text",
-                                                        "values": [
-                                                            "Chrome",
-                                                            "Safari",
-                                                            "Edge",
-                                                            "Firefox",
-                                                            "Samsung Internet",
-                                                            "Opera",
-                                                            "Other"
-                                                        ]
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "other",
-                                                    "type": {
                                                         "kind": "text"
                                                     },
-                                                    "description": ""
+                                                    "description": "Name of the browser from which the event originated.\n\nMeergo tries to normalize this field and store it with one of those names: `\"Chrome\"`, `\"Safari\"`, `\"Edge\"`, `\"Firefox\"`, `\"Samsung Internet\"` or `\"Opera\"`. Otherwise, if the passed browser name cannot be normalized, it is set to `\"Other\"` and the passed name is stored — as is — into `context.browser.other`."
                                                 },
                                                 {
                                                     "name": "version",
@@ -11709,25 +11661,9 @@
                                                 {
                                                     "name": "name",
                                                     "type": {
-                                                        "kind": "text",
-                                                        "values": [
-                                                            "Android",
-                                                            "Windows",
-                                                            "iOS",
-                                                            "macOS",
-                                                            "Linux",
-                                                            "Chrome OS",
-                                                            "Other"
-                                                        ]
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "other",
-                                                    "type": {
                                                         "kind": "text"
                                                     },
-                                                    "description": ""
+                                                    "description": "Name of the OS from which the event originated.\n\nMeergo tries to normalize this field and store it with one of those names: `\"macOS\"`, `\"Android\"`, `\"Windows\"`, `\"iOS\"`, `\"Linux\"` or `\"Chrome OS\"`. Otherwise, if the passed OS name cannot be normalized, it is set to `\"Other\"` and the passed name is stored — as is — into `context.os.other`."
                                                 },
                                                 {
                                                     "name": "version",
@@ -12013,25 +11949,9 @@
                                                 {
                                                     "name": "name",
                                                     "type": {
-                                                        "kind": "text",
-                                                        "values": [
-                                                            "Chrome",
-                                                            "Safari",
-                                                            "Edge",
-                                                            "Firefox",
-                                                            "Samsung Internet",
-                                                            "Opera",
-                                                            "Other"
-                                                        ]
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "other",
-                                                    "type": {
                                                         "kind": "text"
                                                     },
-                                                    "description": ""
+                                                    "description": "Name of the browser from which the event originated.\n\nMeergo tries to normalize this field and store it with one of those names: `\"Chrome\"`, `\"Safari\"`, `\"Edge\"`, `\"Firefox\"`, `\"Samsung Internet\"` or `\"Opera\"`. Otherwise, if the passed browser name cannot be normalized, it is set to `\"Other\"` and the passed name is stored — as is — into `context.browser.other`."
                                                 },
                                                 {
                                                     "name": "version",
@@ -12283,25 +12203,9 @@
                                                 {
                                                     "name": "name",
                                                     "type": {
-                                                        "kind": "text",
-                                                        "values": [
-                                                            "Android",
-                                                            "Windows",
-                                                            "iOS",
-                                                            "macOS",
-                                                            "Linux",
-                                                            "Chrome OS",
-                                                            "Other"
-                                                        ]
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "other",
-                                                    "type": {
                                                         "kind": "text"
                                                     },
-                                                    "description": ""
+                                                    "description": "Name of the OS from which the event originated.\n\nMeergo tries to normalize this field and store it with one of those names: `\"macOS\"`, `\"Android\"`, `\"Windows\"`, `\"iOS\"`, `\"Linux\"` or `\"Chrome OS\"`. Otherwise, if the passed OS name cannot be normalized, it is set to `\"Other\"` and the passed name is stored — as is — into `context.os.other`."
                                                 },
                                                 {
                                                     "name": "version",
@@ -12850,7 +12754,7 @@
                                                                             ]
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the browser from which the event originated.\n\nIf the value is `\"Other\"`, then the field `other` is populated with the browser name."
                                                                     },
                                                                     {
                                                                         "name": "other",
@@ -12858,7 +12762,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the browser in case it is not one of those recognized by Meergo.\n\nThis field is present only when `name` is `\"Other\"`."
                                                                     },
                                                                     {
                                                                         "name": "version",
@@ -13154,7 +13058,7 @@
                                                                             ]
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the OS from which the event originated.\n\nIf the value is `\"Other\"`, then the field `other` is populated with the OS name."
                                                                     },
                                                                     {
                                                                         "name": "other",
@@ -13162,7 +13066,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the OS in case it is not one of those recognized by Meergo.\n\nThis field is present only when `name` is `\"Other\"`."
                                                                     },
                                                                     {
                                                                         "name": "version",
@@ -13740,7 +13644,7 @@
                                                                             ]
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the browser from which the event originated.\n\nIf the value is `\"Other\"`, then the field `other` is populated with the browser name."
                                                                     },
                                                                     {
                                                                         "name": "other",
@@ -13748,7 +13652,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the browser in case it is not one of those recognized by Meergo.\n\nThis field is present only when `name` is `\"Other\"`."
                                                                     },
                                                                     {
                                                                         "name": "version",
@@ -14044,7 +13948,7 @@
                                                                             ]
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the OS from which the event originated.\n\nIf the value is `\"Other\"`, then the field `other` is populated with the OS name."
                                                                     },
                                                                     {
                                                                         "name": "other",
@@ -14052,7 +13956,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the OS in case it is not one of those recognized by Meergo.\n\nThis field is present only when `name` is `\"Other\"`."
                                                                     },
                                                                     {
                                                                         "name": "version",
@@ -15471,7 +15375,7 @@
                                                                             ]
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the browser from which the event originated.\n\nIf the value is `\"Other\"`, then the field `other` is populated with the browser name."
                                                                     },
                                                                     {
                                                                         "name": "other",
@@ -15479,7 +15383,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the browser in case it is not one of those recognized by Meergo.\n\nThis field is present only when `name` is `\"Other\"`."
                                                                     },
                                                                     {
                                                                         "name": "version",
@@ -15775,7 +15679,7 @@
                                                                             ]
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the OS from which the event originated.\n\nIf the value is `\"Other\"`, then the field `other` is populated with the OS name."
                                                                     },
                                                                     {
                                                                         "name": "other",
@@ -15783,7 +15687,7 @@
                                                                             "kind": "text"
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Name of the OS in case it is not one of those recognized by Meergo.\n\nThis field is present only when `name` is `\"Other\"`."
                                                                     },
                                                                     {
                                                                         "name": "version",
