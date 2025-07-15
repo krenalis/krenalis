@@ -1112,6 +1112,86 @@ func makeEventID(source int, messageId string) uuid.UUID {
 	return id
 }
 
+// normalizeContextBrowser normalizes the content of 'context.browser' in an
+// event, modifying the provided map.
+//
+// Specifically, it attempts to recognize the browser name and convert it into a
+// normalized form. If the browser name is not among the recognized ones, the
+// value for the 'name' key becomes 'Other' and an 'other' key is added with the
+// given name; in all other cases, the 'other' key is removed.
+//
+// The 'version' field, if present, is preserved as is.
+func normalizeContextBrowser(browser map[string]any) {
+	name, ok := browser["name"].(string)
+	if !ok {
+		return // no browser name, so there's nothing to normalize.
+	}
+	var other string
+	switch strings.ToLower(name) {
+	case "chrome":
+		name = "Chrome"
+	case "safari":
+		name = "Safari"
+	case "edge":
+		name = "Edge"
+	case "firefox":
+		name = "Firefox"
+	case "samsung internet":
+		name = "Samsung Internet"
+	case "opera":
+		name = "Opera"
+	default:
+		other = name
+		name = "Other"
+	}
+	browser["name"] = name
+	if other != "" {
+		browser["other"] = other
+	} else {
+		delete(browser, "other")
+	}
+}
+
+// normalizeContextOS normalizes the content of 'context.os' in an event,
+// modifying the provided map.
+//
+// Specifically, it attempts to recognize the OS name and convert it into a
+// normalized form. If the OS name is not among the recognized ones, the value
+// for the 'name' key becomes 'Other' and an 'other' key is added with the given
+// name; in all other cases, the 'other' key is removed.
+//
+// The 'version' field, if present, is preserved as is.
+func normalizeContextOS(os map[string]any) {
+	name, ok := os["name"].(string)
+	if !ok {
+		return // no os name, so there's nothing to normalize.
+	}
+	var other string
+	switch strings.ToLower(name) {
+	case "android":
+		name = "Android"
+	case "windows":
+		name = "Windows"
+	case "ios":
+		name = "iOS"
+	case "macos", "darwin":
+		name = "macOS"
+	case "linux":
+		name = "Linux"
+	case "chrome os":
+		name = "Chrome OS"
+	default:
+		other = name
+		name = "Other"
+	}
+	os["name"] = name
+	if other != "" {
+		os["other"] = other
+	} else {
+		delete(os, "other")
+	}
+}
+
 // parseIP parses an IP address.
 func parseIP(ip string) (net.IP, string, error) {
 	addr := net.ParseIP(ip).To16()
@@ -1215,84 +1295,4 @@ func parseUserAgent(userAgent string) (map[string]any, map[string]any) {
 		os["version"] = version
 	}
 	return browser, os
-}
-
-// normalizeContextBrowser normalizes the content of 'context.browser' in an
-// event, modifying the provided map.
-//
-// Specifically, it attempts to recognize the browser name and convert it into a
-// normalized form. If the browser name is not among the recognized ones, the
-// value for the 'name' key becomes 'Other' and an 'other' key is added with the
-// given name; in all other cases, the 'other' key is removed.
-//
-// The 'version' field, if present, is preserved as is.
-func normalizeContextBrowser(browser map[string]any) {
-	name, ok := browser["name"].(string)
-	if !ok {
-		return // no browser name, so there's nothing to normalize.
-	}
-	var other string
-	switch strings.ToLower(name) {
-	case "chrome":
-		name = "Chrome"
-	case "safari":
-		name = "Safari"
-	case "edge":
-		name = "Edge"
-	case "firefox":
-		name = "Firefox"
-	case "samsung internet":
-		name = "Samsung Internet"
-	case "opera":
-		name = "Opera"
-	default:
-		other = name
-		name = "Other"
-	}
-	browser["name"] = name
-	if other != "" {
-		browser["other"] = other
-	} else {
-		delete(browser, "other")
-	}
-}
-
-// normalizeContextOS normalizes the content of 'context.os' in an event,
-// modifying the provided map.
-//
-// Specifically, it attempts to recognize the OS name and convert it into a
-// normalized form. If the OS name is not among the recognized ones, the value
-// for the 'name' key becomes 'Other' and an 'other' key is added with the given
-// name; in all other cases, the 'other' key is removed.
-//
-// The 'version' field, if present, is preserved as is.
-func normalizeContextOS(os map[string]any) {
-	name, ok := os["name"].(string)
-	if !ok {
-		return // no os name, so there's nothing to normalize.
-	}
-	var other string
-	switch strings.ToLower(name) {
-	case "android":
-		name = "Android"
-	case "windows":
-		name = "Windows"
-	case "ios":
-		name = "iOS"
-	case "macos", "darwin":
-		name = "macOS"
-	case "linux":
-		name = "Linux"
-	case "chrome os":
-		name = "Chrome OS"
-	default:
-		other = name
-		name = "Other"
-	}
-	os["name"] = name
-	if other != "" {
-		os["other"] = other
-	} else {
-		delete(os, "other")
-	}
 }
