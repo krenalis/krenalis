@@ -1553,7 +1553,6 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		if outSchema.Valid() {
 			return nil, errors.BadRequest("output schema is a valid schema, but no transformation has been provided")
 		}
-		ev.Type.Values = map[string]any{}
 
 	}
 

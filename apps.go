@@ -435,8 +435,8 @@ type Event struct {
 	Received ReceivedEvent // event as it was received.
 	Type     struct {
 		ID     string         // identifier of the event type (e.g., "user.signup", "order.placed").
-		Schema types.Type     // schema of the event type; may be the invalid schema.
-		Values map[string]any // values of the event type; empty if no transformation exists.
+		Schema types.Type     // schema of the event type; will be invalid if the type has no properties in its schema.
+		Values map[string]any // values of the event type; nil if the type has no properties in its schema.
 	}
 }
 
