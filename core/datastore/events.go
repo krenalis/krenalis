@@ -85,6 +85,7 @@ var eventColumnNameFromPropertyPath = map[string]string{
 	"timestamp":                        "timestamp",
 	"traits":                           "traits",
 	"type":                             "type",
+	"previousId":                       "previous_id",
 	"userId":                           "user_id",
 }
 

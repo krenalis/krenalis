@@ -542,6 +542,7 @@ type ReceivedEvent interface {
 	SentAt() time.Time
 	Timestamp() time.Time
 	Type() string
+	PreviousId() (string, bool)
 	UserId() (string, bool)
 }
 

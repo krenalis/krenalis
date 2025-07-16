@@ -170,6 +170,7 @@ var Schema = types.Object([]types.Property{
 	{Name: "timestamp", Type: types.DateTime()},
 	{Name: "traits", Type: types.JSON()},
 	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
+	{Name: "previousId", Type: types.Text(), ReadOptional: true},
 	{Name: "userId", Type: types.Text()},
 })
 
@@ -217,6 +218,11 @@ func (e receivedEvent) Event() (string, bool) {
 func (e receivedEvent) GroupId() (string, bool) {
 	groupId, ok := e.event["groupId"].(string)
 	return groupId, ok
+}
+
+func (e receivedEvent) PreviousId() (string, bool) {
+	previousId, ok := e.event["messageId"].(string)
+	return previousId, ok
 }
 
 func (e receivedEvent) MessageId() string {

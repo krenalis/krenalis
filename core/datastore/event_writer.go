@@ -67,7 +67,7 @@ func (ew *EventWriter) Close(ctx context.Context) {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (ew *EventWriter) Write(event events.Event, action int) error {
 
-	row := make([]any, 66)
+	row := make([]any, 67)
 
 	// id
 	row[0] = event["id"]
@@ -225,8 +225,11 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 	// type
 	row[64] = event["type"]
 
+	// previousId
+	row[65] = event["previousId"]
+
 	// userId
-	row[65] = event["userId"]
+	row[66] = event["userId"]
 
 	ew.mu.Lock()
 	ew.rows = append(ew.rows, row)

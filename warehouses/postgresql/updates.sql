@@ -76,3 +76,8 @@ ALTER TABLE events
     ALTER COLUMN "name" DROP NOT NULL,
     ALTER COLUMN "properties" DROP NOT NULL,
     ALTER COLUMN "user_id" DROP NOT NULL;
+
+ALTER TABLE
+    events
+ADD
+    COLUMN IF NOT EXISTS "previous_id" character varying;

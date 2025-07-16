@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS events (
     "timestamp" timestamp(3) NOT NULL,
     "traits" jsonb NOT NULL,
     "type" event_type NOT NULL,
+    "previous_id" character varying,
     "user_id" character varying,
     PRIMARY KEY ("id")
 )

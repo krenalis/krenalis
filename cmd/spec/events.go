@@ -379,6 +379,12 @@ var eventGetProperties = []types.Property{
 	{Name: "traits", Type: types.JSON()},
 	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
 	{
+		Name:         "previousId",
+		Type:         types.Text(),
+		ReadOptional: true,
+		Description:  "Previous user ID associated with the event. Defined only for alias-type events.\n\nThis field is unused by the Meergo model, and exists solely for compatibility with SDKs that send it.",
+	},
+	{
 		Name:         "userId",
 		Type:         types.Text(),
 		ReadOptional: true,

@@ -13333,6 +13333,14 @@
                                                 "description": ""
                                             },
                                             {
+                                                "name": "previousId",
+                                                "type": {
+                                                    "kind": "text"
+                                                },
+                                                "readOptional": true,
+                                                "description": "Previous user ID associated with the event. Defined only for alias-type events.\n\nThis field is unused by the Meergo model, and exists solely for compatibility with SDKs that send it."
+                                            },
+                                            {
                                                 "name": "userId",
                                                 "type": {
                                                     "kind": "text"
@@ -14229,6 +14237,14 @@
                                                     ]
                                                 },
                                                 "description": ""
+                                            },
+                                            {
+                                                "name": "previousId",
+                                                "type": {
+                                                    "kind": "text"
+                                                },
+                                                "readOptional": true,
+                                                "description": "Previous user ID associated with the event. Defined only for alias-type events.\n\nThis field is unused by the Meergo model, and exists solely for compatibility with SDKs that send it."
                                             },
                                             {
                                                 "name": "userId",
@@ -15960,6 +15976,14 @@
                                                     ]
                                                 },
                                                 "description": ""
+                                            },
+                                            {
+                                                "name": "previousId",
+                                                "type": {
+                                                    "kind": "text"
+                                                },
+                                                "readOptional": true,
+                                                "description": "Previous user ID associated with the event. Defined only for alias-type events.\n\nThis field is unused by the Meergo model, and exists solely for compatibility with SDKs that send it."
                                             },
                                             {
                                                 "name": "userId",

@@ -117,6 +117,7 @@ interface UserEvent {
 	timestamp?: string;
 	traits?: any;
 	type?: string;
+	previousId?: string;
 	userId?: string;
 }
 
