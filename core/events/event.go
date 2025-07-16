@@ -188,17 +188,6 @@ func ReceivedEvent(event Event) meergo.ReceivedEvent {
 	return receivedEvent{event}
 }
 
-func (e receivedEvent) User() (string, bool) {
-	// The 'user' field of an event is populated by Identity Resolution only for
-	// events stored in the data warehouse.
-	// For events received from a source and then forwarded to a connector for
-	// sending, the 'user' is therefore never set.
-	// This method always returns an empty string and false, and exists solely
-	// to maintain consistency with the event schema, which always includes the
-	// 'user' field by definition.
-	return "", false
-}
-
 func (e receivedEvent) AnonymousId() string {
 	return e.event["anonymousId"].(string)
 }

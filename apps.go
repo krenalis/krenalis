@@ -530,7 +530,6 @@ type Events interface {
 
 // ReceivedEvent represents an event as received from a source connector.
 type ReceivedEvent interface {
-	User() (string, bool)
 	AnonymousId() string
 	Channel() (string, bool)
 	Category() (string, bool)
