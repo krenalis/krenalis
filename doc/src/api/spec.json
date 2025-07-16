@@ -11174,7 +11174,7 @@
                                                                         "kind": "int",
                                                                         "bitSize": 16
                                                                     },
-                                                                    "description": ""
+                                                                    "description": "Screen width. Must be in range [1, 32767]."
                                                                 },
                                                                 {
                                                                     "name": "height",
@@ -11182,7 +11182,7 @@
                                                                         "kind": "int",
                                                                         "bitSize": 16
                                                                     },
-                                                                    "description": ""
+                                                                    "description": "Screen height. Must be in range [1, 32767]."
                                                                 },
                                                                 {
                                                                     "name": "density",
@@ -11191,11 +11191,11 @@
                                                                         "precision": 3,
                                                                         "scale": 2
                                                                     },
-                                                                    "description": ""
+                                                                    "description": "Screen density. Must be a positive number."
                                                                 }
                                                             ]
                                                         },
-                                                        "description": ""
+                                                        "description": "Screen of the device where the event originated."
                                                     },
                                                     {
                                                         "name": "session",
@@ -11300,7 +11300,7 @@
                                                 "kind": "datetime"
                                             },
                                             "nullable": true,
-                                            "description": "It must follow the ISO 8601 timestamp format."
+                                            "description": "It must follow the ISO 8601 timestamp format. When not provided, it is automatically set by Meergo."
                                         },
                                         {
                                             "name": "timestamp",
@@ -11754,7 +11754,7 @@
                                                         "kind": "int",
                                                         "bitSize": 16
                                                     },
-                                                    "description": ""
+                                                    "description": "Screen width. Must be in range [1, 32767]."
                                                 },
                                                 {
                                                     "name": "height",
@@ -11762,7 +11762,7 @@
                                                         "kind": "int",
                                                         "bitSize": 16
                                                     },
-                                                    "description": ""
+                                                    "description": "Screen height. Must be in range [1, 32767]."
                                                 },
                                                 {
                                                     "name": "density",
@@ -11771,11 +11771,11 @@
                                                         "precision": 3,
                                                         "scale": 2
                                                     },
-                                                    "description": ""
+                                                    "description": "Screen density. Must be a positive number."
                                                 }
                                             ]
                                         },
-                                        "description": ""
+                                        "description": "Screen of the device where the event originated."
                                     },
                                     {
                                         "name": "session",
@@ -12296,7 +12296,7 @@
                                                         "kind": "int",
                                                         "bitSize": 16
                                                     },
-                                                    "description": ""
+                                                    "description": "Screen width. Must be in range [1, 32767]."
                                                 },
                                                 {
                                                     "name": "height",
@@ -12304,7 +12304,7 @@
                                                         "kind": "int",
                                                         "bitSize": 16
                                                     },
-                                                    "description": ""
+                                                    "description": "Screen height. Must be in range [1, 32767]."
                                                 },
                                                 {
                                                     "name": "density",
@@ -12313,11 +12313,11 @@
                                                         "precision": 3,
                                                         "scale": 2
                                                     },
-                                                    "description": ""
+                                                    "description": "Screen density. Must be a positive number."
                                                 }
                                             ]
                                         },
-                                        "description": ""
+                                        "description": "Screen of the device where the event originated."
                                     },
                                     {
                                         "name": "session",
@@ -12422,7 +12422,7 @@
                                 "kind": "datetime"
                             },
                             "nullable": true,
-                            "description": "It must follow the ISO 8601 timestamp format."
+                            "description": "It must follow the ISO 8601 timestamp format. When not provided, it is automatically set by Meergo."
                         },
                         {
                             "name": "timestamp",
@@ -13169,7 +13169,7 @@
                                                                             "bitSize": 16
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen width."
                                                                     },
                                                                     {
                                                                         "name": "height",
@@ -13178,7 +13178,7 @@
                                                                             "bitSize": 16
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen height."
                                                                     },
                                                                     {
                                                                         "name": "density",
@@ -13188,12 +13188,12 @@
                                                                             "scale": 2
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen density."
                                                                     }
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Screen of the device where the event originated."
                                                         },
                                                         {
                                                             "name": "session",
@@ -13257,7 +13257,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Group ID related to the event. Returned only for group-type event, and absent for all other event types."
                                             },
                                             {
                                                 "name": "messageId",
@@ -13301,7 +13301,7 @@
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Original timestamp associated to the event."
                                             },
                                             {
                                                 "name": "timestamp",
@@ -13315,7 +13315,7 @@
                                                 "type": {
                                                     "kind": "json"
                                                 },
-                                                "description": ""
+                                                "description": "Traits associated with the event in the form of a JSON object.\n\nThis field is always returned, regardless of the event type.\n\nIf there are no traits, an empty JSON object is returned."
                                             },
                                             {
                                                 "name": "type",
@@ -14075,7 +14075,7 @@
                                                                             "bitSize": 16
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen width."
                                                                     },
                                                                     {
                                                                         "name": "height",
@@ -14084,7 +14084,7 @@
                                                                             "bitSize": 16
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen height."
                                                                     },
                                                                     {
                                                                         "name": "density",
@@ -14094,12 +14094,12 @@
                                                                             "scale": 2
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen density."
                                                                     }
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Screen of the device where the event originated."
                                                         },
                                                         {
                                                             "name": "session",
@@ -14163,7 +14163,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Group ID related to the event. Returned only for group-type event, and absent for all other event types."
                                             },
                                             {
                                                 "name": "messageId",
@@ -14207,7 +14207,7 @@
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Original timestamp associated to the event."
                                             },
                                             {
                                                 "name": "timestamp",
@@ -14221,7 +14221,7 @@
                                                 "type": {
                                                     "kind": "json"
                                                 },
-                                                "description": ""
+                                                "description": "Traits associated with the event in the form of a JSON object.\n\nThis field is always returned, regardless of the event type.\n\nIf there are no traits, an empty JSON object is returned."
                                             },
                                             {
                                                 "name": "type",
@@ -15814,7 +15814,7 @@
                                                                             "bitSize": 16
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen width."
                                                                     },
                                                                     {
                                                                         "name": "height",
@@ -15823,7 +15823,7 @@
                                                                             "bitSize": 16
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen height."
                                                                     },
                                                                     {
                                                                         "name": "density",
@@ -15833,12 +15833,12 @@
                                                                             "scale": 2
                                                                         },
                                                                         "readOptional": true,
-                                                                        "description": ""
+                                                                        "description": "Screen density."
                                                                     }
                                                                 ]
                                                             },
                                                             "readOptional": true,
-                                                            "description": ""
+                                                            "description": "Screen of the device where the event originated."
                                                         },
                                                         {
                                                             "name": "session",
@@ -15902,7 +15902,7 @@
                                                     "kind": "text"
                                                 },
                                                 "readOptional": true,
-                                                "description": ""
+                                                "description": "Group ID related to the event. Returned only for group-type event, and absent for all other event types."
                                             },
                                             {
                                                 "name": "messageId",
@@ -15946,7 +15946,7 @@
                                                 "type": {
                                                     "kind": "datetime"
                                                 },
-                                                "description": ""
+                                                "description": "Original timestamp associated to the event."
                                             },
                                             {
                                                 "name": "timestamp",
@@ -15960,7 +15960,7 @@
                                                 "type": {
                                                     "kind": "json"
                                                 },
-                                                "description": ""
+                                                "description": "Traits associated with the event in the form of a JSON object.\n\nThis field is always returned, regardless of the event type.\n\nIf there are no traits, an empty JSON object is returned."
                                             },
                                             {
                                                 "name": "type",
