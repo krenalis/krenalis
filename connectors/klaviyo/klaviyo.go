@@ -18,9 +18,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
@@ -111,8 +114,11 @@ type innerSettings struct {
 func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
 	if eventType == "create_event" {
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), CreateRequired: true},
-			{Name: "metric_name", Type: types.Text(), CreateRequired: true},
+			{Name: "metric_name", Type: types.Text().WithCharLen(200), CreateRequired: true},
+			{Name: "email", Type: types.Text().WithByteLen(100), CreateRequired: true},
+			{Name: "value", Type: types.Float(64).AsReal()},
+			{Name: "value_currency", Type: types.Text().WithByteLen(3)},
+			{Name: "properties", Type: types.Map(types.JSON())},
 		}), nil
 	}
 	return types.Type{}, meergo.ErrUIEventNotExist
@@ -544,47 +550,113 @@ func (ky *Klaviyo) call(ctx context.Context, method, url string, body io.Reader,
 const maxBodyEventsBytes = 5 * 1024 * 1024
 const maxBodyEvents = 1000
 
-// sendEvents sends the given events to the app and returns the sent HTTP
-// request.
-// If preview is true, the HTTP request is built but not sent, so it is
-// only returned.
+var emailRegex = regexp.MustCompile(`(?i)^(?:[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)])$`)
+
+// sendEvents sends the given events to the app and returns the HTTP request
+// that was sent. If preview is true, the HTTP request is constructed but not
+// sent, and is only returned. If all events are discarded due to validation
+// failures, it returns nil for the request.
 //
 // If an error occurs while sending the events to the app, a nil *http.Request
 // and the error are returned.
+//
+// An event is discarded if it does not satisfy these validations:
+//   - The timestamp cannot be before the year 2000 or more than one year in the
+//     future.
+//   - values["email"] cannot be longer than 100 characters.
+//   - values["email"] must match the emailRegex regular expression.
+//   - values["currency_code"] must be a valid currency code.
+//   - values["properties"] cannot contain more than 400 properties.
+//   - A property cannot contain integers outside the 64-bit range.
+//   - A property cannot have a depth greater than 9 (10 if including
+//     values["properties"]).
+//   - A property cannot contain a string longer than 100K characters.
+//   - A property cannot contain an array with more than 4000 elements.
 func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+
+	now := time.Now().UTC()
+	maxTimestamp := time.Date(now.Year()+1, now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
 
 	var body json.Buffer
 	body.WriteString(`{"data":{"type":"event-bulk-create-job","attributes":{"events-bulk-create":{"data":[`)
 
 	n := 0
 	for event := range events.All() {
+
+		// Validate the event.
+		timestamp := event.Received.Timestamp()
+		if timestamp.Year() < 2_000 || timestamp.After(maxTimestamp) {
+			events.Discard(errors.New("timezone is before 2000 or more than one year in the future"))
+			continue
+		}
+		email := event.Type.Values["email"].(string)
+		if utf8.RuneCountInString(email) > 100 {
+			events.Discard(errors.New("email is longer than 100 characters"))
+			continue
+		}
+		if !emailRegex.MatchString(email) {
+			events.Discard(errors.New("email is not valid"))
+			continue
+		}
+		if currency, ok := event.Type.Values["value_currency"].(string); ok && !isValidCurrency(currency) {
+			events.Discard(errors.New("value_currency is not a valid currency code"))
+			continue
+		}
+		properties, ok := event.Type.Values["properties"].(map[string]any)
+		if ok && len(properties) > 400 {
+			events.Discard(errors.New("there are more than 400 properties"))
+			continue
+		}
+		for _, v := range properties {
+			if err := validateProperty(v.(json.Value)); err != nil {
+				events.Discard(err)
+				continue
+			}
+		}
+
 		size := body.Len()
 		if n > 0 {
 			body.WriteByte(',')
 		}
+
 		body.WriteString(`{"type":"event-bulk-create","attributes":{"profile":{"data":{"type":"profile","attributes":{`)
-		_ = body.EncodeKeyValue("email", event.Type.Values["email"])
-		body.WriteString(`}}},{"events":{"data":[`)
-		body.WriteString(`{"type": "event","attributes":{"properties":`)
-		_ = body.Encode(event.Type.Values)
-		body.WriteString(`,"time":`)
-		_ = body.Encode(event.Received.Timestamp())
-		body.WriteString(`,"metric":{"data":{"type":"metric","attributes":{"name":`)
-		_ = body.Encode(event.Type.Values["metric_name"].(string))
+		_ = body.EncodeKeyValue("email", email) // email
+		body.WriteString(`}}},"events":{"data":[`)
+		body.WriteString(`{"type":"event","attributes":{`)
+		if properties != nil {
+			_ = body.EncodeKeyValue("properties", properties) // properties
+		}
+		_ = body.EncodeKeyValue("time", timestamp) // time
+		if value, ok := event.Type.Values["value"]; ok {
+			_ = body.EncodeKeyValue("value", value) // value
+		}
+		if currency, ok := event.Type.Values["value_currency"]; ok {
+			_ = body.EncodeKeyValue("value_currency", currency) // value_currency
+		}
+		_ = body.EncodeKeyValue("unique_id", event.ID) // unique_id
+		body.WriteString(`,"metric":{"data":{"type":"metric","attributes":{`)
+		_ = body.EncodeKeyValue("name", event.Type.Values["metric_name"]) // metric_name
 		body.WriteString(`}}}}}]}}}`)
 		if body.Len()+len(`]}}}}`) > maxBodyEventsBytes {
 			body.Truncate(size)
 			events.Postpone()
 			break
 		}
+
 		n++
 		if n == maxBodyEvents {
 			break
 		}
+
 	}
 	body.WriteString(`]}}}}`)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://a.klaviyo.com/api/events/", bytes.NewReader(body.Bytes()))
+	// Return if all events has been discarded.
+	if n == 0 {
+		return nil, nil
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://a.klaviyo.com/api/event-bulk-create-jobs", bytes.NewReader(body.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -603,16 +675,155 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		return io.NopCloser(bytes.NewReader(body.Bytes())), nil
 	}
 
+	storeHTTPRequestWhenTesting(ctx, req)
+
 	if preview {
 		return req, nil
 	}
 
-	_, err = ky.conf.HTTPClient.Do(req)
+	res, err := ky.conf.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: handle errors
+	if res.StatusCode != 202 {
+		return nil, fmt.Errorf("Klaviyo's server returned a %d error", res.StatusCode)
+	}
 
 	return req, nil
+}
+
+const (
+	maxArrayLen  = 4000       // 4,000 elements per array
+	maxDepth     = 10 - 1     // max nesting: 9
+	maxStringLen = 100 * 1024 // 100K characters
+)
+
+var (
+	errIntOutOfRange   = errors.New("properties contains an integer that is not within the 64-bit range")
+	errMaxDepthReached = errors.New("properties has a depth greater than 10")
+	errStringTooLong   = errors.New("properties contains a string longer than 100K characters")
+	errTooManyElements = fmt.Errorf("properties contains an array with more than 4000 elements")
+)
+
+// validateProperty validates a property and return an error is the property is
+// not valid.
+func validateProperty(v json.Value) error {
+
+	// Fast path.
+	switch v.Kind() {
+	case 'n', 'f', 't':
+		return nil
+	case '0': // Number token
+		s := v.String()
+		if !strings.Contains(s, ".") && !strings.ContainsAny(s, "eE") {
+			if _, err := strconv.ParseInt(s, 10, 64); err != nil {
+				return errIntOutOfRange
+			}
+		}
+		return nil
+	case '"': // String token
+		if utf8.RuneCountInString(v.String()) > maxStringLen {
+			return errStringTooLong
+		}
+		return nil
+	}
+
+	var numElems [maxDepth + 1]uint16
+	var arrayBitmap uint16
+	depth := 0
+
+	isInArray := func(depth int) bool {
+		return depth > 0 && (arrayBitmap&(1<<depth) != 0)
+	}
+	incrementArrayElem := func() error {
+		numElems[depth]++
+		if numElems[depth] > maxArrayLen {
+			return errTooManyElements
+		}
+		return nil
+	}
+
+	dec := json.NewDecoder(bytes.NewReader(v))
+
+	for {
+		tok, err := dec.ReadToken()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		switch tok.Kind() {
+		case '[':
+			if depth++; depth > maxDepth {
+				return errMaxDepthReached
+			}
+			numElems[depth] = 0
+			arrayBitmap |= 1 << depth
+		case '{':
+			if depth++; depth > maxDepth {
+				return errMaxDepthReached
+			}
+			arrayBitmap &^= 1 << depth
+		case ']':
+			if depth > 0 {
+				depth--
+			}
+		case '}':
+			if depth > 0 {
+				depth--
+			}
+		case '0': // Number token
+			s := tok.String()
+			if !strings.Contains(s, ".") && !strings.ContainsAny(s, "eE") {
+				if _, err := strconv.ParseInt(s, 10, 64); err != nil {
+					return errIntOutOfRange
+				}
+			}
+			if isInArray(depth) {
+				if err := incrementArrayElem(); err != nil {
+					return err
+				}
+			}
+		case '"': // String token
+			if utf8.RuneCountInString(tok.String()) > maxStringLen {
+				return errStringTooLong
+			}
+			if isInArray(depth) {
+				if err := incrementArrayElem(); err != nil {
+					return err
+				}
+			}
+		default:
+			if isInArray(depth) {
+				if err := incrementArrayElem(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// connectorTestString is a defined type used solely to pass a typed key to the
+// context. This is to avoid any kind of collisions with other values that may
+// be inserted into the context.
+type connectorTestString string
+
+// storeHTTPRequestWhenTesting stores the HTTP request if requested by tests.
+//
+// To enable saving the HTTP request, the context must include, under the key
+// 'connectorTestString("storeSentHTTPRequest")', a pointer to an http.Request
+// memory location where the sent request will be written.
+func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) {
+	if stored := ctx.Value(connectorTestString("storeSentHTTPRequest")); stored != nil {
+		clonedReq := req.Clone(req.Context())
+		bodyBytes, _ := io.ReadAll(req.Body)
+		clonedReq.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		*(stored.(*http.Request)) = *clonedReq
+	}
 }
