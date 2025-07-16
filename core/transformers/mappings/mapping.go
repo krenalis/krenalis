@@ -110,14 +110,9 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		}
 		i++
 	}
-	// Sort the expressions based on their paths and ensure that no two paths have the same prefix.
-	slices.SortFunc(me, func(a, b mappingExpr) int {
-		return cmp.Compare(a.path, b.path)
-	})
-	for i, expr := range me[1:] {
-		if prev := me[i]; strings.HasPrefix(expr.path, prev.path) {
-			return nil, fmt.Errorf("paths %q and %q have the same prefix", expr.path, prev.path)
-		}
+	err := sortMappingExpressions(me)
+	if err != nil {
+		return nil, err
 	}
 	return &Mapping{expressions: me, inPlace: inPlace}, nil
 }
@@ -264,6 +259,21 @@ func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (m
 		storeValue(out, e.path, v)
 	}
 	return out, nil
+}
+
+// sortMappingExpressions sorts me by path and returns an error if any two paths
+// are equal or if one is a prefix of another, immediately followed by a dot.
+func sortMappingExpressions(me []mappingExpr) error {
+	slices.SortFunc(me, func(a, b mappingExpr) int {
+		return cmp.Compare(a.path, b.path)
+	})
+	for i, expr := range me[1:] {
+		if prev := me[i]; strings.HasPrefix(expr.path, prev.path) &&
+			(len(expr.path) == len(prev.path) || expr.path[len(prev.path)] == '.') {
+			return fmt.Errorf("paths %q and %q have the same prefix", prev.path, expr.path)
+		}
+	}
+	return nil
 }
 
 // storeValue stores v in value at the given path.

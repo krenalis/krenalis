@@ -440,6 +440,72 @@ func Test_inPlace(t *testing.T) {
 	}
 }
 
+func Test_sortMappingExpressions(t *testing.T) {
+	tests := []struct {
+		name    string
+		paths   []string
+		wantErr bool
+	}{
+		{
+			name:    "no conflict",
+			paths:   []string{"a", "b.c", "b.d", "c.d.e"},
+			wantErr: false,
+		},
+		{
+			name:    "duplicate",
+			paths:   []string{"a", "b", "b", "c"},
+			wantErr: true,
+		},
+		{
+			name:    "logical prefix",
+			paths:   []string{"foo", "foo.bar"},
+			wantErr: true,
+		},
+		{
+			name:    "logical prefix reversed order",
+			paths:   []string{"foo.bar", "foo"},
+			wantErr: true,
+		},
+		{
+			name:    "no conflict with similar prefix",
+			paths:   []string{"value", "value_currency"},
+			wantErr: false,
+		},
+		{
+			name:    "similar but not prefix",
+			paths:   []string{"foo.bar", "foo.barb"},
+			wantErr: false,
+		},
+		{
+			name:    "single element",
+			paths:   []string{"only"},
+			wantErr: false,
+		},
+		{
+			name:    "multiple prefixes",
+			paths:   []string{"a", "a.b", "a.b.c", "b", "b.c"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var exprs []mappingExpr
+			for _, p := range tt.paths {
+				exprs = append(exprs, mappingExpr{path: p})
+			}
+			err := sortMappingExpressions(exprs)
+			if err != nil {
+				if !tt.wantErr {
+					t.Errorf("unexpected error %q", err)
+				}
+			} else if tt.wantErr {
+				t.Error("expected error, got no error")
+			}
+		})
+	}
+}
+
 func Test_storeValue(t *testing.T) {
 	tests := []struct {
 		value    map[string]any
