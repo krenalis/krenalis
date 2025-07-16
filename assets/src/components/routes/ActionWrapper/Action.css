@@ -590,7 +590,7 @@ inherit the disabled style */
 	background-color: var(--bg-primary);
 	box-shadow: var(--sl-shadow-small);
 	border: 1px solid var(--sl-color-neutral-200);
-	height: 100%;
+	min-height: 100%;
 }
 
 .transformation-box--mappings {
