@@ -29,6 +29,16 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// InvalidEventError is returned by the PreviewSendEvent method when an event
+// is invalid.
+type InvalidEventError struct {
+	Err error
+}
+
+func (err *InvalidEventError) Error() string {
+	return err.Err.Error()
+}
+
 // App represents the app of an app connection.
 type App struct {
 	connector   string
@@ -122,8 +132,9 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 //
 // If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
 // error. If the schema of the event is not aligned to the event type's schema,
-// it returns a *schemas.Error error. If the connector returns an error it
-// returns a *UnavailableError error.
+// it returns a *schemas.Error error. If the event is invalid, it returns a
+// *InvalidEventError error. If the connector returns an error, it returns a
+// *UnavailableError error.
 //
 // It panics if the app does not support the event target, or if schema is
 // valid but not an object.
@@ -154,6 +165,9 @@ func (app *App) PreviewSendEvent(ctx context.Context, event meergo.Event) (*http
 			return nil, err
 		}
 		return nil, connectorError(err)
+	}
+	if err = iterator.Err(); err != nil {
+		return nil, &InvalidEventError{Err: err}
 	}
 	return req, nil
 }
@@ -370,6 +384,7 @@ type singleEventIterator struct {
 	iterating bool
 	postponed bool
 	discarded bool
+	err       error
 }
 
 // newSingleEventIterator returns a singleEventIterator with the provided event.
@@ -399,7 +414,17 @@ func (iter *singleEventIterator) Discard(err error) {
 	if iter.discarded {
 		panic(iter.app + " connector: SendEvents method called Events.Discard on a discarded event")
 	}
+	if err == nil {
+		panic(iter.app + " connector: SendEvents method called Events.Discard passing a nil error")
+	}
 	iter.discarded = true
+	iter.err = err
+}
+
+// Err returns the error passed to the Discard method if the event has been
+// discarded.
+func (iter *singleEventIterator) Err() error {
+	return iter.err
 }
 
 func (iter *singleEventIterator) First() *meergo.Event {

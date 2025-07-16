@@ -8656,6 +8656,11 @@
                         },
                         {
                             "status": 422,
+                            "code": "InvalidEvent",
+                            "message": "event is invalid"
+                        },
+                        {
+                            "status": 422,
                             "code": "SchemaNotAligned",
                             "message": "output schema is not compatible with the event type's schema"
                         },

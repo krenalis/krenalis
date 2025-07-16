@@ -1412,6 +1412,7 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist for the connection.
+//   - InvalidEvent, if the event is not valid.
 //   - SchemaNotAligned, if the output schema is not aligned with the event
 //     type's schema.
 //   - TransformationFailed if the transformation fails due to an error in the
@@ -1565,6 +1566,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			switch err.(type) {
 			case *schemas.Error:
 				err = errors.Unprocessable(SchemaNotAligned, "output schema is not compatible with the event type's schema: %w", err)
+			case *connectors.InvalidEventError:
+				err = errors.Unprocessable(InvalidEvent, "event is invalid: %w", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("connector returned an error preparing the preview: %w", err)
 			}

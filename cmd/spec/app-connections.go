@@ -113,6 +113,7 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 					{422, EventTypeNotExist, "connection does not have the event type"},
+					{422, InvalidEvent, "event is invalid"},
 					{422, SchemaNotAligned, "output schema is not compatible with the event type's schema"},
 					{422, TransformationFailed, "transformation failed"},
 					{422, UnsupportedLanguage, "transformation language is not supported"},

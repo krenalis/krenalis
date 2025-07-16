@@ -27,6 +27,7 @@ const (
 	FormatNotExist                errors.Code = "FormatNotExist"
 	IdentityResolutionInExecution errors.Code = "IdentityResolutionInExecution"
 	InspectionMode                errors.Code = "InspectionMode"
+	InvalidEvent                  errors.Code = "InvalidEvent"
 	InvalidPath                   errors.Code = "InvalidPath"
 	InvalidPlaceholder            errors.Code = "InvalidPlaceholder"
 	InvalidAlterSchema            errors.Code = "InvalidAlterSchema"

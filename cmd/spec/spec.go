@@ -121,6 +121,7 @@ const (
 	IdentityResolutionInExecution = "IdentityResolutionInExecution"
 	InspectionMode                = "InspectionMode"
 	InvalidAlterSchema            = "InvalidAlterSchema"
+	InvalidEvent                  = "InvalidEvent"
 	InvalidPath                   = "InvalidPath"
 	InvalidPlaceholder            = "InvalidPlaceholder"
 	InvalidSettings               = "InvalidSettings"
