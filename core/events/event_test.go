@@ -427,7 +427,8 @@ func Test_ReceivedEventMissingFields(t *testing.T) {
 }
 
 func Test_Schema(t *testing.T) {
-	if n := types.NumProperties(Schema); n != 19 {
-		t.Fatalf("expected 18 properties, got %d", n)
+	const expected = 19
+	if n := types.NumProperties(Schema); n != expected {
+		t.Fatalf("expected %d properties, got %d", expected, n)
 	}
 }
