@@ -87,13 +87,13 @@ const Combobox = ({
 		}
 	};
 
-	const onKeyUp = (event: KeyboardEvent) => {
+	const onKeyDown = (event: KeyboardEvent) => {
 		if (
 			['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)
 		) {
 			setIsOpen(true);
 			updateCursorPosition();
-		} else if (event.key === 'Escape') {
+		} else if (event.key === 'Escape' || event.key === 'Tab') {
 			setIsOpen(false);
 		}
 	};
@@ -124,10 +124,10 @@ const Combobox = ({
 				input.setAttribute('data-lpignore', 'true');
 
 				// Add event listeners on the input.
-				input.addEventListener('keyup', onKeyUp);
+				input.addEventListener('keydown', onKeyDown);
 				input.addEventListener('click', onClick);
 				return () => {
-					input.removeEventListener('keyup', onKeyUp);
+					input.removeEventListener('keydown', onKeyDown);
 					input.removeEventListener('click', onClick);
 				};
 			}
@@ -369,6 +369,11 @@ const Combobox = ({
 		wrapper.style.width = `${textWidth + prefixWidth + suffixWidth + 30}px`;
 	};
 
+	const onInputFocus = () => {
+		setIsOpen(true);
+		updateCursorPosition(true);
+	};
+
 	const onInputBlur = () => {
 		if (autoResize) {
 			resizeCombobox();
@@ -528,6 +533,7 @@ const Combobox = ({
 					data-is-combobox-input
 					value={val}
 					onSlInput={disabled ? undefined : onInput}
+					onSlFocus={onInputFocus}
 					onSlBlur={onInputBlur}
 					disabled={disabled}
 					autocomplete='off'

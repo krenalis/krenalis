@@ -40,18 +40,22 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 	let email = page.locator('.combobox[data-id="email"]');
 	await email.locator('sl-input').click();
 	await email.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
+	await page.keyboard.press('Escape');
 
 	let dummyId = page.locator('.combobox[data-id="dummy_id"]');
 	await dummyId.locator('sl-input').click();
 	await dummyId.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'dummyId' }).click();
+	await page.keyboard.press('Escape');
 
 	let firstName = page.locator('.combobox[data-id="first_name"]');
 	await firstName.locator('sl-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'firstName' }).click();
+	await page.keyboard.press('Escape');
 
 	let lastName = page.locator('.combobox[data-id="last_name"]');
 	await lastName.locator('sl-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'lastName' }).click();
+	await page.keyboard.press('Escape');
 
 	const expectedBody = `
 	{
@@ -158,10 +162,12 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 	let firstName = mappings.locator('.combobox[data-id="firstName"]');
 	await firstName.locator('sl-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
+	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="lastName"]');
 	await lastName.locator('sl-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
+	await page.keyboard.press('Escape');
 
 	const expectedBody = `
 	{
@@ -317,6 +323,7 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 	let email = mappings.locator('.combobox[data-id="email"]');
 	await email.locator('sl-input').click();
 	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'traits' }).click();
+	await page.keyboard.press('Escape');
 
 	const expectedBody = `
 	{
@@ -403,9 +410,12 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	let firstName = mappings.locator('.combobox[data-id="first_name"]');
 	await firstName.locator('sl-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'first_name' }).click();
+	await page.keyboard.press('Escape');
+
 	let lastName = mappings.locator('.combobox[data-id="last_name"]');
 	await lastName.locator('sl-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'last_name' }).click();
+	await page.keyboard.press('Escape');
 
 	const expectedBody = `
 	{
@@ -541,12 +551,17 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	let email = mappings.locator('.combobox[data-id="email"]');
 	await email.locator('sl-input').click();
 	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
+	await page.keyboard.press('Escape');
+
 	let firstName = mappings.locator('.combobox[data-id="first_name"]');
 	await firstName.locator('sl-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
+	await page.keyboard.press('Escape');
+
 	let lastName = mappings.locator('.combobox[data-id="last_name"]');
 	await lastName.locator('sl-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
+	await page.keyboard.press('Escape');
 
 	const expectedBody = `
 	{
@@ -728,12 +743,17 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		let email = mappings.locator('.combobox[data-id="email"]');
 		await email.locator('sl-input').click();
 		await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
+		await page.keyboard.press('Escape');
+
 		let firstName = mappings.locator('.combobox[data-id="first_name"]');
 		await firstName.locator('sl-input').click();
 		await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
+		await page.keyboard.press('Escape');
+
 		let lastName = mappings.locator('.combobox[data-id="last_name"]');
 		await lastName.locator('sl-input').click();
 		await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
+		await page.keyboard.press('Escape');
 
 		const expectedBody = `
 		{
