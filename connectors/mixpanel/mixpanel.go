@@ -391,11 +391,11 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		return nil, fmt.Errorf("cannot decode Mixpanel response: %v", err)
 	}
 	if len(out.FailedRecords) == 0 {
-		return nil, errors.New("unexpected status 400 with empty 'failed_records' in response from Mixpanel")
+		return nil, errors.New("Mixpanel responded with status 400, but failed_records was empty")
 	}
 	errors := make(meergo.EventsError, len(out.FailedRecords))
 	for _, f := range out.FailedRecords {
-		errors[f.Index] = fmt.Errorf("sending event %q: %s", f.Field, f.Message)
+		errors[f.Index] = fmt.Errorf("%s: %s", f.Field, f.Message)
 	}
 
 	return nil, errors
