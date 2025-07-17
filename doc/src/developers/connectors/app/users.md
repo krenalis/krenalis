@@ -488,9 +488,28 @@ Below is an example implementation:
     - The processed records remain unchanged, meaning they can potentially be postponed later.
     - This postponed record will remain unprocessed and will be included in the next call to the `Upsert` method.
 
-### Differentiating errors by record
+## Error handling
 
-When records are sent in a batch, some APIs respond with specific error messages for each individual record in the batch. In this case, instead of returning a common error for all records, you can return a specific error for each record that encountered an issue using the `RecordsError` type:
+If, during the iteration over the record sequence, a record cannot be processed—for example, because it fails validation—you should call the `Discard` method on the iterator:
+
+```go
+    n := 0
+    for event := range records.All() {
+        if !valid(record) {
+            events.Discard(errors.new("record is invalid"))
+        }
+        // ...
+        n++
+    }
+    // Return early if all records have been discarded. 
+    if n == 0 {
+        return nil
+    }
+```
+
+Unlike postponed records, **discarded** records will not be retried in future calls to `Upsert`.
+
+If a validation error occurs _after_ sending the request to the app, you should return a `RecordsError`. This type of error lets you indicate which records failed and why:
 
 ```go
 // RecordsError is returned by the Upsert method of an app connector when only
@@ -499,12 +518,25 @@ When records are sent in a batch, some APIs respond with specific error messages
 type RecordsError map[int]error
 ```
 
+If the error affects all records—such as when the entire request fails—you should return a generic error. In that case, all processed records will be marked with the same error.
+
 ### Key concepts:
 
-* **Error handling for individual records**\
-   Instead of returning a single error for the entire batch, you can return an error specific to each record that failed. This makes it possible to identify exactly which record(s) have issues.
+* **Discarding records during iteration**\
+  If a record fails validation before sending, you can discard it during iteration using `records.Discard(err)`. Discarded records are removed from processing entirely and will not be retried in future calls to `Upsert`.
 
-* **Mapping errors by record index**\
-   The key of the `RecordsError` type is the index of the record in the iteration, which corresponds to the position of the record in the request body (assuming the records were written in the same order). The value is the error associated with that specific record.
+* **Handling individual record errors**\
+  When certain records fail due to validation issues (e.g., returned by the app), you can return a `RecordsError` that maps each failed record to its specific error, instead of returning a single error for the whole batch.
 
-This approach lets you identify and handle errors for each record separately, instead of having a single error for the whole batch.
+* **Error index mapping**\
+  Each key in the `RecordsError` type represents the index of a failed record (in the order they were consumed and likely sent in the HTTP request), and each value holds the corresponding error.
+
+### When to validate records
+
+When it comes to record validation, there are a few possible scenarios depending on the target app:
+
+* **The app never returns validation errors**. In this case, your connector should validate records as much as possible before sending them. This allows users to quickly understand why certain records aren't accepted by the app.
+
+* **The app validates records but only returns a single error in the response**, typically the first error encountered. In this case, it's important that your connector performs validation ahead of time — otherwise, a validation error on a single record would cause all records in the same request to be marked as invalid. If the app still returns a validation error, you should return a generic error, which will mark all records as invalid.
+
+* **The app validates records and returns a separate error for each invalid record**. In this case, you can return a `RecordsError` that maps each failed record to its corresponding error.

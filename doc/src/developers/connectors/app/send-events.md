@@ -473,11 +473,28 @@ Below is an example implementation:
     - The processed events remain unchanged, meaning they can potentially be postponed later.
     - This postponed event will remain unprocessed and will be included in the next call to the `SendEvents` method.
 
-### Differentiating errors by event
+## Error handling
 
-When the `SendEvents` and `PreviewSendEvents` methods return an error, it applies to all consumed events. None of these events will be available in future calls.
+If, during the iteration over the event sequence, an event cannot be processed—for example, because it fails validation—you should call the `Discard` method on the iterator:
 
-However, if you need to report errors for specific events—such as validation failures—you can return an `EventsError`. This type allows you to indicate which events failed and why:
+```go
+    n := 0
+    for event := range events.All() {
+        if !valid(event) {
+            events.Discard(errors.new("event is invalid"))
+        }
+        // ...
+        n++
+    }
+    // Return early if all events have been discarded. 
+    if n == 0 {
+        return nil
+    }
+```
+
+Unlike postponed events, **discarded** events will not be retried in future calls to `SendEvents` or `PreviewSendEvents`.
+
+If a validation error occurs _after_ sending the request to the app, you should return an `EventsError`. This type of error lets you indicate which events failed and why:
 
 ```go
 // EventsError can be returned by the SendEvents and PreviewSendEvents methods
@@ -493,14 +510,31 @@ However, if you need to report errors for specific events—such as validation f
 // For example, if the third event is rejected due to a validation error while
 // all other events are accepted, the returned error would be:
 //
-// EventsError{2: errors.New("event is not valid")}
+// EventsError{2: errors.New("event is invalid")}
 type EventsError map[int]error
 ```
 
+If the error affects all events—such as when the entire request fails—you should return a generic error. In that case, all processed events will be marked with the same error.
+
 ### Key concepts:
 
-* **Error Handling for individual events**\
-  If validation errors occur on individual events, you can return a specific error for each failed event instead of a single error for the entire request. This makes it possible to identify exactly which event(s) have issues.
+* **Discarding events during iteration**\
+  If an event fails validation before sending, you can discard it during iteration using `events.Discard(err)`. Discarded events are removed from processing entirely and will not be retried in future calls to `SendEvents` or `PreviewSendEvents`.  
 
-* **Mapping errors by event index**\
-  In the `EventsError` type, each key is the index of an event (assuming the events were added to the HTTP request in the same order they were consumed), and the value is the corresponding error.
+* **Handling individual event errors**\
+  When certain events fail due to validation issues (e.g., returned by the app), you can return an `EventsError` that maps each failed event to its specific error, instead of returning a single error for the whole batch.
+
+* **Error index mapping**\
+  Each key in the `EventsError` type represents the index of a failed event (in the order they were consumed and likely sent in the HTTP request), and each value holds the corresponding error.
+
+### When to validate events
+
+When it comes to event validation, there are a few possible scenarios depending on the target app:
+
+* **The app never returns validation errors** (e.g., Google Analytics). In this case, your connector should validate events as much as possible before sending them. This allows users to quickly understand why certain events aren't accepted by the app.
+
+* **The app validates events but only returns a single error in the response** (e.g., Klaviyo), typically the first error encountered. In this case, it's important that your connector performs validation ahead of time — otherwise, a validation error on a single event would cause all events in the same request to be marked as invalid. If the app still returns a validation error, you should return a generic error, which will mark all events as invalid.
+
+* **The app validates events and returns a separate error for each invalid event** (e.g., Mixpanel). In this case, you can return an `EventsError` that maps each failed event to its corresponding error. However, note that these validation errors won't be visible in the preview (`PreviewSendEvents`), since no actual request is sent during that step.
+
+If your connector relies entirely on the app's validation and doesn't perform any local checks, validation errors **won't** appear in the preview—because the events aren't actually sent. But if the app provides a dedicated validation endpoint, you can call it from `PreviewSendEvents` to simulate the validation step. If such an endpoint is not available, your connector should implement its own validation logic.
