@@ -3534,10 +3534,10 @@ function removeQuotes(v: any | null) {
 	return v.replace(/^"|"$/g, '');
 }
 
-// transformationHeaders returns two pairs of values, the two values ​​to use
-// for the left transformation header, and the two values ​​for the right.
+// transformationHeaders returns two pairs of values, the two values to use
+// for the left transformation header, and the two values for the right.
 //
-// The two values ​​in each pair form a meaningful header and can, for example,
+// The two values in each pair form a meaningful header and can, for example,
 // be displayed on two separate lines or concatenated with a space.
 function transformationHeaders(
 	connection: TransformedConnection,

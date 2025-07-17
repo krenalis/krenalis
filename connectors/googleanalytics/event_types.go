@@ -17,10 +17,10 @@ import (
 var (
 	monetaryType = types.Decimal(20, 2)
 	intType      = types.Int(32)
-	// genericNumberType should be used to represent the types of those values ​​for
+	// genericNumberType should be used to represent the types of those values for
 	// which it is not clear what the precision and scale might be. The values
-	// ​​chosen here (13 and 3) are considered large enough to represent the values,
-	// regardless of what those values ​​mean.
+	// chosen here (13 and 3) are considered large enough to represent the values,
+	// regardless of what those values mean.
 	genericNumberType = types.Decimal(13, 3)
 )
 
