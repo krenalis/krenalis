@@ -526,6 +526,11 @@ github.com/lufia/plan9stats
 # github.com/magiconair/properties v1.8.10
 ## explicit; go 1.19
 github.com/magiconair/properties
+# github.com/mark3labs/mcp-go v0.34.0
+## explicit; go 1.23
+github.com/mark3labs/mcp-go/mcp
+github.com/mark3labs/mcp-go/server
+github.com/mark3labs/mcp-go/util
 # github.com/moby/docker-image-spec v1.3.1
 ## explicit; go 1.18
 github.com/moby/docker-image-spec/specs-go/v1
@@ -650,6 +655,9 @@ github.com/sirupsen/logrus
 # github.com/snowflakedb/gosnowflake v1.14.0
 ## explicit; go 1.22.0
 github.com/snowflakedb/gosnowflake
+# github.com/spf13/cast v1.7.1
+## explicit; go 1.19
+github.com/spf13/cast
 # github.com/stretchr/testify v1.10.0
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
@@ -702,6 +710,9 @@ github.com/xuri/excelize/v2
 # github.com/xuri/nfp v0.0.1
 ## explicit; go 1.15
 github.com/xuri/nfp
+# github.com/yosida95/uritemplate/v3 v3.0.2
+## explicit; go 1.14
+github.com/yosida95/uritemplate/v3
 # github.com/yusufpapurcu/wmi v1.2.4
 ## explicit; go 1.16
 github.com/yusufpapurcu/wmi

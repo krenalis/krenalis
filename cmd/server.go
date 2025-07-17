@@ -178,6 +178,9 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer assets.Close()
 
+	// Instantiate a new MCP (Model Context Protocol) server.
+	mcpServer := newMCPServer(apisServer)
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Handle panics.
@@ -215,6 +218,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 			}
 		}()
+
+		// Serve the requests for the MCP (Model Context Protocol) server.
+		if r.URL.Path == "/mcp" {
+			mcpServer.ServeHTTP(w, r)
+			return
+		}
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
