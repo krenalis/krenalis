@@ -14,6 +14,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -300,12 +301,13 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 
 	storeHTTPRequestWhenTesting(ctx, req)
 
-	_, err = ga.conf.HTTPClient.Do(req)
+	res, err := ga.conf.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: handle errors
+	if res.StatusCode != 204 {
+		return nil, fmt.Errorf("Google Analytics responded with error code %d", res.StatusCode)
+	}
 
 	return req, nil
 }

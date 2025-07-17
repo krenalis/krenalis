@@ -13,6 +13,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"fmt"
 	"io"
 	"maps"
 	"math/rand/v2"
@@ -479,11 +480,15 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, previe
 	if preview {
 		return req, nil
 	}
-	_, err = dummy.conf.HTTPClient.Do(req)
+	res, err := dummy.conf.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: handle errors
+	switch res.StatusCode {
+	case 200, 201, 202, 204:
+	default:
+		return nil, fmt.Errorf("Dummy endpoint responded with error code %d", res.StatusCode)
+	}
 	return req, nil
 }
 
