@@ -593,6 +593,10 @@ inherit the disabled style */
 	min-height: 100%;
 }
 
+.transformation-box--function {
+	height: 100%;
+}
+
 .transformation-box--mappings {
 	background-color: var(--bg-gray);
 }
