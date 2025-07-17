@@ -97,7 +97,7 @@ func TestBadRequest(t *testing.T) {
 	if gotErr1 != gotErr2 {
 		t.Fatal("the two errors should be the same")
 	}
-	const expectedErr = `sending event "properties.time": 'properties.time' is invalid: must not be missing`
+	const expectedErr = `properties.time: 'properties.time' is invalid: must not be missing`
 	if gotErr1 != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, gotErr1)
 	}
