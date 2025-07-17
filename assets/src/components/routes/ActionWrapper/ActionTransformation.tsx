@@ -1775,7 +1775,10 @@ const FullscreenTransformation = ({
 			);
 		} catch (err) {
 			setOutput('');
-			if (err instanceof UnprocessableError && err.code === 'TransformationFailed') {
+			if (
+				err instanceof UnprocessableError &&
+				(err.code === 'TransformationFailed' || err.code === 'InvalidEvent')
+			) {
 				setTimeout(() => {
 					setOutputError(err.message);
 					setIsExecuting(false);
