@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import './ConnectorKeyvalue.css';
 import ConnectorField from '../ConnectorField';
 import { KeyContext } from '../../../../context/KeyContext';
@@ -65,24 +65,23 @@ const ConnectorKeyValue = ({
 		}),
 	);
 
-	useEffect(() => {
-		// Avoid re-rendering when the order of the rows is changed, since the
-		// re-render is done directly inside this component to prevent delays in
-		// the drag and drop animation.
-		if (JSON.stringify(val) === JSON.stringify(normalizeRows(rows))) {
-			return;
-		}
-		setRows(transformRows(val));
-	}, [val]);
-
 	const onAddRowClick = () => {
-		const rws = [...rows, { id: rows[rows.length - 1].id + 1, key: '', value: '' }];
-		onChange(name, normalizeRows(rws));
+		const cloned = structuredClone(rows);
+		let maxID = 0;
+		for (const r of cloned) {
+			if (r.id > maxID) {
+				maxID = r.id;
+			}
+		}
+		cloned.push({ id: maxID + 1, key: '', value: '' });
+		setRows(cloned);
+		onChange(name, normalizeRows(cloned));
 	};
 
 	const onRemoveRowClick = (id: number) => {
-		const rws = [...rows];
-		const filtered = rws.filter((r) => r.id !== id);
+		const cloned = structuredClone(rows);
+		const filtered = cloned.filter((r) => r.id !== id);
+		setRows(filtered);
 		onChange(name, normalizeRows(filtered));
 	};
 
@@ -94,6 +93,7 @@ const ConnectorKeyValue = ({
 			}
 			return r;
 		});
+		setRows(updated);
 		onChange(name, normalizeRows(updated));
 	};
 
@@ -105,6 +105,7 @@ const ConnectorKeyValue = ({
 			}
 			return r;
 		});
+		setRows(updated);
 		onChange(name, normalizeRows(updated));
 	};
 
