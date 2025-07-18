@@ -1990,3 +1990,29 @@ func validateUIPreferences(preferences UIPreferences) error {
 	}
 	return nil
 }
+
+// RawQueryWarehouse executes a query on the warehouse, returning the result as
+// a [][]any.
+//
+// TODO(Gianluca): for more details about the values returned by this function,
+// see the issue https://github.com/meergo/meergo/issues/1666.
+//
+// TODO(Gianluca): the error handling is currently minimal. See the issue
+// https://github.com/meergo/meergo/issues/1667.
+func (this *Workspace) RawQueryWarehouse(ctx context.Context, query string) ([][]any, error) {
+	this.core.mustBeOpen()
+	// TODO(Gianluca): here the warehouse mode is not checked. The reason is
+	// that the mode is currently stored in the store. We should review all
+	// this. This is discussed in the issue https://github.com/meergo/meergo/issues/1224.
+	this.core.mcpMu.Lock()
+	mcp, ok := this.core.mcp[this.workspace.ID]
+	this.core.mcpMu.Unlock()
+	if !ok {
+		return nil, errors.New("workspace not found")
+	}
+	rows, err := mcp.RawQuery(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}

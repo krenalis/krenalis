@@ -98,6 +98,12 @@ func (dw warehouse) Query(ctx context.Context, query meergo.RowQuery, withTotal 
 	return rows, total, err
 }
 
+func (dw warehouse) RawQuery(ctx context.Context, query string) ([][]any, error) {
+	rows, err := dw.inner.RawQuery(ctx, query)
+	err = unavailableError(err)
+	return rows, err
+}
+
 func (dw warehouse) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
 	return unavailableError(dw.inner.ResolveIdentities(ctx, opID, identifiers, userColumns, userPrimarySources))
 }

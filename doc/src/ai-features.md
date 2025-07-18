@@ -32,6 +32,7 @@ Some details:
 
 Meergo's exposed MCP server currently allows to:
 
+* **Query the data warehouse** tables (events, users...) for analyzing data.
 * Expose the **user schema**, so the LLM can analyze it and provide information about it.
 * Expose the **event schema**, so the LLM can analyze it and provide information about it.
 

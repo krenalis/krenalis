@@ -72,6 +72,47 @@ func newMCPServer(apisServer *apisServer) *mcpServer {
 		return mcp.NewToolResultText(string(encoded)), nil
 	})
 
+	// Tool that queries the data warehouse.
+	queryDataWarehouse := mcp.NewTool("query-data-warehouse",
+		mcp.WithDescription("Runs a query on the data warehouse connected to the workspace (to retrieve events, users, or other relevant data) and returns the results for analysis."),
+		mcp.WithString("query", mcp.Required(), mcp.Description("Query to execute on the workspace's data warehouse to retrieve data")),
+		mcp.WithReadOnlyHintAnnotation(true),
+	)
+	m.AddTool(queryDataWarehouse, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		apiToken, err := apiTokenFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		organizationID, workspaceID, found := apisServer.core.APIKey(apiToken)
+		if !found {
+			return nil, errors.New("invalid API key")
+		}
+		org, err := apisServer.core.Organization(ctx, organizationID)
+		if err != nil {
+			return nil, err
+		}
+		if workspaceID == 0 {
+			return nil, errors.New("the API key must be restricted to a workspace")
+		}
+		query, err := req.RequireString("query")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		ws, err := org.Workspace(workspaceID)
+		if err != nil {
+			return nil, err
+		}
+		rows, err := ws.RawQueryWarehouse(ctx, query)
+		if err != nil {
+			return nil, err
+		}
+		encoded, err := json.Marshal(rows)
+		if err != nil {
+			return nil, err
+		}
+		return mcp.NewToolResultText(string(encoded)), nil
+	})
+
 	return &mcpServer{
 		server: server.NewStreamableHTTPServer(m),
 	}

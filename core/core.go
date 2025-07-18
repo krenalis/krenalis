@@ -66,6 +66,11 @@ type Core struct {
 		sync.WaitGroup
 	}
 	closed atomic.Bool
+
+	// mcp holds an instance of a meergo.Warehouse for every workspace, and it
+	// is needed by the MCP (Model Context Protocol) server.
+	mcp   map[int]meergo.Warehouse
+	mcpMu sync.Mutex
 }
 
 var hasBeenCalled bool
@@ -225,12 +230,24 @@ func New(conf *Config) (*Core, error) {
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 
+	// Instantiate a meergo.Warehouse, used by the MCP server, for every
+	// workspace.
+	core.mcp = map[int]meergo.Warehouse{}
+	for _, ws := range core.state.Workspaces() {
+		// TODO(Gianluca): MCP-specific credentials will be used here. See https://github.com/meergo/meergo/issues/1670.
+		wh, _ := getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.Settings)
+		core.mcp[ws.ID] = wh
+	}
+
 	// Listen to state changes.
 	core.state.Freeze()
+	core.state.AddListener(core.onCreateWorkspace)
+	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onExecuteAction)
 	core.state.AddListener(core.onStartAlterUserSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
+	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
 
 	// Try to start pending action executions.
@@ -1279,6 +1296,32 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	}
 }
 
+// onCreateWorkspace is called when a workspace is created.
+func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
+	ws, _ := core.state.Workspace(n.ID)
+	// TODO(Gianluca): MCP-specific credentials will be used here. See https://github.com/meergo/meergo/issues/1670.
+	wh, _ := getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.Settings)
+	core.mcpMu.Lock()
+	core.mcp[ws.ID] = wh
+	core.mcpMu.Unlock()
+}
+
+// onDeleteWorkspace is called when a workspace is deleted.
+func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
+	core.mcpMu.Lock()
+	wh, ok := core.mcp[n.ID]
+	delete(core.mcp, n.ID)
+	core.mcpMu.Unlock()
+	if ok {
+		go func(workspace int) {
+			err := wh.Close()
+			if err != nil {
+				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+			}
+		}(n.ID)
+	}
+}
+
 // onElectLeader is called when a leader is elected.
 func (core *Core) onElectLeader(n state.ElectLeader) {
 	if !core.state.IsLeader() {
@@ -1315,6 +1358,29 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 		return
 	}
 	go core.executeIdentityResolution(n.Workspace, n.ID)
+}
+
+// onUpdateWarehouse is called when a warehouse is updated.
+func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
+	// Update the MCP warehouse if the settings have changed.
+	core.mcpMu.Lock()
+	prevWarehouse := core.mcp[n.Workspace]
+	core.mcpMu.Unlock()
+	ws, _ := core.state.Workspace(n.Workspace)
+	// TODO(Gianluca): MCP-specific credentials will be used here. See https://github.com/meergo/meergo/issues/1670.
+	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Type, n.Settings)
+	if !bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
+		core.mcpMu.Lock()
+		core.mcp[n.Workspace] = nextWarehouse
+		core.mcpMu.Unlock()
+		// Close the previous warehouse.
+		go func(workspace int) {
+			err := prevWarehouse.Close()
+			if err != nil {
+				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+			}
+		}(ws.ID)
+	}
 }
 
 // startAlterUserSchema starts the alter of the user schema.
@@ -1452,6 +1518,18 @@ func categoryBitmaskToCategoryNames(categoryBitmask meergo.Categories) []string 
 		}
 	}
 	return categoryNames
+}
+
+// getMCPWarehouseInstance returns a meergo.Warehouse instance that can be used
+// to implement features for the MCP server.
+// typ is the type of the warehouse and settings are the settings for connecting
+// to it.
+func getMCPWarehouseInstance(typ string, settings []byte) (meergo.Warehouse, error) {
+	wh, err := meergo.RegisteredWarehouseDriver(typ).New(&meergo.WarehouseConfig{Settings: settings})
+	if err != nil {
+		return nil, err
+	}
+	return wh, nil
 }
 
 func isValidMemberToken(token string) bool {
