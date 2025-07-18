@@ -39,8 +39,13 @@ const ConnectorsList = () => {
 	}, [location]);
 
 	const searchedConnectors: any[] = useMemo(() => {
+		const sortedConnectors = structuredClone(connectors).sort((a, b) => (a.name <= b.name ? -1 : 1));
+		const sortedAdditionalConnectorsInfo = structuredClone(additionalConnectorsInfo).sort((a, b) =>
+			a.name <= b.name ? -1 : 1,
+		);
 		let searchedConnectors = [];
-		for (const c of [...connectors, ...additionalConnectorsInfo]) {
+
+		for (const c of [...sortedConnectors, ...sortedAdditionalConnectorsInfo]) {
 			if (
 				(connectionRole === 'Source' && c.asSource == null) ||
 				(connectionRole === 'Destination' && c.asDestination == null)
@@ -51,7 +56,7 @@ const ConnectorsList = () => {
 			const isInfo = c['asSource']?.['implemented'] != null || c['asDestination']?.['implemented'] != null;
 			if (isInfo) {
 				const isAlreadyInstalled =
-					connectors.findIndex(
+					sortedConnectors.findIndex(
 						(conn) =>
 							conn.name === c.name &&
 							((connectionRole === 'Source' && c.asSource != null) ||
