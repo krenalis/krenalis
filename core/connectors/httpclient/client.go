@@ -258,27 +258,32 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 
 		reason, waitTime := retryStrategy(policy, res, retries)
 		limiter.OnFailure(duration, reason, waitTime)
-		if reason == meergo.PermanentFailure {
-			return res, nil
-		}
-		if !retriable {
-			// For unauthorized requests to OAuth connectors, we assume by default that
-			// the request was not consumed, so if the body is retriable, it will be retried.
-			if canBeRetried := isBodyRetriable(req) && reason == meergo.Unauthorized && accessToken != ""; !canBeRetried {
-				return res, nil
-			}
-		}
 
 		if netRetries {
 			retries = 0
 			netRetries = false
 		}
 
-		if reason == meergo.NetFailure {
+		switch reason {
+		case meergo.PermanentFailure:
+			return res, nil
+		case meergo.NetFailure:
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			case <-time.After(waitTime):
+			}
+		case meergo.Unauthorized:
+			if isRetriveOAuthToken {
+				return res, nil
+			}
+			if accessToken == "" {
+				return res, nil
+			}
+			// For unauthorized requests to OAuth apps, we assume by default that
+			// the request was not consumed, so if the body is retriable, it will be retried.
+			if !isBodyRetriable(req) {
+				return res, nil
 			}
 		}
 
