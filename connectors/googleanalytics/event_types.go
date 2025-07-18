@@ -357,48 +357,48 @@ func init() {
 		{
 			ID:   "unlock_achievement",
 			Name: "Unlock Achievement",
-			Schema: types.Object(([]types.Property{
+			Schema: types.Object([]types.Property{
 				{Name: "achievement_id", Type: types.Text(), CreateRequired: true},
-			})),
+			}),
 		},
 		{
 			ID:   "view_cart",
 			Name: "View Cart",
-			Schema: types.Object(([]types.Property{
+			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: types.Text()},
 				{Name: "value", Type: monetaryType},
 				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
-			})),
+			}),
 		},
 		{
 			ID:   "view_item",
 			Name: "View Item",
-			Schema: types.Object(([]types.Property{
+			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: types.Text()},
 				{Name: "value", Type: monetaryType},
 				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
-			})),
+			}),
 		},
 		{
 			ID:   "view_item_list",
 			Name: "View Item List",
-			Schema: types.Object(([]types.Property{
+			Schema: types.Object([]types.Property{
 				{Name: "currency", Type: types.Text()},
 				{Name: "item_list_id", Type: types.Text()},
 				{Name: "item_list_name", Type: types.Text()},
 				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
-			})),
+			}),
 		},
 		{
 			ID:   "view_promotion",
 			Name: "View Promotion",
-			Schema: types.Object(([]types.Property{
+			Schema: types.Object([]types.Property{
 				{Name: "creative_name", Type: types.Text()},
 				{Name: "creative_slot", Type: types.Text()},
 				{Name: "promotion_id", Type: types.Text()},
 				{Name: "promotion_name", Type: types.Text()},
 				{Name: "items", Type: types.Array(promotionItemType), CreateRequired: true},
-			})),
+			}),
 		},
 		{
 			ID:   "view_search_results",
