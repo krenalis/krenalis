@@ -1996,7 +1996,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "type array cannot be used as table key",
+			err:                     "type array(text) cannot be used as table key",
 		},
 		{
 			name: "BAD: Destination/Database/User - unmapped property in input schema",

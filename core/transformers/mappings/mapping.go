@@ -243,12 +243,7 @@ func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (m
 					n, _ := e.dt.CharLen()
 					msg = fmt.Sprintf("«%s» exceeds the %d-char limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
 				default:
-					dtStr := e.dt.String()
-					switch e.dt.Kind() {
-					case types.ArrayKind, types.MapKind:
-						dtStr += "(" + e.dt.Elem().String() + ")"
-					}
-					msg = fmt.Sprintf("«%s» is not convertible to the «%s» type while mapping to «%s»", code(e.expr.source), dtStr, code(e.path))
+					msg = fmt.Sprintf("«%s» is not convertible to the «%s» type while mapping to «%s»", code(e.expr.source), e.dt.String(), code(e.path))
 				}
 				return nil, ValidationError{msg}
 			}

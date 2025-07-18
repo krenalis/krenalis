@@ -472,20 +472,8 @@ func (t Type) String() string {
 		if t.p > 0 {
 			s += "(" + strconv.Itoa(int(t.p)) + "," + strconv.Itoa(int(t.s)) + ")"
 		}
-	case TextKind:
-		if t.p > 0 || t.s > 0 {
-			s += "("
-			if t.p > 0 {
-				s += strconv.Itoa(int(t.p)) + " bytes"
-			}
-			if t.s > 0 {
-				if t.p > 0 {
-					s += ","
-				}
-				s += strconv.Itoa(int(t.s)) + " chars"
-			}
-			s += ")"
-		}
+	case ArrayKind, MapKind:
+		s += "(" + t.Elem().String() + ")"
 	case InvalidKind:
 		s, _ = t.vl.(string)
 	}

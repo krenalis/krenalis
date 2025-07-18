@@ -204,7 +204,7 @@ func Test_validatePrimarySources(t *testing.T) {
 			expectedErr:    "primary sources cannot be specified for object properties",
 		}, {
 			primarySources: map[string]int{"phone_numbers": 12345},
-			expectedErr:    "primary sources cannot be specified for array properties",
+			expectedErr:    "primary sources cannot be specified for array(text) properties",
 		},
 	}
 	for _, test := range tests {
