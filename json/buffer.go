@@ -29,6 +29,7 @@ type Buffer struct {
 	kvOff       int
 	initialized bool
 	indent      bool
+	_           noCopy
 }
 
 // NewBuffer returns a new buffer.
@@ -190,6 +191,11 @@ func (b *Buffer) Value() (Value, error) {
 type buffer struct {
 	bytes.Buffer
 }
+
+type noCopy struct{}
+
+func (*noCopy) Lock()   {}
+func (*noCopy) Unlock() {}
 
 // textMarshaler implements the encoding.TextMarshaler interface for a []byte
 // value. When used with the internal json.Marshal method, the []byte value is
