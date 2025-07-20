@@ -13,14 +13,12 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"crypto/rand"
 	_ "embed"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"math"
-	"math/big"
 	"net/http"
 	"net/url"
 	"slices"
@@ -747,22 +745,6 @@ func (mc *MailChimp) metadata(ctx context.Context) (string, string, error) {
 		return "", "", err
 	}
 	return r.DC, strconv.Itoa(r.UserID), nil
-}
-
-// generateRandomString generates a random string of length characters, composed
-// of random letters and numbers.
-func generateRandomString(length int) (string, error) {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	max := big.NewInt(int64(len(charset)))
-	s := make([]byte, length)
-	for i := range s {
-		n, err := rand.Int(rand.Reader, max)
-		if err != nil {
-			return "", err
-		}
-		s[i] = charset[n.Int64()]
-	}
-	return string(s), nil
 }
 
 // staticProperties contains the static properties of the user schema.
