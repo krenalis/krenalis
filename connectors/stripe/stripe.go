@@ -112,19 +112,16 @@ func (stripe *Stripe) RecordSchema(ctx context.Context, target meergo.Targets, r
 // Records returns the records of the specified target.
 func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, _ []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
-	var body []byte
+	path := "/v1/customers"
 	if cursor != "" {
-		form := url.Values{
-			"starting_after": {cursor},
-		}
-		body = []byte(form.Encode())
+		path += "?starting_after=" + url.QueryEscape(cursor)
 	}
 
 	var response struct {
 		Data []map[string]any `json:"data"`
 	}
 
-	err := stripe.call(ctx, "GET", "/v1/customers", body, 200, &response)
+	err := stripe.call(ctx, "GET", path, nil, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
