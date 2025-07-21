@@ -50,8 +50,7 @@ func (info WarehouseDriver) New(conf *WarehouseConfig) (Warehouse, error) {
 
 // WarehouseConfig represents the configuration of a data warehouse.
 type WarehouseConfig struct {
-	Settings    []byte
-	SetSettings SetSettingsFunc
+	Settings []byte
 }
 
 // WarehouseDriverNewFunc represents functions that create new warehouse driver
