@@ -55,6 +55,17 @@ const ConnectionsList = () => {
 			return;
 		}
 
+		roleConnections.sort((a, b) => {
+			if (a.name < b.name) {
+				return -1;
+			} else if (a.name > b.name) {
+				return 1;
+			} else {
+				// The names are equal, compare the IDs.
+				return a.id < b.id ? -1 : 1;
+			}
+		});
+
 		const hasEventConnections = roleConnections.findIndex((c) => c.linkedConnections != null) !== -1;
 		if (hasEventConnections) {
 			columns.push({
