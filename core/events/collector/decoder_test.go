@@ -532,7 +532,7 @@ func Test_Decoder(t *testing.T) {
 				var buf json.Buffer
 				_ = buf.EncodeIndent(expected.event, "", "\t")
 				expectedJSON := buf.String()
-				buf.Reset()
+				buf.Truncate(0)
 				err = buf.EncodeIndent(got, "", "\t")
 				if err != nil {
 					t.Fatalf("unexpected error encoding the event: %s", err)

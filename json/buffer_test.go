@@ -127,7 +127,7 @@ func Test_Buffer(t *testing.T) {
 			t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
 		}
 
-		buf.Reset()
+		buf.Truncate(0)
 
 		buf.WriteString(`[1,2,3]4`)
 		_, err = buf.Value()
@@ -136,6 +136,37 @@ func Test_Buffer(t *testing.T) {
 		}
 		if _, ok := err.(*SyntaxError); !ok {
 			t.Fatalf("expected *SyntaxError, got %T", err)
+		}
+
+	})
+
+	t.Run("Reset", func(t *testing.T) {
+
+		var buf Buffer
+		if b := buf.Bytes(); b != nil {
+			t.Fatalf("expected nil, got %#v", b)
+		}
+		buf.Reset(nil)
+		if b := buf.Bytes(); b != nil {
+			t.Fatalf("expected nil, got %#v", b)
+		}
+		buf.WriteString("foo")
+		if s := string(buf.Bytes()); s != "foo" {
+			t.Fatalf("expected \"foo\", got %q", s)
+		}
+		buf.Reset(nil)
+		if b := buf.Bytes(); b != nil {
+			t.Fatalf("expected nil, got %#v", b)
+		}
+		b2 := []byte("boo")
+		buf.Reset(b2)
+		if s := string(buf.Bytes()); s != "boo" {
+			t.Fatalf("expected \"boo\", got %q", s)
+		}
+		b3 := []byte("foo")
+		buf.Reset(b3)
+		if s := string(buf.Bytes()); s != "foo" {
+			t.Fatalf("expected \"foo\", got %q", s)
 		}
 
 	})

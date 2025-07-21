@@ -158,11 +158,10 @@ func (b *Buffer) EncodeSorted(v any) error {
 	return nil
 }
 
-// Reset resets the buffer, making it empty, while retaining the underlying
-// storage for future writes.
-// It is functionally equivalent to calling [Buffer.Truncate](0).
-func (b *Buffer) Reset() {
-	b.buffer.Reset()
+// Reset resets the buffer to write to s.
+// To keep the current buffer, call [Buffer.Truncate] with n == 0 instead.
+func (b *Buffer) Reset(s []byte) {
+	b.buffer.Buffer = *bytes.NewBuffer(s)
 	b.enc.Reset(&b.buffer)
 	b.initialized = true
 	b.indent = false
