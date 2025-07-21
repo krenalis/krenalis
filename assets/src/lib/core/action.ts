@@ -186,6 +186,13 @@ interface TransformedActionType {
 	fields: ActionTypeField[];
 }
 
+interface TransformedEventType {
+	id: string;
+	name: string;
+	description: string;
+	filter: Filter | null;
+}
+
 interface TransformedAction {
 	id?: number;
 	connection?: number;
@@ -1148,6 +1155,12 @@ const computeDefaultAction = (
 		inSchema: null,
 		outSchema: null,
 	};
+	if (fields.includes('Filter')) {
+		const eventType = connection.eventTypes.find((t) => t.id === actionType.eventType);
+		if (eventType != null && eventType.filter != null) {
+			action.filter = eventType.filter;
+		}
+	}
 	if (fields.includes('Query')) {
 		action.query = connection.connector.asSource.sampleQuery;
 		action.identityColumn = '';
@@ -1588,4 +1601,11 @@ export {
 	stringifyMapPairs,
 };
 
-export type { TransformedMapping, TransformedProperty, TransformedActionType, TransformedAction, ActionTypeField };
+export type {
+	TransformedMapping,
+	TransformedProperty,
+	TransformedActionType,
+	TransformedEventType,
+	TransformedAction,
+	ActionTypeField,
+};

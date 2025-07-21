@@ -230,6 +230,9 @@ type EventType struct {
 
 	// Description is the description of the event type to be displayed.
 	Description string
+
+	// Filter is the recommended default filter to use for actions that use this event type.
+	Filter string
 }
 
 // RecordFetcher is implemented by app connectors that support fetching records.

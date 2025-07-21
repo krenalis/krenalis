@@ -89,16 +89,19 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 			ID:          "track",
 			Name:        "Send track events",
 			Description: "Send track events to Mixpanel",
+			Filter:      "type is 'track'",
 		},
 		{
 			ID:          "page",
 			Name:        "Send page events",
 			Description: "Send page events to Mixpanel",
+			Filter:      "type is 'page'",
 		},
 		{
 			ID:          "screen",
 			Name:        "Send screen events",
 			Description: "Send screen events to Mixpanel",
+			Filter:      "type is 'screen'",
 		},
 	}, nil
 }

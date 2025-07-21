@@ -77,6 +77,7 @@ type EventType struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	Filter      string `json:"filter"`
 }
 
 // Strategy represents a strategy.

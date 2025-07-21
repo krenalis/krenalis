@@ -9442,6 +9442,13 @@
                                                     "kind": "text"
                                                 },
                                                 "description": "The description of the event type."
+                                            },
+                                            {
+                                                "name": "filter",
+                                                "type": {
+                                                    "kind": "text"
+                                                },
+                                                "description": "The recommended default filter for actions that send events to apps using this event type."
                                             }
                                         ]
                                     }

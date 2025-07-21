@@ -11,6 +11,7 @@ import { Action, ActionTarget, ActionType } from '../api/types/action';
 import TransformedConnector from './connector';
 import { Variant } from '../../components/routes/App/App.types';
 import { ConnectorTarget } from '../api/types/connector';
+import { TransformedEventType } from './action';
 
 interface ConnectionStatus {
 	text: string;
@@ -33,6 +34,7 @@ class TransformedConnection {
 	linkedFiles?: TransformedConnection[];
 	actionTypes?: ActionType[];
 	actions?: Action[];
+	eventTypes?: TransformedEventType[];
 	linkedConnections?: number[];
 
 	constructor(
@@ -51,6 +53,7 @@ class TransformedConnection {
 		linkedFiles?: TransformedConnection[],
 		actionTypes?: ActionType[],
 		actions?: Action[],
+		eventTypes?: TransformedEventType[],
 		linkedConnections?: number[],
 	) {
 		this.id = id;
@@ -68,6 +71,7 @@ class TransformedConnection {
 		this.linkedFiles = linkedFiles;
 		this.actionTypes = actionTypes == null ? [] : actionTypes;
 		this.actions = actions == null ? [] : actions;
+		this.eventTypes = eventTypes == null ? [] : eventTypes;
 		if (linkedConnections) {
 			this.linkedConnections = linkedConnections;
 		}

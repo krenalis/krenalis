@@ -63,16 +63,13 @@
 	color: #777;
 }
 
-.connection-actions__action-filter > div:first-child {
-	margin-top: 0;
-}
-
-.connection-actions__action-filter > div {
+.connection-actions__action-filter {
 	font-size: 12px;
 	opacity: 0.7;
 	font-family: var(--monospace-fonts);
 	word-break: break-word;
-	margin-top: 5px;
+	margin-top: 0;
+	white-space: pre;
 }
 
 .connection-actions__buttons {

@@ -5,6 +5,8 @@ import TransformedConnection from '../../../lib/core/connection';
 import { Connection } from '../../../lib/api/types/connection';
 import { NotFoundError } from '../../../lib/api/errors';
 import { ActionType } from '../../../lib/api/types/action';
+import { TransformedEventType } from '../../../lib/core/action';
+import { parseFilter } from '../../../utils/filters_parser';
 
 const useConnection = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -44,6 +46,28 @@ const useConnection = () => {
 			const connection = Object.assign(providedConnection);
 			connection.actionTypes = actionTypes;
 			connection.actions = fetchedConnection.actions;
+			if (fetchedConnection.eventTypes != null) {
+				let eventTypes: TransformedEventType[] = [];
+				for (const t of fetchedConnection.eventTypes) {
+					let tt: TransformedEventType = {
+						id: t.id,
+						name: t.name,
+						description: t.description,
+						filter: null,
+					};
+					if (t.filter) {
+						try {
+							tt.filter = parseFilter(t.filter);
+						} catch (err) {
+							handleError(
+								`The filter of the event type with ID "${t.id}" is invalid: ${err.message.toLowerCase()}`,
+							);
+						}
+					}
+					eventTypes.push(tt);
+				}
+				connection.eventTypes = eventTypes;
+			}
 			setConnection(connection);
 			setTimeout(() => {
 				setIsLoading(false);

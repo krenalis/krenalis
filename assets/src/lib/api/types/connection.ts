@@ -7,6 +7,13 @@ type ConnectionRole = 'Source' | 'Destination';
 
 type Health = 'Healthy' | 'NoRecentData' | 'RecentError';
 
+interface EventType {
+	id: string;
+	name: string;
+	description: string;
+	filter: string;
+}
+
 interface Connection {
 	id: number;
 	name: string;
@@ -22,6 +29,7 @@ interface Connection {
 	health: Health;
 	actionTypes?: ActionType[];
 	actions?: Action[];
+	eventTypes: EventType[];
 	linkedConnections?: number[];
 }
 

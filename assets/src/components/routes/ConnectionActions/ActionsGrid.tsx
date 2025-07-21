@@ -17,6 +17,7 @@ import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Variant } from '../App/App.types';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
+import { serializeFilter } from '../../../utils/filters';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 
@@ -174,25 +175,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 		let conditionsCell: ReactNode;
 		if (action.filter != null) {
-			const cells: ReactNode[] = [];
-			for (const [i, c] of action.filter.conditions.entries()) {
-				cells.push(
-					<div key={i}>
-						{c.property} {c.operator}{' '}
-						{c.values != null
-							? c.values.map((val, i) => {
-									let v = '';
-									if (i > 0) {
-										v += '-';
-									}
-									v += val;
-									return v;
-								})
-							: ''}
-					</div>,
-				);
-			}
-			conditionsCell = <div className='connection-actions__action-filter'>{cells}</div>;
+			conditionsCell = (
+				<div className='connection-actions__action-filter'>{serializeFilter(action.filter, true)}</div>
+			);
 		} else {
 			conditionsCell = '-';
 		}

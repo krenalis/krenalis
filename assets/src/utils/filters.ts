@@ -1,3 +1,5 @@
+import { Filter, FilterCondition } from '../lib/api/types/action';
+
 const MIN_INT = BigInt('-9223372036854775808');
 const MAX_INT = BigInt('9223372036854775807');
 const MAX_UINT = BigInt('18446744073709551615');
@@ -246,18 +248,90 @@ const parseText = (s: string): string => {
 	return text;
 };
 
+// serializeFilter returns a string representation of the given Filter object.
+// If formatted is true, each condition appears on its own line with indentation
+// based on the logical connector.
+const serializeFilter = (filter: Filter, formatted: boolean): string => {
+	const { logical, conditions } = filter;
+
+	// escapeString returns the input string escaped and wrapped in double quotes.
+	function escapeString(value: string): string {
+		return `"${value
+			.replace(/\\/g, '\\\\')
+			.replace(/"/g, '\\"')
+			.replace(/\n/g, '\\n')
+			.replace(/\r/g, '\\r')
+			.replace(/\t/g, '\\t')}"`;
+	}
+
+	// formatValues formats a list of values as a string.
+	function formatValues(values: string[] | null): string {
+		if (!values || values.length === 0) {
+			return '';
+		}
+
+		if (values.length === 1) {
+			const v = values[0];
+			if (v === 'true' || v === 'false' || !isNaN(Number(v))) {
+				return v;
+			}
+			return escapeString(v);
+		}
+
+		const formattedList = values.map((v) => {
+			if (v === 'true' || v === 'false' || !isNaN(Number(v))) {
+				return v;
+			}
+			return escapeString(v);
+		});
+
+		return `(${formattedList.join(', ')})`;
+	}
+
+	// formatCondition builds a single condition string.
+	function formatCondition(condition: FilterCondition): string {
+		const { property, operator, values } = condition;
+
+		if (!values) {
+			return `${property} ${operator}`;
+		}
+
+		return `${property} ${operator} ${formatValues(values)}`;
+	}
+
+	// Build the final string from all conditions.
+	const lines: string[] = [];
+
+	for (let i = 0; i < conditions.length; i++) {
+		const condStr = formatCondition(conditions[i]);
+
+		if (!formatted) {
+			lines.push(condStr);
+		} else {
+			if (i === 0) {
+				lines.push(condStr);
+			} else {
+				lines.push(`${logical} ${condStr}`); // prefix subsequent lines with the connector
+			}
+		}
+	}
+
+	return formatted ? lines.join('\n') : lines.join(` ${logical} `);
+};
+
 export {
 	formatText,
-	isInt,
-	isUint,
-	isFloat,
-	isDecimal,
-	isDateTime,
 	isDate,
-	isTime,
-	isYear,
-	isUUID,
+	isDateTime,
+	isDecimal,
+	isFloat,
 	isInet,
+	isInt,
+	isTime,
+	isUUID,
+	isUint,
 	isValidPropertyPath,
+	isYear,
 	parseText,
+	serializeFilter,
 };

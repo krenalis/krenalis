@@ -141,6 +141,11 @@ func init() {
 					Type:        types.Text(),
 					Description: "The description of the event type.",
 				},
+				{
+					Name:        "filter",
+					Type:        types.Text(),
+					Description: "The recommended default filter for actions that send events to apps using this event type.",
+				},
 			})),
 			Nullable: true,
 			Description: "The type of events that can be sent to a destination app connection.\n\n" +

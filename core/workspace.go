@@ -459,6 +459,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 				ID:          et.ID,
 				Name:        et.Name,
 				Description: et.Description,
+				Filter:      et.Filter,
 			}
 		}
 		connection.EventTypes = &eventTypes
