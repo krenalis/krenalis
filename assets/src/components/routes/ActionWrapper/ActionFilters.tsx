@@ -304,7 +304,10 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					caret={true}
 					controlled={true}
 					autoResize={true}
-					error={condition.property !== '' && checkIfPropertyExists(condition.property, flatInputSchema)}
+					error={
+						condition.property !== '' &&
+						checkIfPropertyExists(isJSON ? base : condition.property, flatInputSchema)
+					}
 				/>
 			);
 
