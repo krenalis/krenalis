@@ -63,7 +63,7 @@ services:
       POSTGRES_PASSWORD: meergo
       POSTGRES_DB: meergo
     volumes:
-      - ./database:/docker-entrypoint-initdb.d
+      - ./database/initialization:/docker-entrypoint-initdb.d
       - db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U meergo"]

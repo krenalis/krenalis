@@ -163,7 +163,7 @@ go build -tags dev,osusergo,netgo -trimpath ./cmd/meergo
 
 ### 5. Populate the database
 
-Populate the Meergo's database with the queries in [database/PostgreSQL.sql](database/PostgreSQL.sql).
+Populate the Meergo's database with the queries in [database/initialization/1 - postgres.sql](database/initialization/1%20-%20postgres.sql).
 
 ### 7. Run and open the browser
 

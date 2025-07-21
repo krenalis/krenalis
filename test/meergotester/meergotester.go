@@ -537,7 +537,7 @@ func initializePostgreSQLDatabase(ctx context.Context, dbSetts *DBSettings) erro
 		return fmt.Errorf("cannot establish connection to database: %s", err)
 	}
 	defer db.Close()
-	err = execQueries(ctx, db, "../database/PostgreSQL.sql")
+	err = execQueries(ctx, db, "../database/initialization/1 - postgres.sql")
 	return err
 }
 
@@ -606,7 +606,7 @@ func execQueries(ctx context.Context, db *db.DB, queriesFile string) error {
 
 	queries := strings.Split(string(content), ";\n")
 
-	// Recreate the schema from "PostgreSQL.sql".
+	// Recreate the schema from "1 - postgres.sql".
 	for _, query := range queries {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
