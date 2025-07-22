@@ -42,12 +42,17 @@ jobs:
           pip install pandas
           pip install pyarrow
 
-      - name: go run ./commit -no-connector-tests
+      - name: go run ./commit
         env:
           # 20 should be a reasonably sufficient number to properly run all the
           # tests. We will review it in more detail when we address the issue
           # https://github.com/meergo/meergo/issues/1673.
           MEERGO_DB_MAX_CONNECTIONS: 20
-        run: go run ./commit -no-connector-tests
+          MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET: ${{ secrets.MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET }}
+          MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
+          MEERGO_TEST_KLAVIYO_PRIVATE_API_KEY: ${{ secrets.MEERGO_TEST_KLAVIYO_PRIVATE_API_KEY }}
+          MEERGO_TEST_MIXPANEL_PROJECT_ID: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_ID }}
+          MEERGO_TEST_MIXPANEL_PROJECT_TOKEN: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_TOKEN }}
+        run: go run ./commit
 
       - uses: numtide/clean-git-action@v2
