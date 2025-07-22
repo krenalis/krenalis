@@ -75,6 +75,7 @@ const Combobox = ({
 	const inputRef = useRef<any>();
 	const listRef = useRef<any>();
 	const tabGroupRef = useRef<any>();
+	const programmaticFocus = useRef(false);
 
 	const { api, handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
@@ -370,8 +371,17 @@ const Combobox = ({
 	};
 
 	const onInputFocus = () => {
+		if (programmaticFocus.current) {
+			// Prevent opening the list when the focus is set
+			// programmatically, for example after selecting a property
+			// from the list. In this case, the intent is just to place
+			// the cursor back in the input to allow the user to
+			// continue typing, not to immediately open the list again.
+			programmaticFocus.current = false;
+			return;
+		}
 		setIsOpen(true);
-		updateCursorPosition(true);
+		updateCursorPosition();
 	};
 
 	const onInputBlur = () => {
@@ -431,6 +441,7 @@ const Combobox = ({
 		if (type === 'enum') {
 			let v = term;
 			setVal(v);
+			programmaticFocus.current = true;
 			inputRef.current.focus();
 			setTimeout(() => {
 				if (autoResize) {
@@ -493,6 +504,7 @@ const Combobox = ({
 
 		setVal(v);
 
+		programmaticFocus.current = true;
 		inputRef.current.focus();
 		setTimeout(() => {
 			if (autoResize) {
