@@ -11,7 +11,7 @@ jobs:
     # run './commit'.
     runs-on: ubuntu-latest
 
-    timeout-minutes: 120
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
@@ -43,6 +43,11 @@ jobs:
           pip install pyarrow
 
       - name: go run ./commit -no-connector-tests
+        env:
+          # 20 should be a reasonably sufficient number to properly run all the
+          # tests. We will review it in more detail when we address the issue
+          # https://github.com/meergo/meergo/issues/1673.
+          MEERGO_DB_MAX_CONNECTIONS: 20
         run: go run ./commit -no-connector-tests
 
       - uses: numtide/clean-git-action@v2
