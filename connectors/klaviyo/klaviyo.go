@@ -433,27 +433,28 @@ func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records me
 	if ok {
 		delete(record.Properties, "properties")
 	}
-	var body json.Buffer
-	body.WriteString(`{"data":{"type":"profile","attributes":`)
-	_ = body.Encode(record.Properties)
+	bb := ky.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
+	bb.WriteString(`{"data":{"type":"profile","attributes":`)
+	_ = bb.Encode(record.Properties)
 	if ok {
-		body.Truncate(body.Len() - 1) // remove '}'.
-		body.WriteString(`,"properties":`)
-		_ = body.Encode(customProperties)
-		body.WriteByte('}') // add '}'.
+		bb.Truncate(bb.Len() - 1) // remove '}'.
+		bb.WriteString(`,"properties":`)
+		_ = bb.Encode(customProperties)
+		bb.WriteByte('}') // add '}'.
 	}
 	if record.ID != "" {
-		body.WriteString(`,"id":`)
-		_ = body.Encode(record.ID)
+		bb.WriteString(`,"id":`)
+		_ = bb.Encode(record.ID)
 	}
-	body.WriteString(`}}`)
+	bb.WriteString(`}}`)
 
 	u := "https://a.klaviyo.com/api/profiles/"
 	if record.ID == "" {
-		return ky.call(ctx, "POST", u, &body, 201, nil)
+		return ky.call(ctx, "POST", u, bb, 201, nil)
 	}
 
-	return ky.call(ctx, "PATCH", u+url.PathEscape(record.ID)+"/", &body, 200, nil)
+	return ky.call(ctx, "PATCH", u+url.PathEscape(record.ID)+"/", bb, 200, nil)
 }
 
 // saveSettings validates and saves the settings.
@@ -514,16 +515,14 @@ func (err *klaviyoError) Error() string {
 	return fmt.Sprintf("unexpected error from Klaviyo (%d): %s", err.statusCode, &msg)
 }
 
-func (ky *Klaviyo) call(ctx context.Context, method, url string, body io.Reader, expectedStatus int, response any) error {
+func (ky *Klaviyo) call(ctx context.Context, method, url string, bb *meergo.BodyBuffer, expectedStatus int, response any) error {
 
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	req, err := bb.NewRequest(ctx, method, url)
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Authorization", "Klaviyo-API-Key "+ky.settings.PrivateAPIKey)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Revision", apiRevision)
 
 	res, err := ky.conf.HTTPClient.Do(req)
@@ -557,6 +556,9 @@ var emailRegex = regexp.MustCompile(`(?i)^(?:[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~
 // sent, and is only returned. If all events are discarded due to validation
 // failures, it returns nil for the request.
 //
+// When preview is true and a non-nil request is returned, the caller is
+// responsible for eventually closing the request body.
+//
 // If an error occurs while sending the events to the app, a nil *http.Request
 // and the error are returned.
 //
@@ -577,8 +579,10 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 	now := time.Now().UTC()
 	maxTimestamp := time.Date(now.Year()+1, now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
 
-	var body json.Buffer
-	body.WriteString(`{"data":{"type":"event-bulk-create-job","attributes":{"events-bulk-create":{"data":[`)
+	bb := ky.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
+
+	bb.WriteString(`{"data":{"type":"event-bulk-create-job","attributes":{"events-bulk-create":{"data":[`)
 
 	n := 0
 	for event := range events.All() {
@@ -614,33 +618,36 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 			}
 		}
 
-		size := body.Len()
 		if n > 0 {
-			body.WriteByte(',')
+			bb.WriteByte(',')
 		}
 
-		body.WriteString(`{"type":"event-bulk-create","attributes":{"profile":{"data":{"type":"profile","attributes":{`)
-		_ = body.EncodeKeyValue("email", email) // email
-		body.WriteString(`}}},"events":{"data":[`)
-		body.WriteString(`{"type":"event","attributes":{`)
+		bb.WriteString(`{"type":"event-bulk-create","attributes":{"profile":{"data":{"type":"profile","attributes":{`)
+		_ = bb.EncodeKeyValue("email", email) // email
+		bb.WriteString(`}}},"events":{"data":[`)
+		bb.WriteString(`{"type":"event","attributes":{`)
 		if properties != nil {
-			_ = body.EncodeKeyValue("properties", properties) // properties
+			_ = bb.EncodeKeyValue("properties", properties) // properties
 		}
-		_ = body.EncodeKeyValue("time", timestamp) // time
+		_ = bb.EncodeKeyValue("time", timestamp) // time
 		if value, ok := event.Type.Values["value"]; ok {
-			_ = body.EncodeKeyValue("value", value) // value
+			_ = bb.EncodeKeyValue("value", value) // value
 		}
 		if currency, ok := event.Type.Values["value_currency"]; ok {
-			_ = body.EncodeKeyValue("value_currency", currency) // value_currency
+			_ = bb.EncodeKeyValue("value_currency", currency) // value_currency
 		}
-		_ = body.EncodeKeyValue("unique_id", event.ID) // unique_id
-		body.WriteString(`,"metric":{"data":{"type":"metric","attributes":{`)
-		_ = body.EncodeKeyValue("name", event.Type.Values["metric_name"]) // metric_name
-		body.WriteString(`}}}}}]}}}`)
-		if body.Len()+len(`]}}}}`) > maxBodyEventsBytes {
-			body.Truncate(size)
+		_ = bb.EncodeKeyValue("unique_id", event.ID) // unique_id
+		bb.WriteString(`,"metric":{"data":{"type":"metric","attributes":{`)
+		_ = bb.EncodeKeyValue("name", event.Type.Values["metric_name"]) // metric_name
+		bb.WriteString(`}}}}}]}}}`)
+		if bb.Len()+len(`]}}}}`) > maxBodyEventsBytes {
+			bb.Truncate(0)
 			events.Postpone()
 			break
+		}
+
+		if err := bb.Flush(); err != nil {
+			return nil, err
 		}
 
 		n++
@@ -649,33 +656,29 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		}
 
 	}
-	body.WriteString(`]}}}}`)
+	bb.WriteString(`]}}}}`)
 
 	// Return if all events has been discarded.
 	if n == 0 {
 		return nil, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://a.klaviyo.com/api/event-bulk-create-jobs", bytes.NewReader(body.Bytes()))
+	req, err := bb.NewRequest(ctx, "POST", "https://a.klaviyo.com/api/event-bulk-create-jobs")
 	if err != nil {
 		return nil, err
 	}
+
 	key := ky.settings.PrivateAPIKey
 	if preview {
 		key = "[REDACTED]"
 	}
 	req.Header.Set("Authorization", "Klaviyo-API-Key "+key)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Revision", apiRevision)
+	req.Header["Idempotency-Key"] = nil // mark the request as idempotent
 
-	// Mark the request as idempotent.
-	req.Header["Idempotency-Key"] = nil
-	req.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+	if err = storeHTTPRequestWhenTesting(ctx, req); err != nil {
+		return nil, err
 	}
-
-	storeHTTPRequestWhenTesting(ctx, req)
 
 	if preview {
 		return req, nil
@@ -818,12 +821,22 @@ type connectorTestString string
 // To enable saving the HTTP request, the context must include, under the key
 // 'connectorTestString("storeSentHTTPRequest")', a pointer to an http.Request
 // memory location where the sent request will be written.
-func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) {
-	if stored := ctx.Value(connectorTestString("storeSentHTTPRequest")); stored != nil {
-		clonedReq := req.Clone(req.Context())
-		bodyBytes, _ := io.ReadAll(req.Body)
-		clonedReq.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		*(stored.(*http.Request)) = *clonedReq
+func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) error {
+	stored := ctx.Value(connectorTestString("storeSentHTTPRequest"))
+	if stored == nil {
+		return nil
 	}
+	storedReq := req.Clone(req.Context())
+	body, err := req.GetBody()
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	storedReq.Body = io.NopCloser(bytes.NewReader(data))
+	*(stored.(*http.Request)) = *storedReq
+	return nil
 }

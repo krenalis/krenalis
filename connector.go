@@ -118,6 +118,9 @@ type HTTPClient interface {
 
 	// AccessToken returns an OAuth access token.
 	AccessToken(ctx context.Context) (string, error)
+
+	// GetBodyBuffer returns a BodyBuffer.
+	GetBodyBuffer(enc ContentEncoding) *BodyBuffer
 }
 
 // Role represents a role.

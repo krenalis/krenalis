@@ -177,8 +177,10 @@ const maxEventRequestSize = 130 * 1024 // from https://developers.google.com/ana
 // and the error are returned.
 func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
-	var eventsWriter json.Buffer
-	var userID, anonymousId string
+	bb := ga.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
+
+	var userID string
 
 	n := 0
 	for event := range events.SameUser() {
@@ -187,38 +189,41 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			// means that only events with empty 'userID' will be sent in this
 			// batch.
 			userID, _ = event.Received.UserId()
-			anonymousId = event.Received.AnonymousId()
+			bb.WriteByte('{')
+			bb.EncodeKeyValue("client_id", event.Received.AnonymousId())
+			if userID != "" {
+				bb.EncodeKeyValue("user_id", userID)
+			}
+			bb.WriteString(`,"events":[`)
 		} else {
 			if uId, _ := event.Received.UserId(); uId != userID {
 				events.Postpone()
 				continue
 			}
-			eventsWriter.WriteByte(',')
+			bb.WriteByte(',')
 		}
-		size := eventsWriter.Len()
-		eventsWriter.WriteByte('{')
-		eventsWriter.EncodeKeyValue("name", event.Type.ID)
+		bb.WriteByte('{')
+		bb.EncodeKeyValue("name", event.Type.ID)
 		if event.Type.Values != nil {
 			params, err := types.Marshal(event.Type.Values, event.Type.Schema)
 			if err != nil {
 				return nil, err
 			}
-			eventsWriter.EncodeKeyValue("params", params)
+			bb.EncodeKeyValue("params", params)
 		}
-		eventsWriter.EncodeKeyValue("timestamp_micros", event.Received.Timestamp().UnixMicro())
-		eventsWriter.WriteByte('}')
+		bb.EncodeKeyValue("timestamp_micros", event.Received.Timestamp().UnixMicro())
+		bb.WriteByte('}')
 
-		if eventsWriter.Len()+300 > maxEventRequestSize {
+		if bb.Len()+len("]}") > maxEventRequestSize {
 			// From the Google Analytics documentation: «The post body must be smaller than 130kB.»
 			// https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
-			//
-			// 300 is just a margin value that takes into account the rest of
-			// the body, which will be built later, the JSON Object that
-			// encloses "events" (so the various keys "client_id", "user_id",
-			// etc.).
-			eventsWriter.Truncate(size)
+			bb.Truncate(0)
 			events.Postpone()
 			break
+		}
+
+		if err := bb.Flush(); err != nil {
+			return nil, err
 		}
 
 		n++
@@ -228,33 +233,22 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			break
 		}
 	}
-
-	// Build the actual body.
-	var body json.Buffer
-	body.WriteByte('{')
-	body.EncodeKeyValue("client_id", anonymousId)
-	if userID != "" {
-		body.EncodeKeyValue("user_id", userID)
-	}
-	body.WriteString(`,"events":[`)
-	body.Write(eventsWriter.Bytes())
-	body.WriteString("]}")
+	bb.WriteString("]}")
 
 	if preview {
+
 		// First, it performs an actual send to the Google Analytics debug
 		// server to validate the request, returning an error in case of
 		// validation issues.
 		u := requestURL(ga.settings.APISecret, true, false, ga.settings.MeasurementID)
-		req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
+		req, err := bb.NewRequest(ctx, "POST", u)
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Content-Type", "application/json")
-		// Mark the request as idempotent.
-		req.Header["Idempotency-Key"] = nil
-		req.GetBody = func() (io.ReadCloser, error) {
-			return io.NopCloser(bytes.NewReader(body.Bytes())), nil
-		}
+		req.Header["Idempotency-Key"] = nil // mark the request as idempotent
+		// Copy the body to reuse it.
+		body, _ := io.ReadAll(req.Body)
+		req.Body, _ = req.GetBody()
 		// Do the request.
 		resp, err := ga.conf.HTTPClient.Do(req)
 		if err != nil {
@@ -274,32 +268,31 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 			}
 			return nil, errors.New(msg)
 		}
+
 		// Next, build a new request to be returned to Meergo, in which
 		// sensitive information (such as the API secret) is redacted.
 		u = requestURL(ga.settings.APISecret, true, true, ga.settings.MeasurementID)
-		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
+		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+
 		return req, nil
 	}
 
 	// Build the request to send to Google Analytics.
 	u := requestURL(ga.settings.APISecret, false, false, ga.settings.MeasurementID)
-	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
+	req, err := bb.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header["Idempotency-Key"] = nil // mark the request as idempotent
 
-	// Mark the request as idempotent.
-	req.Header["Idempotency-Key"] = nil
-	req.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+	if err = storeHTTPRequestWhenTesting(ctx, req); err != nil {
+		return nil, err
 	}
-
-	storeHTTPRequestWhenTesting(ctx, req)
 
 	res, err := ga.conf.HTTPClient.Do(req)
 	if err != nil {
@@ -336,12 +329,22 @@ type connectorTestString string
 // To enable saving the HTTP request, the context must include, under the key
 // 'connectorTestString("storeSentHTTPRequest")', a pointer to an http.Request
 // memory location where the sent request will be written.
-func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) {
-	if stored := ctx.Value(connectorTestString("storeSentHTTPRequest")); stored != nil {
-		clonedReq := req.Clone(req.Context())
-		bodyBytes, _ := io.ReadAll(req.Body)
-		clonedReq.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		*(stored.(*http.Request)) = *clonedReq
+func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) error {
+	stored := ctx.Value(connectorTestString("storeSentHTTPRequest"))
+	if stored == nil {
+		return nil
 	}
+	storedReq := req.Clone(req.Context())
+	body, err := req.GetBody()
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	storedReq.Body = io.NopCloser(bytes.NewReader(data))
+	*(stored.(*http.Request)) = *storedReq
+	return nil
 }

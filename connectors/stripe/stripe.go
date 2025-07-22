@@ -10,13 +10,11 @@
 package stripe
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"time"
@@ -171,9 +169,10 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 
 // Upsert updates or creates records in the app for the specified target.
 func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+	bb := stripe.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
 	record := records.First()
-	var body bytes.Buffer
-	err := encodeRequest(&body, record.Properties, nil)
+	err := encodeRequest(bb, record.Properties, nil)
 	if err != nil {
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
@@ -181,28 +180,18 @@ func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records
 	if record.ID != "" {
 		u += "/" + record.ID
 	}
-	return stripe.call(ctx, "POST", u, body.Bytes(), 200, nil)
+	return stripe.call(ctx, "POST", u, bb, 200, nil)
 }
 
-func (stripe *Stripe) call(ctx context.Context, method, path string, body []byte, expectedStatus int, response any) error {
-	var b io.Reader
-	if body != nil {
-		b = bytes.NewReader(body)
-	}
-	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, b)
+func (stripe *Stripe) call(ctx context.Context, method, path string, bb *meergo.BodyBuffer, expectedStatus int, response any) error {
+	req, err := bb.NewRequest(ctx, method, baseURL+path)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
 	if req.Method == "POST" {
-		// Mark the request as idempotent.
-		req.Header.Set("Idempotency-Key", meergo.UUID())
-		if body != nil {
-			req.GetBody = func() (io.ReadCloser, error) {
-				return io.NopCloser(bytes.NewReader(body)), nil
-			}
-		}
+		req.Header.Set("Idempotency-Key", meergo.UUID()) // mark the request as idempotent
 	}
 	res, err := stripe.conf.HTTPClient.Do(req)
 	if err != nil {
@@ -276,19 +265,19 @@ func (err *stripeError) Error() string {
 	return fmt.Sprintf("unexpected error from Stripe: (%d) %s", err.statusCode, err.Message)
 }
 
-func encodeRequest(body *bytes.Buffer, request map[string]interface{}, parents []string) error {
+func encodeRequest(bb *meergo.BodyBuffer, request map[string]interface{}, parents []string) error {
 	if len(request) > 0 {
 		for field, value := range request {
 
 			switch v := value.(type) {
 			case bool, string, int, nil:
-				if body.Len() > 0 {
-					body.WriteByte('&')
+				if bb.Len() > 0 {
+					bb.WriteByte('&')
 				}
-				writePath(body, append(parents, field))
-				body.WriteByte('=')
+				writePath(bb, append(parents, field))
+				bb.WriteByte('=')
 			case map[string]interface{}:
-				return encodeRequest(body, v, append(parents, field))
+				return encodeRequest(bb, v, append(parents, field))
 			default:
 				return errors.New("unsupported type")
 			}
@@ -296,31 +285,31 @@ func encodeRequest(body *bytes.Buffer, request map[string]interface{}, parents [
 			switch v := value.(type) {
 			case bool:
 				if v {
-					body.WriteString("true")
+					bb.WriteString("true")
 				} else {
-					body.WriteString("false")
+					bb.WriteString("false")
 				}
 			case string:
-				body.WriteString(url.QueryEscape(v))
+				bb.WriteString(url.QueryEscape(v))
 			case int:
-				body.WriteString(strconv.Itoa(v))
+				bb.WriteString(strconv.Itoa(v))
 			case nil:
-				body.WriteString("")
+				bb.WriteString("")
 			}
 		}
 	}
 	return nil
 }
 
-func writePath(body *bytes.Buffer, path []string) {
+func writePath(bb *meergo.BodyBuffer, path []string) {
 	for i, v := range path {
 		switch i {
 		case 0:
-			body.WriteString(url.QueryEscape(v))
+			bb.WriteString(url.QueryEscape(v))
 		default:
-			body.WriteByte('[')
-			body.WriteString(url.QueryEscape(v))
-			body.WriteByte(']')
+			bb.WriteByte('[')
+			bb.WriteString(url.QueryEscape(v))
+			bb.WriteByte(']')
 		}
 	}
 }

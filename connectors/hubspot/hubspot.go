@@ -10,12 +10,10 @@
 package hubspot
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
 	"io"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -91,7 +89,6 @@ func New(conf *meergo.AppConfig) (*HubSpot, error) {
 
 type HubSpot struct {
 	httpClient meergo.HTTPClient
-	buf        bytes.Buffer
 }
 
 // OAuthAccount returns the app's account associated with the OAuth
@@ -202,22 +199,22 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		} `json:"paging"`
 	}
 
-	var err error
+	bb := hs.httpClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
 
-	hs.buf.Reset()
-	hs.buf.WriteByte('{')
+	bb.WriteByte('{')
 
 	if ids != nil {
-		hs.buf.WriteString(`"inputs":[`)
+		bb.WriteString(`"inputs":[`)
 		for i, id := range ids {
 			if i > 0 {
-				hs.buf.WriteByte(',')
+				bb.WriteByte(',')
 			}
-			hs.buf.WriteString(`{"id":"`)
-			hs.buf.WriteString(id)
-			hs.buf.WriteString(`"}`)
+			bb.WriteString(`{"id":"`)
+			bb.WriteString(id)
+			bb.WriteString(`"}`)
 		}
-		hs.buf.WriteString(`],`)
+		bb.WriteString(`],`)
 		path += "batch/read"
 	} else {
 		propertyName := "lastmodifieddate"
@@ -225,27 +222,27 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		if unix < 0 {
 			unix = 0
 		}
-		hs.buf.WriteString(`"filterGroups":[{"filters":[{"value":"`)
-		hs.buf.WriteString(strconv.FormatInt(unix, 10))
-		hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
+		bb.WriteString(`"filterGroups":[{"filters":[{"value":"`)
+		bb.WriteString(strconv.FormatInt(unix, 10))
+		bb.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
 			`]}],"sorts":["` + propertyName + `"],`)
 		path += "search"
 	}
 
-	hs.buf.WriteString(`"after":"`)
-	hs.buf.WriteString(cursor)
-	hs.buf.WriteString(`","limit":100,"properties":[`)
+	bb.WriteString(`"after":"`)
+	bb.WriteString(cursor)
+	bb.WriteString(`","limit":100,"properties":[`)
 	for i, p := range properties {
 		if i > 0 {
-			hs.buf.WriteByte(',')
+			bb.WriteByte(',')
 		}
-		hs.buf.WriteByte('"')
-		hs.buf.WriteString(p)
-		hs.buf.WriteByte('"')
+		bb.WriteByte('"')
+		bb.WriteString(p)
+		bb.WriteByte('"')
 	}
-	hs.buf.WriteString(`]}`)
+	bb.WriteString(`]}`)
 
-	err = hs.call(ctx, "POST", path, &hs.buf, &response)
+	err := hs.call(ctx, "POST", path, bb, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -286,37 +283,44 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		method = "create"
 	}
 
-	var body json.Buffer
-	body.WriteString(`{"inputs":[`)
+	bb := hs.httpClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
+
+	bb.WriteString(`{"inputs":[`)
 
 	n := 0
 	for record := range records.Same() {
 		if n > 0 {
-			body.WriteByte(',')
+			bb.WriteByte(',')
 		}
-		body.WriteByte('{')
+		bb.WriteByte('{')
 		if method == "update" {
-			_ = body.EncodeKeyValue("id", record.ID)
+			_ = bb.EncodeKeyValue("id", record.ID)
 		}
-		_ = body.EncodeKeyValue("properties", record.Properties)
-		body.WriteByte('}')
+		_ = bb.EncodeKeyValue("properties", record.Properties)
+		bb.WriteByte('}')
+		if err := bb.Flush(); err != nil {
+			return err
+		}
+		if err := bb.Flush(); err != nil {
+			return err
+		}
 		n++
 		if n == 100 {
 			break
 		}
 	}
 
-	body.WriteString(`]}`)
+	bb.WriteString(`]}`)
 
-	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/"+method, &body, nil)
+	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/"+method, bb, nil)
 }
 
-func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader, response any) error {
-	req, err := http.NewRequestWithContext(ctx, method, "https://api.hubapi.com/"+path[1:], body)
+func (hs *HubSpot) call(ctx context.Context, method, path string, bb *meergo.BodyBuffer, response any) error {
+	req, err := bb.NewRequest(ctx, method, "https://api.hubapi.com/"+path[1:])
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
 	res, err := hs.httpClient.Do(req)
 	if err != nil {
 		return err

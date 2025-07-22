@@ -363,41 +363,46 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 
 	basePath := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
-	var body json.Buffer
-	body.WriteString(`{"operations":[`)
+	bb := mc.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
+
+	bb.WriteString(`{"operations":[`)
 
 	n := 0
 	for record := range records.All() {
-		size := body.Len()
+		size := bb.Len()
 		if n > 0 {
-			body.WriteByte(',')
+			bb.WriteByte(',')
 		}
 		method := "PUT"
 		if record.ID == "" {
 			method = "PATCH"
 		}
-		body.WriteString(`{"method":"`)
-		body.WriteString(method)
-		body.WriteString(`","path":"`)
-		body.WriteString(basePath)
+		bb.WriteString(`{"method":"`)
+		bb.WriteString(method)
+		bb.WriteString(`","path":"`)
+		bb.WriteString(basePath)
 		if record.ID != "" {
-			body.WriteByte('/')
-			body.WriteString(url.PathEscape(record.ID))
+			bb.WriteByte('/')
+			bb.WriteString(url.PathEscape(record.ID))
 		}
-		body.WriteString(`","params":{"skip_merge_validation":true},"body":`)
-		_ = body.EncodeQuoted(record.Properties)
-		body.WriteByte('}')
-		if body.Len()+len(`]}`) > maxBodyRecordsBytes {
-			body.Truncate(size)
+		bb.WriteString(`","params":{"skip_merge_validation":true},"body":`)
+		_ = bb.EncodeQuoted(record.Properties)
+		bb.WriteByte('}')
+		if bb.Len()+len(`]}`) > maxBodyRecordsBytes {
+			bb.Truncate(size)
 			records.Postpone()
 			break
+		}
+		if err := bb.Flush(); err != nil {
+			return err
 		}
 		n++
 		if n == maxBodyRecords {
 			break
 		}
 	}
-	body.WriteString(`]}`)
+	bb.WriteString(`]}`)
 
 	type batchResponse struct {
 		ID                string `json:"id"`
@@ -406,7 +411,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		ResponseBodyURL   string `json:"response_body_url"`
 	}
 	var res batchResponse
-	err := mc.call(ctx, "POST", "/batches", nil, &body, 200, &res)
+	err := mc.call(ctx, "POST", "/batches", nil, bb, 200, &res)
 	if err != nil {
 		return err
 	}
@@ -598,7 +603,7 @@ func (err *mailchimpError) Error() string {
 }
 
 // call calls the Mailchimp API.
-func (mc *MailChimp) call(ctx context.Context, method, path string, params url.Values, body io.Reader, expectedStatus int, response any) error {
+func (mc *MailChimp) call(ctx context.Context, method, path string, params url.Values, bb *meergo.BodyBuffer, expectedStatus int, response any) error {
 
 	var dataCenter string
 	if mc.settings == nil {
@@ -616,11 +621,10 @@ func (mc *MailChimp) call(ctx context.Context, method, path string, params url.V
 		u += "?" + params.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, u, body)
+	req, err := bb.NewRequest(ctx, method, u)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
 	res, err := mc.conf.HTTPClient.Do(req)
 	if err != nil {

@@ -174,6 +174,11 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	return c.do(req, false)
 }
 
+// GetBodyBuffer returns a BodyBuffer, initialised for enc.
+func (c *Client) GetBodyBuffer(enc meergo.ContentEncoding) *meergo.BodyBuffer {
+	return meergo.GetBodyBuffer(enc, 1024) // TODO(marco): estimate the size of the buffer
+}
+
 func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response, error) {
 
 	ctx := req.Context()

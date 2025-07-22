@@ -216,14 +216,12 @@ const (
 // and the error are returned.
 func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
-	// body is a bytes.Buffer that contains newline-delimited JSON objects
-	// representing the events to send to Mixpanel.
-	var body bytes.Buffer
+	// bb contains newline-delimited JSON objects representing the events.
+	bb := mp.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
 
 	n := 0
 	for event := range events.All() {
-
-		size := body.Len()
 
 		if event.Type.Values["event"].(string) == "" {
 			return nil, errors.New("event cannot be empty")
@@ -316,7 +314,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 			}
 		}
 
-		err := json.Encode(&body, map[string]any{
+		err := bb.Encode(map[string]any{
 			"event":      event.Type.Values["event"].(string),
 			"properties": properties,
 		})
@@ -324,12 +322,16 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 			return nil, err
 		}
 
-		body.WriteByte('\n')
+		bb.WriteByte('\n')
 
-		if body.Len() > maxBodyEventsBytes {
-			body.Truncate(size)
+		if bb.Len() > maxBodyEventsBytes {
+			bb.Truncate(0)
 			events.Postpone()
 			break
+		}
+
+		if err := bb.Flush(); err != nil {
+			return nil, err
 		}
 
 		n++
@@ -344,11 +346,12 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 	u += "import?strict=1&project_id=" + mp.settings.ProjectID
 
-	req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body.Bytes()))
+	req, err := bb.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-ndjson")
+	req.Header["Idempotency-Key"] = nil // mark the request as idempotent
 
 	if preview {
 		req.Header.Set("Authorization", "Basic [REDACTED]")
@@ -356,13 +359,9 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		req.SetBasicAuth(mp.settings.ProjectToken, "")
 	}
 
-	// Mark the request as idempotent.
-	req.Header["Idempotency-Key"] = nil
-	req.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(body.Bytes())), nil
+	if err = storeHTTPRequestWhenTesting(ctx, req); err != nil {
+		return nil, err
 	}
-
-	storeHTTPRequestWhenTesting(ctx, req)
 
 	if preview {
 		return req, nil
@@ -414,12 +413,22 @@ type connectorTestString string
 // To enable saving the HTTP request, the context must include, under the key
 // 'connectorTestString("storeSentHTTPRequest")', a pointer to an http.Request
 // memory location where the sent request will be written.
-func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) {
-	if stored := ctx.Value(connectorTestString("storeSentHTTPRequest")); stored != nil {
-		clonedReq := req.Clone(req.Context())
-		bodyBytes, _ := io.ReadAll(req.Body)
-		clonedReq.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		*(stored.(*http.Request)) = *clonedReq
+func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) error {
+	stored := ctx.Value(connectorTestString("storeSentHTTPRequest"))
+	if stored == nil {
+		return nil
 	}
+	storedReq := req.Clone(req.Context())
+	body, err := req.GetBody()
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	storedReq.Body = io.NopCloser(bytes.NewReader(data))
+	*(stored.(*http.Request)) = *storedReq
+	return nil
 }

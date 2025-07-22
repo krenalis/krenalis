@@ -29,6 +29,7 @@ require (
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/jxskiss/base62 v1.1.0
 	github.com/klauspost/compress v1.18.0
+	github.com/libp2p/go-buffer-pool v0.1.0
 	github.com/mark3labs/mcp-go v0.34.0
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/pkg/sftp v1.13.9
