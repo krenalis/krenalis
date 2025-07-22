@@ -118,6 +118,10 @@ Configuration used to access the PostgreSQL server used by Meergo.
 - **`MEERGO_DB_SCHEMA`** \
   Specific schema within the PostgreSQL database to use.
 
+- **`MEERGO_DB_MAX_CONNECTIONS`** \
+  Maximum number of connections to the PostgreSQL database. \
+  The default is the greater of 4 or the number of logical CPUs usable by the Meergo process.
+
 ## Member emails
 
 Configuration for emails that are sent to members.

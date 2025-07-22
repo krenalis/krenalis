@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -205,6 +206,15 @@ func settingsFromEnv() (*Settings, error) {
 	settings.DB.Password = os.Getenv("MEERGO_DB_PASSWORD")
 	settings.DB.Database = os.Getenv("MEERGO_DB_DATABASE")
 	settings.DB.Schema = os.Getenv("MEERGO_DB_SCHEMA")
+	if maxConn := os.Getenv("MEERGO_DB_MAX_CONNECTIONS"); maxConn != "" {
+		settings.DB.MaxConnections, err = strconv.Atoi(os.Getenv("MEERGO_DB_MAX_CONNECTIONS"))
+		if err != nil {
+			return nil, fmt.Errorf("invalid integer value specified for MEERGO_DB_MAX_CONNECTIONS: %s", err)
+		}
+		if settings.DB.MaxConnections <= 0 || settings.DB.MaxConnections > math.MaxInt32 {
+			return nil, fmt.Errorf("invalid integer value specified for MEERGO_DB_MAX_CONNECTIONS: %s", err)
+		}
+	}
 
 	// Member emails.
 	settings.SkipMemberEmailVerification, err = boolEnvVar(os.Getenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION"))

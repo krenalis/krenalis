@@ -86,12 +86,13 @@ type Config struct {
 }
 
 type DBConfig struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	Schema   string
+	Host           string
+	Port           int
+	Username       string
+	Password       string
+	Database       string
+	Schema         string
+	MaxConnections int // in range [1, 2147483647] when set; 0 means 'not set'.
 }
 
 type LambdaConfig struct {
@@ -148,12 +149,13 @@ func New(conf *Config) (*Core, error) {
 	// Open connection to PostgreSQL.
 	ps := conf.DB
 	db, err := db.Open(&db.Options{
-		Host:     ps.Host,
-		Port:     ps.Port,
-		Username: ps.Username,
-		Password: ps.Password,
-		Database: ps.Database,
-		Schema:   ps.Schema,
+		Host:           ps.Host,
+		Port:           ps.Port,
+		Username:       ps.Username,
+		Password:       ps.Password,
+		Database:       ps.Database,
+		Schema:         ps.Schema,
+		MaxConnections: int32(ps.MaxConnections),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
