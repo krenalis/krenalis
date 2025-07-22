@@ -211,7 +211,9 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 				if settings.SentryTelemetryLevel == corepkg.TelemetryLevelErrors ||
 					settings.SentryTelemetryLevel == corepkg.TelemetryLevelAll {
 					sentry.CurrentHub().Recover(r)
-					sentry.Flush(time.Second * 5)
+					flushCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+					defer cancel()
+					sentry.FlushWithContext(flushCtx)
 				}
 
 				os.Exit(1)
