@@ -256,7 +256,7 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 			continue
 		}
 
-		if status := res.StatusCode; status == 200 || status == 201 {
+		if status := res.StatusCode; status == 200 || status == 201 || status == 204 {
 			limiter.OnSuccess(duration)
 			return res, nil
 		}
