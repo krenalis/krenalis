@@ -60,8 +60,8 @@ func newMCPServer(apisServer *apisServer) *mcpServer {
 
 	// Tool that exposes the event schema.
 	eventSchema := mcp.NewTool("event-schema",
-		mcp.WithDescription("Returns the user schema (with details of all properties) of Meergo."+
-			" The user schema does not change over time but is fixed, encoded within Meergo."),
+		mcp.WithDescription("Returns the event schema (with details of all properties) of Meergo."+
+			" The event schema does not change over time but is fixed, encoded within Meergo."),
 		mcp.WithReadOnlyHintAnnotation(true),
 	)
 	m.AddTool(eventSchema, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
