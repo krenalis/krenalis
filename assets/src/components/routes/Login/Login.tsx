@@ -48,6 +48,11 @@ const Login = () => {
 				setIsPasswordless(true);
 				setIsTryingPasswordlessLogin(false);
 				return;
+			} else {
+				// Reset any previous Docker-based state if the
+				// application was launched in a Docker environment but
+				// is no longer running in that mode.
+				localStorage.removeItem('meergo_ui_is_docker');
 			}
 			try {
 				[, authError] = await api.login('acme@open2b.com', 'foopass2', true);
