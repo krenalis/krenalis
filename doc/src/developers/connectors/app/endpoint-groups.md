@@ -8,6 +8,19 @@ Endpoint groups define how HTTP requests are collectively subject to rate limiti
 
 This makes it possible to enforce independent rate limits for distinct sets of endpoints—even if they share the same rate limiting or retry policy settings—by simply assigning them to separate groups. For example, API endpoints deployed in different regions can be grouped separately to ensure rate limiting is applied independently per region, even if their configuration is otherwise identical.
 
+```go
+// EndpointGroup defines a group of API endpoints—specified by one or more
+// patterns using the same syntax as http.ServeMux. All HTTP requests matching
+// any of the given patterns will be subject to the specified rate limiting and
+// retry policies.
+type EndpointGroup struct {
+    Patterns    []string    // patterns (e.g. "GET /api/users/", "api.example.com/v1/items") matched by ServeMux-style matching
+    RateLimit   RateLimit   // rate limiting configuration applied to all matching requests
+    RetryPolicy RetryPolicy // retry policy for handling failed requests to these endpoints
+    SkipOAuth   bool        // if true, requests to these endpoints will skip OAuth authentication, if supported
+}
+```
+
 The following example demonstrates how to configure endpoint groups to enforce separate rate limits for different sets of Klaviyo API endpoints:
 
 ```go

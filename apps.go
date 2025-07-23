@@ -139,6 +139,7 @@ type EndpointGroup struct {
 	Patterns    []string    // patterns (e.g. "GET /api/users/", "api.example.com/v1/items") matched by ServeMux-style matching
 	RateLimit   RateLimit   // rate limiting configuration applied to all matching requests
 	RetryPolicy RetryPolicy // retry policy for handling failed requests to these endpoints
+	SkipOAuth   bool        // if true, requests to these endpoints will skip OAuth authentication, if supported
 }
 
 // RateLimit defines the maximum requests per second, burst capacity, and the

@@ -62,6 +62,7 @@ var errUnsupportedOAuth = errors.New("OAuth is not supported")
 type endpointGroup struct {
 	rateLimiter *rateLimiter       // rate limiter
 	retryPolicy meergo.RetryPolicy // retry policy
+	skipOAuth   bool               // skip OAuth
 }
 
 // Client implements the connector.HTTPClient interface.
@@ -217,7 +218,7 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 
 		// Add Authorization header.
 		var accessToken string
-		if !isRetriveOAuthToken {
+		if !isRetriveOAuthToken && !endpointGroup.skipOAuth {
 			var err error
 			accessToken, err = c.AccessToken(ctx)
 			if err != nil {
