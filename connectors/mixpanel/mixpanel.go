@@ -26,6 +26,9 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// Mixpanel supports NoEncoding and Gzip for request bodies.
+const contentEncoding = meergo.Gzip
+
 // Connector icon.
 var icon = "<svg></svg>"
 
@@ -217,7 +220,7 @@ const (
 func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
 	// bb contains newline-delimited JSON objects representing the events.
-	bb := mp.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := mp.conf.HTTPClient.GetBodyBuffer(contentEncoding)
 	defer bb.Close()
 
 	n := 0

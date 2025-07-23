@@ -8,6 +8,7 @@
 package mixpanel
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -86,8 +87,15 @@ func TestSendEvents(t *testing.T) {
 			}
 
 			// Decode the request body and ensure it matches the expected result.
+			body := req.Body
+			if contentEncoding == meergo.Gzip {
+				body, err = gzip.NewReader(body)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
 			var jsonRequest map[string]any
-			dec := json.NewDecoder(req.Body)
+			dec := json.NewDecoder(body)
 			dec.UseNumber()
 			err = dec.Decode(&jsonRequest)
 			if err != nil {
