@@ -199,7 +199,7 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		} `json:"paging"`
 	}
 
-	bb := hs.httpClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := hs.httpClient.GetBodyBuffer(meergo.NoEncoding) // It also supports Gzip.
 	defer bb.Close()
 
 	bb.WriteByte('{')
@@ -283,7 +283,7 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		method = "create"
 	}
 
-	bb := hs.httpClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := hs.httpClient.GetBodyBuffer(meergo.Gzip) // It also supports NoEncoding.
 	defer bb.Close()
 
 	bb.WriteString(`{"inputs":[`)
