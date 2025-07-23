@@ -273,7 +273,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			})
 			for i, record := range previous {
 				r.last = last && i == len(previous)-1
-				record.Err = fmt.Errorf("duplicates found for the matching property %q in exported users", r.matching.InProperty)
+				record.Err = fmt.Errorf("The user has the same «%s» (the matching property) as other users selected for export", r.matching.InProperty)
 				if !yield(record) {
 					return false
 				}
