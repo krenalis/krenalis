@@ -77,6 +77,7 @@ func TestSendEvents(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer req.Body.Close()
 			t.Log("SendEvent returned no errors")
 
 			// Check that the HTTP request was actually set by the test.
