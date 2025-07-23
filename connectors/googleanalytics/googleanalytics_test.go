@@ -9,16 +9,15 @@ package googleanalytics
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/testutils"
 	"github.com/meergo/meergo/types"
 )
@@ -113,7 +112,7 @@ func TestSendEvents(t *testing.T) {
 					map[string]any{
 						"name":             "ad_impression",
 						"params":           map[string]any{},
-						"timestamp_micros": json.Number(strconv.Itoa(int(now.UnixMicro()))),
+						"timestamp_micros": float64(now.UnixMicro()),
 					},
 				},
 			},
@@ -137,6 +136,7 @@ func TestSendEvents(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer req.Body.Close()
 			t.Log("SendEvent returned no errors")
 
 			// Check that the HTTP request was actually set by the test.
@@ -146,9 +146,7 @@ func TestSendEvents(t *testing.T) {
 
 			// Decode the request body and ensure it matches the expected result.
 			var jsonRequest map[string]any
-			dec := json.NewDecoder(req.Body)
-			dec.UseNumber()
-			err := dec.Decode(&jsonRequest)
+			err = json.Decode(req.Body, &jsonRequest)
 			if err != nil {
 				t.Fatal(err)
 			}
