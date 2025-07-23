@@ -373,9 +373,9 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		if n > 0 {
 			bb.WriteByte(',')
 		}
-		method := "PUT"
+		method := "PATCH"
 		if record.ID == "" {
-			method = "PATCH"
+			method = "POST"
 		}
 		bb.WriteString(`{"method":"`)
 		bb.WriteString(method)
@@ -488,7 +488,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		header, err := tarResults.Next()
 		if err != nil {
 			if err == io.EOF {
-				return errors.New("gzip file response from Mailchimp does not contain any files")
+				return errors.New("Gzip file response from Mailchimp does not contain any files")
 			}
 			return fmt.Errorf("cannot read gzip file response from Mailchimp: %s", err)
 		}
