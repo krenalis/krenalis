@@ -219,6 +219,8 @@ const (
 // and the error are returned.
 func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
+	sendBadRequest, _ := ctx.Value(connectorTestString("sendBadRequest")).(bool)
+
 	// bb contains newline-delimited JSON objects representing the events.
 	bb := mp.conf.HTTPClient.GetBodyBuffer(contentEncoding)
 	defer bb.Close()
@@ -233,7 +235,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		properties := event.Type.Values["properties"].(map[string]any)
 		properties["$insert_id"] = event.Received.MessageId()
 		properties["time"] = event.Received.Timestamp().UnixMilli()
-		if sendBadRequest, _ := ctx.Value(connectorTestString("sendBadRequest")).(bool); sendBadRequest {
+		if sendBadRequest {
 			delete(properties, "time")
 		}
 		distinctID := event.Received.AnonymousId()
