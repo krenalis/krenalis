@@ -13,6 +13,81 @@ import (
 	"testing"
 )
 
+func Test_Canonicalize(t *testing.T) {
+	tests := []struct {
+		data     string
+		expected string
+		err      error
+	}{
+		// Null literal.
+		{`null`, `null`, nil},
+
+		// Boolean literal.
+		{`true`, `true`, nil},
+
+		// Normalization of number with trailing zeroes.
+		{`123.000`, `123`, nil},
+
+		// Scientific notation normalized to integer.
+		{`1e3`, `1000`, nil},
+
+		// Canonicalization of simple string.
+		{`"foo"`, `"foo"`, nil},
+
+		// Canonicalization of escaped double quote.
+		{`"a\\\"b"`, `"a\\\"b"`, nil},
+
+		// Canonicalization of Unicode escape (\uXXXX → UTF-8).
+		{`"\u0041"`, `"A"`, nil}, // \u0041 → 'A'
+
+		// Canonicalization of escape sequences.
+		{`"line\nbreak"`, `"line\nbreak"`, nil},
+
+		// Object with unordered keys, nested object, and redundant whitespace.
+		{
+			data:     `{ "z": 3.000, "a": [1, 2, 3], "m": {"b":2,"a":1} }`,
+			expected: `{"a":[1,2,3],"m":{"a":1,"b":2},"z":3}`,
+			err:      nil,
+		},
+
+		// String array with insignificant whitespace.
+		{`["x", "y", "z"]`, `["x","y","z"]`, nil},
+
+		// Complex JSON structure with nested objects and arrays.
+		{
+			data: `{
+				"user": { "name": "Alice", "active": true, "roles": ["admin", "user"] },
+				"metrics": { "cpu": 0.5, "mem": 2048 },
+				"created": "2023-01-01T00:00:00Z"
+			}`,
+			expected: `{"created":"2023-01-01T00:00:00Z","metrics":{"cpu":0.5,"mem":2048},"user":{"active":true,"name":"Alice","roles":["admin","user"]}}`,
+			err:      nil,
+		},
+
+		// Incomplete JSON object.
+		{`{ "a": 1,`, ``, ErrInvalidJSON},
+
+		// Invalid escape sequence.
+		{`"bad\xinput"`, ``, ErrInvalidJSON},
+
+		// Unterminated string.
+		{`"unterminated`, ``, ErrInvalidJSON},
+
+		// Invalid UTF-8 sequence.
+		{string([]byte{0xff, 0xfe}), ``, ErrInvalidJSON},
+	}
+
+	for _, test := range tests {
+		got, err := Canonicalize([]byte(test.data))
+		if !reflect.DeepEqual(err, test.err) {
+			t.Fatalf("for input `%s`: expected error %v, got %v", test.data, test.err, err)
+		}
+		if test.err == nil && string(got) != test.expected {
+			t.Fatalf("for input `%s`: expected `%s`, got `%s`", test.data, test.expected, string(got))
+		}
+	}
+}
+
 func Test_Compaq(t *testing.T) {
 	tests := []struct {
 		data     string

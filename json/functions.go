@@ -52,6 +52,21 @@ func (err *SyntaxError) Error() string {
 	return err.err.Error()
 }
 
+// Canonicalize returns a copy of data with canonical JSON formatting
+// (RFC 8785). It normalizes numbers, removes whitespace, and sorts object keys.
+// If data does not contain valid JSON, it returns nil and ErrInvalidJSON.
+func Canonicalize(data []byte) ([]byte, error) {
+	if !utf8.Valid(data) {
+		return nil, ErrInvalidJSON
+	}
+	v := jsontext.Value(slices.Clone(data))
+	err := v.Canonicalize()
+	if err != nil {
+		return nil, ErrInvalidJSON
+	}
+	return v, nil
+}
+
 // Compact returns a copy of data with all insignificant whitespace removed. If
 // data is already compact, it returns the original data unchanged. If data does
 // not contain valid JSON, it returns nil and ErrInvalidJSON.
