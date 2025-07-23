@@ -71,15 +71,31 @@ func init() {
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",
 			ExpiresIn: math.MaxInt32,
 		},
-		EndpointGroups: []meergo.EndpointGroup{{
-			// https://mailchimp.com/developer/marketing/docs/fundamentals/#throttling
-			RateLimit: meergo.RateLimit{RequestsPerSecond: 20, Burst: 20, MaxConcurrentRequests: 10},
-			// https://mailchimp.com/developer/marketing/docs/fundamentals/#api-limits
-			RetryPolicy: meergo.RetryPolicy{
-				"403 429": meergo.ExponentialStrategy(meergo.Slowdown, 50*time.Millisecond),
-				"500":     meergo.ExponentialStrategy(meergo.NetFailure, 50*time.Millisecond),
+		EndpointGroups: []meergo.EndpointGroup{
+			// Endpoint group used for the Mailchimp API.
+			{
+				Patterns: []string{
+					"GET  login.mailchimp.com/", // OAuth endpoints
+					"GET  /3.0/lists/",          // RecordSchema, Records, and webhooks
+					"GET  /3.0/batches/",        // Upsert
+					"POST /3.0/batches",         // Upsert
+				},
+				// https://mailchimp.com/developer/marketing/docs/fundamentals/#throttling
+				RateLimit: meergo.RateLimit{RequestsPerSecond: 20, Burst: 20, MaxConcurrentRequests: 10},
+				// https://mailchimp.com/developer/marketing/docs/fundamentals/#api-limits
+				RetryPolicy: meergo.RetryPolicy{
+					"403 429": meergo.ExponentialStrategy(meergo.Slowdown, 50*time.Millisecond),
+					"500":     meergo.ExponentialStrategy(meergo.NetFailure, 50*time.Millisecond),
+				},
 			},
-		}},
+			// Generic endpoint group used by Upsert to retrieve results,
+			// where the request domains and paths are not known in advance.
+			{
+				Patterns:  []string{"GET /"},
+				RateLimit: meergo.RateLimit{RequestsPerSecond: 1, Burst: 1},
+				SkipOAuth: true,
+			},
+		},
 		Icon: icon,
 	}, New)
 }
