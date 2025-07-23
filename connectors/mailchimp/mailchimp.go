@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"math"
 	"net/http"
 	"net/url"
@@ -516,7 +515,10 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 				return fmt.Errorf("cannot parse the JSON response from Mailchimp: %s", err)
 			}
 			if result.StatusCode == 400 {
-				slog.Error("connectors/mailchimp: server has returned a 400 error", "details", response.Detail)
+				if strings.HasSuffix(response.Detail, " enter a real email address.") {
+					recordsErr[i] = fmt.Errorf("The email address looks fake or invalid")
+					continue
+				}
 				recordsErr[i] = fmt.Errorf("mailchimp has returned a 400 %s error to the connector", response.Title)
 				continue
 			}
