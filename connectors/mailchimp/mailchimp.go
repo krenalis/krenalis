@@ -475,6 +475,9 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
 	}()
+	if r.StatusCode != 200 {
+		return fmt.Errorf("Mailchimp returned a %d status code while retrieving the results file", r.StatusCode)
+	}
 
 	// recordsErr is the error that will be returned containing all the operation errors.
 	recordsErr := meergo.RecordsError{}
@@ -497,16 +500,16 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 	// Parse the response.
 	gzResults, err := gzip.NewReader(r.Body)
 	if err != nil {
-		return fmt.Errorf("cannot read the gzip file response from Mailchimp: %s", err)
+		return fmt.Errorf("could not read Mailchimp's results file: %q", err)
 	}
 	tarResults := tar.NewReader(gzResults)
 	for {
 		header, err := tarResults.Next()
 		if err != nil {
 			if err == io.EOF {
-				return errors.New("Gzip file response from Mailchimp does not contain any files")
+				return errors.New("Mailchimp's response does not contain any response file")
 			}
-			return fmt.Errorf("cannot read gzip file response from Mailchimp: %s", err)
+			return fmt.Errorf("could not read Mailchimp's results file: %s", err)
 		}
 		if !header.FileInfo().IsDir() {
 			break
@@ -515,10 +518,10 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 	dec := json.NewDecoder(tarResults)
 	tok, err := dec.ReadToken()
 	if err != nil {
-		return fmt.Errorf("cannot parse the JSON response from Mailchimp: %s", err)
+		return fmt.Errorf("could not parse Mailchimp's results file: %s", err)
 	}
 	if tok.Kind() != '[' {
-		return fmt.Errorf("cannot parse the JSON response from Mailchimp; expecting Array, got %s", tok.Kind())
+		return fmt.Errorf("could not parse Mailchimp's results file: expecting Array, got %s", tok.Kind())
 	}
 	for i := 0; dec.PeekKind() == '{'; i++ {
 		err = dec.Decode(&result)
@@ -528,14 +531,14 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		if result.StatusCode != 200 {
 			err = json.Unmarshal([]byte(result.Response), &response)
 			if err != nil {
-				return fmt.Errorf("cannot parse the JSON response from Mailchimp: %s", err)
+				return fmt.Errorf("could not parse Mailchimp's results file: %s", err)
 			}
 			if result.StatusCode == 400 {
 				if strings.HasSuffix(response.Detail, " enter a real email address.") {
-					recordsErr[i] = fmt.Errorf("The email address looks fake or invalid")
+					recordsErr[i] = fmt.Errorf("email address looks fake or invalid")
 					continue
 				}
-				recordsErr[i] = fmt.Errorf("mailchimp has returned a 400 %s error to the connector", response.Title)
+				recordsErr[i] = fmt.Errorf("Mailchimp returned a 400 %q error", response.Title)
 				continue
 			}
 			if len(response.Errors) == 0 {
@@ -657,9 +660,9 @@ func (mc *MailChimp) call(ctx context.Context, method, path string, params url.V
 		mcErr := &mailchimpError{Status: res.StatusCode}
 		err := json.Decode(res.Body, mcErr)
 		if err != nil {
-			return err
+			return errors.New("Mailchimp returned a 400 Bad Request")
 		}
-		return mcErr
+		return fmt.Errorf("Mailchimp returned a 400 Bad Request with error %q", mcErr)
 	}
 
 	if response != nil {
