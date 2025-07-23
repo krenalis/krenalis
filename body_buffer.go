@@ -21,7 +21,7 @@ import (
 )
 
 // ContentEncoding represents supported HTTP body encodings.
-type ContentEncoding int
+type ContentEncoding int8
 
 const (
 	NoEncoding ContentEncoding = iota // No encoding (identity); body is uncompressed
@@ -104,8 +104,7 @@ func (bb *BodyBuffer) Close() {
 	}
 	// Returns the plain buffer to the pool.
 	if plain := bb.plain.Bytes(); plain != nil {
-		clear(plain)
-		bytespool.Put(plain)
+		bytespool.Put(plain[:cap(plain)])
 		bb.plain.Reset(nil)
 	}
 	bb.mu.Lock()
@@ -113,7 +112,6 @@ func (bb *BodyBuffer) Close() {
 	if bb.body.buf != nil {
 		// Wait for all readers to be closed.
 		bb.body.Wait()
-		clear(bb.body.buf)
 		bytespool.Put(bb.body.buf)
 		bb.body.buf = nil
 	}
@@ -248,25 +246,23 @@ func (bb *BodyBuffer) NewRequest(ctx context.Context, method, url string) (*http
 		return req, nil
 	}
 
-	if bb.plain.Bytes() == nil {
+	plain := bb.plain.Bytes()
+	if plain == nil {
 		return nil, errors.New("NewRequest can only be called once")
 	}
+	bb.flushed += len(plain)
 
-	plain := bb.plain.Bytes()
 	switch bb.enc {
 	case NoEncoding:
-		bb.flushed += bb.plain.Len()
 		bb.body.buf = plain
 	case Gzip:
 		// Flush the plain buffer.
-		bb.flushed += bb.plain.Len()
-		_, err := bb.plain.WriteTo(&bb.gzipW)
+		_, err := bb.gzipW.Write(plain)
 		if err != nil {
 			return nil, err
 		}
 		// Put the plain buffer into the pool.
-		clear(plain)
-		bytespool.Put(plain)
+		bytespool.Put(plain[:cap(plain)])
 		// Flushes the gzip buffer into the body buffer.
 		err = bb.gzipW.Close()
 		if err != nil {
@@ -367,7 +363,6 @@ func (w *bodyWriter) Write(p []byte) (int, error) {
 		w.buf = w.buf[0:n]
 		copy(w.buf, old)
 		copy(w.buf[len(old):], p)
-		clear(old)
 		bytespool.Put(old)
 	} else {
 		w.buf = append(w.buf, p...)
