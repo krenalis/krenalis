@@ -44,26 +44,24 @@ const (
 // performance across multiple uses. Always call Close when you're done with the
 // BodyBuffer to release its resources.
 type BodyBuffer struct {
-	mu sync.Mutex // protects access to bodyBuffer during Close and in request.GetBody
+	mu sync.Mutex // protects bodyBuffer and bodyBuffer.openBodies
+
+	// *bodyBuffer holds the internal state of BodyBuffer.
+	// It is set to nil when BodyBuffer is closed, and returned to the pool
+	// only after all body readers have been closed as well.
 	*bodyBuffer
 }
 
 // bodyBuffer is the internal, pooled type used by BodyBuffer.
 type bodyBuffer struct {
-	enc     ContentEncoding // content encoding
-	plain   json.Buffer     // plain data
-	gzipW   gzip.Writer     // gzip writer
-	flushed int             // size of the flushed plain data
-	body    struct {
-		// WaitGroup tracks active body readers.
-		// Add(1) is called by NewRequest and request.GetBody.
-		// Done is called by bodyReader.Close.
-		// Close blocks until all readers have called Done.
-		sync.WaitGroup
-		// bodyWriter.buf holds the request body.
-		// It is written to by the gzip writer and NewRequest, and read from by body readers.
-		bodyWriter
-	}
+	enc        ContentEncoding // content encoding
+	openBodies int8            // openBodies tracks the number of currently open bodies (max 10)
+	plain      json.Buffer     // plain data
+	gzipW      gzip.Writer     // gzip writer
+	flushed    int             // size of the flushed plain data
+	// body holds the request body.
+	// body.buf is written to by the gzip writer and NewRequest, and read from by body readers.
+	body bodyWriter
 }
 
 // GetBodyBuffer returns a BodyBuffer configured with the specified content
@@ -94,29 +92,14 @@ func GetBodyBuffer(enc ContentEncoding, length int) *BodyBuffer {
 
 // Close releases the resources associated with the BodyBuffer and must always
 // be called when the buffer is no longer needed.
-//
-// If NewReader has been called, Close waits for both Reader.Body and any bodies
-// returned by Reader.GetBody to be closed before returning.
 func (bb *BodyBuffer) Close() {
-	// Return if it was already closed.
-	if bb.bodyBuffer == nil {
+	if bb.closed() {
 		return
 	}
-	// Returns the plain buffer to the pool.
-	if plain := bb.plain.Bytes(); plain != nil {
-		bytespool.Put(plain[:cap(plain)])
-		bb.plain.Reset(nil)
-	}
 	bb.mu.Lock()
-	// Returns the body buffer to the pool.
-	if bb.body.buf != nil {
-		// Wait for all readers to be closed.
-		bb.body.Wait()
-		bytespool.Put(bb.body.buf)
-		bb.body.buf = nil
+	if bb.openBodies == 0 {
+		putBodyBuffer(bb.bodyBuffer)
 	}
-	// Return the bodyBuffer to the pool.
-	bodyBufPool.Put(bb.bodyBuffer)
 	bb.bodyBuffer = nil
 	bb.mu.Unlock()
 }
@@ -273,8 +256,21 @@ func (bb *BodyBuffer) NewRequest(ctx context.Context, method, url string) (*http
 	}
 	bb.plain.Reset(nil)
 
-	bb.body.Add(1) // marks creation of a reader
-	body := newBodyReader(bb.body.buf, bb.body.Done)
+	// closed is called when a body is closed.
+	// It captures a direct reference to bodyBuffer because BodyBuffer.bodyBuffer
+	// may have already been set to nil when this function is invoked.
+	buf := bb.bodyBuffer
+	closed := func() {
+		bb.mu.Lock()
+		buf.openBodies--
+		if bb.closed() && buf.openBodies == 0 {
+			putBodyBuffer(buf)
+		}
+		bb.mu.Unlock()
+	}
+
+	bb.openBodies = 1 // marks that a body has been opened
+	body := newBodyReader(bb.body.buf, closed)
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, err
@@ -288,11 +284,14 @@ func (bb *BodyBuffer) NewRequest(ctx context.Context, method, url string) (*http
 	req.GetBody = func() (io.ReadCloser, error) {
 		bb.mu.Lock()
 		defer bb.mu.Unlock()
-		if bb.bodyBuffer == nil {
-			return nil, errors.New("body has been already released")
+		if bb.closed() {
+			return nil, errors.New("body is no longer available")
 		}
-		bb.body.Add(1) // marks creation of a reader
-		return newBodyReader(bb.body.buf, bb.body.Done), nil
+		if bb.openBodies == 10 {
+			return nil, errors.New("cannot get the body: 10 are still open")
+		}
+		bb.openBodies++ // marks that a body has been opened
+		return newBodyReader(bb.body.buf, closed), nil
 	}
 
 	return req, nil
@@ -349,6 +348,29 @@ func (bb *BodyBuffer) WriteString(s string) (int, error) {
 		return 0, errPostReqWrite
 	}
 	return bb.plain.WriteString(s)
+}
+
+// closed reports whether the BodyBuffer has been closed.
+// It must be called with bb.mu held, except when called from Close.
+func (bb *BodyBuffer) closed() bool {
+	return bb.bodyBuffer == nil
+}
+
+// putBodyBuffer returns a *bodyBuffer to the pool for reuse.
+// It is called after a BodyBuffer is closed and all bodies are closed.
+func putBodyBuffer(buf *bodyBuffer) {
+	// Returns the plain buffer to the pool.
+	if plain := buf.plain.Bytes(); plain != nil {
+		bytespool.Put(plain[:cap(plain)])
+		buf.plain.Reset(nil)
+	}
+	// Returns the body buffer to the pool.
+	if buf.body.buf != nil {
+		bytespool.Put(buf.body.buf)
+		buf.body.buf = nil
+	}
+	// Return the bodyBuffer to the pool.
+	bodyBufPool.Put(buf)
 }
 
 // bodyReader implements io.Writer for request bodies.
