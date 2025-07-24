@@ -252,4 +252,68 @@ var tools = []server.ServerTool{
 			return mcp.NewToolResultText(info), nil
 		},
 	},
+
+	// Tool that exposes information about the workspace connections.
+	{
+		Tool: mcp.NewTool("connections",
+			mcp.WithDescription(
+				"Return information about the workspace connections."+
+					" A workspace can have zero, one or multiple connections."+
+					" A connection with role 'source', depending on its type and the external service it's connected to, can import users and events into the data warehouse, and send events to a destination connection."+
+					" A connection with role 'destination', depending on its type and the external service it's connected to, can export users read from the data warehouse, and send events received from a source connection to an app."+
+					" Once events are imported into the data warehouse by a source connection, they can no longer be re-read or forwarded via a destination connection."+
+					" A connection performs its operations (importing, sending, and exporting data) through 'actions'."+
+					" Each connection can have zero, one, or multiple 'actions'."+
+					" App connections interface with external applications outside Meergo."+
+					" Database connections interface with external databases outside Meergo."+
+					" File connections work in conjunction with file storage connections to interact with files for reading and writing data."+
+					" SDK connections receive data (events and users) from SDKs, browsers, and server-side applications",
+			),
+			mcp.WithTitleAnnotation("Information about workspace connections."),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(false),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiToken, err := apiTokenFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			core, err := meergoCoreFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			organizationID, workspaceID, found := core.APIKey(apiToken)
+			if !found {
+				return nil, errors.New("invalid API key")
+			}
+			org, err := core.Organization(ctx, organizationID)
+			if err != nil {
+				return nil, err
+			}
+			if workspaceID == 0 {
+				return nil, errors.New("the API key must be restricted to a workspace")
+			}
+			ws, err := org.Workspace(workspaceID)
+			if err != nil {
+				return nil, err
+			}
+			var info []any
+			for _, c := range ws.Connections() {
+				info = append(info, map[string]any{
+					"id":            c.ID,
+					"name":          c.Name,
+					"connector":     c.Connector,
+					"connectorType": c.ConnectorType,
+					"role":          c.Role,
+					"actionsCount":  c.ActionsCount,
+				})
+			}
+			encoded, err := json.Marshal(info)
+			if err != nil {
+				return nil, err
+			}
+			return mcp.NewToolResultText(string(encoded)), nil
+		},
+	},
 }

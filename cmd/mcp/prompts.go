@@ -28,6 +28,13 @@ var prompts = []server.ServerPrompt{
 		"Retrieve the event schema and provide a high-level description of it."+
 			" Also explain the relationship between the properties of the event schema and the columns of the corresponding 'events' table on the data warehouse.",
 	),
+	simplePrompt(
+		"workspace-connections",
+		"Retrieve information about workspace connections",
+		"List the connections currently present in the workspace."+
+			" For each, display a brief description summarizing the connection type and the number of actions currently present."+
+			" Also indicate which of them are currently configured and which are not, depending on the number of actions.",
+	),
 }
 
 // simplePrompt returns a simple MCP prompt which is based only on a name,
