@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo/cmd/mcp"
 	corepkg "github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/metrics"
@@ -179,7 +180,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	defer assets.Close()
 
 	// Instantiate a new MCP (Model Context Protocol) server.
-	mcpServer := newMCPServer(apisServer)
+	mcpServer := mcp.NewMCPServer(apisServer.core)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

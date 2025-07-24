@@ -5,7 +5,7 @@
 // Copyright (c) 2025 Open2b
 //
 
-package cmd
+package mcp
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
@@ -96,8 +97,8 @@ func init() {
 	}
 }
 
-// newMCPServer returns a new MCP server.
-func newMCPServer(apisServer *apisServer) *mcpServer {
+// NewMCPServer returns a new MCP server.
+func NewMCPServer(core *core.Core) *mcpServer {
 
 	// MCP server.
 	m := server.NewMCPServer("Meergo MCP server", "0.0.0", server.WithRecovery())
@@ -148,11 +149,11 @@ func newMCPServer(apisServer *apisServer) *mcpServer {
 		if err != nil {
 			return nil, err
 		}
-		organizationID, workspaceID, found := apisServer.core.APIKey(apiToken)
+		organizationID, workspaceID, found := core.APIKey(apiToken)
 		if !found {
 			return nil, errors.New("invalid API key")
 		}
-		org, err := apisServer.core.Organization(ctx, organizationID)
+		org, err := core.Organization(ctx, organizationID)
 		if err != nil {
 			return nil, err
 		}
@@ -188,11 +189,11 @@ func newMCPServer(apisServer *apisServer) *mcpServer {
 		if err != nil {
 			return nil, err
 		}
-		organizationID, workspaceID, found := apisServer.core.APIKey(apiToken)
+		organizationID, workspaceID, found := core.APIKey(apiToken)
 		if !found {
 			return nil, errors.New("invalid API key")
 		}
-		org, err := apisServer.core.Organization(ctx, organizationID)
+		org, err := core.Organization(ctx, organizationID)
 		if err != nil {
 			return nil, err
 		}
@@ -227,11 +228,11 @@ func newMCPServer(apisServer *apisServer) *mcpServer {
 		if err != nil {
 			return nil, err
 		}
-		organizationID, workspaceID, found := apisServer.core.APIKey(apiToken)
+		organizationID, workspaceID, found := core.APIKey(apiToken)
 		if !found {
 			return nil, errors.New("invalid API key")
 		}
-		org, err := apisServer.core.Organization(ctx, organizationID)
+		org, err := core.Organization(ctx, organizationID)
 		if err != nil {
 			return nil, err
 		}
@@ -313,11 +314,11 @@ func newMCPServer(apisServer *apisServer) *mcpServer {
 		if err != nil {
 			return nil, err
 		}
-		organizationID, workspaceID, found := apisServer.core.APIKey(apiToken)
+		organizationID, workspaceID, found := core.APIKey(apiToken)
 		if !found {
 			return nil, errors.New("invalid API key")
 		}
-		org, err := apisServer.core.Organization(ctx, organizationID)
+		org, err := core.Organization(ctx, organizationID)
 		if err != nil {
 			return nil, err
 		}
