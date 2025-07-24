@@ -195,7 +195,7 @@ var tools = []server.ServerTool{
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			return mcp.NewToolResultText(strings.Join([]string{
 				"The '_user_identities' table contains user identities before they are unified through Identity Resolution and made available in the 'users' view.",
-				"The '_user_identities.__connection__' column contains the connection from which the user identity was imported.",
+				"The '_user_identities.__connection__' column references the ID (integer) of the connection from which the user identity was imported.",
 				"If there's no match between the contents of '_user_identities' and the 'users' view, it might be because the Identity Resolution process hasn't been run recently.",
 			}, " ")), nil
 		},
