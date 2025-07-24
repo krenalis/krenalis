@@ -16,7 +16,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/meergo/meergo/bytespool"
+	"github.com/meergo/meergo/bufferpool"
 	"github.com/meergo/meergo/json"
 )
 
@@ -77,12 +77,12 @@ func GetBodyBuffer(enc ContentEncoding, length int) *BodyBuffer {
 	bb.enc = enc
 	switch enc {
 	case NoEncoding:
-		b := bytespool.Get(length)
+		b := bufferpool.Get(length)
 		bb.plain.Reset(b)
 	case Gzip:
-		b := bytespool.Get(1024)
+		b := bufferpool.Get(1024)
 		bb.plain.Reset(b)
-		bb.body.buf = bytespool.Get(length)
+		bb.body.buf = bufferpool.Get(length)
 		bb.gzipW.Reset(&bb.body)
 	default:
 		panic(fmt.Sprintf("meergo: invalid encoding %d", enc))
@@ -245,7 +245,7 @@ func (bb *BodyBuffer) NewRequest(ctx context.Context, method, url string) (*http
 			return nil, err
 		}
 		// Put the plain buffer into the pool.
-		bytespool.Put(plain[:cap(plain)])
+		bufferpool.Put(plain[:cap(plain)])
 		// Flushes the gzip buffer into the body buffer.
 		err = bb.gzipW.Close()
 		if err != nil {
@@ -361,12 +361,12 @@ func (bb *BodyBuffer) closed() bool {
 func putBodyBuffer(buf *bodyBuffer) {
 	// Returns the plain buffer to the pool.
 	if plain := buf.plain.Bytes(); plain != nil {
-		bytespool.Put(plain[:cap(plain)])
+		bufferpool.Put(plain[:cap(plain)])
 		buf.plain.Reset(nil)
 	}
 	// Returns the body buffer to the pool.
 	if buf.body.buf != nil {
-		bytespool.Put(buf.body.buf)
+		bufferpool.Put(buf.body.buf)
 		buf.body.buf = nil
 	}
 	// Return the bodyBuffer to the pool.
@@ -381,11 +381,11 @@ type bodyWriter struct {
 func (w *bodyWriter) Write(p []byte) (int, error) {
 	if n := len(w.buf) + len(p); n > cap(w.buf) {
 		old := w.buf
-		w.buf = bytespool.Get(n)
+		w.buf = bufferpool.Get(n)
 		w.buf = w.buf[0:n]
 		copy(w.buf, old)
 		copy(w.buf[len(old):], p)
-		bytespool.Put(old)
+		bufferpool.Put(old)
 	} else {
 		w.buf = append(w.buf, p...)
 	}

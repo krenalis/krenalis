@@ -5,14 +5,14 @@
 // Copyright (c) 2025 Open2b
 //
 
-// Package bytespool provides a pool for reusing byte slices.
-package bytespool
+// Package bufferpool provides a pool for reusing buffers.
+package bufferpool
 
 import (
 	pool "github.com/libp2p/go-buffer-pool"
 )
 
-// Get returns a byte slice with len == 0 and cap <= capacity. Its contents are
+// Get returns a buffer with len == 0 and cap <= capacity. Its contents are
 // unspecified and may retain data from previous use.
 func Get(capacity int) []byte {
 	if capacity == 0 {
