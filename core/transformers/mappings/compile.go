@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -508,11 +510,65 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 		v, err := convert(p.value, p.typ, dt, nullable, false, nil, None)
 		if err != nil {
 			if p.value == nil {
-				return fmt.Errorf("cannot convert null to %s", dt)
-			} else if p.typ.Kind() == types.TextKind {
-				return fmt.Errorf("cannot convert %q (type %s) to %s", p.value, p.typ, dt)
+				return fmt.Errorf("null is not convertible to the %s type", dt)
 			}
-			return fmt.Errorf("cannot convert %v (type %s) to %s", p.value, p.typ, dt)
+			var msg string
+			switch err {
+			case errRangeConversion:
+				msg = fmt.Sprintf("number %s is not a %s value", p.value, dt)
+			case errMinConversion:
+				var n any
+				switch dt.Kind() {
+				case types.IntKind:
+					n, _ = dt.IntRange()
+				case types.UintKind:
+					n, _ = dt.UintRange()
+				case types.FloatKind:
+					n, _ = dt.FloatRange()
+				case types.DecimalKind:
+					n, _ = dt.DecimalRange()
+				}
+				msg = fmt.Sprintf("number %s is less than %v", p.value, n)
+			case errMaxConversion:
+				var n any
+				switch dt.Kind() {
+				case types.IntKind:
+					_, n = dt.IntRange()
+				case types.UintKind:
+					_, n = dt.UintRange()
+				case types.FloatKind:
+					_, n = dt.FloatRange()
+				case types.DecimalKind:
+					_, n = dt.DecimalRange()
+				}
+				msg = fmt.Sprintf("number %s is greater than %v", p.value, n)
+			case errEnumConversion:
+				msg = fmt.Sprintf("%q is not one of the allowed values", p.value)
+			case errRegexpConversion:
+				msg = fmt.Sprintf("%q does not match /%s/", p.value, dt.Regexp())
+			case errByteLenConversion:
+				n, _ := dt.ByteLen()
+				msg = fmt.Sprintf("%q exceeds the %d-byte limit", p.value, n)
+			case errCharLenConversion:
+				n, _ := dt.CharLen()
+				msg = fmt.Sprintf("%q exceeds the %d-char limit", p.value, n)
+			default:
+				var s string
+				switch v := p.value.(type) {
+				case string:
+					s = strconv.Quote(v)
+				case int:
+					s = strconv.Itoa(v)
+				case decimal.Decimal:
+					s = v.String()
+				case bool:
+					s = strconv.FormatBool(v)
+				case json.Value:
+					s = "null"
+				}
+				msg = fmt.Sprintf("%s is not convertible to the %s type", s, dt.String())
+			}
+			return errors.New(msg)
 		}
 		expr[0].value = v
 		expr[0].typ = dt
