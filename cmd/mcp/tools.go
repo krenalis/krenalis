@@ -1,0 +1,255 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2025 Open2b
+//
+
+package mcp
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/meergo/meergo/core/errors"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+)
+
+var tools = []server.ServerTool{
+
+	// Tool that exposes information about the warehouse.
+	{
+		Tool: mcp.NewTool("warehouse-information",
+			mcp.WithDescription("Return information about the data warehouse connected to the workspace"),
+			mcp.WithTitleAnnotation("Information about the warehouse"),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(true),
+		),
+		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiToken, err := apiTokenFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			core, err := meergoCoreFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			organizationID, workspaceID, found := core.APIKey(apiToken)
+			if !found {
+				return nil, errors.New("invalid API key")
+			}
+			org, err := core.Organization(ctx, organizationID)
+			if err != nil {
+				return nil, err
+			}
+			if workspaceID == 0 {
+				return nil, errors.New("the API key must be restricted to a workspace")
+			}
+			ws, err := org.Workspace(workspaceID)
+			if err != nil {
+				return nil, err
+			}
+			typ, _ := ws.Warehouse()
+			information := fmt.Sprintf("Connected to the workspace there is a %s data warehouse", typ)
+			return mcp.NewToolResultText(string(information)), nil
+		},
+	},
+
+	// Tool that queries the data warehouse.
+	{
+		Tool: mcp.NewTool("query-data-warehouse",
+			mcp.WithDescription("Run a query on the data warehouse connected to the workspace (to retrieve events, users, or other relevant data) and returns the results for analysis."),
+			mcp.WithString("query", mcp.Required(), mcp.Description("Query to execute on the workspace's data warehouse to retrieve data")),
+			mcp.WithTitleAnnotation("Query the data warehouse of the workspace"),
+			mcp.WithReadOnlyHintAnnotation(false),
+			mcp.WithDestructiveHintAnnotation(true),
+			mcp.WithIdempotentHintAnnotation(false),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiToken, err := apiTokenFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			core, err := meergoCoreFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			organizationID, workspaceID, found := core.APIKey(apiToken)
+			if !found {
+				return nil, errors.New("invalid API key")
+			}
+			org, err := core.Organization(ctx, organizationID)
+			if err != nil {
+				return nil, err
+			}
+			if workspaceID == 0 {
+				return nil, errors.New("the API key must be restricted to a workspace")
+			}
+			query, err := req.RequireString("query")
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			ws, err := org.Workspace(workspaceID)
+			if err != nil {
+				return nil, err
+			}
+			rows, err := ws.RawQueryWarehouse(ctx, query)
+			if err != nil {
+				return nil, err
+			}
+			encoded, err := json.Marshal(rows)
+			if err != nil {
+				return nil, err
+			}
+			return mcp.NewToolResultText(string(encoded)), nil
+		},
+	},
+
+	// Tool that exposes the user schema.
+	{
+		Tool: mcp.NewTool("user-schema",
+			mcp.WithDescription(
+				"Return the user schema (with details of all its properties and the corresponding data warehouse columns) related to the Meergo workspace."+
+					" Information is returned about the properties of the user schema in Meergo (with their types),"+
+					" and about the corresponding column of the 'users' view in the data warehouse (along with its column type), where the user information is actually stored."+
+					" All user schema properties in Meergo are always nullable, as any of them can be omitted."+
+					" Unlike the event schema, which is fixed for each workspace, the user schema can be modified and thus change over time.",
+			),
+			mcp.WithTitleAnnotation("User schema of the workspace"),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(false),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiToken, err := apiTokenFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			core, err := meergoCoreFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			organizationID, workspaceID, found := core.APIKey(apiToken)
+			if !found {
+				return nil, errors.New("invalid API key")
+			}
+			org, err := core.Organization(ctx, organizationID)
+			if err != nil {
+				return nil, err
+			}
+			if workspaceID == 0 {
+				return nil, errors.New("the API key must be restricted to a workspace")
+			}
+			ws, err := org.Workspace(workspaceID)
+			if err != nil {
+				return nil, err
+			}
+			schemaInfo := userSchemaInfoForMCPClient(ws.UserSchema, ws.ColumnTypeDescription)
+			encoded, err := json.Marshal(schemaInfo)
+			if err != nil {
+				return nil, err
+			}
+			return mcp.NewToolResultText(string(encoded)), nil
+		},
+	},
+
+	// Tool that exposes the event schema.
+	{
+		Tool: mcp.NewTool("event-schema",
+			mcp.WithDescription(
+				"Return the event schema (with details of all its properties and the corresponding data warehouse columns)."+
+					" Information is returned about the properties of the event schema in Meergo (with their types),"+
+					" and about the corresponding column of the 'events' table in the data warehouse (along with its column type), where the user information is actually stored."+
+					" Unlike the workspace user schema, which can be modified, the event schema is the same for every workspace and is never modified.",
+			),
+			mcp.WithTitleAnnotation("Event schema"),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(true),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			encoded, err := json.Marshal(eventSchemaInfoForMCPClient)
+			if err != nil {
+				return nil, err
+			}
+			return mcp.NewToolResultText(string(encoded)), nil
+		},
+	},
+
+	// Tool that exposes information about the user identities.
+	{
+		Tool: mcp.NewTool("user-identities-doc",
+			mcp.WithDescription(
+				"Return information about the user identities in Meergo.",
+			),
+			mcp.WithTitleAnnotation("Documentation about user identities"),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(true),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			return mcp.NewToolResultText(strings.Join([]string{
+				"The '_user_identities' table contains user identities before they are unified through Identity Resolution and made available in the 'users' view.",
+				"The '_user_identities.__connection__' column contains the connection from which the user identity was imported.",
+				"If there's no match between the contents of '_user_identities' and the 'users' view, it might be because the Identity Resolution process hasn't been run recently.",
+			}, " ")), nil
+		},
+	},
+
+	// Tool that exposes the Identity Resolution executions.
+	{
+		Tool: mcp.NewTool("identity-resolution-executions",
+			mcp.WithDescription(
+				"Return information about Identity Resolution executions.",
+			),
+			mcp.WithTitleAnnotation("Information about Identity Resolution execution."),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(false),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			apiToken, err := apiTokenFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			core, err := meergoCoreFromCtx(ctx)
+			if err != nil {
+				return nil, err
+			}
+			organizationID, workspaceID, found := core.APIKey(apiToken)
+			if !found {
+				return nil, errors.New("invalid API key")
+			}
+			org, err := core.Organization(ctx, organizationID)
+			if err != nil {
+				return nil, err
+			}
+			if workspaceID == 0 {
+				return nil, errors.New("the API key must be restricted to a workspace")
+			}
+			ws, err := org.Workspace(workspaceID)
+			if err != nil {
+				return nil, err
+			}
+			startTime, endTime, err := ws.LatestIdentityResolution(ctx)
+			if err != nil {
+				return nil, err
+			}
+			var info string
+			switch {
+			case startTime == nil && endTime == nil:
+				info = "Identity Resolution has never been performed on the workspace"
+			case startTime != nil && endTime != nil:
+				info = fmt.Sprintf("The Identity Resolution procedure has been started on the workspace at %v and ended at %v", startTime, endTime)
+			case startTime != nil && endTime == nil:
+				info = fmt.Sprintf("The Identity Resolution procedure has been started on the workspace at %v and it's still running", startTime)
+			}
+			return mcp.NewToolResultText(info), nil
+		},
+	},
+}
