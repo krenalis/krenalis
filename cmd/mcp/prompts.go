@@ -35,6 +35,16 @@ var prompts = []server.ServerPrompt{
 			" For each, display a brief description summarizing the connection type and the number of actions currently present."+
 			" Also indicate which of them are currently configured and which are not, depending on the number of actions.",
 	),
+	simplePrompt(
+		"how-actions-connections-identity-resolutions-work",
+		"Explain how connections, actions and Identity Resolution work",
+		"Explain to me how actions, connections, and identity resolution work. Provide concrete examples using data from my workspace, if possible.",
+	),
+	simplePrompt(
+		"i-am-new-to-meergo",
+		"Get an overview on how Meergo works",
+		"I'm new to Meergo and don't know how it works or what it does. Can you explain how it works, what it allows me to do, and what are the key concepts I need to work with?",
+	),
 }
 
 // simplePrompt returns a simple MCP prompt which is based only on a name,

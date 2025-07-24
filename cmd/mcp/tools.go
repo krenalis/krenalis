@@ -205,7 +205,8 @@ var tools = []server.ServerTool{
 	{
 		Tool: mcp.NewTool("identity-resolution-executions",
 			mcp.WithDescription(
-				"Return information about Identity Resolution executions.",
+				"Return information about Identity Resolution executions."+
+					" Regardless of the language, use the English term Identity Resolution without translating it, as it is a key concept in the software.",
 			),
 			mcp.WithTitleAnnotation("Information about Identity Resolution execution."),
 			mcp.WithReadOnlyHintAnnotation(true),
@@ -267,7 +268,8 @@ var tools = []server.ServerTool{
 					" App connections interface with external applications outside Meergo."+
 					" Database connections interface with external databases outside Meergo."+
 					" File connections work in conjunction with file storage connections to interact with files for reading and writing data."+
-					" SDK connections receive data (events and users) from SDKs, browsers, and server-side applications",
+					" SDK connections receive data (events and users) from SDKs, browsers, and server-side applications"+
+					" Regardless of the language, use the English terms Connection, Source, Destination and Action without translating them, as they are key concepts in the software.",
 			),
 			mcp.WithTitleAnnotation("Information about workspace connections."),
 			mcp.WithReadOnlyHintAnnotation(true),
