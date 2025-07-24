@@ -158,6 +158,13 @@ type Warehouse interface {
 	// data warehouse's methods are in progress and no more will be made.
 	Close() error
 
+	// ColumnTypeDescription returns a description for the warehouse column type
+	// corresponding to the given types.Type.
+	// The description is not required to be a syntactically valid warehouse type,
+	// and may therefore include additional human-readable details (such as type
+	// information, maximum character count, enum values, etc...).
+	ColumnTypeDescription(t types.Type) (string, error)
+
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.
 	Delete(ctx context.Context, table string, where Expr) error

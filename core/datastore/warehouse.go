@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // UnavailableError represents an error with the data warehouse.
@@ -68,6 +69,12 @@ func (dw warehouse) CanInitialize(ctx context.Context) error {
 
 func (dw warehouse) Close() error {
 	return unavailableError(dw.inner.Close())
+}
+
+func (dw warehouse) ColumnTypeDescription(t types.Type) (string, error) {
+	description, err := dw.inner.ColumnTypeDescription(t)
+	err = unavailableError(err)
+	return description, err
 }
 
 func (dw warehouse) Delete(ctx context.Context, table string, where meergo.Expr) error {

@@ -26,6 +26,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -126,6 +127,12 @@ func (warehouse *Snowflake) Close() error {
 		return snowflake(err)
 	}
 	return nil
+}
+
+// ColumnTypeDescription returns a description for the warehouse column type
+// corresponding to the given types.Type.
+func (warehouse *Snowflake) ColumnTypeDescription(t types.Type) (string, error) {
+	return typeToSnowflakeType(t), nil
 }
 
 // Delete deletes rows from the specified table that match the provided where

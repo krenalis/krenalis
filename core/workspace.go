@@ -236,6 +236,16 @@ const (
 	Day    = MetricUnit(metrics.Day)
 )
 
+// ColumnTypeDescription returns a description for the warehouse column type
+// corresponding to the given types.Type.
+// The description is not required to be a syntactically valid warehouse type,
+// and may therefore include additional human-readable details (such as type
+// information, maximum character count, enum values, etc...).
+func (this Workspace) ColumnTypeDescription(t types.Type) (string, error) {
+	this.core.mustBeOpen()
+	return this.store.ColumnTypeDescription(t)
+}
+
 // ActionMetricsPerDate returns metrics aggregated by day for the time interval
 // between the specified start and end dates. The dates must be no earlier than
 // 1970-01-01 and no later than 2262-04-10. The day of the start date must be at

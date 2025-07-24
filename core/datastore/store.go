@@ -144,6 +144,16 @@ func (store *Store) AlterUserSchema(ctx context.Context, opID string, schema typ
 	return store.warehouse().AlterUserSchema(ctx, opID, columns, operations)
 }
 
+// ColumnTypeDescription returns a description for the warehouse column type
+// corresponding to the given types.Type.
+// The description is not required to be a syntactically valid warehouse type,
+// and may therefore include additional human-readable details (such as type
+// information, maximum character count, enum values, etc...).
+func (store *Store) ColumnTypeDescription(t types.Type) (string, error) {
+	store.mustBeOpen()
+	return store.warehouse().ColumnTypeDescription(t)
+}
+
 // DeleteDestinationUsers deletes the destination users of the provided action.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode

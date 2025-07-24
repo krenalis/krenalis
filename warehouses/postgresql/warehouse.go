@@ -24,6 +24,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/metrics"
+	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -117,6 +118,12 @@ func (warehouse *PostgreSQL) Close() error {
 	warehouse.pool.Close()
 	warehouse.pool = nil
 	return nil
+}
+
+// ColumnTypeDescription returns a description for the warehouse column type
+// corresponding to the given types.Type.
+func (warehouse *PostgreSQL) ColumnTypeDescription(t types.Type) (string, error) {
+	return typeToPostgresType(t), nil
 }
 
 // Delete deletes rows from the specified table that match the provided where

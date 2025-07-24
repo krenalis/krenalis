@@ -13,6 +13,13 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// EventColumnByPath returns the meergo.Column corresponding to the property of
+// the events schema with the specified path.
+// propertyPath must always refer to an existing property in the events schema.
+func EventColumnByPath(propertyPath string) meergo.Column {
+	return eventColumnByProperty[propertyPath]
+}
+
 // eventColumnNameFromPropertyPath maps a property path in the event schema
 // to the corresponding column name in the events table.
 //
