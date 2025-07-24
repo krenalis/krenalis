@@ -15,38 +15,31 @@ import (
 )
 
 var prompts = []server.ServerPrompt{
+	simplePrompt(
+		"describe-user-schema",
+		"Get a better understanding of the user schema",
+		"Retrieve the current user schema associated with the workspace and provide a high-level description of it,"+
+			" indicating which parts of it could be improved."+
+			" Also explain the relationship between the properties of the user schema and the columns of the corresponding 'users' view on the data warehouse.",
+	),
+	simplePrompt(
+		"describe-event-schema",
+		"Get a better understanding of the event schema",
+		"Retrieve the event schema and provide a high-level description of it."+
+			" Also explain the relationship between the properties of the event schema and the columns of the corresponding 'events' table on the data warehouse.",
+	),
+}
 
-	// Prompt for getting a description of the user schema.
-	{
-		Prompt: mcp.NewPrompt("describe-user-schema", mcp.WithPromptDescription("Get a better understanding of the user schema")),
+// simplePrompt returns a simple MCP prompt which is based only on a name,
+// description and the prompt itself.
+func simplePrompt(name, description, prompt string) server.ServerPrompt {
+	return server.ServerPrompt{
+		Prompt: mcp.NewPrompt(name, mcp.WithPromptDescription(description)),
 		Handler: func(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
-			pr := mcp.NewGetPromptResult("Get a better understanding of the user schema", []mcp.PromptMessage{
-				mcp.NewPromptMessage(
-					mcp.RoleUser,
-					mcp.NewTextContent(
-						"Retrieve the current user schema associated with the workspace and provide a high-level description of it,"+
-							" indicating which parts of it could be improved."+
-							" Also explain the relationship between the properties of the user schema and the columns of the corresponding 'users' view on the data warehouse.",
-					),
-				),
+			pr := mcp.NewGetPromptResult(description, []mcp.PromptMessage{
+				mcp.NewPromptMessage(mcp.RoleUser, mcp.NewTextContent(prompt)),
 			})
 			return pr, nil
 		},
-	},
-
-	// Prompt for getting a description of the event schema.
-	{
-		Prompt: mcp.NewPrompt("describe-event-schema", mcp.WithPromptDescription("Get a better understanding of the event schema")),
-		Handler: func(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
-			pr := mcp.NewGetPromptResult("Get a better understanding of the event schema", []mcp.PromptMessage{
-				mcp.NewPromptMessage(
-					mcp.RoleUser,
-					mcp.NewTextContent("Retrieve the event schema and provide a high-level description of it."+
-						" Also explain the relationship between the properties of the event schema and the columns of the corresponding 'events' table on the data warehouse.",
-					),
-				),
-			})
-			return pr, nil
-		},
-	},
+	}
 }
