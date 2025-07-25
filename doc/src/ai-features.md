@@ -44,13 +44,13 @@ More will be implemented in the future.
 
 ## Example interaction with Meergo using **fast-agent**
 
-This example assumes the use of **fast-agent** as the LLM application to connect to a **Gemini** model and to Meergo's MCP.
+This example assumes the use of **fast-agent** as the LLM application to connect to an **OpenAI** model and to Meergo's MCP.
 
 Once you understand this example, you can adapt it to your needs (eg. another LL model, etc...) and use your preferred LLM application.
 
 ### Requirements
 
-* A Google API key stored in the `GOOGLE_API_KEY` environment variable.
+* A Open AI API key stored in the `OPENAI_API_KEY` environment variable.
 * The [`fast-agent`](https://fast-agent.ai/) command installed locally.
 * A Meergo API key associated to a specific workspace, stored in the `MEERGO_API_KEY` environment variable.
 * A running instance of Meergo.
@@ -58,7 +58,7 @@ Once you understand this example, you can adapt it to your needs (eg. another LL
 ### Starting the chat
 
 ```bash
-fast-agent go --model google --url=http://localhost:9090/mcp --auth=$MEERGO_API_KEY
+fast-agent go --model openai --url=http://localhost:9090/mcp --auth=$MEERGO_API_KEY
 ```
 
 By changing the command-line parameters and environment variables, you can configure **fast-agent** to connect to a different model or a different Meergo instance. See the [documentation for the `fast-agent go` command](https://fast-agent.ai/ref/go_command/) for more details.
@@ -86,7 +86,7 @@ when interacting via `fast-agent`. These errors don’t seem to affect usability
 You may encounter an error like this:
 
 ```plain
-[mcp_agent.llm.augmented_llm] Google API Error: 400 - * 
+[mcp_agent.llm.augmented_llm] API Error: 400 - * 
 GenerateContentRequest.tools[0].function_declarations[0].name: Invalid function name. Must start with a letter 
 or an underscore. Must be alphameric (a-z, A-Z, 0-9), underscores (_), dots (.) or dashes (-), with a maximum 
 length of 64.
@@ -94,7 +94,7 @@ length of 64.
   Finished       | FastAgent CLI     / Elapsed Time 00:00:08
 
 Provider Configuration Error:
-Google API Error: 400
+API Error: 400
 
 Details:
 * GenerateContentRequest.tools[0].function_declarations[0].name: Invalid function name. Must start with a 
