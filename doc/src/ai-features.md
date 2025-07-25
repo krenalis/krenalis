@@ -6,9 +6,13 @@
 
 You can interact with Meergo through AI. This feature allows you to query Meergo it for answers to questions like:
 
-> In the current workspace, analyze the users who interacted with the site over the past two weeks. What insights can you share about them?
+> *In the current workspace, analyze the users who interacted with the site over the past two weeks. What insights can you share about them?*
 
 ⚙️ Please note that, currently, using this feature requires some technical knowledge and it is highly experimental. It will be made more accessible, complete and stable in the future.
+
+## Model compatibility
+
+Meergo's AI features have been tested with **OpenAI's GPT-4.1 mini** model. Other models *might* work, but compatibility is not guaranteed as they haven't been tested. ⚠️ 🤖
 
 ## MCP server details
 
@@ -20,7 +24,7 @@ You can interact with Meergo through AI. This feature allows you to query Meergo
                                 User
 ```
 
-Meergo exposes an MCP (Model Context Protocol) server to interact using your own LLM application.
+Meergo exposes an **MCP (Model Context Protocol)** server to interact using your own LLM application.
 
 Some details:
 
