@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/cmd/mcp"
-	corepkg "github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/opentelemetry"
@@ -34,10 +34,13 @@ import (
 	"github.com/getsentry/sentry-go"
 )
 
+const telemetryLevelErrors = core.TelemetryLevelErrors
+const telemetryLevelAll = core.TelemetryLevelAll
+
 type Settings struct {
 	TerminationDelay            time.Duration
 	JavaScriptSDKURL            string
-	SentryTelemetryLevel        corepkg.TelemetryLevel
+	SentryTelemetryLevel        core.TelemetryLevel
 	SkipMemberEmailVerification bool
 	HTTP                        struct {
 		Host string
@@ -50,7 +53,7 @@ type Settings struct {
 		ExternalURL string
 		EventURL    string
 	}
-	DB              corepkg.DBConfig
+	DB              core.DBConfig
 	MaxMindDBPath   string
 	MemberEmailFrom string
 	SMTP            struct {
@@ -117,7 +120,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
 	}
 
-	config := corepkg.Config{
+	config := core.Config{
 		DB:                   settings.DB,
 		MaxMindDBPath:        settings.MaxMindDBPath,
 		MemberEmailFrom:      settings.MemberEmailFrom,
@@ -127,13 +130,13 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	// Choose the transformation function provider setting.
 	if settings.Transformations.Lambda.Node.Runtime != "" || settings.Transformations.Lambda.Python.Runtime != "" {
-		config.FunctionProvider = corepkg.LambdaConfig(settings.Transformations.Lambda)
+		config.FunctionProvider = core.LambdaConfig(settings.Transformations.Lambda)
 	}
 	if settings.Transformations.Local.NodeExecutable != "" || settings.Transformations.Local.PythonExecutable != "" {
 		if config.FunctionProvider != nil {
 			return errors.New("meergo environment variables cannot specify both the Lambda and the local transformation")
 		}
-		config.FunctionProvider = corepkg.LocalConfig(settings.Transformations.Local)
+		config.FunctionProvider = core.LocalConfig(settings.Transformations.Local)
 	}
 
 	// Validate the settings of the connectors.
@@ -150,7 +153,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		config.ConnectorsOAuth = maps.Clone(settings.OAuth)
 	}
 
-	core, err := corepkg.New(&config)
+	core, err := core.New(&config)
 	if err != nil {
 		return err
 	}
@@ -209,8 +212,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 				}
 
 				// Send the panic to Sentry.
-				if settings.SentryTelemetryLevel == corepkg.TelemetryLevelErrors ||
-					settings.SentryTelemetryLevel == corepkg.TelemetryLevelAll {
+				if settings.SentryTelemetryLevel == telemetryLevelErrors || settings.SentryTelemetryLevel == telemetryLevelAll {
 					sentry.CurrentHub().Recover(r)
 					flushCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 					defer cancel()
