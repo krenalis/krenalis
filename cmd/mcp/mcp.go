@@ -20,6 +20,10 @@ import (
 
 // NewMCPServer returns a new MCP server, which servers HTTP requests from MCP
 // clients.
+//
+// An MCP server can be initialized with a nil Meergo core. In that case, only
+// operations that do not involve the core (eg. listing the tools, the prompts,
+// etc...) are supported; otherwise, a panic may occur. This is useful in tests.
 func NewMCPServer(core *core.Core) *MCPServer {
 
 	// Instantiate an MCP server.
