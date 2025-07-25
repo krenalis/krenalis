@@ -9,6 +9,7 @@ package json
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -480,27 +481,42 @@ func Test_Value(t *testing.T) {
 		}
 	})
 
+	t.Run("UnmarshalJSON nil", func(t *testing.T) {
+		expected := errors.New("UnmarshalJSON on nil pointer")
+		var v *Value
+		err := v.UnmarshalJSON([]byte("{}"))
+		if !reflect.DeepEqual(err, expected) {
+			t.Fatalf("expected error %v (type %T), got error %v (type %T)", expected, expected, err, err)
+		}
+		if v != nil {
+			t.Fatalf("expected unchanged v, got `%s`", string(*v))
+		}
+	})
+
 	t.Run("UnmarshalJSON", func(t *testing.T) {
+
 		tests := []struct {
+			value    string
 			data     string
 			expected string
 			err      error
 		}{
-			{`""`, `""`, nil},
-			{` "" `, `""`, nil},
-			{`"foo"`, `"foo"`, nil},
-			{`"foo`, ``, ErrInvalidJSON},
-			{`{"foo": true, "boo": 5 } `, `{"foo": true, "boo": 5 }`, nil},
-			{"\"\xFF\"", ``, ErrInvalidJSON},
+			{"{}", `[]`, ``, errors.New("UnmarshalJSON on non-empty value")},
+			{"", `""`, `""`, nil},
+			{"", ` "" `, `""`, nil},
+			{"", `"foo"`, `"foo"`, nil},
+			{"", `"foo`, ``, ErrInvalidJSON},
+			{"", `{"foo": true, "boo": 5 } `, `{"foo": true, "boo": 5 }`, nil},
+			{"", "\"\xFF\"", ``, ErrInvalidJSON},
 		}
 		for _, test := range tests {
-			v := Value("true")
+			v := Value(test.value)
 			err := v.UnmarshalJSON([]byte(test.data))
 			if !reflect.DeepEqual(err, test.err) {
 				t.Fatalf("expected error %v (type %T), got error %v (type %T)", test.err, test.err, err, err)
 			}
 			if test.err != nil {
-				if !bytes.Equal(v, []byte("true")) {
+				if string(v) != test.value {
 					t.Fatalf("expected unchanged v, got `%s`", string(v))
 				}
 				continue

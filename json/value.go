@@ -42,8 +42,9 @@ func (err NotExistError) Error() string {
 
 // Value is a JSON-encoded value.
 //
-// All methods of Value assume that it contains valid JSON, potentially with
-// leading and trailing JSON spaces; otherwise, the behavior is undefined.
+// All methods of Value do not modify it. They also assume that it contains
+// valid JSON, possibly with leading or trailing whitespace. If not, the
+// behavior is undefined.
 type Value []byte
 
 // AppendUnquote writes the unquoted value of v into dst, and returns the
@@ -53,7 +54,7 @@ func (v Value) AppendUnquote(dst []byte) []byte {
 	if !v.IsString() {
 		panic("expected string")
 	}
-	dst, _ = jsontext.AppendUnquote(dst, TrimSpace(v))
+	dst, _ = jsontext.AppendUnquote(dst, v)
 	return dst
 }
 
@@ -381,10 +382,13 @@ func (v Value) Unmarshal(out any) error {
 
 // UnmarshalJSON sets *v to a copy of the data, excluding leading and trailing
 // whitespace. If data does not contain valid JSON, it does nothing and returns
-// ErrInvalidJSON.
+// ErrInvalidJSON. v must be a non-nil empty Value.
 func (v *Value) UnmarshalJSON(data []byte) error {
 	if v == nil {
 		return errors.New("UnmarshalJSON on nil pointer")
+	}
+	if len(*v) > 0 {
+		return errors.New("UnmarshalJSON on non-empty value")
 	}
 	if !Valid(data) {
 		return ErrInvalidJSON
