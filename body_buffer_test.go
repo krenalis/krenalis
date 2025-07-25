@@ -396,8 +396,8 @@ func TestBodyBuffer(t *testing.T) {
 
 // TestBodyBufferPool verifies the reuse behavior of BodyBuffer instances and
 // internal buffers. It ensures that:
-//   - bodyBuffer structs are correctly pooled and reused for both NoEncoding
-//     and Gzip encodings.
+//   - bodyBufferState structs are correctly pooled and reused for both
+//     NoEncoding and Gzip encodings.
 //   - The internal plain byte slice is reused via the pool when released
 //     correctly.
 //   - Buffers are not reused if Close or NewRequest is not called, preventing
@@ -408,14 +408,14 @@ func TestBodyBufferPool(t *testing.T) {
 	t.Run("PoolReuseBodyBufferNoEncoding", func(t *testing.T) {
 		// First allocation
 		bb1 := GetBodyBuffer(NoEncoding, 0)
-		ptr1 := bb1.bodyBuffer
+		ptr1 := bb1.bodyBufferState
 		bb1.Close()
 
 		// Second allocation – should reuse same object.
 		bb2 := GetBodyBuffer(NoEncoding, 0)
-		ptr2 := bb2.bodyBuffer
+		ptr2 := bb2.bodyBufferState
 		if ptr1 != ptr2 {
-			t.Fatalf("bodyBuffer not reused: %p vs %p", ptr1, ptr2)
+			t.Fatalf("bodyBufferState not reused: %p vs %p", ptr1, ptr2)
 		}
 		bb2.Close()
 	})
@@ -423,13 +423,13 @@ func TestBodyBufferPool(t *testing.T) {
 	// BodyBuffer instance reuse (Gzip).
 	t.Run("PoolReuseBodyBufferGzip", func(t *testing.T) {
 		bb1 := GetBodyBuffer(Gzip, 0)
-		ptr1 := bb1.bodyBuffer
+		ptr1 := bb1.bodyBufferState
 		bb1.Close()
 
 		bb2 := GetBodyBuffer(Gzip, 0)
-		ptr2 := bb2.bodyBuffer
+		ptr2 := bb2.bodyBufferState
 		if ptr1 != ptr2 {
-			t.Fatalf("bodyBuffer not reused for Gzip: %p vs %p", ptr1, ptr2)
+			t.Fatalf("bodyBufferState not reused for Gzip: %p vs %p", ptr1, ptr2)
 		}
 		bb2.Close()
 	})
@@ -437,12 +437,12 @@ func TestBodyBufferPool(t *testing.T) {
 	// Pool not reused when Close/NewRequest omitted.
 	t.Run("PoolNotReusedWithoutClose", func(t *testing.T) {
 		bb1 := GetBodyBuffer(NoEncoding, 0)
-		ptr1 := bb1.bodyBuffer // NOT closed here
+		ptr1 := bb1.bodyBufferState // NOT closed here
 
 		bb2 := GetBodyBuffer(NoEncoding, 0)
-		ptr2 := bb2.bodyBuffer
+		ptr2 := bb2.bodyBufferState
 		if ptr1 == ptr2 {
-			t.Fatalf("expected distinct bodyBuffer when first was not closed")
+			t.Fatalf("expected distinct bodyBufferState when first was not closed")
 		}
 
 		// Clean up to avoid leaking buffers into the pool between subtests.

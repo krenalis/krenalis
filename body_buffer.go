@@ -44,16 +44,16 @@ const (
 // performance across multiple uses. Always call Close when you're done with the
 // BodyBuffer to release its resources.
 type BodyBuffer struct {
-	mu sync.Mutex // protects bodyBuffer and bodyBuffer.openBodies
+	mu sync.Mutex // protects bodyBuffer and bodyBufferState.openBodies
 
-	// *bodyBuffer holds the internal state of BodyBuffer.
+	// *bodyBufferState holds the internal state of BodyBuffer.
 	// It is set to nil when BodyBuffer is closed, and returned to the pool
 	// only after all body readers have been closed as well.
-	*bodyBuffer
+	*bodyBufferState
 }
 
-// bodyBuffer is the internal, pooled type used by BodyBuffer.
-type bodyBuffer struct {
+// bodyBufferState is the internal, pooled state type used by BodyBuffer.
+type bodyBufferState struct {
 	enc        ContentEncoding // content encoding
 	openBodies int8            // openBodies tracks the number of currently open bodies (max 10)
 	plain      json.Buffer     // plain data
@@ -87,7 +87,7 @@ func GetBodyBuffer(enc ContentEncoding, length int) *BodyBuffer {
 	default:
 		panic(fmt.Sprintf("meergo: invalid encoding %d", enc))
 	}
-	return &BodyBuffer{bodyBuffer: bb}
+	return &BodyBuffer{bodyBufferState: bb}
 }
 
 // Close releases the resources associated with the BodyBuffer and must always
@@ -98,9 +98,9 @@ func (bb *BodyBuffer) Close() {
 	}
 	bb.mu.Lock()
 	if bb.openBodies == 0 {
-		putBodyBuffer(bb.bodyBuffer)
+		putBodyBuffer(bb.bodyBufferState)
 	}
-	bb.bodyBuffer = nil
+	bb.bodyBufferState = nil
 	bb.mu.Unlock()
 }
 
@@ -257,9 +257,9 @@ func (bb *BodyBuffer) NewRequest(ctx context.Context, method, url string) (*http
 	bb.plain.Reset(nil)
 
 	// closed is called when a body is closed.
-	// It captures a direct reference to bodyBuffer because BodyBuffer.bodyBuffer
+	// It captures a direct reference to bodyBufferState because BodyBuffer.bodyBufferState
 	// may have already been set to nil when this function is invoked.
-	buf := bb.bodyBuffer
+	buf := bb.bodyBufferState
 	closed := func() {
 		bb.mu.Lock()
 		buf.openBodies--
@@ -353,12 +353,12 @@ func (bb *BodyBuffer) WriteString(s string) (int, error) {
 // closed reports whether the BodyBuffer has been closed.
 // It must be called with bb.mu held, except when called from Close.
 func (bb *BodyBuffer) closed() bool {
-	return bb.bodyBuffer == nil
+	return bb.bodyBufferState == nil
 }
 
-// putBodyBuffer returns a *bodyBuffer to the pool for reuse.
+// putBodyBuffer returns a *bodyBufferState to the pool for reuse.
 // It is called after a BodyBuffer is closed and all bodies are closed.
-func putBodyBuffer(buf *bodyBuffer) {
+func putBodyBuffer(buf *bodyBufferState) {
 	// Returns the plain buffer to the pool.
 	if plain := buf.plain.Bytes(); plain != nil {
 		bufferpool.Put(plain[:cap(plain)])
@@ -369,7 +369,7 @@ func putBodyBuffer(buf *bodyBuffer) {
 		bufferpool.Put(buf.body.buf)
 		buf.body.buf = nil
 	}
-	// Return the bodyBuffer to the pool.
+	// Return the bodyBufferState to the pool.
 	bodyBufPool.Put(buf)
 }
 
@@ -426,27 +426,27 @@ func (r *bodyReader) Close() error {
 	return nil
 }
 
-// bodyBufferPool is a pool of *bodyBuffer.
+// bodyBufferPool is a pool of *bodyBufferState.
 type bodyBufferPool struct {
 	sync.Pool
 }
 
-// Get returns a *bodyBuffer from the pool.
-func (p *bodyBufferPool) Get() *bodyBuffer {
-	return p.Pool.Get().(*bodyBuffer)
+// Get returns a *bodyBufferState from the pool.
+func (p *bodyBufferPool) Get() *bodyBufferState {
+	return p.Pool.Get().(*bodyBufferState)
 }
 
 // Put returns bb to the pool.
-func (p *bodyBufferPool) Put(bb *bodyBuffer) {
+func (p *bodyBufferPool) Put(bb *bodyBufferState) {
 	p.Pool.Put(bb)
 }
 
-// bodyBufPool is a pool of reusable *bodyBuffer instances to reduce
+// bodyBufPool is a pool of reusable *bodyBufferState instances to reduce
 // allocations.
 var bodyBufPool = &bodyBufferPool{
 	Pool: sync.Pool{
 		New: func() any {
-			bb := &bodyBuffer{}
+			bb := &bodyBufferState{}
 			bb.gzipW = *gzip.NewWriter(nil)
 			return bb
 		},
