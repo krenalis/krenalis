@@ -253,6 +253,14 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		Addr:     addr,
 		Handler:  handler,
 		ErrorLog: log.New(&httpLogger{}, "", 0),
+		// Max time to read request headers, including TLS handshake.
+		ReadTimeout: 5 * time.Second,
+		// Max time to read the full request (headers + body), starting from first byte.
+		ReadHeaderTimeout: 2 * time.Second,
+		// Max time for handler execution and sending response. For TLS, includes handshake.
+		WriteTimeout: 10 * time.Second,
+		// Max idle time between requests on keep-alive connections.
+		IdleTimeout: 120 * time.Second,
 	}
 	var certPem, keyPem string
 	if settings.HTTP.TLS.Enabled {
