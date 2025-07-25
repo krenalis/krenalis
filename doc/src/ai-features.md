@@ -4,9 +4,13 @@
 
 # AI features
 
-You can interact with Meergo through AI.
+You can interact with Meergo through AI. This feature allows you to query Meergo it for answers to questions like:
 
-> ⚙️ Currently, using this feature requires some technical knowledge and it is highly experimental. It will be made more accessible, complete and stable in the future.
+> In the current workspace, analyze the users who interacted with the site over the past two weeks. What insights can you share about them?
+
+⚙️ Please note that, currently, using this feature requires some technical knowledge and it is highly experimental. It will be made more accessible, complete and stable in the future.
+
+## MCP server details
 
 ```plain
  Meergo instance     ←→     LLM Application     ←→      LLM 
@@ -15,8 +19,6 @@ You can interact with Meergo through AI.
                                  ↓
                                 User
 ```
-
-## MCP server details
 
 Meergo exposes an MCP (Model Context Protocol) server to interact using your own LLM application.
 
