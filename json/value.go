@@ -382,7 +382,7 @@ func (v Value) Unmarshal(out any) error {
 
 // UnmarshalJSON sets *v to a copy of the data, excluding leading and trailing
 // whitespace. If data does not contain valid JSON, it does nothing and returns
-// ErrInvalidJSON. v must be a non-nil empty Value.
+// ErrInvalidJSON. v must not be nil, and *v must not be empty.
 func (v *Value) UnmarshalJSON(data []byte) error {
 	if v == nil {
 		return errors.New("UnmarshalJSON on nil pointer")
