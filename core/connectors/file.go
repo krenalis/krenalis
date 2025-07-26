@@ -79,7 +79,7 @@ func (connectors *Connectors) File(action *state.Action) *File {
 		action:      action,
 		timeLayouts: &format.TimeLayouts,
 	}
-	file.inner, file.err = meergo.RegisteredFile(format.Name).New(&meergo.FileConfig{
+	file.inner, file.err = meergo.RegisteredFile(format.Name).New(&meergo.FileEnv{
 		Settings:    action.FormatSettings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
@@ -206,7 +206,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 func (file *File) storage() (any, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
-	return meergo.RegisteredFileStorage(connector.Name).New(&meergo.FileStorageConfig{
+	return meergo.RegisteredFileStorage(connector.Name).New(&meergo.FileStorageEnv{
 		Settings:    conn.Settings,
 		SetSettings: setConnectionSettingsFunc(file.state, conn),
 	})

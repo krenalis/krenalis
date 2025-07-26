@@ -69,10 +69,10 @@ func init() {
 }
 
 // New returns a new Dummy connector instance.
-func New(conf *meergo.AppConfig) (*Dummy, error) {
-	c := Dummy{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.AppEnv) (*Dummy, error) {
+	c := Dummy{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Dummy connector")
 		}
@@ -81,7 +81,7 @@ func New(conf *meergo.AppConfig) (*Dummy, error) {
 }
 
 type Dummy struct {
-	conf     *meergo.AppConfig
+	env      *meergo.AppEnv
 	settings *innerSettings
 }
 
@@ -426,7 +426,7 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	if err != nil {
 		return err
 	}
-	err = dummy.conf.SetSettings(ctx, b)
+	err = dummy.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -475,7 +475,7 @@ func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, previe
 	if preview {
 		return req, nil
 	}
-	res, err := dummy.conf.HTTPClient.Do(req)
+	res, err := dummy.env.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

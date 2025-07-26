@@ -58,10 +58,10 @@ func init() {
 }
 
 // New returns a new PostgreSQL connector instance.
-func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
-	c := PostgreSQL{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.DatabaseEnv) (*PostgreSQL, error) {
+	c := PostgreSQL{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of PostgreSQL connector")
 		}
@@ -70,7 +70,7 @@ func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
 }
 
 type PostgreSQL struct {
-	conf     *meergo.DatabaseConfig
+	env      *meergo.DatabaseEnv
 	settings *innerSettings
 	pool     *pgxpool.Pool
 }
@@ -280,7 +280,7 @@ func (ps *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 	if err != nil {
 		return err
 	}
-	err = ps.conf.SetSettings(ctx, b)
+	err = ps.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

@@ -41,8 +41,7 @@ func TestSendEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Instantiate the Klaviyo connector, with a specific configuration
-	// for testing.
+	// Instantiate the Klaviyo connector, with a specific settings for testing.
 	app, err := testutils.NewAppConnectorForTests("Klaviyo", settings)
 	if err != nil {
 		t.Fatal(err)

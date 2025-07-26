@@ -75,7 +75,7 @@ type Klaviyo struct {
 }
 
 // New returns a new Klaviyo connector instance.
-func New(conf *meergo.AppConfig) (*Klaviyo, error) {
+func New(env *meergo.AppEnv) (*Klaviyo, error) {
     // ...
 }
 
@@ -210,20 +210,28 @@ func init() {
 The second argument supplied to the `RegisterApp` function is the function utilized for creating an app instance:
 
 ```go
-func New(conf *meergo.AppConfig) (*Klaviyo, error)
+func New(env *meergo.AppEnv) (*Klaviyo, error)
 ```
 
-This function accepts an app configuration and yields a value representing your custom type.
+This function accepts an app environment and yields a value representing your custom type.
 
-The structure of `AppConfig` is defined as follows:
+The structure of `AppEnv` is defined as follows:
 
 ```go
-type AppConfig struct {
-    Settings     []byte
-    SetSettings  meergo.SetSettingsFunc
+// AppEnv is the environment for an app connector.
+type AppEnv struct {
+
+    // Settings holds the raw settings data.
+    Settings []byte
+
+    // SetSettings is the function used to update the settings.
+    SetSettings SetSettingsFunc
+
+    // OAuthAccount is the OAuth account identifier for authentication.
     OAuthAccount string
-    HTTPClient   meergo.HTTPClient
-{#    WebhookURL   string #}
+
+    // HTTPClient is the HTTP client to use for all requests.
+    HTTPClient HTTPClient
 }
 ```
 

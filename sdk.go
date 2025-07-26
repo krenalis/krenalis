@@ -30,18 +30,22 @@ func (info SDKInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new SDK connector instance.
-func (info SDKInfo) New(conf *SDKConfig) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (info SDKInfo) New(env *SDKEnv) (any, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// SDKConfig represents the configuration of an SDK connector.
-type SDKConfig struct {
-	Settings    []byte
+// SDKEnv is the environment for an SDK connector.
+type SDKEnv struct {
+
+	// Settings is the raw settings data.
+	Settings []byte
+
+	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc
 }
 
 // SDKNewFunc represents functions that create new SDK connector instances.
-type SDKNewFunc[T any] func(*SDKConfig) (T, error)
+type SDKNewFunc[T any] func(*SDKEnv) (T, error)

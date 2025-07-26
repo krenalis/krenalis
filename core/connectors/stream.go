@@ -58,7 +58,7 @@ func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, err
 	stream := &Stream{
 		connector: connection.Connector().Name,
 	}
-	inner, err := meergo.RegisteredStream(connection.Connector().Name).New(&meergo.StreamConfig{
+	inner, err := meergo.RegisteredStream(connection.Connector().Name).New(&meergo.StreamEnv{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})

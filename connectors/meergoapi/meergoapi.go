@@ -35,7 +35,7 @@ func init() {
 }
 
 // New returns a new Meergo API connector instance.
-func New(*meergo.SDKConfig) (*MeergoAPI, error) {
+func New(env *meergo.SDKEnv) (*MeergoAPI, error) {
 	return &MeergoAPI{}, nil
 }
 

@@ -41,7 +41,7 @@ type S3 struct {
 }
 
 // New returns a new S3 connector instance.
-func New(conf *meergo.FileStorageConfig) (*S3, error) {
+func New(env *meergo.FileStorageEnv) (*S3, error) {
     // ...
 }
 
@@ -104,17 +104,22 @@ func init() {
 The second argument supplied to the `RegisterFileStorage` function is the function utilized for creating a connector instance:
 
 ```go
-func New(conf *meergo.FileStorageConfig) (*S3, error)
+func New(env *meergo.FileStorageEnv) (*S3, error)
 ```
 
-This function accepts a file storage configuration and yields a value representing your custom type.
+This function accepts a file storage environment and yields a value representing your custom type.
 
-The structure of `FileStorageConfig` is outlined as follows:
+The structure of `FileStorageEnv` is outlined as follows:
 
 ```go
-type FileStorageConfig struct {
-    Settings    []byte
-    SetSettings meergo.SetSettingsFunc
+// FileStorageEnv is the environment for a file storage connector.
+type FileStorageEnv struct {
+
+    // Settings is the raw settings data.
+    Settings []byte
+
+    // SetSettings is the function used to update the settings.
+    SetSettings SetSettingsFunc
 }
 ```
 

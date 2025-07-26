@@ -330,7 +330,7 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     }
 
     // Send the events.
-    res, err := my.conf.HTTPClient.Do(req)
+    res, err := my.env.HTTPClient.Do(req)
     if err != nil {
         return err
     }
@@ -400,7 +400,7 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     }
 
     // Send the events.
-    res, err := my.conf.HTTPClient.Do(req)
+    res, err := my.env.HTTPClient.Do(req)
     if err != nil {
         return err
     }

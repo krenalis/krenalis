@@ -55,10 +55,10 @@ func init() {
 }
 
 // New returns a new S3 connector instance.
-func New(conf *meergo.FileStorageConfig) (*S3, error) {
-	c := S3{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.FileStorageEnv) (*S3, error) {
+	c := S3{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of S3 connector")
 		}
@@ -67,7 +67,7 @@ func New(conf *meergo.FileStorageConfig) (*S3, error) {
 }
 
 type S3 struct {
-	conf     *meergo.FileStorageConfig
+	env      *meergo.FileStorageEnv
 	settings *innerSettings
 }
 
@@ -231,7 +231,7 @@ func (ss3 *S3) saveSettings(ctx context.Context, settings json.Value) error {
 	if err != nil {
 		return err
 	}
-	err = ss3.conf.SetSettings(ctx, b)
+	err = ss3.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

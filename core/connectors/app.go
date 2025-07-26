@@ -90,7 +90,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		// accountID = a.ID // TODO(marco): implement webhooks
 		accountCode = a.Code
 	}
-	app.inner, app.err = meergo.RegisteredApp(app.connector).New(&meergo.AppConfig{
+	app.inner, app.err = meergo.RegisteredApp(app.connector).New(&meergo.AppEnv{
 		Settings:     connection.Settings,
 		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 		OAuthAccount: accountCode,

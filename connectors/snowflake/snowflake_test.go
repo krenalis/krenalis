@@ -235,8 +235,8 @@ func newSnowflakeFromENV(t *testing.T) *Snowflake {
 	if err != nil {
 		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 	}
-	config := meergo.DatabaseConfig{Settings: settings}
-	connector, err := New(&config)
+	env := meergo.DatabaseEnv{Settings: settings}
+	connector, err := New(&env)
 	if err != nil {
 		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
 	}

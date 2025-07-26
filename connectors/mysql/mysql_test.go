@@ -146,8 +146,8 @@ func Test_Merge_Query(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var config = meergo.DatabaseConfig{Settings: settings}
-	connector, err := New(&config)
+	env := meergo.DatabaseEnv{Settings: settings}
+	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)
 	}

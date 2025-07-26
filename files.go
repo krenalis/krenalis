@@ -53,21 +53,25 @@ func (info FileInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new file connector instance.
-func (info FileInfo) New(conf *FileConfig) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (info FileInfo) New(env *FileEnv) (any, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// FileConfig represents the configuration of a file connector.
-type FileConfig struct {
-	Settings    []byte
+// FileEnv is the environment for a file connector.
+type FileEnv struct {
+
+	// Settings is the raw settings data.
+	Settings []byte
+
+	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc
 }
 
 // FileNewFunc represents functions that create new file connector instances.
-type FileNewFunc[T any] func(*FileConfig) (T, error)
+type FileNewFunc[T any] func(*FileEnv) (T, error)
 
 // A RecordReader interface is used by file connectors to read the records to be
 // written.

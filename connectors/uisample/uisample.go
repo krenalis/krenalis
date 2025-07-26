@@ -47,10 +47,10 @@ func init() {
 }
 
 // New returns a new UISample connector instance.
-func New(conf *meergo.AppConfig) (*UISample, error) {
-	c := UISample{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.AppEnv) (*UISample, error) {
+	c := UISample{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of UISample connector")
 		}
@@ -59,7 +59,7 @@ func New(conf *meergo.AppConfig) (*UISample, error) {
 }
 
 type UISample struct {
-	conf     *meergo.AppConfig
+	env      *meergo.AppEnv
 	settings *innerSettings
 }
 
@@ -164,7 +164,7 @@ func (uiSample *UISample) saveSettings(ctx context.Context, options json.Value) 
 	if err != nil {
 		return err
 	}
-	err = uiSample.conf.SetSettings(ctx, b)
+	err = uiSample.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

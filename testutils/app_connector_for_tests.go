@@ -29,7 +29,7 @@ func NewAppConnectorForTests(connectorName string, settings []byte) (any, error)
 		EndpointGroups: registeredApp.EndpointGroups,
 	}
 	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
-	app, err := registeredApp.New(&meergo.AppConfig{
+	app, err := registeredApp.New(&meergo.AppEnv{
 		Settings:    settings,
 		SetSettings: func(ctx context.Context, b []byte) error { return nil },
 		HTTPClient:  httpClient,

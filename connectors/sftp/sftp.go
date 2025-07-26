@@ -59,10 +59,10 @@ func init() {
 }
 
 // New returns a new SFTP connector instance.
-func New(conf *meergo.FileStorageConfig) (*SFTP, error) {
-	c := SFTP{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.FileStorageEnv) (*SFTP, error) {
+	c := SFTP{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of SFTP connector")
 		}
@@ -71,7 +71,7 @@ func New(conf *meergo.FileStorageConfig) (*SFTP, error) {
 }
 
 type SFTP struct {
-	conf     *meergo.FileStorageConfig
+	env      *meergo.FileStorageEnv
 	settings *innerSettings
 }
 
@@ -255,7 +255,7 @@ func (sf *SFTP) saveSettings(ctx context.Context, settings json.Value, role meer
 	if err != nil {
 		return err
 	}
-	err = sf.conf.SetSettings(ctx, b)
+	err = sf.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

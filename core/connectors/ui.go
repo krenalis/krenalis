@@ -46,7 +46,7 @@ type uiHandlerConnector interface {
 func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, settings json.Value) (json.Value, error) {
 	role := meergo.Role(action.Connection().Role)
 	format := action.Format()
-	inner, err := meergo.RegisteredFile(format.Name).New(&meergo.FileConfig{
+	inner, err := meergo.RegisteredFile(format.Name).New(&meergo.FileEnv{
 		Settings:    action.FormatSettings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
@@ -80,7 +80,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	var err error
 	switch c := connection.Connector(); c.Type {
 	case state.App:
-		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
+		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppEnv{
 			Settings:     connection.Settings,
 			SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 			OAuthAccount: accountCode,
@@ -89,24 +89,24 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		})
 	case state.Database:
 		var database any
-		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{
+		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseEnv{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 		defer database.(databaseConnector).Close()
 		inner = database
 	case state.FileStorage:
-		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{
+		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageEnv{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.SDK:
-		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKConfig{
+		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKEnv{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.Stream:
-		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{
+		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamEnv{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
@@ -144,23 +144,23 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	var err error
 	switch c := connector; c.Type {
 	case state.App:
-		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
+		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppEnv{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.ConnectorClient(c, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 		})
 	case state.Database:
 		var database any
-		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{})
+		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseEnv{})
 		defer database.(databaseConnector).Close()
 		inner = database
 	case state.File:
-		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{})
+		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileEnv{})
 	case state.FileStorage:
-		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{})
+		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageEnv{})
 	case state.SDK:
-		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKConfig{})
+		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKEnv{})
 	case state.Stream:
-		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{})
+		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamEnv{})
 	}
 	if err != nil {
 		return nil, err
@@ -195,24 +195,24 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	}
 	switch c := connector; c.Type {
 	case state.App:
-		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
+		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppEnv{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.ConnectorClient(c, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			SetSettings:  setSettings,
 		})
 	case state.Database:
 		var database any
-		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{SetSettings: setSettings})
+		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseEnv{SetSettings: setSettings})
 		defer database.(databaseConnector).Close()
 		inner = database
 	case state.File:
-		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileEnv{SetSettings: setSettings})
 	case state.SDK:
-		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredSDK(c.Name).New(&meergo.SDKEnv{SetSettings: setSettings})
 	case state.FileStorage:
-		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageEnv{SetSettings: setSettings})
 	case state.Stream:
-		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamEnv{SetSettings: setSettings})
 	}
 	if err != nil {
 		return nil, err

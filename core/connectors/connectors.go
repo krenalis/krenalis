@@ -237,7 +237,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	if err != nil {
 		return nil, err
 	}
-	app, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{
+	app, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppEnv{
 		HTTPClient: connectors.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
@@ -268,7 +268,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //	if connector.WebhooksPer != state.WebhooksPerAccount {
 //		return nil, ErrNoWebhooks
 //	}
-//	config := &meergo.AppConfig{
+//	config := &meergo.AppEnv{
 //		OAuthAccount: account.Code,
 //	}
 //	if connector.OAuth != nil {
@@ -303,7 +303,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //		accountID = a.ID
 //		accountCode = a.Code
 //	}
-//	inner, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{
+//	inner, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppEnv{
 //		Settings:     connection.Settings,
 //		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 //		OAuthAccount: accountCode,
@@ -331,7 +331,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //	if connector.WebhooksPer != state.WebhooksPerConnector {
 //		return nil, ErrNoWebhooks
 //	}
-//	inner, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{})
+//	inner, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppEnv{})
 //	if err != nil {
 //		return nil, err
 //	}

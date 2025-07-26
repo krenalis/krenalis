@@ -132,8 +132,7 @@ func initMixpanelForTests(t *testing.T) *Mixpanel {
 		t.Fatal(err)
 	}
 
-	// Instantiate the Mixpanel connector, with a specific configuration
-	// for testing.
+	// Instantiate the Mixpanel connector, with a specific settings for testing.
 	app, err := testutils.NewAppConnectorForTests("Mixpanel", settings)
 	if err != nil {
 		t.Fatal(err)

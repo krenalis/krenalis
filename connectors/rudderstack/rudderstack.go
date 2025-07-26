@@ -35,7 +35,7 @@ func init() {
 }
 
 // New returns a new RudderStack connector instance.
-func New(*meergo.SDKConfig) (*RudderStack, error) {
+func New(env *meergo.SDKEnv) (*RudderStack, error) {
 	return &RudderStack{}, nil
 }
 

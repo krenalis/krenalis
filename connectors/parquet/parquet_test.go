@@ -34,8 +34,8 @@ func TestExportAndImportParquet(t *testing.T) {
 	ctx := context.Background()
 
 	// Instantiate the Parquet connector.
-	config := meergo.FileConfig{}
-	connector, err := New(&config)
+	env := meergo.FileEnv{}
+	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,8 +292,8 @@ func TestExport(t *testing.T) {
 	ctx := context.Background()
 
 	// Instantiate the Parquet connector.
-	config := meergo.FileConfig{}
-	connector, err := New(&config)
+	env := meergo.FileEnv{}
+	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)
 	}

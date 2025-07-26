@@ -75,7 +75,7 @@ If an error occurs, `Records` must return a non-nil error, and it should not be 
 
 ### Making HTTP calls to the app
 
-When a connector instance is created, an HTTP client is passed to the constructor through the `AppConfig.HTTPClient` field. This client should be used by the connector's methods to make HTTP calls to the app. It takes care of:
+When a connector instance is created, an HTTP client is passed to the constructor through the `AppEnv.HTTPClient` field. This client should be used by the connector's methods to make HTTP calls to the app. It takes care of:
 
 - Retrying calls in case of an error, if the request allows for it.
 - Proper resource management.

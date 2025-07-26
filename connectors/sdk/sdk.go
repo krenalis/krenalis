@@ -145,7 +145,7 @@ func init() {
 }
 
 // New returns a new SDK connector instance.
-func New(*meergo.SDKConfig) (*SDK, error) {
+func New(env *meergo.SDKEnv) (*SDK, error) {
 	return &SDK{}, nil
 }
 

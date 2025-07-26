@@ -44,10 +44,10 @@ func init() {
 }
 
 // New returns a new RabbitMQ connector instance.
-func New(conf *meergo.StreamConfig) (*RabbitMQ, error) {
-	c := RabbitMQ{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.StreamEnv) (*RabbitMQ, error) {
+	c := RabbitMQ{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of RabbitMQ connector")
 		}
@@ -56,7 +56,7 @@ func New(conf *meergo.StreamConfig) (*RabbitMQ, error) {
 }
 
 type RabbitMQ struct {
-	conf       *meergo.StreamConfig
+	env        *meergo.StreamEnv
 	settings   *innerSettings
 	conn       *amqp.Connection
 	ch         *amqp.Channel
@@ -245,7 +245,7 @@ func (rmq *RabbitMQ) saveSettings(ctx context.Context, options json.Value, test 
 	if err != nil {
 		return err
 	}
-	err = rmq.conf.SetSettings(ctx, b)
+	err = rmq.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

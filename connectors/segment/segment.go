@@ -35,7 +35,7 @@ func init() {
 }
 
 // New returns a new Segment connector instance.
-func New(*meergo.SDKConfig) (*Segment, error) {
+func New(env *meergo.SDKEnv) (*Segment, error) {
 	return &Segment{}, nil
 }
 

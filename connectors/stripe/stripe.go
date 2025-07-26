@@ -73,10 +73,10 @@ func init() {
 }
 
 // New returns a new Stripe connector instance.
-func New(conf *meergo.AppConfig) (*Stripe, error) {
-	c := Stripe{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.AppEnv) (*Stripe, error) {
+	c := Stripe{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Stripe connector")
 		}
@@ -85,7 +85,7 @@ func New(conf *meergo.AppConfig) (*Stripe, error) {
 }
 
 type Stripe struct {
-	conf     *meergo.AppConfig
+	env      *meergo.AppEnv
 	settings *innerSettings
 }
 
@@ -169,7 +169,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 
 // Upsert updates or creates records in the app for the specified target.
 func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
-	bb := stripe.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := stripe.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
 	defer bb.Close()
 	record := records.First()
 	err := encodeRequest(bb, record.Properties, nil)
@@ -193,7 +193,7 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, bb *meergo.
 	if req.Method == "POST" {
 		req.Header.Set("Idempotency-Key", meergo.UUID()) // mark the request as idempotent
 	}
-	res, err := stripe.conf.HTTPClient.Do(req)
+	res, err := stripe.env.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 	if err != nil {
 		return err
 	}
-	err = stripe.conf.SetSettings(ctx, b)
+	err = stripe.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

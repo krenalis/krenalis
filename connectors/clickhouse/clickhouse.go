@@ -54,10 +54,10 @@ func init() {
 }
 
 // New returns a new ClickHouse connector instance.
-func New(conf *meergo.DatabaseConfig) (*ClickHouse, error) {
-	c := ClickHouse{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.DatabaseEnv) (*ClickHouse, error) {
+	c := ClickHouse{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of ClickHouse connector")
 		}
@@ -66,7 +66,7 @@ func New(conf *meergo.DatabaseConfig) (*ClickHouse, error) {
 }
 
 type ClickHouse struct {
-	conf     *meergo.DatabaseConfig
+	env      *meergo.DatabaseEnv
 	settings *innerSettings
 	db       driver.Conn
 }
@@ -242,7 +242,7 @@ func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, tes
 	if err != nil {
 		return err
 	}
-	err = ch.conf.SetSettings(ctx, b)
+	err = ch.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

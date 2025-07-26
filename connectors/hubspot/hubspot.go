@@ -80,15 +80,13 @@ func init() {
 }
 
 // New returns a new HubSpot connector instance.
-func New(conf *meergo.AppConfig) (*HubSpot, error) {
-	c := HubSpot{
-		httpClient: conf.HTTPClient,
-	}
+func New(env *meergo.AppEnv) (*HubSpot, error) {
+	c := HubSpot{env: env}
 	return &c, nil
 }
 
 type HubSpot struct {
-	httpClient meergo.HTTPClient
+	env *meergo.AppEnv
 }
 
 // OAuthAccount returns the app's account associated with the OAuth
@@ -199,7 +197,7 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		} `json:"paging"`
 	}
 
-	bb := hs.httpClient.GetBodyBuffer(meergo.NoEncoding) // It also supports Gzip.
+	bb := hs.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding) // It also supports Gzip.
 	defer bb.Close()
 
 	bb.WriteByte('{')
@@ -283,7 +281,7 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		method = "create"
 	}
 
-	bb := hs.httpClient.GetBodyBuffer(meergo.Gzip) // It also supports NoEncoding.
+	bb := hs.env.HTTPClient.GetBodyBuffer(meergo.Gzip) // It also supports NoEncoding.
 	defer bb.Close()
 
 	bb.WriteString(`{"inputs":[`)
@@ -321,7 +319,7 @@ func (hs *HubSpot) call(ctx context.Context, method, path string, bb *meergo.Bod
 	if err != nil {
 		return err
 	}
-	res, err := hs.httpClient.Do(req)
+	res, err := hs.env.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

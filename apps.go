@@ -113,23 +113,31 @@ func (app AppInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new app connector instance.
-func (app AppInfo) New(conf *AppConfig) (any, error) {
-	out := app.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (app AppInfo) New(env *AppEnv) (any, error) {
+	out := app.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// AppConfig represents the configuration of an app connector.
-type AppConfig struct {
-	Settings     []byte
-	SetSettings  SetSettingsFunc
+// AppEnv is the environment for an app connector.
+type AppEnv struct {
+
+	// Settings holds the raw settings data.
+	Settings []byte
+
+	// SetSettings is the function used to update the settings.
+	SetSettings SetSettingsFunc
+
+	// OAuthAccount is the OAuth account identifier for authentication.
 	OAuthAccount string
-	HTTPClient   HTTPClient
+
+	// HTTPClient is the HTTP client to use for all requests.
+	HTTPClient HTTPClient
 }
 
 // AppNewFunc represents functions that create new app connector instances.
-type AppNewFunc[T any] func(*AppConfig) (T, error)
+type AppNewFunc[T any] func(*AppEnv) (T, error)
 
 // EndpointGroup defines a group of API endpoints—specified by one or more
 // patterns using the same syntax as http.ServeMux. All HTTP requests matching

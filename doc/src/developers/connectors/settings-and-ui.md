@@ -26,10 +26,10 @@ Meergo does not impose any constraints on how settings are serialized, except th
 When Meergo creates an instance of a connector, it passes the current settings through the `Settings` field and a function through the `SetSettings` field, which the connector can use to update the settings. For example, the constructor of the Google Analytics connector stores the configuration passed as an argument and the `SetSettings` function, and deserializes the settings:
 
 ```go
-func New(conf *meergo.AppConfig) (*Analytics, error) {
-    c := Analytics{conf: conf}
-    if len(conf.Settings) > 0 {
-        err := json.Unmarshal(conf.Settings, &c.settings)
+func New(env *meergo.AppEnv) (*Analytics, error) {
+    c := Analytics{env: env}
+    if len(env.Settings) > 0 {
+        err := json.Unmarshal(env.Settings, &c.settings)
         if err != nil {
             return nil, errors.New("cannot unmarshal settings of Google Analytics connector")
         }
@@ -46,7 +46,7 @@ settings, err := json.Marshal(s.settings)
 if err != nil {
     return err
 }
-err = ga.conf.SetSettings(ctx, settings)
+err = ga.env.SetSettings(ctx, settings)
 if err != nil {
     return err
 }
@@ -135,7 +135,7 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Va
         if err != nil {
             return nil, err
         }
-        return nil, ga.conf.SetSettings(ctx, s)
+        return nil, ga.env.SetSettings(ctx, s)
     default:
         return nil, meergo.ErrEventNotExist
     }

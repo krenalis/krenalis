@@ -57,10 +57,10 @@ func init() {
 }
 
 // New returns a new CSV connector instance.
-func New(conf *meergo.FileConfig) (*CSV, error) {
-	c := CSV{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.FileEnv) (*CSV, error) {
+	c := CSV{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of CSV connector")
 		}
@@ -69,7 +69,7 @@ func New(conf *meergo.FileConfig) (*CSV, error) {
 }
 
 type CSV struct {
-	conf     *meergo.FileConfig
+	env      *meergo.FileEnv
 	settings *innerSettings
 }
 
@@ -278,7 +278,7 @@ func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role meergo
 	if err != nil {
 		return err
 	}
-	err = c.conf.SetSettings(ctx, b)
+	err = c.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

@@ -55,10 +55,10 @@ func init() {
 }
 
 // New returns a new Excel connector instance.
-func New(conf *meergo.FileConfig) (*Excel, error) {
-	c := Excel{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.FileEnv) (*Excel, error) {
+	c := Excel{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of CSV connector")
 		}
@@ -67,7 +67,7 @@ func New(conf *meergo.FileConfig) (*Excel, error) {
 }
 
 type Excel struct {
-	conf     *meergo.FileConfig
+	env      *meergo.FileEnv
 	settings *innerSettings
 }
 
@@ -274,7 +274,7 @@ func (exel *Excel) saveSettings(ctx context.Context, settings json.Value, role m
 	if err != nil {
 		return err
 	}
-	err = exel.conf.SetSettings(ctx, b)
+	err = exel.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

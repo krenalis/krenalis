@@ -36,7 +36,7 @@ type PostgreSQL struct {
 }
 
 // New returns a new PostgreSQL connector instance.
-func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
+func New(env *meergo.DatabaseEnv) (*PostgreSQL, error) {
     // ...
 }
 
@@ -111,17 +111,22 @@ func init() {
 The second argument supplied to the `RegisterDatabase` function is the function utilized for creating a connector instance:
 
 ```go
-func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error)
+func New(env *meergo.DatabaseEnv) (*PostgreSQL, error)
 ```
 
-This function accepts a database configuration and yields a value representing your custom type.
+This function accepts a database environment and yields a value representing your custom type.
 
-The structure of `DatabaseConfig` is outlined as follows:
+The structure of `DatabaseEnv` is outlined as follows:
 
 ```go
-type DatabaseConfig struct {
-    Settings    []byte
-    SetSettings meergo.SetSettingsFunc
+// DatabaseEnv is the environment for a database connector.
+type DatabaseEnv struct {
+
+    // Settings holds the raw settings data.
+    Settings []byte
+
+    // SetSettings is the function used to update the settings.
+    SetSettings SetSettingsFunc
 }
 ```
 

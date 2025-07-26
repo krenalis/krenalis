@@ -54,10 +54,10 @@ func init() {
 }
 
 // New returns a new Snowflake connector instance.
-func New(conf *meergo.DatabaseConfig) (*Snowflake, error) {
-	c := Snowflake{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.DatabaseEnv) (*Snowflake, error) {
+	c := Snowflake{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Snowflake connector")
 		}
@@ -66,7 +66,7 @@ func New(conf *meergo.DatabaseConfig) (*Snowflake, error) {
 }
 
 type Snowflake struct {
-	conf     *meergo.DatabaseConfig
+	env      *meergo.DatabaseEnv
 	settings *innerSettings
 	db       *sql.DB
 }
@@ -290,7 +290,7 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 	if err != nil {
 		return err
 	}
-	err = sf.conf.SetSettings(ctx, b)
+	err = sf.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

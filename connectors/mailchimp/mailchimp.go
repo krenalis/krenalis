@@ -101,10 +101,10 @@ func init() {
 }
 
 // New returns a new Mailchimp connector instance.
-func New(conf *meergo.AppConfig) (*MailChimp, error) {
-	c := MailChimp{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.AppEnv) (*MailChimp, error) {
+	c := MailChimp{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Mailchimp connector")
 		}
@@ -118,7 +118,7 @@ func New(conf *meergo.AppConfig) (*MailChimp, error) {
 }
 
 type MailChimp struct {
-	conf     *meergo.AppConfig
+	env      *meergo.AppEnv
 	settings *innerSettings
 }
 
@@ -378,7 +378,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 
 	basePath := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
-	bb := mc.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := mc.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
 	defer bb.Close()
 
 	bb.WriteString(`{"operations":[`)
@@ -467,7 +467,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 	if err != nil {
 		return err
 	}
-	r, err := mc.conf.HTTPClient.Do(req)
+	r, err := mc.env.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -591,7 +591,7 @@ func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) erro
 	if err != nil {
 		return err
 	}
-	err = mc.conf.SetSettings(ctx, b)
+	err = mc.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -647,7 +647,7 @@ func (mc *MailChimp) call(ctx context.Context, method, path string, params url.V
 		return err
 	}
 
-	res, err := mc.conf.HTTPClient.Do(req)
+	res, err := mc.env.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -750,7 +750,7 @@ func (mc *MailChimp) metadata(ctx context.Context) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	res, err := mc.conf.HTTPClient.Do(req)
+	res, err := mc.env.HTTPClient.Do(req)
 	if err != nil {
 		return "", "", err
 	}

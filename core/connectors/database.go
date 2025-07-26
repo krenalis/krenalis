@@ -78,7 +78,7 @@ func (connectors *Connectors) Database(connection *state.Connection) *Database {
 		connector:   connector.Name,
 		timeLayouts: &connector.TimeLayouts,
 	}
-	inner, err := meergo.RegisteredDatabase(connector.Name).New(&meergo.DatabaseConfig{
+	inner, err := meergo.RegisteredDatabase(connector.Name).New(&meergo.DatabaseEnv{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})

@@ -59,19 +59,23 @@ func (info FileStorageInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new file storage connector instance.
-func (info FileStorageInfo) New(conf *FileStorageConfig) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (info FileStorageInfo) New(env *FileStorageEnv) (any, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// FileStorageConfig represents the configuration of a file storage connector.
-type FileStorageConfig struct {
-	Settings    []byte
+// FileStorageEnv is the environment for a file storage connector.
+type FileStorageEnv struct {
+
+	// Settings is the raw settings data.
+	Settings []byte
+
+	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc
 }
 
 // FileStorageNewFunc represents functions that create new file storage
 // connector instances.
-type FileStorageNewFunc[T any] func(*FileStorageConfig) (T, error)
+type FileStorageNewFunc[T any] func(*FileStorageEnv) (T, error)

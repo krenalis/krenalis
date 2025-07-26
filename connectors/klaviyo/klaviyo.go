@@ -90,10 +90,10 @@ var retryPolicy = meergo.RetryPolicy{
 const apiRevision = "2024-07-15"
 
 // New returns a new Klaviyo connector instance.
-func New(conf *meergo.AppConfig) (*Klaviyo, error) {
-	c := Klaviyo{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.AppEnv) (*Klaviyo, error) {
+	c := Klaviyo{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Klaviyo connector")
 		}
@@ -102,7 +102,7 @@ func New(conf *meergo.AppConfig) (*Klaviyo, error) {
 }
 
 type Klaviyo struct {
-	conf     *meergo.AppConfig
+	env      *meergo.AppEnv
 	settings *innerSettings
 }
 
@@ -433,7 +433,7 @@ func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records me
 	if ok {
 		delete(record.Properties, "properties")
 	}
-	bb := ky.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := ky.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
 	defer bb.Close()
 	bb.WriteString(`{"data":{"type":"profile","attributes":`)
 	_ = bb.Encode(record.Properties)
@@ -482,7 +482,7 @@ func (ky *Klaviyo) saveSettings(ctx context.Context, settings json.Value) error 
 	if err != nil {
 		return err
 	}
-	err = ky.conf.SetSettings(ctx, b)
+	err = ky.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -525,7 +525,7 @@ func (ky *Klaviyo) call(ctx context.Context, method, url string, bb *meergo.Body
 	req.Header.Set("Authorization", "Klaviyo-API-Key "+ky.settings.PrivateAPIKey)
 	req.Header.Set("Revision", apiRevision)
 
-	res, err := ky.conf.HTTPClient.Do(req)
+	res, err := ky.env.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -579,7 +579,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 	now := time.Now().UTC()
 	maxTimestamp := time.Date(now.Year()+1, now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
 
-	bb := ky.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := ky.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
 	defer bb.Close()
 
 	bb.WriteString(`{"data":{"type":"event-bulk-create-job","attributes":{"events-bulk-create":{"data":[`)
@@ -684,7 +684,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		return req, nil
 	}
 
-	res, err := ky.conf.HTTPClient.Do(req)
+	res, err := ky.env.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

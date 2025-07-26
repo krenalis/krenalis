@@ -53,10 +53,10 @@ func init() {
 }
 
 // New returns a new JSON connector instance.
-func New(conf *meergo.FileConfig) (*JSON, error) {
-	c := JSON{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.FileEnv) (*JSON, error) {
+	c := JSON{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of JSON connector")
 		}
@@ -65,7 +65,7 @@ func New(conf *meergo.FileConfig) (*JSON, error) {
 }
 
 type JSON struct {
-	conf     *meergo.FileConfig
+	env      *meergo.FileEnv
 	settings *innerSettings
 }
 
@@ -336,7 +336,7 @@ func (j *JSON) saveSettings(ctx context.Context, settings json.Value, role meerg
 	if err != nil {
 		return err
 	}
-	err = j.conf.SetSettings(ctx, b)
+	err = j.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

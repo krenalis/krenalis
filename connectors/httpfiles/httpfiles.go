@@ -54,10 +54,10 @@ func init() {
 }
 
 // New returns a new HTTP Files connection.
-func New(conf *meergo.FileStorageConfig) (*HTTPFiles, error) {
-	c := HTTPFiles{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.FileStorageEnv) (*HTTPFiles, error) {
+	c := HTTPFiles{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of HTTP Files connector")
 		}
@@ -66,7 +66,7 @@ func New(conf *meergo.FileStorageConfig) (*HTTPFiles, error) {
 }
 
 type HTTPFiles struct {
-	conf     *meergo.FileStorageConfig
+	env      *meergo.FileStorageEnv
 	settings *innerSettings
 }
 
@@ -219,7 +219,7 @@ func (h *HTTPFiles) saveSettings(ctx context.Context, settings json.Value) error
 	if err != nil {
 		return err
 	}
-	err = h.conf.SetSettings(ctx, b)
+	err = h.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

@@ -53,10 +53,10 @@ func init() {
 }
 
 // New returns a new MySQL connector instance.
-func New(conf *meergo.DatabaseConfig) (*MySQL, error) {
-	c := MySQL{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.DatabaseEnv) (*MySQL, error) {
+	c := MySQL{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of MySQL connector")
 		}
@@ -65,7 +65,7 @@ func New(conf *meergo.DatabaseConfig) (*MySQL, error) {
 }
 
 type MySQL struct {
-	conf     *meergo.DatabaseConfig
+	env      *meergo.DatabaseEnv
 	settings *innerSettings
 	db       *sql.DB
 }
@@ -258,7 +258,7 @@ func (my *MySQL) saveSettings(ctx context.Context, settings json.Value, test boo
 	if err != nil {
 		return err
 	}
-	err = my.conf.SetSettings(ctx, b)
+	err = my.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

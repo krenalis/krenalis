@@ -47,10 +47,10 @@ func init() {
 }
 
 // New returns a new Kafka connector instance.
-func New(conf *meergo.StreamConfig) (*Kafka, error) {
-	c := Kafka{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.StreamEnv) (*Kafka, error) {
+	c := Kafka{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Kafka connector")
 		}
@@ -59,7 +59,7 @@ func New(conf *meergo.StreamConfig) (*Kafka, error) {
 }
 
 type Kafka struct {
-	conf     *meergo.StreamConfig
+	env      *meergo.StreamEnv
 	settings *innerSettings
 	client   *kgo.Client
 	iter     *fetchesRecordIter
@@ -228,7 +228,7 @@ func (kafka *Kafka) saveSettings(ctx context.Context, settings json.Value, test 
 	if err != nil {
 		return err
 	}
-	err = kafka.conf.SetSettings(ctx, b)
+	err = kafka.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

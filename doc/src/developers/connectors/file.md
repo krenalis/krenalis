@@ -44,7 +44,7 @@ type CSV struct {
 }
 
 // New returns a new CSV connector instance.
-func New(conf *meergo.FileConfig) (*CSV, error) {
+func New(env *meergo.FileEnv) (*CSV, error) {
     // ...
 }
 
@@ -118,17 +118,22 @@ func init() {
 The second argument supplied to the `RegisterFile` function is the function utilized for creating a connector instance:
 
 ```go
-func New(conf *meergo.FileConfig) (*CSV, error)
+func New(env *meergo.FileEnv) (*CSV, error)
 ```
 
-This function accepts a file configuration and yields a value representing your custom type.
+This function accepts a file environment and yields a value representing your custom type.
 
-The structure of `FileConfig` is outlined as follows:
+The structure of `FileEnv` is outlined as follows:
 
 ```go
-type FileConfig struct {
-    Settings    []byte
-    SetSettings meergo.SetSettingsFunc
+// FileEnv is the environment for a file connector.
+type FileEnv struct {
+
+    // Settings is the raw settings data.
+    Settings []byte
+
+    // SetSettings is the function used to update the settings.
+    SetSettings SetSettingsFunc
 }
 ```
 

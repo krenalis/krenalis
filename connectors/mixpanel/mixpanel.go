@@ -63,7 +63,7 @@ func init() {
 }
 
 type Mixpanel struct {
-	conf     *meergo.AppConfig
+	env      *meergo.AppEnv
 	settings *innerSettings
 }
 
@@ -74,10 +74,10 @@ type innerSettings struct {
 }
 
 // New returns a new Mixpanel connector instance.
-func New(conf *meergo.AppConfig) (*Mixpanel, error) {
-	c := Mixpanel{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.AppEnv) (*Mixpanel, error) {
+	c := Mixpanel{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Mixpanel connector")
 		}
@@ -195,7 +195,7 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 	if err != nil {
 		return err
 	}
-	err = mp.conf.SetSettings(ctx, b)
+	err = mp.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	sendBadRequest, _ := ctx.Value(connectorTestString("sendBadRequest")).(bool)
 
 	// bb contains newline-delimited JSON objects representing the events.
-	bb := mp.conf.HTTPClient.GetBodyBuffer(contentEncoding)
+	bb := mp.env.HTTPClient.GetBodyBuffer(contentEncoding)
 	defer bb.Close()
 
 	n := 0
@@ -373,7 +373,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 
 	// Send the request.
-	res, err := mp.conf.HTTPClient.Do(req)
+	res, err := mp.env.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

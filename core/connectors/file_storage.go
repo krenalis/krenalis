@@ -64,7 +64,7 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 		state:     connectors.state,
 		storage:   storage,
 	}
-	s.inner, s.err = meergo.RegisteredFileStorage(storage.Connector().Name).New(&meergo.FileStorageConfig{
+	s.inner, s.err = meergo.RegisteredFileStorage(storage.Connector().Name).New(&meergo.FileStorageEnv{
 		Settings:    storage.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, storage),
 	})
@@ -145,7 +145,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 
-	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileConfig{
+	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileEnv{
 		SetSettings: func(ctx context.Context, innerSettings []byte) error { return nil },
 	})
 	if err != nil {
@@ -205,7 +205,7 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 		return nil, storage.err
 	}
 
-	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileConfig{
+	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileEnv{
 		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {

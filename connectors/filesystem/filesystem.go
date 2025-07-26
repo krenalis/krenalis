@@ -51,10 +51,10 @@ func init() {
 }
 
 // New returns a new Filesystem connector instance.
-func New(conf *meergo.FileStorageConfig) (*Filesystem, error) {
-	c := Filesystem{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
+	c := Filesystem{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Filesystem connector")
 		}
@@ -63,7 +63,7 @@ func New(conf *meergo.FileStorageConfig) (*Filesystem, error) {
 }
 
 type Filesystem struct {
-	conf     *meergo.FileStorageConfig
+	env      *meergo.FileStorageEnv
 	settings *innerSettings
 }
 
@@ -199,7 +199,7 @@ func (filesystem *Filesystem) saveSettings(ctx context.Context, settings json.Va
 	if err != nil {
 		return err
 	}
-	err = filesystem.conf.SetSettings(ctx, b)
+	err = filesystem.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}

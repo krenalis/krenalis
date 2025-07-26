@@ -33,22 +33,26 @@ func (info DatabaseInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new database connector instance.
-func (info DatabaseInfo) New(conf *DatabaseConfig) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (info DatabaseInfo) New(env *DatabaseEnv) (any, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
 
-// DatabaseConfig represents the configuration of a database connector.
-type DatabaseConfig struct {
-	Settings    []byte
+// DatabaseEnv is the environment for a database connector.
+type DatabaseEnv struct {
+
+	// Settings holds the raw settings data.
+	Settings []byte
+
+	// SetSettings is the function used to update the settings.
 	SetSettings SetSettingsFunc
 }
 
 // DatabaseNewFunc represents functions that create new database connector
 // instances.
-type DatabaseNewFunc[T any] func(*DatabaseConfig) (T, error)
+type DatabaseNewFunc[T any] func(*DatabaseEnv) (T, error)
 
 // Table represents a database table.
 type Table struct {

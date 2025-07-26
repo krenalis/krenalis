@@ -62,7 +62,7 @@ func init() {
 }
 
 // New returns a new Parquet connector instance.
-func New(conf *meergo.FileConfig) (*Parquet, error) {
+func New(env *meergo.FileEnv) (*Parquet, error) {
 	return &Parquet{}, nil
 }
 

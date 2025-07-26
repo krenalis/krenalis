@@ -53,10 +53,10 @@ func init() {
 }
 
 // New returns a new Google Analytics connector instance.
-func New(conf *meergo.AppConfig) (*Analytics, error) {
-	c := Analytics{conf: conf}
-	if len(conf.Settings) > 0 {
-		err := json.Value(conf.Settings).Unmarshal(&c.settings)
+func New(env *meergo.AppEnv) (*Analytics, error) {
+	c := Analytics{env: env}
+	if len(env.Settings) > 0 {
+		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Google Analytics connector")
 		}
@@ -65,7 +65,7 @@ func New(conf *meergo.AppConfig) (*Analytics, error) {
 }
 
 type Analytics struct {
-	conf     *meergo.AppConfig
+	env      *meergo.AppEnv
 	settings *innerSettings
 }
 
@@ -158,7 +158,7 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 	if err != nil {
 		return err
 	}
-	err = ga.conf.SetSettings(ctx, b)
+	err = ga.env.SetSettings(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ const maxEventRequestSize = 130 * 1024 // from https://developers.google.com/ana
 // and the error are returned.
 func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
-	bb := ga.conf.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := ga.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
 	defer bb.Close()
 
 	var userID string
@@ -250,7 +250,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		body, _ := io.ReadAll(req.Body)
 		req.Body, _ = req.GetBody()
 		// Do the request.
-		resp, err := ga.conf.HTTPClient.Do(req)
+		resp, err := ga.env.HTTPClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -294,7 +294,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		return nil, err
 	}
 
-	res, err := ga.conf.HTTPClient.Do(req)
+	res, err := ga.env.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
