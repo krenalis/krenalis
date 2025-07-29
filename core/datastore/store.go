@@ -481,7 +481,12 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 		Table:   "users",
 		Limit:   1, // minimize the number of rows the warehouse needs to prepare — we only need the count here.
 	}
-	_, count1, err := store.warehouse().Query(ctx, query, true)
+	// Even if rows is not read, it is assigned because it must be closed.
+	rows, count1, err := store.warehouse().Query(ctx, query, true)
+	if err != nil {
+		return err
+	}
+	err = rows.Close()
 	if err != nil {
 		return err
 	}
@@ -490,7 +495,12 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 	if err != nil {
 		return err
 	}
-	_, count2, err := dw.Query(ctx, query, true)
+	// Even if rows is not read, it is assigned because it must be closed.
+	rows, count2, err := dw.Query(ctx, query, true)
+	if err != nil {
+		return err
+	}
+	err = rows.Close()
 	if err != nil {
 		return err
 	}
