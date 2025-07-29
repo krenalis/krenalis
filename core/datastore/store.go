@@ -479,6 +479,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 	query := meergo.RowQuery{
 		Columns: []meergo.Column{{Name: "__id__", Type: types.UUID()}},
 		Table:   "users",
+		Limit:   1, // minimize the number of rows the warehouse needs to prepare — we only need the count here.
 	}
 	_, count1, err := store.warehouse().Query(ctx, query, true)
 	if err != nil {
