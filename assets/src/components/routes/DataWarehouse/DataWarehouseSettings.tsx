@@ -17,6 +17,7 @@ interface DataWarehouseSettingsProps {
 	setSelectedWarehouse: React.Dispatch<React.SetStateAction<Warehouse | undefined>>;
 	currentMode: WarehouseMode | undefined;
 	currentSettings: WarehouseSettings | undefined;
+	currentMCPSettings: WarehouseSettings | undefined;
 }
 
 const DataWarehouseSettings = ({
@@ -24,9 +25,13 @@ const DataWarehouseSettings = ({
 	setSelectedWarehouse,
 	currentMode,
 	currentSettings,
+	currentMCPSettings,
 }: DataWarehouseSettingsProps) => {
 	const [mode, setMode] = useState<WarehouseMode>(currentMode || 'Normal');
 	const [settings, setSettings] = useState<Record<string, any> | undefined>(objectKeysToLower(currentSettings));
+	const [mcpSettings, setMCPSettings] = useState<Record<string, any> | undefined>(
+		objectKeysToLower(currentMCPSettings),
+	);
 	const [isCheckLoading, setIsCheckLoading] = useState<boolean>(false);
 	const [isActionButtonLoading, setIsActionButtonLoading] = useState<boolean>(false);
 
@@ -45,7 +50,7 @@ const DataWarehouseSettings = ({
 	const onCheck = async () => {
 		const timeout = setTimeout(() => setIsCheckLoading(true), 300);
 		try {
-			await api.workspaces.testWarehouseUpdate(settings);
+			await api.workspaces.testWarehouseUpdate(settings, mcpSettings);
 		} catch (err) {
 			handleError(err);
 			clearTimeout(timeout);
@@ -64,7 +69,15 @@ const DataWarehouseSettings = ({
 	const onSave = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspaces.updateWarehouse(selectedWarehouse.name, mode, settings, false);
+			await api.workspaces.updateWarehouse(
+				selectedWarehouse.name,
+				mode,
+				settings,
+				mcpSettings != undefined && Object.values(mcpSettings).some((v) => v !== '' && v !== 0)
+					? mcpSettings
+					: null,
+				false,
+			);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'InvalidWarehouseType') {
@@ -95,11 +108,6 @@ const DataWarehouseSettings = ({
 				<p className='warehouse-settings__name'>{selectedWarehouse.name}</p>
 			</div>
 			<div className='warehouse-settings__settings'>
-				{selectedWarehouse.name === 'PostgreSQL' ? (
-					<PostgreSQLSettings setSettings={setSettings} settings={settings} />
-				) : (
-					<SnowflakeSettings setSettings={setSettings} settings={settings} />
-				)}
 				<SlSelect label='Mode' className='warehouse-settings__mode' value={mode} onSlChange={onChangeMode}>
 					<SlOption value='Normal'>
 						<div className='warehouse-settings__mode-title'>Normal</div>
@@ -124,6 +132,30 @@ const DataWarehouseSettings = ({
 						</div>
 					</SlOption>
 				</SlSelect>
+				<h2>Warehouse settings</h2>
+				{selectedWarehouse.name === 'PostgreSQL' ? (
+					<PostgreSQLSettings setSettings={setSettings} settings={settings} precompileDefault={true} />
+				) : (
+					<SnowflakeSettings setSettings={setSettings} settings={settings} precompileDefault={true} />
+				)}
+				<h2>MCP settings (optional)</h2>
+				<div>
+					Here you can configure a {selectedWarehouse.name} user that will be used by the MCP (Model Context
+					Protocol) server to access and query the data warehouse.
+				</div>
+				<div>
+					<b>It is highly recommended that this user only have read-only access to the data warehouse</b>,
+					otherwise the MCP client may run destructive operations on your data.
+				</div>
+				<div>
+					If you leave these fields blank, the MCP user will not be configured and MCP features won't be
+					available.
+				</div>
+				{selectedWarehouse.name === 'PostgreSQL' ? (
+					<PostgreSQLSettings setSettings={setMCPSettings} settings={mcpSettings} precompileDefault={false} />
+				) : (
+					<SnowflakeSettings setSettings={setMCPSettings} settings={mcpSettings} precompileDefault={false} />
+				)}
 			</div>
 
 			<div className='warehouse-settings__buttons'>

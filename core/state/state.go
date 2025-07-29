@@ -501,9 +501,10 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 type Workspace struct {
 	mu        *sync.Mutex
 	Warehouse struct {
-		Type     string
-		Mode     WarehouseMode
-		Settings json.RawMessage
+		Type        string
+		Mode        WarehouseMode
+		Settings    json.RawMessage
+		MCPSettings json.RawMessage // it can be a JSON object or json.RawMessage(nil).
 	}
 	connections                    map[int]*Connection
 	executions                     map[int]*ActionExecution // running action executions.

@@ -32,6 +32,23 @@ func init() {
 		CreateRequired: true,
 		Description:    "The settings of the data warehouse.",
 	}
+	getMCPSettingsParameter := types.Property{
+		Name:        "mcpSettings",
+		Type:        types.Parameter("Warehouse"),
+		Placeholder: "{...}",
+		Nullable:    true,
+		Description: "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\n" +
+			"When `null`, it means that the MCP server settings aren't configured, so the MCP tools cannot be used for this workspace.",
+	}
+	postMCPSettingsParameter := types.Property{
+		Name:        "mcpSettings",
+		Type:        types.Parameter("Warehouse"),
+		Placeholder: "{...}",
+		Nullable:    true,
+		Description: "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\n" +
+			"When provided, it is highly recommended that these settings refer to a read-only access to the data warehouse; otherwise, the MCP client could perform destructive operations on the warehouse data.\n\n" +
+			"If `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace.",
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "warehouse",
@@ -52,6 +69,7 @@ func init() {
 							Description: "The name of the data warehouse.",
 						},
 						settingsParameter,
+						getMCPSettingsParameter,
 					},
 				},
 				Errors: []Error{
@@ -65,6 +83,7 @@ func init() {
 				URL:         "/v1/warehouse",
 				Parameters: []types.Property{
 					settingsParameter,
+					postMCPSettingsParameter,
 					modeParameter,
 					cancelIncompatibleOperationsParameter,
 				},
@@ -83,6 +102,7 @@ func init() {
 				URL:    "/v1/warehouse/test",
 				Parameters: []types.Property{
 					settingsParameter,
+					postMCPSettingsParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},

@@ -722,13 +722,14 @@ func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	var body struct {
-		Settings json.Value `json:"settings"`
+		Settings    json.Value `json:"settings"`
+		MCPSettings json.Value `json:"mcpSettings"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.TestWarehouseUpdate(r.Context(), body.Settings)
+	err = ws.TestWarehouseUpdate(r.Context(), body.Settings, body.MCPSettings)
 	return nil, err
 }
 
@@ -791,6 +792,7 @@ func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Reques
 	}
 	var body struct {
 		Settings                     json.Value         `json:"settings"`
+		MCPSettings                  json.Value         `json:"mcpSettings"`
 		Mode                         core.WarehouseMode `json:"mode"`
 		CancelIncompatibleOperations bool               `json:"cancelIncompatibleOperations"`
 	}
@@ -798,7 +800,10 @@ func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateWarehouse(r.Context(), body.Mode, body.Settings, body.CancelIncompatibleOperations)
+	if body.MCPSettings != nil && body.MCPSettings.IsNull() {
+		body.MCPSettings = nil
+	}
+	err = ws.UpdateWarehouse(r.Context(), body.Mode, body.Settings, body.MCPSettings, body.CancelIncompatibleOperations)
 	return nil, err
 }
 
@@ -953,15 +958,19 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 	return nil, nil
 }
 
-// Warehouse returns the type and settings of the data warehouse for a
-// workspace.
+// Warehouse returns the type, settings and MCP settings of the data warehouse
+// for a workspace.
 func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	name, settings := ws.Warehouse()
-	return map[string]any{"name": name, "settings": settings}, nil
+	name, settings, mcpSettings := ws.Warehouse()
+	return map[string]any{
+		"name":        name,
+		"settings":    settings,
+		"mcpSettings": mcpSettings,
+	}, nil
 }
 
 // workspace returns the workspace.

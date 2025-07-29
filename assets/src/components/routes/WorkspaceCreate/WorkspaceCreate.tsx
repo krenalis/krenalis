@@ -107,6 +107,7 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
+					null,
 					uiProperties,
 				);
 			} catch (err) {
@@ -133,6 +134,7 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
+					null,
 					uiProperties,
 				);
 				id = res.id;
@@ -206,9 +208,17 @@ const WorkspaceCreate = () => {
 			) : (
 				<div className='workspace-create__warehouse-settings'>
 					{selectedWarehouse === 'PostgreSQL' ? (
-						<PostgreSQLSettings settings={warehouseSettings} setSettings={setWarehouseSettings} />
+						<PostgreSQLSettings
+							settings={warehouseSettings}
+							setSettings={setWarehouseSettings}
+							precompileDefault={true}
+						/>
 					) : (
-						<SnowflakeSettings settings={warehouseSettings} setSettings={setWarehouseSettings} />
+						<SnowflakeSettings
+							settings={warehouseSettings}
+							setSettings={setWarehouseSettings}
+							precompileDefault={true}
+						/>
 					)}
 				</div>
 			)}

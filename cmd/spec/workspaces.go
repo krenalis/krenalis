@@ -74,6 +74,15 @@ func init() {
 		Placeholder: "{...}",
 		Description: "The settings of the data warehouse.",
 	}
+	warehouseMCPSettingsParameter := types.Property{
+		Name:        "mcpSettings",
+		Type:        types.Parameter("Warehouse"),
+		Placeholder: "{...}",
+		Nullable:    true,
+		Description: "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\n" +
+			"When provided, it is highly recommended that these settings refer to a read-only access to the data warehouse; otherwise, the MCP client could perform destructive operations on the warehouse data.\n\n" +
+			"If `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace.",
+	}
 	uiPreferencesParameter := types.Property{
 		Name: "uiPreferences",
 		Type: types.Object([]types.Property{
@@ -128,6 +137,7 @@ func init() {
 							warehouseTypeParameter,
 							warehouseModeParameter,
 							warehouseSettingsParameter,
+							warehouseMCPSettingsParameter,
 						}),
 						CreateRequired: true,
 						Description: "The data warehouse of the workspace, serving as the central repository for the workspace's user data and collected events.\n\n" +
@@ -161,6 +171,7 @@ func init() {
 							warehouseTypeParameter,
 							warehouseModeParameter,
 							warehouseSettingsParameter,
+							warehouseMCPSettingsParameter,
 						}),
 						CreateRequired: true,
 						Description: "The data warehouse of the workspace, serving as the central repository for the workspace's user data and collected events.\n\n" +

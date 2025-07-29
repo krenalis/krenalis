@@ -16,6 +16,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/db"
+	_json "github.com/meergo/meergo/json"
 )
 
 // load loads the state.
@@ -225,8 +226,8 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 	// Read all workspaces.
 	state.workspaces = map[int]*Workspace{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_type,"+
-		" warehouse_mode, warehouse_settings, alter_user_schema_id, alter_user_schema_schema,"+
-		" alter_user_schema_primary_sources, alter_user_schema_operations,"+
+		" warehouse_mode, warehouse_settings, warehouse_mcp_settings, alter_user_schema_id,"+
+		" alter_user_schema_schema, alter_user_schema_primary_sources, alter_user_schema_operations,"+
 		" alter_user_schema_start_time, alter_user_schema_end_time,"+
 		" alter_user_schema_error, user_schema, resolve_identities_on_batch_import,"+
 		" identifiers, ir_id, ir_start_time, ir_end_time, ui_user_profile_image,"+
@@ -238,7 +239,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			var warehouseMode WarehouseMode
 			var userSchema []byte
 			var alterUserSchemaSchema []byte
-			var warehouseSettings []byte
+			var warehouseSettings, warehouseMCPSettings []byte
 			for rows.Next() {
 				ws := &Workspace{
 					mu:          new(sync.Mutex),
@@ -247,7 +248,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					accounts:    map[int]*Account{},
 				}
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
-					&warehouseMode, &warehouseSettings, &ws.AlterUserSchema.ID,
+					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterUserSchema.ID,
 					&alterUserSchemaSchema, &ws.AlterUserSchema.PrimarySources,
 					&ws.AlterUserSchema.Operations, &ws.AlterUserSchema.StartTime,
 					&ws.AlterUserSchema.EndTime, &ws.AlterUserSchema.Err, &userSchema,
@@ -264,6 +265,11 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				ws.Warehouse.Type = warehouseType
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.Settings = warehouseSettings
+				if _json.Value(warehouseMCPSettings).IsNull() {
+					ws.Warehouse.MCPSettings = nil
+				} else {
+					ws.Warehouse.MCPSettings = warehouseMCPSettings
+				}
 				err = json.Unmarshal(userSchema, &ws.UserSchema)
 				if err != nil {
 					return err

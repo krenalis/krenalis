@@ -18,6 +18,7 @@ const DataWarehouse = () => {
 	const [connectedWarehouse, setConnectedWarehouse] = useState<string>();
 	const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse>();
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
+	const [warehouseMCPSettings, setWarehouseMCPSettings] = useState<WarehouseSettings>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [hasError, setHasError] = useState<boolean>();
 
@@ -30,6 +31,7 @@ const DataWarehouse = () => {
 				const response = await api.workspaces.warehouse();
 				setConnectedWarehouse(response.name);
 				setWarehouseSettings(response.settings);
+				setWarehouseMCPSettings(response.mcpSettings);
 			} catch (err) {
 				setTimeout(() => {
 					setIsLoading(false);
@@ -74,11 +76,13 @@ const DataWarehouse = () => {
 					setSelectedWarehouse={setSelectedWarehouse}
 					currentMode={warehouseMode}
 					currentSettings={warehouseSettings}
+					currentMCPSettings={warehouseMCPSettings}
 				/>
 			) : (
 				<WarehouseInfo
 					warehouseName={connectedWarehouse}
 					warehouseSettings={warehouseSettings!}
+					warehouseMCPSettings={warehouseMCPSettings}
 					warehouseMode={warehouseMode}
 					setSelectedWarehouse={setSelectedWarehouse}
 				/>
@@ -90,6 +94,7 @@ const DataWarehouse = () => {
 interface WarehouseInfoProps {
 	warehouseName: string;
 	warehouseSettings: WarehouseSettings;
+	warehouseMCPSettings: WarehouseSettings;
 	warehouseMode: WarehouseMode;
 	setSelectedWarehouse: React.Dispatch<React.SetStateAction<Warehouse | undefined>>;
 }
@@ -106,6 +111,7 @@ const warehouseInfoColumns: GridColumn[] = [
 const WarehouseInfo = ({
 	warehouseName,
 	warehouseSettings,
+	warehouseMCPSettings,
 	warehouseMode,
 	setSelectedWarehouse,
 }: WarehouseInfoProps) => {
@@ -159,6 +165,18 @@ const WarehouseInfo = ({
 		rows.push(row);
 	}
 
+	const mcpRows: GridRow[] = [];
+	for (const k in warehouseMCPSettings) {
+		let value: ReactNode;
+		if (k === 'Password') {
+			value = <PasswordToggle password={warehouseMCPSettings[k]} />;
+		} else {
+			value = warehouseMCPSettings[k];
+		}
+		const row: GridRow = { cells: [<span style={{ fontWeight: '600' }}>{k}</span>, value] };
+		mcpRows.push(row);
+	}
+
 	return (
 		<div className='warehouse-info'>
 			<div className='warehouse-info__info'>
@@ -204,6 +222,22 @@ const WarehouseInfo = ({
 			<div className='warehouse-info__settings'>
 				<Grid rows={rows} columns={warehouseInfoColumns} />
 			</div>
+
+			<h3>MCP settings</h3>
+			<p>
+				Here is the configuration for the {warehouse.name} user that will be used by the MCP (Model Context
+				Protocol) server to access and query the data warehouse.
+			</p>
+			{mcpRows.length > 0 ? (
+				<div className='warehouse-info__settings'>
+					<Grid rows={mcpRows} columns={warehouseInfoColumns} />
+				</div>
+			) : (
+				<div>
+					<b>MCP settings not configured.</b> You can configure them clicking on "Change settings...".
+				</div>
+			)}
+
 			<div className='warehouse-info__buttons'>
 				<SlButton variant='default' onClick={onChange}>
 					Change settings...

@@ -17,6 +17,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/analytics-go"
+	_json "github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -472,9 +473,10 @@ type CreateWorkspace struct {
 	UserSchema                     types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
-		Type     string
-		Mode     WarehouseMode
-		Settings json.RawMessage
+		Type        string
+		Mode        WarehouseMode
+		Settings    json.RawMessage
+		MCPSettings json.RawMessage
 	}
 	UIPreferences UIPreferences
 }
@@ -484,6 +486,12 @@ func (state *State) createWorkspace(n notification) {
 	e := CreateWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
+	}
+	// Warehouse.MCPSettings must be a JSON object or json.RawMessage(nil), so
+	// transform "null" (obtained from the PostgreSQL notification when
+	// serializing nil) into json.RawMessage(nil).
+	if _json.Value(e.Warehouse.MCPSettings).IsNull() {
+		e.Warehouse.MCPSettings = nil
 	}
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
@@ -1267,6 +1275,7 @@ type UpdateWarehouse struct {
 	Workspace                    int
 	Mode                         WarehouseMode
 	Settings                     json.RawMessage
+	MCPSettings                  json.RawMessage // it can be a JSON object or json.RawMessage(nil).
 	CancelIncompatibleOperations bool
 }
 
@@ -1276,9 +1285,16 @@ func (state *State) updateWarehouse(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
+	// MCPSettings must be a JSON object or json.RawMessage(nil), so transform
+	// "null" (obtained from the PostgreSQL notification when serializing nil)
+	// into json.RawMessage(nil).
+	if _json.Value(e.MCPSettings).IsNull() {
+		e.MCPSettings = nil
+	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse.Mode = e.Mode
 		w.Warehouse.Settings = e.Settings
+		w.Warehouse.MCPSettings = e.MCPSettings
 		w.actionsToPurge = []int{}
 	})
 	dispatchNotification(state, e)

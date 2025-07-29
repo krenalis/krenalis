@@ -58,6 +58,7 @@ Once you understand this example, you can adapt it to your needs (eg. another LL
 * The [`fast-agent`](https://fast-agent.ai/) command installed locally.
 * A Meergo API key associated to a specific workspace, stored in the `MEERGO_API_KEY` environment variable.
 * A running instance of Meergo.
+* Data warehouse MCP login settings must have been configured for the workspace.
 
 ### Starting the chat
 

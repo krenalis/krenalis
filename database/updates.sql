@@ -29,3 +29,6 @@ DROP TYPE sending_mode;
 
 -- 7
 ALTER TYPE sending_mode_new RENAME TO sending_mode;
+
+-- 8
+ALTER TABLE workspaces ADD column warehouse_mcp_settings varchar(65535) NOT NULL DEFAULT 'null'::jsonb;

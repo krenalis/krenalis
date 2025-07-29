@@ -1292,7 +1292,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte) error {
+func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings []byte) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
 	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
@@ -1301,6 +1301,15 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte)
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
+	}
+	if mcpSettings != nil {
+		_, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
+		if err != nil {
+			if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
+			}
+			return err
+		}
 	}
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
@@ -1484,8 +1493,8 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 	return err
 }
 
-// UpdateWarehouse updates the mode and settings of the warehouse associated
-// with the workspace.
+// UpdateWarehouse updates the mode, settings and MCP settings (which can be
+// nil) of the warehouse associated with the workspace.
 //
 // If cancelIncompatibleOperations is true, the operations currently in progress
 // on the warehouse that are incompatible with mode are cancelled.
@@ -1496,7 +1505,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
+func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings, mcpSettings []byte, cancelIncompatibleOperations bool) error {
 	this.core.mustBeOpen()
 
 	switch mode {
@@ -1515,6 +1524,17 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		return err
 	}
 
+	if mcpSettings != nil {
+		var err error
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
+		if err != nil {
+			if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
+			}
+			return err
+		}
+	}
+
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
@@ -1530,12 +1550,19 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		Workspace:                    ws.ID,
 		Mode:                         state.WarehouseMode(mode),
 		Settings:                     settings,
+		MCPSettings:                  mcpSettings,
 		CancelIncompatibleOperations: cancelIncompatibleOperations,
 	}
 
+	var mcp string
+	if n.MCPSettings != nil {
+		mcp = string(n.MCPSettings)
+	} else {
+		mcp = "null"
+	}
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3",
-			n.Mode, string(n.Settings), n.Workspace)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2, warehouse_mcp_settings = $3 WHERE id = $4",
+			n.Mode, string(n.Settings), mcp, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
@@ -1730,11 +1757,19 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	return users, schema, total, nil
 }
 
-// Warehouse returns type and settings of the data warehouse for the workspace.
-func (this *Workspace) Warehouse() (string, json.Value) {
+// Warehouse returns type, settings and MCP settings of the data warehouse for
+// the workspace.
+func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	return ws.Warehouse.Type, json.Value(slices.Clone(ws.Warehouse.Settings))
+	settings := json.Value(slices.Clone(ws.Warehouse.Settings))
+	var mcpSettings json.Value
+	if ws.Warehouse.MCPSettings != nil {
+		mcpSettings = json.Value(slices.Clone(ws.Warehouse.MCPSettings))
+	} else {
+		mcpSettings = json.Value("null")
+	}
+	return ws.Warehouse.Type, settings, mcpSettings
 }
 
 // userIdentities returns the user identities matching the provided where
@@ -2005,6 +2040,9 @@ func validateUIPreferences(preferences UIPreferences) error {
 // RawQueryWarehouse executes a query on the warehouse, returning the result as
 // a [][]any.
 //
+// If the workspace has no MCP settings configured, this method returns an
+// error.
+//
 // TODO(Gianluca): for more details about the values returned by this function,
 // see the issue https://github.com/meergo/meergo/issues/1666.
 //
@@ -2020,6 +2058,9 @@ func (this *Workspace) RawQueryWarehouse(ctx context.Context, query string) ([][
 	this.core.mcpMu.Unlock()
 	if !ok {
 		return nil, errors.New("workspace not found")
+	}
+	if mcp == nil {
+		return nil, errors.New("the workspace does not have MCP settings configured")
 	}
 	rows, err := mcp.RawQuery(ctx, query)
 	if err != nil {

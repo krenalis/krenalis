@@ -69,6 +69,9 @@ type Core struct {
 
 	// mcp holds an instance of a meergo.Warehouse for every workspace, and it
 	// is needed by the MCP (Model Context Protocol) server.
+	//
+	// If a workspace does not have MCP settings configured, the map has a key
+	// and the value is nil.
 	mcp   map[int]meergo.Warehouse
 	mcpMu sync.Mutex
 }
@@ -236,8 +239,10 @@ func New(conf *Config) (*Core, error) {
 	// workspace.
 	core.mcp = map[int]meergo.Warehouse{}
 	for _, ws := range core.state.Workspaces() {
-		// TODO(Gianluca): MCP-specific credentials will be used here. See https://github.com/meergo/meergo/issues/1670.
-		wh, _ := getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.Settings)
+		var wh meergo.Warehouse
+		if ws.Warehouse.MCPSettings != nil {
+			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.MCPSettings)
+		}
 		core.mcp[ws.ID] = wh
 	}
 
@@ -1301,8 +1306,10 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 // onCreateWorkspace is called when a workspace is created.
 func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
-	// TODO(Gianluca): MCP-specific credentials will be used here. See https://github.com/meergo/meergo/issues/1670.
-	wh, _ := getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.Settings)
+	var wh meergo.Warehouse
+	if ws.Warehouse.MCPSettings != nil {
+		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.MCPSettings)
+	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = wh
 	core.mcpMu.Unlock()
@@ -1314,7 +1321,7 @@ func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
 	wh, ok := core.mcp[n.ID]
 	delete(core.mcp, n.ID)
 	core.mcpMu.Unlock()
-	if ok {
+	if ok || wh != nil {
 		go func(workspace int) {
 			err := wh.Close()
 			if err != nil {
@@ -1364,16 +1371,23 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 
 // onUpdateWarehouse is called when a warehouse is updated.
 func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
+
 	// Update the MCP warehouse if the settings have changed.
 	core.mcpMu.Lock()
 	prevWarehouse := core.mcp[n.Workspace]
 	core.mcpMu.Unlock()
 	ws, _ := core.state.Workspace(n.Workspace)
-	// TODO(Gianluca): MCP-specific credentials will be used here. See https://github.com/meergo/meergo/issues/1670.
-	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Type, n.Settings)
-	if !bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
+
+	// The MCP settings were and have remained unset (nil).
+	if prevWarehouse == nil && n.MCPSettings == nil {
+		// Nothing to do.
+		return
+	}
+
+	// The MCP settings changed from set to unset (nil).
+	if prevWarehouse != nil && n.MCPSettings == nil {
 		core.mcpMu.Lock()
-		core.mcp[n.Workspace] = nextWarehouse
+		core.mcp[n.Workspace] = nil
 		core.mcpMu.Unlock()
 		// Close the previous warehouse.
 		go func(workspace int) {
@@ -1382,7 +1396,36 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 				slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
 			}
 		}(ws.ID)
+		return
 	}
+
+	// The MCP settings were unset (nil) and have now been set.
+	if prevWarehouse == nil && n.MCPSettings != nil {
+		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Type, n.MCPSettings)
+		core.mcpMu.Lock()
+		core.mcp[n.Workspace] = nextWarehouse
+		core.mcpMu.Unlock()
+		return
+	}
+
+	// The MCP settings were set and have been set again with the same value.
+	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Type, n.MCPSettings)
+	if bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
+		return
+	}
+
+	// The MCP settings were set and have been set with a different value.
+	core.mcpMu.Lock()
+	core.mcp[n.Workspace] = nextWarehouse
+	core.mcpMu.Unlock()
+	// Close the previous warehouse.
+	go func(workspace int) {
+		err := prevWarehouse.Close()
+		if err != nil {
+			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "err", err)
+		}
+	}(ws.ID)
+
 }
 
 // startAlterUserSchema starts the alter of the user schema.

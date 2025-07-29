@@ -21,6 +21,7 @@ CREATE TABLE workspaces (
     warehouse_type varchar NOT NULL,
     warehouse_mode warehouse_mode NOT NULL,
     warehouse_settings varchar(65535) NOT NULL,
+    warehouse_mcp_settings varchar(65535) NOT NULL DEFAULT 'null'::jsonb,
     alter_user_schema_id uuid,
     alter_user_schema_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     alter_user_schema_primary_sources jsonb,

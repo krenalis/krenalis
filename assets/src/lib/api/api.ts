@@ -727,6 +727,7 @@ class Workspaces {
 		warehouseType: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
+		warehouseMCPSettings: WarehouseSettings | null,
 		uiPreferences: UIPreferences,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, this.workspaceID, {
@@ -736,6 +737,7 @@ class Workspaces {
 				type: warehouseType,
 				mode: warehouseMode,
 				settings: warehouseSettings,
+				mcpSettings: warehouseMCPSettings,
 			},
 			uiPreferences: uiPreferences,
 		});
@@ -747,6 +749,7 @@ class Workspaces {
 		warehouseType: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
+		mcpWarehouseSettings: WarehouseSettings | null,
 		uiPreferences: UIPreferences,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, this.workspaceID, {
@@ -756,6 +759,7 @@ class Workspaces {
 				type: warehouseType,
 				mode: warehouseMode,
 				settings: warehouseSettings,
+				mcpSettings: mcpWarehouseSettings,
 			},
 			uiPreferences: uiPreferences,
 		});
@@ -818,9 +822,10 @@ class Workspaces {
 		});
 	};
 
-	testWarehouseUpdate = async (settings: any): Promise<void> => {
+	testWarehouseUpdate = async (settings: any, mcpSettings: any): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/test`, http.PUT, this.workspaceID, {
 			settings,
+			mcpSettings,
 		});
 	};
 
@@ -828,12 +833,14 @@ class Workspaces {
 		name: string,
 		mode: WarehouseMode,
 		settings: any,
+		mcpSettings: any | null,
 		cancelIncompatibleOperations: boolean,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse`, http.PUT, this.workspaceID, {
 			name,
 			mode,
 			settings,
+			mcpSettings,
 			cancelIncompatibleOperations,
 		});
 	};

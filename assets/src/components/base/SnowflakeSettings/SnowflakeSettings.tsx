@@ -6,11 +6,12 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 interface settingsProps {
 	setSettings: React.Dispatch<React.SetStateAction<any>>;
 	settings: WarehouseSettings | undefined;
+	precompileDefault: boolean;
 }
 
-const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
+const SnowflakeSettings = ({ setSettings, settings, precompileDefault }: settingsProps) => {
 	useEffect(() => {
-		if (settings === undefined) {
+		if (settings === undefined && precompileDefault) {
 			// Precompile schema and role.
 			setSettings({
 				schema: 'public',

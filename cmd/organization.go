@@ -116,9 +116,10 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		Name       string     `json:"name"`
 		UserSchema types.Type `json:"userSchema"`
 		Warehouse  struct {
-			Type     string             `json:"type"`
-			Mode     core.WarehouseMode `json:"mode"`
-			Settings json.Value         `json:"settings"`
+			Type        string             `json:"type"`
+			Mode        core.WarehouseMode `json:"mode"`
+			Settings    json.Value         `json:"settings"`
+			MCPSettings json.Value         `json:"mcpSettings"`
 		} `json:"warehouse"`
 		UIPreferences core.UIPreferences `json:"uiPreferences"`
 	}
@@ -126,8 +127,12 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.Warehouse.MCPSettings != nil && body.Warehouse.MCPSettings.IsNull() {
+		body.Warehouse.MCPSettings = nil
+	}
 	id, err := org.CreateWorkspace(r.Context(), body.Name, body.UserSchema,
-		body.UIPreferences, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
+		body.UIPreferences, body.Warehouse.Type, body.Warehouse.Settings,
+		body.Warehouse.MCPSettings, body.Warehouse.Mode)
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
 			return nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
@@ -204,9 +209,10 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		Name       string     `json:"name"`
 		UserSchema types.Type `json:"userSchema"`
 		Warehouse  struct {
-			Type     string             `json:"type"`
-			Mode     core.WarehouseMode `json:"mode"`
-			Settings json.Value         `json:"settings"`
+			Type        string             `json:"type"`
+			Mode        core.WarehouseMode `json:"mode"`
+			Settings    json.Value         `json:"settings"`
+			MCPSettings json.Value         `json:"mcpSettings"`
 		} `json:"warehouse"`
 		UIPreferences core.UIPreferences `json:"uiPreferences"`
 	}
@@ -214,8 +220,12 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.Warehouse.MCPSettings != nil && body.Warehouse.MCPSettings.IsNull() {
+		body.Warehouse.MCPSettings = nil
+	}
 	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.UserSchema,
-		body.UIPreferences, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
+		body.UIPreferences, body.Warehouse.Type, body.Warehouse.Settings,
+		body.Warehouse.MCPSettings, body.Warehouse.Mode)
 	return nil, err
 }
 
