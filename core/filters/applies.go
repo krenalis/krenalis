@@ -97,7 +97,7 @@ func opIs(v any, values []any) bool {
 	case time.Time:
 		return v.Equal(v0.(time.Time))
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
@@ -125,7 +125,7 @@ func opIsLessThan(v any, values []any) bool {
 	case float64:
 		return v < v0.(float64)
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
@@ -153,7 +153,7 @@ func opIsLessThanOrEqualTo(v any, values []any) bool {
 	case float64:
 		return v <= v0.(float64)
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
@@ -181,7 +181,7 @@ func opIsGreaterThan(v any, values []any) bool {
 	case float64:
 		return v > v0.(float64)
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
@@ -209,7 +209,7 @@ func opIsGreaterThanOrEqualTo(v any, values []any) bool {
 	case float64:
 		return v >= v0.(float64)
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
@@ -242,8 +242,8 @@ func opIsBetween(v any, values []any) bool {
 	case float64:
 		return v0.(float64) <= v && v <= v1.(float64)
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
-		v1 := v1.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
+		v1 := v1.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
@@ -277,8 +277,8 @@ func opIsNotBetween(v any, values []any) bool {
 	case float64:
 		return v < v0.(float64) || v > v1.(float64)
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
-		v1 := v1.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
+		v1 := v1.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
@@ -302,7 +302,7 @@ func opContains(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.String:
 			return strings.Contains(v.String(), v0.String)
@@ -332,7 +332,7 @@ func opDoesNotContain(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
 	case json.Value:
-		v0 := v0.(*state.JSONConditionValue)
+		v0 := v0.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.String:
 			return !strings.Contains(v.String(), v0.String)
@@ -393,7 +393,7 @@ func opIsIn(v any, values []any) bool {
 			v, err := v.Decimal(0, 0)
 			if err == nil {
 				for _, vi := range values {
-					vi := vi.(*state.JSONConditionValue)
+					vi := vi.(state.JSONConditionValue)
 					if vi.Number != nil && v.Equal(*vi.Number) {
 						return true
 					}
@@ -402,7 +402,7 @@ func opIsIn(v any, values []any) bool {
 		case json.String:
 			v := v.String()
 			for _, vi := range values {
-				vi := vi.(*state.JSONConditionValue)
+				vi := vi.(state.JSONConditionValue)
 				if v == vi.String {
 					return true
 				}
@@ -456,7 +456,7 @@ func opIsNotIn(v any, values []any) bool {
 			v, err := v.Decimal(0, 0)
 			if err == nil {
 				for _, vi := range values {
-					vi := vi.(*state.JSONConditionValue)
+					vi := vi.(state.JSONConditionValue)
 					if vi.Number != nil && v.Equal(*vi.Number) {
 						return false
 					}
@@ -465,7 +465,7 @@ func opIsNotIn(v any, values []any) bool {
 		case json.String:
 			v := v.String()
 			for _, vi := range values {
-				vi := vi.(*state.JSONConditionValue)
+				vi := vi.(state.JSONConditionValue)
 				if v == vi.String {
 					return false
 				}
@@ -490,7 +490,7 @@ func opStartsWith(v any, values []any) bool {
 	switch v := v.(type) {
 	case json.Value:
 		if v.Kind() == json.String {
-			v0 := v0.(*state.JSONConditionValue)
+			v0 := v0.(state.JSONConditionValue)
 			return strings.HasPrefix(v.String(), v0.String)
 		}
 	case string:
@@ -507,7 +507,7 @@ func opEndsWith(v any, values []any) bool {
 	switch v := v.(type) {
 	case json.Value:
 		if v.Kind() == json.String {
-			v0 := v0.(*state.JSONConditionValue)
+			v0 := v0.(state.JSONConditionValue)
 			return strings.HasSuffix(v.String(), v0.String)
 		}
 	case string:
@@ -594,7 +594,10 @@ func readPropertyFrom(m map[string]any, path []string) (any, bool) {
 		case map[string]any:
 			m = v
 		case json.Value:
-			return v.Get(path[i+1:])
+			if v, ok := v.Get(path[i+1:]); ok {
+				return v, true
+			}
+			return nil, false
 		default:
 			return nil, false
 		}

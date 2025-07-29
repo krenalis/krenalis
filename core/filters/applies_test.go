@@ -592,7 +592,7 @@ func Test_readPropertyFrom(t *testing.T) {
 		{[]string{"nested", "x"}, nil, false},
 		{[]string{"a", "b"}, nil, false},
 		{[]string{"json", "b", "c"}, json.Value("4"), true},
-		{[]string{"json", "x"}, json.Value(nil), false},
+		{[]string{"json", "x"}, nil, false},
 	}
 
 	for _, cas := range cases {
