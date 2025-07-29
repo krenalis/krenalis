@@ -93,12 +93,12 @@ type user struct {
 //  2. (Optional) Transform the event and set 0the Event.Properties field.
 //  3. Call the QueueEvent method.
 type Sender struct {
-	connector  string         // app connector.
-	waitTime   WaitTimeFunc   // function that returns an estimate of how long to wait before calling sendEvents.
-	sendEvents SendEventsFunc // function that sends the events to the app.
-	acks       AcksFunc       // ack function.
+	connector string   // app connector.
+	acks      AcksFunc // ack function.
 
 	mu                 sync.Mutex
+	waitTime           WaitTimeFunc       // function that returns an estimate of how long to wait before calling sendEvents.
+	sendEvents         SendEventsFunc     // function that sends the events to the app.
 	events             []*Event           // events in the queue; protected by mu.
 	users              map[string]*user   // users by anonymous id; protected by mu.
 	releasableUsers    map[*user]struct{} // users that have been iterated and are now ready to be released.
@@ -155,12 +155,13 @@ func New(connector string, waitTime WaitTimeFunc, sendEvents SendEventsFunc, ack
 				pattern = s.rateLimiterPattern
 			}
 			s.resetTimerLocked()
+			waitTime := s.waitTime
 			s.mu.Unlock()
 			if iter == nil {
 				continue
 			}
 			if pattern != "" {
-				if d, _ := s.waitTime(pattern); d > 0 {
+				if d, _ := waitTime(pattern); d > 0 {
 					select {
 					case <-time.After(d):
 					case <-s.close.ctx.Done():
@@ -201,12 +202,13 @@ func (s *Sender) Close(ctx context.Context) error {
 			pattern = s.rateLimiterPattern
 			trace("Sender.Close: %d events available; create new iterator %p\n", s.available, iter)
 		}
+		waitTime := s.waitTime
 		s.mu.Unlock()
 		if iter == nil {
 			break
 		}
 		if pattern != "" {
-			if d, _ := s.waitTime(pattern); d != 0 {
+			if d, _ := waitTime(pattern); d != 0 {
 				select {
 				case <-time.After(d):
 				case <-s.close.ctx.Done():
@@ -297,6 +299,14 @@ func (s *Sender) DiscardEvent(event *Event) {
 // order they were created using the CreateEvent method.
 func (s *Sender) QueueEvent(event *Event) {
 	s.queueOrDiscardEvent(event, false)
+}
+
+// SetFunc replaces the waitTime and sendEvents functions.
+func (s *Sender) SetFunc(waitTime WaitTimeFunc, sendEvents SendEventsFunc) {
+	s.mu.Lock()
+	s.waitTime = waitTime
+	s.sendEvents = sendEvents
+	s.mu.Unlock()
 }
 
 // appendToReadyQueue adds the given event to the ready queue.
@@ -625,7 +635,11 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 			Set:     s.setRateLimiterPattern,
 		})
 
-	err := s.sendEvents(ctx, iter)
+	s.mu.Lock()
+	sendEvents := s.sendEvents
+	s.mu.Unlock()
+
+	err := sendEvents(ctx, iter)
 	if err != nil {
 		if ee, ok := err.(meergo.EventsError); ok {
 			errEvents = ee

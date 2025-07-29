@@ -68,6 +68,7 @@ func newDestinations(st *state.State, connectors *connectors.Connectors, provide
 	d.state.AddListener(d.onDeleteConnection)
 	d.state.AddListener(d.onDeleteWorkspace)
 	d.state.AddListener(d.onSetActionStatus)
+	d.state.AddListener(d.onSetConnectionSettings)
 	d.state.AddListener(d.onUpdateAction)
 	for _, c := range st.Connections() {
 		if c.Role != state.Destination {
@@ -306,6 +307,18 @@ func (d *destinations) onSetActionStatus(n state.SetActionStatus) {
 	d.actions[c.ID] = actions
 	d.mu.Unlock()
 	go da.Discard(errors.New("action has been disabled"))
+}
+
+// onSetConnectionSettings is called when the settings of a connection is
+// changed.
+func (d *destinations) onSetConnectionSettings(n state.SetConnectionSettings) {
+	sender, ok := d.senders[n.Connection]
+	if !ok {
+		return
+	}
+	connection, _ := d.state.Connection(n.Connection)
+	app := d.connectors.App(connection)
+	sender.SetFunc(app.WaitTime, app.SendEvents)
 }
 
 // onUpdateAction is called when an action is updated.
