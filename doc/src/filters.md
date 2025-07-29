@@ -52,6 +52,35 @@ It is not necessary to quote values. However, if a value starts or ends with a s
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
 
+#### Using keys of a JSON property
+
+To refer to a key within a JSON object, specify it right after the property name. For example, given the following object:   
+
+```json
+{
+  "address": {
+    "street": "1234 Sunset Blvd",
+    "city": "Los Angeles",
+    "state": "CA",
+    "zip": "90026",
+    "country": "USA"
+  }
+}
+```
+
+To refer to the state, use `address.state` as shown below:
+
+```
+┌───────────────────────────┐ ┌──────────────────┐ ┌──────────┐ ┌──────────┐
+│ traits                  ▼ │ │ address.state    │ │ is     ▼ │ │ CA       │  ✔ yes
+└───────────────────────────┘ └──────────────────┘ └──────────┘ └──────────┘
+┌───────────────────────────┐ ┌──────────────────┐ ┌──────────┐ ┌──────────┐
+│ traits                  ▼ │ │ "address city"   │ │ is     ▼ │ │ CA       │  ✘ no
+└───────────────────────────┘ └──────────────────┘ └──────────┘ └──────────┘
+```
+
+Make sure you reference nested keys without quotes and using dot notation.
+
 #### Check if a JSON property exists
 
 To check if a JSON property exists, use the `exists` operator instead of `is null`:
