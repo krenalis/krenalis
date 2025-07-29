@@ -28,7 +28,7 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 	const id = await addDummySource(page);
 	await page.goto(`${adminURL}/connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
-		hasText: 'Import customers',
+		hasText: 'Import Dummy customers',
 	});
 
 	await expect(name).toBeAttached();
@@ -61,7 +61,7 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 	{
 		"target": "User",
 		"eventType": null,
-		"name": "Import customers",
+		"name": "Import Dummy customers",
 		"enabled": true,
 		"filter": null,
 		"inSchema": {
@@ -1238,7 +1238,7 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 	{
 		"target": "Event",
 		"eventType": null,
-		"name": "Import events",
+		"name": "Import events into warehouse",
 		"enabled": false,
 		"filter": {
 			"logical": "and",
@@ -1315,7 +1315,7 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 	{
 		"target": "User",
 		"eventType": null,
-		"name": "Import users",
+		"name": "Import users into warehouse",
 		"enabled": false,
 		"filter": {
 			"logical": "and",

@@ -150,7 +150,11 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 		let description = actionType.description;
 		if (connection.isFileStorage) {
-			description = `${connection.isSource ? 'Import' : 'Export'} the ${action.target.toLowerCase()} ${connection.isSource ? 'from' : 'to'} ${action.path}`;
+			if (connection.isSource) {
+				description = `Import ${action.target.toLowerCase()}s from ${action.path} into the data warehouse`;
+			} else {
+				description = `Export ${action.target.toLowerCase()}s to ${action.path}`;
+			}
 		}
 
 		let logo: ReactNode;

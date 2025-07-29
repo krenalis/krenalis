@@ -109,7 +109,7 @@ const FileConnector = () => {
 								key={'users-action-type'}
 								icon={getConnectorLogo(file.icon)}
 								name='Import users'
-								description={`Import the users from ${file.name}`}
+								description={`Import users from ${file.name} into the data warehouse`}
 								className='file-connector__action-type'
 								action={
 									<SlButton
@@ -128,7 +128,7 @@ const FileConnector = () => {
 								key={'groups-action-type'}
 								icon={getConnectorLogo(file.icon)}
 								name='Import groups'
-								description={`Import the groups from ${file.name}`}
+								description={`Import groups from ${file.name} into the data warehouse`}
 								className='file-connector__action-type'
 								action={
 									<SlButton

@@ -344,12 +344,12 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			var name, description string
 			if c.Role == state.Source {
 				// Source/App/User.
-				name = "Import " + connector.Terms.Users
+				name = "Import " + connector.Name + " " + connector.Terms.Users
 				description = "Import " + connector.Terms.Users
 				if connector.Terms.Users != "users" {
 					description += " as users"
 				}
-				description += " from " + connector.Name
+				description += " into the data warehouse"
 			} else {
 				// Destination/App/User.
 				name = "Export " + connector.Terms.Users
@@ -373,7 +373,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				// Source/FileStorage/Users.
 				// Source/Database/Users.
 				name = "Import users"
-				description = "Import users from " + connector.Name
+				description = "Import users from " + connector.Name + " into the data warehouse"
 			} else {
 				// Destination/FileStorage/Users.
 				// Destination/Database/Users.
@@ -390,8 +390,8 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			if c.Role == state.Source {
 				// Source/SDK/Users.
 				at := ActionType{
-					Name:        "Import users",
-					Description: "Import users from the events sent with " + connector.Name,
+					Name:        "Import users into warehouse",
+					Description: "Import users from " + connector.Name + " into the data warehouse",
 					Target:      TargetUser,
 				}
 				actionTypes = append(actionTypes, at)
@@ -406,12 +406,12 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	//		var name, description string
 	//		if c.Role == state.Source {
 	//			// Source/App/Group.
-	//			name = "Import " + connector.Terms.Groups
+	//		    name = "Import " + connector.Name + " " + connector.Terms.Groups
 	//			description = "Import " + connector.Terms.Groups
 	//			if connector.Terms.Groups != "groups" {
 	//				description += " as groups"
 	//			}
-	//			description += " from " + connector.Name
+	//			description += " into the data warehouse"
 	//		} else {
 	//			// Destination/App/Group.
 	//			name = "Export " + connector.Terms.Groups
@@ -435,7 +435,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	//			// Source/FileStorage/Group.
 	//			// Source/Database/Group.
 	//			name = "Import groups"
-	//			description = "Import groups from " + connector.Name
+	//			description = "Import groups from " + connector.Name + " into the data warehouse"
 	//		} else {
 	//			// Destination/FileStorage/Group.
 	//			// Destination/Database/Group.
@@ -452,8 +452,8 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	//		if c.Role == state.Source {
 	//			// Source/SDK/Group.
 	//			at := ActionType{
-	//				Name:        "Import groups",
-	//				Description: "Import groups from the events of the " + connector.Name,
+	//				Name:        "Import groups into warehouse",
+	//				Description: "Import groups from " + connector.Name + " into the data warehouse",
 	//				Target:      Group,
 	//			}
 	//			actionTypes = append(actionTypes, at)
@@ -466,8 +466,8 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			if c.Role == state.Source {
 				// Source/SDK/Event.
 				at := ActionType{
-					Name:        "Import events",
-					Description: "Import events sent with " + connector.Name,
+					Name:        "Import events into warehouse",
+					Description: "Import events from " + connector.Name + " into the data warehouse",
 					Target:      TargetEvent,
 				}
 				actionTypes = slices.Insert(actionTypes, 0, at)
