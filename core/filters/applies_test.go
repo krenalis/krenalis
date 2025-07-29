@@ -23,13 +23,13 @@ import (
 func Test_Applies(t *testing.T) {
 
 	var n670 = decimal.MustInt(670)
-	var v670 = &state.JSONConditionValue{String: "670", Number: &n670}
+	var v670 = state.JSONConditionValue{String: "670", Number: &n670}
 
 	var n812 = decimal.MustInt(812)
-	var v812 = &state.JSONConditionValue{String: "812", Number: &n812}
+	var v812 = state.JSONConditionValue{String: "812", Number: &n812}
 
-	var vFoo = &state.JSONConditionValue{String: "foo"}
-	var vBoo = &state.JSONConditionValue{String: "boo"}
+	var vFoo = state.JSONConditionValue{String: "foo"}
+	var vBoo = state.JSONConditionValue{String: "boo"}
 
 	tests := []struct {
 		op        state.WhereOperator
@@ -548,9 +548,9 @@ func Test_AppliesWithNestedPath(t *testing.T) {
 		Logical: state.OpAnd,
 		Conditions: []state.WhereCondition{
 			{Property: []string{"n1", "b"}, Operator: state.OpIs, Values: []any{5}},
-			{Property: []string{"n2", "b"}, Operator: state.OpIs, Values: []any{func() *state.JSONConditionValue {
+			{Property: []string{"n2", "b"}, Operator: state.OpIs, Values: []any{func() state.JSONConditionValue {
 				d := decimal.MustInt(5)
-				return &state.JSONConditionValue{Number: &d, String: "5"}
+				return state.JSONConditionValue{Number: &d, String: "5"}
 			}()}},
 		},
 	}
