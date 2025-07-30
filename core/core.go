@@ -396,6 +396,17 @@ func (core *Core) Close() {
 	core.close.Wait()
 	// Close the action cleaner.
 	core.actionCleaner.Close(context.Background())
+	// Close the MCP warehouse connections.
+	core.mcpMu.Lock()
+	for _, mcp := range core.mcp {
+		if mcp != nil {
+			err := mcp.Close()
+			if err != nil {
+				slog.Warn("cannot close MCP warehouse connection", "err", err)
+			}
+		}
+	}
+	core.mcpMu.Unlock()
 	// Close event collector, metrics, datastore, and state.
 	core.events.collector.Close()
 	core.metrics.Close(context.Background())
