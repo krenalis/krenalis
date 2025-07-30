@@ -32,26 +32,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(true),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			mcpToken, err := mcpTokenFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			core, err := meergoCoreFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
-			if !found {
-				return nil, errors.New("invalid MCP key")
-			}
-			org, err := core.Organization(ctx, organizationID)
-			if err != nil {
-				return nil, err
-			}
-			if workspaceID == 0 {
-				return nil, errors.New("the MCP key must be restricted to a workspace")
-			}
-			ws, err := org.Workspace(workspaceID)
+			ws, err := workspaceFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -72,32 +53,13 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			mcpToken, err := mcpTokenFromCtx(ctx)
+			ws, err := workspaceFromCtx(ctx)
 			if err != nil {
 				return nil, err
-			}
-			core, err := meergoCoreFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
-			if !found {
-				return nil, errors.New("invalid MCP key")
-			}
-			org, err := core.Organization(ctx, organizationID)
-			if err != nil {
-				return nil, err
-			}
-			if workspaceID == 0 {
-				return nil, errors.New("the MCP key must be restricted to a workspace")
 			}
 			query, err := req.RequireString("query")
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
-			}
-			ws, err := org.Workspace(workspaceID)
-			if err != nil {
-				return nil, err
 			}
 			rows, err := ws.RawQueryWarehouse(ctx, query)
 			if err != nil {
@@ -127,26 +89,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			mcpToken, err := mcpTokenFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			core, err := meergoCoreFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
-			if !found {
-				return nil, errors.New("invalid MCP key")
-			}
-			org, err := core.Organization(ctx, organizationID)
-			if err != nil {
-				return nil, err
-			}
-			if workspaceID == 0 {
-				return nil, errors.New("the MCP key must be restricted to a workspace")
-			}
-			ws, err := org.Workspace(workspaceID)
+			ws, err := workspaceFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -215,26 +158,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			mcpToken, err := mcpTokenFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			core, err := meergoCoreFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
-			if !found {
-				return nil, errors.New("invalid MCP key")
-			}
-			org, err := core.Organization(ctx, organizationID)
-			if err != nil {
-				return nil, err
-			}
-			if workspaceID == 0 {
-				return nil, errors.New("the MCP key must be restricted to a workspace")
-			}
-			ws, err := org.Workspace(workspaceID)
+			ws, err := workspaceFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -278,26 +202,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			mcpToken, err := mcpTokenFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			core, err := meergoCoreFromCtx(ctx)
-			if err != nil {
-				return nil, err
-			}
-			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
-			if !found {
-				return nil, errors.New("invalid MCP key")
-			}
-			org, err := core.Organization(ctx, organizationID)
-			if err != nil {
-				return nil, err
-			}
-			if workspaceID == 0 {
-				return nil, errors.New("the MCP key must be restricted to a workspace")
-			}
-			ws, err := org.Workspace(workspaceID)
+			ws, err := workspaceFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -319,4 +224,36 @@ var tools = []server.ServerTool{
 			return mcp.NewToolResultText(string(encoded)), nil
 		},
 	},
+}
+
+// workspaceFromCtx retrieves the Meergo workspace from the information provided
+// within the context.
+//
+// If the workspace cannot be retrieved for some reason, this function returns
+// an error explaining the problem.
+func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
+	mcpToken, err := mcpTokenFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	core, err := meergoCoreFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
+	if !found {
+		return nil, errors.New("invalid MCP key")
+	}
+	org, err := core.Organization(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	if workspaceID == 0 {
+		return nil, errors.New("the MCP key must be restricted to a workspace")
+	}
+	ws, err := org.Workspace(workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	return ws, nil
 }
