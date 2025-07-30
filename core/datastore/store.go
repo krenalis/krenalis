@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -495,6 +496,12 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err := dw.Close()
+		if err != nil {
+			slog.Warn("cannot close data warehouse", "err", err)
+		}
+	}()
 	// Even if rows is not read, it is assigned because it must be closed.
 	rows, count2, err := dw.Query(ctx, query, true)
 	if err != nil {
