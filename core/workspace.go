@@ -1321,6 +1321,8 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		}
 		return err
 	}
+	// TODO(Gianluca): do a more strict validation over the MCP settings, see
+	// the issue https://github.com/meergo/meergo/issues/1687.
 	return nil
 }
 
