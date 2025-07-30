@@ -6,7 +6,7 @@ module github.com/meergo/meergo
 go 1.24
 
 require (
-	github.com/ClickHouse/clickhouse-go/v2 v2.38.0
+	github.com/ClickHouse/clickhouse-go/v2 v2.40.1
 	github.com/andybalholm/brotli v1.2.0
 	github.com/avct/uasurfer v0.0.0-20250506104815-f2613aa2d406
 	github.com/aws/aws-sdk-go-v2 v1.36.0
@@ -91,7 +91,7 @@ require (
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v28.3.2+incompatible // indirect
+	github.com/docker/docker v28.3.3+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect

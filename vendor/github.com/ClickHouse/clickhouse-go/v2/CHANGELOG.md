@@ -1,3 +1,48 @@
+# v2.40.1, 2025-07-30 <!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Bug fixes 🐛 
+* fix: `database/sql` Nullable(JSON) string scan by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1625
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-go/compare/v2.40.0...v2.40.1
+
+# v2.40.0, 2025-07-30 <!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Enhancements 🎉 
+* support `database/sql` scanning json into `string`/`[]byte`/`json.RawMessage` by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1623
+### Bug fixes 🐛 
+* fix: json v1 encoding/decoding for prefixed types by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1622
+* fix: Nullable base types with prefix by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1624
+### Other Changes 🛠
+* Bump github.com/docker/docker from 28.3.2+incompatible to 28.3.3+incompatible by @dependabot[bot] in https://github.com/ClickHouse/clickhouse-go/pull/1621
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-go/compare/v2.39.0...v2.40.0
+
+# v2.39.0, 2025-07-23 <!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Bug fixes 🐛 
+* Fix `ReadTimeout` so that it applies to each call to `conn.Read` not just the first read block by @GeorgeMac in https://github.com/ClickHouse/clickhouse-go/pull/1616, @SpencerTorres https://github.com/ClickHouse/clickhouse-go/pull/1617
+
+## Read Timeout behavior changes
+This bug fix has potential to affect longer running queries, ensure you're setting `clickhouse.Options` `ReadTimeout` to a reasonable value, and that your `context.WithDeadline` is also set to a reasonable value. The read timeout will now be applied to all blocks, previously it was only set for the first block.
+
+## New Contributors
+* @GeorgeMac made their first contribution in https://github.com/ClickHouse/clickhouse-go/pull/1616
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-go/compare/v2.38.1...v2.39.0
+
+# v2.38.1, 2025-07-23 <!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Bug fixes 🐛 
+* fix: build failure due to 32-bit integer overflow on 386 arch by @SpencerTorres in https://github.com/ClickHouse/clickhouse-go/pull/1616
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-go/compare/v2.38.0...v2.38.1
+
 # v2.38.0, 2025-07-22 <!-- Release notes generated using configuration in .github/release.yml at main -->
 
 ## What's Changed
