@@ -30,12 +30,12 @@ const Organization = () => {
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
-				<Link path='organization/api-keys'>
+				<Link path='organization/access-keys'>
 					<ListTile
 						className='organization__entry'
 						icon={<SlIcon name='key' />}
-						name={'API Keys'}
-						description='View and modify your API keys'
+						name={'API and MCP keys'}
+						description='View and modify your API and MCP keys'
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>

@@ -56,14 +56,14 @@ Once you understand this example, you can adapt it to your needs (eg. another LL
 
 * A Open AI API key stored in the `OPENAI_API_KEY` environment variable.
 * The [`fast-agent`](https://fast-agent.ai/) command installed locally.
-* A Meergo API key associated to a specific workspace, stored in the `MEERGO_API_KEY` environment variable.
+* A Meergo MCP key associated to a specific workspace, stored in the `MEERGO_MCP_KEY` environment variable.
 * A running instance of Meergo.
 * Data warehouse MCP login settings must have been configured for the workspace.
 
 ### Starting the chat
 
 ```bash
-fast-agent go --model openai --url=http://localhost:9090/mcp --auth=$MEERGO_API_KEY
+fast-agent go --model openai --url=http://localhost:9090/mcp --auth=$MEERGO_MCP_KEY
 ```
 
 By changing the command-line parameters and environment variables, you can configure **fast-agent** to connect to a different model or a different Meergo instance. See the [documentation for the `fast-agent go` command](https://fast-agent.ai/ref/go_command/) for more details.

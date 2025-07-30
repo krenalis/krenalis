@@ -28,8 +28,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /connections/{id}/event-write-keys/{key}":        connection.DeleteEventWriteKey,
 		"DELETE /connections/{src}/links/{dst}":                  connection.UnlinkConnection,
 		"DELETE /events/listeners/{id}":                          workspace.DeleteEventListener,
-		"DELETE /keys/{key}":                                     organization.DeleteAPIKey, /* only admin */
-		"DELETE /members/{id}":                                   organization.DeleteMember, /* only admin */
+		"DELETE /keys/{key}":                                     organization.DeleteAccessKey, /* only admin */
+		"DELETE /members/{id}":                                   organization.DeleteMember,    /* only admin */
 		"DELETE /workspaces/current":                             workspace.Delete,
 		"GET    /actions/errors/{start}/{end}":                   workspace.ActionErrors,
 		"GET    /actions/executions":                             workspace.Executions,
@@ -68,7 +68,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /identity-resolution/settings":                   workspace.IdentityResolutionSettings,
 		"GET    /installation-id":                                api.InstallationID,                   /* only admin */
 		"GET    /javascript-sdk-url":                             api.JavaScriptSDKURL,                 /* only admin */
-		"GET    /keys":                                           organization.APIKeys,                 /* only admin */
+		"GET    /keys":                                           organization.AccessKeys,              /* only admin */
 		"GET    /members":                                        organization.Members,                 /* only admin */
 		"GET    /members/current":                                api.Member,                           /* only admin */
 		"GET    /members/invitations/{token}":                    api.MemberInvitation,                 /* only admin */
@@ -101,16 +101,16 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /events/{type}":                                  workspace.IngestEvents,
 		"POST   /expressions-properties":                         api.ExpressionsProperties, /* only admin */
 		"POST   /identity-resolution/start":                      workspace.StartIdentityResolution,
-		"POST   /keys":                                           organization.CreateAPIKey, /* only admin */
-		"POST   /members":                                        organization.AddMember,    /* only admin */
-		"POST   /members/invitations":                            organization.InviteMember, /* only admin */
-		"POST   /members/login":                                  s.login,                   /* only admin */
-		"POST   /members/logout":                                 s.logout,                  /* only admin */
-		"POST   /sentry/errors":                                  s.forwardSentryError,      /* only admin */
-		"POST   /transformations":                                api.TransformData,         /* only admin */
-		"POST   /ui":                                             workspace.ServeUI,         /* only admin */
-		"POST   /ui-event":                                       workspace.ServeUI,         /* only admin */
-		"POST   /validate-expression":                            api.ValidateExpression,    /* only admin */
+		"POST   /keys":                                           organization.CreateAccessKey, /* only admin */
+		"POST   /members":                                        organization.AddMember,       /* only admin */
+		"POST   /members/invitations":                            organization.InviteMember,    /* only admin */
+		"POST   /members/login":                                  s.login,                      /* only admin */
+		"POST   /members/logout":                                 s.logout,                     /* only admin */
+		"POST   /sentry/errors":                                  s.forwardSentryError,         /* only admin */
+		"POST   /transformations":                                api.TransformData,            /* only admin */
+		"POST   /ui":                                             workspace.ServeUI,            /* only admin */
+		"POST   /ui-event":                                       workspace.ServeUI,            /* only admin */
+		"POST   /validate-expression":                            api.ValidateExpression,       /* only admin */
 		"POST   /warehouse/repair":                               workspace.RepairWarehouse,
 		"POST   /workspaces":                                     organization.CreateWorkspace,
 		"POST   /workspaces/test":                                organization.TestWorkspaceCreation,
@@ -119,7 +119,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"PUT    /actions/{id}/status":                            action.SetStatus,
 		"PUT    /connections/{id}":                               connection.Update,
 		"PUT    /identity-resolution/settings":                   workspace.UpdateIdentityResolutionSettings,
-		"PUT    /keys/{key}":                                     organization.UpdateAPIKey,       /* only admin */
+		"PUT    /keys/{key}":                                     organization.UpdateAccessKey,    /* only admin */
 		"PUT    /members/current":                                organization.UpdateMember,       /* only admin */
 		"PUT    /members/invitations/{token}":                    api.AcceptInvitation,            /* only admin */
 		"PUT    /members/reset-password":                         api.SendMemberPasswordReset,     /* only admin */

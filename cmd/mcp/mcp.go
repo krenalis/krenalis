@@ -50,18 +50,18 @@ type MCPServer struct {
 // ServeHTTP serves HTTP requests from MCP clients.
 func (mcp *MCPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	// Retrieve the Meergo API token from the request, otherwise return a Bad
+	// Retrieve the Meergo MCP token from the request, otherwise return a Bad
 	// Request error to the MCP client.
-	apiToken, err := apiTokenFromRequest(r)
+	mcpToken, err := mcpTokenFromRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Inject the API token and the Meergo core into the request's context, so
+	// Inject the MCP token and the Meergo core into the request's context, so
 	// it is made available to the MCP tools.
 	ctx := r.Context()
-	ctx = context.WithValue(ctx, mcpContextKey("api-token"), apiToken)
+	ctx = context.WithValue(ctx, mcpContextKey("mcp-token"), mcpToken)
 	ctx = context.WithValue(ctx, mcpContextKey("meergo-core"), mcp.core)
 	r = r.Clone(ctx)
 
@@ -70,26 +70,26 @@ func (mcp *MCPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type mcpContextKey string
 
-// apiTokenFromCtx extracts the API token from the given context, returning
+// mcpTokenFromCtx extracts the MCP token from the given context, returning
 // error if it is not found.
-func apiTokenFromCtx(ctx context.Context) (string, error) {
-	apiToken, ok := ctx.Value(mcpContextKey("api-token")).(string)
+func mcpTokenFromCtx(ctx context.Context) (string, error) {
+	mcpToken, ok := ctx.Value(mcpContextKey("mcp-token")).(string)
 	if !ok {
-		return "", errors.New("API token not found in context")
+		return "", errors.New("MCP token not found in context")
 	}
-	return apiToken, nil
+	return mcpToken, nil
 }
 
-// apiTokenFromRequest reads the Meergo API token from the request's
+// mcpTokenFromRequest reads the Meergo MCP token from the request's
 // 'Authorization' header.
-func apiTokenFromRequest(r *http.Request) (string, error) {
+func mcpTokenFromRequest(r *http.Request) (string, error) {
 	auth, ok := r.Header["Authorization"]
 	if !ok {
 		return "", errors.New("no Authorization header found in request")
 	}
 	token, found := strings.CutPrefix(auth[0], "Bearer ")
 	if !found || token == "" {
-		return "", errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_API_KEY>'.")
+		return "", errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_MCP_KEY>'.")
 	}
 	return token, nil
 }

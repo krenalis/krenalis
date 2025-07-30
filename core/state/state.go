@@ -58,7 +58,7 @@ type State struct {
 	actions          map[int]*Action        // protected by mu
 	connections      map[int]*Connection    // protected by mu
 	connectionsByKey map[string]*Connection // protected by mu
-	apiKeyByToken    map[string]*APIKey     // protected by mu
+	accessKeyByToken map[string]*AccessKey  // protected by mu
 	election         election               // protected by mu
 	organizations    map[int]*Organization  // protected by mu
 	workspaces       map[int]*Workspace     // protected by mu
@@ -131,11 +131,11 @@ func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth, sendStats bool) 
 	return state, nil
 }
 
-// APIKeyByToken returns the API key with the provided token.
-// The boolean return value reports whether the API key exists.
-func (state *State) APIKeyByToken(token string) (*APIKey, bool) {
+// AccessKeyByToken returns the access key with the provided token.
+// The boolean return value reports whether the access key exists.
+func (state *State) AccessKeyByToken(token string) (*AccessKey, bool) {
 	state.mu.Lock()
-	key, ok := state.apiKeyByToken[token]
+	key, ok := state.accessKeyByToken[token]
 	state.mu.Unlock()
 	return key, ok
 }
@@ -400,11 +400,61 @@ func (state *State) Workspaces() []*Workspace {
 	return workspaces
 }
 
-// APIKey represents an API key.
-type APIKey struct {
+// AccessKeyType represents an access key type.
+type AccessKeyType int
+
+const (
+	AccessKeyTypeAPI AccessKeyType = iota
+	AccessKeyTypeMCP
+)
+
+// Scan implements the sql.Scanner interface.
+func (typ *AccessKeyType) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an AccessKeyType value", src)
+	}
+	var t AccessKeyType
+	switch s {
+	case "API":
+		t = AccessKeyTypeAPI
+	case "MCP":
+		t = AccessKeyTypeMCP
+	default:
+		return fmt.Errorf("invalid AccessKeyType: %s", s)
+	}
+	*typ = t
+	return nil
+}
+
+// String returns the string representation of typ.
+// It panics if typ is not a valid AccessKeyType value.
+func (typ AccessKeyType) String() string {
+	m, err := typ.Value()
+	if err != nil {
+		panic("invalid access key type")
+	}
+	return m.(string)
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if typ is not a valid AccessKeyType.
+func (typ AccessKeyType) Value() (driver.Value, error) {
+	switch typ {
+	case AccessKeyTypeAPI:
+		return "API", nil
+	case AccessKeyTypeMCP:
+		return "MCP", nil
+	}
+	return nil, fmt.Errorf("not a valid AccessKeyType: %d", typ)
+}
+
+// AccessKey represents an access key.
+type AccessKey struct {
 	ID           int
 	Organization int
 	Workspace    int
+	Type         AccessKeyType
 }
 
 // Organization represents an organization.

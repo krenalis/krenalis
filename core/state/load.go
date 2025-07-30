@@ -288,21 +288,21 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		return err
 	}
 
-	// Read all API keys.
-	state.apiKeyByToken = map[string]*APIKey{}
-	err = tx.QueryScan(ctx, "SELECT id, organization, workspace, token FROM api_keys",
+	// Read all access keys.
+	state.accessKeyByToken = map[string]*AccessKey{}
+	err = tx.QueryScan(ctx, "SELECT id, organization, workspace, type, token FROM access_keys",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				k := APIKey{}
+				k := AccessKey{}
 				var token string
 				var workspace *int
-				if err := rows.Scan(&k.ID, &k.Organization, &workspace, &token); err != nil {
+				if err := rows.Scan(&k.ID, &k.Organization, &workspace, &k.Type, &token); err != nil {
 					return err
 				}
 				if workspace != nil {
 					k.Workspace = *workspace
 				}
-				state.apiKeyByToken[token] = &k
+				state.accessKeyByToken[token] = &k
 			}
 			return nil
 		})

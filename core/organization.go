@@ -8,6 +8,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/tls"
@@ -93,13 +94,77 @@ type emailToSend struct {
 	BodyHTML []byte
 }
 
-// APIKey represents an API key.
-type APIKey struct {
-	ID        int       `json:"id"`
-	Workspace *int      `json:"workspace"`
-	Name      string    `json:"name"`
-	Token     string    `json:"token"`
-	CreatedAt time.Time `json:"createdAt"`
+// AccessKeyType represents an access key type.
+type AccessKeyType int
+
+const (
+	AccessKeyTypeAPI AccessKeyType = iota
+	AccessKeyTypeMCP
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if mode is not a valid AccessKeyType value.
+func (typ AccessKeyType) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + typ.String() + `"`), nil
+}
+
+// String returns the string representation of typ.
+// It panics if typ is not a valid AccessKeyType value.
+func (typ AccessKeyType) String() string {
+	switch typ {
+	case AccessKeyTypeAPI:
+		return "API"
+	case AccessKeyTypeMCP:
+		return "MCP"
+	}
+	panic("invalid access key type")
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (typ *AccessKeyType) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var v any
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+	m, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("json: cannot scan a %T value into an AccessKeyType value", v)
+	}
+	var ty AccessKeyType
+	switch m {
+	case "API":
+		ty = AccessKeyTypeAPI
+	case "MCP":
+		ty = AccessKeyTypeMCP
+	default:
+		return fmt.Errorf("json: invalid AccessKeyType: %s", m)
+	}
+	*typ = ty
+	return nil
+}
+
+// IsValid reports whether typ is a valid AccessKeyType.
+func (typ AccessKeyType) IsValid() bool {
+	switch typ {
+	case AccessKeyTypeAPI, AccessKeyTypeMCP:
+		return true
+	default:
+		return false
+	}
+}
+
+// AccessKey represents an access key.
+type AccessKey struct {
+	ID        int           `json:"id"`
+	Workspace *int          `json:"workspace"`
+	Name      string        `json:"name"`
+	Type      AccessKeyType `json:"type"`
+	Token     string        `json:"token"`
+	CreatedAt time.Time     `json:"createdAt"`
 }
 
 // AddMember adds a new member of the organization.
@@ -155,20 +220,23 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 	return err
 }
 
-// APIKeys returns the API keys of the organization ordered by creation time.
-func (this *Organization) APIKeys(ctx context.Context) ([]*APIKey, error) {
+// AccessKeys returns the access keys of the organization ordered by creation
+// time.
+func (this *Organization) AccessKeys(ctx context.Context) ([]*AccessKey, error) {
 	this.core.mustBeOpen()
-	keys := make([]*APIKey, 0)
-	query := "SELECT id, workspace, name, token, created_at FROM api_keys WHERE organization = $1 ORDER BY created_at"
+	keys := make([]*AccessKey, 0)
+	query := "SELECT id, workspace, name, type, token, created_at FROM access_keys WHERE organization = $1 ORDER BY created_at"
 	err := this.core.db.QueryScan(ctx, query, this.organization.ID, func(rows *db.Rows) error {
 		var err error
 		for rows.Next() {
-			var key APIKey
-			if err = rows.Scan(&key.ID, &key.Workspace, &key.Name, &key.Token, &key.CreatedAt); err != nil {
+			var key AccessKey
+			var typ state.AccessKeyType
+			if err = rows.Scan(&key.ID, &key.Workspace, &key.Name, &typ, &key.Token, &key.CreatedAt); err != nil {
 				return err
 			}
+			key.Type = AccessKeyType(typ)
 			if len(key.Token) != 43 {
-				return fmt.Errorf("API key %d has an invalid token in the database", key.ID)
+				return fmt.Errorf("access key %d has an invalid token in the database", key.ID)
 			}
 			key.Token = key.Token[:4] + "..." + key.Token[40:]
 			keys = append(keys, &key)
@@ -227,15 +295,17 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	return id, nil
 }
 
-// CreateAPIKey creates a new API key for the organization with the specified
-// name, which must be between 1 and 100 runes in length. If the workspace is
-// not 0, the key will be restricted to that specific workspace.
+// CreateAccessKey creates a new access key for the organization with the
+// specified name, which must be between 1 and 100 runes in length, and the
+// specified type. If the workspace is not 0, the key will be restricted to that
+// specific workspace. If the created key is an MCP key the workspace is
+// required and therefore cannot be 0.
 //
 // It returns an errors.UnprocessableError error with code
 //
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WorkspaceNotExist, if the workspace does not exist.
-func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspace int) (int, string, error) {
+func (this *Organization) CreateAccessKey(ctx context.Context, name string, workspace int, typ AccessKeyType) (int, string, error) {
 	this.core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return 0, "", errors.BadRequest("%s", err)
@@ -248,27 +318,34 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 			return 0, "", errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", workspace)
 		}
 	}
+	if !typ.IsValid() {
+		return 0, "", errors.BadRequest("invalid access key type: %v", typ)
+	}
+	if typ == AccessKeyTypeMCP && workspace == 0 {
+		return 0, "", errors.BadRequest("workspace is required for MCP keys")
+	}
 	// Generate a random identifier.
 	id, err := generateRandomID()
 	if err != nil {
 		return 0, "", err
 	}
-	n := state.CreateAPIKey{
+	n := state.CreateAccessKey{
 		ID:           id,
 		Organization: this.organization.ID,
 		Workspace:    workspace,
-		Token:        generateAPIKeyToken(),
+		Type:         state.AccessKeyType(typ),
+		Token:        generateAccessKeyToken(),
 	}
 	createdAt := time.Now().UTC().Truncate(time.Second)
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO api_keys (id, organization, workspace, name, token, created_at) "+
-			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6)", n.ID, n.Organization, n.Workspace, name, n.Token, createdAt)
+		_, err := tx.Exec(ctx, "INSERT INTO access_keys (id, organization, workspace, name, type, token, created_at) "+
+			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7)", n.ID, n.Organization, n.Workspace, name, typ, n.Token, createdAt)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
 				switch db.ErrConstraintName(err) {
-				case "api_keys_organization_fkey":
+				case "access_keys_organization_fkey":
 					err = errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
-				case "api_keys_workspace_fkey":
+				case "access_keys_workspace_fkey":
 					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 				}
 			}
@@ -375,24 +452,24 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 	return n.ID, nil
 }
 
-// DeleteAPIKey deletes the API key of the organization with identifier id.
-// If the API key does not exist for the organization, it returns an
+// DeleteAccessKey deletes the access key of the organization with identifier
+// id. If the access key does not exist for the organization, it returns an
 // errors.NotFound error.
-func (this *Organization) DeleteAPIKey(ctx context.Context, id int) error {
+func (this *Organization) DeleteAccessKey(ctx context.Context, id int) error {
 	this.core.mustBeOpen()
 	if id < 1 || id > maxInt32 {
-		return errors.BadRequest("identifier %d is not a valid API key identifier", id)
+		return errors.BadRequest("identifier %d is not a valid access key identifier", id)
 	}
-	n := state.DeleteAPIKey{
+	n := state.DeleteAccessKey{
 		ID: id,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "DELETE FROM api_keys WHERE id = $1 AND organization = $2", id, this.organization.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM access_keys WHERE id = $1 AND organization = $2", id, this.organization.ID)
 		if err != nil {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("API key %d does not exist", id)
+			return nil, errors.NotFound("access key %d does not exist", id)
 		}
 		return n, nil
 	})
@@ -609,25 +686,25 @@ func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string
 	return err
 }
 
-// UpdateAPIKey updates the name of the API key for the organization with the
-// specified identifier. name must be between 1 and 100 runes in length.
+// UpdateAccessKey updates the name of the access key for the organization with
+// the specified identifier. name must be between 1 and 100 runes in length.
 //
-// If the API key does not exist for the organization, it returns an
+// If the access key does not exist for the organization, it returns an
 // errors.NotFound error.
-func (this *Organization) UpdateAPIKey(ctx context.Context, id int, name string) error {
+func (this *Organization) UpdateAccessKey(ctx context.Context, id int, name string) error {
 	this.core.mustBeOpen()
 	if id < 1 || id > maxInt32 {
-		return errors.BadRequest("identifier %d is not a valid API key identifier", id)
+		return errors.BadRequest("identifier %d is not a valid access key identifier", id)
 	}
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	result, err := this.core.db.Exec(ctx, "UPDATE api_keys SET name = $1 WHERE id = $2 AND organization = $3", name, id, this.organization.ID)
+	result, err := this.core.db.Exec(ctx, "UPDATE access_keys SET name = $1 WHERE id = $2 AND organization = $3", name, id, this.organization.ID)
 	if err != nil {
 		return err
 	}
 	if result.RowsAffected() == 0 {
-		return errors.NotFound("API key %d does not exist", id)
+		return errors.NotFound("access key %d does not exist", id)
 	}
 	return nil
 }
@@ -831,8 +908,8 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	return settings, whMCPSettings, nil
 }
 
-// generateAPIKeyToken generates a new API key token.
-func generateAPIKeyToken() string {
+// generateAccessKeyToken generates a new access key token.
+func generateAccessKeyToken() string {
 	// ⌈log₆₂ 2²⁵⁶⌉ ≈ 43 chars
 	const base62alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 	src := make([]byte, 43)

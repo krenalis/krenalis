@@ -328,13 +328,13 @@ func (core *Core) AddOrganization(ctx context.Context, name string) (int, error)
 	return id, nil
 }
 
-// APIKey returns the organization and workspace identifiers associated with the
-// provided API key token. If the API key is not restricted to a workspace, the
-// workspace identifier will be 0. The boolean return value indicates whether
-// the token exists.
-func (core *Core) APIKey(token string) (int, int, bool) {
-	key, ok := core.state.APIKeyByToken(token)
-	if !ok {
+// AccessKey returns the organization and workspace identifiers associated with
+// the provided access key token and type. If the access key is not restricted
+// to a workspace, the workspace identifier will be 0. The boolean return value
+// indicates whether the token exists.
+func (core *Core) AccessKey(token string, typ AccessKeyType) (int, int, bool) {
+	key, ok := core.state.AccessKeyByToken(token)
+	if !ok || key.Type != state.AccessKeyType(typ) {
 		return 0, 0, false
 	}
 	return key.Organization, key.Workspace, true

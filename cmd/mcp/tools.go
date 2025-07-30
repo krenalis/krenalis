@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 
+	_core "github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -31,7 +32,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(true),
 		),
 		Handler: func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			apiToken, err := apiTokenFromCtx(ctx)
+			mcpToken, err := mcpTokenFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -39,16 +40,16 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			organizationID, workspaceID, found := core.APIKey(apiToken)
+			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
 			if !found {
-				return nil, errors.New("invalid API key")
+				return nil, errors.New("invalid MCP key")
 			}
 			org, err := core.Organization(ctx, organizationID)
 			if err != nil {
 				return nil, err
 			}
 			if workspaceID == 0 {
-				return nil, errors.New("the API key must be restricted to a workspace")
+				return nil, errors.New("the MCP key must be restricted to a workspace")
 			}
 			ws, err := org.Workspace(workspaceID)
 			if err != nil {
@@ -71,7 +72,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			apiToken, err := apiTokenFromCtx(ctx)
+			mcpToken, err := mcpTokenFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -79,16 +80,16 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			organizationID, workspaceID, found := core.APIKey(apiToken)
+			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
 			if !found {
-				return nil, errors.New("invalid API key")
+				return nil, errors.New("invalid MCP key")
 			}
 			org, err := core.Organization(ctx, organizationID)
 			if err != nil {
 				return nil, err
 			}
 			if workspaceID == 0 {
-				return nil, errors.New("the API key must be restricted to a workspace")
+				return nil, errors.New("the MCP key must be restricted to a workspace")
 			}
 			query, err := req.RequireString("query")
 			if err != nil {
@@ -126,7 +127,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			apiToken, err := apiTokenFromCtx(ctx)
+			mcpToken, err := mcpTokenFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -134,16 +135,16 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			organizationID, workspaceID, found := core.APIKey(apiToken)
+			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
 			if !found {
-				return nil, errors.New("invalid API key")
+				return nil, errors.New("invalid MCP key")
 			}
 			org, err := core.Organization(ctx, organizationID)
 			if err != nil {
 				return nil, err
 			}
 			if workspaceID == 0 {
-				return nil, errors.New("the API key must be restricted to a workspace")
+				return nil, errors.New("the MCP key must be restricted to a workspace")
 			}
 			ws, err := org.Workspace(workspaceID)
 			if err != nil {
@@ -214,7 +215,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			apiToken, err := apiTokenFromCtx(ctx)
+			mcpToken, err := mcpTokenFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -222,16 +223,16 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			organizationID, workspaceID, found := core.APIKey(apiToken)
+			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
 			if !found {
-				return nil, errors.New("invalid API key")
+				return nil, errors.New("invalid MCP key")
 			}
 			org, err := core.Organization(ctx, organizationID)
 			if err != nil {
 				return nil, err
 			}
 			if workspaceID == 0 {
-				return nil, errors.New("the API key must be restricted to a workspace")
+				return nil, errors.New("the MCP key must be restricted to a workspace")
 			}
 			ws, err := org.Workspace(workspaceID)
 			if err != nil {
@@ -277,7 +278,7 @@ var tools = []server.ServerTool{
 			mcp.WithIdempotentHintAnnotation(false),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-			apiToken, err := apiTokenFromCtx(ctx)
+			mcpToken, err := mcpTokenFromCtx(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -285,16 +286,16 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			organizationID, workspaceID, found := core.APIKey(apiToken)
+			organizationID, workspaceID, found := core.AccessKey(mcpToken, _core.AccessKeyTypeMCP)
 			if !found {
-				return nil, errors.New("invalid API key")
+				return nil, errors.New("invalid MCP key")
 			}
 			org, err := core.Organization(ctx, organizationID)
 			if err != nil {
 				return nil, err
 			}
 			if workspaceID == 0 {
-				return nil, errors.New("the API key must be restricted to a workspace")
+				return nil, errors.New("the MCP key must be restricted to a workspace")
 			}
 			ws, err := org.Workspace(workspaceID)
 			if err != nil {

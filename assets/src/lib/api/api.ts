@@ -25,7 +25,7 @@ import Workspace, {
 	PrimarySources,
 } from './types/workspace';
 import {
-	APIKeyResponse,
+	AccessKeyResponse,
 	ActionErrorsResponse,
 	ActionSchemasResponse,
 	AppUsersResponse,
@@ -33,7 +33,7 @@ import {
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
 	ConnectorUIResponse,
-	CreateAPIKeyResponse,
+	CreateAccessKeyResponse,
 	CreateEventListenerResponse,
 	Event,
 	EventListenerEventsResponse,
@@ -57,6 +57,7 @@ import {
 	authCodeURLResponse,
 	userTraitsResponse,
 } from './types/responses';
+import { AccessKeyType } from './types/organization';
 
 const API_BASE_PATH = '/api/v1';
 
@@ -211,24 +212,29 @@ class API {
 		return await call(`${this.apiURL}/members/${member}`, http.DELETE, this.workspaceID);
 	};
 
-	keys = async (): Promise<APIKeyResponse> => {
+	keys = async (): Promise<AccessKeyResponse> => {
 		return await call(`${this.apiURL}/keys`, http.GET, this.workspaceID);
 	};
 
-	createAPIKey = async (name: string, workspace: number | null): Promise<CreateAPIKeyResponse> => {
+	createAccessKey = async (
+		name: string,
+		workspace: number | null,
+		type: AccessKeyType,
+	): Promise<CreateAccessKeyResponse> => {
 		return await call(`${this.apiURL}/keys`, http.POST, this.workspaceID, {
 			name,
 			workspace,
+			type,
 		});
 	};
 
-	updateAPIKey = async (key: number, name: string): Promise<void> => {
+	updateAccessKey = async (key: number, name: string): Promise<void> => {
 		return await call(`${this.apiURL}/keys/${encodeURIComponent(key)}`, http.PUT, this.workspaceID, {
 			name,
 		});
 	};
 
-	deleteAPIKey = async (key: number): Promise<void> => {
+	deleteAccessKey = async (key: number): Promise<void> => {
 		return await call(`${this.apiURL}/keys/${encodeURIComponent(key)}`, http.DELETE, this.workspaceID);
 	};
 }

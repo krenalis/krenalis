@@ -36,7 +36,7 @@ const ROUTE_PATTERNS = [
 	'/organization/members/current',
 	'/organization/members/add',
 	'/organization/members',
-	'/organization/api-keys',
+	'/organization/access-keys',
 ];
 
 const REQUEST_SENSITIVE_QUERIES = ['authCode', 'redirectURI', 'filter'];

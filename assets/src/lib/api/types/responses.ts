@@ -1,5 +1,6 @@
 import { ActionError } from './action';
 import { ConnectorInfo } from './connector';
+import { AccessKey } from './organization';
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
 import { UserEvent, UserIdentity, UserTraits } from './user';
@@ -153,19 +154,11 @@ interface MemberInvitationResponse {
 	organization: string;
 }
 
-interface APIKey {
-	id: number;
-	workspace: number | null;
-	name: string;
-	token: string;
-	createdAt: string;
+interface AccessKeyResponse {
+	keys: AccessKey[];
 }
 
-interface APIKeyResponse {
-	keys: APIKey[];
-}
-
-interface CreateAPIKeyResponse {
+interface CreateAccessKeyResponse {
 	id: number;
 	token: string;
 }
@@ -202,9 +195,9 @@ export type {
 	MemberAvatar,
 	MemberInvitationResponse,
 	MemberToSet,
-	APIKey,
-	APIKeyResponse,
-	CreateAPIKeyResponse,
+	AccessKey,
+	AccessKeyResponse,
+	CreateAccessKeyResponse,
 	PreviewSendEventResponse,
 	PreviewAlterUserSchemaResponse,
 	RePaths,

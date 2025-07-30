@@ -43,11 +43,14 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE api_keys (
+CREATE TYPE access_key_type AS ENUM ('API', 'MCP');
+
+CREATE TABLE access_keys (
     id integer NOT NULL,
     organization integer NOT NULL REFERENCES organizations ON DELETE CASCADE,
     workspace integer REFERENCES workspaces ON DELETE CASCADE,
     name varchar(100) NOT NULL,
+    type access_key_type NOT NULL,
     token varchar(43) NOT NULL UNIQUE,
     created_at timestamp(0) NOT NULL,
     PRIMARY KEY (id)
@@ -257,12 +260,12 @@ CREATE TABLE accounts (
 CREATE INDEX ON accounts (connector);
 
 CREATE TYPE notification_name AS ENUM (
-    'CreateAPIKey',
+    'CreateAccessKey',
     'CreateAction',
     'CreateConnection',
     'CreateEventWriteKey',
     'CreateWorkspace',
-    'DeleteAPIKey',
+    'DeleteAccessKey',
     'DeleteAction',
     'DeleteConnection',
     'DeleteEventWriteKey',

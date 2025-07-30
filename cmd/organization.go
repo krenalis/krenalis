@@ -65,28 +65,29 @@ func (organization organization) AddMember(_ http.ResponseWriter, r *http.Reques
 	return nil, err
 }
 
-// APIKeys returns the API keys of an organization.
-func (organization organization) APIKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
+// AccessKeys returns the access keys of an organization.
+func (organization organization) AccessKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
 	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
-	keys, err := org.APIKeys(r.Context())
+	keys, err := org.AccessKeys(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	return map[string][]*core.APIKey{"keys": keys}, nil
+	return map[string][]*core.AccessKey{"keys": keys}, nil
 }
 
-// CreateAPIKey creates a new API key for an organization.
-func (organization organization) CreateAPIKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+// CreateAccessKey creates a new access key for an organization.
+func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
 	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
 	var body struct {
-		Name      string `json:"name"`
-		Workspace *int   `json:"workspace"`
+		Name      string              `json:"name"`
+		Workspace *int                `json:"workspace"`
+		Type      *core.AccessKeyType `json:"type"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
@@ -99,7 +100,10 @@ func (organization organization) CreateAPIKey(_ http.ResponseWriter, r *http.Req
 		}
 		workspace = *body.Workspace
 	}
-	id, token, err := org.CreateAPIKey(r.Context(), body.Name, workspace)
+	if body.Type == nil {
+		return nil, errors.BadRequest("access key type is required")
+	}
+	id, token, err := org.CreateAccessKey(r.Context(), body.Name, workspace, *body.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -142,8 +146,8 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	return map[string]int{"id": id}, nil
 }
 
-// DeleteAPIKey deletes an API key of an organization.
-func (organization organization) DeleteAPIKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+// DeleteAccessKey deletes an access key of an organization.
+func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
 	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
@@ -152,7 +156,7 @@ func (organization organization) DeleteAPIKey(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	err = org.DeleteAPIKey(r.Context(), key)
+	err = org.DeleteAccessKey(r.Context(), key)
 	return nil, err
 }
 
@@ -229,8 +233,8 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	return nil, err
 }
 
-// UpdateAPIKey updates the name of an API key for an organization.
-func (organization organization) UpdateAPIKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateAccessKey updates the name of an access key for an organization.
+func (organization organization) UpdateAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
 	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
@@ -246,7 +250,7 @@ func (organization organization) UpdateAPIKey(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = org.UpdateAPIKey(r.Context(), key, body.Name)
+	err = org.UpdateAccessKey(r.Context(), key, body.Name)
 	return nil, err
 }
 

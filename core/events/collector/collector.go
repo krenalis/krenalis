@@ -309,8 +309,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 		if len(token) == 43 {
 			// Authenticate with the API key in the header.
-			key, ok := c.state.APIKeyByToken(token)
-			if !ok {
+			key, ok := c.state.AccessKeyByToken(token)
+			if !ok || key.Type != state.AccessKeyTypeAPI {
 				return errors.Unauthorized(`the API key in the Authorization header does not exist`)
 			}
 			if header, ok := r.Header["Meergo-Workspace"]; ok {

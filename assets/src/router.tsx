@@ -34,7 +34,7 @@ import { Schema } from './components/routes/Schema/Schema';
 import { SchemaEditWrapper } from './components/routes/SchemaEdit/SchemaEditWrapper';
 import { WorkspaceCreate } from './components/routes/WorkspaceCreate/WorkspaceCreate';
 import { WorkspacesWrapper } from './components/routes/WorkspacesWrapper/WorkspacesWrapper';
-import { APIKeys } from './components/routes/APIKeys/APIKeys';
+import { AccessKeys } from './components/routes/AccessKeys/AccessKeys';
 import { ResetPassword } from './components/routes/ResetPassword/ResetPassword';
 import { ResetPasswordToken } from './components/routes/ResetPasswordToken/ResetPasswordToken';
 
@@ -147,8 +147,8 @@ const router = createBrowserRouter([
 								element: <Members />,
 							},
 							{
-								path: 'api-keys',
-								element: <APIKeys />,
+								path: 'access-keys',
+								element: <AccessKeys />,
 							},
 						],
 					},

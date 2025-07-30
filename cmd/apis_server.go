@@ -190,7 +190,7 @@ func (s *apisServer) credentials(r *http.Request) (*core.Organization, *core.Wor
 		if !found || token == "" {
 			return nil, nil, errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_API_KEY>'.")
 		}
-		organizationID, workspaceID, found := s.core.APIKey(token)
+		organizationID, workspaceID, found := s.core.AccessKey(token, core.AccessKeyTypeAPI)
 		if !found {
 			return nil, nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
 		}

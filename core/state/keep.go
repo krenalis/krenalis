@@ -59,8 +59,8 @@ func (state *State) keep() {
 		}
 		state.changing.Lock()
 		switch n.Name {
-		case "CreateAPIKey":
-			state.createAPIKey(n)
+		case "CreateAccessKey":
+			state.createAccessKey(n)
 		case "CreateAction":
 			state.createAction(n)
 		case "CreateConnection":
@@ -69,8 +69,8 @@ func (state *State) keep() {
 			state.createWorkspace(n)
 		case "CreateEventWriteKey":
 			state.createEventWriteKey(n)
-		case "DeleteAPIKey":
-			state.deleteAPIKey(n)
+		case "DeleteAccessKey":
+			state.deleteAccessKey(n)
 		case "DeleteAction":
 			state.deleteAction(n)
 		case "DeleteConnection":
@@ -260,27 +260,29 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 	return ww
 }
 
-// CreateAPIKey is the event sent when an API key is created.
-type CreateAPIKey struct {
+// CreateAccessKey is the event sent when an access key is created.
+type CreateAccessKey struct {
 	ID           int
 	Organization int
 	Workspace    int
+	Type         AccessKeyType
 	Token        string
 }
 
-// createAPIKey creates an API key.
-func (state *State) createAPIKey(n notification) {
-	e := CreateAPIKey{}
+// createAccessKey creates an access key.
+func (state *State) createAccessKey(n notification) {
+	e := CreateAccessKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
-	key := APIKey{
+	key := AccessKey{
 		ID:           e.ID,
 		Organization: e.Organization,
 		Workspace:    e.Workspace,
+		Type:         e.Type,
 	}
 	state.mu.Lock()
-	state.apiKeyByToken[e.Token] = &key
+	state.accessKeyByToken[e.Token] = &key
 	state.mu.Unlock()
 }
 
@@ -543,21 +545,21 @@ func (state *State) createEventWriteKey(n notification) {
 	state.mu.Unlock()
 }
 
-// DeleteAPIKey is the event sent when an API key is deleted.
-type DeleteAPIKey struct {
+// DeleteAccessKey is the event sent when an access key is deleted.
+type DeleteAccessKey struct {
 	ID int
 }
 
-// deleteAPIKey deletes an API key.
-func (state *State) deleteAPIKey(n notification) {
-	e := DeleteAPIKey{}
+// deleteAccessKey deletes an access key.
+func (state *State) deleteAccessKey(n notification) {
+	e := DeleteAccessKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
 	state.mu.Lock()
-	for token, key := range state.apiKeyByToken {
+	for token, key := range state.accessKeyByToken {
 		if key.ID == e.ID {
-			delete(state.apiKeyByToken, token)
+			delete(state.accessKeyByToken, token)
 			break
 		}
 	}
