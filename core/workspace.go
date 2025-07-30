@@ -2060,7 +2060,7 @@ func (this *Workspace) RawQueryWarehouse(ctx context.Context, query string) ([][
 		return nil, errors.New("workspace not found")
 	}
 	if mcp == nil {
-		return nil, errors.New("the workspace does not have MCP settings configured")
+		return nil, errors.New("the workspace lacks the MCP (Model Context Protocol) user configuration required to access the data warehouse")
 	}
 	rows, err := mcp.RawQuery(ctx, query)
 	if err != nil {
