@@ -110,6 +110,72 @@ type psSettings struct {
 	Schema   string
 }
 
+// CheckReadOnlyAccess checks that the warehouse access is read-only, returning
+// a *WarehouseSettingsNotReadOnly error in case it is not, which may contain
+// additional details.
+func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
+
+	pool, err := warehouse.connectionPool(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Define the privileges not allowed for a read-only user (in the format for
+	// the 'has_table_privilege' function).
+	const disallowedPrivileges = `INSERT,UPDATE,DELETE,TRUNCATE`
+
+	// Retrieve the users table version.
+	userSchemaVersion, err := warehouse.usersVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Determine if there are tables on the data warehouse for which the current
+	// user has too many privileges.
+	tables := []string{
+		"_destinations_users",
+		"_operations",
+		"_user_identities",
+		"_user_schema_versions",
+		"events",
+		fmt.Sprintf("_users_%d", userSchemaVersion),
+	}
+	var canWriteOnTable []any
+	for range len(tables) {
+		var b bool
+		canWriteOnTable = append(canWriteOnTable, &b)
+	}
+	var query strings.Builder
+	query.WriteString("SELECT ")
+	for i, table := range tables {
+		if i > 0 {
+			query.WriteByte(',')
+		}
+		query.WriteString("has_table_privilege(")
+		quoteString(&query, table)
+		query.WriteString(", '" + disallowedPrivileges + "')")
+	}
+	err = pool.QueryRow(ctx, query.String()).Scan(canWriteOnTable...)
+	if err != nil {
+		return err
+	}
+	var tooPrivilegedTableNames []string
+	for i, canWrite := range canWriteOnTable {
+		if *canWrite.(*bool) {
+			tooPrivilegedTableNames = append(tooPrivilegedTableNames, tables[i])
+		}
+	}
+	if len(tooPrivilegedTableNames) > 0 {
+		return &meergo.WarehouseSettingsNotReadOnly{
+			Err: fmt.Errorf(
+				"the credentials should be read-only, but they allow write operations on the following Meergo tables: %s",
+				strings.Join(tooPrivilegedTableNames, ", "),
+			)}
+	}
+
+	return nil
+}
+
 // Close closes the data warehouse.
 func (warehouse *PostgreSQL) Close() error {
 	if warehouse.pool == nil {

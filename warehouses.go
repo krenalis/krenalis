@@ -154,6 +154,11 @@ type Warehouse interface {
 	// cannot be initialized.
 	CanInitialize(ctx context.Context) error
 
+	// CheckReadOnlyAccess checks that the warehouse access is read-only, returning
+	// a *WarehouseSettingsNotReadOnly error in case it is not, which may contain
+	// additional details.
+	CheckReadOnlyAccess(ctx context.Context) error
+
 	// Close closes the data warehouse. When Close is called, no other calls to
 	// data warehouse's methods are in progress and no more will be made.
 	Close() error
@@ -568,6 +573,16 @@ func (e *WarehouseSettingsError) Error() string {
 // fmt.Errorf(format, a...) error.
 func WarehouseSettingsErrorf(format string, a ...any) error {
 	return &WarehouseSettingsError{Err: fmt.Errorf(format, a...)}
+}
+
+// WarehouseSettingsNotReadOnly is an error that informs that the warehouse
+// settings that should be read only also have write access.
+type WarehouseSettingsNotReadOnly struct {
+	Err error
+}
+
+func (err *WarehouseSettingsNotReadOnly) Error() string {
+	return err.Err.Error()
 }
 
 // Expr represents a subset of SQL expressions.

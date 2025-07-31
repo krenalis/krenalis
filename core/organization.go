@@ -371,6 +371,8 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 // It returns an errors.UnprocessableError error with code:
 //
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
+//     read-only user on the data warehouse.
 //   - OrganizationNotExist, if the organization does not exist.
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
@@ -673,6 +675,8 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 // It returns an errors.UnprocessableError error with code:
 //
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
+//     read-only user on the data warehouse.
 //   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
@@ -832,6 +836,8 @@ func (this *Organization) Workspaces() []*Workspace {
 // It returns an errors.UnprocessableError error with code:
 //
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
+//     read-only user on the data warehouse.
 //   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
@@ -888,6 +894,16 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 			}
 			return nil, nil, err
 		}
+		err = this.core.datastore.CheckMCPSettings(ctx, whType, whMCPSettings)
+		if err != nil {
+			if err, ok := err.(*meergo.WarehouseSettingsNotReadOnly); ok {
+				return nil, nil, errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
+			}
+			if err, ok := err.(*datastore.UnavailableError); ok {
+				return nil, nil, errors.Unavailable("%s", err)
+			}
+			return nil, nil, err
+		}
 	}
 
 	// Check if the warehouse is initializable.
@@ -901,9 +917,6 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		}
 		return nil, nil, err
 	}
-
-	// TODO(Gianluca): do a more strict validation over the MCP settings, see
-	// the issue https://github.com/meergo/meergo/issues/1687.
 
 	return settings, whMCPSettings, nil
 }

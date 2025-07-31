@@ -38,6 +38,7 @@ const (
 	MaintenanceMode               errors.Code = "MaintenanceMode"
 	MemberEmailExists             errors.Code = "MemberEmailExists"
 	NoColumnsFound                errors.Code = "NoColumnsFound"
+	NotReadOnlyMCPSettings        errors.Code = "NotReadOnlyMCPSettings"
 	OperationAlreadyExecuting     errors.Code = "OperationAlreadyExecuting"
 	OrderNotExist                 errors.Code = "OrderNotExist"
 	OrderTypeNotSortable          errors.Code = "OrderTypeNotSortable"

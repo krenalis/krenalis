@@ -92,6 +92,24 @@ func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []
 	return dw.Close()
 }
 
+// CheckMCPSettings checks that the MCP settings are valid, that is it checks
+// that datastore's warehouse access with these settings is read-only (at least
+// on the Meergo tables), returning a *meergo.WarehouseSettingsNotReadOnly
+// error in case it is not, explaining the reason.
+func (ds *Datastore) CheckMCPSettings(ctx context.Context, name string, settings []byte) error {
+	ds.mustBeOpen()
+	dw, err := getWarehouseInstance(name, settings)
+	if err != nil {
+		return err
+	}
+	defer dw.Close()
+	err = dw.CheckReadOnlyAccess(ctx)
+	if err != nil {
+		return err
+	}
+	return dw.Close()
+}
+
 // Close closes the datastore. When Close is called, no other calls to
 // datastore's methods should be in progress and no other shall be made.
 // It panics if it has already been called.

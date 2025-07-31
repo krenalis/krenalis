@@ -16191,7 +16191,7 @@
                                     "kind": "Warehouse"
                                 },
                                 "nullable": true,
-                                "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen `null`, it means that the MCP server settings aren't configured, so the MCP tools cannot be used for this workspace."
+                                "description": "The read-only settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen `null`, it means that the MCP server settings aren't configured, so the MCP tools cannot be used for this workspace."
                             }
                         ]
                     },
@@ -16225,7 +16225,7 @@
                                 "kind": "Warehouse"
                             },
                             "nullable": true,
-                            "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen provided, it is highly recommended that these settings refer to a read-only access to the data warehouse; otherwise, the MCP client could perform destructive operations on the warehouse data.\n\nIf `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace."
+                            "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen provided, these settings must refer to a read-only access to the data warehouse; this is a security requirement to prevent the MCP client from performing destructive operations on the warehouse data by mistake.\n\nIf `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace."
                         },
                         {
                             "name": "mode",
@@ -16266,6 +16266,11 @@
                             "status": 422,
                             "code": "InvalidWarehouseSettings",
                             "message": "data warehouse settings are not valid"
+                        },
+                        {
+                            "status": 422,
+                            "code": "NotReadOnlyMCPSettings",
+                            "message": "warehouse MCP settings are not read-only"
                         }
                     ]
                 },
@@ -16291,7 +16296,7 @@
                                 "kind": "Warehouse"
                             },
                             "nullable": true,
-                            "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen provided, it is highly recommended that these settings refer to a read-only access to the data warehouse; otherwise, the MCP client could perform destructive operations on the warehouse data.\n\nIf `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace."
+                            "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen provided, these settings must refer to a read-only access to the data warehouse; this is a security requirement to prevent the MCP client from performing destructive operations on the warehouse data by mistake.\n\nIf `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace."
                         }
                     ],
                     "moreParameters": null,
@@ -16311,6 +16316,11 @@
                             "status": 422,
                             "code": "InvalidWarehouseSettings",
                             "message": "data warehouse settings are not valid"
+                        },
+                        {
+                            "status": 422,
+                            "code": "NotReadOnlyMCPSettings",
+                            "message": "warehouse MCP settings are not read-only"
                         }
                     ]
                 },
@@ -16487,7 +16497,7 @@
                                             "kind": "Warehouse"
                                         },
                                         "nullable": true,
-                                        "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen provided, it is highly recommended that these settings refer to a read-only access to the data warehouse; otherwise, the MCP client could perform destructive operations on the warehouse data.\n\nIf `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace."
+                                        "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen provided, these settings must refer to a read-only access to the data warehouse; this is a security requirement to prevent the MCP client from performing destructive operations on the warehouse data by mistake.\n\nIf `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace."
                                     }
                                 ]
                             },
@@ -16580,6 +16590,11 @@
                             "status": 422,
                             "code": "WarehouseNonInitializable",
                             "message": "data warehouse cannot be initialized"
+                        },
+                        {
+                            "status": 422,
+                            "code": "NotReadOnlyMCPSettings",
+                            "message": "warehouse MCP settings are not read-only"
                         }
                     ]
                 },
@@ -16652,7 +16667,7 @@
                                             "kind": "Warehouse"
                                         },
                                         "nullable": true,
-                                        "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen provided, it is highly recommended that these settings refer to a read-only access to the data warehouse; otherwise, the MCP client could perform destructive operations on the warehouse data.\n\nIf `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace."
+                                        "description": "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\nWhen provided, these settings must refer to a read-only access to the data warehouse; this is a security requirement to prevent the MCP client from performing destructive operations on the warehouse data by mistake.\n\nIf `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace."
                                     }
                                 ]
                             },
@@ -16731,6 +16746,11 @@
                             "status": 422,
                             "code": "WarehouseNonInitializable",
                             "message": "data warehouse cannot be initialized"
+                        },
+                        {
+                            "status": 422,
+                            "code": "NotReadOnlyMCPSettings",
+                            "message": "warehouse MCP settings are not read-only"
                         }
                     ]
                 },

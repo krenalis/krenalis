@@ -1292,6 +1292,8 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
+//   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
+//     read-only user on the data warehouse.
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings []byte) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
@@ -1310,6 +1312,16 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 			}
 			return err
 		}
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Type, mcpSettings)
+		if err != nil {
+			if err, ok := err.(*meergo.WarehouseSettingsNotReadOnly); ok {
+				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
+			}
+			if err, ok := err.(*datastore.UnavailableError); ok {
+				return errors.Unavailable("%s", err)
+			}
+			return err
+		}
 	}
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
@@ -1321,8 +1333,6 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		}
 		return err
 	}
-	// TODO(Gianluca): do a more strict validation over the MCP settings, see
-	// the issue https://github.com/meergo/meergo/issues/1687.
 	return nil
 }
 
@@ -1506,6 +1516,8 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 //
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
+//   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
+//     read-only user on the data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
 func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings, mcpSettings []byte, cancelIncompatibleOperations bool) error {
 	this.core.mustBeOpen()
@@ -1532,6 +1544,16 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if err != nil {
 			if err, ok := err.(*meergo.WarehouseSettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
+			}
+			return err
+		}
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Type, mcpSettings)
+		if err != nil {
+			if err, ok := err.(*meergo.WarehouseSettingsNotReadOnly); ok {
+				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
+			}
+			if err, ok := err.(*datastore.UnavailableError); ok {
+				return errors.Unavailable("%s", err)
 			}
 			return err
 		}

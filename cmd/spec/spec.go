@@ -131,6 +131,7 @@ const (
 	MaintenanceMode               = "MaintenanceMode"
 	MemberEmailExists             = "MemberEmailExists"
 	NoColumnsFound                = "NoColumnsFound"
+	NotReadOnlyMCPSettings        = "NotReadOnlyMCPSettings"
 	OperationAlreadyExecuting     = "OperationAlreadyExecuting"
 	OrderNotExist                 = "OrderNotExist"
 	OrderTypeNotSortable          = "OrderTypeNotSortable"

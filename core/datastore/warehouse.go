@@ -33,7 +33,8 @@ func unavailableError(err error) error {
 	case
 		*meergo.OperationError,
 		*meergo.WarehouseNonInitializableError,
-		*meergo.WarehouseSettingsError:
+		*meergo.WarehouseSettingsError,
+		*meergo.WarehouseSettingsNotReadOnly:
 		return err
 	}
 	return &UnavailableError{Err: err}
@@ -65,6 +66,10 @@ func (dw warehouse) AlterUserSchema(ctx context.Context, opID string, columns []
 
 func (dw warehouse) CanInitialize(ctx context.Context) error {
 	return unavailableError(dw.inner.CanInitialize(ctx))
+}
+
+func (dw warehouse) CheckReadOnlyAccess(ctx context.Context) error {
+	return unavailableError(dw.inner.CheckReadOnlyAccess(ctx))
 }
 
 func (dw warehouse) Close() error {

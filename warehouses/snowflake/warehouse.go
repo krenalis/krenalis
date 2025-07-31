@@ -116,6 +116,14 @@ type sfSettings struct {
 	Role      string
 }
 
+// CheckReadOnlyAccess checks that the warehouse access is read-only, returning
+// a *WarehouseSettingsNotReadOnly error in case it is not, which may contain
+// additional details.
+func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
+	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1693.
+	return errors.New("the read-only access check is currently not implemented in Snowflake")
+}
+
 // Close closes the data warehouse.
 func (warehouse *Snowflake) Close() error {
 	if warehouse.db == nil {

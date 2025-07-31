@@ -37,7 +37,7 @@ func init() {
 		Type:        types.Parameter("Warehouse"),
 		Placeholder: "{...}",
 		Nullable:    true,
-		Description: "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\n" +
+		Description: "The read-only settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\n" +
 			"When `null`, it means that the MCP server settings aren't configured, so the MCP tools cannot be used for this workspace.",
 	}
 	postMCPSettingsParameter := types.Property{
@@ -46,7 +46,7 @@ func init() {
 		Placeholder: "{...}",
 		Nullable:    true,
 		Description: "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\n" +
-			"When provided, it is highly recommended that these settings refer to a read-only access to the data warehouse; otherwise, the MCP client could perform destructive operations on the warehouse data.\n\n" +
+			"When provided, these settings must refer to a read-only access to the data warehouse; this is a security requirement to prevent the MCP client from performing destructive operations on the warehouse data by mistake.\n\n" +
 			"If `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace.",
 	}
 
@@ -91,6 +91,7 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{422, DifferentWarehouse, "data warehouse is a different data warehouse"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
+					{422, NotReadOnlyMCPSettings, "warehouse MCP settings are not read-only"},
 				},
 			},
 			{
@@ -108,6 +109,7 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{422, DifferentWarehouse, "data warehouse is a different data warehouse"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
+					{422, NotReadOnlyMCPSettings, "warehouse MCP settings are not read-only"},
 				},
 			},
 			{
