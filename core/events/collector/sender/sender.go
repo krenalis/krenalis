@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/connectors/httpclient"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/types"
@@ -48,16 +49,18 @@ type Ack struct {
 // delivery.
 type AcksFunc func(acks []Ack, err error)
 
-// WaitTimeFunc is a function invoked by the sender to determine how long to
-// wait before starting an iteration, in order to reduce the risk of being
-// throttled by the rate limiter when sending an event.
-//
-// The suggested wait time is based on the rate limiter's state at the time of
-// the call, but there is no guarantee that the request won't still be limited.
-type WaitTimeFunc func(pattern string) (time.Duration, error)
+type App interface {
+	// WaitTime is a function invoked by the sender to determine how long to
+	// wait before starting an iteration, in order to reduce the risk of being
+	// throttled by the rate limiter when sending an event.
+	//
+	// The suggested wait time is based on the rate limiter's state at the time of
+	// the call, but there is no guarantee that the request won't still be limited.
+	WaitTime(pattern string) (time.Duration, error)
 
-// SendEventsFunc is a function that sends events to apps.
-type SendEventsFunc func(ctx context.Context, events meergo.Events) error
+	// SendEvents is a function that sends events to apps.
+	SendEvents(ctx context.Context, events meergo.Events) error
+}
 
 // maxQueueDelay is the maximum time an event can stay in the queue before being
 // sent. See also the Sender.minBatchSize field.
@@ -97,17 +100,17 @@ type Sender struct {
 	acks      AcksFunc // ack function.
 
 	mu                 sync.Mutex
-	waitTime           WaitTimeFunc       // function that returns an estimate of how long to wait before calling sendEvents.
-	sendEvents         SendEventsFunc     // function that sends the events to the app.
-	events             []*Event           // events in the queue; protected by mu.
-	users              map[string]*user   // users by anonymous id; protected by mu.
-	releasableUsers    map[*user]struct{} // users that have been iterated and are now ready to be released.
-	iterator           *iterator          // current iterator; protected by mu.
-	available          int                // number of available (non-read) records; protected by mu.
-	index              int                // index of the oldest available event; 0 if no event is available; protected by mu.
-	timer              *time.Timer        // timer to trigger an iterator every maxQueueDelay; protected by mu.
-	minBatchSize       int                // minimum number of events in the queue required to trigger a new iteration.
-	rateLimiterPattern string             // pattern of the rate limiter that defines how requests are throttled over time.
+	waitTime           func(pattern string) (time.Duration, error)           // function that returns an estimate of how long to wait before calling sendEvents.
+	sendEvents         func(ctx context.Context, events meergo.Events) error // function that sends the events to the app.
+	events             []*Event                                              // events in the queue; protected by mu.
+	users              map[string]*user                                      // users by anonymous id; protected by mu.
+	releasableUsers    map[*user]struct{}                                    // users that have been iterated and are now ready to be released.
+	iterator           *iterator                                             // current iterator; protected by mu.
+	available          int                                                   // number of available (non-read) records; protected by mu.
+	index              int                                                   // index of the oldest available event; 0 if no event is available; protected by mu.
+	timer              *time.Timer                                           // timer to trigger an iterator every maxQueueDelay; protected by mu.
+	minBatchSize       int                                                   // minimum number of events in the queue required to trigger a new iteration.
+	rateLimiterPattern string                                                // pattern of the rate limiter that defines how requests are throttled over time.
 
 	close struct {
 		closed    atomic.Bool        // indicates if the writer has been closed.
@@ -122,11 +125,11 @@ type Sender struct {
 // function used to estimate how long to wait before sending a batch of events,
 // sendEvents is the function that sends the events to the app, and acks
 // acknowledges both successes and failures.
-func New(connector string, waitTime WaitTimeFunc, sendEvents SendEventsFunc, acks AcksFunc) *Sender {
+func New(connector string, app App, acks AcksFunc) *Sender {
 	s := &Sender{
 		connector:       connector,
-		waitTime:        waitTime,
-		sendEvents:      sendEvents,
+		waitTime:        app.WaitTime,
+		sendEvents:      app.SendEvents,
 		acks:            acks,
 		events:          make([]*Event, 0, 1000),
 		users:           make(map[string]*user, 1000),
@@ -301,11 +304,11 @@ func (s *Sender) QueueEvent(event *Event) {
 	s.queueOrDiscardEvent(event, false)
 }
 
-// SetFunc replaces the waitTime and sendEvents functions.
-func (s *Sender) SetFunc(waitTime WaitTimeFunc, sendEvents SendEventsFunc) {
+// SetApp replaces the aap.
+func (s *Sender) SetApp(app *connectors.App) {
 	s.mu.Lock()
-	s.waitTime = waitTime
-	s.sendEvents = sendEvents
+	s.waitTime = app.WaitTime
+	s.sendEvents = app.SendEvents
 	s.mu.Unlock()
 }
 

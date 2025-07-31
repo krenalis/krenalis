@@ -27,6 +27,17 @@ import (
 	"github.com/google/uuid"
 )
 
+// nopApp is a no-op App that returns zero wait time and skips sending events.
+type nopApp struct{}
+
+func (nopApp) WaitTime(string) (time.Duration, error) {
+	return 0, nil
+}
+
+func (nopApp) SendEvents(context.Context, meergo.Events) error {
+	return nil
+}
+
 func Test_newStoppedTimer(t *testing.T) {
 	tm := newStoppedTimer()
 	select {
@@ -39,10 +50,8 @@ func Test_newStoppedTimer(t *testing.T) {
 	}
 }
 
-func zeroWaitTime(string) (time.Duration, error) { return 0, nil }
-
 func Test_CreateEvent_DeterministicID(t *testing.T) {
-	s := New("test", zeroWaitTime, func(context.Context, meergo.Events) error { return nil }, func([]Ack, error) {})
+	s := New("test", nopApp{}, func([]Ack, error) {})
 	src1 := rand.NewPCG(1, ^uint64(1))
 	src2 := rand.NewPCG(1, ^uint64(1))
 	e1 := s.CreateEvent(0, "t", types.Type{}, events.Event{"anonymousId": "u"}, src1)
@@ -59,7 +68,7 @@ func Test_CreateEvent_DeterministicID(t *testing.T) {
 }
 
 func Test_iterator_invalidUsage(t *testing.T) {
-	s := New("test", zeroWaitTime, func(context.Context, meergo.Events) error { return nil }, func([]Ack, error) {})
+	s := New("test", nopApp{}, func([]Ack, error) {})
 	expectPanic := func(f func()) {
 		defer func() {
 			if r := recover(); r == nil {
@@ -163,7 +172,7 @@ func Test_Sender(t *testing.T) {
 			rng := rand.New(src)
 
 			app := newApp(t, test.seed)
-			s := New("test", zeroWaitTime, app.SendEvents, app.ack)
+			s := New("test", app, app.ack)
 
 			ctx := context.Background()
 
@@ -457,4 +466,8 @@ func (app *app) validateEvent(e *meergo.Event) {
 	if e.Received == nil {
 		app.t.Fatal("SendEvents: expected non-nil received event, got nil")
 	}
+}
+
+func (app *app) WaitTime(string) (time.Duration, error) {
+	return 0, nil
 }

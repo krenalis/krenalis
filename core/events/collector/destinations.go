@@ -78,7 +78,7 @@ func newDestinations(st *state.State, connectors *connectors.Connectors, provide
 			continue
 		}
 		app := connectors.App(c)
-		sender := sender.New(c.Connector().Name, app.WaitTime, app.SendEvents, d.sentAcks)
+		sender := sender.New(c.Connector().Name, app, d.sentAcks)
 		actions := make([]*destinationAction, 0, 1)
 		// Keeps all actions active on the connection's events.
 		for _, a := range c.Actions() {
@@ -189,7 +189,7 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 		return
 	}
 	app := d.connectors.App(c)
-	d.senders[n.ID] = sender.New(connector.Name, app.WaitTime, app.SendEvents, d.sentAcks)
+	d.senders[n.ID] = sender.New(connector.Name, app, d.sentAcks)
 	actions := make([]*destinationAction, 0, 1)
 	d.mu.Lock()
 	d.actions[n.ID] = actions
@@ -318,7 +318,7 @@ func (d *destinations) onSetConnectionSettings(n state.SetConnectionSettings) {
 	}
 	connection, _ := d.state.Connection(n.Connection)
 	app := d.connectors.App(connection)
-	sender.SetFunc(app.WaitTime, app.SendEvents)
+	sender.SetApp(app)
 }
 
 // onUpdateAction is called when an action is updated.
