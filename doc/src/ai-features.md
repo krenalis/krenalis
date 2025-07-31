@@ -46,6 +46,48 @@ Meergo's exposed MCP server currently allows to:
 
 More will be implemented in the future.
 
+## Create a read-only user for PostgreSQL
+
+The MCP server requires a read-only user for accessing the data warehouse.
+
+So, for example, to create an user called `foo_ro` to for the MCP server to access the warehouse called `warehouse`:
+
+1. Open a PostgreSQL shell into `warehouse`, for example:
+  
+  ```bash
+  psql warehouse
+  ```
+
+2. Create the `foo_ro` user:
+
+  ```sql
+  CREATE USER foo_ro WITH PASSWORD 'strong_password';
+  ```
+
+3. Grant the database `warehouse` connection to `foo_ro`:
+
+  ```sql
+  GRANT CONNECT ON DATABASE warehouse TO foo_ro;
+  ```
+
+4. Grant the access to the warehouse schema (eg. `public`):
+
+  ```sql
+  GRANT USAGE ON SCHEMA public TO foo_ro;
+  ```
+
+5. Let `foo_ro` run `SELECT` queries on every table in the schema:
+
+  ```sql
+  GRANT SELECT ON ALL TABLES IN SCHEMA public TO foo_ro;
+  ```
+
+6. Set default permissions for future tables created in the warehouse schema for `foo_ro`:
+
+  ```sql
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO foo_ro;
+  ```
+
 ## Example interaction with Meergo using **fast-agent**
 
 This example assumes the use of **fast-agent** as the LLM application to connect to an **OpenAI** model and to Meergo's MCP.
