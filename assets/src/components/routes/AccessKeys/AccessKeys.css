@@ -21,6 +21,7 @@
 	justify-content: space-between;
 	align-items: end;
 	margin-top: 20px;
+	gap: 30px;
 }
 
 .access-keys__title--mcp {
@@ -50,6 +51,18 @@
 
 .access-keys__grid-any-workspace {
 	color: var(--sl-color-neutral-400);
+}
+
+.access-keys__grid-learn-more {
+	color: #333;
+	margin: 15px auto 0 auto;
+	text-align: center;
+	font-size: 14px;
+}
+
+.access-keys__grid-learn-more a {
+	color: var(--color-primary-500);
+	text-decoration: underline;
 }
 
 .access-keys__dialog--copy::part(close-button) {

@@ -303,18 +303,6 @@ sl-dialog::part(body) {
 	min-height: calc(100vh - 140px);
 }
 
-.grid-learn-more {
-	color: #333;
-	margin: 20px auto;
-	text-align: center;
-	font-size: 14px;
-}
-
-.grid-learn-more a {
-	color: var(--color-primary-500);
-	text-decoration: underline;
-}
-
 /* || Tab panels */
 
 sl-tab-group::part(body) {

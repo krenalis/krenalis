@@ -186,7 +186,13 @@ const AccessKeys = () => {
 					noRowsMessage='No API keys to show'
 					isLoading={isLoadingAPIKeys}
 				/>
-				<SlDivider style={{ '--spacing': '40px' } as React.CSSProperties} />
+				<div className='access-keys__grid-learn-more'>
+					Learn more about{' '}
+					<a href='http://localhost:8080/api/authentication' target='_blank'>
+						API keys
+					</a>
+				</div>
+				<SlDivider style={{ '--spacing': '30px' } as React.CSSProperties} />
 				<div className='access-keys__title access-keys__title--mcp'>
 					<p className='access-keys__title-text'>MCP keys</p>
 					<SlButton size='small' variant='primary' onClick={() => setIsCreatingMCPKey(true)}>
@@ -200,6 +206,12 @@ const AccessKeys = () => {
 					noRowsMessage='No MCP keys to show'
 					isLoading={isLoadingMCPKeys}
 				/>
+				<div className='access-keys__grid-learn-more'>
+					Learn more about{' '}
+					<a href='http://localhost:8080/ai-features#mcp-server-details' target='_blank'>
+						Model Context Protocol
+					</a>
+				</div>
 				<AlertDialog
 					variant='danger'
 					isOpen={accessKeyToDelete != null}
