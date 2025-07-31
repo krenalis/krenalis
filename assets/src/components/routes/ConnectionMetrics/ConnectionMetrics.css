@@ -162,11 +162,6 @@
 .connection-metrics__errors .grid a {
 	color: var(--sl-color-primary-600);
 	text-decoration: underline;
-	font-weight: 500;
-}
-
-.connection-metrics__errors .grid .grid__row .grid__cell:last-child .grid__cell-content {
-	font-weight: 500;
 }
 
 .connection-metrics__funnel {

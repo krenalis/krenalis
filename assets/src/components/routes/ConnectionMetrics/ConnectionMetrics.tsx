@@ -49,7 +49,7 @@ const ERRORS_COLUMNS: GridColumn[] = [
 	{ name: 'Step' },
 	{ name: 'Count', alignment: 'center' },
 	{ name: 'Last occurred' },
-	{ name: 'Error' },
+	{ name: 'Error', type: 'html' },
 ];
 
 const STEP_NAMES: string[] = [
@@ -647,6 +647,12 @@ const ConnectionMetrics = () => {
 };
 
 const computeActionErrorRows = (connection: TransformedConnection, actionErrors: ActionError[]): GridRow[] => {
+	const quotedTextToCode = (input: string): string => {
+		const style = 'background:#eee; padding: 2px 8px; border-radius: 6px; font-size:12px;';
+		return input.replace(/«(.*?)»/g, (_, content) => {
+			return `<code style="${style}">${content}</code>`;
+		});
+	};
 	if (actionErrors == null) {
 		return null;
 	}
@@ -660,7 +666,7 @@ const computeActionErrorRows = (connection: TransformedConnection, actionErrors:
 				STEP_NAMES[error.step],
 				formatNumber(error.count),
 				<RelativeTime date={error.lastOccurred} />,
-				error.message,
+				quotedTextToCode(error.message),
 			],
 		};
 		actionErrorRows.push(row);
