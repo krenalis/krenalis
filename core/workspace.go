@@ -1305,7 +1305,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		return err
 	}
 	if mcpSettings != nil {
-		_, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*meergo.WarehouseSettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
