@@ -32,6 +32,7 @@ require (
 	github.com/mark3labs/mcp-go v0.36.0
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/pkg/sftp v1.13.9
+	github.com/prometheus/client_golang v1.22.0
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.6.0
 	github.com/segmentio/backo-go v1.1.0
@@ -82,9 +83,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.13 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.12 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.2 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -131,6 +134,7 @@ require (
 	github.com/moby/term v0.5.0 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/paulmach/orb v0.11.1 // indirect
@@ -139,6 +143,9 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
+	github.com/prometheus/client_model v0.6.1 // indirect
+	github.com/prometheus/common v0.62.0 // indirect
+	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect

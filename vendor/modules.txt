@@ -261,6 +261,9 @@ github.com/aws/smithy-go/waiter
 # github.com/bahlo/generic-list-go v0.2.0
 ## explicit; go 1.18
 github.com/bahlo/generic-list-go
+# github.com/beorn7/perks v1.0.1
+## explicit; go 1.11
+github.com/beorn7/perks/quantile
 # github.com/buger/jsonparser v1.1.1
 ## explicit; go 1.13
 github.com/buger/jsonparser
@@ -270,6 +273,9 @@ github.com/cenkalti/backoff/v4
 # github.com/cenkalti/backoff/v5 v5.0.2
 ## explicit; go 1.23
 github.com/cenkalti/backoff/v5
+# github.com/cespare/xxhash/v2 v2.3.0
+## explicit; go 1.11
+github.com/cespare/xxhash/v2
 # github.com/containerd/errdefs v1.0.0
 ## explicit; go 1.20
 github.com/containerd/errdefs
@@ -572,6 +578,9 @@ github.com/morikuni/aec
 # github.com/mtibben/percent v0.2.1
 ## explicit; go 1.14
 github.com/mtibben/percent
+# github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+## explicit
+github.com/munnerz/goautoneg
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
@@ -609,6 +618,22 @@ github.com/pmezard/go-difflib/difflib
 # github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c
 ## explicit; go 1.14
 github.com/power-devops/perfstat
+# github.com/prometheus/client_golang v1.22.0
+## explicit; go 1.22
+github.com/prometheus/client_golang/prometheus
+github.com/prometheus/client_golang/prometheus/internal
+# github.com/prometheus/client_model v0.6.1
+## explicit; go 1.19
+github.com/prometheus/client_model/go
+# github.com/prometheus/common v0.62.0
+## explicit; go 1.21
+github.com/prometheus/common/expfmt
+github.com/prometheus/common/model
+# github.com/prometheus/procfs v0.15.1
+## explicit; go 1.20
+github.com/prometheus/procfs
+github.com/prometheus/procfs/internal/fs
+github.com/prometheus/procfs/internal/util
 # github.com/rabbitmq/amqp091-go v1.10.0
 ## explicit; go 1.20
 github.com/rabbitmq/amqp091-go
@@ -1002,6 +1027,7 @@ google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # google.golang.org/protobuf v1.36.6
 ## explicit; go 1.22
+google.golang.org/protobuf/encoding/protodelim
 google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
