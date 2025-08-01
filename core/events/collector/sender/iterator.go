@@ -9,6 +9,7 @@ package sender
 
 import (
 	"iter"
+	"time"
 
 	"github.com/meergo/meergo"
 )
@@ -76,7 +77,7 @@ func (it *iterator) First() *meergo.Event {
 	if !ok {
 		panic("core/events/collector/sender: iterator has called Sender.read, but no events are available")
 	}
-	return event
+	return &event.Event
 }
 
 func (it *iterator) Peek() (*meergo.Event, bool) {
@@ -88,7 +89,7 @@ func (it *iterator) Peek() (*meergo.Event, bool) {
 	if !ok {
 		return nil, false
 	}
-	return event, true
+	return &event.Event, true
 }
 
 func (it *iterator) Postpone() {
@@ -136,12 +137,18 @@ func (it *iterator) seq() iter.Seq[*meergo.Event] {
 				trace("iterator.seq: iterator %p finished reading the events; no more are available\n", it)
 				break
 			}
-			if !yield(e) {
+			ok = yield(&e.Event)
+			if !it.postponed {
+				wait := time.Since(e.EnqueuedAt).Seconds()
+				it.sender.metrics.queueWait.Observe(wait)
+			}
+			if !ok {
 				trace("iterator.seq: iterator %p broke out of the loop while reading events\n", it)
 				break
 			}
 			it.firstEvent = false
 		}
+		it.sender.metrics.queueWait.Consolidate()
 		it.iterating = false
 		it.firstEvent = false
 		it.sender.complete()

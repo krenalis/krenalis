@@ -42,6 +42,7 @@ func (err *InvalidEventError) Error() string {
 // App represents the app of an app connection.
 type App struct {
 	connector   string
+	connection  int
 	role        state.Role
 	timeLayouts *state.TimeLayouts
 	httpClient  *httpclient.Client
@@ -78,6 +79,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 	}
 	app := &App{
 		connector:   connector.Name,
+		connection:  connection.ID,
 		role:        connection.Role,
 		timeLayouts: &connector.TimeLayouts,
 		httpClient:  connectors.http.ConnectionClient(connection),
@@ -98,6 +100,11 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		// WebhookURL:   webhookURL(connection, accountID), // TODO(marco): implement webhooks
 	})
 	return app
+}
+
+// Connection returns the ID of the app connection.
+func (app *App) Connection() int {
+	return app.connection
 }
 
 // Connector returns the name of the app connector.

@@ -30,6 +30,10 @@ import (
 // nopApp is a no-op App that returns zero wait time and skips sending events.
 type nopApp struct{}
 
+func (nopApp) Connection() int { return 1 }
+
+func (nopApp) Connector() string { return "nop" }
+
 func (nopApp) WaitTime(string) (time.Duration, error) {
 	return 0, nil
 }
@@ -51,7 +55,7 @@ func Test_newStoppedTimer(t *testing.T) {
 }
 
 func Test_CreateEvent_DeterministicID(t *testing.T) {
-	s := New("test", nopApp{}, func([]Ack, error) {})
+	s := New(nopApp{}, func([]Ack, error) {})
 	src1 := rand.NewPCG(1, ^uint64(1))
 	src2 := rand.NewPCG(1, ^uint64(1))
 	e1 := s.CreateEvent(0, "t", types.Type{}, events.Event{"anonymousId": "u"}, src1)
@@ -68,7 +72,7 @@ func Test_CreateEvent_DeterministicID(t *testing.T) {
 }
 
 func Test_iterator_invalidUsage(t *testing.T) {
-	s := New("test", nopApp{}, func([]Ack, error) {})
+	s := New(nopApp{}, func([]Ack, error) {})
 	expectPanic := func(f func()) {
 		defer func() {
 			if r := recover(); r == nil {
@@ -172,7 +176,7 @@ func Test_Sender(t *testing.T) {
 			rng := rand.New(src)
 
 			app := newApp(t, test.seed)
-			s := New("test", app, app.ack)
+			s := New(app, app.ack)
 
 			ctx := context.Background()
 
@@ -330,6 +334,14 @@ func (app *app) Acks() []ack {
 	acks := slices.Clone(app.acks)
 	app.mu.Unlock()
 	return acks
+}
+
+func (app *app) Connection() int {
+	return 1
+}
+
+func (app *app) Connector() string {
+	return "test"
 }
 
 func (app *app) Consumed() []string {

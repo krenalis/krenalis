@@ -14,6 +14,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"slices"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/connectors/httpclient"
 	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -50,6 +52,13 @@ type Ack struct {
 type AcksFunc func(acks []Ack, err error)
 
 type App interface {
+
+	// Connection returns the ID of the connection.
+	Connection() int
+
+	// Connector returns the name of the connector.
+	Connector() string
+
 	// WaitTime is a function invoked by the sender to determine how long to
 	// wait before starting an iteration, in order to reduce the risk of being
 	// throttled by the rate limiter when sending an event.
@@ -70,6 +79,7 @@ const maxQueueDelay = 200 * time.Millisecond
 type Event struct {
 	meergo.Event           // original event.
 	CreatedAt    time.Time // time at which the event was created.
+	EnqueuedAt   time.Time // time at which the event was enqueued.
 	action       int       // action ID.
 	user         *user     // associated user; nil if the event was discarded.
 	sequence     int       // sequence number; access is synchronized via Sender.mu.
@@ -99,6 +109,10 @@ type Sender struct {
 	connector string   // app connector.
 	acks      AcksFunc // ack function.
 
+	metrics struct {
+		queueWait *metrics.BufferedHistogram
+	}
+
 	mu                 sync.Mutex
 	waitTime           func(pattern string) (time.Duration, error)           // function that returns an estimate of how long to wait before calling sendEvents.
 	sendEvents         func(ctx context.Context, events meergo.Events) error // function that sends the events to the app.
@@ -125,9 +139,9 @@ type Sender struct {
 // function used to estimate how long to wait before sending a batch of events,
 // sendEvents is the function that sends the events to the app, and acks
 // acknowledges both successes and failures.
-func New(connector string, app App, acks AcksFunc) *Sender {
+func New(app App, acks AcksFunc) *Sender {
 	s := &Sender{
-		connector:       connector,
+		connector:       app.Connector(),
 		waitTime:        app.WaitTime,
 		sendEvents:      app.SendEvents,
 		acks:            acks,
@@ -158,7 +172,7 @@ func New(connector string, app App, acks AcksFunc) *Sender {
 				pattern = s.rateLimiterPattern
 			}
 			s.resetTimerLocked()
-			waitTime := s.waitTime
+			waitTime := app.WaitTime
 			s.mu.Unlock()
 			if iter == nil {
 				continue
@@ -176,7 +190,22 @@ func New(connector string, app App, acks AcksFunc) *Sender {
 			go s.send(iter, pattern)
 		}
 	}()
+	// Set the metrics.
+	labels := []string{s.connector, strconv.Itoa(app.Connection())}
+	s.metrics.queueWait = queueWaitMetric.LoadOrStore(labels)
+	queueAvailableMetric.LoadOrStore(labels, func() float64 {
+		s.mu.Lock()
+		a := s.available
+		s.mu.Unlock()
+		return float64(a)
+	})
 	return s
+}
+
+func (s *Sender) Available() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.available
 }
 
 // Close terminates the sender, ensuring that all events are processed before
@@ -498,6 +527,8 @@ func (s *Sender) queueOrDiscardEvent(event *Event, discard bool) {
 	}
 	if discard {
 		event.user = nil
+	} else {
+		event.EnqueuedAt = time.Now().UTC()
 	}
 	if asserts {
 		s._assertAvailable(s.available)
@@ -508,7 +539,7 @@ func (s *Sender) queueOrDiscardEvent(event *Event, discard bool) {
 // read reads an event from the queue. If consume is true, the event is removed;
 // otherwise, subsequent calls to read will return the same event.
 // consume indicates if the event should be consumed.
-func (s *Sender) read(consume bool) (*meergo.Event, bool) {
+func (s *Sender) read(consume bool) (*Event, bool) {
 	var event *Event
 	s.mu.Lock()
 	var i int
@@ -564,7 +595,7 @@ func (s *Sender) read(consume bool) (*meergo.Event, bool) {
 	if event == nil {
 		return nil, false
 	}
-	return &event.Event, true
+	return event, true
 }
 
 // releaseUsers releases the iterated users, making their events available
