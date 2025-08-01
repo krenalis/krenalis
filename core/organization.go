@@ -830,7 +830,7 @@ func (this *Organization) Workspaces() []*Workspace {
 
 // validateWorkspaceCreation validates the arguments for a workspace creation.
 // It tests that a warehouse with the provided name, settings and MCP settings
-// (which can be nl) can be initialized, and returns an error if the arguments
+// (which can be nil) can be initialized, and returns an error if the arguments
 // are not valid.
 //
 // It returns an errors.UnprocessableError error with code:
