@@ -729,6 +729,9 @@ func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Re
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.MCPSettings != nil && body.MCPSettings.IsNull() {
+		body.MCPSettings = nil
+	}
 	err = ws.TestWarehouseUpdate(r.Context(), body.Settings, body.MCPSettings)
 	return nil, err
 }
