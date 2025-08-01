@@ -32,6 +32,7 @@ import (
 	"github.com/meergo/meergo/opentelemetry"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const telemetryLevelErrors = core.TelemetryLevelErrors
@@ -240,8 +241,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
 			assets.ServeHTTP(w, r)
 			return
+		case r.URL.Path == "/metrics":
+			promhttp.Handler().ServeHTTP(w, r)
+			return
 		case metrics.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
 			expvar.Handler().ServeHTTP(w, r)
+			return
 		default:
 			http.NotFound(w, r)
 			return
