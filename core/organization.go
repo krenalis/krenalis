@@ -894,6 +894,9 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 			}
 			return nil, nil, err
 		}
+		if bytes.Equal(settings, whMCPSettings) {
+			return nil, nil, errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
+		}
 		err = this.core.datastore.CheckMCPSettings(ctx, whType, whMCPSettings)
 		if err != nil {
 			if err, ok := err.(*meergo.WarehouseSettingsNotReadOnly); ok {

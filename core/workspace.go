@@ -1312,6 +1312,9 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 			}
 			return err
 		}
+		if bytes.Equal(settings, mcpSettings) {
+			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
+		}
 		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Type, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*meergo.WarehouseSettingsNotReadOnly); ok {
@@ -1546,6 +1549,9 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return err
+		}
+		if bytes.Equal(settings, mcpSettings) {
+			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
 		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Type, mcpSettings)
 		if err != nil {
