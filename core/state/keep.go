@@ -298,7 +298,7 @@ type CreateAction struct {
 	SchedulePeriod       int16
 	InSchema             types.Type
 	OutSchema            types.Type
-	Filter               json.RawMessage `json:",omitempty"`
+	Filter               json.RawMessage
 	Transformation       Transformation
 	Query                string
 	Format               string
@@ -323,6 +323,12 @@ func (state *State) createAction(n notification) {
 	e := CreateAction{}
 	if !decodeNotification(n, &e) {
 		return
+	}
+	// json.RawMessage(nil) is marshaled into "null", but when it is
+	// deserialized it becomes json.RawMessage("null"), so this code converts it
+	// back to json.RawMessage(nil).
+	if _json.Value(e.Filter).IsNull() {
+		e.Filter = nil
 	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
@@ -489,9 +495,9 @@ func (state *State) createWorkspace(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	// Warehouse.MCPSettings must be a JSON object or json.RawMessage(nil), so
-	// transform "null" (obtained from the PostgreSQL notification when
-	// serializing nil) into json.RawMessage(nil).
+	// json.RawMessage(nil) is marshaled into "null", but when it is
+	// deserialized it becomes json.RawMessage("null"), so this code converts it
+	// back to json.RawMessage(nil).
 	if _json.Value(e.Warehouse.MCPSettings).IsNull() {
 		e.Warehouse.MCPSettings = nil
 	}
@@ -1149,7 +1155,7 @@ type UpdateAction struct {
 	Enabled              bool
 	InSchema             types.Type
 	OutSchema            types.Type
-	Filter               json.RawMessage `json:",omitempty"`
+	Filter               json.RawMessage
 	Transformation       Transformation
 	Query                string
 	Format               string
@@ -1175,6 +1181,12 @@ func (state *State) updateAction(n notification) {
 	e := UpdateAction{}
 	if !decodeNotification(n, &e) {
 		return
+	}
+	// json.RawMessage(nil) is marshaled into "null", but when it is
+	// deserialized it becomes json.RawMessage("null"), so this code converts it
+	// back to json.RawMessage(nil).
+	if _json.Value(e.Filter).IsNull() {
+		e.Filter = nil
 	}
 	format := state.connectors[e.Format]
 	var filter *Where
@@ -1287,9 +1299,9 @@ func (state *State) updateWarehouse(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	// MCPSettings must be a JSON object or json.RawMessage(nil), so transform
-	// "null" (obtained from the PostgreSQL notification when serializing nil)
-	// into json.RawMessage(nil).
+	// json.RawMessage(nil) is marshaled into "null", but when it is
+	// deserialized it becomes json.RawMessage("null"), so this code converts it
+	// back to json.RawMessage(nil).
 	if _json.Value(e.MCPSettings).IsNull() {
 		e.MCPSettings = nil
 	}
