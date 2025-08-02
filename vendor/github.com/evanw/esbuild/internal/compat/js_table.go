@@ -92,7 +92,9 @@ const (
 	Hashbang
 	ImportAssertions
 	ImportAttributes
+	ImportDefer
 	ImportMeta
+	ImportSource
 	InlineScript
 	LogicalAssignment
 	NestedRestBinding
@@ -153,7 +155,9 @@ var StringToJSFeature = map[string]JSFeature{
 	"hashbang":                          Hashbang,
 	"import-assertions":                 ImportAssertions,
 	"import-attributes":                 ImportAttributes,
+	"import-defer":                      ImportDefer,
 	"import-meta":                       ImportMeta,
+	"import-source":                     ImportSource,
 	"inline-script":                     InlineScript,
 	"logical-assignment":                LogicalAssignment,
 	"nested-rest-binding":               NestedRestBinding,
@@ -588,14 +592,16 @@ var jsTable = map[JSFeature]map[Engine][]versionRange{
 		Node:   {{start: v{16, 14, 0}, end: v{22, 0, 0}}},
 	},
 	ImportAttributes: {
-		Chrome: {{start: v{123, 0, 0}}},
-		Deno:   {{start: v{1, 37, 0}}},
-		Edge:   {{start: v{123, 0, 0}}},
-		IOS:    {{start: v{17, 2, 0}}},
-		Node:   {{start: v{18, 20, 0}, end: v{19, 0, 0}}, {start: v{20, 10, 0}}},
-		Opera:  {{start: v{109, 0, 0}}},
-		Safari: {{start: v{17, 2, 0}}},
+		Chrome:  {{start: v{123, 0, 0}}},
+		Deno:    {{start: v{1, 37, 0}}},
+		Edge:    {{start: v{123, 0, 0}}},
+		Firefox: {{start: v{138, 0, 0}}},
+		IOS:     {{start: v{17, 2, 0}}},
+		Node:    {{start: v{18, 20, 0}, end: v{19, 0, 0}}, {start: v{20, 10, 0}}},
+		Opera:   {{start: v{109, 0, 0}}},
+		Safari:  {{start: v{17, 2, 0}}},
 	},
+	ImportDefer: {},
 	ImportMeta: {
 		Chrome:  {{start: v{64, 0, 0}}},
 		Deno:    {{start: v{1, 0, 0}}},
@@ -607,6 +613,7 @@ var jsTable = map[JSFeature]map[Engine][]versionRange{
 		Opera:   {{start: v{51, 0, 0}}},
 		Safari:  {{start: v{11, 1, 0}}},
 	},
+	ImportSource: {},
 	InlineScript: {},
 	LogicalAssignment: {
 		// Note: The latest version of "IE" failed 9 tests including: Logical Assignment: &&= basic support

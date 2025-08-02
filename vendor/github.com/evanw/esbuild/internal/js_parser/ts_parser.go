@@ -262,7 +262,8 @@ loop:
 			p.lexer.Next()
 
 			// "[import: number]"
-			if flags.has(allowTupleLabelsFlag) && p.lexer.Token == js_lexer.TColon {
+			// "[import?: number]"
+			if flags.has(allowTupleLabelsFlag) && (p.lexer.Token == js_lexer.TColon || p.lexer.Token == js_lexer.TQuestion) {
 				return
 			}
 
@@ -288,7 +289,8 @@ loop:
 			p.lexer.Next()
 
 			// "[new: number]"
-			if flags.has(allowTupleLabelsFlag) && p.lexer.Token == js_lexer.TColon {
+			// "[new?: number]"
+			if flags.has(allowTupleLabelsFlag) && (p.lexer.Token == js_lexer.TColon || p.lexer.Token == js_lexer.TQuestion) {
 				return
 			}
 
@@ -314,13 +316,15 @@ loop:
 
 				// Valid:
 				//   "[keyof: string]"
+				//   "[keyof?: string]"
 				//   "{[keyof: string]: number}"
 				//   "{[keyof in string]: number}"
 				//
 				// Invalid:
 				//   "A extends B ? keyof : string"
 				//
-				if (p.lexer.Token != js_lexer.TColon && p.lexer.Token != js_lexer.TIn) || (!flags.has(isIndexSignatureFlag) && !flags.has(allowTupleLabelsFlag)) {
+				if (p.lexer.Token != js_lexer.TColon && p.lexer.Token != js_lexer.TQuestion && p.lexer.Token != js_lexer.TIn) ||
+					(!flags.has(isIndexSignatureFlag) && !flags.has(allowTupleLabelsFlag)) {
 					p.skipTypeScriptType(js_ast.LPrefix)
 				}
 				break loop
@@ -332,7 +336,10 @@ loop:
 				// "type Foo = Bar extends [infer T extends string] ? T : null"
 				// "type Foo = Bar extends [infer T extends string ? infer T : never] ? T : null"
 				// "type Foo = { [infer in Bar]: number }"
-				if (p.lexer.Token != js_lexer.TColon && p.lexer.Token != js_lexer.TIn) || (!flags.has(isIndexSignatureFlag) && !flags.has(allowTupleLabelsFlag)) {
+				// "type Foo = [infer: number]"
+				// "type Foo = [infer?: number]"
+				if (p.lexer.Token != js_lexer.TColon && p.lexer.Token != js_lexer.TQuestion && p.lexer.Token != js_lexer.TIn) ||
+					(!flags.has(isIndexSignatureFlag) && !flags.has(allowTupleLabelsFlag)) {
 					p.lexer.Expect(js_lexer.TIdentifier)
 					if p.lexer.Token == js_lexer.TExtends {
 						p.trySkipTypeScriptConstraintOfInferTypeWithBacktracking(flags)
@@ -390,7 +397,8 @@ loop:
 			p.lexer.Next()
 
 			// "[typeof: number]"
-			if flags.has(allowTupleLabelsFlag) && p.lexer.Token == js_lexer.TColon {
+			// "[typeof?: number]"
+			if flags.has(allowTupleLabelsFlag) && (p.lexer.Token == js_lexer.TColon || p.lexer.Token == js_lexer.TQuestion) {
 				return
 			}
 
@@ -459,12 +467,13 @@ loop:
 
 		default:
 			// "[function: number]"
+			// "[function?: number]"
 			if flags.has(allowTupleLabelsFlag) && p.lexer.IsIdentifierOrKeyword() {
 				if p.lexer.Token != js_lexer.TFunction {
 					p.log.AddError(&p.tracker, p.lexer.Range(), fmt.Sprintf("Unexpected %q", p.lexer.Raw()))
 				}
 				p.lexer.Next()
-				if p.lexer.Token != js_lexer.TColon {
+				if p.lexer.Token != js_lexer.TColon && p.lexer.Token != js_lexer.TQuestion {
 					p.lexer.Expect(js_lexer.TColon)
 				}
 				return
@@ -908,6 +917,84 @@ func (p *parser) trySkipTypeScriptArrowReturnTypeWithBacktracking() bool {
 	// Restore the log disabled flag. Note that we can't just set it back to false
 	// because it may have been true to start with.
 	p.lexer.IsLogDisabled = oldLexer.IsLogDisabled
+	return true
+}
+
+// This is a very specific function that determines whether a colon token is a
+// TypeScript arrow function return type in the case where the arrow function
+// is the middle expression of a JavaScript ternary operator (i.e. is between
+// the "?" and ":" tokens). It's separate from the other function above called
+// "trySkipTypeScriptArrowReturnTypeWithBacktracking" because it's much more
+// expensive, and likely not as robust.
+func (originalParser *parser) isTypeScriptArrowReturnTypeAfterQuestionAndBeforeColon(await awaitOrYield) bool {
+	// Implement "backtracking" by swallowing lexer errors on a temporary parser
+	defer func() {
+		r := recover()
+		if _, isLexerPanic := r.(js_lexer.LexerPanic); isLexerPanic {
+			return // Swallow this error
+		} else if r != nil {
+			panic(r)
+		}
+	}()
+
+	// THIS IS A GROSS HACK. Some context:
+	//
+	// JavaScript is designed to not require a backtracking parser. Generally a
+	// backtracking parser is not regarded as a good thing and you try to avoid
+	// having one if it's not necessary.
+	//
+	// However, TypeScript's parser does do backtracking in an (admittedly noble)
+	// effort to retrofit nice type syntax onto JavaScript. Up until this edge
+	// case was discovered, this backtracking was limited to type syntax so
+	// esbuild could deal with it by using a backtracking lexer without needing a
+	// backtracking parser.
+	//
+	// This edge case requires a backtracking parser. The TypeScript compiler's
+	// algorithm for parsing this is to try to parse the entire arrow function
+	// body and then reset all the way back to the colon for the arrow function
+	// return type if the token following the arrow function body is not another
+	// colon. For example:
+	//
+	//   x = a ? (b) : c => d;
+	//   y = a ? (b) : c => d : e;
+	//
+	// The first colon of "x" pairs with the "?" because the arrow function
+	// "(b) : c => d" is not followed by a colon. However, the first colon of "y"
+	// starts a return type because the arrow function "(b) : c => d" is followed
+	// by a colon. In other words, the first ":" before the arrow function body
+	// must pair with the "?" unless there is another ":" to pair with it after
+	// the function body.
+	//
+	// I'm not going to rewrite esbuild's parser to support backtracking for this
+	// one edge case. So instead, esbuild tries to parse the arrow function body
+	// using a rough copy of the parser and then always throws the result away.
+	// So arrow function bodies will always be parsed twice for this edge case.
+	//
+	// This is a hack instead of a good solution because the parser isn't designed
+	// for this, and doing this is not going to have good test coverage given that
+	// it's an edge case. We can't prevent parser code (either currently or in the
+	// future) from accidentally depending on some parser state that isn't cloned
+	// here. That could result in a parser panic when parsing a more complex
+	// version of this edge case.
+	p := newParser(logger.NewDeferLog(logger.DeferLogNoVerboseOrDebug, nil), originalParser.source, originalParser.lexer, &originalParser.options)
+
+	// Clone all state that the parser needs to parse this arrow function body
+	p.allowIn = originalParser.allowIn
+	p.lexer.IsLogDisabled = true
+	p.pushScopeForParsePass(js_ast.ScopeEntry, logger.Loc{Start: 0})
+	p.pushScopeForParsePass(js_ast.ScopeFunctionArgs, logger.Loc{Start: 1})
+
+	// Parse the return type
+	p.lexer.Expect(js_lexer.TColon)
+	p.skipTypeScriptReturnType()
+
+	// Parse the body and throw it out (with the side effect of maybe throwing an error)
+	_ = p.parseArrowBody([]js_ast.Arg{}, fnOrArrowDataParse{await: await})
+
+	// There must be a colon following the arrow function body to pair with the leading "?"
+	p.lexer.Expect(js_lexer.TColon)
+
+	// Parsing was successful if we get here
 	return true
 }
 
