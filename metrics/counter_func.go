@@ -131,7 +131,7 @@ func (v *CounterFuncVec) LoadOrStore(labels []string, get func() float64) *Count
 	if len(labels) != len(v.labels) {
 		panic(fmt.Sprintf("metrics: expected %d labels, got %d", len(v.labels), len(labels)))
 	}
-	key := strings.Join(labels, "%ff")
+	key := strings.Join(labels, "\xff")
 	if counter, ok := v.metrics.Load(key); ok {
 		return counter.(*CounterFunc)
 	}

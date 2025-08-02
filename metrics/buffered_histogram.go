@@ -190,7 +190,7 @@ func (v *BufferedHistogramVec) LoadOrStore(labels []string) *BufferedHistogram {
 	if len(labels) != len(v.labels) {
 		panic(fmt.Sprintf("metrics: expected %d labels, got %d", len(v.labels), len(labels)))
 	}
-	key := strings.Join(labels, "%ff")
+	key := strings.Join(labels, "\xff")
 	if hist, ok := v.metrics.Load(key); ok {
 		return hist.(*BufferedHistogram)
 	}

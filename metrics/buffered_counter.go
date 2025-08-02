@@ -148,7 +148,7 @@ func (v *BufferedCounterVec) LoadOrStore(labelValues []string) *BufferedCounter 
 	if len(labelValues) != len(v.labels) {
 		panic(fmt.Sprintf("metrics: expected %d labels, got %d", len(v.labels), len(labelValues)))
 	}
-	key := strings.Join(labelValues, "%ff")
+	key := strings.Join(labelValues, "\xff")
 	if c, ok := v.metrics.Load(key); ok {
 		return c.(*BufferedCounter)
 	}
