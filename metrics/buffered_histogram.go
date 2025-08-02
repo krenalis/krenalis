@@ -194,12 +194,8 @@ func (v *BufferedHistogramVec) LoadOrStore(labels []string) *BufferedHistogram {
 	if hist, ok := v.metrics.Load(key); ok {
 		return hist.(*BufferedHistogram)
 	}
-	constLabels := make(map[string]string, len(labels))
-	for i, name := range v.labels {
-		constLabels[name] = labels[i]
-	}
 	h := &BufferedHistogram{
-		desc:    prometheus.NewDesc(v.name, v.help, labels, constLabels),
+		desc:    prometheus.NewDesc(v.name, v.help, v.labels, nil),
 		labels:  labels,
 		les:     v.les,
 		buckets: make([]uint32, len(v.les)),
