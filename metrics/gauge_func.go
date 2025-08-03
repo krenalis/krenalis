@@ -30,9 +30,10 @@ import (
 // The [GaugeFunc.Collect] and [GaugeFunc.Describe] methods are called by the
 // Prometheus collector and are safe for concurrent use.
 type GaugeFunc struct {
-	desc   *prometheus.Desc
-	labels []string
-	get    func() float64
+	desc        *prometheus.Desc
+	labelValues []string
+	vec         *GaugeFuncVec
+	get         func() float64
 }
 
 // NewGaugeFunc creates and registers a new [GaugeFunc] metric with the given
@@ -52,7 +53,7 @@ func NewGaugeFunc(name, help string, get func() float64) *GaugeFunc {
 // to the provided Prometheus metrics channel.
 // It is safe for concurrent use by multiple goroutines.
 func (g *GaugeFunc) Collect(ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(g.desc, prometheus.GaugeValue, g.get(), g.labels...)
+	ch <- prometheus.MustNewConstMetric(g.desc, prometheus.GaugeValue, g.get(), g.labelValues...)
 }
 
 // Describe sends the metric descriptor to the provided channel.
@@ -61,20 +62,30 @@ func (g *GaugeFunc) Describe(ch chan<- *prometheus.Desc) {
 	ch <- g.desc
 }
 
+// Unregister unregisters the metric.
+func (g *GaugeFunc) Unregister() {
+	if g.vec != nil {
+		key := strings.Join(g.labelValues, "\xff")
+		g.vec.metrics.Delete(key)
+		return
+	}
+	prometheus.Unregister(g)
+}
+
 // GaugeFuncVec is a collection of [GaugeFunc] metrics partitioned by label
 // values. Each metric's value is retrieved by calling its registered function.
 //
 // Example:
 //
-//		vec := NewGaugeFuncVec(
-//	     "temperature_celsius",
-//	     "Temperature by location",
+//	vec := RegisterGaugeFuncVec(
+//	    "temperature_celsius",
+//	    "Temperature by location",
 //	    []string{"location"})
-//		gauge := vec.LoadOrStore([]string{"server_room"}, func() float64 {
-//		    return readTemp("server_room")
-//		})
+//	gauge := vec.Register(func() float64 {
+//	    return readTemp("server_room")
+//	}, "server_room")
 //
-// The [GaugeFuncVec.LoadOrStore] method is safe for concurrent use by multiple
+// The [GaugeFuncVec.Register] method is safe for concurrent use by multiple
 // goroutines. The [GaugeFuncVec.Collect] and [GaugeFuncVec.Describe] methods
 // are called by the Prometheus collector.
 type GaugeFuncVec struct {
@@ -85,11 +96,11 @@ type GaugeFuncVec struct {
 	metrics sync.Map // sync.Map allows non-blocking writes during Collect.
 }
 
-// NewGaugeFuncVec creates and registers a new [GaugeFuncVec] metric vector
-// with the given name, help string, and label names. Metric and label names
-// must start with [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
+// RegisterGaugeFuncVec registers a [GaugeFuncVec] metric vector with the given
+// name, help string, and label names. Metric and label names must start with
+// [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
 // It panics if a metric with the same name is already registered.
-func NewGaugeFuncVec(name, help string, labels []string) *GaugeFuncVec {
+func RegisterGaugeFuncVec(name, help string, labels []string) *GaugeFuncVec {
 	v := &GaugeFuncVec{
 		name:   name,
 		help:   help,
@@ -103,8 +114,8 @@ func NewGaugeFuncVec(name, help string, labels []string) *GaugeFuncVec {
 // Collect sends all [GaugeFunc] metrics in the vector to Prometheus by calling
 // their [GaugeFunc.Collect] methods.
 // It is safe for concurrent use by multiple goroutines.
-func (v *GaugeFuncVec) Collect(ch chan<- prometheus.Metric) {
-	v.metrics.Range(func(_, metric any) bool {
+func (vec *GaugeFuncVec) Collect(ch chan<- prometheus.Metric) {
+	vec.metrics.Range(func(_, metric any) bool {
 		metric.(*GaugeFunc).Collect(ch)
 		return true
 	})
@@ -113,37 +124,39 @@ func (v *GaugeFuncVec) Collect(ch chan<- prometheus.Metric) {
 // Describe sends the descriptor of this metric vector and all its stored
 // [GaugeFunc] metrics to the provided channel.
 // It is safe for concurrent use by multiple goroutines.
-func (v *GaugeFuncVec) Describe(ch chan<- *prometheus.Desc) {
-	ch <- v.desc
-	v.metrics.Range(func(_, metric any) bool {
+func (vec *GaugeFuncVec) Describe(ch chan<- *prometheus.Desc) {
+	ch <- vec.desc
+	vec.metrics.Range(func(_, metric any) bool {
 		metric.(*GaugeFunc).Describe(ch)
 		return true
 	})
 }
 
-// LoadOrStore returns the [GaugeFunc] metric for the given label values,
-// creating and storing it if it does not already exist. The provided get
-// function is used to retrieve the metric value on collection.
+// Register registers a [GaugeFunc] for the given label values and returns it.
 //
-// Label values must match the vector's label names in number.
+// It panics if the number of label values does not match the vector's label
+// names, or if a metric with the same label values already registered.
+//
 // This method is safe for concurrent use by multiple goroutines.
-func (v *GaugeFuncVec) LoadOrStore(labels []string, get func() float64) *GaugeFunc {
-	if len(labels) != len(v.labels) {
-		panic(fmt.Sprintf("metrics: expected %d labels, got %d", len(v.labels), len(labels)))
+func (vec *GaugeFuncVec) Register(get func() float64, labelValues ...string) *GaugeFunc {
+	if len(labelValues) != len(vec.labels) {
+		panic(fmt.Sprintf("metrics: expected %d label values, got %d", len(vec.labels), len(labelValues)))
 	}
-	key := strings.Join(labels, "\xff")
-	if gauge, ok := v.metrics.Load(key); ok {
-		return gauge.(*GaugeFunc)
-	}
-	constLabels := make(map[string]string, len(labels))
-	for i, name := range v.labels {
-		constLabels[name] = labels[i]
-	}
+	key := strings.Join(labelValues, "\xff")
 	g := &GaugeFunc{
-		desc:   prometheus.NewDesc(v.name, v.help, labels, constLabels),
-		labels: labels,
-		get:    get,
+		desc:        prometheus.NewDesc(vec.name, vec.help, vec.labels, nil),
+		labelValues: labelValues,
+		vec:         vec,
+		get:         get,
 	}
-	gauge, _ := v.metrics.LoadOrStore(key, g)
-	return gauge.(*GaugeFunc)
+	if _, loaded := vec.metrics.LoadOrStore(key, g); loaded {
+		panic(fmt.Sprintf("metrics: label values %v already registered", labelValues))
+	}
+
+	return g
+}
+
+// Unregister unregisters the vector.
+func (vec *GaugeFuncVec) Unregister() {
+	prometheus.Unregister(vec)
 }

@@ -20,7 +20,7 @@ import (
 //
 // Example:
 //
-//	counter := NewCounterFunc(
+//	counter := RegisterCounterFunc(
 //	    "my_counter",
 //	    "Counter from function",
 //	    func() float64 {
@@ -30,16 +30,17 @@ import (
 // The [CounterFunc.Collect] and [CounterFunc.Describe] methods are called by
 // the Prometheus collector and are safe for concurrent use.
 type CounterFunc struct {
-	desc   *prometheus.Desc
-	labels []string
-	get    func() float64
+	desc        *prometheus.Desc
+	labelValues []string
+	vec         *CounterFuncVec
+	get         func() float64
 }
 
-// NewCounterFunc creates and registers a new [CounterFunc] metric with the
-// given name, help description, and value retrieval function. Metric name must
-// start with [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces. It panics if a
-// metric with the same name is already registered.
-func NewCounterFunc(name, help string, get func() float64) *CounterFunc {
+// RegisterCounterFunc registers a [CounterFunc] metric with the given name,
+// help description, and value retrieval function. Metric name must start with
+// [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces. It panics if a metric
+// with the same name is already registered.
+func RegisterCounterFunc(name, help string, get func() float64) *CounterFunc {
 	c := &CounterFunc{
 		desc: prometheus.NewDesc(name, help, nil, nil),
 		get:  get,
@@ -52,7 +53,7 @@ func NewCounterFunc(name, help string, get func() float64) *CounterFunc {
 // to the provided Prometheus metrics channel.
 // It is safe for concurrent use by multiple goroutines.
 func (c *CounterFunc) Collect(ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(c.desc, prometheus.CounterValue, c.get(), c.labels...)
+	ch <- prometheus.MustNewConstMetric(c.desc, prometheus.CounterValue, c.get(), c.labelValues...)
 }
 
 // Describe sends the metric descriptor to the provided channel.
@@ -61,20 +62,30 @@ func (c *CounterFunc) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.desc
 }
 
+// Unregister unregisters the metric.
+func (c *CounterFunc) Unregister() {
+	if c.vec != nil {
+		key := strings.Join(c.labelValues, "\xff")
+		c.vec.metrics.Delete(key)
+		return
+	}
+	prometheus.Unregister(c)
+}
+
 // CounterFuncVec is a collection of [CounterFunc] metrics partitioned by label
 // values. Each metric's value is retrieved by calling its registered function.
 //
 // Example:
 //
-//	vec := NewCounterFuncVec(
+//	vec := RegisterCounterFuncVec(
 //	    "requests_total",
 //	    "Total requests by method",
 //	    []string{"method"})
-//	counter := vec.LoadOrStore([]string{"GET"}, func() float64 {
+//	counter := vec.Register(func() float64 {
 //	    return getRequestCount("GET")
-//	})
+//	}, "GET")
 //
-// The [CounterFuncVec.LoadOrStore] method is safe for concurrent use by
+// The [CounterFuncVec.Register] method is safe for concurrent use by
 // multiple goroutines. The [CounterFuncVec.Collect] and
 // [CounterFuncVec.Describe] methods are called by the Prometheus collector.
 type CounterFuncVec struct {
@@ -85,11 +96,11 @@ type CounterFuncVec struct {
 	metrics sync.Map
 }
 
-// NewCounterFuncVec creates and registers a new [CounterFuncVec] metric vector
-// with the given name, help string, and label names. Metric and label names
-// must start with [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
+// RegisterCounterFuncVec registers a [CounterFuncVec] metric vector with the
+// given name, help string, and label names. Metric and label names must start
+// with [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
 // It panics if a metric with the same name is already registered.
-func NewCounterFuncVec(name, help string, labels []string) *CounterFuncVec {
+func RegisterCounterFuncVec(name, help string, labels []string) *CounterFuncVec {
 	v := &CounterFuncVec{
 		name:   name,
 		help:   help,
@@ -103,8 +114,8 @@ func NewCounterFuncVec(name, help string, labels []string) *CounterFuncVec {
 // Collect sends all [CounterFunc] metrics in the vector to Prometheus by
 // calling their [CounterFunc.Collect] methods.
 // It is safe for concurrent use by multiple goroutines.
-func (v *CounterFuncVec) Collect(ch chan<- prometheus.Metric) {
-	v.metrics.Range(func(_, metric any) bool {
+func (vec *CounterFuncVec) Collect(ch chan<- prometheus.Metric) {
+	vec.metrics.Range(func(_, metric any) bool {
 		metric.(*CounterFunc).Collect(ch)
 		return true
 	})
@@ -113,37 +124,41 @@ func (v *CounterFuncVec) Collect(ch chan<- prometheus.Metric) {
 // Describe sends the descriptor of this metric vector and all its stored
 // [CounterFunc] metrics to the provided channel.
 // It is safe for concurrent use by multiple goroutines.
-func (v *CounterFuncVec) Describe(ch chan<- *prometheus.Desc) {
-	ch <- v.desc
-	v.metrics.Range(func(_, metric any) bool {
+func (vec *CounterFuncVec) Describe(ch chan<- *prometheus.Desc) {
+	ch <- vec.desc
+	vec.metrics.Range(func(_, metric any) bool {
 		metric.(*CounterFunc).Describe(ch)
 		return true
 	})
 }
 
-// LoadOrStore returns the [CounterFunc] metric for the given label values,
-// creating and storing it if it does not already exist. The provided get
-// function is used to retrieve the metric value on collection.
+// Register registers a [CounterFunc] for the given label values and returns it.
 //
-// Label values must match the vector's label names in number.
+// It panics if the number of label values does not match the vector's label
+// names, or if a metric with the same label values already registered.
+//
 // This method is safe for concurrent use by multiple goroutines.
-func (v *CounterFuncVec) LoadOrStore(labels []string, get func() float64) *CounterFunc {
-	if len(labels) != len(v.labels) {
-		panic(fmt.Sprintf("metrics: expected %d labels, got %d", len(v.labels), len(labels)))
+func (vec *CounterFuncVec) Register(get func() float64, labelValues ...string) *CounterFunc {
+	if len(labelValues) != len(vec.labels) {
+		panic(fmt.Sprintf("metrics: expected %d label values, got %d", len(vec.labels), len(labelValues)))
 	}
-	key := strings.Join(labels, "\xff")
-	if counter, ok := v.metrics.Load(key); ok {
+	key := strings.Join(labelValues, "\xff")
+	if counter, ok := vec.metrics.Load(key); ok {
 		return counter.(*CounterFunc)
 	}
-	constLabels := make(map[string]string, len(labels))
-	for i, name := range v.labels {
-		constLabels[name] = labels[i]
-	}
 	c := &CounterFunc{
-		desc:   prometheus.NewDesc(v.name, v.help, v.labels, constLabels),
-		labels: labels,
-		get:    get,
+		desc:        prometheus.NewDesc(vec.name, vec.help, vec.labels, nil),
+		labelValues: labelValues,
+		vec:         vec,
+		get:         get,
 	}
-	counter, _ := v.metrics.LoadOrStore(key, c)
-	return counter.(*CounterFunc)
+	if _, loaded := vec.metrics.LoadOrStore(key, c); loaded {
+		panic(fmt.Sprintf("metrics: label values %v already registered", labelValues))
+	}
+	return c
+}
+
+// Unregister unregisters the vector.
+func (vec *CounterFuncVec) Unregister() {
+	prometheus.Unregister(vec)
 }

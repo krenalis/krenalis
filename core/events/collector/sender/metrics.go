@@ -11,8 +11,14 @@ import (
 	"github.com/meergo/meergo/metrics"
 )
 
-// Time spent waiting in the event queue (in seconds).
-var queueWaitMetric = metrics.NewBufferedHistogramVec(
+// Queue available.
+var queueAvailableMetric = metrics.RegisterGaugeFuncVec(
+	"meergo_sender_queue_available",
+	"Number of available events in the event queue",
+	[]string{"connector", "connection"})
+
+// Queue wait.
+var queueWaitMetric = metrics.RegisterHistogramBufVec(
 	"meergo_sender_queue_wait",
 	"Time spent waiting in the event queue (in seconds)",
 	[]string{"connector", "connection"},
@@ -31,9 +37,3 @@ var queueWaitMetric = metrics.NewBufferedHistogramVec(
 		1.0,
 		2.0,
 	})
-
-// Number of available events in the event queue.
-var queueAvailableMetric = metrics.NewGaugeFuncVec(
-	"meergo_sender_queue_available",
-	"Number of available events in the event queue",
-	[]string{"connector", "connection"})

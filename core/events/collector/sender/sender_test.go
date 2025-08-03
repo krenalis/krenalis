@@ -69,6 +69,7 @@ func Test_CreateEvent_DeterministicID(t *testing.T) {
 	if e1.user == nil || e2.user == nil {
 		t.Fatal("user should not be nil")
 	}
+	_ = s.Close(t.Context())
 }
 
 func Test_iterator_invalidUsage(t *testing.T) {

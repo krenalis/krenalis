@@ -12,14 +12,14 @@
 //
 // Available types:
 //
-//   - [BufferedCounter] is a counter that buffers increments locally before consolidating. Useful for high-frequency updates with reduced lock contention.
-//   - [BufferedCounterVec] is a vector of [BufferedCounter], partitioned by label values.
-//   - [CounterFunc] is a counter that retrieves its value by calling a function at collection time. Use when the counter is managed externally.
+//   - [CounterBufVec] is a vector of [CounterBuf], partitioned by label values.
+//   - [CounterBuf] is a counter that buffers increments locally before consolidating. Useful for high-frequency updates with reduced lock contention.
 //   - [CounterFuncVec] is a vector of CounterFunc, indexed by label values.
-//   - [GaugeFunc] is a gauge that retrieves its value via a function. Suitable for externally tracked values that can go up or down.
+//   - [CounterFunc] is a counter that retrieves its value by calling a function at collection time. Use when the counter is managed externally.
 //   - [GaugeFuncVec] is a vector of [GaugeFunc], partitioned by labels.
-//   - [BufferedHistogram] is a histogram that buffers observations locally and consolidates them later. Reduces contention during frequent updates.
-//   - [BufferedHistogramVec] is a vector of [BufferedHistogram], grouped by label values.
+//   - [GaugeFunc] is a gauge that retrieves its value via a function. Suitable for externally tracked values that can go up or down.
+//   - [HistogramBufVec] is a vector of [HistogramBuf], grouped by label values.
+//   - [HistogramBuf] is a histogram that buffers observations locally and consolidates them later. Reduces contention during frequent updates.
 package metrics
 
 import (

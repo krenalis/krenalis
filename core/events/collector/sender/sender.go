@@ -110,7 +110,8 @@ type Sender struct {
 	acks      AcksFunc // ack function.
 
 	metrics struct {
-		queueWait *metrics.BufferedHistogram
+		queueAvailable *metrics.GaugeFunc
+		queueWait      *metrics.HistogramBuf
 	}
 
 	mu                 sync.Mutex
@@ -191,14 +192,14 @@ func New(app App, acks AcksFunc) *Sender {
 		}
 	}()
 	// Set the metrics.
-	labels := []string{s.connector, strconv.Itoa(app.Connection())}
-	s.metrics.queueWait = queueWaitMetric.LoadOrStore(labels)
-	queueAvailableMetric.LoadOrStore(labels, func() float64 {
+	connection := strconv.Itoa(app.Connection())
+	s.metrics.queueAvailable = queueAvailableMetric.Register(func() float64 {
 		s.mu.Lock()
 		a := s.available
 		s.mu.Unlock()
 		return float64(a)
-	})
+	}, s.connector, connection)
+	s.metrics.queueWait = queueWaitMetric.Register(s.connector, connection)
 	return s
 }
 
@@ -259,6 +260,8 @@ func (s *Sender) Close(ctx context.Context) error {
 		s._assertAvailable(0)
 	}
 	trace("Writer.Close: iterators are terminated; writer is now closed\n")
+	s.metrics.queueAvailable.Unregister()
+	s.metrics.queueWait.Unregister()
 	return nil
 }
 
