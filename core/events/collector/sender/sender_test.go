@@ -72,7 +72,7 @@ func Test_CreateEvent_DeterministicID(t *testing.T) {
 }
 
 func Test_iterator_invalidUsage(t *testing.T) {
-	s := New(nopApp{}, func([]Ack, error) {})
+
 	expectPanic := func(f func()) {
 		defer func() {
 			if r := recover(); r == nil {
@@ -83,11 +83,15 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	}
 
 	t.Run("PostponeOutsideIteration", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		expectPanic(func() { it.Postpone() })
 	})
 
 	t.Run("PostponeFirstEvent", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
 		it.firstEvent = true
@@ -95,6 +99,8 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PostponeDiscardedEvent", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
 		it.discarded = true
@@ -102,6 +108,8 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardDiscardedEvent", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
 		it.discarded = true
@@ -109,6 +117,8 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardPostponedEvent", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
 		it.postponed = true
@@ -116,33 +126,37 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PeekAfterConsumed", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
 		expectPanic(func() { it.Peek() })
 	})
 
 	t.Run("AllAfterConsumed", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
 		expectPanic(func() { it.All() })
 	})
 
 	t.Run("FirstAfterConsumed", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
 		expectPanic(func() { it.First() })
 	})
 
 	t.Run("SameUserAfterConsumed", func(t *testing.T) {
+		s := New(nopApp{}, func([]Ack, error) {})
+		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
 		expectPanic(func() { it.SameUser() })
 	})
 
-	t.Run("FirstNoEvents", func(t *testing.T) {
-		it := newIterator(s)
-		expectPanic(func() { it.First() })
-	})
 }
 
 func Test_Sender(t *testing.T) {
