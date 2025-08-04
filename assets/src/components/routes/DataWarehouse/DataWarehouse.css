@@ -8,7 +8,7 @@
 .warehouse-list,
 .warehouse-settings,
 .warehouse-info {
-	max-width: 900px;
+	max-width: 1200px;
 	margin: auto;
 	padding: 30px;
 }
@@ -34,7 +34,6 @@
 
 .warehouse-info__buttons {
 	display: flex;
-	margin-top: 30px;
 	justify-content: end;
 	gap: 15px;
 }
@@ -60,7 +59,7 @@
 .warehouse-info__info {
 	display: flex;
 	gap: 80px;
-	align-items: end;
+	align-items: start;
 	justify-content: space-between;
 	margin-bottom: 20px;
 }
@@ -79,8 +78,9 @@
 	justify-content: end;
 }
 
-.warehouse-info__mode {
-	width: 100%;
+.warehouse-info__change-settings-button {
+	position: relative;
+	top: -8px;
 }
 
 .warehouse-info__mode sl-option::part(checked-icon) {
@@ -108,12 +108,42 @@
 	padding-left: 0;
 }
 
-.warehouse-settings__settings > * {
-	margin-bottom: 30px;
+.warehouse-settings__main-form > sl-input,
+.warehouse-settings__mcp-form > sl-input {
+	margin-bottom: 20px;
+}
+
+.warehouse-settings__main-form > sl-input:first-child {
+	margin-top: -8px;
+}
+
+.warehouse-settings__main-form > sl-input:last-child,
+.warehouse-settings__mcp-form > sl-input:last-child {
+	margin-bottom: 0;
+}
+
+.data-warehouse .section {
+	margin-top: 50px;
+}
+
+.warehouse-info .section:nth-child(2) {
+	margin-top: 44px;
+}
+
+.warehouse-info__mcp-not-configured > span {
+	font-weight: 600;
+}
+
+.warehouse-settings__settings h2 {
+	margin-bottom: 8px;
+	margin-top: 30px;
+	font-weight: 500;
+	font-size: 21px;
 }
 
 .warehouse-settings__mode {
 	font-size: 14px;
+	max-width: 500px;
 }
 
 .warehouse-settings__mode sl-option::part(checked-icon) {
@@ -133,9 +163,15 @@
 	font-size: 13px;
 }
 
+.warehouse-settings__mcp-form {
+	padding-left: 27px;
+	margin-top: 25px;
+}
+
 .warehouse-settings__buttons {
 	display: flex;
-	justify-content: center;
+	margin-top: 20px;
+	justify-content: end;
 	gap: 30px;
 }
 

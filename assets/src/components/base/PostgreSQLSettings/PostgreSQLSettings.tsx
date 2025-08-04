@@ -7,9 +7,10 @@ interface settingsProps {
 	setSettings: React.Dispatch<React.SetStateAction<any>>;
 	settings: WarehouseSettings | undefined;
 	precompileDefault: boolean;
+	inputRef?: any;
 }
 
-const PostgreSQLSettings = ({ setSettings, settings, precompileDefault }: settingsProps) => {
+const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef }: settingsProps) => {
 	useEffect(() => {
 		if (settings === undefined && precompileDefault) {
 			// Precompile port and schema.
@@ -64,6 +65,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault }: settin
 				maxlength={63}
 				onSlInput={onSettingInput}
 				value={settings?.username || ''}
+				ref={inputRef}
 			/>
 			<SlInput
 				name='password'

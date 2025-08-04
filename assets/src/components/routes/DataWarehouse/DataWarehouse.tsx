@@ -7,12 +7,10 @@ import PasswordToggle from '../../base/PasswordToggle/PasswordToggle';
 import { WarehouseMode, WarehouseSettings } from '../../../lib/api/types/warehouse';
 import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
+import Section from '../../base/Section/Section';
 import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 
 const DataWarehouse = () => {
 	const [connectedWarehouse, setConnectedWarehouse] = useState<string>();
@@ -20,23 +18,17 @@ const DataWarehouse = () => {
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [warehouseMCPSettings, setWarehouseMCPSettings] = useState<WarehouseSettings>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [hasError, setHasError] = useState<boolean>();
 
 	const { api, handleError, selectedWorkspace, workspaces } = useContext(appContext);
 
 	useEffect(() => {
 		const fetchWarehouse = async () => {
-			setHasError(false);
 			try {
 				const response = await api.workspaces.warehouse();
 				setConnectedWarehouse(response.name);
 				setWarehouseSettings(response.settings);
 				setWarehouseMCPSettings(response.mcpSettings);
 			} catch (err) {
-				setTimeout(() => {
-					setIsLoading(false);
-				}, 300);
-				setHasError(true);
 				handleError(err);
 				return;
 			}
@@ -46,11 +38,6 @@ const DataWarehouse = () => {
 		};
 		fetchWarehouse();
 	}, [selectedWorkspace, selectedWarehouse]);
-
-	// TODO: handle unexpected errors.
-	if (hasError) {
-		return null;
-	}
 
 	if (isLoading) {
 		return (
@@ -99,6 +86,28 @@ interface WarehouseInfoProps {
 	setSelectedWarehouse: React.Dispatch<React.SetStateAction<Warehouse | undefined>>;
 }
 
+const warehouseModeDescriptions: Record<WarehouseMode, string> = {
+	Normal: 'Full read and write access',
+	Inspection: 'Read-only for data inspection',
+	Maintenance: 'Init and alter schema operations only',
+};
+
+const warehouseSectionTexts = {
+	mode: {
+		title: 'Mode',
+		description: 'The mode of accessing the data warehouse',
+	},
+	main: {
+		title: 'Main credentials',
+		description: 'Read and write credentials used by Meergo for accessing the data warehouse',
+	},
+	mcp: {
+		title: 'MCP credentials',
+		description:
+			'Read-only credentials used by the built-in MCP server (Model Context Protocol server) for accessing the data warehouse',
+	},
+};
+
 const warehouseInfoColumns: GridColumn[] = [
 	{
 		name: 'Field',
@@ -116,9 +125,6 @@ const WarehouseInfo = ({
 	setSelectedWarehouse,
 }: WarehouseInfoProps) => {
 	const [isWarehouseModeLoading, setIsWarehouseModeLoading] = useState<boolean>(false);
-	const [warehouseModeToSet, setWarehouseModeToSet] = useState<WarehouseMode | ''>('');
-
-	const { api, handleError, setIsLoadingWorkspaces } = useContext(appContext);
 
 	useEffect(() => {
 		if (isWarehouseModeLoading) {
@@ -132,25 +138,8 @@ const WarehouseInfo = ({
 		return warehouses.find((w) => w.name === warehouseName)!;
 	}, [warehouses, warehouseName]);
 
-	const onChange = () => {
+	const onChangeSettings = () => {
 		setSelectedWarehouse(warehouse);
-	};
-
-	const onChangeMode = async (e) => {
-		setWarehouseModeToSet(e.target.value);
-	};
-
-	const onConfirmChangeMode = async () => {
-		setIsWarehouseModeLoading(true);
-		try {
-			await api.workspaces.updateWarehouseMode(warehouseModeToSet as WarehouseMode, false);
-		} catch (err) {
-			setIsWarehouseModeLoading(false);
-			handleError(err);
-			return;
-		}
-		setIsLoadingWorkspaces(true);
-		setWarehouseModeToSet('');
 	};
 
 	const rows: GridRow[] = [];
@@ -186,86 +175,48 @@ const WarehouseInfo = ({
 					</div>
 					<div className='warehouse-info__name'>{warehouse.name}</div>
 				</div>
-				<div className='warehouse-info__mode-init'>
-					<SlSelect
-						className='warehouse-info__mode'
-						value={isWarehouseModeLoading ? '' : warehouseMode}
-						onSlChange={onChangeMode}
-						disabled={isWarehouseModeLoading}
-					>
-						{isWarehouseModeLoading && <SlSpinner slot='prefix'></SlSpinner>}
-						<SlOption value='Normal'>
-							<div className='warehouse-info__mode-title'>Normal</div>
-							<div className='warehouse-info__mode-description'>
-								{' '}
-								<span className='warehouse-info__mode-separator'>-</span> Full read and write access
-							</div>
-						</SlOption>
-						<SlOption value='Inspection'>
-							<div className='warehouse-info__mode-title'>Inspection</div>
-							<div className='warehouse-info__mode-description'>
-								{' '}
-								<span className='warehouse-info__mode-separator'>-</span> Read-only for data inspection
-							</div>
-						</SlOption>
-						<SlOption value='Maintenance'>
-							<div className='warehouse-info__mode-title'>Maintenance</div>
-							<div className='warehouse-info__mode-description'>
-								{' '}
-								<span className='warehouse-info__mode-separator'>-</span> Init and alter schema
-								operations only
-							</div>
-						</SlOption>
-					</SlSelect>
-				</div>
-			</div>
-			<div className='warehouse-info__settings'>
-				<Grid rows={rows} columns={warehouseInfoColumns} />
-			</div>
-
-			<h3>MCP settings</h3>
-			<p>
-				Here is the configuration for the {warehouse.name} user that will be used by the MCP (Model Context
-				Protocol) server to access and query the data warehouse.
-			</p>
-			{mcpRows.length > 0 ? (
-				<div className='warehouse-info__settings'>
-					<Grid rows={mcpRows} columns={warehouseInfoColumns} />
-				</div>
-			) : (
-				<div>
-					<b>MCP settings not configured.</b> You can configure them clicking on "Change settings...".
-				</div>
-			)}
-
-			<div className='warehouse-info__buttons'>
-				<SlButton variant='default' onClick={onChange}>
-					Change settings...
+				<SlButton
+					className='warehouse-info__change-settings-button'
+					variant='primary'
+					onClick={onChangeSettings}
+				>
+					Modify...
 				</SlButton>
 			</div>
-			<AlertDialog
-				variant='danger'
-				isOpen={warehouseModeToSet !== ''}
-				onClose={() => setWarehouseModeToSet('')}
-				title='Are you sure?'
-				actions={
-					<>
-						<SlButton onClick={() => setWarehouseModeToSet('')} disabled={isWarehouseModeLoading}>
-							Cancel
-						</SlButton>
-						<SlButton variant='primary' onClick={onConfirmChangeMode} loading={isWarehouseModeLoading}>
-							Put in {warehouseModeToSet} mode
-						</SlButton>
-					</>
-				}
+			<Section
+				title={warehouseSectionTexts.mode.title}
+				description={warehouseSectionTexts.mode.description}
+				padded={true}
+				annotated={true}
 			>
-				<p>
-					Changing the warehouse mode alters the types of operations that can be performed on the data
-					warehouse
-				</p>
-			</AlertDialog>
+				{warehouseMode} - {warehouseModeDescriptions[warehouseMode]}
+			</Section>
+			<Section
+				title={warehouseSectionTexts.main.title}
+				description={warehouseSectionTexts.main.description}
+				annotated={true}
+			>
+				<Grid rows={rows} columns={warehouseInfoColumns} />
+			</Section>
+			<Section
+				title={warehouseSectionTexts.mcp.title}
+				description={warehouseSectionTexts.mcp.description}
+				padded={mcpRows.length === 0}
+				annotated={true}
+			>
+				{mcpRows.length > 0 ? (
+					<div className='warehouse-info__settings'>
+						<Grid rows={mcpRows} columns={warehouseInfoColumns} />
+					</div>
+				) : (
+					<div className='warehouse-info__mcp-not-configured'>
+						No credentials have been set, so the MCP server is inactive.
+					</div>
+				)}
+			</Section>
 		</div>
 	);
 };
 
 export default DataWarehouse;
+export { warehouseSectionTexts };

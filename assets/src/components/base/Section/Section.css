@@ -29,12 +29,12 @@
 }
 
 .section--annotated .section__heading {
-	width: 15%;
+	width: 20%;
 }
 
 .section--annotated .section__content {
 	margin-top: 0;
-	width: 75%;
+	width: 80%;
 }
 
 @media (max-width: 1200px) {

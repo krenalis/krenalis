@@ -53,6 +53,7 @@ body,
 #root,
 .app {
 	height: 100% !important;
+	scroll-behavior: smooth;
 }
 
 *,
