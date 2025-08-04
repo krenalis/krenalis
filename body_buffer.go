@@ -184,7 +184,7 @@ func (bb *BodyBuffer) Flush() error {
 	}
 	switch bb.enc {
 	case NoEncoding:
-		bb.flushed += len(plain)
+		bb.flushed = len(plain)
 	case Gzip:
 		n, err := bb.gzipW.Write(plain)
 		bb.flushed += n
@@ -200,6 +200,9 @@ func (bb *BodyBuffer) Flush() error {
 // Len returns the number of bytes written, including unflushed data.
 // The result may differ from the request body length if Gzip encoding is use.
 func (bb *BodyBuffer) Len() int {
+	if bb.enc == NoEncoding {
+		return bb.plain.Len()
+	}
 	return bb.plain.Len() + bb.flushed
 }
 
@@ -369,6 +372,7 @@ func putBodyBuffer(buf *bodyBufferState) {
 		bufferpool.Put(buf.body.buf)
 		buf.body.buf = nil
 	}
+	buf.flushed = 0
 	// Return the bodyBufferState to the pool.
 	bodyBufPool.Put(buf)
 }

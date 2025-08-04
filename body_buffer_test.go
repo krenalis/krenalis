@@ -189,6 +189,34 @@ func TestBodyBuffer(t *testing.T) {
 	})
 
 	// Flush must clear the internal buffer.
+	t.Run("FlushNoEncoding", func(t *testing.T) {
+		bb := GetBodyBuffer(NoEncoding, 0)
+		if l := bb.Len(); l != 0 {
+			t.Errorf("expected length 0, got %d", l)
+		}
+		_, err := bb.Write([]byte("abc"))
+		if err != nil {
+			t.Errorf("unexpected error writing: %v", err)
+		}
+		if l := bb.Len(); l != 3 {
+			t.Errorf("expected length 3, got %d", l)
+		}
+		if err := bb.Flush(); err != nil {
+			t.Errorf("unexpected error flushing body: %v", err)
+		}
+		if l := bb.Len(); l != 3 {
+			t.Errorf("expected length 3, got %d", l)
+		}
+		if err := bb.Flush(); err != nil {
+			t.Errorf("unexpected error flushing body: %v", err)
+		}
+		if l := bb.Len(); l != 3 {
+			t.Errorf("expected length 3, got %d", l)
+		}
+		bb.Close()
+	})
+
+	// Flush must clear the internal buffer.
 	t.Run("FlushGzipWithData", func(t *testing.T) {
 		bb := GetBodyBuffer(Gzip, 0)
 		if l := bb.Len(); l != 0 {
@@ -212,6 +240,15 @@ func TestBodyBuffer(t *testing.T) {
 		}
 		if l := bb.Len(); l != 3 {
 			t.Errorf("expected length 3, got %d", l)
+		}
+		bb.Close()
+	})
+
+	// Flush should succeed even if no data was written.
+	t.Run("FlushNoEncodingNoData", func(t *testing.T) {
+		bb := GetBodyBuffer(NoEncoding, 0)
+		if err := bb.Flush(); err != nil {
+			t.Errorf("unexpected error flushing body: %v", err)
 		}
 		bb.Close()
 	})
