@@ -22,6 +22,7 @@ import (
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/embed"
 	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -80,6 +81,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 
 	client, err := fn.connect(ctx)
 	if err != nil {
+		errorsMetric[errorTypeConnection].Inc()
 		return err
 	}
 
@@ -88,15 +90,20 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	payload = append(payload, '"')
 	payload, err = transformers.Marshal(payload, inSchema, records, language, preserveJSON)
 	if err != nil {
+		errorsMetric[errorTypeSerialization].Inc()
 		return err
 	}
 	payload = append(payload, '"')
+
+	// Duration of a successful execution.
+	var duration time.Duration
 
 	// Invoke the function.
 	var out *lambda.InvokeOutput
 	bo := backoff.New(100)
 	bo.SetCap(3 * time.Second)
 	for bo.Next(ctx) {
+		start := time.Now()
 		out, err = client.Invoke(ctx, &lambda.InvokeInput{
 			FunctionName: &arn,
 			Payload:      payload,
@@ -104,10 +111,11 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		})
 		if err != nil {
 			if status, ok := httpStatusCode(err); ok {
-				if status == 404 {
+				switch status {
+				case 404:
+					errorsMetric[errorTypeFunctionNotFound].Inc()
 					return transformers.ErrFunctionNotExist
-				}
-				if status == 409 {
+				case 409:
 					// The function is pending.
 					// Set the base with a greater value and retry.
 					bo.SetBase(300)
@@ -116,12 +124,15 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 				if 500 <= status && status <= 599 {
 					// There was an internal error.
 					// Set the base with the default value and retry.
+					errorsMetric[errorTypeLambdaInternal].Inc()
 					bo.SetBase(100)
 					continue
 				}
 			}
+			errorsMetric[errorTypeNetwork].Inc()
 			return err
 		}
+		duration = time.Since(start)
 		break
 	}
 	if err = ctx.Err(); err != nil {
@@ -135,6 +146,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		}{}
 		err := json.Unmarshal(out.Payload, &payload)
 		if err != nil {
+			errorsMetric[errorTypeLambdaInternal].Inc()
 			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", id, err)
 		}
 		return errors.New(payload.ErrorMessage)
@@ -147,13 +159,28 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		var s string
 		err = json.Unmarshal(out.Payload, &s)
 		if err != nil {
+			errorsMetric[errorTypeSerialization].Inc()
 			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", id, err)
 		}
 		r = strings.NewReader(s)
 	}
 
 	// Unmarshal returns a FunctionExecError if execution fails, for example, due to a syntax error in the function.
-	return transformers.Unmarshal(r, records, outSchema, language, preserveJSON)
+	err = transformers.Unmarshal(r, records, outSchema, language, preserveJSON)
+	if err != nil {
+		if _, ok := err.(transformers.FunctionExecError); ok {
+			errorsMetric[errorTypeFunctionExec].Inc()
+		} else {
+			errorsMetric[errorTypeSerialization].Inc()
+		}
+		return err
+	}
+
+	// Success metrics.
+	durationMetric.Observe(duration.Seconds())
+	recordsMetric.Add(len(records))
+
+	return nil
 }
 
 // Close closes the function.
@@ -449,4 +476,53 @@ func parseID(id string) (arn string, language state.Language, err error) {
 		return "", 0, fmt.Errorf("transformers/lambda: invalid function identifier %q", id)
 	}
 	return
+}
+
+// Metric error types.
+const (
+	errorTypeConnection = iota
+	errorTypeNetwork
+	errorTypeLambdaInternal
+	errorTypeFunctionNotFound
+	errorTypeSerialization
+	errorTypeFunctionExec
+)
+
+var metricErrorLabels = [...]string{
+	"connection",
+	"network",
+	"lambda_internal",
+	"function_not_found",
+	"serialization",
+	"function_exec",
+}
+
+// Metrics.
+var errorsMetric [len(metricErrorLabels)]*metrics.Counter
+var durationMetric *metrics.Histogram
+var recordsMetric *metrics.Counter
+
+func init() {
+	// Errors metric.
+	vec := metrics.RegisterCounterVec(
+		"meergo_lambda_errors_total",
+		"Total number of Lambda errors, classified by type",
+		[]string{"type"},
+	)
+	for i, status := range metricErrorLabels {
+		errorsMetric[i] = vec.Register(status)
+	}
+
+	// Duration metric.
+	durationMetric = metrics.RegisterHistogram(
+		"meergo_lambda_duration_seconds",
+		"Duration of successful Lambda executions in seconds",
+		[]float64{0.1, 0.5, 1, 2.5, 5},
+	)
+
+	// Records metric.
+	recordsMetric = metrics.RegisterCounter(
+		"meergo_lambda_records_total",
+		"Total number of input records processed by successful Lambda executions",
+	)
 }
