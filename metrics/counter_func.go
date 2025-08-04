@@ -121,7 +121,7 @@ func (vec *CounterFuncVec) Collect(ch chan<- prometheus.Metric) {
 	})
 }
 
-// Describe sends the descriptor of this metric vector and all its stored
+// Describe sends the descriptor of this metric vector and all its registered
 // [CounterFunc] metrics to the provided channel.
 // It is safe for concurrent use by multiple goroutines.
 func (vec *CounterFuncVec) Describe(ch chan<- *prometheus.Desc) {
@@ -132,7 +132,8 @@ func (vec *CounterFuncVec) Describe(ch chan<- *prometheus.Desc) {
 	})
 }
 
-// Register registers a [CounterFunc] for the given label values and returns it.
+// Register registers a [CounterFunc] metric for the given label values and
+// returns it.
 //
 // It panics if the number of label values does not match the vector's label
 // names, or if a metric with the same label values already registered.

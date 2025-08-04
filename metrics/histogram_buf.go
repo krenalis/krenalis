@@ -48,7 +48,7 @@ type HistogramBuf struct {
 	}
 }
 
-// RegisterHistogramBuf registers a new [HistogramBuf] with specified name, help
+// RegisterHistogramBuf registers a [HistogramBuf] metric with specified name, help
 // string, and bucket upper bounds (less or equal thresholds). Metric name must
 // start with [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
 // It panics if a metric with the same name is already registered.
@@ -157,9 +157,9 @@ type HistogramBufVec struct {
 	metrics sync.Map // sync.Map allows non-blocking writes during Collect.
 }
 
-// RegisterHistogramBufVec registers a [HistogramBufVec] with given name, help,
-// label names, and bucket boundaries. Metric and label names must start with
-// [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
+// RegisterHistogramBufVec registers a [HistogramBufVec] metric with given name,
+// help, label names, and bucket boundaries. Metric and label names must start
+// with [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
 // It panics if a metric with the same name is already registered.
 func RegisterHistogramBufVec(name, help string, labels []string, les []float64) *HistogramBufVec {
 	vec := &HistogramBufVec{
@@ -183,7 +183,7 @@ func (vec *HistogramBufVec) Collect(ch chan<- prometheus.Metric) {
 	})
 }
 
-// Describe sends the descriptor of this histogram vector and all its stored
+// Describe sends the descriptor of this histogram vector and all its registered
 // metrics to the provided channel. It implements prometheus.Collector.
 // It is safe for concurrent use by multiple goroutines.
 func (vec *HistogramBufVec) Describe(ch chan<- *prometheus.Desc) {
@@ -194,8 +194,8 @@ func (vec *HistogramBufVec) Describe(ch chan<- *prometheus.Desc) {
 	})
 }
 
-// Register registers a [HistogramBuf] for the given label values and returns
-// it.
+// Register registers a [HistogramBuf] metric for the given label values and
+// returns it.
 //
 // It panics if the number of label values does not match the vector's label
 // names, or if a metric with the same label values already registered.

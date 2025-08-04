@@ -20,7 +20,7 @@ import (
 //
 // Example:
 //
-//	g := NewGaugeFunc(
+//	g := RegisterGaugeFunc(
 //	    "current_temperature",
 //	    "Current temperature",
 //	    func() float64 {
@@ -36,11 +36,11 @@ type GaugeFunc struct {
 	get         func() float64
 }
 
-// NewGaugeFunc creates and registers a new [GaugeFunc] metric with the given
-// name, help string, and value retrieval function. Metric and label names must
-// start with [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
+// RegisterGaugeFunc registers a [GaugeFunc] metric with the given name, help
+// string, and value retrieval function. Metric and label names must start with
+// [a-zA-Z_] and contain only [a-zA-Z0-9_], no spaces.
 // It panics if a metric with the same name is already registered.
-func NewGaugeFunc(name, help string, get func() float64) *GaugeFunc {
+func RegisterGaugeFunc(name, help string, get func() float64) *GaugeFunc {
 	g := &GaugeFunc{
 		desc: prometheus.NewDesc(name, help, nil, nil),
 		get:  get,
@@ -121,7 +121,7 @@ func (vec *GaugeFuncVec) Collect(ch chan<- prometheus.Metric) {
 	})
 }
 
-// Describe sends the descriptor of this metric vector and all its stored
+// Describe sends the descriptor of this metric vector and all its registered
 // [GaugeFunc] metrics to the provided channel.
 // It is safe for concurrent use by multiple goroutines.
 func (vec *GaugeFuncVec) Describe(ch chan<- *prometheus.Desc) {
@@ -132,7 +132,8 @@ func (vec *GaugeFuncVec) Describe(ch chan<- *prometheus.Desc) {
 	})
 }
 
-// Register registers a [GaugeFunc] for the given label values and returns it.
+// Register registers a [GaugeFunc] metric for the given label values and
+// returns it.
 //
 // It panics if the number of label values does not match the vector's label
 // names, or if a metric with the same label values already registered.
@@ -152,7 +153,6 @@ func (vec *GaugeFuncVec) Register(get func() float64, labelValues ...string) *Ga
 	if _, loaded := vec.metrics.LoadOrStore(key, g); loaded {
 		panic(fmt.Sprintf("metrics: label values %v already registered", labelValues))
 	}
-
 	return g
 }
 
