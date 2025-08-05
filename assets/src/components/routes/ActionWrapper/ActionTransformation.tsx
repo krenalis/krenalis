@@ -819,7 +819,7 @@ const TransformationBox = ({
 				const mapping = action.transformation.mapping[closestMappedParent];
 				const indentationDifference = property.indentation - mapping.indentation;
 				const mappingProperty = flatInputSchema[mapping.value];
-				if (mappingProperty.full.type.kind === 'object') {
+				if (mappingProperty?.full.type.kind === 'object') {
 					const flat = flattenSchema(mappingProperty.full.type as ObjectType);
 					let key = Object.keys(flat).find(
 						(k) =>
