@@ -29,7 +29,6 @@ import (
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/metrics"
-	"github.com/meergo/meergo/opentelemetry"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -67,10 +66,7 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	OAuth         map[string]*state.ConnectorOAuth
-	OpenTelemetry struct {
-		Enable bool
-	}
+	OAuth map[string]*state.ConnectorOAuth
 }
 
 type LambdaConfig struct {
@@ -98,13 +94,6 @@ type LocalConfig struct {
 // Cancel ctx to terminate the execution. If ctx is cancelled, Run does not
 // return any error.
 func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
-
-	if settings.OpenTelemetry.Enable {
-		err := opentelemetry.Init(ctx)
-		if err != nil {
-			return err
-		}
-	}
 
 	// Determine the address, the external URL, the JavaScript SDK URL and the
 	// event URL.

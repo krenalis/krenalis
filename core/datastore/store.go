@@ -21,7 +21,6 @@ import (
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/util"
-	"github.com/meergo/meergo/opentelemetry"
 	"github.com/meergo/meergo/types"
 )
 
@@ -408,9 +407,6 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 // same ID.
 func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	store.mustBeOpen()
-
-	ctx, span := opentelemetry.TraceSpan(ctx, "Store.StartIdentityResolution")
-	defer span.End()
 
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
 	// actual IR execution. See issue

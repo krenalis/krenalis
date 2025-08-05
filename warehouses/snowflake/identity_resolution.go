@@ -19,7 +19,6 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/backoff"
-	"github.com/meergo/meergo/opentelemetry"
 	"github.com/meergo/meergo/types"
 
 	"github.com/snowflakedb/gosnowflake"
@@ -55,8 +54,6 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 }
 
 func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
-	_, span := opentelemetry.TraceSpan(ctx, "Snowflake.ResolveIdentities")
-	defer span.End()
 
 	// Determine the current version of the "users" table and create a copy of
 	// it with the incremented version.
@@ -69,7 +66,6 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 
 	// Create a copy of the current users table and set its new version in
 	// '_USER_SCHEMA_VERSIONS'.
-	_, span = opentelemetry.TraceSpan(ctx, "Switching user table", "current version", usersVersion, "next version", newUsersVersion)
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		likeTable := fmt.Sprintf(`_USERS_%d`, usersVersion)
 		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteIdent(newUsersName), quoteIdent(likeTable)))
@@ -83,7 +79,6 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		}
 		return nil
 	})
-	span.End()
 	if err != nil {
 		return err
 	}
@@ -190,23 +185,19 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
 	query = strings.ReplaceAll(query, "{{ new_users_name }}", quoteIdent(newUsersName))
 	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
-	_, span = opentelemetry.TraceSpan(ctx, "Creation of support objects and stored procedures")
 	ctxMulti, err := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
 	if err != nil {
 		return snowflake(err)
 	}
 	db := warehouse.openDB()
 	_, err = db.ExecContext(ctxMulti, query)
-	span.End()
 	if err != nil {
 		return snowflake(err)
 	}
 
 	// Call the 'RESOLVE_IDENTITIES' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
-	_, span = opentelemetry.TraceSpan(ctx, "CALL RESOLVE_IDENTITIES()")
 	_, err = db.ExecContext(ctx, "CALL RESOLVE_IDENTITIES()")
-	span.End()
 	if err != nil {
 		return snowflake(err)
 	}

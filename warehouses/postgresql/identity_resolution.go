@@ -18,7 +18,6 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/backoff"
-	"github.com/meergo/meergo/opentelemetry"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"
@@ -54,8 +53,6 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 }
 
 func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
-	_, span := opentelemetry.TraceSpan(ctx, "PostgreSQL.ResolveIdentities")
-	defer span.End()
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -73,7 +70,6 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 
 	// Create a copy of the current users table and set its new version in
 	// '_user_schema_versions'.
-	_, span = opentelemetry.TraceSpan(ctx, "Switching user table", "current version", usersVersion, "next version", newUsersVersion)
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, quoteIdent(newUsersName), usersVersion))
 		if err != nil {
@@ -86,7 +82,6 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 		}
 		return nil
 	})
-	span.End()
 	if err != nil {
 		return err
 	}
@@ -202,18 +197,14 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
 	query = strings.ReplaceAll(query, "{{ new_users_name }}", quoteIdent(newUsersName))
 	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
-	_, span = opentelemetry.TraceSpan(ctx, "Creation of support objects and stored procedures")
 	_, err = pool.Exec(ctx, query)
-	span.End()
 	if err != nil {
 		return err
 	}
 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
-	_, span = opentelemetry.TraceSpan(ctx, "CALL resolve_identities()")
 	_, err = pool.Exec(ctx, "CALL resolve_identities()")
-	span.End()
 	if err != nil {
 		return err
 	}

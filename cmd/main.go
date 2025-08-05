@@ -272,15 +272,6 @@ func settingsFromEnv() (*Settings, error) {
 		}
 	}
 
-	// OpenTelemetry.
-	//
-	// The actual errors telemetry is sent to Sentry. This is just an
-	// experimental and partial feature.
-	settings.OpenTelemetry.Enable, err = boolEnvVar(os.Getenv("MEERGO_OPEN_TELEMETRY_ENABLE"))
-	if err != nil {
-		return nil, fmt.Errorf("invalid value specified for MEERGO_OPEN_TELEMETRY_ENABLE: %s", err)
-	}
-
 	return settings, nil
 }
 
