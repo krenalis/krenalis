@@ -2,7 +2,7 @@
 {% macro Title string %}Configuration{% end %}
 {% Article %}
 
-# Configuration file
+# Configuration
 
 This document describes the available environment variables for configuring Meergo. In particular:
 
