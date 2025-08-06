@@ -227,11 +227,9 @@ type Warehouse interface {
 	// to.
 	Query(ctx context.Context, query RowQuery, withTotal bool) (Rows, int, error)
 
-	// RawQuery executes a query and returns the results as [][]any.
-	//
-	// TODO(Gianluca): for the values that should be returned by this method,
-	// see https://github.com/meergo/meergo/issues/1666.
-	RawQuery(ctx context.Context, query string) ([][]any, error)
+	// RawQuery executes a query and returns the results and the number of columns
+	// in each row.
+	RawQuery(ctx context.Context, query string) (Rows, int, error)
 
 	// ResolveIdentities resolves the identities.
 	//

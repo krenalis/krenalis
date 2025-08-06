@@ -2067,22 +2067,30 @@ func validateUIPreferences(preferences UIPreferences) error {
 	return nil
 }
 
+const maxRawQuerySize = 10 * 1024 * 1024 // 10 MiB.
+
 // RawQueryWarehouse executes a query on the warehouse, returning the result as
-// a [][]any.
+// a json.Value representing a JSON Array (representing the rows) of JSON Arrays
+// (representing the values for each column).
+//
+// If the JSON size exceeds the allowed maximum, this method returns a valid
+// JSON array of arrays containing only the rows within the limit, and
+// simultaneously returns an error indicating the issue.
 //
 // If the workspace has no MCP settings configured, this method returns an
 // error.
 //
-// TODO(Gianluca): for more details about the values returned by this function,
-// see the issue https://github.com/meergo/meergo/issues/1666.
-//
 // TODO(Gianluca): the error handling is currently minimal. See the issue
 // https://github.com/meergo/meergo/issues/1667.
-func (this *Workspace) RawQueryWarehouse(ctx context.Context, query string) ([][]any, error) {
+func (this *Workspace) RawQueryWarehouse(ctx context.Context, query string) (json.Value, error) {
+
 	this.core.mustBeOpen()
+
 	// TODO(Gianluca): here the warehouse mode is not checked. The reason is
 	// that the mode is currently stored in the store. We should review all
 	// this. This is discussed in the issue https://github.com/meergo/meergo/issues/1224.
+
+	// Retrieve the warehouse instance for the MCP.
 	this.core.mcpMu.Lock()
 	mcp, ok := this.core.mcp[this.workspace.ID]
 	this.core.mcpMu.Unlock()
@@ -2092,9 +2100,58 @@ func (this *Workspace) RawQueryWarehouse(ctx context.Context, query string) ([][
 	if mcp == nil {
 		return nil, errors.New("the workspace lacks the MCP (Model Context Protocol) user configuration required to access the data warehouse")
 	}
-	rows, err := mcp.RawQuery(ctx, query)
+
+	// Execute the query on the data warehouse.
+	rows, columnCount, err := mcp.RawQuery(ctx, query)
 	if err != nil {
 		return nil, err
 	}
-	return rows, nil
+
+	// Build the JSON response.
+	b := json.NewBuffer()
+	defer rows.Close()
+	comma := false
+	b.WriteByte('[')
+	for rows.Next() {
+		row := make([]any, columnCount)
+		for i := range row {
+			var v any
+			row[i] = &v
+		}
+		err := rows.Scan(row...)
+		if err != nil {
+			return nil, err
+		}
+		size := b.Len()
+		if comma {
+			b.WriteByte(',')
+		}
+		err = b.Encode(row)
+		if err != nil {
+			return nil, err
+		}
+		// Truncate the response if it exceeds the limit, simultaneously
+		// returning the truncated response and an error.
+		if b.Len()+len("]") >= maxRawQuerySize {
+			b.Truncate(size)
+			b.WriteByte(']')
+			value, err := b.Value()
+			if err != nil {
+				return nil, err
+			}
+			return value, fmt.Errorf("only a subset of rows was returned because the total size exceeded the %d-byte limit", maxRawQuerySize)
+		}
+		comma = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	b.WriteByte(']')
+
+	value, err := b.Value()
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
 }

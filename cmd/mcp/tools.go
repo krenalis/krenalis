@@ -61,15 +61,15 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}
-			rows, err := ws.RawQueryWarehouse(ctx, query)
+			queryResult, err := ws.RawQueryWarehouse(ctx, query)
 			if err != nil {
+				if queryResult != nil {
+					msg := fmt.Sprintf("an error occurred: %s, only the following rows have been read: %s", err, string(queryResult))
+					return mcp.NewToolResultText(msg), nil
+				}
 				return nil, err
 			}
-			encoded, err := json.Marshal(rows)
-			if err != nil {
-				return nil, err
-			}
-			return mcp.NewToolResultText(string(encoded)), nil
+			return mcp.NewToolResultText(string(queryResult)), nil
 		},
 	},
 
