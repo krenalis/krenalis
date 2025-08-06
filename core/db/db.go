@@ -175,6 +175,66 @@ func (db *DB) Ping(ctx context.Context) error {
 	return db.db.Ping(ctx)
 }
 
+// PoolStats defines a set of methods for retrieving statistics about the
+// lifecycle and usage of a connection pool. It provides insight into
+// acquisition patterns, connection limits, creation rates, and the current
+// state of connections (in use, idle, or establishing).
+type PoolStats interface {
+
+	// AcquireCount returns how many times a connection was successfully fetched.
+	AcquireCount() int64
+
+	// AcquireDuration returns the sum of durations spent acquiring connections.
+	AcquireDuration() time.Duration
+
+	// AcquiredConns returns the number of connections currently in use.
+	AcquiredConns() int32
+
+	// CanceledAcquireCount returns how many acquisition attempts were aborted
+	// due to context cancellation.
+	CanceledAcquireCount() int64
+
+	// ConstructingConns returns how many connections are in the process
+	// of being opened.
+	ConstructingConns() int32
+
+	// EmptyAcquireCount returns how many acquisitions had to wait
+	// because no connection was immediately available.
+	EmptyAcquireCount() int64
+
+	// EmptyAcquireWaitTime returns the total time spent waiting
+	// for a connection to become available.
+	EmptyAcquireWaitTime() time.Duration
+
+	// IdleConns returns the number of connections that are open
+	// but not currently used.
+	IdleConns() int32
+
+	// MaxConns returns the upper limit on simultaneous connections.
+	MaxConns() int32
+
+	// MaxIdleDestroyCount returns how many idle connections were closed
+	// for exceeding the idle timeout.
+	MaxIdleDestroyCount() int64
+
+	// MaxLifetimeDestroyCount returns how many connections were closed
+	// for exceeding their maximum allowed lifetime.
+	MaxLifetimeDestroyCount() int64
+
+	// NewConnsCount returns the number of times a new connection
+	// was created.
+	NewConnsCount() int64
+
+	// TotalConns returns the sum of active, idle, and establishing connections.
+	TotalConns() int32
+}
+
+// PoolStats returns aggregated statistics about the current state and usage of
+// the connection pool.
+func (db *DB) PoolStats() PoolStats {
+	return db.db.Stat()
+}
+
 // Query implements the [Connection.Query] method.
 func (db *DB) Query(ctx context.Context, query string, args ...any) (*Rows, error) {
 	rows, err := db.db.Query(ctx, query, args...)

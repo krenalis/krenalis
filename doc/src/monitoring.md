@@ -8,14 +8,18 @@ Meergo monitors its own internal service metrics, and makes them available under
 
 ## Metrics
 
-| Name                             | Type         | Labels                      | Description                                                              |
-|----------------------------------|--------------|-----------------------------|--------------------------------------------------------------------------|
-| `meergo_lambda_errors_total`     | CounterVec   | `type`                      | Total number of Lambda errors, categorized by error type.                |
-| `meergo_lambda_duration_seconds` | Histogram    | –                           | Duration of successful Lambda executions, in seconds.                    |
-| `meergo_lambda_records_total`    | Counter      | –                           | Total number of input records processed by successful Lambda executions. |
-| `meergo_sender_queue_available`  | GaugeVec     | –                           | Number of available events in the event queue.                           |
-| `meergo_sender_queue_wait`       | HistogramVec | `connector`<br>`connection` | Time spent waiting in the event queue (in seconds).                      |
-
+ Name                                         | Type         | Labels                       | Description                                                                 |
+|---------------------------------------------|--------------|------------------------------|-----------------------------------------------------------------------------|
+| `meergo_db_acquired_conns`                  | Gauge        | –                            | Current number of connections in use by the database connection pool.       |
+| `meergo_db_max_conns`                       | Gauge        | –                            | Configured maximum number of simultaneous database connections.             |
+| `meergo_db_acquire_duration_seconds_total`  | Counter      | –                            | Cumulative seconds spent acquiring connections from the database pool.      |
+| `meergo_db_acquire_count_total`             | Counter      | –                            | Total number of successful database connection acquisitions.                |
+| `meergo_db_new_conns_count_total`           | Counter      | –                            | Total number of newly created database connections (connection churn).      |
+| `meergo_lambda_errors_total`                | CounterVec   | `type`                       | Total number of Lambda errors, categorized by error type.                   |
+| `meergo_lambda_duration_seconds`            | Histogram    | –                            | Duration of successful Lambda executions, in seconds.                       |
+| `meergo_lambda_records_total`               | Counter      | –                            | Total number of input records processed by successful Lambda executions.    |
+| `meergo_sender_queue_available`             | GaugeVec     | –                            | Number of available events in the event queue.                              |
+| `meergo_sender_queue_wait`                  | HistogramVec | `connector`,<br>`connection` | Time spent waiting in the event queue (in seconds).                         |
 
 ### Notes
 

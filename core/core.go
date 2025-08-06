@@ -30,7 +30,7 @@ import (
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events/collector"
-	"github.com/meergo/meergo/core/metrics"
+	coremetrics "github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/lambda"
@@ -46,12 +46,13 @@ import (
 )
 
 type Core struct {
-	db         *db.DB
-	state      *state.State
-	datastore  *datastore.Datastore
-	connectors *connectors.Connectors
-	metrics    *metrics.Collector
-	events     struct {
+	db            *db.DB
+	dbPoolMetrics *dbPoolMetrics
+	state         *state.State
+	datastore     *datastore.Datastore
+	connectors    *connectors.Connectors
+	metrics       *coremetrics.Collector
+	events        struct {
 		collector *collector.Collector
 		observer  *collector.Observer
 	}
@@ -179,6 +180,7 @@ func New(conf *Config) (*Core, error) {
 
 	core := &Core{
 		db:              db,
+		dbPoolMetrics:   registerDBPoolMetrics(db),
 		memberEmailFrom: conf.MemberEmailFrom,
 		smtp:            smtp,
 	}
@@ -210,7 +212,7 @@ func New(conf *Config) (*Core, error) {
 	}
 
 	// Init the metrics.
-	core.metrics = metrics.New(db, core.state)
+	core.metrics = coremetrics.New(db, core.state)
 
 	// Init the datastore.
 	core.datastore = datastore.New(core.state)
@@ -412,6 +414,8 @@ func (core *Core) Close() {
 	core.metrics.Close(context.Background())
 	core.datastore.Close()
 	core.state.Close()
+	// Unregister the database connection pool metrics.
+	core.dbPoolMetrics.Unregister()
 }
 
 // Connector returns the connector with the provided name.
@@ -947,11 +951,11 @@ func (core *Core) onExecuteAction(n state.ExecuteAction) {
 
 // actionError represents an action error.
 type actionError struct {
-	step metrics.Step
+	step coremetrics.Step
 	err  error
 }
 
-func newActionError(step metrics.Step, err error) *actionError {
+func newActionError(step coremetrics.Step, err error) *actionError {
 	return &actionError{step, err}
 }
 
@@ -1035,7 +1039,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 		defer stopPing()
 
 		// Prepare the execution metrics.
-		timeSlot := metrics.TimeSlotFromTime(execution.StartTime)
+		timeSlot := coremetrics.TimeSlotFromTime(execution.StartTime)
 		bo = backoff.New(200)
 		for bo.Next(ctx) {
 			_, err := core.db.Exec(ctx,
