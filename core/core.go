@@ -416,6 +416,8 @@ func (core *Core) Close() {
 	core.state.Close()
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
+	// Close PostgreSQL connections.
+	core.db.Close()
 }
 
 // Connector returns the connector with the provided name.
