@@ -583,6 +583,7 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "l", Type: types.Array(types.Map(types.Text()))},
 		{Name: "m", Type: types.Object([]types.Property{{Name: "x", Type: types.Text()}}), Nullable: true},
 		{Name: "n", Type: types.Map(types.Text()), Nullable: true},
+		{Name: "o", Type: types.Text().WithValues("foo", "boo"), Nullable: true},
 	})
 
 	tests := []struct {
@@ -751,6 +752,15 @@ func Test_validateFilter(t *testing.T) {
 		},
 		{
 			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
+					{Property: "o", Operator: OpIsLessThan, Values: []string{"none"}},
+				},
+			},
+			err: fmt.Errorf(`operator "is less than" cannot be used with text type that has values`),
+		},
+		{
+			filter: Filter{
 				Logical: OpOr,
 				Conditions: []FilterCondition{
 					{Property: "b", Operator: OpIs, Values: []string{"5"}},
@@ -785,9 +795,11 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "m", Operator: OpIsNull},
 					{Property: "m.x", Operator: OpContains, Values: []string{"abc"}},
 					{Property: "n", Operator: OpIsNotNull},
+					{Property: "o", Operator: OpIs, Values: []string{"foo"}},
+					{Property: "o", Operator: OpIsNotNull},
 				},
 			},
-			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n"},
+			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n", "o"},
 		},
 	}
 

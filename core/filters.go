@@ -446,18 +446,18 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 		//
 		// is                          : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, text
 		// is not                      : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, text
-		// is less than                : int, uint, float, decimal, json, text
-		// is less than or equal to    : int, uint, float, decimal, json, text
-		// is greater than             : int, uint, float, decimal, json, text
-		// is greater than or equal to : int, uint, float, decimal, json, text
-		// is between                  : int, uint, float, decimal, year, datetime, date, time, json, text
-		// is not between              : int, uint, float, decimal, year, datetime, date, time, json, text
-		// contains                    : json, text, array [^1]
-		// does not contain            : json, text, array [^1]
+		// is less than                : int, uint, float, decimal, json, text [^1]
+		// is less than or equal to    : int, uint, float, decimal, json, text [^1]
+		// is greater than             : int, uint, float, decimal, json, text [^1]
+		// is greater than or equal to : int, uint, float, decimal, json, text [^1]
+		// is between                  : int, uint, float, decimal, year, datetime, date, time, json, text [^1]
+		// is not between              : int, uint, float, decimal, year, datetime, date, time, json, text [^1]
+		// contains                    : json, text, array [^2]
+		// does not contain            : json, text, array [^2]
 		// is one of                   : int, uint, float, decimal, year, datetime, date, time, json, text
 		// is not one of               : int, uint, float, decimal, year, datetime, date, time, json, text
-		// starts with                 : json, text
-		// ends with                   : json, text
+		// starts with                 : json, text [^1]
+		// ends with                   : json, text [^1]
 		// is before                   : datetime, date, time, year
 		// is on or before             : datetime, date, time, year
 		// is after                    : datetime, date, time, year
@@ -469,7 +469,8 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 		// exists                      : json
 		// does not exist              : json
 		//
-		// [1]: array(T) is supported if T is a type that is supported by the 'is' operator.
+		// [1]: text with values is not supported.
+		// [2]: array(T) is supported if T is a type that is supported by the 'is' operator.
 		//
 		switch op {
 		case OpIs, OpIsNot:
@@ -477,7 +478,16 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 			case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
 				return nil, fmt.Errorf("operator %q cannot be used with boolean properties", op)
 			}
-		case OpIsBetween, OpIsNotBetween, OpIsOneOf, OpIsNotOneOf:
+		case OpIsBetween, OpIsNotBetween:
+			switch kind {
+			case types.TextKind:
+				if p.Type.Values() != nil {
+					return nil, fmt.Errorf("operator %q cannot be used with text type that has values", op)
+				}
+			case types.BooleanKind, types.UUIDKind, types.InetKind, types.ArrayKind, types.ObjectKind, types.MapKind:
+				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			}
+		case OpIsOneOf, OpIsNotOneOf:
 			switch kind {
 			case types.BooleanKind, types.UUIDKind, types.InetKind, types.ArrayKind, types.ObjectKind, types.MapKind:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
@@ -486,6 +496,9 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 			switch kind {
 			case types.IntKind, types.UintKind, types.FloatKind, types.DecimalKind:
 			case types.TextKind:
+				if p.Type.Values() != nil {
+					return nil, fmt.Errorf("operator %q cannot be used with text type that has values", op)
+				}
 			case types.JSONKind:
 			default:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
@@ -502,7 +515,13 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 			}
 		case OpStartsWith, OpEndsWith:
-			if kind != types.JSONKind && kind != types.TextKind {
+			switch kind {
+			case types.JSONKind:
+			case types.TextKind:
+				if p.Type.Values() != nil {
+					return nil, fmt.Errorf("operator %q cannot be used with text type that has values", op)
+				}
+			default:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 			}
 		case OpIsBefore, OpIsAfter, OpIsOnOrBefore, OpIsOnOrAfter:

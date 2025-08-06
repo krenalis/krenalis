@@ -253,6 +253,20 @@ const getCompatibleFilterOperators = (property: TransformedProperty): number[] =
 			}
 		}
 
+		// The 'texts' property with values can only be used with the operators
+		// 'is', 'is not', 'is one of', and 'is not one of'.
+		if (property.type === 'text' && (property.full.type as TextType).values != null) {
+			switch (FILTER_OPERATORS[i]) {
+				case 'is':
+				case 'is not':
+				case 'is one of':
+				case 'is not one of':
+					break;
+				default:
+					continue;
+			}
+		}
+
 		if (typesByFilterOperator[i].includes(property.type)) {
 			operators.push(Number(i));
 		}
