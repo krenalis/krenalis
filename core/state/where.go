@@ -165,7 +165,7 @@ const (
 var jsonOperators = []byte(`"Is"IsNot"IsLessThan"IsLessThanOrEqualTo"IsGreaterThan"IsGreaterThanOrEqualTo"` +
 	`IsBetween"OpIsNotBetween"Contains"DoesNotContain"IsOneOf"IsNotOneOf"StartsWith"EndsWith"IsBefore"` +
 	`IsOnOrBefore"IsAfter"IsOnOrAfter"IsTrue"IsFalse"IsNull"IsNotNull"Exists"DoesNotExist"`)
-var jsonOperatorsIndexes = [...]uint{0, 3, 9, 20, 40, 54, 77, 87, 102, 111, 126, 134, 145, 156, 165, 174, 187, 195, 207, 214, 222, 229, 239, 246}
+var jsonOperatorsIndexes = [...]uint{0, 3, 9, 20, 40, 54, 77, 87, 102, 111, 126, 134, 145, 156, 165, 174, 187, 195, 207, 214, 222, 229, 239, 246, 259}
 
 // MarshalJSON returns the JSON representation of op.
 func (op WhereOperator) MarshalJSON() ([]byte, error) {
