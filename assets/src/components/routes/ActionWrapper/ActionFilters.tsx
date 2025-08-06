@@ -320,7 +320,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 						onSlInput={onInputPathFragment}
 						name={`path-${i}`}
 						disabled={isDisabled}
-						placeholder='Path'
+						placeholder='Path (optional)'
 					/>
 				);
 			}
