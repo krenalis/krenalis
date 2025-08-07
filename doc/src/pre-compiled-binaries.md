@@ -4,10 +4,34 @@
 
 # Pre-compiled binaries
 
-For this installation method you need to have [PostgreSQL](https://www.postgresql.org/download/) 13 or higher.
+Meergo is also available as pre-compiled binaries.
 
-> 🚧 Releases are not available yet, so this section is just a stub.
+This is the recommended installation method for users who want more control over the execution and environment of Meergo compared to running it via Docker, but don't specifically need to compile Meergo from source.
 
-You can download a build of Meergo from the [releases page of the repository](https://github.com/meergo/meergo/releases) or from the [Meergo's website](https://www.meergo.com).
+## Before you begin
 
-Then you can proceed with the [configuration](#configuration).
+To install and use Meergo via pre-compiled binaries, you need:
+
+* [PostgreSQL](https://www.postgresql.org/download/) version 13 or later.
+
+## How to run Meergo from pre-compiled binaries
+
+You can find Meergo binaries on the [GitHub Releases page](https://github.com/meergo/meergo/releases).
+
+Once downloaded and extracted, verify the `meergo` binary works by running:
+
+```bash
+./meergo --help
+```
+
+You should see an output like:
+
+```bash
+Usage of ./meergo:
+  -help
+    	print the help for meergo and exit
+```
+
+This confirms the Meergo binary is valid and executable.
+
+You can now proceed with the [database setup](./database-setup).
