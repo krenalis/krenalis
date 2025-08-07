@@ -29,3 +29,17 @@ For this installation method you need to have [Git](https://git-scm.com/download
 3. Open the Meergo admin at [http://localhost:9090/admin/](http://localhost:9090/admin/)
 
 Initially, login is not required with the Docker installation. To enable login, create a new member with their email and password.
+
+## Import and export local files with Docker
+
+When running Meergo under Docker, for importing and exporting files locally, you can add a Filesystem connection whose Root Path is:
+
+```plain
+/bin/meergo-files/sample-filesystem
+```
+
+which is mapped to the directory:
+
+```plain
+<local Meergo repository>/docker-compose/sample-filesystem
+```

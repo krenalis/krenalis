@@ -29,16 +29,3 @@ Each workspace operates as an isolated environment with its own **data warehouse
 
 > ⚠️ Once a data warehouse is linked to a workspace, it **cannot be changed** later.
 
-### Import and export local files with Docker
-
-When running Meergo under Docker, for importing and exporting files locally, you can add a Filesystem connection whose Root Path is:
-
-```plain
-/bin/meergo-files/sample-filesystem
-```
-
-which is mapped to the directory:
-
-```plain
-<local Meergo repository>/docker-compose/sample-filesystem
-```
