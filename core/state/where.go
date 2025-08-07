@@ -158,8 +158,11 @@ const (
 	OpIsFalse                                     // is false
 	OpIsNull                                      // is null
 	OpIsNotNull                                   // is not null
-	OpExists                                      // exists
-	OpDoesNotExist                                // does not exist
+
+	// OpExists and OpDoesNotExist must be placed at the end, as the convertWhere function in
+	// the "core/datastore" package relies on the other operators being in their expected positions.
+	OpExists       // exists
+	OpDoesNotExist // does not exist
 )
 
 var jsonOperators = []byte(`"Is"IsNot"IsLessThan"IsLessThanOrEqualTo"IsGreaterThan"IsGreaterThanOrEqualTo"` +
