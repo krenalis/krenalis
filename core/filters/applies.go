@@ -41,7 +41,7 @@ func Applies(where *state.Where, properties map[string]any) bool {
 		case state.OpIsBetween:
 			applies = opIsBetween(v, cond.Values)
 		case state.OpIsNotBetween:
-			applies = opIsNotBetween(v, cond.Values)
+			applies = !opIsBetween(v, cond.Values)
 		case state.OpContains:
 			applies = opContains(v, cond.Values)
 		case state.OpDoesNotContain:
@@ -256,41 +256,6 @@ func opIsBetween(v any, values []any) bool {
 		}
 	case string:
 		return v0.(string) <= v && v <= v1.(string)
-	}
-	return false
-}
-
-func opIsNotBetween(v any, values []any) bool {
-	v0 := values[0]
-	v1 := values[1]
-	switch v := v.(type) {
-	case decimal.Decimal:
-		return v.Less(v0.(decimal.Decimal)) || v.Greater(v1.(decimal.Decimal))
-	case time.Time:
-		v0 := v0.(time.Time)
-		v1 := v1.(time.Time)
-		return v.Before(v0) || v.After(v1)
-	case int:
-		return v < v0.(int) || v > v1.(int)
-	case uint:
-		return v < v0.(uint) || v > v1.(uint)
-	case float64:
-		return v < v0.(float64) || v > v1.(float64)
-	case json.Value:
-		v0 := v0.(state.JSONConditionValue)
-		v1 := v1.(state.JSONConditionValue)
-		switch v.Kind() {
-		case json.Number:
-			if v0.Number != nil {
-				v, err := v.Decimal(0, 0)
-				return err == nil && v.Less(*v0.Number) || v.Greater(*v1.Number)
-			}
-		case json.String:
-			v := v.String()
-			return v < v0.String || v > v1.String
-		}
-	case string:
-		return v < v0.(string) || v > v1.(string)
 	}
 	return false
 }

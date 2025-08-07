@@ -234,7 +234,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsBetween, v: json.Value("null"), v0: v670, v1: v812, expected: false},
 
 		// OpIsNotBetween.
-		{op: state.OpIsNotBetween, v0: 350, v1: 412, expected: false, notExists: true},
+		{op: state.OpIsNotBetween, v0: 350, v1: 412, expected: true, notExists: true},
 		{op: state.OpIsNotBetween, v: 100, v0: 359, v1: 412, expected: true},
 		{op: state.OpIsNotBetween, v: 359, v0: 359, v1: 412, expected: false},
 		{op: state.OpIsNotBetween, v: 405, v0: 359, v1: 412, expected: false},
@@ -260,7 +260,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsNotBetween, v: decimal.MustParse("2726608135.048165"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: false},
 		{op: state.OpIsNotBetween, v: decimal.MustParse("3084136838.720635"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: false},
 		{op: state.OpIsNotBetween, v: decimal.MustParse("8539500341.8264811"), v0: decimal.MustParse("947126405.18361204926705329"), v1: decimal.MustParse("3084136838.720635"), expected: true},
-		{op: state.OpIsNotBetween, v: nil, v0: 5, v1: 8, expected: false},
+		{op: state.OpIsNotBetween, v: nil, v0: 5, v1: 8, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value("511.0"), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value("670.0"), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsNotBetween, v: json.Value("775.0"), v0: v670, v1: v812, expected: false},
@@ -270,10 +270,10 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsNotBetween, v: json.Value("812.0"), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsNotBetween, v: json.Value(`"850"`), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value(`"670"`), v0: v670, v1: v812, expected: false},
-		{op: state.OpIsNotBetween, v: json.Value("true"), v0: v670, v1: v812, expected: false},
+		{op: state.OpIsNotBetween, v: json.Value("true"), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value(`"foo"`), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value(`""`), v0: v670, v1: v812, expected: true},
-		{op: state.OpIsNotBetween, v: json.Value("null"), v0: v670, v1: v812, expected: false},
+		{op: state.OpIsNotBetween, v: json.Value("null"), v0: v670, v1: v812, expected: true},
 
 		// OpContains.
 		{op: state.OpContains, v0: "boo", expected: false, notExists: true},
