@@ -10,15 +10,6 @@ There are several ways to install Meergo or simply try out its features. Choose 
 * [**Pre-compiled binaries**](./pre-compiled-binaries). A convenient method for quickly setting up Meergo without the need to compile from source.
 * [**From source**](./from-source). Recommended if you wish to customize the executable or contribute to the project by building Meergo directly from the source.
 
-### Certificates
-
-If you have enabled HTTPS by setting the `MEERGO_HTTP_TLS_ENABLED` environment variable to `true`, you must also specify the TLS certificate and private key files. To do this, set the following environment variables:
-
-- `MEERGO_HTTP_TLS_CERT_FILE`: Path to the TLS certificate file.
-- `MEERGO_HTTP_TLS_KEY_FILE`: Path to the corresponding private key file.
-
-Make sure both files are accessible.
-
 ### Starting Meergo
 
 Once the setup is complete, run the `meergo` executable (if you have a `.env` file, it must be in the same directory where Meergo is executed).
