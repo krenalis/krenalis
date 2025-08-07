@@ -129,8 +129,42 @@ const typesByFilterOperator: string[][] = [
 		'object',
 		'map',
 	], // is not null
-	['json'], // exists
-	['json'], // does not exist
+	[
+		'boolean',
+		'int',
+		'uint',
+		'float',
+		'decimal',
+		'datetime',
+		'date',
+		'year',
+		'time',
+		'uuid',
+		'json',
+		'inet',
+		'text',
+		'array',
+		'object',
+		'map',
+	], // exists
+	[
+		'boolean',
+		'int',
+		'uint',
+		'float',
+		'decimal',
+		'datetime',
+		'date',
+		'year',
+		'time',
+		'uuid',
+		'json',
+		'inet',
+		'text',
+		'array',
+		'object',
+		'map',
+	], // does not exist
 ];
 
 type TransformedExportMode = 'Create and update' | 'Create only' | 'Update only';
@@ -224,16 +258,18 @@ interface TransformedAction {
 	format?: string;
 }
 
-const getCompatibleFilterOperators = (property: TransformedProperty): number[] => {
+const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: boolean): number[] => {
 	if (property == null) {
 		return [];
 	}
 	const operators: number[] = [];
 	for (const i of Object.keys(FILTER_OPERATORS)) {
+		let op = FILTER_OPERATORS[i];
+
 		// 'is null' and 'is not null' are compatible only with nullable
 		// properties or json type properties.
-		if (FILTER_OPERATORS[i] === 'is null' || FILTER_OPERATORS[i] === 'is not null') {
-			const isNullable = property.full.nullable === true;
+		if (op === 'is null' || op === 'is not null') {
+			const isNullable = property.full.nullable;
 			const isJSON = property.type === 'json';
 			if (!isNullable && !isJSON) {
 				continue;
@@ -242,10 +278,7 @@ const getCompatibleFilterOperators = (property: TransformedProperty): number[] =
 
 		// 'contains' and 'does not contain' should only be shown if the type of
 		// the array element is supported by the 'is' operator.
-		if (
-			(FILTER_OPERATORS[i] === 'contains' || FILTER_OPERATORS[i] === 'does not contain') &&
-			property.type === 'array'
-		) {
+		if ((op === 'contains' || op === 'does not contain') && property.type === 'array') {
 			const elementType = (property.full.type as ArrayType).elementType;
 			const isOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === 'is');
 			if (!typesByFilterOperator[isOperatorIndex].includes(elementType.kind)) {
@@ -253,10 +286,10 @@ const getCompatibleFilterOperators = (property: TransformedProperty): number[] =
 			}
 		}
 
-		// The 'texts' property with values can only be used with the operators
+		// text property with values can only be used with the operators
 		// 'is', 'is not', 'is one of', and 'is not one of'.
 		if (property.type === 'text' && (property.full.type as TextType).values != null) {
-			switch (FILTER_OPERATORS[i]) {
+			switch (op) {
 				case 'is':
 				case 'is not':
 				case 'is one of':
@@ -264,6 +297,12 @@ const getCompatibleFilterOperators = (property: TransformedProperty): number[] =
 					break;
 				default:
 					continue;
+			}
+		}
+
+		if (op === 'exists' || op === 'does not exist') {
+			if (!(property.readOptional || (property.type === 'json' && hasPath))) {
+				continue;
 			}
 		}
 

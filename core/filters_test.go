@@ -576,7 +576,7 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "e", Type: types.DateTime()},
 		{Name: "f", Type: types.Date()},
 		{Name: "g", Type: types.Time()},
-		{Name: "h", Type: types.UUID()},
+		{Name: "h", Type: types.UUID(), ReadOptional: true},
 		{Name: "i", Type: types.Year()},
 		{Name: "j", Type: types.Inet()},
 		{Name: "k", Type: types.Array(types.Text()), Nullable: true},
@@ -694,7 +694,16 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "b", Operator: OpExists},
 				},
 			},
-			err: errors.New(`operator "exists" can only be used with a json property that includes a json path`),
+			err: errors.New(`operator "exists" can only be used with read-optional properties or with json properties that include a JSON path`),
+		},
+		{
+			filter: Filter{
+				Logical: OpOr,
+				Conditions: []FilterCondition{
+					{Property: "d", Operator: OpDoesNotExist},
+				},
+			},
+			err: errors.New(`operator "does not exist" can only be used with read-optional properties or with json properties that include a JSON path`),
 		},
 		{
 			filter: Filter{
@@ -781,6 +790,8 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "f", Operator: OpIsOnOrBefore, Values: []string{"2024-09-10"}},
 					{Property: "g", Operator: OpIsAfter, Values: []string{"15:34:31"}},
 					{Property: "h", Operator: OpIs, Values: []string{"dbfa8339-0d12-4c94-a3fb-569199ae5c8e"}},
+					{Property: "h", Operator: OpExists},
+					{Property: "h", Operator: OpDoesNotExist},
 					{Property: "i", Operator: OpIsBefore, Values: []string{"2024"}},
 					{Property: "j", Operator: OpIs, Values: []string{"192.168.1.1"}},
 					{Property: "e", Operator: OpIsOnOrAfter, Values: []string{"2024-09-10T15:34:31"}},

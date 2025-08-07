@@ -55,9 +55,10 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 
 		const a = { ...action };
 		const id = Number(name.split('-')[1]);
+		const hasPath = 'path' in a.filter!.conditions[id];
 		const currentOperator = a.filter!.conditions[id]['operator'];
 		const currentOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === currentOperator);
-		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value]);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value], hasPath);
 		const isCompatible = compatibleOperators.includes(currentOperatorIndex);
 		const isJson = flatInputSchema[value]?.type === 'json';
 
@@ -93,12 +94,13 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		const propertyName = a.filter!.conditions[id]['property'];
 		const [_, path] = splitPropertyAndPath(propertyName, flatInputSchema);
 		let newPropertyName = '';
-		if (path !== '' && flatInputSchema[value]?.type === 'json') {
+		let hasPath = path !== '';
+		if (hasPath && flatInputSchema[value]?.type === 'json') {
 			newPropertyName = `${value}.${path}`;
 		} else {
 			newPropertyName = value;
 		}
-		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[newPropertyName]);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[newPropertyName], hasPath);
 		const currentOperator = a.filter!.conditions[id]['operator'];
 		if (currentOperator != null && currentOperator !== '') {
 			const index = FILTER_OPERATORS.indexOf(currentOperator);
@@ -336,7 +338,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					disabled={isInvalidProperty || isDisabled}
 				>
 					{property != null
-						? getCompatibleFilterOperators(property).map((i) => (
+						? getCompatibleFilterOperators(property, path !== '').map((i) => (
 								<SlOption key={i} value={String(i)}>
 									{FILTER_OPERATORS[i]}
 								</SlOption>

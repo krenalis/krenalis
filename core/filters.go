@@ -541,8 +541,8 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 				return nil, fmt.Errorf("operator %q can only be used with nullable or json properties", op)
 			}
 		case OpExists, OpDoesNotExist:
-			if path == cond.Property {
-				return nil, fmt.Errorf("operator %q can only be used with a json property that includes a json path", op)
+			if !p.ReadOptional && path == cond.Property {
+				return nil, fmt.Errorf("operator %q can only be used with read-optional properties or with json properties that include a JSON path", op)
 			}
 		default:
 			return nil, fmt.Errorf("operator %q is not valid", op)
