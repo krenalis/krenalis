@@ -32,4 +32,4 @@ Meergo CDP is built for engineers, analysts, and growth teams who want full cont
 
 ## Get started
 
-To get started, check out how to [Install Meergo](install-meergo).
+To get started, see [Installation](installation).

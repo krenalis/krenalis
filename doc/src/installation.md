@@ -1,8 +1,8 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Install Meergo{% end %}
+{% macro Title string %}Installation{% end %}
 {% Article %}
 
-# Install Meergo
+# Installation
 
 There are several ways to install Meergo or simply try out its features. Choose the one that suits you best:
 
