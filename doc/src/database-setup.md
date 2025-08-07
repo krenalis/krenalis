@@ -21,7 +21,7 @@ psql postgres -c "CREATE DATABASE meergo"
 Next, initialize the database with the tables needed for Meergo to run:
 
 ```bash
-curl https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/database/initialization/1%20-%20postgres.sql\?token\=GHSAT0AAAAAACG2OK4HUAQL2QOFNT7Y4ZWG2EUV2QA | psql meergo
+curl -sf https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/database/initialization/1%20-%20postgres.sql\?token\=GHSAT0AAAAAACG2OK4HUAQL2QOFNT7Y4ZWG2EUV2QA | psql meergo
 ```
 
 If the database initialization was successful, running the command:
