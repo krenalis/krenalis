@@ -50,10 +50,10 @@ type Query struct {
 	Limit int
 }
 
-// exprFromWhere converts a state.Where expression into a meergo.Expr.
+// convertWhere converts a state.Where expression into a meergo.Expr.
 // "exists" and "does not exist" operators are mapped to OpIsNotNull and
 // OpIsNull, respectively.
-func exprFromWhere(where *state.Where, columnFromProperty map[string]meergo.Column) (meergo.Expr, error) {
+func convertWhere(where *state.Where, columnFromProperty map[string]meergo.Column) (meergo.Expr, error) {
 	exp := meergo.NewMultiExpr(meergo.LogicalOperator(where.Logical), make([]meergo.Expr, len(where.Conditions)))
 	for i, cond := range where.Conditions {
 		path := strings.Join(cond.Property, ".") // TODO(marco): How can I avoid this allocation?

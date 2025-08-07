@@ -16,8 +16,8 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// TestExprFromWhereSimple tests exprFromWhere with a single condition.
-func TestExprFromWhereSimple(t *testing.T) {
+// TestConvertWhereSimple tests convertWhere with a single condition.
+func TestConvertWhereSimple(t *testing.T) {
 	column := meergo.Column{Name: "a", Type: types.Int(32)}
 	columns := map[string]meergo.Column{
 		"a": column,
@@ -28,9 +28,9 @@ func TestExprFromWhereSimple(t *testing.T) {
 			{Property: []string{"a"}, Operator: state.OpIs, Values: []any{1}},
 		},
 	}
-	got, err := exprFromWhere(where, columns)
+	got, err := convertWhere(where, columns)
 	if err != nil {
-		t.Fatalf("exprFromWhere returned error: %v", err)
+		t.Fatalf("convertWhere returned error: %v", err)
 	}
 	want := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 		meergo.NewBaseExpr(column, meergo.OpIs, 1),
@@ -40,8 +40,8 @@ func TestExprFromWhereSimple(t *testing.T) {
 	}
 }
 
-// TestExprFromWhereMultiple tests exprFromWhere with multiple conditions.
-func TestExprFromWhereMultiple(t *testing.T) {
+// TestConvertWhereMultiple tests convertWhere with multiple conditions.
+func TestConvertWhereMultiple(t *testing.T) {
 	colA := meergo.Column{Name: "a", Type: types.Int(32)}
 	colBC := meergo.Column{Name: "b_c", Type: types.Int(32)}
 	columns := map[string]meergo.Column{
@@ -55,9 +55,9 @@ func TestExprFromWhereMultiple(t *testing.T) {
 			{Property: []string{"b", "c"}, Operator: state.OpIsLessThanOrEqualTo, Values: []any{10}},
 		},
 	}
-	got, err := exprFromWhere(where, columns)
+	got, err := convertWhere(where, columns)
 	if err != nil {
-		t.Fatalf("exprFromWhere returned error: %v", err)
+		t.Fatalf("convertWhere returned error: %v", err)
 	}
 	want := meergo.NewMultiExpr(meergo.OpOr, []meergo.Expr{
 		meergo.NewBaseExpr(colA, meergo.OpIsGreaterThan, 5),
@@ -68,8 +68,8 @@ func TestExprFromWhereMultiple(t *testing.T) {
 	}
 }
 
-// TestExprFromWhereExistsOperators tests exprFromWhere with exists operators.
-func TestExprFromWhereExistsOperators(t *testing.T) {
+// TestConvertWhereExistsOperators tests convertWhere with exists operators.
+func TestConvertWhereExistsOperators(t *testing.T) {
 	colA := meergo.Column{Name: "a", Type: types.Int(32)}
 	colB := meergo.Column{Name: "b", Type: types.Int(32)}
 	columns := map[string]meergo.Column{
@@ -83,9 +83,9 @@ func TestExprFromWhereExistsOperators(t *testing.T) {
 			{Property: []string{"b"}, Operator: state.OpDoesNotExist},
 		},
 	}
-	got, err := exprFromWhere(where, columns)
+	got, err := convertWhere(where, columns)
 	if err != nil {
-		t.Fatalf("exprFromWhere returned error: %v", err)
+		t.Fatalf("convertWhere returned error: %v", err)
 	}
 	want := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 		meergo.NewBaseExpr(colA, meergo.OpIsNotNull),
@@ -96,15 +96,16 @@ func TestExprFromWhereExistsOperators(t *testing.T) {
 	}
 }
 
-// TestExprFromWhereUnknownProperty tests exprFromWhere with an unknown property path.
-func TestExprFromWhereUnknownProperty(t *testing.T) {
+// TestConvertWhereUnknownProperty tests convertWhere with an unknown property
+// path.
+func TestConvertWhereUnknownProperty(t *testing.T) {
 	where := &state.Where{
 		Logical: state.OpAnd,
 		Conditions: []state.WhereCondition{
 			{Property: []string{"a"}, Operator: state.OpIs, Values: []any{1}},
 		},
 	}
-	_, err := exprFromWhere(where, map[string]meergo.Column{})
+	_, err := convertWhere(where, map[string]meergo.Column{})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}

@@ -59,7 +59,7 @@ func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idPro
 	var where meergo.Expr
 	if query.Where != nil {
 		var err error
-		where, err = exprFromWhere(query.Where, columnByProperty)
+		where, err = convertWhere(query.Where, columnByProperty)
 		if err != nil {
 			return nil, err
 		}
