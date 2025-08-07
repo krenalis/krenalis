@@ -28,4 +28,3 @@ After logging in, you’ll be prompted to create your first **workspace**.
 Each workspace operates as an isolated environment with its own **data warehouse**, which stores user data, events, and is used for identity resolution and data unification.
 
 > ⚠️ Once a data warehouse is linked to a workspace, it **cannot be changed** later.
-
