@@ -4,74 +4,137 @@
 
 # From source
 
-There are two ways to install Meergo from the source:
+You can also compile Meergo directly from source. This is recommended for more advanced users who want more control over builds and customization.
 
-* [Build using Go modules](#build-using-go-modules): Let Go download and compile the main module.
+There are two alternatives:
 
-* [Build from repository](#build-from-repository): Clone the repository locally and compile the source.
+* [**Building using the Go tools**](#building-using-the-go-tools). It uses Go's command-line tools to compile Meergo and doesn't require Git.
+* [**Building from the repository**](#building-from-the-repository). Downloading and building the Meergo repository. This is a more advanced method, allowing for maximum control and customization of the build.
 
-### Build using Go modules
+## Building using the Go tools
 
-For this installation method you need to have [Go](https://go.dev/doc/install) 1.23 and [PostgreSQL](https://www.postgresql.org/download/) 13 or higher.
+### Before you begin
 
-1. **Create a new directory**
+To build Meergo using the Go tools and use it, you need:
 
-   ```sh
-   mkdir meergo
-   cd meergo 
-   ```
+* [Go](https://go.dev/doc/install) 1.23
+* [PostgreSQL](https://www.postgresql.org/download/) version 13 or later.
+* `curl`, or any other tool to download a file via HTTP from the web.
 
-2. **Copy the main.go file**
+### Steps
 
-   Obtain the `main.go` file from [Meergo's GitHub repository](https://github.com/meergo/meergo/blob/main/cmd/meergo/main.go) and place it in the directory you just created.
+Create a new directory called `meergo` and cd into it:
 
-3. **Initialize a Go module**
+```bash
+mkdir meergo
+cd meergo 
+```
 
-   ```sh
-   go mod init meergo
-   go mod tidy
-   ```
+Create a `main.go` file copying its content from the Meergo repository:
 
-4. **Generate the admin assets and build the executable**
+```bash
+curl -o main.go 'https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/cmd/meergo/main.go?token=GHSAT0AAAAAACG2OK4GJGLTBXJ5J337DZMM2EUZV6A'
+```
 
-   Use the following commands to generate the admin assets and to build the executable:
+Initialize a Go module:
 
-   ```sh
-   go generate
-   go build
-   ```
+```bash
+go mod init meergo
+go mod tidy
+```
 
-   > Note: You can provide the `-trimpath` option to the `go build` command to remove absolute paths from any error stack traces in Meergo. This way, if telemetry is enabled, the absolute paths will not be sent.
+Generate the admin assets:
 
-   Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
+```bash
+go generate
+```
 
-Proceed with the [configuration](#configuration) after completing these steps.
+Now the directory should look like:
 
-### Build from repository
+```plain
+meergo
+├── go.mod
+├── go.sum
+├── main.go
+└── meergo-assets
+    ├── index.css.br
+    ├── index.css.map.br
+    ├── index.html.br
+    ├── index.js.br
+    ├── index.js.map.br
+    ├── monaco
+    └── shoelace
+```
 
-For this installation method you need to have [Git](https://git-scm.com/downloads), [Go](https://go.dev/doc/install) 1.23, and [PostgreSQL](https://www.postgresql.org/download/) 13 or higher.
+You are ready to build the `meergo` executable:
 
-1. **Clone the repository and change into the _meergo/cmd/meergo_ directory**
+```bash
+go build
+```
 
-   > Since the repository of Meergo is private, you may need to configure your local `GOPRIVATE` variable in order to test and develop some of the installation methods listed below.
-   > It may be enough to add `github.com/meergo/meergo` to the paths listed in the `GOPRIVATE` values (which are separated by a comma `,`).
+> Note: You can provide the `-trimpath` option to the `go build` command to remove absolute paths from any error stack traces in Meergo. This way, if telemetry is enabled, the absolute paths will not be sent.
 
-   ```sh
-   git clone https://github.com/meergo/meergo
-   cd meergo/cmd/meergo
-   ```
+Verify it has been built correctly (replace `meergo` with `meergo.exe` on Windows):
 
-2. **Generate the admin assets and build the executable**
+```
+./meergo --help
+```
 
-   Use the following commands to generate the admin assets and to build the executable:
+You can now proceed with the [database setup](./database-setup).
 
-   ```sh
-   go generate
-   go build
-   ```
+## Building from the repository
 
-   > Note: You can provide the `-trimpath` option to the `go build` command to remove absolute paths from any error stack traces in Meergo. This way, if telemetry is enabled, the absolute paths will not be sent.
+### Before you begin
 
-   Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
+To build Meergo from the repository the Go tools and use it, you need:
 
-Then you can proceed with the [configuration](#configuration).
+* [Git](https://git-scm.com/downloads)
+* [Go](https://go.dev/doc/install) 1.23
+* [PostgreSQL](https://www.postgresql.org/download/) version 13 or later.
+
+### Steps
+
+Clone the Meergo repository from GitHub and cd into the `meergo/cmd/meergo` directory:
+
+```bash
+git clone https://github.com/meergo/meergo
+cd meergo/cmd/meergo
+```
+
+Generate the admin assets:
+
+```bash
+go generate
+```
+
+Now the `meergo/cmd/meergo` directory should look like:
+
+```plain
+meergo
+├── main.go
+├── meergo-assets
+│   ├── index.css.br
+│   ├── index.css.map.br
+│   ├── index.html.br
+│   ├── index.js.br
+│   ├── index.js.map.br
+│   ├── monaco
+│   └── shoelace
+└── meergo.example.env
+```
+
+You are ready to build the `meergo` executable:
+
+```bash
+go build
+```
+
+> Note: You can provide the `-trimpath` option to the `go build` command to remove absolute paths from any error stack traces in Meergo. This way, if telemetry is enabled, the absolute paths will not be sent.
+
+Verify it has been built correctly (replace `meergo` with `meergo.exe` on Windows):
+
+```
+./meergo --help
+```
+
+You can now proceed with the [database setup](./database-setup).
