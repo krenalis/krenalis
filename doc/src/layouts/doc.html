@@ -167,7 +167,14 @@
                     </li>
                     <li>{{ item(``, `Overview`) }}</li>
                     <li>{{ item(`what-is-meergo`, `What is Meergo`) }}</li>
-                    <li>{{ item(`installation`, `Installation`) }}</li>
+                     <li>
+                        {{ item(`installation`, `Installation`) }}
+                        <ul>
+                            <li>{{ item(`using-docker`, `Using Docker`) }}</li>
+                            <li>{{ item(`pre-compiled-binaries`, `Pre-compiled binaries`) }}</li>
+                            <li>{{ item(`from-source`, `From source`) }}</li>
+                        </ul>
+                    </li>
                     <li>{{ item(`configuration`, `Configuration`) }}</li>
                     <li>{{ item(`create-workspace`, `Create a workspace`) }}</li>
                     <li>{{ item(`collect-users`, `Collect users`) }}</li>
