@@ -10,18 +10,6 @@ There are several ways to install Meergo or simply try out its features. Choose 
 * [**Pre-compiled binaries**](./pre-compiled-binaries). A convenient method for quickly setting up Meergo without the need to compile from source.
 * [**From source**](./from-source). Recommended if you wish to customize the executable or contribute to the project by building Meergo directly from the source.
 
-## Configuration
-
-Once you have obtained the `meergo` executable, follow these steps to configure the application:
-
-1. **Choose a directory** on your filesystem — this will be the working directory where you will run Meergo.
-2. Download the example configuration file [`meergo.example.env`](https://github.com/meergo/meergo/blob/main/cmd/meergo/meergo.example.env) and copy it into the chosen directory as `.env`.
-3. Edit `.env` to match your environment and requirements.
-
-> The `.env` file contains the definition of environment variables and is sourced by Meergo at startup. It is therefore possible, alternatively and according to the needs of the environment in which Meergo is to be run, to define the environment variables before starting Meergo, without using the `.env` file.
-
-Next, you’ll need to set up certificates (if using HTTPS), configure the database, and launch the application.
-
 ### Certificates
 
 If you have enabled HTTPS by setting the `MEERGO_HTTP_TLS_ENABLED` environment variable to `true`, you must also specify the TLS certificate and private key files. To do this, set the following environment variables:

@@ -167,7 +167,7 @@
                     </li>
                     <li>{{ item(``, `Overview`) }}</li>
                     <li>{{ item(`what-is-meergo`, `What is Meergo`) }}</li>
-                     <li>
+                    <li>
                         {{ item(`installation`, `Installation`) }}
                         <ul>
                             <li>{{ item(`using-docker`, `Using Docker`) }}</li>
@@ -176,7 +176,13 @@
                         </ul>
                     </li>
                     <li>{{ item(`database-setup`, `Database setup`) }}</li>
-                    <li>{{ item(`configuration`, `Configuration`) }}</li>
+                    <li>
+                        {{ item(`configuration`, `Configuration`) }}
+                        <ul>
+                            <li>{{ item(`env-file`, `.env file`) }}</li>
+                            <li>{{ item(`configuration-reference`, `Configuration reference`) }}</li>
+                        </ul>
+                    </li>
                     <li>{{ item(`create-workspace`, `Create a workspace`) }}</li>
                     <li>{{ item(`collect-users`, `Collect users`) }}</li>
                     <li>{{ item(`unify-users`, `Unify users`) }}</li>
