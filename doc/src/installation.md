@@ -9,11 +9,6 @@ There are several ways to install Meergo or simply try out its features. Choose 
 * [**Using Docker**](./using-docker). This method is ideal for local development, testing, and prototyping. 
 * [**Pre-compiled binaries**](./pre-compiled-binaries). A convenient method for quickly setting up Meergo without the need to compile from source.
 * [**From source**](./from-source). Recommended if you wish to customize the executable or contribute to the project by building Meergo directly from the source.
-* [**Run Meergo on a virtual server**](#run-meergo-on-a-virtual-server). Instructions for deploying Meergo on a virtual server.
-
-## Run Meergo on a virtual server
-
-> 🚧 This section still needs to be developed.
 
 ## Configuration
 
@@ -35,14 +30,6 @@ If you have enabled HTTPS by setting the `MEERGO_HTTP_TLS_ENABLED` environment v
 - `MEERGO_HTTP_TLS_KEY_FILE`: Path to the corresponding private key file.
 
 Make sure both files are accessible.
-
-### Database setup
-
-Meergo relies on PostgreSQL for its internal database. Note that this is not the same as the data warehouse you will configure later — this database is used exclusively for Meergo's own operational data and internal management.
-
-To initialize it, execute the SQL script [`database/initialization/1 - postgres.sql`](https://github.com/meergo/meergo/blob/main/database/initialization/1%20-%20postgres.sql), which will create the required schema and tables based on your configuration.
-
-Make sure the database connection settings in specified with the environment variables match your PostgreSQL instance.
 
 ### Starting Meergo
 
