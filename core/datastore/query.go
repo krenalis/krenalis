@@ -50,7 +50,9 @@ type Query struct {
 	Limit int
 }
 
-// exprFromWhere returns a meergo.Expr expression from a where.
+// exprFromWhere converts a state.Where expression into a meergo.Expr.
+// "exists" and "does not exist" operators are mapped to OpIsNotNull and
+// OpIsNull, respectively.
 func exprFromWhere(where *state.Where, columnFromProperty map[string]meergo.Column) (meergo.Expr, error) {
 	exp := meergo.NewMultiExpr(meergo.LogicalOperator(where.Logical), make([]meergo.Expr, len(where.Conditions)))
 	for i, cond := range where.Conditions {
@@ -59,7 +61,16 @@ func exprFromWhere(where *state.Where, columnFromProperty map[string]meergo.Colu
 		if !ok {
 			return nil, fmt.Errorf("property path %s does not exist", path)
 		}
-		exp.Operands[i] = meergo.NewBaseExpr(column, meergo.Operator(cond.Operator), cond.Values...)
+		var op meergo.Operator
+		switch cond.Operator {
+		case state.OpExists:
+			op = meergo.OpIsNotNull
+		case state.OpDoesNotExist:
+			op = meergo.OpIsNull
+		default:
+			op = meergo.Operator(cond.Operator)
+		}
+		exp.Operands[i] = meergo.NewBaseExpr(column, op, cond.Values...)
 	}
 	return exp, nil
 }
