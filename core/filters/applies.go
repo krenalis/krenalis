@@ -45,11 +45,11 @@ func Applies(where *state.Where, properties map[string]any) bool {
 		case state.OpContains:
 			applies = opContains(v, cond.Values)
 		case state.OpDoesNotContain:
-			applies = opDoesNotContain(v, cond.Values)
+			applies = !opContains(v, cond.Values)
 		case state.OpIsOneOf:
 			applies = opIsIn(v, cond.Values)
 		case state.OpIsNotOneOf:
-			applies = opIsNotIn(v, cond.Values)
+			applies = !opIsIn(v, cond.Values)
 		case state.OpStartsWith:
 			applies = opStartsWith(v, cond.Values)
 		case state.OpEndsWith:
@@ -290,36 +290,6 @@ func opContains(v any, values []any) bool {
 	return false
 }
 
-func opDoesNotContain(v any, values []any) bool {
-	if v == nil {
-		return true
-	}
-	v0 := values[0]
-	switch v := v.(type) {
-	case json.Value:
-		v0 := v0.(state.JSONConditionValue)
-		switch v.Kind() {
-		case json.String:
-			return !strings.Contains(v.String(), v0.String)
-		case json.Array:
-			for _, ev := range v.Elements() {
-				if opIs(ev, values) {
-					return false
-				}
-			}
-		}
-	case string:
-		return !strings.Contains(v, v0.(string))
-	case []any:
-		for _, ev := range v {
-			if opIs(ev, values) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 func opIsIn(v any, values []any) bool {
 	switch v := v.(type) {
 	case decimal.Decimal:
@@ -381,70 +351,6 @@ func opIsIn(v any, values []any) bool {
 		}
 	}
 	return false
-}
-
-func opIsNotIn(v any, values []any) bool {
-	switch v := v.(type) {
-	case decimal.Decimal:
-		for _, vi := range values {
-			if v.Equal(vi.(decimal.Decimal)) {
-				return false
-			}
-		}
-	case time.Time:
-		for _, vi := range values {
-			if v.Equal(vi.(time.Time)) {
-				return false
-			}
-		}
-	case int:
-		for _, vi := range values {
-			if v == vi.(int) {
-				return false
-			}
-		}
-	case uint:
-		for _, vi := range values {
-			if v == vi.(uint) {
-				return false
-			}
-		}
-	case float64:
-		for _, vi := range values {
-			if v == vi.(float64) {
-				return false
-			}
-		}
-	case json.Value:
-		switch v.Kind() {
-		case json.Number:
-			v, err := v.Decimal(0, 0)
-			if err == nil {
-				for _, vi := range values {
-					vi := vi.(state.JSONConditionValue)
-					if vi.Number != nil && v.Equal(*vi.Number) {
-						return false
-					}
-				}
-			}
-		case json.String:
-			v := v.String()
-			for _, vi := range values {
-				vi := vi.(state.JSONConditionValue)
-				if v == vi.String {
-					return false
-				}
-			}
-		}
-		return true
-	case string:
-		for _, vi := range values {
-			if v == vi.(string) {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 func opStartsWith(v any, values []any) bool {
