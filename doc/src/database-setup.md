@@ -10,7 +10,7 @@ To initialize it, execute the SQL script [`database/initialization/1 - postgres.
 
 Make sure the database connection settings in specified with the environment variables match your PostgreSQL instance.
 
-## Database Initialization Steps
+## Database initialization steps
 
 First, create a PostgreSQL database that will be used by Meergo. In this example, we'll name the database `meergo`:
 
