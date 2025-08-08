@@ -10,12 +10,6 @@ There are several ways to install Meergo or simply try out its features. Choose 
 * [**Pre-compiled binaries**](./pre-compiled-binaries). A convenient method for quickly setting up Meergo without the need to compile from source.
 * [**From source**](./from-source). Recommended if you wish to customize the executable or contribute to the project by building Meergo directly from the source.
 
-### Starting Meergo
-
-Once the setup is complete, run the `meergo` executable (if you have a `.env` file, it must be in the same directory where Meergo is executed).
-
-Meergo will launch using the configuration specified by the environment variables and will be ready for use.
-
 ## First login
 
 When you start **Meergo** for the first time, you can access the admin using the default credentials:
