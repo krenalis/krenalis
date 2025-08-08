@@ -4,7 +4,33 @@
 
 # Configuration reference
 
+The environment variables used to configure your Meergo installation are documented here.
+
+Note that this configuration applies to the entire Meergo installation; specific configuration for each workspace can be modified through the Meergo admin (GUI) or via the APIs.
+
+> 💡 For convenience, instead of passing environment variables to the Meergo command, you can declare an .env file. See [the dedicated page](env-file).
+
+Table of contents:
+
+- [General settings](#general-settings)
+- [HTTP server configuration](#http-server-configuration)
+- [Database configuration](#database-configuration)
+- [Member emails](#member-emails)
+- [SMTP configuration](#smtp-configuration)
+- [MaxMind configuration](#maxmind-configuration)
+- [Transformations](#transformations)
+  - [AWS Lambda](#aws-lambda)
+    - [Node.js settings](#nodejs-settings)
+    - [Python settings](#python-settings)
+  - [Local execution](#local-execution)
+- [OAuth providers](#oauth-providers)
+  - [HubSpot](#hubspot)
+  - [Mailchimp](#mailchimp)
+
+
 ## General settings
+
+General settings for Meergo.
 
 - **`MEERGO_TERMINATION_DELAY`** \
   Delay time before gracefully shutting down the server. If left empty, the server will initiate a graceful shutdown immediately after receiving the termination signal, without waiting for the specified delay. \
@@ -30,6 +56,8 @@
   By default, the telemetry level is `all`.
 
 ## HTTP server configuration
+
+Settings for the Meergo HTTP server.
 
 - **`MEERGO_HTTP_HOST`** \
   The server address to bind to. It can be an IPv4 address, an IPv6 address, or a hostname. \
@@ -128,6 +156,13 @@ These settings are used to send transactional emails.
 
 Configuration for executing transformation functions via AWS Lambda or locally. Local execution should only be used for testing and not in production.
 
+> 💡 Note that this configuration does not concern the data transformations themselves, which are set up via the graphical interface for each workspace, but the general configuration provided by the Meergo installation to enable writing transformation functions.
+
+You can configure Meergo to run transformation functions on one of the following:
+
+* [**AWS Lambda**](#aws-lambda). Recommended for production.
+* [**Local transformation**](#local-execution). Recommended for testing Meergo locally.
+
 ### AWS Lambda
 
 - **`MEERGO_TRANSFORMATIONS_LAMBDA_ACCESS_KEY_ID`** \
@@ -161,6 +196,8 @@ Configuration for executing transformation functions via AWS Lambda or locally. 
   (Optional) ARN of a Lambda layer for Python functions.
 
 ### Local execution
+
+> ⚠️ Configuring transformations for local execution allows the code in transformation functions defined in Meergo to execute arbitrary code on the local machine. Therefore, use with caution and only in trusted contexts.
 
 - **`MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE`** \
   Path to the Node.js executable. \
