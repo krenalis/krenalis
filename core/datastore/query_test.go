@@ -71,16 +71,23 @@ func TestConvertWhereMultiple(t *testing.T) {
 // TestConvertWhereExistsOperators tests convertWhere with exists operators.
 func TestConvertWhereExistsOperators(t *testing.T) {
 	colA := meergo.Column{Name: "a", Type: types.Int(32)}
-	colB := meergo.Column{Name: "b", Type: types.Int(32)}
+	colBC := meergo.Column{Name: "b_c", Type: types.Int(32)}
+	colBD := meergo.Column{Name: "b_d", Type: types.Text()}
+	colEF := meergo.Column{Name: "e_f", Type: types.Boolean()}
+	colEG := meergo.Column{Name: "e_g", Type: types.Text()}
 	columns := map[string]meergo.Column{
-		"a": colA,
-		"b": colB,
+		"a":   colA,
+		"b.c": colBC,
+		"b.d": colBD,
+		"e.f": colEF,
+		"e.g": colEG,
 	}
 	where := &state.Where{
 		Logical: state.OpAnd,
 		Conditions: []state.WhereCondition{
 			{Property: []string{"a"}, Operator: state.OpExists},
 			{Property: []string{"b"}, Operator: state.OpDoesNotExist},
+			{Property: []string{"e"}, Operator: state.OpExists},
 		},
 	}
 	got, err := convertWhere(where, columns)
@@ -89,7 +96,14 @@ func TestConvertWhereExistsOperators(t *testing.T) {
 	}
 	want := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 		meergo.NewBaseExpr(colA, meergo.OpIsNotNull),
-		meergo.NewBaseExpr(colB, meergo.OpIsNull),
+		meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
+			meergo.NewBaseExpr(colBC, meergo.OpIsNull),
+			meergo.NewBaseExpr(colBD, meergo.OpIsNull),
+		}),
+		meergo.NewMultiExpr(meergo.OpOr, []meergo.Expr{
+			meergo.NewBaseExpr(colEF, meergo.OpIsNotNull),
+			meergo.NewBaseExpr(colEG, meergo.OpIsNotNull),
+		}),
 	})
 	if !reflect.DeepEqual(want, got) {
 		t.Fatalf("expected %#v, got %#v", want, got)

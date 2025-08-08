@@ -8,7 +8,9 @@
 package datastore
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/meergo/meergo"
@@ -57,20 +59,45 @@ func convertWhere(where *state.Where, columnFromProperty map[string]meergo.Colum
 	exp := meergo.NewMultiExpr(meergo.LogicalOperator(where.Logical), make([]meergo.Expr, len(where.Conditions)))
 	for i, cond := range where.Conditions {
 		path := strings.Join(cond.Property, ".") // TODO(marco): How can I avoid this allocation?
-		column, ok := columnFromProperty[path]
-		if !ok {
-			return nil, fmt.Errorf("property path %s does not exist", path)
+		if column, ok := columnFromProperty[path]; ok {
+			var op meergo.Operator
+			switch cond.Operator {
+			case state.OpExists:
+				op = meergo.OpIsNotNull
+			case state.OpDoesNotExist:
+				op = meergo.OpIsNull
+			default:
+				op = meergo.Operator(cond.Operator)
+			}
+			exp.Operands[i] = meergo.NewBaseExpr(column, op, cond.Values...)
+			continue
 		}
+		// The property is an object; apply it to all sub-property columns.
+		var logical meergo.LogicalOperator
 		var op meergo.Operator
 		switch cond.Operator {
 		case state.OpExists:
+			logical = meergo.OpOr
 			op = meergo.OpIsNotNull
 		case state.OpDoesNotExist:
+			logical = meergo.OpAnd
 			op = meergo.OpIsNull
 		default:
-			op = meergo.Operator(cond.Operator)
+			return nil, fmt.Errorf("invalid operator %q for property %q in where expression", cond.Operator, path)
 		}
-		exp.Operands[i] = meergo.NewBaseExpr(column, op, cond.Values...)
+		var operands []meergo.Expr
+		for name, column := range columnFromProperty {
+			if strings.HasPrefix(name, path) && name[len(path)] == '.' {
+				operands = append(operands, meergo.NewBaseExpr(column, op))
+			}
+		}
+		if operands == nil {
+			return nil, fmt.Errorf("property %q does not exist in where expression", path)
+		}
+		slices.SortFunc(operands, func(a, b meergo.Expr) int {
+			return cmp.Compare(a.(*meergo.BaseExpr).Column.Name, b.(*meergo.BaseExpr).Column.Name)
+		})
+		exp.Operands[i] = meergo.NewMultiExpr(logical, operands)
 	}
 	return exp, nil
 }
