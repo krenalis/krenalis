@@ -18,6 +18,8 @@ First, create a PostgreSQL database that will be used by Meergo. In this example
 psql postgres -c "CREATE DATABASE meergo"
 ```
 
+> 💡 You can choose any name you like for the database; `meergo` is just an example. You'll need to specify the name you choose later in the Meergo [configuration](configuration).
+
 Next, initialize the database with the tables needed for Meergo to run:
 
 ```bash
@@ -55,3 +57,5 @@ You should see something like this:
  public | user_schema_primary_sources | table    | user
  public | workspaces                  | table    | user
 ```
+
+Now you are ready to proceed with the [configuration](./configuration).
