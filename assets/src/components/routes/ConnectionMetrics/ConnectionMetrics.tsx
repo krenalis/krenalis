@@ -187,7 +187,7 @@ const ConnectionMetrics = () => {
 					endAnchor='left'
 					showHead={true}
 					label={
-						i === 5 ? null : (
+						i === steps.length - 1 ? null : (
 							<div className='connection-metrics__funnel-label connection-metrics__funnel-label--passed'>
 								{formatNumber(passedData)}
 							</div>
