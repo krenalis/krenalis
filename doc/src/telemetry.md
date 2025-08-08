@@ -6,4 +6,4 @@
 
 By default, Meergo sends telemetry data containing information about errors and crashes that occur. This helps Meergo developers identify issues and resolve them.
 
-This behavior can be changed by setting the environment variable `MEERGO_TELEMETRY_LEVEL`. For more details, see the [configuration](configuration) section.
+This behavior can be changed by setting the environment variable `MEERGO_TELEMETRY_LEVEL`. For more details, see the [configuration page](configuration-reference#general-settings).
