@@ -141,7 +141,7 @@ interface ActionToSet {
 
 interface ActionError {
 	action: number;
-	step: ActionStep;
+	step: number;
 	count: number;
 	message: string;
 	lastOccurred: Date;

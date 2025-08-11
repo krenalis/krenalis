@@ -52,15 +52,6 @@ const ERRORS_COLUMNS: GridColumn[] = [
 	{ name: 'Error', type: 'html' },
 ];
 
-const STEP_NAMES: string[] = [
-	'Receive',
-	'Input validation',
-	'Filter',
-	'Transformation',
-	'Output validation',
-	'Finalize',
-];
-
 const STEP_IDENTIFIERS: StepIdentifier[] = [
 	'RECEIVE',
 	'INPUT_VALIDATION',
@@ -69,15 +60,6 @@ const STEP_IDENTIFIERS: StepIdentifier[] = [
 	'OUTPUT_VALIDATION',
 	'FINALIZE',
 ];
-
-const STEP_NAME_BY_IDENTIFIER: Record<StepIdentifier, string> = {
-	RECEIVE: 'Receive',
-	INPUT_VALIDATION: 'Input validation',
-	FILTER: 'Filter',
-	TRANSFORMATION: 'Transformation',
-	OUTPUT_VALIDATION: 'Output validation',
-	FINALIZE: 'Finalize',
-};
 
 const ConnectionMetrics = () => {
 	const { connection: c } = useContext(ConnectionContext);
@@ -108,10 +90,41 @@ const ConnectionMetrics = () => {
 	const currentMetricsIntervalID = useRef<any>();
 	const previouslySelectedAction = useRef<number | null>(null);
 
+	const isUsersSelected = selectedTarget === 'User';
+
+	let receiveStepTerm = '';
+	let finalizeStepTerm = '';
+	if (c.isSource) {
+		if (isUsersSelected) {
+			receiveStepTerm = `Extract from ${c.name}`;
+		} else {
+			receiveStepTerm = `Receive from ${c.name}`;
+		}
+		finalizeStepTerm = 'Load into warehouse';
+	} else {
+		if (isUsersSelected) {
+			receiveStepTerm = 'Extract from warehouse';
+			finalizeStepTerm = `Load into ${c.name}`;
+		} else {
+			receiveStepTerm = 'Receive from sources';
+			finalizeStepTerm = `Send to ${c.name}`;
+		}
+	}
+
+	const stepTermByIdentifier: Record<StepIdentifier, string> = {
+		RECEIVE: receiveStepTerm,
+		INPUT_VALIDATION: 'Check user data',
+		FILTER: 'Apply filter',
+		TRANSFORMATION: 'Transform',
+		OUTPUT_VALIDATION: 'Validate',
+		FINALIZE: finalizeStepTerm,
+	};
+
 	const { userActionErrorRows, eventActionErrorRows } = useMemo(() => {
+		const stepTerms = Object.values(stepTermByIdentifier);
 		return {
-			userActionErrorRows: computeActionErrorRows(c, userActionsErrors),
-			eventActionErrorRows: computeActionErrorRows(c, eventActionsErrors),
+			userActionErrorRows: computeActionErrorRows(c, userActionsErrors, stepTerms),
+			eventActionErrorRows: computeActionErrorRows(c, eventActionsErrors, stepTerms),
 		};
 	}, [userActionsErrors, eventActionsErrors]);
 
@@ -429,7 +442,6 @@ const ConnectionMetrics = () => {
 		);
 	}
 
-	const isUsersSelected = selectedTarget === 'User';
 	let titleRange = '';
 	if (selectedMetricsRange === 'last15Minutes') {
 		titleRange = 'Last 15 minutes';
@@ -439,6 +451,17 @@ const ConnectionMetrics = () => {
 		titleRange = 'Last 7 days';
 	} else {
 		titleRange = `Between ${customMetricsRange[0].startDate.toLocaleDateString()} and ${customMetricsRange[0].endDate.toLocaleDateString()}`;
+	}
+
+	let chartTitle = '';
+	if (c.isSource) {
+		chartTitle = 'Imported';
+	} else {
+		if (isUsersSelected) {
+			chartTitle = 'Exported';
+		} else {
+			chartTitle = 'Sent';
+		}
 	}
 
 	return (
@@ -540,10 +563,7 @@ const ConnectionMetrics = () => {
 					</div>
 					<div className='connection-metrics__chart'>
 						<div className='connection-metrics__chart-heading'>
-							{isUsersSelected
-								? `Users ${c.isSource ? 'imported' : 'exported'}`
-								: `Events ${c.isSource ? 'received' : 'sent'}`}{' '}
-							<span>{titleRange}</span>
+							{chartTitle} {isUsersSelected ? 'users' : 'events'} <span>{titleRange}</span>
 						</div>
 						<ResponsiveContainer width='100%' height='100%'>
 							<ComposedChart
@@ -570,7 +590,7 @@ const ConnectionMetrics = () => {
 									}}
 								/>
 								<Legend />
-								<Bar dataKey='passed' name='Passed' fill='#4f46e5' />
+								<Bar dataKey='passed' name={chartTitle} fill='#4f46e5' />
 								<Bar dataKey='failed' name='Failed' fill='#cf3a3a' />
 								<Line
 									type='monotone'
@@ -595,9 +615,7 @@ const ConnectionMetrics = () => {
 								return (
 									<div className='connection-metrics__funnel-step' key={`funnel-passed-${i}`}>
 										<div className='connection-metrics__funnel-title'>
-											{c.isDestination && c.isApp && !isUsersSelected && s === 'FINALIZE'
-												? 'Delivering'
-												: STEP_NAME_BY_IDENTIFIER[s]}
+											{stepTermByIdentifier[s]}
 										</div>
 										<div
 											className='connection-metrics__funnel-circle'
@@ -646,7 +664,11 @@ const ConnectionMetrics = () => {
 	);
 };
 
-const computeActionErrorRows = (connection: TransformedConnection, actionErrors: ActionError[]): GridRow[] => {
+const computeActionErrorRows = (
+	connection: TransformedConnection,
+	actionErrors: ActionError[],
+	stepTerms: string[],
+): GridRow[] => {
 	const quotedTextToCode = (input: string): string => {
 		const style = 'background:#eee; padding: 2px 8px; border-radius: 6px; font-size:12px;';
 		return input.replace(/«(.*?)»/g, (_, content) => {
@@ -663,7 +685,7 @@ const computeActionErrorRows = (connection: TransformedConnection, actionErrors:
 				<Link path={`connections/${connection.id}/actions/edit/${error.action}`}>
 					{connection.actions.find((a) => a.id == error.action)?.name}
 				</Link>,
-				STEP_NAMES[error.step],
+				stepTerms[error.step],
 				formatNumber(error.count),
 				<RelativeTime date={error.lastOccurred} />,
 				quotedTextToCode(error.message),
