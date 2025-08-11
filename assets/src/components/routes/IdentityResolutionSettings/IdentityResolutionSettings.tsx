@@ -233,15 +233,15 @@ const IdentityResolutionSettings = () => {
 						>
 							<SlIcon name='plus' />
 						</SlButton>
-						<SlButton
-							className='identifiers__save-button'
-							onClick={onSave}
-							variant='primary'
-							loading={isSaving}
-						>
-							Save
-						</SlButton>
 					</Section>
+					<SlButton
+						className='identifiers__save-button'
+						onClick={onSave}
+						variant='primary'
+						loading={isSaving}
+					>
+						Save
+					</SlButton>
 				</div>
 			)}
 		</div>
