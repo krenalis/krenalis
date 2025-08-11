@@ -146,7 +146,7 @@ const WorkspaceCreate = () => {
 			setIsCreatingWorkspace(false);
 			setSelectedWorkspace(id);
 			setIsLoadingState(true);
-			redirect('settings');
+			redirect('connections');
 			if (localStorage.getItem('meergo_ui_is_docker') != null) {
 				localStorage.removeItem('meergo_ui_is_docker');
 			}
