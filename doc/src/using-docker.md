@@ -16,7 +16,7 @@ To use Meergo using Docker, you will need:
 
 Try Meergo locally by simply running:
 
-```
+```bash
 git clone https://github.com/meergo/meergo.git && cd meergo && docker compose up
 ```
 
