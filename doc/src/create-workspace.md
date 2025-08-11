@@ -17,7 +17,9 @@ Meergo currently supports PostgreSQL and Snowflake as data warehouse.
 <ul class="grid-list">
   <li><a href="#postgresql"> PostgreSQL</a></li>
   <li><a href="#snowflake"> Snowflake</a></li>
-</ul>
+</ul><br> 
+
+> 💡 Note that, when running Meergo through Docker Compose, is automatically available a PostgreSQL data warehouse that runs locally, ready to use, and that requires no configuration. For a quick tryout of Meergo, this is the recommended option.
 
 ## PostgreSQL
 
