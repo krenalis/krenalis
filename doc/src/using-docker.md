@@ -27,7 +27,7 @@ cd meergo
 Build the Docker image of Meergo:
 
 ```sh
-docker build -t meergo:dev . --progress=plain
+docker build -t gianlucamondini/prova-meergo:dev . --progress=plain
 ```
 
 Launch the built image with Docker Compose:

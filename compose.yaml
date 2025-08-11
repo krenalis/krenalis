@@ -1,6 +1,6 @@
 services:
   meergo:
-    image: meergo:dev
+    image: gianlucamondini/prova-meergo:dev
     ports:
       - 9090:9090
     environment:

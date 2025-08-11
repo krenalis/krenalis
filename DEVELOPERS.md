@@ -189,7 +189,7 @@ Only more technical information is kept here.
 2. Run:
 
     ```bash
-    docker build -t meergo:dev . --progress=plain
+    docker build -t gianlucamondini/prova-meergo:dev . --progress=plain
     ```
 
 ### Running Meergo within a Container
@@ -205,7 +205,7 @@ Only more technical information is kept here.
         -v ./cmd/meergo/cert.pem:/bin/cert.pem \
         -v ./cmd/meergo/key.pem:/bin/key.pem \
         --net host \
-        meergo:dev
+        gianlucamondini/prova-meergo:dev
     ```
 
 3. Visit Meergo at the address shown on the console
