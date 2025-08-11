@@ -4,10 +4,7 @@
 
 # Using Docker
 
-This is the easiest and fastest way to start using Meergo on your PC. It's ideal for local development, testing, and exploring its features.
-
-> 🚧 Using Meergo with Docker will be easier when the Meergo image will be published to Docker Hub.
-
+This is the easiest and fastest way to start using Meergo on your PC.
 ## Before you begin
 
 To use Meergo using Docker, you will need:
@@ -15,7 +12,17 @@ To use Meergo using Docker, you will need:
 * [Git](https://git-scm.com/downloads). To download the Meergo repository.
 * [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/). To build the Meergo image and run it within a pre-configured environment.
 
-## Steps
+## One-line step
+
+Try Meergo locally by simply running:
+
+```
+git clone https://github.com/meergo/meergo.git && cd meergo && docker compose up
+```
+
+Or, alternatively, follow the detailed steps below.
+
+## Detailed steps
 
 Clone the Meergo's repository and enter into the repository's directory: 
 
@@ -24,13 +31,7 @@ git clone https://github.com/meergo/meergo
 cd meergo
 ```
 
-Build the Docker image of Meergo:
-
-```sh
-docker build -t gianlucamondini/prova-meergo:dev . --progress=plain
-```
-
-Launch the built image with Docker Compose:
+Launch Meergo with Docker Compose:
 
 ```
 docker compose up
