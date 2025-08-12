@@ -396,7 +396,7 @@ github.com/gabriel-vasile/mimetype
 github.com/gabriel-vasile/mimetype/internal/charset
 github.com/gabriel-vasile/mimetype/internal/json
 github.com/gabriel-vasile/mimetype/internal/magic
-# github.com/getsentry/sentry-go v0.34.1
+# github.com/getsentry/sentry-go v0.35.0
 ## explicit; go 1.21
 github.com/getsentry/sentry-go
 github.com/getsentry/sentry-go/attribute
