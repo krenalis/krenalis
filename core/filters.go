@@ -464,14 +464,15 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 		// is on or after              : datetime, date, time, year
 		// is true                     : boolean, json
 		// is false                    : boolean, json
-		// is null                     : All types
-		// is not null                 : All types
-		// exists                      : All types [^3]
-		// does not exist              : All types [^3]
+		// is null                     : All types [^3]
+		// is not null                 : All types [^3]
+		// exists                      : All types [^4]
+		// does not exist              : All types [^4]
 		//
 		// [1]: text with values is not supported.
 		// [2]: array(T) is supported if T is a type that is supported by the 'is' operator.
-		// [3]: only if the property is read-optional or 'json' with a non-empty path.
+		// [3]: only if the property is nullable or 'json'.
+		// [4]: only if the property is read-optional or 'json' with a non-empty path.
 		//
 		switch op {
 		case OpIs, OpIsNot:
