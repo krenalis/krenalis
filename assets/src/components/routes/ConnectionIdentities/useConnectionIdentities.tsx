@@ -67,7 +67,7 @@ const useConnectionIdentities = () => {
 		];
 		if (connection.hasAnonymousIdentifiers) {
 			columns.push({
-				name: 'Anonymous Ids',
+				name: 'Anonymous IDs',
 			});
 		}
 
