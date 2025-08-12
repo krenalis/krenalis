@@ -59,9 +59,6 @@ const useConnectionIdentities = () => {
 				explanation: 'The last update time on the source.',
 			},
 			{
-				name: 'Action',
-			},
-			{
 				name: connection.connector.getIdentityIDLabel(),
 			},
 		];
@@ -70,6 +67,9 @@ const useConnectionIdentities = () => {
 				name: 'Anonymous IDs',
 			});
 		}
+		columns.push({
+			name: 'Action',
+		});
 
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
@@ -77,9 +77,6 @@ const useConnectionIdentities = () => {
 			const row: GridRow = {
 				cells: [
 					identity.lastChangeTime,
-					<span className='connection-identities__action'>
-						<Link path={`connections/${connection.id}/actions/edit/${identity.action}`}>{actionName}</Link>
-					</span>,
 					identity.id ? (
 						identity.id
 					) : (
@@ -88,6 +85,10 @@ const useConnectionIdentities = () => {
 							anonymous
 						</span>
 					),
+					null,
+					<span className='connection-identities__action'>
+						<Link path={`connections/${connection.id}/actions/edit/${identity.action}`}>{actionName}</Link>
+					</span>,
 				],
 				key: identity.id,
 			};
@@ -98,7 +99,7 @@ const useConnectionIdentities = () => {
 						anonymousIds.push(<code>{id}</code>);
 					}
 				}
-				row.cells.push(anonymousIds);
+				row.cells[2] = anonymousIds;
 			}
 			rows.push(row);
 		}
