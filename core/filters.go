@@ -471,7 +471,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 		//
 		// [1]: text with values is not supported.
 		// [2]: array(T) is supported if T is a type that is supported by the 'is' operator.
-		// [3]: only if the property is nullable or 'json' with a non-empty path.
+		// [3]: only if the property is read-optional or 'json' with a non-empty path.
 		//
 		switch op {
 		case OpIs, OpIsNot:
