@@ -454,6 +454,10 @@ const useApp = (
 			filteredItem = <li>{formatNumber(filtered)} filtered out</li>;
 		}
 
+		const user = connection.isSource ? 'user identity' : 'user';
+		const users = connection.isSource ? 'user identities' : 'users';
+		const executed = connection.isSource ? 'imported' : 'exported';
+
 		const infoMessage = (
 			<div className='connection-actions__execution-info'>
 				<div className='connection-actions__execution-info-title'>
@@ -461,14 +465,11 @@ const useApp = (
 				</div>
 				<ul>
 					<li>
-						{formatNumber(passed)} {passed === 1 ? 'user identity' : 'user identities'}{' '}
-						{connection.isSource ? 'imported' : 'exported'}
+						{formatNumber(passed)} {passed === 1 ? user : users} {executed}
 					</li>
 					{filteredItem}
 					<li>
-						{failed === 0
-							? 'No errors occurred'
-							: `${formatNumber(failed)} not ${connection.isSource ? 'imported' : 'exported'} due to errors`}
+						{failed === 0 ? 'No errors occurred' : `${formatNumber(failed)} not ${executed} due to errors`}
 					</li>
 				</ul>
 				{metricsLink}
