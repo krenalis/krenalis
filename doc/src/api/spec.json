@@ -12605,7 +12605,7 @@
                                     "userId"
                                 ]
                             },
-                            "description": "The name of the property by which to sort the events to be returned."
+                            "description": "The name of the property by which to sort the events to be returned.\n\nIf not provided, the events are sorted by `id`."
                         },
                         {
                             "name": "orderDesc",
@@ -15077,7 +15077,7 @@
                             "type": {
                                 "kind": "text"
                             },
-                            "description": "The name of the property by which to sort the users to be returned. It can be any property from the user schema with a sortable type, meaning it cannot be of type `json`, `array`, `object`, or `map`."
+                            "description": "The name of the property by which to sort the users to be returned. It can be any property from the user schema with a sortable type, meaning it cannot be of type `json`, `array`, `object`, or `map`.\n\nIf not provided, the users are ordered by their last change time."
                         },
                         {
                             "name": "orderDesc",

@@ -769,7 +769,7 @@ func init() {
 						Name:        "order",
 						Type:        types.Text().WithValues("id", "user", "connection", "anonymousId", "channel", "category", "event", "groupId", "messageId", "name", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type", "userId"),
 						Placeholder: `id`,
-						Description: "The name of the property by which to sort the events to be returned.",
+						Description: "The name of the property by which to sort the events to be returned.\n\nIf not provided, the events are sorted by `id`.",
 					},
 					{
 						Name:        "orderDesc",
