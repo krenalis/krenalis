@@ -969,9 +969,7 @@ func (err actionError) Error() string {
 // It returns immediately and spawns a new goroutine to handle the execution.
 func (core *Core) tryStartActionExecution(actionID int) {
 
-	core.close.Add(1)
-	go func() {
-		defer core.close.Done()
+	core.close.Go(func() {
 
 		ctx := core.close.ctx
 
@@ -1114,7 +1112,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 			}
 		}
 
-	}()
+	})
 }
 
 // executeAlterUserSchema executes the alter of the user schema, not returning

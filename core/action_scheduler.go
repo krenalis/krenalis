@@ -196,9 +196,7 @@ func newActionSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Cont
 		se.indexes[action.ID] = scIndex{i, j}
 	}
 
-	wg.Add(1)
-
-	go func() {
+	wg.Go(func() {
 		ticker := time.NewTicker(time.Minute)
 		for {
 			select {
@@ -217,9 +215,7 @@ func newActionSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Cont
 						store := se.core.datastore.Store(connection.Workspace().ID)
 						c := &Connection{core: se.core, connection: connection, store: store}
 						a := &Action{core: se.core, action: action, connection: c}
-						wg.Add(1)
-						go func() {
-							defer wg.Done()
+						wg.Go(func() {
 							_, err := a.createExecution(ctx, nil)
 							if err != nil {
 								if _, ok := err.(*errors.NotFoundError); ok {
@@ -230,15 +226,14 @@ func newActionSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Cont
 								}
 								slog.Debug("core: cannot add execution for action", "action", a.ID, "err", err)
 							}
-						}()
+						})
 					}
 				}
 			case <-se.close:
-				wg.Done()
 				return
 			}
 		}
-	}()
+	})
 
 	return se
 }

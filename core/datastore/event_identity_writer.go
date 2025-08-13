@@ -294,12 +294,10 @@ func (iw *EventIdentityWriter) flush() {
 	iw.ackIDs = nil
 	clear(iw.index)
 	iw.timer = nil
-	iw.close.Add(1)
-	go func() {
-		defer iw.close.Done()
+	iw.close.Go(func() {
 		err := iw.store.warehouse().MergeIdentities(iw.close.ctx, iw.columns, rows)
 		iw.ack(iw.action, ackIDs, err)
-	}()
+	})
 }
 
 // onCreateAction is called when an action of the connection of iw's action is

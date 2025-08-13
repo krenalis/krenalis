@@ -282,10 +282,8 @@ func (iw *BatchIdentityWriter) flush() {
 	iw.ackIDs = nil
 	clear(iw.index)
 	iw.timer = nil
-	iw.close.Add(1)
-	go func() {
-		defer iw.close.Done()
+	iw.close.Go(func() {
 		err := iw.store.warehouse().MergeIdentities(iw.close.ctx, iw.columns, rows)
 		iw.ack(ackIDs, err)
-	}()
+	})
 }
