@@ -1,5 +1,5 @@
 import React from 'react';
-import { TransformedMapping, flattenSchema } from '../../lib/core/action';
+import { TransformedMapping, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/action';
 import { DecimalType, ObjectType } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
@@ -39,8 +39,8 @@ const getFilterPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const property = flatSchema[k];
 		if (property.type === 'object' || property.type === 'array') {
-			const isNullable = property.full.nullable === true;
-			if (!isNullable) {
+			const compatibleOperators = getCompatibleFilterOperators(property, false);
+			if (compatibleOperators.length === 0) {
 				continue;
 			}
 		}
