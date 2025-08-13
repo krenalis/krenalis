@@ -566,7 +566,18 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			)}
 			<Section
 				title='Transformation'
-				description='The relation between the event properties and the action type properties'
+				description={
+					<>
+						The relation between the event properties and the action type properties
+						{connection.isSource && connection.isEventBased && action.target == 'User' && (
+							<>
+								<br />
+								<br />
+								<b>Anonymous users</b> are not imported if the transformation yields no properties.
+							</>
+						)}
+					</>
+				}
 				padded={false}
 				annotated={true}
 				className='action__transformation-section'
