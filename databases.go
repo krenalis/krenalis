@@ -36,7 +36,7 @@ func (info DatabaseInfo) ReflectType() reflect.Type {
 func (info DatabaseInfo) New(env *DatabaseEnv) (any, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
-	err, _ := out[1].Interface().(error)
+	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err
 }
 

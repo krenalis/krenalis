@@ -387,7 +387,7 @@ func convertInt96(v any) (time.Time, error) {
 	// Convert the array to a slice value.
 	ra := reflect.New(t).Elem()
 	ra.Set(r)
-	p := ra.Slice(0, t.Len()).Interface().([]byte)
+	p, _ := reflect.TypeAssert[[]byte](ra.Slice(0, t.Len()))
 	// Convert the byte slice to a time.Time value.
 	// The following code was taken from https://stackoverflow.com/a/53133964
 	// and was written by https://stackoverflow.com/users/1912391/zaky.

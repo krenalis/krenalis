@@ -43,8 +43,8 @@ func (info WarehouseDriver) ReflectType() reflect.Type {
 // New returns a new data warehouse instance.
 func (info WarehouseDriver) New(conf *WarehouseConfig) (Warehouse, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	d := out[0].Interface().(Warehouse)
-	err, _ := out[1].Interface().(error)
+	d, _ := reflect.TypeAssert[Warehouse](out[0])
+	err, _ := reflect.TypeAssert[error](out[1])
 	return d, err
 }
 

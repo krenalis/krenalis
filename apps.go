@@ -116,7 +116,7 @@ func (app AppInfo) ReflectType() reflect.Type {
 func (app AppInfo) New(env *AppEnv) (any, error) {
 	out := app.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
-	err, _ := out[1].Interface().(error)
+	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err
 }
 

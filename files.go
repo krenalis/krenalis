@@ -56,7 +56,7 @@ func (info FileInfo) ReflectType() reflect.Type {
 func (info FileInfo) New(env *FileEnv) (any, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
-	err, _ := out[1].Interface().(error)
+	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err
 }
 
