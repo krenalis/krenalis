@@ -191,6 +191,26 @@ func Test_StripZeroBytes(t *testing.T) {
 	}
 }
 
+func Test_TrimLeftSpace(t *testing.T) {
+	tests := []struct {
+		data     string
+		expected string
+	}{
+		{`""`, `""`},
+		{"\t \" \"\t", "\" \"\t"},
+		{`null`, `null`},
+		{"\n\n\ttrue\n", "true\n"},
+		{` {"foo": 5}`, `{"foo": 5}`},
+		{` [ 1, 2, 3 ] `, `[ 1, 2, 3 ] `},
+	}
+	for _, test := range tests {
+		got := TrimLeftSpace([]byte(test.data))
+		if test.expected != string(got) {
+			t.Fatalf("expected `%s`, got `%s`", test.expected, got)
+		}
+	}
+}
+
 func Test_TrimSpace(t *testing.T) {
 	tests := []struct {
 		data     string

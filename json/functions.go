@@ -186,6 +186,15 @@ func StripZeroBytes(data []byte) []byte {
 	return data
 }
 
+// TrimLeftSpace returns a subslice of data with all leading whitespace removed.
+// data must contain valid JSON.
+func TrimLeftSpace(data []byte) []byte {
+	i := 0
+	for ; lookupTable[data[i]] == 1; i++ {
+	}
+	return data[i:]
+}
+
 // TrimSpace returns a subslice of data with all leading and trailing whitespace
 // removed. data must contain valid JSON.
 func TrimSpace(data []byte) []byte {
