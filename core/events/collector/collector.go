@@ -454,7 +454,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				c.metrics.ReceivePassed(action.ID, 1)
 				if !filters.Applies(action.Filter, event) {
 					c.metrics.FilterFailed(action.ID, 1)
-					meergoMetrics.Increment("Collector.serveEvents.discarded_user_identitites", 1)
+					meergoMetrics.Increment("Collector.serveEvents.discarded_user_identities", 1)
 					continue
 				}
 				c.metrics.FilterPassed(action.ID, 1)
