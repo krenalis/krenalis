@@ -168,6 +168,17 @@ func Test_renderExpr(t *testing.T) {
 				}),
 			query: `("id" = 'abc_42' OR "id" = 'abc_50' OR "id" = 'abc_60') AND ("count" = 100 OR "count" = 200 OR "count" = 300)`,
 		},
+		{
+			expr: meergo.NewMultiExpr(
+				meergo.OpOr,
+				[]meergo.Expr{
+					meergo.NewBaseExpr(meergo.Column{Name: "type", Type: types.Text(), Nullable: true}, meergo.OpIsNotEmpty),
+					meergo.NewBaseExpr(meergo.Column{Name: "properties", Type: types.JSON()}, meergo.OpIsEmpty),
+					meergo.NewBaseExpr(meergo.Column{Name: "scores", Type: types.Array(types.Int(32)), Nullable: true}, meergo.OpIsEmpty),
+					meergo.NewBaseExpr(meergo.Column{Name: "properties", Type: types.Map(types.Text())}, meergo.OpIsNotEmpty),
+				}),
+			query: `("type" IS NOT NULL AND "type" <> '') OR "properties" IN ('{}'::jsonb,'[]'::jsonb,'""'::jsonb,'null'::jsonb) OR array_length("scores", 1) IS NULL OR "properties" <> '{}'::jsonb`,
+		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {

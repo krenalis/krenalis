@@ -10,6 +10,7 @@ package filters
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ func Test_Applies(t *testing.T) {
 
 	tests := []struct {
 		op        state.WhereOperator
+		property  string // if empty, "v" is used as the property
 		v         any
 		v0        any
 		v1        any
@@ -469,15 +471,83 @@ func Test_Applies(t *testing.T) {
 		// OpDoesNotExist.
 		{op: state.OpDoesNotExist, expected: true, notExists: true},
 		{op: state.OpDoesNotExist, v: json.Value(`"foo"`), expected: false},
+
+		// OpIsEmpty.
+		{op: state.OpIsEmpty, expected: true, notExists: true},
+		{op: state.OpIsEmpty, v: nil, expected: true},
+		{op: state.OpIsEmpty, v: "", expected: true},
+		{op: state.OpIsEmpty, v: []any{}, expected: true},
+		{op: state.OpIsEmpty, v: map[string]any{}, expected: true},
+		{op: state.OpIsEmpty, v: json.Value(`""`), expected: true},
+		{op: state.OpIsEmpty, v: json.Value(`[]`), expected: true},
+		{op: state.OpIsEmpty, v: json.Value(`{}`), expected: true},
+		{op: state.OpIsEmpty, v: "foo", expected: false},
+		{op: state.OpIsEmpty, v: []any{1, 2, 3}, expected: false},
+		{op: state.OpIsEmpty, v: map[string]any{"k": true}, expected: false},
+		{op: state.OpIsEmpty, v: json.Value(` "foo"`), expected: false},
+		{op: state.OpIsEmpty, v: json.Value(`[1,2,3]`), expected: false},
+		{op: state.OpIsEmpty, v: json.Value(` { "a" : "b"} `), expected: false},
+		{op: state.OpIsEmpty, property: "v.a", expected: true, notExists: true},
+		{op: state.OpIsEmpty, property: "v.a", v: nil, expected: true},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value("null"), expected: true},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value("{}"), expected: true},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5}`), expected: true},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5,"a":4}`), expected: false},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5,"a":""}`), expected: true},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5,"a":"foo"}`), expected: false},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5,"a":[]}`), expected: true},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5,"a":[1,2,3]}`), expected: false},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5,"a":null}`), expected: true},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5,"a":{}}`), expected: true},
+		{op: state.OpIsEmpty, property: "v.a", v: json.Value(`{"b":5,"a":{"c":true}}`), expected: false},
+		{op: state.OpIsEmpty, v: json.Value(` 8`), expected: false},
+		{op: state.OpIsEmpty, v: json.Value(`null`), expected: true},
+
+		// OpIsNotEmpty.
+		{op: state.OpIsNotEmpty, expected: false, notExists: true},
+		{op: state.OpIsNotEmpty, v: nil, expected: false},
+		{op: state.OpIsNotEmpty, v: "", expected: false},
+		{op: state.OpIsNotEmpty, v: []any{}, expected: false},
+		{op: state.OpIsNotEmpty, v: map[string]any{}, expected: false},
+		{op: state.OpDoesNotExist, v: json.Value(`""`), expected: false},
+		{op: state.OpIsNotEmpty, v: json.Value(`[]`), expected: false},
+		{op: state.OpIsNotEmpty, v: json.Value(`{}`), expected: false},
+		{op: state.OpIsNotEmpty, v: "foo", expected: true},
+		{op: state.OpIsNotEmpty, v: []any{1, 2, 3}, expected: true},
+		{op: state.OpIsNotEmpty, v: map[string]any{"k": true}, expected: true},
+		{op: state.OpIsNotEmpty, v: json.Value(` "foo"`), expected: true},
+		{op: state.OpIsNotEmpty, v: json.Value(`[1,2,3]`), expected: true},
+		{op: state.OpIsNotEmpty, v: json.Value(` { "a" : "b"} `), expected: true},
+		{op: state.OpIsNotEmpty, property: "v.a", expected: false, notExists: true},
+		{op: state.OpIsNotEmpty, property: "v.a", v: nil, expected: false},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value("null"), expected: false},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value("{}"), expected: false},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5}`), expected: false},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5,"a":4}`), expected: true},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5,"a":""}`), expected: false},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5,"a":"foo"}`), expected: true},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5,"a":[]}`), expected: false},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5,"a":[1,2,3]}`), expected: true},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5,"a":null}`), expected: false},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5,"a":{}}`), expected: false},
+		{op: state.OpIsNotEmpty, property: "v.a", v: json.Value(`{"b":5,"a":{"c":true}}`), expected: true},
+		{op: state.OpIsNotEmpty, v: json.Value(` 8`), expected: true},
+		{op: state.OpIsNotEmpty, v: json.Value(`null`), expected: false},
 	}
 
 	for _, test := range tests {
 		name := fmt.Sprintf("%#v %s (%#v, %#v)", test.v, test.op, test.v0, test.v1)
 		t.Run(name, func(t *testing.T) {
+			var property []string
+			if test.property == "" {
+				property = []string{"v"}
+			} else {
+				property = strings.Split(test.property, ".")
+			}
 			filter := &state.Where{
 				Logical: state.OpAnd,
 				Conditions: []state.WhereCondition{
-					{Property: []string{"v"}, Operator: test.op},
+					{Property: property, Operator: test.op},
 				},
 			}
 			if test.v0 != nil {

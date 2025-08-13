@@ -61,6 +61,8 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
+	qname := quoteIdent(c.Name)
+
 	// Render the column identifier, the operator, and, if necessary, the values.
 	switch op := baseExpr.Operator; op {
 	case
@@ -75,7 +77,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		meergo.OpIsAfter,
 		meergo.OpIsOnOrAfter:
 
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 
 		switch op {
 		case meergo.OpIs:
@@ -94,7 +96,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
 	case meergo.OpIsBetween, meergo.OpIsNotBetween:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		if op == meergo.OpIsNotBetween {
 			b.WriteString(" NOT")
 		}
@@ -109,7 +111,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			b.WriteString("POSITION(")
 			serializeValue(b, baseExpr.Values[0], c.Type)
 			b.WriteString(" IN ")
-			b.WriteString(quoteIdent(c.Name))
+			b.WriteString(qname)
 			if op == meergo.OpContains {
 				b.WriteString(") > 0")
 			} else {
@@ -121,7 +123,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			}
 			serializeValue(b, baseExpr.Values[0], c.Type.Elem())
 			b.WriteString(" = ANY(")
-			b.WriteString(quoteIdent(c.Name))
+			b.WriteString(qname)
 			b.WriteByte(')')
 			if op == meergo.OpDoesNotContain {
 				b.WriteByte(')')
@@ -129,7 +131,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		}
 
 	case meergo.OpIsOneOf, meergo.OpIsNotOneOf:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		if op == meergo.OpIsOneOf {
 			b.WriteString(" IN (")
 		} else {
@@ -149,25 +151,81 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		} else {
 			b.WriteString("RIGHT(")
 		}
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		b.WriteString(", LENGTH(")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")) = ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
 	case meergo.OpIsTrue:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 
 	case meergo.OpIsFalse:
 		b.WriteString("NOT ")
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
+
+	case meergo.OpIsEmpty:
+		k := c.Type.Kind()
+		if k == types.ArrayKind {
+			b.WriteString("array_length(")
+			b.WriteString(qname)
+			b.WriteString(", 1) IS NULL")
+		} else {
+			if c.Nullable {
+				b.WriteByte('(')
+				b.WriteString(qname)
+				b.WriteString(" IS NULL OR ")
+			}
+			b.WriteString(qname)
+			var s string
+			switch k {
+			case types.JSONKind:
+				s = ` IN ('{}'::jsonb,'[]'::jsonb,'""'::jsonb,'null'::jsonb)`
+			case types.TextKind:
+				s = " = ''"
+			case types.MapKind:
+				s = " = '{}'::jsonb"
+			}
+			b.WriteString(s)
+			if c.Nullable {
+				b.WriteByte(')')
+			}
+		}
+
+	case meergo.OpIsNotEmpty:
+		k := c.Type.Kind()
+		if k == types.ArrayKind {
+			b.WriteString("array_length(")
+			b.WriteString(qname)
+			b.WriteString(", 1) IS NOT NULL")
+		} else {
+			if c.Nullable {
+				b.WriteByte('(')
+				b.WriteString(qname)
+				b.WriteString(" IS NOT NULL AND ")
+			}
+			b.WriteString(qname)
+			var s string
+			switch k {
+			case types.JSONKind:
+				s = ` NOT IN ('{}'::jsonb,'[]'::jsonb,'""'::jsonb,'null'::jsonb)`
+			case types.TextKind:
+				s = " <> ''"
+			case types.MapKind:
+				s = " <> '{}'::jsonb"
+			}
+			b.WriteString(s)
+			if c.Nullable {
+				b.WriteByte(')')
+			}
+		}
 
 	case meergo.OpIsNull:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		b.WriteString(" IS NULL")
 
 	case meergo.OpIsNotNull:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		b.WriteString(" IS NOT NULL")
 
 	default:

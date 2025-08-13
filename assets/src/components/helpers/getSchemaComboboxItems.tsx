@@ -1,8 +1,9 @@
 import React from 'react';
 import { TransformedMapping, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/action';
-import { DecimalType, ObjectType } from '../../lib/api/types/types';
+import { DecimalType, ObjectType, Role } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
+import { ActionTarget } from '../../lib/api/types/action';
 
 const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): ComboboxItem[] => {
 	if (schema == null) {
@@ -30,7 +31,7 @@ const getUIPreferencesComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const getFilterPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const getFilterPropertyComboboxItems = (schema: ObjectType, role: Role, target: ActionTarget): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -39,7 +40,7 @@ const getFilterPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const property = flatSchema[k];
 		if (property.type === 'object' || property.type === 'array') {
-			const compatibleOperators = getCompatibleFilterOperators(property, false);
+			const compatibleOperators = getCompatibleFilterOperators(property, false, role, target);
 			if (compatibleOperators.length === 0) {
 				continue;
 			}

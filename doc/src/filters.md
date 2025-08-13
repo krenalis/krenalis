@@ -34,6 +34,7 @@ Here are all the operators you can use in filters. The operators you can use for
 | `is before`                | `is after`                    |
 | `is on or before`          | `is on or after`              |
 | `is true`                  | `is false`                    |
+| `is empty`                 | `is not empty`                |
 | `is null`                  | `is not null`                 |
 | `exists`                   | `does not exist`              |
 
@@ -106,6 +107,29 @@ Use the `is true` operator if you want a JSON property to be the boolean `true`:
 │ traits                  ▼ │ │ active                    │ │ is           ▼ │ │ true                       │  ✘ invalid
 └───────────────────────────┘ └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
+
+#### Check if empty
+
+Use the `is empty` operator to check whether a property is empty, and the `is not empty` operator to check whether it is not.
+
+A property is empty in the following cases:
+
+  * it does not exist
+  * it is `null`
+  * it is an empty `string`
+  * it is an empty `array`
+  * it is an empty `map`
+  * it has type `json` and its value is JSON null, or an empty JSON string, array, or object. 
+
+```text
+┌───────────────────────────┐ ┌───────────────────────────┐ ┌────────────────┐
+│ traits                  ▼ │ │ email                     │ │ is empty     ▼ │  ✔ correct
+└───────────────────────────┘ └───────────────────────────┘ └────────────────┘
+┌───────────────────────────┐ ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
+│ traits                  ▼ │ │ email                     │ │ is           ▼ │ │ ""                         │  ✘ invalid
+└───────────────────────────┘ └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
+```
+
 
 #### Dates and times
 

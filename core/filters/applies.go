@@ -66,6 +66,10 @@ func Applies(where *state.Where, properties map[string]any) bool {
 			applies = opIsTrue(v)
 		case state.OpIsFalse:
 			applies = opIsFalse(v)
+		case state.OpIsEmpty:
+			applies = opIsEmpty(v)
+		case state.OpIsNotEmpty:
+			applies = !opIsEmpty(v)
 		case state.OpIsNull:
 			applies = exists && opIsNull(v)
 		case state.OpIsNotNull:
@@ -446,6 +450,22 @@ func opIsNull(v any) bool {
 		return v.IsNull()
 	}
 	return v == nil
+}
+
+func opIsEmpty(v any) bool {
+	switch v := v.(type) {
+	case nil:
+		return true
+	case string:
+		return v == ""
+	case json.Value:
+		return v.IsNull() || v.IsEmpty()
+	case []any:
+		return len(v) == 0
+	case map[string]any:
+		return len(v) == 0
+	}
+	return false
 }
 
 // readPropertyFrom reads the property with the given path from m, returning its

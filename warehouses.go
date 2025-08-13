@@ -653,6 +653,8 @@ const (
 	OpIsOnOrAfter                            // is on or after
 	OpIsTrue                                 // is true
 	OpIsFalse                                // is false
+	OpIsEmpty                                // is empty
+	OpIsNotEmpty                             // is not empty
 	OpIsNull                                 // is null
 	OpIsNotNull                              // is not null
 )

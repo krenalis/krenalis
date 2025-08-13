@@ -90,6 +90,8 @@ const (
 	OpIsOnOrAfter            FilterOperator = "is on or after"
 	OpIsTrue                 FilterOperator = "is true"
 	OpIsFalse                FilterOperator = "is false"
+	OpIsEmpty                FilterOperator = "is empty"
+	OpIsNotEmpty             FilterOperator = "is not empty"
 	OpIsNull                 FilterOperator = "is null"
 	OpIsNotNull              FilterOperator = "is not null"
 	OpExists                 FilterOperator = "exists"
@@ -100,7 +102,8 @@ const (
 var operators = [...]FilterOperator{
 	OpIs, OpIsNot, OpIsLessThan, OpIsLessThanOrEqualTo, OpIsGreaterThan, OpIsGreaterThanOrEqualTo, OpIsBetween,
 	OpIsNotBetween, OpContains, OpDoesNotContain, OpIsOneOf, OpIsNotOneOf, OpStartsWith, OpEndsWith, OpIsBefore,
-	OpIsOnOrBefore, OpIsAfter, OpIsOnOrAfter, OpIsTrue, OpIsFalse, OpIsNull, OpIsNotNull, OpExists, OpDoesNotExist,
+	OpIsOnOrBefore, OpIsAfter, OpIsOnOrAfter, OpIsTrue, OpIsFalse, OpIsEmpty, OpIsNotEmpty, OpIsNull, OpIsNotNull,
+	OpExists, OpDoesNotExist,
 }
 
 // convertOperatorFromWhere converts a where operator into a filter operator.
@@ -413,7 +416,10 @@ func retrieveFilterProperty(schema types.Type, path string) (types.Property, str
 // Returns an error if the filter is not valid. Specifically, it returns a
 // types.PathNotExistError if a path does not exist.
 // Panics if the filter is nil or the schema is not valid.
-func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
+func validateFilter(filter *Filter, schema types.Type, role state.Role, target state.Target) ([]string, error) {
+
+	// disallowEmptyOnObject indicates if "is empty" and "is not empty" operators are disallowed on object properties.
+	disallowEmptyOnObject := role == state.Destination && target == state.TargetUser || target == state.TargetEvent
 
 	if op := filter.Logical; op != OpAnd && op != OpOr {
 		return nil, fmt.Errorf("invalid logical operator %q", op)
@@ -464,15 +470,18 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 		// is on or after              : datetime, date, time, year
 		// is true                     : boolean, json
 		// is false                    : boolean, json
-		// is null                     : All types [^3]
-		// is not null                 : All types [^3]
-		// exists                      : All types [^4]
-		// does not exist              : All types [^4]
+		// is empty                    : json, text, object, array, map [^3]
+		// is not empty                : json, text, object, array, map [^3]
+		// is null                     : All types [^4]
+		// is not null                 : All types [^4]
+		// exists                      : All types [^5]
+		// does not exist              : All types [^5]
 		//
 		// [1]: text with values is not supported.
 		// [2]: array(T) is supported if T is a type that is supported by the 'is' operator.
-		// [3]: only if the property is nullable or 'json'.
-		// [4]: only if the property is read-optional or 'json' with a non-empty path.
+		// [3]: object is disallowed on users when role is destination and on events.
+		// [4]: only if the property is nullable or 'json'.
+		// [5]: only if the property is read-optional or 'json' with a non-empty path.
 		//
 		switch op {
 		case OpIs, OpIsNot:
@@ -538,6 +547,19 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 			if kind != types.BooleanKind && kind != types.JSONKind {
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 			}
+		case OpIsEmpty, OpIsNotEmpty:
+			switch kind {
+			case types.JSONKind, types.TextKind, types.ArrayKind, types.MapKind:
+			case types.ObjectKind:
+				if disallowEmptyOnObject {
+					if target == state.TargetEvent {
+						return nil, fmt.Errorf("operator %q cannot be used on object properties for actions on events", op)
+					}
+					return nil, fmt.Errorf("operator %q cannot be used on object properties for destination actions on users", op)
+				}
+			default:
+				return nil, fmt.Errorf("operator %q can only be used with json, text, object, array, and map properties", op)
+			}
 		case OpIsNull, OpIsNotNull:
 			if !p.Nullable && kind != types.JSONKind {
 				return nil, fmt.Errorf("operator %q can only be used with nullable or json properties", op)
@@ -552,7 +574,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 
 		// Validate the values.
 		switch op {
-		case OpIsNull, OpIsNotNull, OpIsTrue, OpIsFalse, OpExists, OpDoesNotExist:
+		case OpIsTrue, OpIsFalse, OpIsEmpty, OpIsNotEmpty, OpIsNull, OpIsNotNull, OpExists, OpDoesNotExist:
 			if cond.Values != nil {
 				return nil, fmt.Errorf("values cannot be used with the operator %q", op)
 			}

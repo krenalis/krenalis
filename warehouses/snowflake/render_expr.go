@@ -62,6 +62,8 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
+	qname := quoteIdent(c.Name)
+
 	// Render the column identifier, the operator, and, if necessary, the values.
 	switch op := baseExpr.Operator; op {
 	case
@@ -76,7 +78,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		meergo.OpIsAfter,
 		meergo.OpIsOnOrAfter:
 
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 
 		switch op {
 		case meergo.OpIs:
@@ -95,7 +97,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
 	case meergo.OpIsBetween, meergo.OpIsNotBetween:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		if op == meergo.OpIsNotBetween {
 			b.WriteString(" NOT")
 		}
@@ -109,13 +111,13 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			b.WriteString("NOT ")
 		}
 		b.WriteString("CONTAINS(")
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		b.WriteString(", ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
 	case meergo.OpIsOneOf, meergo.OpIsNotOneOf:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		if op == meergo.OpIsOneOf {
 			b.WriteString(" IN (")
 		} else {
@@ -135,24 +137,70 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		} else {
 			b.WriteString("ENDSWITH(")
 		}
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		b.WriteString(", ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
 	case meergo.OpIsTrue:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 
 	case meergo.OpIsFalse:
 		b.WriteString("NOT ")
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
+
+	case meergo.OpIsEmpty:
+		if c.Nullable {
+			b.WriteByte('(')
+			b.WriteString(qname)
+			b.WriteString(" IS NULL OR ")
+		}
+		b.WriteString(qname)
+		var s string
+		switch c.Type.Kind() {
+		case types.JSONKind:
+			s = " IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
+		case types.TextKind:
+			s = " = ''"
+		case types.ArrayKind:
+			s = " = ARRAY_CONSTRUCT()"
+		case types.MapKind:
+			s = " = OBJECT_CONSTRUCT()"
+		}
+		b.WriteString(s)
+		if c.Nullable {
+			b.WriteByte(')')
+		}
+
+	case meergo.OpIsNotEmpty:
+		if c.Nullable {
+			b.WriteByte('(')
+			b.WriteString(qname)
+			b.WriteString(" IS NOT NULL AND ")
+		}
+		b.WriteString(qname)
+		var s string
+		switch c.Type.Kind() {
+		case types.JSONKind:
+			s = " NOT IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
+		case types.TextKind:
+			s = " <> ''"
+		case types.ArrayKind:
+			s = " <> ARRAY_CONSTRUCT()"
+		case types.MapKind:
+			s = " <> OBJECT_CONSTRUCT()"
+		}
+		b.WriteString(s)
+		if c.Nullable {
+			b.WriteByte(')')
+		}
 
 	case meergo.OpIsNull:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		b.WriteString(" IS NULL")
 
 	case meergo.OpIsNotNull:
-		b.WriteString(quoteIdent(c.Name))
+		b.WriteString(qname)
 		b.WriteString(" IS NOT NULL")
 
 	default:

@@ -22,6 +22,7 @@ import Type, {
 	MapType,
 	ObjectType,
 	Property,
+	Role,
 	TextType,
 	UintType,
 } from '../api/types/types';
@@ -66,11 +67,24 @@ const FILTER_OPERATORS: FilterOperator[] = [
 	'is on or after',
 	'is true',
 	'is false',
+	'is empty',
+	'is not empty',
 	'is null',
 	'is not null',
 	'exists',
 	'does not exist',
 ];
+
+const UNARY_OPERATORS = new Set<FilterOperator>([
+	'is true',
+	'is false',
+	'is empty',
+	'is not empty',
+	'is null',
+	'is not null',
+	'exists',
+	'does not exist',
+]);
 
 const typesByFilterOperator: string[][] = [
 	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'text'], // is
@@ -93,6 +107,8 @@ const typesByFilterOperator: string[][] = [
 	['datetime', 'date', 'time', 'year'], // is on or after
 	['boolean', 'json'], // is true
 	['boolean', 'json'], // is false
+	['json', 'text', 'object', 'array', 'map'], // is empty
+	['json', 'text', 'object', 'array', 'map'], // is not empty
 	[
 		'boolean',
 		'int',
@@ -258,7 +274,12 @@ interface TransformedAction {
 	format?: string;
 }
 
-const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: boolean): number[] => {
+const getCompatibleFilterOperators = (
+	property: TransformedProperty,
+	hasPath: boolean,
+	role: Role,
+	target: ActionTarget,
+): number[] => {
 	if (property == null) {
 		return [];
 	}
@@ -300,6 +321,14 @@ const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: bo
 			}
 		}
 
+		// 'is empty' and 'is not empty' cannot be used on object properties for users with role 'Destination' or for events.
+		if ((op === 'is empty' || op === 'is not empty') && property.type === 'object') {
+			const disallowEmptyOnObject = (role === 'Destination' && target == 'User') || target == 'Event';
+			if (disallowEmptyOnObject) {
+				continue;
+			}
+		}
+
 		if (op === 'exists' || op === 'does not exist') {
 			if (!(property.readOptional || (property.type === 'json' && hasPath))) {
 				continue;
@@ -313,16 +342,7 @@ const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: bo
 	return operators;
 };
 
-const isUnaryOperator = (operator: string): boolean => {
-	return (
-		operator === 'is true' ||
-		operator === 'is false' ||
-		operator === 'is null' ||
-		operator === 'is not null' ||
-		operator === 'exists' ||
-		operator === 'does not exist'
-	);
-};
+const isUnaryOperator = (op: FilterOperator | ''): boolean => (op === '' ? false : UNARY_OPERATORS.has(op));
 
 const isBetweenOperator = (operator: string): boolean => {
 	return operator === 'is between' || operator === 'is not between';

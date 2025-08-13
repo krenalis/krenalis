@@ -152,7 +152,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
-		properties, err := validateFilter(action.Filter, inSchema)
+		properties, err := validateFilter(action.Filter, inSchema, v.connection.role, v.target)
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}

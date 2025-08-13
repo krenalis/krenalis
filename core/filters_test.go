@@ -588,6 +588,8 @@ func Test_validateFilter(t *testing.T) {
 
 	tests := []struct {
 		filter   Filter
+		role     state.Role
+		target   state.Target
 		expected []string
 		err      error
 	}{
@@ -770,6 +772,46 @@ func Test_validateFilter(t *testing.T) {
 		},
 		{
 			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
+					{Property: "g", Operator: OpIsEmpty},
+				},
+			},
+			err: fmt.Errorf(`operator "is empty" can only be used with json, text, object, array, and map properties`),
+		},
+		{
+			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
+					{Property: "g", Operator: OpIsEmpty},
+				},
+			},
+			err: fmt.Errorf(`operator "is empty" can only be used with json, text, object, array, and map properties`),
+		},
+		{
+			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
+					{Property: "m", Operator: OpIsEmpty},
+				},
+			},
+			target: state.TargetUser,
+			role:   state.Destination,
+			err:    fmt.Errorf(`operator "is empty" cannot be used on object properties for destination actions on users`),
+		},
+		{
+			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
+					{Property: "m", Operator: OpIsNotEmpty},
+				},
+			},
+			target: state.TargetEvent,
+			role:   state.Source,
+			err:    fmt.Errorf(`operator "is not empty" cannot be used on object properties for actions on events`),
+		},
+		{
+			filter: Filter{
 				Logical: OpOr,
 				Conditions: []FilterCondition{
 					{Property: "b", Operator: OpIs, Values: []string{"5"}},
@@ -777,6 +819,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "c", Operator: OpIsLessThan, Values: []string{"12"}},
 					{Property: "c", Operator: OpIsLessThanOrEqualTo, Values: []string{"5"}},
 					{Property: "b", Operator: OpIsGreaterThan, Values: []string{"boo"}},
+					{Property: "b", Operator: OpIsEmpty},
 					{Property: "c", Operator: OpIsGreaterThanOrEqualTo, Values: []string{"23"}},
 					{Property: "c", Operator: OpIsBetween, Values: []string{"10", "20"}},
 					{Property: "c", Operator: OpIsNotBetween, Values: []string{"20", "30"}},
@@ -794,18 +837,23 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "h", Operator: OpDoesNotExist},
 					{Property: "i", Operator: OpIsBefore, Values: []string{"2024"}},
 					{Property: "j", Operator: OpIs, Values: []string{"192.168.1.1"}},
+					{Property: "d", Operator: OpIsNotEmpty},
 					{Property: "e", Operator: OpIsOnOrAfter, Values: []string{"2024-09-10T15:34:31"}},
 					{Property: "a", Operator: OpIsTrue},
 					{Property: "a", Operator: OpIsFalse},
 					{Property: "b", Operator: OpIsNull},
 					{Property: "b", Operator: OpIsNotNull},
+					{Property: "d", Operator: OpIsEmpty},
+					{Property: "d.s", Operator: OpIsEmpty},
 					{Property: "d.s", Operator: OpExists},
 					{Property: "d.s", Operator: OpDoesNotExist},
 					{Property: "k", Operator: OpIsNull},
 					{Property: "k", Operator: OpContains, Values: []string{"boo"}},
 					{Property: "m", Operator: OpIsNull},
+					{Property: "m", Operator: OpIsEmpty},
 					{Property: "m.x", Operator: OpContains, Values: []string{"abc"}},
 					{Property: "n", Operator: OpIsNotNull},
+					{Property: "n", Operator: OpIsNotEmpty},
 					{Property: "o", Operator: OpIs, Values: []string{"foo"}},
 					{Property: "o", Operator: OpIsNotNull},
 				},
@@ -816,7 +864,15 @@ func Test_validateFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			got, err := validateFilter(&test.filter, schema)
+			role := test.role
+			if role == state.Both {
+				role = state.Source
+			}
+			target := state.TargetUser
+			if test.target == state.TargetEvent {
+				target = state.TargetEvent
+			}
+			got, err := validateFilter(&test.filter, schema, role, target)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q  (type %T)", err, err)

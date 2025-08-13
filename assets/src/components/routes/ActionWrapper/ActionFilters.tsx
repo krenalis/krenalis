@@ -58,7 +58,12 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		const hasPath = 'path' in a.filter!.conditions[id];
 		const currentOperator = a.filter!.conditions[id]['operator'];
 		const currentOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === currentOperator);
-		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value], hasPath);
+		const compatibleOperators = getCompatibleFilterOperators(
+			flatInputSchema[value],
+			hasPath,
+			connection.role,
+			action.target,
+		);
 		const isCompatible = compatibleOperators.includes(currentOperatorIndex);
 		const isJson = flatInputSchema[value]?.type === 'json';
 
@@ -100,7 +105,12 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		} else {
 			newPropertyName = value;
 		}
-		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[newPropertyName], hasPath);
+		const compatibleOperators = getCompatibleFilterOperators(
+			flatInputSchema[newPropertyName],
+			hasPath,
+			connection.role,
+			action.target,
+		);
 		const currentOperator = a.filter!.conditions[id]['operator'];
 		if (currentOperator != null && currentOperator !== '') {
 			const index = FILTER_OPERATORS.indexOf(currentOperator);
@@ -299,7 +309,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					className='action__filters-property'
 					size='small'
 					name={`property-${i}`}
-					items={getFilterPropertyComboboxItems(actionType.inputSchema)}
+					items={getFilterPropertyComboboxItems(actionType.inputSchema, connection.role, action.target)}
 					isExpression={false}
 					disabled={isDisabled}
 					placeholder={'Property'}
@@ -338,11 +348,13 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					disabled={isInvalidProperty || isDisabled}
 				>
 					{property != null
-						? getCompatibleFilterOperators(property, path !== '').map((i) => (
-								<SlOption key={i} value={String(i)}>
-									{FILTER_OPERATORS[i]}
-								</SlOption>
-							))
+						? getCompatibleFilterOperators(property, path !== '', connection.role, action.target).map(
+								(i) => (
+									<SlOption key={i} value={String(i)}>
+										{FILTER_OPERATORS[i]}
+									</SlOption>
+								),
+							)
 						: Object.keys(FILTER_OPERATORS).map((i) => (
 								<SlOption key={i} value={String(i)}>
 									{FILTER_OPERATORS[i]}

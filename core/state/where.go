@@ -156,6 +156,8 @@ const (
 	OpIsOnOrAfter                                 // is on or after
 	OpIsTrue                                      // is true
 	OpIsFalse                                     // is false
+	OpIsEmpty                                     // is empty
+	OpIsNotEmpty                                  // is not empty
 	OpIsNull                                      // is null
 	OpIsNotNull                                   // is not null
 
@@ -167,8 +169,8 @@ const (
 
 var jsonOperators = []byte(`"Is"IsNot"IsLessThan"IsLessThanOrEqualTo"IsGreaterThan"IsGreaterThanOrEqualTo"` +
 	`IsBetween"OpIsNotBetween"Contains"DoesNotContain"IsOneOf"IsNotOneOf"StartsWith"EndsWith"IsBefore"` +
-	`IsOnOrBefore"IsAfter"IsOnOrAfter"IsTrue"IsFalse"IsNull"IsNotNull"Exists"DoesNotExist"`)
-var jsonOperatorsIndexes = [...]uint{0, 3, 9, 20, 40, 54, 77, 87, 102, 111, 126, 134, 145, 156, 165, 174, 187, 195, 207, 214, 222, 229, 239, 246, 259}
+	`IsOnOrBefore"IsAfter"IsOnOrAfter"IsTrue"IsFalse"IsEmpty"IsNotEmpty"IsNull"IsNotNull"Exists"DoesNotExist"`)
+var jsonOperatorsIndexes = [...]uint16{0, 3, 9, 20, 40, 54, 77, 87, 102, 111, 126, 134, 145, 156, 165, 174, 187, 195, 207, 214, 222, 230, 241, 248, 258, 265, 278}
 
 // MarshalJSON returns the JSON representation of op.
 func (op WhereOperator) MarshalJSON() ([]byte, error) {
@@ -189,7 +191,7 @@ func (op *WhereOperator) UnmarshalJSON(data []byte) error {
 	if k < 0 {
 		return errors.New("invalid operator")
 	}
-	h := slices.Index(jsonOperatorsIndexes[:], uint(k))
+	h := slices.Index(jsonOperatorsIndexes[:], uint16(k))
 	if h < 0 {
 		return errors.New("invalid operator")
 	}
