@@ -250,6 +250,30 @@ func Test_Value(t *testing.T) {
 		}
 	})
 
+	t.Run("IsEmpty", func(t *testing.T) {
+		if !Value(` ""`).IsEmpty() {
+			t.Fatal("expected true, got false")
+		}
+		if !Value(` [ ]`).IsEmpty() {
+			t.Fatal("expected true, got false")
+		}
+		if !Value(` { }`).IsEmpty() {
+			t.Fatal("expected true, got false")
+		}
+		if Value(`"a"`).Bool() {
+			t.Fatal("expected false, got true")
+		}
+		if Value(`[ 1, 2, 3 ]`).Bool() {
+			t.Fatal("expected false, got true")
+		}
+		if Value(` { "a": true }`).Bool() {
+			t.Fatal("expected false, got true")
+		}
+		if Value(`null`).Bool() {
+			t.Fatal("expected false, got true")
+		}
+	})
+
 	t.Run("IsFalse", func(t *testing.T) {
 		if !Value(`false`).IsFalse() {
 			t.Fatal("expected true, got false")

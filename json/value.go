@@ -185,6 +185,20 @@ func (v Value) IsBool() bool {
 	return k == False || k == True
 }
 
+// IsEmpty reports whether v is an empty string, array, or object.
+func (v Value) IsEmpty() bool {
+	ts := Value(TrimLeftSpace(v))
+	switch ts[0] {
+	case '"':
+		return ts[1] == '"'
+	case '[':
+		return TrimLeftSpace(ts[1:])[0] == ']'
+	case '{':
+		return TrimLeftSpace(ts[1:])[0] == '}'
+	}
+	return false
+}
+
 // IsFalse reports whether v represents a JSON false.
 func (v Value) IsFalse() bool {
 	return v.Kind() == False
