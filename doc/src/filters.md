@@ -43,12 +43,12 @@ Here are all the operators you can use in filters. The operators you can use for
 
 It is not necessary to quote values. However, if a value starts or ends with a space, `"` or `'`, you should quote it with `"` or `'`. Use a backslash (`\`) to escape `"` or `'` within a quoted value.
 
-```
+```text
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ code                    ▼ │ │ starts with  ▼ │ │ "  'S'"                    │  ✔ yes
+│ code                    ▼ │ │ starts with  ▼ │ │ "  'S'"                    │  ✔ correct
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ code                    ▼ │ │ starts with  ▼ │ │   'S'                      │  ✘ no
+│ code                    ▼ │ │ starts with  ▼ │ │   'S'                      │  ✘ invalid
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
 
@@ -70,12 +70,12 @@ To refer to a key within a JSON object, specify it right after the property name
 
 To refer to the state, use `address.state` as shown below:
 
-```
+```text
 ┌───────────────────────────┐ ┌──────────────────┐ ┌──────────┐ ┌──────────┐
-│ traits                  ▼ │ │ address.state    │ │ is     ▼ │ │ CA       │  ✔ yes
+│ traits                  ▼ │ │ address.state    │ │ is     ▼ │ │ CA       │  ✔ correct
 └───────────────────────────┘ └──────────────────┘ └──────────┘ └──────────┘
 ┌───────────────────────────┐ ┌──────────────────┐ ┌──────────┐ ┌──────────┐
-│ traits                  ▼ │ │ "address city"   │ │ is     ▼ │ │ CA       │  ✘ no
+│ traits                  ▼ │ │ "address city"   │ │ is     ▼ │ │ CA       │  ✘ invalid
 └───────────────────────────┘ └──────────────────┘ └──────────┘ └──────────┘
 ```
 
@@ -85,12 +85,12 @@ Make sure you reference nested keys without quotes and using dot notation.
 
 To check if a JSON property exists, use the `exists` operator instead of `is null`:
 
-```
+```text
 ┌───────────────────────────┐ ┌───────────────────────────┐ ┌────────────────┐
-│ traits                  ▼ │ │ name                      │ │ exists       ▼ │  ✔ yes
+│ traits                  ▼ │ │ name                      │ │ exists       ▼ │  ✔ correct
 └───────────────────────────┘ └───────────────────────────┘ └────────────────┘
 ┌───────────────────────────┐ ┌───────────────────────────┐ ┌────────────────┐
-│ traits                  ▼ │ │ name                      │ │ is null      ▼ │  ✘ no
+│ traits                  ▼ │ │ name                      │ │ is null      ▼ │  ✘ invalid
 └───────────────────────────┘ └───────────────────────────┘ └────────────────┘
 ```
 
@@ -98,12 +98,12 @@ To check if a JSON property exists, use the `exists` operator instead of `is nul
 
 Use the `is true` operator if you want a JSON property to be the boolean `true`:
 
-```
+```text
 ┌───────────────────────────┐ ┌───────────────────────────┐ ┌────────────────┐
-│ traits                  ▼ │ │ active                    │ │ is true      ▼ │  ✔ yes
+│ traits                  ▼ │ │ active                    │ │ is true      ▼ │  ✔ correct
 └───────────────────────────┘ └───────────────────────────┘ └────────────────┘
 ┌───────────────────────────┐ ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ traits                  ▼ │ │ active                    │ │ is           ▼ │ │ true                       │  ✘ no
+│ traits                  ▼ │ │ active                    │ │ is           ▼ │ │ true                       │  ✘ invalid
 └───────────────────────────┘ └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
 
@@ -116,33 +116,33 @@ Write values representing date and time (`datetime` property type) using one of 
 * `YYYY-MM-DDThh:mm::ss+hh:mm`
 * `YYYY-MM-DDThh:mm::ssZ`
 
-```
+```text
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ registration_time       ▼ │ │ is before    ▼ │ │ 2024-09-17T12:34:22.561    │  ✔ yes
+│ registration_time       ▼ │ │ is before    ▼ │ │ 2024-09-17T12:34:22.561    │  ✔ correct
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ registration_time       ▼ │ │ is before    ▼ │ │ 09-07-2024 12:34:22.561    │  ✘ no
+│ registration_time       ▼ │ │ is before    ▼ │ │ 09-07-2024 12:34:22.561    │  ✘ invalid
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
 
 Write values representing dates (`date` property type) using the format `YYYY-MM-DD`:
 
-```
+```text
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ date_of_birth           ▼ │ │ is after     ▼ │ │ 2024-09-17                 │  ✔ yes
+│ date_of_birth           ▼ │ │ is after     ▼ │ │ 2024-09-17                 │  ✔ correct
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ date_of_birth           ▼ │ │ is after     ▼ │ │ 09/17/2024                 │  ✘ no
+│ date_of_birth           ▼ │ │ is after     ▼ │ │ 09/17/2024                 │  ✘ invalid
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
 
 Write values representing a time in a day (`time` property type) using the format `hh:mm:ss` or, for sub-second precision, `hh:mm:ss.nnnnnnnnn`:
 
-```
+```text
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ event_start_time        ▼ │ │ is after     ▼ │ │ 10:30:00                   │  ✔ yes
+│ event_start_time        ▼ │ │ is after     ▼ │ │ 10:30:00                   │  ✔ correct
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
-│ event_start_time        ▼ │ │ is before    ▼ │ │ 10h 30m                    │  ✘ no
+│ event_start_time        ▼ │ │ is before    ▼ │ │ 10h 30m                    │  ✘ invalid
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
