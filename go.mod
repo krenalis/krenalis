@@ -3,7 +3,7 @@ module github.com/meergo/meergo
 // Keep in sync with the version within ".github/workflows/main.yml".
 // Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 // Keep in sync with the version within "Dockerfile".
-go 1.24
+go 1.25
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.40.1

@@ -22,7 +22,7 @@ jobs:
           # Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
           # Keep in sync with the version within "Dockerfile".
           # Keep in sync with the version within "go.mod".
-          go-version: "1.24"
+          go-version: "1.25"
 
       - uses: denoland/setup-deno@v2
         with:

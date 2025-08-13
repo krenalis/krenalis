@@ -27,7 +27,7 @@ jobs:
           # Keep in sync with the version within ".github/workflows/main.yml".
           # Keep in sync with the version within "Dockerfile".
           # Keep in sync with the version within "go.mod".
-          go-version: "1.24"
+          go-version: "1.25"
 
       - name: Install Brotli (for decompressing built assets)
         run: sudo apt install -y brotli
