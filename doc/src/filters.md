@@ -18,9 +18,9 @@ Common use cases for filters include:
 
 ## Operators
 
-In a filter, select the boolean operator `any` if you want an event or user to match any of the conditions to be processed. Select `all` if you want an event or user to match all conditions.
+In a filter, select **or** if you want an event or user to match any of the conditions. Select **and** if you want an event or user to match all of the conditions.
 
-Here are all the operators you can use in filters. The operators you can use for a property depend on the type of property and whether it can be null or not. Texts are compared in a case-sensitive manner.
+Here are all the operators you can use in filters. The operators you can use for a property depend on the property. Texts are compared in a case-sensitive manner.
 
 | Operators                  |                               |
 |----------------------------|-------------------------------|
@@ -94,7 +94,7 @@ To check if a JSON property exists, use the `exists` operator instead of `is nul
 └───────────────────────────┘ └───────────────────────────┘ └────────────────┘
 ```
 
-#### Check If true
+#### Check if true
 
 Use the `is true` operator if you want a JSON property to be the boolean `true`:
 
