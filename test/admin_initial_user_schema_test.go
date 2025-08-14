@@ -17,9 +17,9 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// TestUIInitialUserSchema tests the correctness of the user schema that is
-// initially created when a workspace is created through the UI.
-func TestUIInitialUserSchema(t *testing.T) {
+// TestAdminInitialUserSchema tests the correctness of the user schema that is
+// initially created when a workspace is created through the Admin.
+func TestAdminInitialUserSchema(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
