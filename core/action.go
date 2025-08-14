@@ -392,6 +392,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					OutSchema      types.Type      `json:"outSchema"`
 				}{
 					serializedAction: a,
+					Filter:           this.Filter,
 					Transformation:   this.Transformation,
 					InSchema:         this.InSchema,
 					OutSchema:        this.OutSchema,
