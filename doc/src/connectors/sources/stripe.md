@@ -30,12 +30,13 @@ Before you can add a Stripe data source, you need to create an API key in your S
 Now proceed to add a Stripe data source:
 
 1. From the Meergo admin, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new destination**.
-3. Search for the **Stripe** source; you can use the search bar at the top to assist you.
-4. Next to the **Stripe** source, click the **+** icon. The source addition page will open.
-5. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
-6. In the **API Key** field, enter the previously copied key.
-7. Click **Add**.
+2. On the **Sources** page, click **Add new source**.
+3. Search for the **Stripe** source; you can use the search bar at the top or filter by category.
+4. Click on the **Stripe** connector. A panel will open on the right with information about **Stripe**.
+5. Click on **Add source**. The `Add Stripe source connection` page will appear.
+6. In the **Name** field, enter a name for the source to easily recognize it later.
+7. In the **API Key** field, enter the previously copied key.
+8. Click **Add**.
 
 Once the Stripe data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the customers read from Stripe.
 

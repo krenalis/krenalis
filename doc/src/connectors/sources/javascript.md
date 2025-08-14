@@ -25,12 +25,13 @@ The JavaScript data source requires the use of the [JavaScript SDK](/developers/
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
-3. Search for the **JavaScript** source; you can use the search bar at the top to help you.
-4. Next to the **JavaScript** source, click the **+** icon. The source addition page will open.
-5. (Optional) In the **Name** field, enter a name for the source to easily recognize it later. This could be the name of the site, for example.
-6. (Optional) From the **Strategy** menu, select a strategy. You can change it later if needed.
-7. (Optional) In the **Host** field, enter the domain of the site for tracking events.
-8. Click **Add**.
+3. Search for the **JavaScript** source; you can use the search bar at the top or filter by category.
+4. Click on the **JavaScript** connector. A panel will open on the right with information about **JavaScript**.
+5. Click on **Add source**. The `Add JavaScript source connection` page will appear.
+6. In the **Name** field, enter a name for the source to easily recognize it later. This could be the name of the site, for example.
+7. (Optional) From the **Strategy** menu, select a strategy. You can change it later if needed.
+8. (Optional) In the **Host** field, enter the domain of the site for tracking events.
+9. Click **Add**.
 
 Once the JavaScript data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the events received from this source.
 

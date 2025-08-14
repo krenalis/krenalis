@@ -24,10 +24,11 @@ To use the Python data source, you will need the [Python SDK](../../developers/p
 
 1. From the **Meergo admin**, navigate to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
-3. Search for the **Python** source using the search bar at the top.
-4. Next to the **Python** source, click the **+** icon to open the source addition page.
-5. (Optional) In the **Name** field, provide a name to easily identify the source later (e.g., the name of the Python application or server).
-6. Click **Add**.
+3. Search for the **Python** source; you can use the search bar at the top or filter by category.
+4. Click on the **Python** connector. A panel will open on the right with information about **Python**.
+5. Click on **Add source**. The `Add Python source connection` page will appear.
+6. In the **Name** field, provide a name to easily identify the source later (e.g., the name of the Python application or server).
+7. Click **Add**.
 
 Once the Python data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
 

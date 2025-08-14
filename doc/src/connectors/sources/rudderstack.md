@@ -21,10 +21,11 @@ RudderStack is an open-source customer data platform that helps businesses colle
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
-3. Search for the **RudderStack** source; you can use the search bar at the top to help you.
-4. Next to the **RudderStack** source, click the **+** icon. The source addition page will open.
-5. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
-6. Click **Add**.
+3. Search for the **RudderStack** source; you can use the search bar at the top or filter by category.
+4. Click on the **RudderStack** connector. A panel will open on the right with information about **RudderStack**.
+5. Click on **Add source**. The `Add RudderStack source connection` page will appear.
+6. In the **Name** field, enter a name for the source to easily recognize it later.
+7. Click **Add**.
 
 Once the RudderStack data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
 
@@ -40,7 +41,7 @@ Then proceed to create a Webhook destination in RudderStack:
 
 1. From the [RudderStack web app](https://app.rudderstack.com/), go to **Connect > Destinations**.
 2. Click **New destination**.
-3. Search for the **Webhook** destination; you can use the search bar at the top to help you.
+3. Search for the **Webhook** destination; you can use the search bar at the top or filter by category.
 4. On the Webhook page, in the **Name destination** field, enter a name for the destination to easily recognize it later.
 5. Click **Continue**. 
 6. Select the sources whose events you want to send to Meergo.

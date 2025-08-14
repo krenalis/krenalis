@@ -26,10 +26,11 @@ Now proceed to add a Mixpanel data destination:
 
 1. In Meergo admin, go to **Connections > Destinations**.
 2. On the **Sources** page, click **Add New source**.
-3. Search for **Mixpanel**; you can use the search bar at the top.
-4. Next to **Mixpanel**, click the **+** icon.
-5. On the **Add Mixpanel destination connection** page, enter a name in the **Name** field.
-6. In the **Project ID** field, enter the Project ID you copied earlier.
-7. In the **Project Token** field, enter the Project Token you copied earlier.
-8. Optionally, select "Use the European Endpoint" if needed.
-9. Click **Add**.
+3. Search for **Mixpanel**; you can use the search bar at the top or filter by category.
+4. Click on the **Mixpanel** connector. A panel will open on the right with information about **Mixpanel**.
+5. Click on **Add destination**. The `Add Mixpanel API destination connection` page will appear.
+6. In the **Name** field, enter a name for the destination to easily recognize it later.
+7. In the **Project ID** field, enter the Project ID you copied earlier.
+8. In the **Project Token** field, enter the Project Token you copied earlier.
+9. (Optional) Select **Use the European Endpoint** if needed.
+10. Click **Add**.

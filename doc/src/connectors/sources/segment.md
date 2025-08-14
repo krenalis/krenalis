@@ -21,10 +21,11 @@ Segment is a customer data platform that collects, unifies, and integrates custo
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
-3. Search for the **Segment** source; you can use the search bar at the top to help you.
-4. Next to the **Segment** source, click the **+** icon. The source addition page will open.
-5. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
-6. Click **Add**.
+3. Search for the **Segment** source; you can use the search bar at the top or filter by category.
+4. Click on the **Segment** connector. A panel will open on the right with information about **Segment**.
+5. Click on **Add source**. The `Add Segment source connection` page will appear.
+6. In the **Name** field, enter a name for the source to easily recognize it later.
+7. Click **Add**.
 
 Once the Segment data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
 
@@ -40,7 +41,7 @@ Then proceed to create a Webhook destination in Segment:
 
 1. From the [Segment dashboard](https://app.segment.com/workspaces), go to **Connections > Destinations**. 
 2. Click **Add destination**.
-3. Search for the **Webhook** destination; you can use the search bar at the top to help you.
+3. Search for the **Webhook** destination; you can use the search bar at the top or filter by category.
 4. Click **Add destination** on the Webhook page.
 5. Select the data sources whose events you want to send to Meergo.
 6. Click **Next**.

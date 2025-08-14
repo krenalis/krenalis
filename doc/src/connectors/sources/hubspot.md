@@ -32,11 +32,12 @@ Now proceed to add a HubSpot data source:
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
-3. Search for the **HubSpot** source; you can use the search bar at the top to help you.
-4. Next to the **HubSpot** source, click the **+** icon. A page will open on the HubSpot site.
-5. Follow the instructions provided by HubSpot to authorize access to your account to read contacts. Once finished, you will return to the Meergo admin.
-6. (Optional) In the **Name** field, enter a name for the source to easily recognize it later.
-7. Click **Add**.
+3. Search for the **HubSpot** source; you can use the search bar at the top or filter by category.
+4. Click on the **HubSpot** connector. A panel will open on the right with information about **HubSpot**.
+5. Click on **Add source**.
+6. Follow the instructions provided by HubSpot to authorize access to your account to read contacts. Once finished, the `Add HubSpot source connection` page will appear.
+7. In the **Name** field, enter a name for the source to easily recognize it later.
+8. Click **Add**.
 
 Once the HubSpot data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the contacts read from HubSpot.
 

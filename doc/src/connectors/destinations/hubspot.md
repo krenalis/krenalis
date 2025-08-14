@@ -32,11 +32,12 @@ Now proceed to add a HubSpot data destination:
 
 1. From the Meergo admin, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
-3. Search for the **HubSpot** destination; you can use the search bar at the top to help you.
-4. Next to the **HubSpot** destination, click the **+** icon. A page will open on the HubSpot site.
-5. Follow the instructions provided by HubSpot to authorize access to your account for writing contacts. Once completed, you will return to the Meergo admin.
-6. (Optional) In the **Name** field, enter a name for the destination to easily recognize it later.
-7. Click **Add**.
+3. Search for the **HubSpot** destination; you can use the search bar at the top or filter by category.
+4. Click on the **HubSpot** connector. A panel will open on the right with information about **HubSpot**.
+5. Click on **Add destination**.
+6. Follow the instructions provided by HubSpot to authorize access to your account for writing contacts. Once finished, the `Add HubSpot destination connection` page will appear.
+7. In the **Name** field, enter a name for the destination to easily recognize it later.
+8. Click **Add**.
 
 Once the HubSpot data destination is added, the **Actions** page will be displayed, indicating the actions required to add and update contacts in HubSpot.
 

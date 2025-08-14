@@ -31,11 +31,12 @@ Now proceed to add a Stripe data destination:
 
 1. From the Meergo admin, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
-3. Search for the **Stripe** destination; you can use the search bar at the top to assist you.
-4. Next to the **Stripe** destination, click the **+** icon. The destination addition page will open.
-5. (Optional) In the **Name** field, enter a name for the destination to easily recognize it later.
-6. In the **API Key** field, enter the previously copied key.
-7. Click **Add**.
+3. Search for the **Stripe** destination; you can use the search bar at the top or filter by category.
+4. Click on the **Stripe** connector. A panel will open on the right with information about **Stripe**.
+5. Click on **Add destination**. The `Add Stripe destination connection` page will appear.
+6. In the **Name** field, enter a name for the destination to easily recognize it later.
+7. In the **API Key** field, enter the previously copied key.
+8. Click **Add**.
 
 Once the Stripe data destination is added, the **Actions** page will be displayed, indicating the actions required to add and update customers in Stripe.
 

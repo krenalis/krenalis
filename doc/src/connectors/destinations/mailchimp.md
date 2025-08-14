@@ -35,12 +35,13 @@ Now proceed to add a Mailchimp data destination:
 
 1. From the Meergo admin, go to **Connections > Destinations**.
 2. On the **Sources** page, click **Add New source**.
-3. Search for the **Mailchimp** destination; you can use the search bar at the top to assist you.
-4. Next to the **Mailchimp** destination, click the **+** icon. A page will open on the Mailchimp site.
-5. Follow the instructions provided by Mailchimp to authorize access to your account to write contacts. Once finished, you will return to the Meergo admin.
-6. (Optional) In the **Name** field, enter a name for the destination to easily recognize it later.
-7. In the **List** field, select the Mailchimp list to which write the contacts. You can change it later.
-8. Click **Add**.
+3. Search for the **Mailchimp** destination; you can use the search bar at the top or filter by category.
+4. Click on the **Mailchimp** connector. A panel will open on the right with information about **Mailchimp**.
+5. Click on **Add destination**.
+6. Follow the instructions provided by Mailchimp to authorize access to your account to write contacts. Once finished, the `Add Mailchimp destination connection` page will appear.
+7. In the **Name** field, enter a name for the destination to easily recognize it later.
+8. In the **List** field, select the Mailchimp list to which write the contacts. You can change it later.
+9. Click **Add**.
 
 Once the Mailchimp data destination is added, the Actions page will be displayed, indicating the actions required to add and update contacts in Mailchimp.
 

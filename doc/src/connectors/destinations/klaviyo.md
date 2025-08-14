@@ -32,11 +32,12 @@ Now proceed to add a Klaviyo data destination:
 
 1. From the Meergo admin, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
-3. Search for the **Klaviyo** destination; you can use the search bar at the top to assist you.
-4. Next to the **Klaviyo** destination, click the **+** icon. The destination addition page will open.
-5. (Optional) In the **Name** field, enter a name for the destination to easily recognize it later.
-6. In the **Your Private Key** field, enter the previously copied private key.
-7. Click **Add**.
+3. Search for the **Klaviyo** destination; you can use the search bar at the top or filter by category.
+4. Click on the **Klaviyo** connector. A panel will open on the right with information about **Klaviyo**.
+5. Click on **Add destination**. The `Add Klaviyo destination connection` page will appear.
+6. In the **Name** field, enter a name for the destination to easily recognize it later.
+7. In the **Your Private Key** field, enter the previously copied private key.
+8. Click **Add**.
 
 Once the Klaviyo data destination is added, the **Actions** page will be displayed, indicating the actions required to add and update profiles and send events to Klaviyo.
 

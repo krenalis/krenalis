@@ -16,12 +16,13 @@ Once the HTTP Files data destination is configured, you can easily customize the
 
 1. From the Meergo admin, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
-3. Search for the **HTTP Files** destination; you can use the search bar at the top to help you.
-4. Next to the **HTTP Files** destination, click the **+** icon.
-5. On the `Add HTTP Files destination connection` page, in the **Name** field, enter a name for the destination to easily recognize it later.
-6. In the `Host` field, enter the host where the file or files you wish to write are located.
-7. In the `Port` field, enter the port.
-8. (Optional) In the `Headers` fields,  specify any headers that should be included in the request for writing the files.
-9. Click **Add**.
+3. Search for the **HTTP Files** destination; you can use the search bar at the top or filter by category.
+4. Click on the **HTTP Files** connector. A panel will open on the right with information about **HTTP Files**.
+5. Click on **Add destination**. The `Add HTTP Files destination connection` page will appear.
+6. In the **Name** field, enter a name for the destination to easily recognize it later.
+7. In the `Host` field, enter the host where the file or files you wish to write are located.
+8. In the `Port` field, enter the port.
+9. (Optional) In the `Headers` fields,  specify any headers that should be included in the request for writing the files.
+10. Click **Add**.
 
 Once the HTTP Files data destination is added, the **Actions** page will be displayed. Here, you can add an action for each file you want to generate using the newly added HTTP Files data destination. Configure each action with the desired settings for file format, user filters, endpoint, and scheduling.

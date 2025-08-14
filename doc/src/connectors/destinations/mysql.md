@@ -17,17 +17,18 @@ MySQL is an open-source relational database management system. It's popular for 
 
 1. From the Meergo admin, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destinations**.
-3. Search for the **MySQL** destination; you can use the search bar at the top to help you.
-4. Next to the **MySQL** destination, click the **+** icon.
-5. On the `Add MySQL destination connection` page, in the **Name** field, enter a name for the destination to easily recognize it later.
-6. In the remaining fields, provide the necessary information to access your MySQL instance:
+3. Search for the **MySQL** destination; you can use the search bar at the top or filter by category.
+4. Click on the **MySQL** connector. A panel will open on the right with information about **MySQL**.
+5. Click on **Add destination**. The `Add MySQL destination connection` page will appear.
+6. In the **Name** field, enter a name for the destination to easily recognize it later.
+7. In the remaining fields, provide the necessary information to access your MySQL instance:
     * **Host**: The name of the host.
     * **Port**: The port. The default is 3306.
     * **Username**: A username with read and write access to the table.
     * **Password**: The password for the user.
     * **Database name**: The name of the database.
-7. (Optional) Click **Test connection** to check if the inserted data is correct.
-8. Click **Add**.
+8. (Optional) Click **Test connection** to check if the inserted data is correct.
+9. Click **Add**.
 
 Once the MySQL data destination is added, the **Actions** page will be displayed, indicating the actions required to update the table.
 
