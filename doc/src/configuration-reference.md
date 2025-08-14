@@ -87,6 +87,22 @@ Settings for the Meergo HTTP server.
 
   If not provided, the event endpoint is assumed to be on the same server as Meergo at `/api/v1/events`.
 
+- **`MEERGO_HTTP_READ_HEADER_TIMEOUT`** \
+  Max time to read request headers, including TLS handshake. \
+  By default, it is `2s`.
+
+- **`MEERGO_HTTP_READ_TIMEOUT`** \
+  Max time to read the full request (headers + body), starting from first byte. \
+  By default, it is `5s`.
+
+- **`MEERGO_HTTP_WRITE_TIMEOUT`** \
+  Max time for handler execution and sending response. For TLS, includes handshake. \
+  By default, it is `10s`.
+
+- **`MEERGO_HTTP_IDLE_TIMEOUT`** \
+  Max idle time between requests on keep-alive connections. \
+  By default, it is `120s`.
+
 ## Database configuration
 
 Configuration used to access the PostgreSQL server used by Meergo.

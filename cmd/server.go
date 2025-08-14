@@ -50,8 +50,12 @@ type Settings struct {
 			CertFile string
 			KeyFile  string
 		}
-		ExternalURL string
-		EventURL    string
+		ExternalURL       string
+		EventURL          string
+		ReadHeaderTimeout time.Duration
+		ReadTimeout       time.Duration
+		WriteTimeout      time.Duration
+		IdleTimeout       time.Duration
 	}
 	DB              core.DBConfig
 	MaxMindDBPath   string
@@ -244,17 +248,13 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	})
 
 	httpServer := http.Server{
-		Addr:     addr,
-		Handler:  handler,
-		ErrorLog: log.New(&httpLogger{}, "", 0),
-		// Max time to read request headers, including TLS handshake.
-		ReadHeaderTimeout: 2 * time.Second,
-		// Max time to read the full request (headers + body), starting from first byte.
-		ReadTimeout: 5 * time.Second,
-		// Max time for handler execution and sending response. For TLS, includes handshake.
-		WriteTimeout: 10 * time.Second,
-		// Max idle time between requests on keep-alive connections.
-		IdleTimeout: 120 * time.Second,
+		Addr:              addr,
+		Handler:           handler,
+		ErrorLog:          log.New(&httpLogger{}, "", 0),
+		ReadHeaderTimeout: settings.HTTP.ReadHeaderTimeout,
+		ReadTimeout:       settings.HTTP.ReadTimeout,
+		WriteTimeout:      settings.HTTP.WriteTimeout,
+		IdleTimeout:       settings.HTTP.IdleTimeout,
 	}
 	var certPem, keyPem string
 	if settings.HTTP.TLS.Enabled {

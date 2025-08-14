@@ -193,6 +193,18 @@ func settingsFromEnv() (*Settings, error) {
 	settings.HTTP.TLS.KeyFile = os.Getenv("MEERGO_HTTP_TLS_KEY_FILE")
 	settings.HTTP.ExternalURL = os.Getenv("MEERGO_HTTP_EXTERNAL_URL")
 	settings.HTTP.EventURL = os.Getenv("MEERGO_HTTP_EVENT_URL")
+	if settings.HTTP.ReadHeaderTimeout, err = parseHTTPDuration("MEERGO_HTTP_READ_HEADER_TIMEOUT", 2*time.Second); err != nil {
+		return nil, err
+	}
+	if settings.HTTP.ReadTimeout, err = parseHTTPDuration("MEERGO_HTTP_READ_TIMEOUT", 5*time.Second); err != nil {
+		return nil, err
+	}
+	if settings.HTTP.WriteTimeout, err = parseHTTPDuration("MEERGO_HTTP_WRITE_TIMEOUT", 10*time.Second); err != nil {
+		return nil, err
+	}
+	if settings.HTTP.IdleTimeout, err = parseHTTPDuration("MEERGO_HTTP_IDLE_TIMEOUT", 120*time.Second); err != nil {
+		return nil, err
+	}
 
 	// DB.
 	settings.DB.Host = os.Getenv("MEERGO_DB_HOST")
@@ -286,4 +298,21 @@ func boolEnvVar(v string) (bool, error) {
 	default:
 		return false, fmt.Errorf("value %q is not a valid boolean value (expected \"true\", \"false\" or empty string)", v)
 	}
+}
+
+// parseHTTPDuration parses the value of an HTTP configuration setting into a
+// time.Duration.
+func parseHTTPDuration(key string, defaultValue time.Duration) (time.Duration, error) {
+	s := os.Getenv(key)
+	if s == "" {
+		return defaultValue, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("invalid value specified for %s: %s", key, err)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("invalid value specified for %s: it must be greater than 0", key)
+	}
+	return d, nil
 }
