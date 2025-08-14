@@ -12,161 +12,85 @@ Note that this configuration applies to the entire Meergo installation; specific
 
 Table of contents:
 
-- [General settings](#general-settings)
-- [HTTP server configuration](#http-server-configuration)
-- [Database configuration](#database-configuration)
+- [General](#general)
+- [HTTP server](#http-server)
+- [Database](#database)
 - [Member emails](#member-emails)
-- [SMTP configuration](#smtp-configuration)
-- [MaxMind configuration](#maxmind-configuration)
+- [SMTP](#smtp)
+- [MaxMind](#maxmind)
 - [Transformations](#transformations)
   - [AWS Lambda](#aws-lambda)
-    - [Node.js settings](#nodejs-settings)
-    - [Python settings](#python-settings)
   - [Local execution](#local-execution)
 - [OAuth providers](#oauth-providers)
   - [HubSpot](#hubspot)
   - [Mailchimp](#mailchimp)
 
 
-## General settings
+## General
 
-General settings for Meergo.
+| Variabile                   | Default                                                                  | Description                                                                                                                                                                                                                                                                                             |
+|-----------------------------|--------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_TERMINATION_DELAY`  | no delay                                                                 | Delay time before gracefully shutting down the server. Example: `1s` (1 second), `200ms` (200 milliseconds).                                                                                                                                                                                            |
+| `MEERGO_JAVASCRIPT_SDK_URL` | `https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js` | URL that serves the JavaScript SDK.                                                                                                                                                                                                                                                                     |
+| `MEERGO_TELEMETRY_LEVEL`    | `all`                                                                    | Level for telemetry data sent by Meergo: `none` (no telemetry data will be sent), `errors` (only telemetry data related to errors will be sent), `stats` (only telemetry data related to software usage statistics will be sent), `all` (both types of telemetry data (errors and stats) will be sent). |
 
-- **`MEERGO_TERMINATION_DELAY`** \
-  Delay time before gracefully shutting down the server. If left empty, the server will initiate a graceful shutdown immediately after receiving the termination signal, without waiting for the specified delay. \
-  Example: `1s` (1 second), `200ms` (200 milliseconds) 
+## HTTP server
 
-- **`MEERGO_JAVASCRIPT_SDK_URL`** \
-  The URL that serves the JavaScript SDK.
+| Variable                          | Default                        | Description                                                                                                                                                                                                        |
+|-----------------------------------|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_HTTP_HOST`                | `127.0.0.1`                    | Server address to bind to. It can be an IPv4 address, an IPv6 address, or a hostname. Examples: `localhost`, `[::1]`                                                                                               |
+| `MEERGO_HTTP_PORT`                | `9090`                         | Port number on which the server listens. Example: `443`.                                                                                                                                                           |
+| `MEERGO_HTTP_TLS_ENABLED`         | `false`                        | Enable or disable TLS (HTTPS). You can disable TLS if a reverse proxy or load balancer in front of the Meergo server is handling the TLS termination, as it will manage the encryption and decryption of traffic.  |
+| `MEERGO_HTTP_TLS_CERT_FILE`       |                                | Path to the TLS certificate file (e.g., `.crt` file). It is required if TLS is enabled.                                                                                                                            |
+| `MEERGO_HTTP_TLS_KEY_FILE`        |                                | Path to the private key file associated with the TLS certificate. It is required if TLS is enabled.                                                                                                                |
+| `MEERGO_HTTP_EXTERNAL_URL`        |                                | publicly accessible URL of the server. If not provided, it is determined by the combination of `MEERGO_HTTP_TLS_ENABLED`, `MEERGO_HTTP_HOST`, and `MEERGO_HTTP_PORT`. Example: `https://meergo.example.com:8080/`. |
+| `MEERGO_HTTP_EVENT_URL`           | `/api/v1/events` (same server) | URL of the endpoint receiving events. If not set, assumed to be `/api/v1/events` on the same server. Example: `https://meergo.example.com:8080/api/v1/events`.                                                     |
+| `MEERGO_HTTP_READ_HEADER_TIMEOUT` | `2s`                           | Max time to read request headers (incl. TLS handshake).                                                                                                                                                            |
+| `MEERGO_HTTP_READ_TIMEOUT`        | `5s`                           | Max time to read full request (headers + body) from first byte.                                                                                                                                                    |
+| `MEERGO_HTTP_WRITE_TIMEOUT`       | `10s`                          | Max time for handler execution + sending response (TLS incl. handshake).                                                                                                                                           |
+| `MEERGO_HTTP_IDLE_TIMEOUT`        | `120s`                         | Max idle time between requests on keep-alive connections.                                                                                                                                                          | 
 
-  Example `https://my.cdn.meergo.example.com/javascript-sdk/dist/meergo.min.js`.
-
-  If not provided, the default is `https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js`.
-
-- **`MEERGO_TELEMETRY_LEVEL`** \
-  The level for telemetry data sent by Meergo.
-
-  Available values are:
-
-  - `none`, which means no telemetry data will be sent
-  - `errors`, which means that only telemetry data related to errors will be sent
-  - `stats`, which means that only telemetry data related to software usage statistics will be sent
-  - `all`, which means that both types of telemetry data (errors and stats) will be sent
-
-  By default, the telemetry level is `all`.
-
-## HTTP server configuration
-
-Settings for the Meergo HTTP server.
-
-- **`MEERGO_HTTP_HOST`** \
-  The server address to bind to. It can be an IPv4 address, an IPv6 address, or a hostname. \
-  Examples: `127.0.0.1`, `[::1]`, `localhost`.
-
-- **`MEERGO_HTTP_PORT`** \
-  The port number on which the server listens. \
-  Example: `9090`
-
-- **`MEERGO_HTTP_TLS_ENABLED`** \
-  Enable or disable TLS (HTTPS). You can disable TLS if a reverse proxy or load balancer in front of the Meergo server is handling the TLS termination, as it will manage the encryption and decryption of traffic.
-
-- **`MEERGO_HTTP_TLS_CERT_FILE`** \
-  Path to the TLS certificate file (e.g., `.crt` file). It is required if TLS is enabled.
-
-- **`MEERGO_HTTP_TLS_KEY_FILE`** \
-  Path to the private key file associated with the TLS certificate. It is required if TLS is enabled.
-
-- **`MEERGO_HTTP_EXTERNAL_URL`** \
-  The publicly accessible URL of the server. If not provided, it is determined by the combination of `MEERGO_HTTP_TLS_ENABLED`, `MEERGO_HTTP_HOST`, and `MEERGO_HTTP_PORT`. \
-  Example: `https://meergo.example.com:8080/`
-
-- **`MEERGO_HTTP_EVENT_URL`** \
-  The URL of the endpoint that receives the events.
-
-  Example: `https://meergo.example.com:8080/api/v1/events`
-
-  If not provided, the event endpoint is assumed to be on the same server as Meergo at `/api/v1/events`.
-
-- **`MEERGO_HTTP_READ_HEADER_TIMEOUT`** \
-  Max time to read request headers, including TLS handshake. \
-  By default, it is `2s`.
-
-- **`MEERGO_HTTP_READ_TIMEOUT`** \
-  Max time to read the full request (headers + body), starting from first byte. \
-  By default, it is `5s`.
-
-- **`MEERGO_HTTP_WRITE_TIMEOUT`** \
-  Max time for handler execution and sending response. For TLS, includes handshake. \
-  By default, it is `10s`.
-
-- **`MEERGO_HTTP_IDLE_TIMEOUT`** \
-  Max idle time between requests on keep-alive connections. \
-  By default, it is `120s`.
-
-## Database configuration
+## Database
 
 Configuration used to access the PostgreSQL server used by Meergo.
 
-- **`MEERGO_DB_HOST`** \
-  Address of the PostgreSQL database server. \
-  Example: `127.0.0.1`
-
-- **`MEERGO_DB_PORT`** \
-  Port number used by PostgreSQL. \
-  By default, the port is `5432`.
-
-- **`MEERGO_DB_USERNAME`** \
-  PostgreSQL database username.
-
-- **`MEERGO_DB_PASSWORD`** \
-  Password for the PostgreSQL user.
-
-- **`MEERGO_DB_DATABASE`** \
-  Name of the PostgreSQL database.
-
-- **`MEERGO_DB_SCHEMA`** \
-  Specific schema within the PostgreSQL database to use.
-
-- **`MEERGO_DB_MAX_CONNECTIONS`** \
-  Maximum number of connections to the PostgreSQL database. \
-  The default is the greater of 4 or the number of logical CPUs usable by the Meergo process.
+| Variable                    | Default                   | Description                                             |
+|-----------------------------|---------------------------|---------------------------------------------------------|
+| `MEERGO_DB_HOST`            |                           | Address of the PostgreSQL server. Example: `127.0.0.1`. |
+| `MEERGO_DB_PORT`            | `5432`                    | Port number used by PostgreSQL.                         |
+| `MEERGO_DB_USERNAME`        |                           | PostgreSQL username.                                    |
+| `MEERGO_DB_PASSWORD`        |                           | PostgreSQL password.                                    |
+| `MEERGO_DB_DATABASE`        |                           | PostgreSQL database name.                               |
+| `MEERGO_DB_SCHEMA`          |                           | Schema within the PostgreSQL database to use.           |
+| `MEERGO_DB_MAX_CONNECTIONS` | `max(4,runtime.NumCPU())` | Max number of connections to PostgreSQL.                |
 
 ## Member emails
 
 Configuration for emails that are sent to members.
 
-- **`MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION`** \
-  Enable or disable the ability to add new members without requiring email verification.
+| Variable                                | Default                         | Description                                                                                                                                    |
+|-----------------------------------------|---------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION` | `false` (verification required) | Enable or disable the ability to add new members without requiring email verification.                                                         |
+| `MEERGO_MEMBER_EMAIL_FROM`              |                                 | "From" address from which member emails are sent (mandatory to send emails to members). Example: `Org <org@example.com>` or `org@example.com`. |
 
-  By default, the email verification is required.
-
-- **`MEERGO_MEMBER_EMAIL_FROM`** \
-  Specifies the "from" address from which member emails are sent. \
-  This is mandatory to send emails to members. \
-  Example: `My Organization <organization@example.com>` or `organization@example.com`.
-
-## SMTP configuration
+## SMTP
 
 These settings are used to send transactional emails.
 
-- **`MEERGO_SMTP_HOST`** \
-  SMTP server address.
+| Variable               | Default | Description          |
+|------------------------|---------|----------------------|
+| `MEERGO_SMTP_HOST`     |         | SMTP server address. |
+| `MEERGO_SMTP_PORT`     |         | SMTP server port.    |
+| `MEERGO_SMTP_USERNAME` |         | SMTP username.       |
+| `MEERGO_SMTP_PASSWORD` |         | SMTP password.       |
 
-- **`MEERGO_SMTP_PORT`** \
-  SMTP server port number.
 
-- **`MEERGO_SMTP_USERNAME`** \
-  Username for SMTP authentication.
+## MaxMind
 
-- **`MEERGO_SMTP_PASSWORD`** \
-  Password for SMTP authentication.
+| Variable                 | Default  | Description                                                                                                                                                                                                                                                                                    |
+|--------------------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_MAXMIND_DB_PATH` |          | Path to the MaxMind database file (usually with extension '.mmdb') for automatically adding geolocation information to the events. If not set, no geolocation information are automatically added to the events by Meergo, so it is only possibile to provide location information explicitly. |
 
-## MaxMind configuration
-
-- **`MEERGO_MAXMIND_DB_PATH`** \
-  Path to the MaxMind database file (usually with extension '.mmdb') for automatically adding geolocation information to the events.
-
-  If not set, no geolocation information are automatically added to the events by Meergo, so it is only possibile to provide location information explicitly.
 
 ## Transformations
 
@@ -177,55 +101,30 @@ Configuration for executing transformation functions via AWS Lambda or locally. 
 You can configure Meergo to run transformation functions on one of the following:
 
 * [**AWS Lambda**](#aws-lambda). Recommended for production.
-* [**Local transformation**](#local-execution). Recommended for testing Meergo locally.
+* [**Local execution**](#local-execution). Recommended for testing Meergo locally.
 
 ### AWS Lambda
 
-- **`MEERGO_TRANSFORMATIONS_LAMBDA_ACCESS_KEY_ID`** \
-  AWS access key ID for Lambda.
-
-- **`MEERGO_TRANSFORMATIONS_LAMBDA_SECRET_ACCESS_KEY`** \
-  AWS secret access key for Lambda.
-
-- **`MEERGO_TRANSFORMATIONS_LAMBDA_REGION`** \
-  AWS region where Lambda functions are deployed.
-
-- **`MEERGO_TRANSFORMATIONS_LAMBDA_ROLE`** \
-  AWS IAM Role ARN to be assumed for executing Lambda functions.
-
-#### Node.js settings
-
-- **`MEERGO_TRANSFORMATIONS_LAMBDA_NODE_RUNTIME`** \
-  Node.js runtime version for AWS Lambda. \
-  Example: `nodejs22.x`
-
-- **`MEERGO_TRANSFORMATIONS_LAMBDA_NODE_LAYER`** \
-  (Optional) ARN of a Lambda layer for Node.js functions.
-
-#### Python settings
-
-- **`MEERGO_TRANSFORMATIONS_LAMBDA_PYTHON_RUNTIME`** \
-  Python runtime version for AWS Lambda. \
-  Example: `python3.13`
-
-- **`MEERGO_TRANSFORMATIONS_LAMBDA_PYTHON_LAYER`** \
-  (Optional) ARN of a Lambda layer for Python functions.
+| Variable                                          | Default | Description                                                    |
+|---------------------------------------------------|---------|----------------------------------------------------------------|
+| `MEERGO_TRANSFORMATIONS_LAMBDA_ACCESS_KEY_ID`     |         | AWS access key ID for Lambda.                                  |
+| `MEERGO_TRANSFORMATIONS_LAMBDA_SECRET_ACCESS_KEY` |         | AWS secret access key for Lambda.                              |
+| `MEERGO_TRANSFORMATIONS_LAMBDA_REGION`            |         | AWS region where Lambda functions are deployed.                |
+| `MEERGO_TRANSFORMATIONS_LAMBDA_ROLE`              |         | AWS IAM Role ARN to be assumed for executing Lambda functions. |
+| `MEERGO_TRANSFORMATIONS_LAMBDA_NODE_RUNTIME`      |         | Node.js runtime version for AWS Lambda. Example: `nodejs22.x`. |
+| `MEERGO_TRANSFORMATIONS_LAMBDA_NODE_LAYER`        |         | (Optional) ARN of a Lambda layer for Node.js functions.        |
+| `MEERGO_TRANSFORMATIONS_LAMBDA_PYTHON_RUNTIME`    |         | Python runtime version for AWS Lambda. Example: `python3.13`.  |
+| `MEERGO_TRANSFORMATIONS_LAMBDA_PYTHON_LAYER`      |         | (Optional) ARN of a Lambda layer for Python functions.         |
 
 ### Local execution
 
 > ⚠️ Configuring transformations for local execution allows the code in transformation functions defined in Meergo to execute arbitrary code on the local machine. Therefore, use with caution and only in trusted contexts.
 
-- **`MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE`** \
-  Path to the Node.js executable. \
-  Example: `/usr/bin/node`
-
-- **`MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE`** \
-  Path to the Python executable. \
-  Example: `/usr/bin/python`
-
-- **`MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR`** \
-  Directory where local transformation functions are stored. This directory should be writable by the user executing the Meergo executable. \
-  Example: `/var/meergo/functions`
+| Variable                                         | Default | Description                                                                                                                                                                 |
+|--------------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE`   |         | Path to the Node.js executable. Example: `/usr/bin/node`.                                                                                                                   |
+| `MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE` |         | Path to the Python executable. Example: `/usr/bin/python`.                                                                                                                  |
+| `MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR`     |         | Directory where local transformation functions are stored. This directory should be writable by the user executing the Meergo executable. Example: `/var/meergo/functions`. |
 
 ## OAuth providers
 
@@ -233,16 +132,14 @@ Configuration for OAuth integrations with external applications.
 
 ### HubSpot
 
-- **`MEERGO_OAUTH_HUBSPOT_CLIENT_ID`** \
-  OAuth Client ID for HubSpot.
-
-- **`MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET`** \
-  OAuth Client Secret for HubSpot.
+| Variable                             | Default | Description                      |
+|--------------------------------------|---------|----------------------------------|
+| `MEERGO_OAUTH_HUBSPOT_CLIENT_ID`     |         | OAuth Client ID for HubSpot.     |
+| `MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET` |         | OAuth Client Secret for HubSpot. |
 
 ### Mailchimp
 
-- **`MEERGO_OAUTH_MAILCHIMP_CLIENT_ID`** \
-  OAuth Client ID for Mailchimp.
-
-- **`MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET`** \
-  OAuth Client Secret for Mailchimp.
+| Variable                               | Default | Description                        |
+|----------------------------------------|---------|------------------------------------|
+| `MEERGO_OAUTH_MAILCHIMP_CLIENT_ID`     |         | OAuth Client ID for Mailchimp.     |
+| `MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET` |         | OAuth Client Secret for Mailchimp. |
