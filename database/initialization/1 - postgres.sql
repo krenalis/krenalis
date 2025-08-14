@@ -97,7 +97,7 @@ CREATE TABLE actions (
     schedule_period smallint NOT NULL DEFAULT 0 CHECK(schedule_period IN (0, 5, 15, 30, 60, 120, 180, 360, 480, 720, 1440)),
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
-    filter text NOT NULL DEFAULT '',
+    filter jsonb,
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',
     transformation_version varchar(128) NOT NULL DEFAULT '',

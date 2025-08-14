@@ -448,7 +448,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					// TODO(marco) disable the action instead of returning an error
 					return err
 				}
-				if len(filter) > 0 {
+				if filter != nil {
 					action.Filter, err = unmarshalWhere(filter, action.InSchema)
 					if err != nil {
 						return err

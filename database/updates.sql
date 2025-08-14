@@ -113,3 +113,10 @@ DROP TYPE notification_name;
 
 -- 20
 ALTER TYPE notification_name_new RENAME TO notification_name
+
+-- 21
+ALTER TABLE actions
+    ALTER COLUMN filter DROP DEFAULT,
+    ALTER COLUMN filter TYPE jsonb
+        USING NULLIF(filter, '')::jsonb,
+    ALTER COLUMN filter DROP NOT NULL;

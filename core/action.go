@@ -820,7 +820,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		}
 		// Update the action.
 		result, err := tx.Exec(ctx, update,
-			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
+			n.Name, n.Enabled, rawInSchema, rawOutSchema, n.Filter, mapping,
 			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
