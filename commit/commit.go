@@ -108,8 +108,8 @@ func main() {
 	// Update the Go vendor.
 	NewCmd("go", "mod", "vendor").InDir(repo).Run()
 
-	// Run checks and do operations on the admin assets.
-	fmt.Println("Run checks and do operations on the admin assets")
+	// Run checks and do operations on the Admin assets.
+	fmt.Println("Run checks and do operations on the Admin assets")
 	NewCmd("npm", "install").InDir(repo, "assets").Run()
 	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run()
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run()
@@ -144,7 +144,7 @@ func parseCli() cliOptions {
 		" so some parts of the software and/or changes made may not be validated " +
 		"when running the script with this option"
 
-	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the go tests on the admin. "+
+	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the Go tests on the Admin console. "+
 		reducedTestSetWarning)
 	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. "+reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
@@ -310,7 +310,7 @@ func removeGoSum(repo, module string) {
 	}
 }
 
-// runGoTestAdmin runs admin tests via go test.
+// runGoTestAdmin runs Admin tests via go test.
 func runGoTestAdmin() {
 	start := time.Now()
 	args := []string{"test", "-run", "^TestAdmin$", "github.com/meergo/meergo/test", "-count", "1", "-v"}

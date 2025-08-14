@@ -6,7 +6,7 @@
 
 The environment variables used to configure your Meergo installation are documented here.
 
-Note that this configuration applies to the entire Meergo installation; specific configuration for each workspace can be modified through the Meergo admin (GUI) or via the APIs.
+Note that this configuration applies to the entire Meergo installation; specific configuration for each workspace can be modified through the Meergo Admin console (GUI) or via the APIs.
 
 > 💡 For convenience, instead of passing environment variables to the Meergo command, you can declare an .env file. See [the dedicated page](env-file).
 

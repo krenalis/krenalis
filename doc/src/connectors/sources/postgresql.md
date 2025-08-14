@@ -16,7 +16,7 @@ PostgreSQL is an advanced open-source relational database system known for its r
 
 ### Add a PostgreSQL data source
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **PostgreSQL** source; you can use the search bar at the top or filter by category.
 4. Click on the **PostgreSQL** connector. A panel will open on the right with information about **PostgreSQL**.
@@ -35,7 +35,7 @@ Once the PostgreSQL data source is added, the **Actions** page will be displayed
 
 ### Import users into the workspace's data warehouse
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the PostgreSQL data source from which you want to import the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. Enter the SQL query to select the PostgreSQL rows to be imported as users.

@@ -39,7 +39,7 @@ docker compose up
 
 > 🧹 If you have previously started Meergo using Docker Compose and want to reset it, perhaps for a clean installation or because you are running a new version of Meergo, you just need to clear the Meergo Docker data by running `docker compose down -v` before starting Meergo with `docker compose up`.
 
-Now you can start using Meergo by visiting the admin at [http://localhost:9090/admin/](http://localhost:9090/admin/).
+Now you can start using Meergo by visiting the Admin console at [http://localhost:9090/admin/](http://localhost:9090/admin/).
 
 Keep reading the documentation to see how [create your first workspace](./create-workspace).
 

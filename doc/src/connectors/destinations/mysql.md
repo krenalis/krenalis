@@ -15,7 +15,7 @@ MySQL is an open-source relational database management system. It's popular for 
 
 ### Add a MySQL data destination
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destinations**.
 3. Search for the **MySQL** destination; you can use the search bar at the top or filter by category.
 4. Click on the **MySQL** connector. A panel will open on the right with information about **MySQL**.
@@ -36,7 +36,7 @@ Once the MySQL data destination is added, the **Actions** page will be displayed
 
 ### Export users to MySQL
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the MySQL data destination where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. Enter the name of the MySQL table where users should be added or updated.

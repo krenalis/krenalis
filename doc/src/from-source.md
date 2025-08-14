@@ -43,7 +43,7 @@ go mod init meergo
 go mod tidy
 ```
 
-Generate the admin assets:
+Generate the Admin console assets:
 
 ```bash
 go generate
@@ -101,7 +101,7 @@ git clone https://github.com/meergo/meergo
 cd meergo/cmd/meergo
 ```
 
-Generate the admin assets:
+Generate the Admin console assets:
 
 ```bash
 go generate

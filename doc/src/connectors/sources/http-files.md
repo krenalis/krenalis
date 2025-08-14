@@ -15,7 +15,7 @@ Once the HTTP Files data source is configured, you can easily customize how the 
 
 ### Add an HTTP Files data source
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **HTTP Files** source; you can use the search bar at the top or filter by category.
 4. Click on the **HTTP Files** connector. A panel will open on the right with information about **HTTP Files**.
@@ -30,7 +30,7 @@ Once the HTTP Files data source is added, the **Actions** page will be displayed
 
 ### Import users into the workspace's data warehouse
 
-1. In the Meergo admin panel, navigate to **Connections > Sources**.
+1. In the Meergo Admin console panel, navigate to **Connections > Sources**.
 2. Click on the HTTP Files source from which you wish to import users.
 3. Click **Add New Action**, then select **Import Users**.
 4. From the **Format** menu, choose the file format from which you want to import users.

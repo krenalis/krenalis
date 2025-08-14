@@ -24,7 +24,7 @@ Before you can add a Mixpanel data destination, you need to retrieve the **Proje
 
 Now proceed to add a Mixpanel data destination:
 
-1. In Meergo admin, go to **Connections > Destinations**.
+1. In Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Sources** page, click **Add New source**.
 3. Search for **Mixpanel**; you can use the search bar at the top or filter by category.
 4. Click on the **Mixpanel** connector. A panel will open on the right with information about **Mixpanel**.

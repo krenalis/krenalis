@@ -61,12 +61,12 @@ go run ./commit --help
 
 Telemetry can be enabled at various levels, depending on the value of the environment variable `MEERGO_TELEMETRY_LEVEL`:
 
-| Value for `MEERGO_TELEMETRY_LEVEL` | Data sent to Sentry            | Data sent to chichi.open2b.net |
-|------------------------------------|--------------------------------|--------------------------------|
-| `none`                             | *(none)*                       | *(none)*                       |
-| `errors`                           | Go server panics, admin errors | *(none)*                       |
-| `stats`                            | *(none)*                       | State changes                  |
-| `all` or empty string/not set      | Go server panics, admin errors | State changes                  |
+| Value for `MEERGO_TELEMETRY_LEVEL` | Data sent to Sentry                    | Data sent to chichi.open2b.net |
+|------------------------------------|----------------------------------------|--------------------------------|
+| `none`                             | *(none)*                               | *(none)*                       |
+| `errors`                           | Go server panics, Admin console errors | *(none)*                       |
+| `stats`                            | *(none)*                               | State changes                  |
+| `all` or empty string/not set      | Go server panics, Admin console errors | State changes                  |
 
 The `MEERGO_TELEMETRY_LEVEL` environment variable is the only thing that can enable or disable telemetry. Anything else (how Meergo is compiled, build flags, availability of Debug IDs, etc...) does not impact the sending of data to Sentry and/or chichi.open2b.net.
 
@@ -74,7 +74,7 @@ Also, note that:
 
 * **Personal data is never sent**. All error and statistics data sent to Sentry and chichi.open2b.net contain no personal information. For example, this is why only panic errors are eventually sent to Sentry, and not slog errors—because panics have been verified not to include personal data, while this cannot currently be guaranteed for slog.
 
-* **Admin stack traces are available only under certain conditions**. The ability to see stack traces of admin errors in Sentry only exists if (1) Meergo is running in production mode (i.e., non-dev mode) and (2) the Meergo assets are unchanged from any commit in the repository, for which the GitHub Action sent source maps with Debug IDs to sentry. So, in any other case, the errors displayed on Sentry may not show a correct stack trace.
+* **Admin stack traces are available only under certain conditions**. The ability to see stack traces of Admin console errors in Sentry only exists if (1) Meergo is running in production mode (i.e., non-dev mode) and (2) the Meergo assets are unchanged from any commit in the repository, for which the GitHub Action sent source maps with Debug IDs to sentry. So, in any other case, the errors displayed on Sentry may not show a correct stack trace.
 
 * **Admin errors are sent to Sentry through a server tunnel**. This avoids the problem of adblockers blocking data from being sent directly to Sentry. This does not cause any inconvenience to the user, as they can disable telemetry at any time through the environment variable.
 
@@ -151,7 +151,7 @@ Within the root of this repository execute:
 go generate ./cmd/meergo
 ```
 
-Note that the assets will be embedded into the executable. However, in development mode, the assets are rebuilt for each invocation of the admin.
+Note that the assets will be embedded into the executable. However, in development mode, the assets are rebuilt for each invocation of the Admin console.
 
 ### 4. Compile the server command in dev mode
 
@@ -194,7 +194,7 @@ Only more technical information is kept here.
 
 ### Running Meergo within a Container
 
-**Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the admin.
+**Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the Admin console.
 
 1. Cd the root of this repository
 2. Run this command, replacing the paths for `--env-file` and on the left of `:` as needed (and leaving the paths on the right, `./cmd/meergo/cert.pem`, etc... as they are):

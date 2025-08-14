@@ -107,7 +107,7 @@ func buildAssets() error {
 		}
 	}
 
-	// Copy the admin's assets into the adminDir directory.
+	// Copy the Admin's assets into the adminDir directory.
 	err = os.CopyFS(adminDir, assetsFS)
 	if err != nil {
 		return fmt.Errorf("cannot copy assets: %s", err)
@@ -121,7 +121,7 @@ func buildAssets() error {
 
 	vendorDir := filepath.Join(adminDir, "node_modules_vendor")
 
-	// Bundle the admin's assets.
+	// Bundle the Admin's assets.
 	entryPoint := filepath.Join(adminDir, "src", "index.tsx")
 	externals := []string{"monaco-editor"}
 	err = build(outDir, vendorDir, entryPoint, externals, resolve)
@@ -246,7 +246,7 @@ func buildAssets() error {
 		return fmt.Errorf("cannot create the Shoelace icons directory into the destination dir: %s", err)
 	}
 
-	// Compress the admin's assets.
+	// Compress the Admin's assets.
 	var in, out *os.File
 	var bw *brotli.Writer
 	defer func() {

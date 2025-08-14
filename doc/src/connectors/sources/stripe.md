@@ -29,7 +29,7 @@ Before you can add a Stripe data source, you need to create an API key in your S
 
 Now proceed to add a Stripe data source:
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **Stripe** source; you can use the search bar at the top or filter by category.
 4. Click on the **Stripe** connector. A panel will open on the right with information about **Stripe**.
@@ -42,7 +42,7 @@ Once the Stripe data source is added, the **Actions** page will be displayed. Th
 
 ### Import customers into the workspace's data warehouse
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the Stripe data source from which you want to import the customers.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To import only specific customers, apply a [filter](/filters) to refine your selection.

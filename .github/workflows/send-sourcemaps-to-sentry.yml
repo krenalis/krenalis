@@ -3,7 +3,7 @@ on:
     # Only run the action when a file is modified that could, at least
     # theoretically, affect the files whose Debug IDs are sent to Sentry.
     #
-    # Among these, in addition to the admin assets, it is necessary to include
+    # Among these, in addition to the Admin assets, it is necessary to include
     # the go.mod (since it contains the esbuild version) and the GitHub Action
     # file descriptions, among which there is the build and push to Sentry
     # process.

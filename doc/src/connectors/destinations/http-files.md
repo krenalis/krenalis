@@ -14,7 +14,7 @@ Once the HTTP Files data destination is configured, you can easily customize the
 
 ### Add an HTTP Files data destination
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
 3. Search for the **HTTP Files** destination; you can use the search bar at the top or filter by category.
 4. Click on the **HTTP Files** connector. A panel will open on the right with information about **HTTP Files**.

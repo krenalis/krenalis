@@ -22,7 +22,7 @@ The Android data source requires the [Android SDK](../../developers/android-sdk)
 
 ### Add an Android data source
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **Android** source; you can use the search bar at the top or filter by category.
 4. Click on the **Android** connector. A panel will open on the right with information about **Android**.
@@ -35,7 +35,7 @@ Once the Android data source is added, the **Actions** page will be displayed. T
 
 ### Import events into the workspace's data warehouse
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the Android data source from which you want to import the events.
 3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
 4. Click **Import events**.
@@ -43,7 +43,7 @@ Once the Android data source is added, the **Actions** page will be displayed. T
 
 ### Import users into the workspace's data warehouse
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the Android data source from which you want to import the users.
 3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
 4. Click **Import users**.

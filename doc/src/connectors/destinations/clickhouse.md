@@ -15,7 +15,7 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 
 ### Add a ClickHouse data destination
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destinations**.
 3. Search for the **ClickHouse** destination; you can use the search bar at the top or filter by category.
 4. Click on the **ClickHouse** connector. A panel will open on the right with information about **ClickHouse**.
@@ -34,7 +34,7 @@ Once the ClickHouse data destination is added, the **Actions** page will be disp
 
 ### Export users to ClickHouse
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the ClickHouse data destination where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. Enter the name of the ClickHouse table where users should be added or updated.

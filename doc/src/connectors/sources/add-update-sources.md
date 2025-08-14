@@ -4,7 +4,7 @@
 
 # Add and update sources
 
-You can add sources or update existing ones from the **Sources** page of your admin.
+You can add sources or update existing ones from the **Sources** page of your Admin console.
 
 ## On this page
 

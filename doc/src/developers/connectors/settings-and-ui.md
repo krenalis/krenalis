@@ -55,7 +55,7 @@ if err != nil {
 
 ## User interface
 
-If the connector requires all or part of the settings to be configurable by the user, it can define a user interface (UI) that will be integrated into Meergo's admin. Various components are available to create the interface for a connector: `Input`, `Select`, `Checkbox`, `ColorPicker`, `Radios`, `Range`, `Switch`, `KeyValue`, `FieldSet`, `AlternativeFieldSets`, `Text`, `Button`, and `Alert`.
+If the connector requires all or part of the settings to be configurable by the user, it can define a user interface (UI) that will be integrated into the Meergo Admin console. Various components are available to create the interface for a connector: `Input`, `Select`, `Checkbox`, `ColorPicker`, `Radios`, `Range`, `Switch`, `KeyValue`, `FieldSet`, `AlternativeFieldSets`, `Text`, `Button`, and `Alert`.
 
 For example, for the previous two settings of Google Analytics, the interface could be defined as follows:
 

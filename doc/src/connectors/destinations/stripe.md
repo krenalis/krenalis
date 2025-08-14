@@ -29,7 +29,7 @@ Before you can add a Stripe data destination, you need to create an API key in y
 
 Now proceed to add a Stripe data destination:
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
 3. Search for the **Stripe** destination; you can use the search bar at the top or filter by category.
 4. Click on the **Stripe** connector. A panel will open on the right with information about **Stripe**.
@@ -42,7 +42,7 @@ Once the Stripe data destination is added, the **Actions** page will be displaye
 
 ### Export users as Stripe customers
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the Stripe data destination where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To export only specific users, apply a [filter](/filters) to refine your selection.

@@ -16,7 +16,7 @@ MySQL is an open-source relational database management system. It's popular for 
 
 ### Add a MySQL data source
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **MySQL** source; you can use the search bar at the top or filter by category.
 4. Click on the **MySQL** connector. A panel will open on the right with information about **MySQL**.
@@ -35,7 +35,7 @@ Once the MySQL data source is added, the **Actions** page will be displayed. Thi
 
 ### Import users into the workspace's data warehouse
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the MySQL data source from which you want to import the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. Enter the SQL query to select the MySQL rows to be imported as users.

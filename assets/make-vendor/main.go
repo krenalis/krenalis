@@ -28,8 +28,7 @@ import (
 // Path to the Shoelace icons within the "node_modules" directory.
 const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
 
-// Path to the file containing the list of Shoelace icons used in the
-// admin.
+// Path to the file containing the list of Shoelace icons used in the Admin.
 const shoelaceIconsListPath = "assets/src/shoelace-icons.txt"
 
 func main() {
@@ -117,7 +116,7 @@ func makeVendor() error {
 		},
 	}
 
-	// Run esbuild for the admin.
+	// Run esbuild for the Admin.
 	entryPoint := filepath.Join(root, "assets", "src", "index.jsx")
 	err = build(outDir, entryPoint, plugin)
 	if err != nil {
@@ -304,7 +303,7 @@ func build(outDir, entryPoint string, plugin api.Plugin) error {
 		Write: true,
 	})
 	if result.Errors != nil {
-		msg := "cannot generate admin assets when making vendor:"
+		msg := "cannot generate Admin console assets when making vendor:"
 		for _, err := range result.Errors {
 			if len(result.Errors) == 1 {
 				msg += " "

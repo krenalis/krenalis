@@ -30,7 +30,7 @@ Before you can add a HubSpot data source, you need to create an app in HubSpot a
 
 Now proceed to add a HubSpot data source:
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **HubSpot** source; you can use the search bar at the top or filter by category.
 4. Click on the **HubSpot** connector. A panel will open on the right with information about **HubSpot**.
@@ -43,7 +43,7 @@ Once the HubSpot data source is added, the **Actions** page will be displayed. T
 
 ### Import contacts into the workspace's data warehouse
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the HubSpot data source from which you want to import the contacts.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To import only specific contacts, apply a [filter](/filters) to refine your selection.

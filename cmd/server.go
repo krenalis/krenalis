@@ -278,7 +278,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}()
 
 	// Print a message with the external URL.
-	_, _ = fmt.Fprintf(os.Stderr, "The Meergo admin is now available at: %s\n", strings.TrimRight(externalURL, "/")+"/admin")
+	_, _ = fmt.Fprintf(os.Stderr, "The Meergo Admin console is now available at: %s\n", strings.TrimRight(externalURL, "/")+"/admin")
 
 	select {
 	case <-ctx.Done():

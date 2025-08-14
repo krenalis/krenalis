@@ -32,7 +32,7 @@ Before you can add a Google Analytics data destination, you need to create a pri
 
 Now proceed to add a Google Analytics data destination:
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
 3. Search for the **Google Analytics** destination; you can use the search bar at the top or filter by category.
 4. Next to the **Google Analytics** destination, click the **+** icon. The destination addition page will open.

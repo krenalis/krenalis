@@ -33,7 +33,7 @@ Before you can add a Mailchimp data source, you need to create a private key in 
 
 Now proceed to add a Mailchimp data source:
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **Mailchimp** source; you can use the search bar at the top or filter by category.
 4. Click on the **Mailchimp** connector. A panel will open on the right with information about **Mailchimp**.
@@ -46,7 +46,7 @@ Once the Mailchimp data source is added, the **Actions** page will be displayed.
 
 ### Import contacts into the workspace's data warehouse
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the Mailchimp data source from which you want to import the contacts.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To import only specific contacts, apply a [filter](/filters) to refine your selection.

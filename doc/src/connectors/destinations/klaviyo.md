@@ -30,7 +30,7 @@ Before you can add a Klaviyo data destination, you need to create a private key 
 
 Now proceed to add a Klaviyo data destination:
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
 3. Search for the **Klaviyo** destination; you can use the search bar at the top or filter by category.
 4. Click on the **Klaviyo** connector. A panel will open on the right with information about **Klaviyo**.
@@ -43,7 +43,7 @@ Once the Klaviyo data destination is added, the **Actions** page will be display
 
 ### Export users as Klaviyo profiles
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the Klaviyo data destination where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To export only specific users, apply a [filter](/filters) to refine your selection.

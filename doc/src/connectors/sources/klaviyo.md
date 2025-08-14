@@ -28,7 +28,7 @@ Before you can add a Klaviyo data source, you need to create a private key in yo
 
 Now proceed to add a Klaviyo data source:
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **Klaviyo** source; you can use the search bar at the top or filter by category.
 4. Click on the **Klaviyo** connector. A panel will open on the right with information about **Klaviyo**.
@@ -41,7 +41,7 @@ Once the Klaviyo data source is added, the **Actions** page will be displayed. T
 
 ### Import profiles into the workspace's data warehouse
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the Klaviyo data source from which you want to import the profiles.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To import only specific profiles, apply a [filter](/filters) to refine your selection.

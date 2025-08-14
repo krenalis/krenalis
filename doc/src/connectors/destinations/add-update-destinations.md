@@ -4,7 +4,7 @@
 
 # Add and update destinations
 
-You can add destinations or update existing ones from the **Destinations** page of your admin.
+You can add destinations or update existing ones from the **Destinations** page of your Admin console.
 
 ## On this page
 

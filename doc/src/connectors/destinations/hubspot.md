@@ -30,7 +30,7 @@ Before you can add a HubSpot data destination, you need to create an app in HubS
 
 Now proceed to add a HubSpot data destination:
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
 3. Search for the **HubSpot** destination; you can use the search bar at the top or filter by category.
 4. Click on the **HubSpot** connector. A panel will open on the right with information about **HubSpot**.
@@ -43,7 +43,7 @@ Once the HubSpot data destination is added, the **Actions** page will be display
 
 ### Export users as HubSpot contacts
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the HubSpot data destination where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To export only specific users, apply a [filter](/filters) to refine your selection.

@@ -15,7 +15,7 @@ PostgreSQL is an advanced open-source relational database system known for its r
 
 ### Add a PostgreSQL data destination
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destinations**.
 3. Search for the **PostgreSQL** destination; you can use the search bar at the top or filter by category.
 4. Click on the **PostgreSQL** connector. A panel will open on the right with information about **PostgreSQL**.
@@ -34,7 +34,7 @@ Once the PostgreSQL data destination is added, the **Actions** page will be disp
 
 ### Export users to PostgreSQL
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the PostgreSQL data destination where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. Enter the name of the PostgreSQL table where users should be added or updated.

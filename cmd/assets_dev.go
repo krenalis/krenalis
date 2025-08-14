@@ -53,7 +53,7 @@ func init() {
 	}
 }
 
-// assetsHandler implements a http.Handler to serve admin assets.
+// assetsHandler implements a http.Handler to serve Admin assets.
 // It monitors the JavaScript and CSS files and creates a bundle for JavaScript
 // and a separate bundle for CSS. It also serves the bundled files compressed
 // with Brotli if the client supports it.
@@ -88,12 +88,12 @@ func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 		fs:     http.StripPrefix("/admin/src/", http.FileServer(http.Dir(outDir))),
 	}
 
-	// Build the admin.
+	// Build the Admin.
 	entryPoint := filepath.Join(moduleRoot, "assets", "src", "index.jsx")
 	external := []string{"monaco-editor"}
 	h.watchers.index, err = watchAndBuild(entryPoint, outDir, external)
 	if err != nil {
-		return nil, fmt.Errorf("cannot bundle admin: %w", err)
+		return nil, fmt.Errorf("cannot bundle Admin cosnole: %w", err)
 	}
 
 	// Build Monaco editor and its workers.

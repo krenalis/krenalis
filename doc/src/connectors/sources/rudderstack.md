@@ -19,7 +19,7 @@ RudderStack is an open-source customer data platform that helps businesses colle
 
 ### Add a RudderStack data source
 
-1. From the Meergo admin, go to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add new source**.
 3. Search for the **RudderStack** source; you can use the search bar at the top or filter by category.
 4. Click on the **RudderStack** connector. A panel will open on the right with information about **RudderStack**.

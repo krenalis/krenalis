@@ -2016,10 +2016,10 @@ func suitableAsIdentifier(t types.Type) bool {
 // UserIdentity represents a user identity.
 type UserIdentity struct {
 	// TODO(Gianluca): the Connection field is kept here redundantly (the action
-	// is already there) because the admin does not currently have the Action =>
-	// Connection mapping available, and it would be very inconvenient to
-	// retrieve this information where it is needed. When it will have it in the
-	// future, we will remove this field.
+	// is already there) because the Admin console does not currently have the
+	// Action => Connection mapping available, and it would be very inconvenient
+	// to retrieve this information where it is needed. When it will have it in
+	// the future, we will remove this field.
 	Connection     int       `json:"connection"`
 	Action         int       `json:"action"`
 	ID             string    `json:"id"`                           // empty string for identities imported from anonymous events.

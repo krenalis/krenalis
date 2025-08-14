@@ -14,7 +14,7 @@ SFTP (Secure File Transfer Protocol) is a secure network protocol used for trans
 
 ### Add an SFTP Data Destination
 
-1. From the Meergo admin, go to **Connections > Destinations**.
+1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add new destination**.
 3. Search for the **SFTP** destination; you can use the search bar at the top or filter by category.
 4. Click on the **SFTP** connector. A panel will open on the right with information about **SFTP**.

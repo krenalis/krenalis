@@ -26,13 +26,13 @@ import (
 )
 
 // passUIFlagToPlaywright, when set to true, passes the '--ui' flag to the
-// Playwright command, when it is executed for the admin tests.
+// Playwright command, when it is executed for the Admin tests.
 //
 // To understand what the '--ui' flag does, see the Playwright UI Mode
 // documentation: https://playwright.dev/docs/test-ui-mode.
 //
 // NOTE: this is intended for advanced usage and debugging purposes only, so if
-// the admin test is run with this constant enabled, the Go test will always
+// the Admin test is run with this constant enabled, the Go test will always
 // fail, as there is no way to determine whether the test set launched via the
 // UI is complete and whether all tests ran correctly and successfully.
 const passUIFlagToPlaywright = false
@@ -146,13 +146,13 @@ func TestAdmin(t *testing.T) {
 	f.Close()
 	t.Logf("configuration file %q created", testConfigJSONPath)
 
-	// Prepare and run the admin tests.
+	// Prepare and run the Admin tests.
 	assetsDir := filepath.Join("..", "assets")
 	run(t, "npm", []string{"install"}, assetsDir)
 	run(t, "npx", []string{"playwright", "install", "chromium"}, assetsDir)
 	if passUIFlagToPlaywright {
 		run(t, "npx", []string{"playwright", "test", "--ui"}, assetsDir)
-		t.Fatal("The admin test was run with the constant 'passUIFlagToPlaywright' set to true," +
+		t.Fatal("The Admin test was run with the constant 'passUIFlagToPlaywright' set to true," +
 			" so the test is considered to have failed as a precaution." +
 			" For more details, see the documentation for the constant 'passUIFlagToPlaywright'.")
 	} else {
