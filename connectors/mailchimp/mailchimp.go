@@ -75,10 +75,11 @@ func init() {
 			// Endpoint group used for the Mailchimp API.
 			{
 				Patterns: []string{
-					"GET  login.mailchimp.com/", // OAuth endpoints
-					"GET  /3.0/lists/",          // RecordSchema, Records, and webhooks
-					"GET  /3.0/batches/",        // Upsert
-					"POST /3.0/batches",         // Upsert
+					"GET  login.mailchimp.com/oauth2/metadata", // metadata endpoint
+					"POST login.mailchimp.com/",                // OAuth token endpoint
+					"GET  /3.0/lists/",                         // RecordSchema, Records, and webhooks
+					"GET  /3.0/batches/",                       // Upsert
+					"POST /3.0/batches",                        // Upsert
 				},
 				RequireOAuth: true,
 				// https://mailchimp.com/developer/marketing/docs/fundamentals/#throttling
@@ -768,6 +769,12 @@ func (mc *MailChimp) metadata(ctx context.Context) (string, string, error) {
 	err = json.Decode(res.Body, &r)
 	if err != nil {
 		return "", "", err
+	}
+	if r.DC == "" {
+		return "", "", errors.New("fetching metadata, MailChimp returned an empty data center")
+	}
+	if r.UserID <= 0 {
+		return "", "", fmt.Errorf("fetching metadata, MailChimp returned an invalid user ID: %d", r.UserID)
 	}
 	return r.DC, strconv.Itoa(r.UserID), nil
 }
