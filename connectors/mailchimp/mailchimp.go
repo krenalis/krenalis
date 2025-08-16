@@ -77,6 +77,7 @@ func init() {
 				Patterns: []string{
 					"GET  login.mailchimp.com/oauth2/metadata", // metadata endpoint
 					"POST login.mailchimp.com/",                // OAuth token endpoint
+					"GET  /3.0/lists",                          // audiences
 					"GET  /3.0/lists/",                         // RecordSchema, Records, and webhooks
 					"GET  /3.0/batches/",                       // Upsert
 					"POST /3.0/batches",                        // Upsert
