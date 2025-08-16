@@ -199,7 +199,7 @@ func settingsFromEnv() (*Settings, error) {
 	if settings.HTTP.ReadTimeout, err = parseHTTPDuration("MEERGO_HTTP_READ_TIMEOUT", 5*time.Second); err != nil {
 		return nil, err
 	}
-	if settings.HTTP.WriteTimeout, err = parseHTTPDuration("MEERGO_HTTP_WRITE_TIMEOUT", 10*time.Second); err != nil {
+	if settings.HTTP.WriteTimeout, err = parseHTTPDuration("MEERGO_HTTP_WRITE_TIMEOUT", 30*time.Second); err != nil {
 		return nil, err
 	}
 	if settings.HTTP.IdleTimeout, err = parseHTTPDuration("MEERGO_HTTP_IDLE_TIMEOUT", 120*time.Second); err != nil {

@@ -47,7 +47,7 @@ Table of contents:
 | `MEERGO_HTTP_EVENT_URL`           | `/api/v1/events` (same server) | URL of the endpoint receiving events. If not set, assumed to be `/api/v1/events` on the same server. Example: `https://meergo.example.com:8080/api/v1/events`.                                                     |
 | `MEERGO_HTTP_READ_HEADER_TIMEOUT` | `2s`                           | Max time to read request headers, including TLS handshake.                                                                                                                                                         |
 | `MEERGO_HTTP_READ_TIMEOUT`        | `5s`                           | Max time to read the full request (headers + body), starting from first byte.                                                                                                                                      |
-| `MEERGO_HTTP_WRITE_TIMEOUT`       | `10s`                          | Max time for handler execution and sending response. For TLS, includes handshake.                                                                                                                                  |
+| `MEERGO_HTTP_WRITE_TIMEOUT`       | `30s`                          | Max time for handler execution and sending response. For TLS, includes handshake.                                                                                                                                  |
 | `MEERGO_HTTP_IDLE_TIMEOUT`        | `120s`                         | Max idle time between requests on keep-alive connections.                                                                                                                                                          | 
 
 ## Database
