@@ -66,6 +66,7 @@ func init() {
 			DestinationScopes: []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
 		EndpointGroups: []meergo.EndpointGroup{{
+			RequireOAuth: true,
 			// https://developers.hubspot.com/docs/guides/apps/api-usage/usage-details#public-apps
 			RateLimit: meergo.RateLimit{RequestsPerSecond: 11, Burst: 110},
 			// https://developers.hubspot.com/docs/reference/api/other-resources/error-handling

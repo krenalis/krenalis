@@ -162,9 +162,9 @@ func endpointGroupByPattern(groups []meergo.EndpointGroup) map[string]endpointGr
 	}
 	for _, g := range groups {
 		eg := endpointGroup{
-			rateLimiter: newRateLimiter(g.RateLimit.RequestsPerSecond, g.RateLimit.Burst, g.RateLimit.MaxConcurrentRequests),
-			retryPolicy: g.RetryPolicy,
-			skipOAuth:   g.SkipOAuth,
+			requireOAuth: g.RequireOAuth,
+			rateLimiter:  newRateLimiter(g.RateLimit.RequestsPerSecond, g.RateLimit.Burst, g.RateLimit.MaxConcurrentRequests),
+			retryPolicy:  g.RetryPolicy,
 		}
 		if g.Patterns == nil {
 			byPattern["/"] = eg

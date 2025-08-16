@@ -387,7 +387,9 @@ func validateAppConnector(app AppInfo) {
 	}
 
 	// Patterns are checked for validity when rate limiters are created; invalid patterns will cause construction to panic.
+	var requireOAuth bool
 	for _, group := range app.EndpointGroups {
+		requireOAuth = requireOAuth || group.RequireOAuth
 		if group.Patterns != nil && len(group.Patterns) == 0 {
 			panic(fmt.Sprintf("connector %s: Patterns must be nil or contain at least one pattern", app.Name))
 		}
@@ -400,6 +402,12 @@ func validateAppConnector(app AppInfo) {
 		if group.RateLimit.MaxConcurrentRequests < 0 {
 			panic(fmt.Sprintf("connector %s: MaxConcurrentRequests must be >= 0", app.Name))
 		}
+	}
+	if app.OAuth.AuthURL == "" && requireOAuth {
+		panic(fmt.Sprintf("connector %s: RequireOAuth cannot be true when OAuth is not supported", app.Name))
+	}
+	if app.OAuth.AuthURL != "" && !requireOAuth {
+		panic(fmt.Sprintf("connector %s: OAuth is supported, but there are no endpoint groups that require it", app.Name))
 	}
 
 }

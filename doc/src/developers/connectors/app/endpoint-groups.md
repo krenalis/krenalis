@@ -14,10 +14,10 @@ This makes it possible to enforce independent rate limits for distinct sets of e
 // any of the given patterns will be subject to the specified rate limiting and
 // retry policies.
 type EndpointGroup struct {
-    Patterns    []string    // patterns (e.g. "GET /api/users/", "api.example.com/v1/items") matched by ServeMux-style matching
-    RateLimit   RateLimit   // rate limiting configuration applied to all matching requests
-    RetryPolicy RetryPolicy // retry policy for handling failed requests to these endpoints
-    SkipOAuth   bool        // if true, requests to these endpoints will skip OAuth authentication, if supported
+    Patterns     []string    // patterns (e.g. "GET /api/users/", "api.example.com/v1/items") matched by ServeMux-style matching
+    RequireOAuth bool        // require OAuth authentication
+    RateLimit    RateLimit   // rate limiting configuration applied to all matching requests
+    RetryPolicy  RetryPolicy // retry policy for handling failed requests to these endpoints
 }
 ```
 

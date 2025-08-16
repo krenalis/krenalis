@@ -32,7 +32,7 @@ The `meergo.OAuth` type contains this information:
 
 If `AuthURL` and `TokenURL` contain query string arguments, they will be preserved.
 
-> If an endpoint doesn't use OAuth for authentication (e.g. a public endpoint or one that uses a different authentication method), set the `SkipOAuth` field of the corresponding [EndpointGroup](endpoint-groups) to `true`. The `SkipOAuth` field has no effect on the `AuthURL` and `TokenURL` endpoints.
+> For endpoint groups that require OAuth for authentication, set the `RequireOAuth` field to `true`. The `AuthURL` and `TokenURL` endpoints are not affected.
 
 ## OAuthAccount method
 

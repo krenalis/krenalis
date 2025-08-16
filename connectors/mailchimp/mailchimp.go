@@ -80,6 +80,7 @@ func init() {
 					"GET  /3.0/batches/",        // Upsert
 					"POST /3.0/batches",         // Upsert
 				},
+				RequireOAuth: true,
 				// https://mailchimp.com/developer/marketing/docs/fundamentals/#throttling
 				RateLimit: meergo.RateLimit{RequestsPerSecond: 20, Burst: 20, MaxConcurrentRequests: 10},
 				// https://mailchimp.com/developer/marketing/docs/fundamentals/#api-limits
@@ -93,7 +94,6 @@ func init() {
 			{
 				Patterns:  []string{"GET /"},
 				RateLimit: meergo.RateLimit{RequestsPerSecond: 1, Burst: 1},
-				SkipOAuth: true,
 			},
 		},
 		Icon: icon,

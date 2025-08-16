@@ -60,9 +60,9 @@ var errUnsupportedOAuth = errors.New("OAuth is not supported")
 // endpointGroup represents an endpoint group with its rate limiter and retry
 // policy.
 type endpointGroup struct {
-	rateLimiter *rateLimiter       // rate limiter
-	retryPolicy meergo.RetryPolicy // retry policy
-	skipOAuth   bool               // skip OAuth
+	requireOAuth bool               // require OAuth
+	rateLimiter  *rateLimiter       // rate limiter
+	retryPolicy  meergo.RetryPolicy // retry policy
 }
 
 // Client implements the connector.HTTPClient interface.
@@ -218,7 +218,7 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 
 		// Add Authorization header.
 		var accessToken string
-		if !isRetriveOAuthToken && !endpointGroup.skipOAuth {
+		if endpointGroup.requireOAuth && !isRetriveOAuthToken {
 			var err error
 			accessToken, err = c.AccessToken(ctx)
 			if err != nil {
