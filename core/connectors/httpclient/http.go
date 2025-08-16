@@ -22,7 +22,11 @@ import (
 	"github.com/meergo/meergo/core/state"
 )
 
-func noOpHandler(http.ResponseWriter, *http.Request) {}
+type noOpHandler struct{}
+
+func (h noOpHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
+
+var noOpHandle = noOpHandler{}
 
 // HTTP allows creating HTTP clients for connections and enables granting,
 // retrieving, and refreshing OAuth access tokens.
@@ -133,15 +137,15 @@ func (h *HTTP) connectorMux(name string, groups []meergo.EndpointGroup) *http.Se
 	}()
 	mux := http.NewServeMux()
 	if groups == nil {
-		mux.HandleFunc("/", noOpHandler)
+		mux.Handle("/", noOpHandle)
 	} else {
 		for _, group := range groups {
 			if group.Patterns == nil {
-				mux.HandleFunc("/", noOpHandler)
+				mux.Handle("/", noOpHandle)
 				continue
 			}
 			for _, pattern := range group.Patterns {
-				mux.HandleFunc(pattern, noOpHandler)
+				mux.Handle(pattern, noOpHandle)
 			}
 		}
 	}

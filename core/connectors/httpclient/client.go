@@ -184,11 +184,10 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 
 	ctx := req.Context()
 
-	_, pattern := c.endpointGroups.mux.Handler(req)
-	if pattern == "" {
-		return nil, fmt.Errorf(`connector %s attempted to call the '%s %s%s' endpoint, but there is no endpoint group that matches this request`, c.connector, req.Method, req.Host, req.URL.Path)
+	pattern, endpointGroup, err := c.patternByRequest(req)
+	if err != nil {
+		return nil, err
 	}
-	endpointGroup := c.endpointGroups.byPattern[pattern]
 	limiter := endpointGroup.rateLimiter
 	policy := endpointGroup.retryPolicy
 
@@ -315,6 +314,18 @@ func (c *Client) WaitTime(pattern string) (time.Duration, error) {
 		return 0, fmt.Errorf("endpoint group with pattern %q does not exist", pattern)
 	}
 	return group.rateLimiter.WaitTime(), nil
+}
+
+// patternByRequest returns the pattern and endpoint group for req.
+// It returns an error if req does not match any pattern.
+func (c *Client) patternByRequest(req *http.Request) (string, endpointGroup, error) {
+	h, pattern := c.endpointGroups.mux.Handler(req)
+	if h == noOpHandle || (pattern == "/" && req.URL.Path == "") {
+		if endpointGroup, ok := c.endpointGroups.byPattern[pattern]; ok {
+			return pattern, endpointGroup, nil
+		}
+	}
+	return "", endpointGroup{}, fmt.Errorf(`connector %s attempted to call the '%s %s%s' endpoint, but there is no endpoint group that matches this request`, c.connector, req.Method, req.Host, req.URL.Path)
 }
 
 // isBodyRetriable reports whether the request body can be retried.
