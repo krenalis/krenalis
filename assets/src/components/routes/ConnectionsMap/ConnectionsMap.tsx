@@ -153,7 +153,11 @@ const ConnectionsMap = () => {
 							</Link>
 						</div>
 						<div className='connections-map__map'>
-							<div className='connections-map__sources'>{sourcesBlocks}</div>
+							<div
+								className={`connections-map__sources${sourcesBlocks.length === 0 ? ' connections-map__sources--no-connection' : ''}`}
+							>
+								{sourcesBlocks}
+							</div>
 							<div className='connections-map__main'>
 								<div className='connections-map__central-logo' id='central-logo'>
 									CDP
@@ -197,7 +201,11 @@ const ConnectionsMap = () => {
 								</div>
 								{databaseArrows}
 							</div>
-							<div className='connections-map__destinations'>{destinationsBlocks}</div>
+							<div
+								className={`connections-map__destinations${destinationsBlocks.length === 0 ? ' connections-map__destinations--no-connection' : ''}`}
+							>
+								{destinationsBlocks}
+							</div>
 						</div>
 					</div>
 				</div>

@@ -160,6 +160,11 @@
 	overflow: hidden;
 }
 
+.connections-map__sources--no-connection,
+.connections-map__destinations--no-connection {
+	border: 0 !important;
+}
+
 .connection-block {
 	padding: 20px;
 	display: flex;
