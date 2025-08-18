@@ -298,7 +298,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
-		err := core.db.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
+		err := tx.QueryRow(ctx, "SELECT id, created_at FROM members WHERE invitation_token = $1", token).Scan(&id, &createdAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, errors.NotFound("invitation token %q does not exist", token)
@@ -308,7 +308,7 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 		if isInvitationTokenExpired(createdAt) {
 			return nil, errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
 		}
-		_, err = core.db.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3",
+		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, password = $2, invitation_token = '' WHERE id = $3",
 			name, string(pass), id)
 		return nil, err
 	})
@@ -366,7 +366,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var id int
 		var createdAt time.Time
-		err := core.db.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
+		err := tx.QueryRow(ctx, "SELECT id, reset_password_token_created_at FROM members WHERE reset_password_token = $1", token).Scan(&id, &createdAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
@@ -376,7 +376,7 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 		if isResetPasswordTokenExpired(createdAt) {
 			return nil, errors.NotFound("reset password token %q does not exist or is expired", token)
 		}
-		_, err = core.db.Exec(ctx, "UPDATE members SET password = $1, reset_password_token = '', reset_password_token_created_at = NULL WHERE id = $2",
+		_, err = tx.Exec(ctx, "UPDATE members SET password = $1, reset_password_token = '', reset_password_token_created_at = NULL WHERE id = $2",
 			string(pass), id)
 		return nil, err
 	})

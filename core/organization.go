@@ -184,7 +184,7 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 	}
 	now := time.Now().UTC()
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
+		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		if member.Avatar != nil {
-			_, err = this.core.db.Exec(
+			_, err = tx.Exec(
 				ctx,
 				"INSERT INTO members (name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 				member.Name,
@@ -204,7 +204,7 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 				now,
 			)
 		} else {
-			_, err = this.core.db.Exec(
+			_, err = tx.Exec(
 				ctx,
 				"INSERT INTO members (name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
 				member.Name,
@@ -516,14 +516,14 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	}
 	now := time.Now().UTC()
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
 		if err != nil {
 			return nil, err
 		}
 		if exists {
 			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
-		_, err = this.core.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
+		_, err = tx.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
 			"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $6, created_at = $7",
 			this.organization.ID, "", email, "", nil, invitationToken, now)
 		return nil, err
@@ -632,7 +632,7 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	}
 	now := time.Now().UTC()
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
 		if err != nil {
 			return nil, err
 		}
@@ -736,37 +736,37 @@ func (this *Organization) UpdateMember(ctx context.Context, id int, member Membe
 		}
 	}
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		exists, err := this.core.db.QueryExists(ctx, "SELECT FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
+		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
 		if err != nil {
 			return nil, err
 		}
 		if !exists {
 			return nil, errors.NotFound("member %d does not exist", id)
 		}
-		exists, err = this.core.db.QueryExists(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
+		exists, err = tx.QueryExists(ctx, "SELECT FROM members WHERE id <> $1 AND organization = $2 AND email = $3", id, this.organization.ID, member.Email)
 		if err != nil {
 			return nil, err
 		}
 		if exists {
 			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
-		_, err = this.core.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE id = $3 AND organization = $4",
+		_, err = tx.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE id = $3 AND organization = $4",
 			member.Name, member.Email, id, this.organization.ID)
 		if err != nil {
 			return nil, err
 		}
 		if member.Avatar != nil {
-			_, err = this.core.db.Exec(ctx, "UPDATE members SET avatar.image = $1, avatar.mime_type = $2 WHERE id = $3 AND organization = $4",
+			_, err = tx.Exec(ctx, "UPDATE members SET avatar.image = $1, avatar.mime_type = $2 WHERE id = $3 AND organization = $4",
 				member.Avatar.Image, member.Avatar.MimeType, id, this.organization.ID)
 		} else {
-			_, err = this.core.db.Exec(ctx, "UPDATE members SET avatar = $1 WHERE id = $2 AND organization = $3",
+			_, err = tx.Exec(ctx, "UPDATE members SET avatar = $1 WHERE id = $2 AND organization = $3",
 				nil, id, this.organization.ID)
 		}
 		if err != nil {
 			return nil, err
 		}
 		if password != nil {
-			_, err = this.core.db.Exec(ctx, "UPDATE members SET password = $1 WHERE id = $2 AND organization = $3",
+			_, err = tx.Exec(ctx, "UPDATE members SET password = $1 WHERE id = $2 AND organization = $3",
 				string(password), id, this.organization.ID)
 		}
 		return nil, err

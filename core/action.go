@@ -958,7 +958,7 @@ func (this *Action) endExecution(err error) {
 	bo := backoff.New(200)
 	for bo.Next(ctx) {
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			res, err := this.core.db.Exec(ctx,
+			res, err := tx.Exec(ctx,
 				"WITH s AS (\n"+
 					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
 					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
