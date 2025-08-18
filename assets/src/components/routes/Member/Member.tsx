@@ -218,7 +218,7 @@ const Member = () => {
 					/>
 				) : (
 					<>
-						<div className='member__title'>{isUpdate ? 'Edit the member' : 'Add a new member'}</div>
+						<div className='member__title'>{isUpdate ? 'Your profile' : 'Add a new member'}</div>
 						<form onSubmit={onSave}>
 							<div className='member__name'>
 								<SlInput

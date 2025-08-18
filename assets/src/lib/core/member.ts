@@ -1,27 +1,4 @@
-import { Member, MemberAvatar, MemberToSet } from '../api/types/responses';
-
-interface TransformedMember {
-	id: number;
-	name: string;
-	email: string;
-	avatar: MemberAvatar;
-	initials: string;
-	invitation: '' | 'Invited' | 'Expired';
-	createdAt: string;
-}
-
-const transformMember = (member: Member): TransformedMember => {
-	const split = member.name.split(' ');
-	let initials = '';
-	for (let i = 0; i < 2; i++) {
-		const word = split[i];
-		if (word) {
-			initials += word[0];
-		}
-	}
-	const transformed = { ...member, initials: initials };
-	return transformed;
-};
+import { MemberToSet } from '../api/types/responses';
 
 const validateMemberEmail = (email: string) => {
 	if (email === '') {
@@ -75,4 +52,4 @@ const validateMemberToSet = (
 	}
 };
 
-export { transformMember, TransformedMember, validateMemberToSet, validateMemberEmail, validateMemberPassword };
+export { validateMemberToSet, validateMemberEmail, validateMemberPassword };

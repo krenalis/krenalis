@@ -5,9 +5,9 @@ import TransformedConnection from '../lib/core/connection';
 import { Status } from '../components/routes/App/App.types';
 import { Warehouse } from '../components/routes/App/App.types';
 import Workspace from '../lib/api/types/workspace';
-import { TransformedMember } from '../lib/core/member';
 import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import { FeedbackButtonRef } from '../components/base/FeedbackButton/FeedbackButton';
+import { Member } from '../lib/api/types/responses';
 
 interface AppContext {
 	api: API;
@@ -16,7 +16,7 @@ interface AppContext {
 	showNotFound: () => void;
 	setTitle: React.Dispatch<React.SetStateAction<ReactNode>>;
 	redirect: (url: string) => void;
-	member: TransformedMember;
+	member: Member;
 	setIsLoadingMember: React.Dispatch<React.SetStateAction<boolean>>;
 	connectors: TransformedConnector[];
 	connections: TransformedConnection[];

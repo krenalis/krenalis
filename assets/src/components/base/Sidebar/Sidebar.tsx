@@ -71,11 +71,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
-	const { redirect, connections, setIsLoadingState, logout, isPasswordless } = useContext(AppContext);
-
-	const onLogout = () => {
-		logout();
-	};
+	const { redirect, connections, setIsLoadingState } = useContext(AppContext);
 
 	const location = useLocation();
 	const currentRoute = getRouteFromPathname(location.pathname, connections);
@@ -139,22 +135,6 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 						redirect={redirect}
 					/>
 					{items}
-				</div>
-				<div className='sidebar__bottom'>
-					<a
-						href='https://github.com/meergo/meergo/blob/main/CONTRIBUTING.md#how-to-report-a-bug'
-						target='_blank'
-						className='sidebar__item'
-					>
-						<SlIcon name='megaphone' />
-						<div className='sidebar__item-text'>Report a bug</div>
-					</a>
-					{!isPasswordless && (
-						<div className='sidebar__item' onClick={onLogout}>
-							<SlIcon name='box-arrow-left' />
-							<div className='sidebar__item-text sidebar__item-text-logout'>Logout</div>
-						</div>
-					)}
 				</div>
 			</div>
 		</div>

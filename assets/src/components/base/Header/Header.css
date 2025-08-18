@@ -1,9 +1,9 @@
 .header {
-	padding: 5px 30px 5px 18px;
+	padding: 5px 0;
 	display: grid;
 	grid-template-areas: 'title account';
 	justify-content: space-between;
-	align-items: baseline;
+	align-items: center;
 	height: var(--header-height);
 	background: var(--bg-primary);
 	position: fixed;
@@ -19,6 +19,8 @@
 	display: flex;
 	align-items: baseline;
 	gap: 15px;
+	position: relative;
+	top: 2px;
 }
 
 .header__account {
@@ -26,6 +28,8 @@
 	align-items: center;
 	gap: 10px;
 	grid-area: account;
+	position: relative;
+	left: -20px;
 }
 
 .header__account-avatar {
@@ -38,39 +42,129 @@
 	font-size: 18px;
 }
 
-.header__passwordless-tooltip::part(body) {
+.header__passwordless-tooltip {
+	width: 220px;
 	padding: 15px 20px;
-	background-color: var(--sl-color-primary-200);
-	color: #051925;
-	pointer-events: all;
-	width: 100%;
-}
-
-.header__passwordless-tooltip::part(base__arrow) {
-	background-color: var(--sl-color-primary-200);
-}
-
-.header__passwordless-tooltip-close {
-	margin-top: 5px;
-	margin-left: auto;
-	display: block;
-	max-width: fit-content;
-}
-
-.header__passwordless-tooltip-close::part(base) {
-	background-color: var(--sl-color-primary-200) !important;
-	border: 1px solid var(--sl-color-primary-600);
-	color: var(--sl-color-primary-600);
+	border-right: 1px solid var(--sl-color-warning-600);
+	font-size: 14px;
+	color: var(--text-onaccent);
+	background-color: var(--sl-color-warning-600);
+	border-top-left-radius: var(--radius);
+	border-bottom-left-radius: var(--radius);
+	border: 1px solid var(--sl-color-warning-600);
+	border-right: 0;
 }
 
 .header__passwordless-tooltip-title {
 	font-weight: 600;
-	font-size: 16px;
-	margin-bottom: 3px;
+	font-size: 18px;
+	margin-bottom: 10px;
+	line-height: 1.3;
 }
 
-.header__passwordless-tooltip a {
-	text-decoration: underline;
+.header__passwordless-create-account {
+	margin-top: 16px;
+	display: block;
+}
+
+.header__passwordless-create-account::part(base) {
+	background-color: #4d7c0f;
+	min-height: 2.1rem;
+}
+
+.header__passwordless-create-account::part(label) {
+	font-size: 13px;
+	position: relative;
+	top: 1px;
+}
+
+.header__account-menu-wrapper {
+	display: flex;
+	padding: 0;
+	border: 0;
+	overflow: visible;
+}
+
+.header__account-menu-wrapper::before {
+	content: '';
+	position: absolute;
+	width: 0;
+	height: 0;
+	border-left: 8px solid transparent;
+	border-right: 8px solid transparent;
+	border-bottom: 15px solid #fff;
+	right: 12px;
+	transform: translateY(-100%);
+	top: 1px;
+}
+
+.header__account-menu-wrapper::after {
+	content: '';
+	position: absolute;
+	width: 0;
+	height: 0;
+	border-left: 9px solid transparent;
+	border-right: 9px solid transparent;
+	border-bottom: 15px solid var(--sl-color-neutral-300);
+	z-index: -1;
+	right: 11px;
+	transform: translateY(-100%);
+	top: 0;
+}
+
+.header__account-menu {
+	padding: 10px;
+	min-width: 250px;
+	border-top-right-radius: var(--radius);
+	border-bottom-right-radius: var(--radius);
+	border: 1px solid var(--sl-color-neutral-300);
+	border-left: 0;
+}
+
+.header__account-menu-heading {
+	padding: 12px;
+	display: flex;
+	gap: 8px;
+	align-items: start;
+}
+
+.header__account-menu-heading sl-avatar::part(base) {
+	width: 35px;
+	height: 35px;
+	font-size: 15px;
+}
+
+.header__account-menu-heading-name {
+	font-size: 14px;
+	color: var(--sl-color-neutral-800);
+	font-weight: 500;
+}
+
+.header__account-menu-heading-email {
+	font-size: 12px;
+	margin-top: -3px;
+	color: var(--sl-color-neutral-500);
+}
+
+.header__account-menu-item {
+	display: flex;
+	padding: 5px 12px;
+	transition: background-color 0.5s;
+	border-radius: 4px;
+	font-size: 14px;
+	color: var(--sl-color-neutral-600);
+	cursor: pointer;
+	align-items: center;
+	gap: 6px;
+	line-height: 1.7;
+}
+
+.header__account-menu-item--indented {
+	margin-left: 20px;
+}
+
+.header__account-menu-item:hover {
+	background-color: var(--sl-color-primary-50);
 }
 
 .status-dot {

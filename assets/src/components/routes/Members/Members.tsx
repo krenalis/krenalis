@@ -12,14 +12,14 @@ import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { TransformedMember, transformMember, validateMemberEmail } from '../../../lib/core/member';
+import { validateMemberEmail } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
 
 const Members = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isRemoveAlertOpen, setIsRemoveAlertOpen] = useState<boolean>(false);
 	const [isInviteMemberDialogOpen, setIsInviteMemberDialogOpen] = useState<boolean>(false);
-	const [members, setMembers] = useState<TransformedMember[]>();
+	const [members, setMembers] = useState<Member[]>();
 	const [skipEmailVerification, setSkipEmailVerification] = useState<boolean>();
 
 	const { api, handleError, member: loggedMember, logout } = useContext(AppContext);
@@ -36,11 +36,7 @@ const Members = () => {
 				setTimeout(() => setIsLoading(false), 300);
 				return;
 			}
-			const transformed: TransformedMember[] = [];
-			for (const m of members) {
-				transformed.push(transformMember(m));
-			}
-			setMembers(transformed);
+			setMembers(members);
 
 			let skipEmailVerification: boolean;
 			try {
@@ -146,7 +142,6 @@ const Members = () => {
 									description={member.email}
 									icon={
 										<SlAvatar
-											initials={member.initials}
 											image={
 												member.avatar
 													? `data:${member.avatar.mimeType};base64, ${member.avatar.image}`

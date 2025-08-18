@@ -16,7 +16,6 @@ import { Warehouse } from './App.types';
 import { WarehouseResponse } from '../../../lib/api/types/warehouse';
 import { Execution, Member, TelemetryLevel } from '../../../lib/api/types/responses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { TransformedMember, transformMember } from '../../../lib/core/member';
 import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
@@ -34,7 +33,7 @@ const useApp = (
 	location: Location,
 ) => {
 	const [isLoadingState, setIsLoadingState] = useState<boolean>(true);
-	const [member, setMember] = useState<TransformedMember | null>();
+	const [member, setMember] = useState<Member | null>();
 	const [isLoadingMember, setIsLoadingMember] = useState<boolean>(false);
 	const [connectors, setConnectors] = useState<TransformedConnector[] | null>(null);
 	const [connections, setConnections] = useState<TransformedConnection[] | null>(null);
@@ -189,7 +188,7 @@ const useApp = (
 				handleError(err);
 				return;
 			}
-			setMember(transformMember(member));
+			setMember(member);
 
 			// if the user is logged in and has a selected workspace,
 			// but they are currently on the login or reset password
@@ -362,7 +361,7 @@ const useApp = (
 				handleError(err);
 				return;
 			}
-			setMember(transformMember(m));
+			setMember(m);
 		};
 
 		if (isLoadingState || !isLoadingMember) {

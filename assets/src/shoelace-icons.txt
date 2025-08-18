@@ -13,9 +13,8 @@ arrows-angle-expand.svg
 arrows-collapse.svg
 arrows-expand.svg
 bar-chart.svg
-bell.svg
 bookmark-check.svg
-box-arrow-left.svg
+box-arrow-right.svg
 braces-asterisk.svg
 braces.svg
 bug.svg
@@ -51,13 +50,13 @@ info-circle.svg
 input-cursor.svg
 key.svg
 layout-three-columns.svg
-megaphone.svg
 pencil.svg
 people.svg
 person-arms-up.svg
 person-check.svg
 person-exclamation.svg
 person-workspace.svg
+person.svg
 phone.svg
 play-circle.svg
 play.svg
