@@ -195,7 +195,7 @@ func (notifier *notifier) init(ctx context.Context) {
 		} else {
 			// Reads any missed notifications.
 			const query = "SELECT id, name, payload FROM notifications WHERE id >= $1 ORDER BY id"
-			err = notifier.db.QueryScan(ctx, query, notifier.next, func(rows *db.Rows) error {
+			err = conn.QueryScan(ctx, query, notifier.next, func(rows *db.Rows) error {
 				for rows.Next() {
 					var id int64
 					var name string
