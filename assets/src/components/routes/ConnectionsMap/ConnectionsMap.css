@@ -127,6 +127,11 @@
 	background-color: transparent;
 	padding-top: 5px;
 	position: relative;
+	width: 90px;
+}
+
+.connections-map__database > sl-tooltip::part(body) {
+	max-width: 200px;
 }
 
 .connections-map__database--users {
@@ -147,15 +152,16 @@
 	grid-area: destinations;
 }
 
-.connection-block {
-	margin-bottom: 30px;
+.connections-map__sources,
+.connections-map__destinations {
+	background-color: var(--bg-primary);
+	border: 1px solid var(--border-primary);
+	border-radius: var(--radius);
+	overflow: hidden;
 }
 
 .connection-block {
-	background-color: var(--bg-primary);
 	padding: 20px;
-	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-small);
 	display: flex;
 	align-items: center;
 	gap: 20px;
@@ -164,13 +170,17 @@
 	position: relative;
 	z-index: 1;
 	font-size: 14px;
-	border: 1px solid var(--sl-color-neutral-200);
 	cursor: pointer;
 	will-change: transform;
+	border-bottom: 1px solid var(--sl-color-neutral-200);
+}
+
+.connections-map__sources > a:nth-last-child(2) .connection-block,
+.connections-map__destinations > a:nth-last-child(2) .connection-block {
+	border-bottom: 0;
 }
 
 .connection-block[data-is-hovered='true'] {
-	border: 1px dashed var(--sl-color-primary-600);
 	background-color: var(--sl-color-primary-50);
 }
 

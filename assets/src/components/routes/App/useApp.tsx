@@ -237,6 +237,7 @@ const useApp = (
 				if (c.linkedConnections) {
 					transformedConnection.linkedConnections = c.linkedConnections;
 				}
+				transformedConnection.actionsInfo = c.actionsInfo;
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {
@@ -308,6 +309,7 @@ const useApp = (
 				if (c.linkedConnections) {
 					transformedConnection.linkedConnections = c.linkedConnections;
 				}
+				transformedConnection.actionsInfo = c.actionsInfo;
 				transformedConnections.push(transformedConnection);
 			}
 			for (const c of transformedConnections) {

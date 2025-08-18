@@ -68,6 +68,9 @@ type Connection struct {
 	// Actions is populated only by the (*Workspace).Connection method.
 	Actions *[]Action `json:"actions,omitzero"`
 
+	// ActionsInfo is populated only by the (*Workspace).Connections method.
+	ActionsInfo *[]ActionInfo `json:"actionsInfo,omitzero"`
+
 	// EventTypes is populated only by the (*Workspace).Connection method.
 	EventTypes *[]EventType `json:"eventTypes,omitzero"`
 }
@@ -78,6 +81,14 @@ type EventType struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Filter      string `json:"filter"`
+}
+
+type ActionInfo struct {
+	ID             int             `json:"id"`
+	Target         Target          `json:"target"`
+	Enabled        bool            `json:"enabled"`
+	ScheduleStart  *int            `json:"scheduleStart"`
+	SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
 }
 
 // Strategy represents a strategy.

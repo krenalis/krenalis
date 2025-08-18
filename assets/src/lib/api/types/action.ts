@@ -109,6 +109,14 @@ interface Action {
 	format: string;
 }
 
+interface ActionInfo {
+	id: number;
+	target: ActionTarget;
+	enabled: boolean;
+	scheduleStart: number | null;
+	schedulePeriod: SchedulePeriod | null;
+}
+
 interface ActionType {
 	name: string;
 	description: string;
@@ -168,6 +176,7 @@ export type {
 	FilterLogical,
 	FilterCondition,
 	Action,
+	ActionInfo,
 	ActionType,
 	ActionToSet,
 	ExpressionToBeExtracted,

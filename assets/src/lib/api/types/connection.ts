@@ -1,4 +1,4 @@
-import { Action, ActionType } from './action';
+import { Action, ActionInfo, ActionType } from './action';
 import { ConnectorSettings } from './responses';
 
 type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'SDK' | 'Stream';
@@ -28,8 +28,9 @@ interface Connection {
 	actionsCount: number;
 	health: Health;
 	actionTypes?: ActionType[];
-	actions?: Action[];
-	eventTypes: EventType[];
+	actions?: Action[]; // Only returned by 'api/connections/{id}'
+	actionsInfo?: ActionInfo[]; // Only returned by 'api/connections'
+	eventTypes?: EventType[]; // Only returned by 'api/connections/{id}'
 	linkedConnections?: number[];
 }
 

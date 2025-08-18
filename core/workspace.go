@@ -500,6 +500,28 @@ func (this *Workspace) Connections() []*Connection {
 			ActionsCount:      len(c.Actions()),
 			Health:            Health(c.Health),
 		}
+
+		// Set the actions info.
+		actions := c.Actions()
+		a := make([]ActionInfo, len(actions))
+		connection.ActionsInfo = &a
+		for i, action := range actions {
+			info := ActionInfo{
+				ID:      action.ID,
+				Target:  Target(action.Target),
+				Enabled: action.Enabled,
+			}
+			if action.Target == state.TargetUser || action.Target == state.TargetGroup {
+				if action.SchedulePeriod != 0 {
+					start := int(action.ScheduleStart)
+					period := SchedulePeriod(action.SchedulePeriod)
+					info.ScheduleStart = &start
+					info.SchedulePeriod = &period
+				}
+			}
+			a[i] = info
+		}
+
 		infos[i] = &connection
 	}
 	sort.Slice(infos, func(i, j int) bool {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode, useContext } from 'react';
 import Flex from '../../base/Flex/Flex';
 import Arrow from '../../base/Arrow/Arrow';
 import StatusDot from '../../base/StatusDot/StatusDot';
@@ -6,6 +6,8 @@ import { ArrowAnchor } from '../../base/Arrow/Arrow.types';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
+import connectionMapContext from '../../../context/ConnectionMapContext';
+import appContext from '../../../context/AppContext';
 
 interface ConnectionBlockProps {
 	connection: TransformedConnection;
@@ -16,44 +18,76 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 	const [isHovered, setIsHovered] = useState<boolean>(false);
 	const [arrow, setArrow] = useState<ReactNode>();
 
+	const { connections } = useContext(appContext);
+	const { hoveredConnection, setHoveredConnection, isUserDbHovered, isEventDbHovered } =
+		useContext(connectionMapContext);
+
 	useEffect(() => {
 		// Must wait for the block to be painted and styled before proceding
 		// with the render of the arrow.
-		let arrowStart: string, arrowEnd: string, arrowStartAnchor: ArrowAnchor, arrowEndAnchor: ArrowAnchor;
-		if (c.isFile) {
-			arrowStart = `${c.id}`;
-			arrowEnd = `${c.storage}`;
-			arrowStartAnchor = c.isSource ? 'right' : 'left';
-			arrowEndAnchor = c.isSource ? 'left' : 'right';
-		} else {
+
+		let arrowStart: string,
+			arrowEnd: string,
+			arrowStartAnchor: ArrowAnchor,
+			arrowEndAnchor: ArrowAnchor,
+			showTail: boolean = false,
+			showHead: boolean = false;
+		if (c.isSource) {
 			arrowStart = `${c.id}`;
 			arrowEnd = 'central-logo';
-			arrowStartAnchor = c.isSource ? 'right' : 'left';
-			arrowEndAnchor = c.isSource ? 'left' : 'right';
+			arrowStartAnchor = 'right';
+			arrowEndAnchor = 'left';
+			showTail = true;
+		} else {
+			arrowStart = 'central-logo';
+			arrowEnd = `${c.id}`;
+			arrowStartAnchor = 'right';
+			arrowEndAnchor = 'left';
+			showHead = true;
 		}
+
+		const hasRelations = c.relations(connections).length > 0;
+
+		const hovered =
+			isHovered ||
+			c.relations(connections).includes(hoveredConnection) ||
+			(isUserDbHovered && c.relations(connections).includes('dwh-user')) ||
+			(isEventDbHovered && c.relations(connections).includes('dwh-event'));
+		const isHighlighted = hovered && hasRelations;
+
+		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
+		const isHidden = isSomethingHovered && !isHighlighted;
+
 		const arrow = (
 			<Arrow
 				start={arrowStart}
 				end={arrowEnd}
 				startAnchor={arrowStartAnchor}
 				endAnchor={arrowEndAnchor}
-				color={isHovered ? '#4f46e5' : undefined}
-				dashness={isHovered ? { strokeLen: 5, nonStrokeLen: 5, animation: c.isSource ? 2 : -2 } : false}
-				data-is-hovered={isHovered}
+				color={isHighlighted ? '#4f46e5' : undefined}
+				strokeWidth={hasRelations ? 1 : 0.3}
+				dashness={isHighlighted ? { strokeLen: 5, nonStrokeLen: 5, animation: c.isSource ? 2 : -2 } : false}
+				data-is-hovered={isHighlighted}
 				isNew={isNew}
+				isHidden={isHidden}
+				showTail={showTail && (hasRelations || isHighlighted)}
+				showHead={showHead && (hasRelations || isHighlighted)}
 			/>
 		);
+
 		setTimeout(() => {
 			setArrow(arrow);
 		}, 0);
-	}, [c, isHovered]);
+	}, [c, isHovered, hoveredConnection, isUserDbHovered, isEventDbHovered]);
 
 	const onMouseEnter = () => {
 		setIsHovered(true);
+		setHoveredConnection(c.id);
 	};
 
 	const onMouseLeave = () => {
 		setIsHovered(false);
+		setHoveredConnection(null);
 	};
 
 	return (

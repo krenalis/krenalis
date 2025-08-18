@@ -7,7 +7,7 @@ import {
 	Strategy,
 	SendingMode,
 } from '../api/types/connection';
-import { Action, ActionTarget, ActionType } from '../api/types/action';
+import { Action, ActionInfo, ActionTarget, ActionType } from '../api/types/action';
 import TransformedConnector from './connector';
 import { Variant } from '../../components/routes/App/App.types';
 import { ConnectorTarget } from '../api/types/connector';
@@ -34,6 +34,7 @@ class TransformedConnection {
 	linkedFiles?: TransformedConnection[];
 	actionTypes?: ActionType[];
 	actions?: Action[];
+	actionsInfo?: ActionInfo[];
 	eventTypes?: TransformedEventType[];
 	linkedConnections?: number[];
 
@@ -53,6 +54,7 @@ class TransformedConnection {
 		linkedFiles?: TransformedConnection[],
 		actionTypes?: ActionType[],
 		actions?: Action[],
+		actionsInfo?: ActionInfo[],
 		eventTypes?: TransformedEventType[],
 		linkedConnections?: number[],
 	) {
@@ -71,6 +73,7 @@ class TransformedConnection {
 		this.linkedFiles = linkedFiles;
 		this.actionTypes = actionTypes == null ? [] : actionTypes;
 		this.actions = actions == null ? [] : actions;
+		this.actionsInfo = actionsInfo;
 		this.eventTypes = eventTypes == null ? [] : eventTypes;
 		if (linkedConnections) {
 			this.linkedConnections = linkedConnections;
@@ -123,6 +126,39 @@ class TransformedConnection {
 
 	get hasSettings(): boolean {
 		return this.connector.hasSettings(this.role);
+	}
+
+	relations(connections: TransformedConnection[]): ('dwh-user' | 'dwh-event' | number)[] {
+		let hasUsersActions = this.actionsInfo.some((a) => {
+			if (this.isSDK) {
+				return a.target === 'User' && a.enabled;
+			}
+			return a.target === 'User' && a.enabled && a.schedulePeriod != null;
+		});
+		let hasEventActions = this.actionsInfo.some((a) => a.target === 'Event' && a.enabled);
+
+		const linkedTo: ('dwh-user' | 'dwh-event' | number)[] = [];
+		if (hasUsersActions) {
+			linkedTo.push('dwh-user');
+		}
+		if (this.isSource && hasEventActions) {
+			linkedTo.push('dwh-event');
+		}
+		if (this.linkedConnections?.length > 0) {
+			if (this.isSource) {
+				linkedTo.push(
+					...this.linkedConnections.filter((id) =>
+						connections
+							.find((conn) => conn.id === id)
+							?.actionsInfo.some((a) => a.target === 'Event' && a.enabled),
+					),
+				);
+			} else {
+				if (this.actionsInfo.some((a) => a.target === 'Event' && a.enabled))
+					linkedTo.push(...this.linkedConnections);
+			}
+		}
+		return linkedTo;
 	}
 }
 
