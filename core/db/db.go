@@ -125,6 +125,9 @@ func Open(opts *Options) (*DB, error) {
 	if opts.MaxConnections > 0 {
 		config.MaxConns = opts.MaxConnections
 	}
+	if traceAcquiring {
+		config.ConnConfig.Tracer = acquireTracer{}
+	}
 	conn, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		return nil, err
