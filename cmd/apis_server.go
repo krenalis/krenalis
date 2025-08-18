@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"mime"
 	"net/http"
 	"strconv"
@@ -373,41 +374,39 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 }
 
 // memberCredentials is like credentials but only accepts a session cookie.
-// It returns the associated organization and member.
+// It returns the associated organization and the member identifier.
 //
-// If the request is not authorized, an errors.UnauthorizedError is returned.
-func (s *apisServer) memberCredentials(r *http.Request) (*core.Organization, *core.Member, error) {
+// If the request is not authorized, it returns an errors.UnauthorizedError.
+// If the session cookie is not valid, it returns an errInvalidSessionCookie.
+func (s *apisServer) memberCredentials(r *http.Request) (*core.Organization, int, error) {
 
 	// Get the session.
 	cookie, _ := r.Cookie(sessionCookieName)
 	if cookie == nil {
-		return nil, nil, errors.Unauthorized("the Authorization header with the API key is not present in the request")
+		return nil, 0, errors.Unauthorized("the Authorization header with the API key is not present in the request")
 	}
 	session := &sessionCookie{}
 	err := s.secureCookie.Decode(sessionCookieName, cookie.Value, session)
 	if err != nil {
-		return nil, nil, errInvalidSessionCookie
+		return nil, 0, errInvalidSessionCookie
+	}
+	if id := session.Member; id < 1 || id > math.MaxInt32 {
+		return nil, 0, errInvalidSessionCookie
+	}
+	if id := session.Organization; id < 1 || id > math.MaxInt32 {
+		return nil, 0, errInvalidSessionCookie
 	}
 
 	// Get the organization.
 	organization, err := s.core.Organization(r.Context(), session.Organization)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); ok {
-			return nil, nil, errInvalidSessionCookie
+			return nil, 0, errInvalidSessionCookie
 		}
-		return nil, nil, err
+		return nil, 0, err
 	}
 
-	// Get the member.
-	member, err := organization.Member(r.Context(), session.Member)
-	if err != nil {
-		if _, ok := err.(*errors.NotFoundError); ok {
-			err = errInvalidSessionCookie
-		}
-		return nil, nil, err
-	}
-
-	return organization, member, nil
+	return organization, session.Member, nil
 }
 
 type bodyWriter struct {

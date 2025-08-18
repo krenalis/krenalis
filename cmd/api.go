@@ -128,8 +128,16 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 
 // Member returns the current member.
 func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, member, err := api.memberCredentials(r)
+	org, memberID, err := api.memberCredentials(r)
 	if err != nil {
+		return nil, err
+	}
+	// Get the member.
+	member, err := org.Member(r.Context(), memberID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			err = errInvalidSessionCookie
+		}
 		return nil, err
 	}
 	return member, nil

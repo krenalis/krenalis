@@ -176,8 +176,16 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 
 // InviteMember sends an invitation email.
 func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, member, err := organization.memberCredentials(r)
+	org, memberID, err := organization.memberCredentials(r)
 	if err != nil {
+		return nil, err
+	}
+	// Get the member.
+	member, err := org.Member(r.Context(), memberID)
+	if err != nil {
+		if _, ok := err.(*errors.NotFoundError); ok {
+			err = errInvalidSessionCookie
+		}
 		return nil, err
 	}
 	var body struct {
@@ -256,7 +264,7 @@ func (organization organization) UpdateAccessKey(_ http.ResponseWriter, r *http.
 
 // UpdateMember updates a member of an organization.
 func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, member, err := organization.memberCredentials(r)
+	org, memberID, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +293,10 @@ func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Req
 		}
 		memberToSet.Avatar = avatar
 	}
-	err = org.UpdateMember(r.Context(), member.ID, memberToSet)
+	err = org.UpdateMember(r.Context(), memberID, memberToSet)
+	if _, ok := err.(*errors.NotFoundError); ok {
+		err = errInvalidSessionCookie
+	}
 	return nil, err
 }
 
