@@ -96,7 +96,7 @@ type DBConfig struct {
 	Password       string
 	Database       string
 	Schema         string
-	MaxConnections int // in range [1, 2147483647] when set; 0 means 'not set'.
+	MaxConnections int32 // values less than 2 are treated as 2.
 }
 
 type LambdaConfig struct {
@@ -159,7 +159,7 @@ func New(conf *Config) (*Core, error) {
 		Password:       ps.Password,
 		Database:       ps.Database,
 		Schema:         ps.Schema,
-		MaxConnections: int32(ps.MaxConnections),
+		MaxConnections: max(2, ps.MaxConnections),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)

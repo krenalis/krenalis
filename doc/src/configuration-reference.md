@@ -54,15 +54,15 @@ Table of contents:
 
 Configuration used to access the PostgreSQL server used by Meergo.
 
-| Variable                    | Default                   | Description                                             |
-|-----------------------------|---------------------------|---------------------------------------------------------|
-| `MEERGO_DB_HOST`            |                           | Address of the PostgreSQL server. Example: `127.0.0.1`. |
-| `MEERGO_DB_PORT`            | `5432`                    | Port number used by PostgreSQL.                         |
-| `MEERGO_DB_USERNAME`        |                           | PostgreSQL username.                                    |
-| `MEERGO_DB_PASSWORD`        |                           | PostgreSQL password.                                    |
-| `MEERGO_DB_DATABASE`        |                           | PostgreSQL database name.                               |
-| `MEERGO_DB_SCHEMA`          |                           | Schema within the PostgreSQL database to use.           |
-| `MEERGO_DB_MAX_CONNECTIONS` | `max(4,runtime.NumCPU())` | Max number of connections to PostgreSQL.                |
+| Variable                    | Default | Description                                                  |
+|-----------------------------|---------|--------------------------------------------------------------|
+| `MEERGO_DB_HOST`            |         | Address of the PostgreSQL server. Example: `127.0.0.1`.      |
+| `MEERGO_DB_PORT`            | `5432`  | Port number used by PostgreSQL.                              |
+| `MEERGO_DB_USERNAME`        |         | PostgreSQL username.                                         |
+| `MEERGO_DB_PASSWORD`        |         | PostgreSQL password.                                         |
+| `MEERGO_DB_DATABASE`        |         | PostgreSQL database name.                                    |
+| `MEERGO_DB_SCHEMA`          |         | Schema within the PostgreSQL database to use.                |
+| `MEERGO_DB_MAX_CONNECTIONS` | `8`     | Maximum number of connections to PostgreSQL. Must be `>= 2`. |
 
 ## Member emails
 
