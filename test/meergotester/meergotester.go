@@ -578,11 +578,11 @@ func (c *Meergo) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 	if err != nil {
 		c.t.Fatalf("cannot open database for executing query tests: %s", err)
 	}
+	defer db.Close()
 	err = db.QueryRow(ctx, query, args...).Scan(dest)
 	if err != nil {
 		c.t.Fatalf("cannot scan result of QueryRow: %s", err)
 	}
-	db.Close()
 }
 
 // WorkspaceID returns the ID of the workspace on which the instance of Meergo
