@@ -179,7 +179,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "Separator", Label: "Separator", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
 			&meergo.Input{Name: "NumberOfColumns", Label: "Number of columns", Placeholder: "", HelpText: "When 0, it is determined from the first record.", Type: "number", OnlyIntegerPart: true, Role: meergo.Source},
-			&meergo.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space", Role: meergo.Source},
+			&meergo.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space in fields", Role: meergo.Source},
 			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: meergo.Destination},
 			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
 		},
