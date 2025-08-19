@@ -57,6 +57,6 @@ Meergo doesn't automatically forward an event's properties to a destination. Ins
 
 However, when you set up a mapping, Meergo automatically fills in the mapping expressions with the following properties when applicable:
 
-| Property   | JSON&nbsp;Type | Description                                      |
-|------------|----------------|--------------------------------------------------|
-| `name`     | `String`       | Page name designated as reserved for future use. |
+| Property   | JSON&nbsp;Type | Description                                        |
+|------------|----------------|----------------------------------------------------|
+| `name`     | `String`       | Screen name designated as reserved for future use. |
