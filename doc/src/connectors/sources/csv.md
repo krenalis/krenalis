@@ -22,7 +22,7 @@ The CSV data source allows you to import user data from a CSV (Comma-Separated V
 6. (Optional) Proceed with the other fields:
    * **Compression**: Format of compression. If the CSV file is compressed, select the compression format; Meergo automatically decompresses the file upon reading. 
    * **Separator**: Character used to separate fields. By default, this is a comma. Specify another character if different.
-   * **Field per record**: Expected number of fields per record. If **Field per record** is set to **0**, the number of expected fields is taken from the first record, meaning that subsequent records must have the same field count. If Fields per Record is negative, no check is made, and records may have a variable number of fields.
+   * **Number of columns**: Expected number of columns. If **Number of columns** is set to **0**, the number of expected columns is taken from the first record.
    * **Trim leading space**: Indicates whether leading whitespace in a field should be ignored.
    * **The first row contains the column names**: Indicates if the first row of the CSV file contains the column names. If not selected, the column names will default to A, B, C, etc., similar to Excel files. 
 7. Click **Preview** to view a preview of the file.

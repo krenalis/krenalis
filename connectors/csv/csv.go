@@ -75,7 +75,7 @@ type CSV struct {
 
 type innerSettings struct {
 	Separator        string
-	FieldsPerRecord  int
+	NumberOfColumns  int
 	LazyQuotes       bool
 	TrimLeadingSpace bool
 	UseCRLF          bool
@@ -93,7 +93,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meerg
 	// Create a CSV reader.
 	v := csv.NewReader(r)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Separator)
-	v.FieldsPerRecord = c.settings.FieldsPerRecord
+	v.FieldsPerRecord = c.settings.NumberOfColumns
 	v.LazyQuotes = c.settings.LazyQuotes
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
 
@@ -178,7 +178,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "Separator", Label: "Separator", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&meergo.Input{Name: "FieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: meergo.Source},
+			&meergo.Input{Name: "NumberOfColumns", Label: "Number of columns", Placeholder: "", HelpText: "When 0, it is determined from the first record.", Type: "number", OnlyIntegerPart: true, Role: meergo.Source},
 			&meergo.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space", Role: meergo.Source},
 			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: meergo.Destination},
 			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
@@ -247,12 +247,12 @@ func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role meergo
 		return meergo.NewInvalidSettingsError("separator cannot be \\r, \\n, or the Unicode replacement character")
 	}
 	if role == meergo.Source {
-		// Validate FieldsPerRecord.
-		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-			return meergo.NewInvalidSettingsError("fields per record, if provided, must be in range [0,1000]")
+		// Validate NumberOfColumns.
+		if f := s.NumberOfColumns; f < 0 || f > 1000 {
+			return meergo.NewInvalidSettingsError("number of columns, if provided, must be in range [0,1000]")
 		}
 	} else {
-		s.FieldsPerRecord = 0
+		s.NumberOfColumns = 0
 		s.TrimLeadingSpace = false
 		s.HasColumnNames = false
 	}

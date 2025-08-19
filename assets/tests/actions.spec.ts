@@ -837,7 +837,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			"format": "CSV",
 			"formatSettings": {
 				"Separator": ",",
-				"FieldsPerRecord": 0,
+				"NumberOfColumns": 0,
 				"HasColumnNames": true,
 				"LazyQuotes": false,
 				"TrimLeadingSpace": false,
@@ -1170,7 +1170,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			"format": "CSV",
 			"formatSettings": {
 				"Separator": ",",
-				"FieldsPerRecord": 0,
+				"NumberOfColumns": 0,
 				"HasColumnNames": false,
 				"LazyQuotes": false,
 				"TrimLeadingSpace": false,
