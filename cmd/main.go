@@ -50,19 +50,18 @@ func Main(assets fs.FS) {
 		var err error
 		assets, err = fs.Sub(assets, "meergo-assets")
 		if err != nil {
-			panic("meergo: there is no directory 'meergo-assets' in assets")
+			fatal(1, `directory "meergo-assets" not found in assets (did you forget to generate and embed them?)`)
 		}
 	}
 
 	// Configure the logger.
 	logFile, err := os.OpenFile("error.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
-		p, err := filepath.Abs("error.log")
-		if err != nil {
+		p, err2 := filepath.Abs("error.log")
+		if err2 != nil {
 			p = "error.log"
 		}
-		slog.Error("cmd: cannot open log file", "path", p, "err", err)
-		os.Exit(1)
+		fatalf(1, "cannot open log file %q: %s", p, err)
 	}
 	defer logFile.Close()
 
@@ -75,26 +74,27 @@ func Main(assets fs.FS) {
 	// environment variables already set to be overwritten.
 	err = godotenv.Overload()
 	if err != nil && !os.IsNotExist(err) {
-		slog.Error("cmd: error occurred while loading .env file", "err", err)
-		os.Exit(1)
+		p, err2 := filepath.Abs(".env")
+		if err2 != nil {
+			p = ".env"
+		}
+		fatalf(1, "failed to read %q file: %s", p, err)
 	}
 
 	// Read the settings from the environment variables.
 	settings, err := settingsFromEnv()
 	if err != nil {
-		slog.Error("cmd: error occurred while reading settings from environment variables", "err", err)
-		os.Exit(1)
+		fatal(1, err.Error())
 	}
 
 	// Clear all the Meergo environment variables, that are the environment
 	// variables that start with "MEERGO_".
 	for _, v := range os.Environ() {
 		if key, _, ok := strings.Cut(v, "="); ok && strings.HasPrefix(key, "MEERGO_") {
-			err := os.Unsetenv(key)
-			if err != nil {
-				slog.Error("cmd: cannot unset environment variable %q: %s", key, err)
-				os.Exit(1)
-			}
+			// os.Unsetenv can only fail on Windows if the key is not UTF-8 encoded.
+			// But since Meergo only supports UTF-8 keys, and this is a rare edge case,
+			// failing to unset such a variable shouldn't prevent Meergo from starting.
+			_ = os.Unsetenv(key)
 		}
 	}
 
@@ -121,10 +121,11 @@ func Main(assets fs.FS) {
 			},
 		})
 		if err != nil {
-			slog.Error("cmd: cannot init Sentry", "err", err)
-			os.Exit(1)
+			// Failing to initialize Sentry shouldn't stop Meergo from starting.
+			slog.Warn("meergo: failed to init Sentry", "err", err)
+		} else {
+			defer sentry.Flush(2 * time.Second)
 		}
-		defer sentry.Flush(2 * time.Second)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -137,8 +138,8 @@ func Main(assets fs.FS) {
 
 	err = Run(ctx, settings, assets)
 	if err != nil {
-		slog.Error("cmd: error occurred running server", "err", err)
-		os.Exit(1)
+		slog.Error("meergo: error occurred running server", "err", err)
+		fatal(1, err.Error())
 	}
 }
 
@@ -298,6 +299,25 @@ func boolEnvVar(v string) (bool, error) {
 	default:
 		return false, fmt.Errorf("value %q is not a valid boolean value (expected \"true\", \"false\" or empty string)", v)
 	}
+}
+
+// fatal writes the message (if not empty) to stderr and exits with the given
+// code.
+func fatal(code int, msg string) {
+	if msg != "" {
+		fprint := fmt.Fprintln
+		if strings.HasSuffix(msg, "\n") {
+			fprint = fmt.Fprint
+		}
+		_, _ = fprint(os.Stderr, "error: "+msg)
+	}
+	os.Exit(code)
+}
+
+// fatalf formats according to a format specifier and writes (if not empty) to
+// stderr, and exits with the given code.
+func fatalf(code int, format string, a ...any) {
+	fatal(code, fmt.Sprintf(format, a...))
 }
 
 // parseHTTPDuration parses the value of an HTTP configuration setting into a
