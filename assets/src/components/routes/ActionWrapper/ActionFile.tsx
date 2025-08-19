@@ -731,7 +731,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<div
 					className={`action__file-complete-path${absolutePath !== '' ? ' action__file-complete-path--visible' : ''}`}
 				>
-					{absolutePath}
+					Absolute path: {absolutePath}
 				</div>
 			</div>
 			{hasSheets &&
