@@ -49,6 +49,6 @@
     "@types/json-bigint": "1.0.4",
     "@types/node": "22.7.5",
     "prettier": "3.2.5",
-    "typescript": "5.2.2"
+    "typescript": "5.9.2"
   }
 }
