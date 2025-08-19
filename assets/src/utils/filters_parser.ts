@@ -234,6 +234,7 @@ export function parseFilter(s: string): Filter {
 		let values: string[] | null = null;
 		if (
 			!operator.endsWith('null') &&
+			!operator.endsWith('empty') &&
 			!operator.endsWith('exist') &&
 			operator !== 'is true' &&
 			operator !== 'is false'
