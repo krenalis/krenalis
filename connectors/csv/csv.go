@@ -75,7 +75,6 @@ type CSV struct {
 
 type innerSettings struct {
 	Comma            string
-	Comment          string
 	FieldsPerRecord  int
 	LazyQuotes       bool
 	TrimLeadingSpace bool
@@ -94,9 +93,6 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meerg
 	// Create a CSV reader.
 	v := csv.NewReader(r)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
-	if c.settings.Comment != "" {
-		v.Comment, _ = utf8.DecodeRuneInString(c.settings.Comment)
-	}
 	v.FieldsPerRecord = c.settings.FieldsPerRecord
 	v.LazyQuotes = c.settings.LazyQuotes
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
@@ -182,7 +178,6 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "Comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&meergo.Input{Name: "Comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: meergo.Source},
 			&meergo.Input{Name: "FieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: meergo.Source},
 			&meergo.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space", Role: meergo.Source},
 			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: meergo.Destination},
@@ -252,24 +247,11 @@ func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role meergo
 		return meergo.NewInvalidSettingsError("comma cannot be \\r, \\n, or the Unicode replacement character")
 	}
 	if role == meergo.Source {
-		// Validate Comment.
-		if c := s.Comment; c != "" {
-			if utf8.RuneCountInString(c) != 1 {
-				return meergo.NewInvalidSettingsError("comment, if provided, must be a single character")
-			}
-			if c == "\n" || c == "\r" || c == "\uFFFD" {
-				return meergo.NewInvalidSettingsError("comment cannot be \\r, \\n, or the Unicode replacement character")
-			}
-			if c == s.Comma {
-				return meergo.NewInvalidSettingsError("comment cannot be equal to the comma")
-			}
-		}
 		// Validate FieldsPerRecord.
 		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
 			return meergo.NewInvalidSettingsError("fields per record, if provided, must be in range [0,1000]")
 		}
 	} else {
-		s.Comment = ""
 		s.FieldsPerRecord = 0
 		s.TrimLeadingSpace = false
 		s.HasColumnNames = false
