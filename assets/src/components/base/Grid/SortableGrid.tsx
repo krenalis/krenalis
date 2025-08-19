@@ -53,26 +53,22 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 
 	const { columnsWidths, reloadColumnsWidths } = useGrid(gridRef, rows, columns);
 
-	useImperativeHandle(
-		ref,
-		() => {
-			return {
-				expandRow: (id: string) => {
-					const row = gridRef.current.querySelector(`[data-id="${id}"]`);
-					const parent = row.closest('.grid__nested-rows');
-					if (parent == null) {
-						return;
-					}
-					const isExpanded = parent.classList.contains('grid__nested-rows--expanded');
-					if (!isExpanded) {
-						const expandIcon = parent.querySelector('.grid__row-expand');
-						expandIcon.click();
-					}
-				},
-			};
-		},
-		[],
-	);
+	useImperativeHandle(ref, () => {
+		return {
+			expandRow: (id: string) => {
+				const row = gridRef.current.querySelector(`[data-id="${id}"]`);
+				const parent = row.closest('.grid__nested-rows');
+				if (parent == null) {
+					return;
+				}
+				const isExpanded = parent.classList.contains('grid__nested-rows--expanded');
+				if (!isExpanded) {
+					const expandIcon = parent.querySelector('.grid__row-expand');
+					expandIcon.click();
+				}
+			},
+		};
+	}, []);
 
 	useEffect(() => {
 		ref = gridRef.current;

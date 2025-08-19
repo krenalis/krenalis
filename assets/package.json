@@ -24,7 +24,7 @@
     "make-vendor": "go run ./make-vendor",
     "minify-snippet": "node minify-snippet.js",
     "typecheck": "npx -p typescript@5.2.2 tsc",
-    "prettier": "npx prettier@3.2.5 --log-level warn --write \"src/**/*\" minify-snippet.js"
+    "prettier": "npx prettier@3.6.2 --log-level warn --write \"src/**/*\" minify-snippet.js"
   },
   "eslintConfig": {
     "extends": [
@@ -48,7 +48,7 @@
     "@playwright/test": "1.48.0",
     "@types/json-bigint": "1.0.4",
     "@types/node": "22.7.5",
-    "prettier": "3.2.5",
+    "prettier": "3.6.2",
     "typescript": "5.9.2"
   }
 }

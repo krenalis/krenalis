@@ -13,8 +13,9 @@
 	--border-primary: #e6e6e6;
 	--radius: 5px;
 	--header-height: 56px;
-	--system-fonts: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif,
-		'Apple Color Emoji', 'Segoe UI Emoji';
+	--system-fonts:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji';
 	--monospace-fonts: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 
 	/* set shoelace primary colors */

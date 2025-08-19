@@ -59,36 +59,32 @@ const Grid = forwardRef<GridRef, GridProps>(
 			isShown,
 		);
 
-		useImperativeHandle(
-			ref,
-			() => {
-				return {
-					expand: () => {
-						const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
-						for (const r of nestedRows) {
-							const isExpanded = r.classList.contains('grid__nested-rows--expanded');
-							if (!isExpanded) {
-								const expandIcon = r.querySelector('.grid__row-expand');
-								expandIcon.click();
-							}
+		useImperativeHandle(ref, () => {
+			return {
+				expand: () => {
+					const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
+					for (const r of nestedRows) {
+						const isExpanded = r.classList.contains('grid__nested-rows--expanded');
+						if (!isExpanded) {
+							const expandIcon = r.querySelector('.grid__row-expand');
+							expandIcon.click();
 						}
-						reloadColumnsWidths();
-					},
-					collapse: () => {
-						const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
-						for (const r of nestedRows) {
-							const isExpanded = r.classList.contains('grid__nested-rows--expanded');
-							if (isExpanded) {
-								const expandIcon = r.querySelector('.grid__row-expand');
-								expandIcon.click();
-							}
+					}
+					reloadColumnsWidths();
+				},
+				collapse: () => {
+					const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
+					for (const r of nestedRows) {
+						const isExpanded = r.classList.contains('grid__nested-rows--expanded');
+						if (isExpanded) {
+							const expandIcon = r.querySelector('.grid__row-expand');
+							expandIcon.click();
 						}
-						reloadColumnsWidths();
-					},
-				};
-			},
-			[],
-		);
+					}
+					reloadColumnsWidths();
+				},
+			};
+		}, []);
 
 		useEffect(() => {
 			ref = gridRef.current;
