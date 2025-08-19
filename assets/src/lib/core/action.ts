@@ -1232,6 +1232,14 @@ const computeDefaultAction = (
 		const eventType = connection.eventTypes.find((t) => t.id === actionType.eventType);
 		if (eventType != null && eventType.filter != null) {
 			action.filter = eventType.filter;
+		} else if (connection.isSDK && actionType.target === 'User') {
+			action.filter = {
+				logical: 'or',
+				conditions: [
+					{ property: 'type', operator: 'is', values: ['identify'] },
+					{ property: 'traits', operator: 'is not empty', values: null },
+				],
+			};
 		}
 	}
 	if (fields.includes('Query')) {

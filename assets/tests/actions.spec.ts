@@ -1294,21 +1294,6 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 	await button.click();
 	await expect(page.locator('.action__header')).toBeAttached();
 
-	// Filters.
-	await page.locator('.action__filters-add-condition').click();
-	await page.locator('.action__filters-add-condition').click();
-	await page.locator('.action__filters-add-condition').click();
-
-	let filters = page.locator('.action__filters-filter');
-
-	await filters.nth(0).locator('.action__filters-property sl-input').click();
-	await filters
-		.nth(0)
-		.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^type$/ })
-		.click();
-	await filters.nth(0).locator('.action__filters-operator sl-option[value="0"]').click(); // option is "is".
-	await filters.nth(0).locator('.action__filters-value-input >> input').fill('identify');
-
 	const expectedBody = `
 	{
 		"target": "User",
@@ -1316,7 +1301,7 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 		"name": "Import users into warehouse",
 		"enabled": false,
 		"filter": {
-			"logical": "and",
+			"logical": "or",
 			"conditions": [
 				{
 					"property": "type",
@@ -1324,7 +1309,12 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 					"values": [
 						"identify"
 					]
-				}
+				},
+				{
+					"property": "traits",
+         			"operator": "is not empty",
+         			"values": null
+       			}
 			]
 		},
 		"inSchema": null,

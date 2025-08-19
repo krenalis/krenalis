@@ -444,29 +444,26 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 
-		// Import the user identities into the data warehouse
-		eventContext := event["context"].(map[string]any)
-		if event["type"] == "identify" || eventContext["traits"] != nil {
-			for _, action := range connection.Actions() {
-				if action.Target != state.TargetUser || !action.Enabled {
-					continue
-				}
-				c.metrics.ReceivePassed(action.ID, 1)
-				if !filters.Applies(action.Filter, event) {
-					c.metrics.FilterFailed(action.ID, 1)
-					meergoMetrics.Increment("Collector.serveEvents.discarded_user_identities", 1)
-					continue
-				}
-				c.metrics.FilterPassed(action.ID, 1)
-				if w, ok := c.identityWriters.Load(action.ID); ok {
-					err = w.(*identityWriter).Write(event)
-					if err != nil {
-						c.metrics.FinalizeFailed(action.ID, 1, err.Error())
-						if eventErr == nil {
-							eventErr = errServiceUnavailable
-						}
-						continue
+		// Import the user identities into the data warehouse.
+		for _, action := range connection.Actions() {
+			if action.Target != state.TargetUser || !action.Enabled {
+				continue
+			}
+			c.metrics.ReceivePassed(action.ID, 1)
+			if !filters.Applies(action.Filter, event) {
+				c.metrics.FilterFailed(action.ID, 1)
+				meergoMetrics.Increment("Collector.serveEvents.discarded_user_identities", 1)
+				continue
+			}
+			c.metrics.FilterPassed(action.ID, 1)
+			if w, ok := c.identityWriters.Load(action.ID); ok {
+				err = w.(*identityWriter).Write(event)
+				if err != nil {
+					c.metrics.FinalizeFailed(action.ID, 1, err.Error())
+					if eventErr == nil {
+						eventErr = errServiceUnavailable
 					}
+					continue
 				}
 			}
 		}
