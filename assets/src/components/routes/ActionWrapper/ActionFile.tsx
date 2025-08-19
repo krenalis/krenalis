@@ -715,11 +715,10 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					ref={pathInputRef}
 				>
 					<div className='action__file-path-label' slot='label'>
-						<div className='action__file-path-text'>Path</div>
+						<div className='action__file-path-text'>File path</div>
 						<div className='action__file-path-description'>
-							The path of the file.
 							{connection.role == 'Destination'
-								? ' You can use the ${now}, ${today} and ${unix} placeholders.'
+								? 'You can use the ${now}, ${today} and ${unix} placeholders.'
 								: ''}
 						</div>
 					</div>
