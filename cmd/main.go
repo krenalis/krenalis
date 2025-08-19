@@ -74,11 +74,9 @@ func Main(assets fs.FS) {
 	// It is important to call Overload instead of Load because we want any
 	// environment variables already set to be overwritten.
 	err = godotenv.Overload()
-	if err != nil {
-		if _, ok := err.(*fs.PathError); !ok {
-			slog.Error("cmd: error occurred while loading .env file", "err", err)
-			os.Exit(1)
-		}
+	if err != nil && !os.IsNotExist(err) {
+		slog.Error("cmd: error occurred while loading .env file", "err", err)
+		os.Exit(1)
 	}
 
 	// Read the settings from the environment variables.
