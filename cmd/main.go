@@ -221,8 +221,11 @@ func settingsFromEnv() (*Settings, error) {
 		settings.DB.MaxConnections = 8
 	} else {
 		maxConn, err := strconv.ParseInt(c, 10, 32)
-		if err != nil || settings.DB.MaxConnections < 2 {
+		if err != nil {
 			return nil, fmt.Errorf("invalid integer value specified for MEERGO_DB_MAX_CONNECTIONS: %s", err)
+		}
+		if maxConn < 2 {
+			return nil, fmt.Errorf("invalid MEERGO_DB_MAX_CONNECTIONS: %d (minimum is 2)", maxConn)
 		}
 		settings.DB.MaxConnections = int32(maxConn)
 	}
