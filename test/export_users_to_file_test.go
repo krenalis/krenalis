@@ -95,7 +95,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}),
 		Format: "CSV",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-			"Comma": ",",
+			"Separator": ",",
 		}),
 		OrderBy: "email",
 	})
@@ -139,7 +139,7 @@ func TestExportUsersToFile(t *testing.T) {
 			}),
 			Format: "CSV",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-				"Comma": ",",
+				"Separator": ",",
 			}),
 			Compression: meergotester.Compression(compression),
 			OrderBy:     "email",

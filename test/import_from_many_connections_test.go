@@ -112,7 +112,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
 			Format:               "CSV",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-				"Comma":          ",",
+				"Separator":      ",",
 				"HasColumnNames": true,
 			}),
 		})

@@ -836,7 +836,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			"compression": "",
 			"format": "CSV",
 			"formatSettings": {
-				"Comma": ",",
+				"Separator": ",",
 				"FieldsPerRecord": 0,
 				"HasColumnNames": true,
 				"LazyQuotes": false,
@@ -1169,7 +1169,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			"orderBy": "email",
 			"format": "CSV",
 			"formatSettings": {
-				"Comma": ",",
+				"Separator": ",",
 				"FieldsPerRecord": 0,
 				"HasColumnNames": false,
 				"LazyQuotes": false,

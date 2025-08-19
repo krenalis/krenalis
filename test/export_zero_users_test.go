@@ -95,7 +95,7 @@ func TestExportZeroUsers(t *testing.T) {
 			Format:  "CSV",
 			OrderBy: "email",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-				"Comma": ",",
+				"Separator": ",",
 			}),
 		})
 

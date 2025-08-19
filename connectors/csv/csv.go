@@ -74,7 +74,7 @@ type CSV struct {
 }
 
 type innerSettings struct {
-	Comma            string
+	Separator        string
 	FieldsPerRecord  int
 	LazyQuotes       bool
 	TrimLeadingSpace bool
@@ -92,7 +92,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meerg
 
 	// Create a CSV reader.
 	v := csv.NewReader(r)
-	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
+	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Separator)
 	v.FieldsPerRecord = c.settings.FieldsPerRecord
 	v.LazyQuotes = c.settings.LazyQuotes
 	v.TrimLeadingSpace = c.settings.TrimLeadingSpace
@@ -164,7 +164,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 	case "load":
 		var s innerSettings
 		if c.settings == nil {
-			s.Comma = ","
+			s.Separator = ","
 		} else {
 			s = *c.settings
 		}
@@ -177,7 +177,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Input{Name: "Comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
+			&meergo.Input{Name: "Separator", Label: "Separator", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
 			&meergo.Input{Name: "FieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: meergo.Source},
 			&meergo.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space", Role: meergo.Source},
 			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: meergo.Destination},
@@ -193,7 +193,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.RecordReader) error {
 
 	v := csv.NewWriter(w)
-	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
+	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Separator)
 	v.UseCRLF = c.settings.UseCRLF
 
 	// Write the column names.
@@ -239,12 +239,12 @@ func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role meergo
 	if err != nil {
 		return err
 	}
-	// Validate Comma.
-	if utf8.RuneCountInString(s.Comma) != 1 {
-		return meergo.NewInvalidSettingsError("comma must be a single character")
+	// Validate Separator.
+	if utf8.RuneCountInString(s.Separator) != 1 {
+		return meergo.NewInvalidSettingsError("separator must be a single character")
 	}
-	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
-		return meergo.NewInvalidSettingsError("comma cannot be \\r, \\n, or the Unicode replacement character")
+	if c := s.Separator; c == "\n" || c == "\r" || c == "\uFFFD" {
+		return meergo.NewInvalidSettingsError("separator cannot be \\r, \\n, or the Unicode replacement character")
 	}
 	if role == meergo.Source {
 		// Validate FieldsPerRecord.

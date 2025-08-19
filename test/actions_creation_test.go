@@ -79,7 +79,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
 				Format:               "CSV",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
@@ -109,7 +109,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
 				Format:               "CSV",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
@@ -127,7 +127,7 @@ func TestActionsCreation(t *testing.T) {
 				Format:  "CSV",
 				OrderBy: "email",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
@@ -156,7 +156,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeColumn: "timestamp",
 				Format:               "CSV",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
@@ -185,7 +185,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
 				Format:               "CSV",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
@@ -213,7 +213,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityColumn: "- - invalid - -",
 				Format:         "CSV",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
@@ -240,7 +240,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeColumn: "timestamp",
 				Format:               "CSV",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
@@ -255,7 +255,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
 				Format:               "CSV",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
@@ -283,7 +283,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
 				Format:               "CSV",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
-					"Comma":          ",",
+					"Separator":      ",",
 					"HasColumnNames": true,
 				}),
 			},
