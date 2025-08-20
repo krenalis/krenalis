@@ -140,7 +140,12 @@ const ActionTable = () => {
 
 	return (
 		<>
-			<Section title='Table' description='The name of the table of the database' padded={true} annotated={true}>
+			<Section
+				title='Table name'
+				description='An existing table on the database where users will be exported'
+				padded={true}
+				annotated={true}
+			>
 				<div className='action__table'>
 					<SlInput value={action.tableName} onSlInput={onUpdateTableName} />
 					<FeedbackButton
