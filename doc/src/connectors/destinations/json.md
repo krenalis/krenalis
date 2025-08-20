@@ -10,7 +10,8 @@ The JSON data destination allows you to export unified users (i.e., users consol
 
 ### On this page
 
-* [Add a JSON data destination](#add-a-json-data-destination)
+- [Add a JSON data destination](#add-a-json-data-destination)
+- [Exported JSON format](#exported-json-format)
 
 ### Add a JSON data destination
 
@@ -25,3 +26,24 @@ The JSON data destination allows you to export unified users (i.e., users consol
     * **Indent the generated output**: Indicates if the file should contain only ASCII characters. If selected, non-ASCII characters in JSON strings are escaped; for example `"José"` is written as `"Jos\u00e9"`.
     * **Allow non-standard NaN, Infinity, and -Infinity values**: Indicates how to write NaN and ±Infinity values in JSON. Select this option if you want them to be written as non-standard values `NaN`, `Infinity`, and `-Infinity`.
 7. Click **Add** to add the action.
+
+### Exported JSON format
+
+The exported JSON file is a JSON Object containing a single key, `records`, whose value is an Array containing the various Objects representing the exported users. For example:
+
+```json
+{
+    "records": [
+        {
+            "name": "John",
+            "email": "john@example.com",
+            "score": 328.2
+        },
+        {
+            "name": "Paul",
+            "email": "paul@example.com",
+            "score": 240.2
+        }
+    ]
+}
+```
