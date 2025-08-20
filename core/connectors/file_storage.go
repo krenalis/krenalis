@@ -227,7 +227,7 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 	defer r.Close()
 	sheets, err := sheetsFile.Sheets(ctx, r)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	if err = r.Close(); err != nil {
 		return nil, err
