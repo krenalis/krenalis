@@ -10,7 +10,8 @@ The JSON data source allows you to import user data from a JSON file, which you 
 
 ### On this page
 
-* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+- [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+- [Supported JSON formats](#supported-json-formats)
 
 ### Import users into the workspace's data warehouse
 
@@ -23,3 +24,43 @@ The JSON data source allows you to import user data from a JSON file, which you 
 7. In the **Properties** section, enter the properties names to read from the file and indicate if they are required or optional.
 8. Click **Preview** to view a preview of the file.
 9. Click **Confirm** to confirm your selections. You can change them at any time later if needed.
+
+### Supported JSON formats
+
+JSON files containing an Array of Objects are supported, where each Object maps properties to values, as in this example:
+
+```json
+[
+    {
+        "name": "John",
+        "email": "john@example.com",
+        "score": 328.2
+    },
+    {
+        "name": "Paul",
+        "email": "paul@example.com",
+        "score": 240.2
+    }
+]
+```
+
+Or JSON files containing an Object with a single key — regardless of what that key is — whose associated value is an Array of Objects, with the same structure as the previous example, are supported:
+
+```json
+{
+    "some_key_name": [
+        {
+            "name": "John",
+            "email": "john@example.com",
+            "score": 328.2
+        },
+        {
+            "name": "Paul",
+            "email": "paul@example.com",
+            "score": 240.2
+        }
+    ]
+}
+```
+
+Any other JSON format is not supported at this time.
