@@ -5,10 +5,8 @@
  *
  * To run:
  *
- *   1. Install tsx if not already installed:
- *        npm install -D tsx
- *   2. cd into the directory containing this file
- *   3. Run the test:
+ *   1. cd into the directory containing this file
+ *   2. Run the test:
  *        npx tsx filters_parser_test.ts
  */
 
