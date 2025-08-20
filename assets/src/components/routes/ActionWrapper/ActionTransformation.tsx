@@ -949,7 +949,7 @@ const TransformationBox = ({
 						>
 							{isIdentifier && (
 								<div className='action__transformation-property-icon' slot='prefix'>
-									<SlTooltip content='Used as identifier' hoist>
+									<SlTooltip content='Used as identifier in Identity Resolution' hoist>
 										<SlIcon
 											name='person-check'
 											className='action__transformation-property-identifier'
@@ -3169,7 +3169,7 @@ const TransformationProperty = ({
 				<div className='fullscreen-transformation__property-name'>
 					{parentName != null && <span className='fullscreen-transformation__property-nested-icon' />}
 					{isIdentifier && (
-						<SlTooltip content='Used as identifier'>
+						<SlTooltip content='Used as identifier in Identity Resolution'>
 							<SlIcon
 								className='fullscreen-transformation__property-identifier-icon'
 								name='person-check'
