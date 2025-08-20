@@ -22,6 +22,6 @@ The CSV data destination allows you to export unified users (i.e., users consoli
 6. (Optional) Proceed with the other fields:
     * **Compression**: Select a compression format if you want the file to be compressed.
     * **Order users by**: Choose the property you want to use to sort the users in the file.
-    * **Comma**: Character used to separate fields. By default, this is a comma. Specify another character if you want a different delimiter.
+    * **Separator**: Character used to separate fields. By default, this is a comma. Specify another character if different.
     * **Use CRLF**: Terminate lines with `\r\n` instead of `\n`.
 7. Click **Add** to add the action.
