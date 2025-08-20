@@ -3,7 +3,7 @@ PostgreSQL is an advanced open-source relational database system known for its r
 
 ## What can you do with this?
 
-This connector lets you write the unified users from your data warehouse into a MySQL table and keep it synchronized.
+This connector lets you write the unified users from your data warehouse into a PostgreSQL table and keep it synchronized.
 
 ## What does it require?
 
