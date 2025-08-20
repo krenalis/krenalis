@@ -80,6 +80,8 @@ func (exel *Excel) ContentType(ctx context.Context) string {
 	return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
+var errReadFile = errors.New("document is not a valid Excel (.xlsx) file or may be corrupted")
+
 // Read reads the records from r and writes them to records.
 func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
 
@@ -89,9 +91,9 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 	if err != nil {
 		// Don't return a Zip error because it might be misleading.
 		if err.Error() == "zip: not a valid zip file" {
-			err = errors.New("not a valid Excel '.xlsx' file")
+			return errReadFile
 		}
-		return err
+		return fmt.Errorf("%s: %s", errReadFile, err)
 	}
 	defer f.Close()
 	rows, err := f.Rows(sheet)
@@ -195,9 +197,9 @@ func (exel *Excel) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 	if err != nil {
 		// Don't return a Zip error because it might be misleading.
 		if err.Error() == "zip: not a valid zip file" {
-			err = errors.New("not a valid Excel '.xlsx' file")
+			return nil, errReadFile
 		}
-		return nil, err
+		return nil, fmt.Errorf("%s: %s", errReadFile, err)
 	}
 	defer f.Close()
 	return f.GetSheetList(), nil

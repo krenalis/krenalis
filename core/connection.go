@@ -1782,7 +1782,7 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 		case *meergo.InvalidSettingsError:
 			err = errors.Unprocessable(InvalidSettings, "%s", err)
 		case *connectors.UnavailableError:
-			err = errors.Unavailable("cannot read the file: %w", err)
+			err = errors.Unavailable("%w", err)
 		}
 		return nil, err
 	}
