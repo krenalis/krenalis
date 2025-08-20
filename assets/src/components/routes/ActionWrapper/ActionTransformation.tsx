@@ -568,7 +568,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				title='Transformation'
 				description={
 					<>
-						The relation between the event properties and the action type properties
+						The relation between the action's input properties and the resulting output properties
 						{connection.isSource && connection.isEventBased && action.target == 'User' && (
 							<>
 								<br />
