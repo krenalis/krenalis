@@ -383,6 +383,7 @@ func TestActionsCreation(t *testing.T) {
 			action: meergotester.ActionToSet{
 				Name:     "Import user identities from events",
 				Enabled:  true,
+				Filter:   meergotester.DefaultFilterUserFromEvents,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
@@ -399,6 +400,7 @@ func TestActionsCreation(t *testing.T) {
 			action: meergotester.ActionToSet{
 				Name:    "Import user identities from events",
 				Enabled: true,
+				Filter:  meergotester.DefaultFilterUserFromEvents,
 				InSchema: types.Object([]types.Property{
 					{Name: "traits", Type: types.Object([]types.Property{
 						{Name: "email", Type: types.Text()},

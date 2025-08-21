@@ -164,6 +164,24 @@ func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (i
 	return id, nil
 }
 
+// DefaultFilterUserFromEvents is the filter that the admin adds by default to
+// the actions that import users from events.
+var DefaultFilterUserFromEvents = &Filter{
+	Logical: "or",
+	Conditions: []FilterCondition{
+		{
+			Property: "type",
+			Operator: "is",
+			Values:   []string{"identify"},
+		},
+		{
+			Property: "traits",
+			Operator: "is not empty",
+			Values:   nil,
+		},
+	},
+}
+
 func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
 	var id int
 	c.MustCall("POST", "/api/v1/connections", connection, &id)

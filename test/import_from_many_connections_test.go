@@ -147,6 +147,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			javascriptUsersAction = c.CreateAction(javaScript, "User", meergotester.ActionToSet{
 				Name:     "JavaScript",
 				Enabled:  true,
+				Filter:   meergotester.DefaultFilterUserFromEvents,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
