@@ -248,9 +248,16 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	})
 
+	c := http.NewCrossOriginProtection()
+	origin := strings.TrimSuffix(externalURL, "/")
+	err = c.AddTrustedOrigin(origin)
+	if err != nil {
+		return fmt.Errorf("unexpected error calling CrossOriginProtection.AddTrustedOrigin with %q", origin)
+	}
+
 	httpServer := http.Server{
 		Addr:              addr,
-		Handler:           handler,
+		Handler:           c.Handler(handler),
 		ErrorLog:          log.New(&httpLogger{}, "", 0),
 		ReadHeaderTimeout: settings.HTTP.ReadHeaderTimeout,
 		ReadTimeout:       settings.HTTP.ReadTimeout,
