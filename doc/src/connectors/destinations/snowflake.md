@@ -32,7 +32,7 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
 8. (Optional) Click **Test connection** to check if the inserted data is correct.
 9. Click **Add**.
 
-Once the Snowflake data destination is added, the **Actions** page will be displayed, indicating the actions required to update the table.
+Once the Snowflake data destination is added, the **Actions** page will be displayed.
 
 ### Export users to Snowflake
 

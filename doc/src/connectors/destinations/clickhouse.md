@@ -30,7 +30,7 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 8. (Optional) Click **Test connection** to check if the inserted data is correct.
 9. Click **Add**.
 
-Once the ClickHouse data destination is added, the **Actions** page will be displayed, indicating the actions required to update the table.
+Once the ClickHouse data destination is added, the **Actions** page will be displayed.
 
 ### Export users to ClickHouse
 
