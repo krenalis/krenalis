@@ -429,7 +429,7 @@ class Connections {
 			return await call(
 				`${this.apiURL}/connections/${encodeURIComponent(
 					connection,
-				)}/actions/schemas/Events/${encodeURIComponent(eventType)}`,
+				)}/actions/schemas/Events?type=${encodeURIComponent(eventType)}`,
 				http.GET,
 				this.workspaceID,
 			);

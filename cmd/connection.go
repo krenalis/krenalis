@@ -406,7 +406,7 @@ func (connection connection) AppEventSchema(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	schema, err := c.AppEventSchema(r.Context(), r.PathValue("type"))
+	schema, err := c.AppEventSchema(r.Context(), r.URL.Query().Get("type"))
 	if err != nil {
 		return nil, err
 	}
@@ -477,7 +477,7 @@ func (connection connection) target(r *http.Request) (core.Target, string, error
 	case "Event":
 		return core.TargetEvent, "", nil
 	case "":
-		return core.TargetEvent, r.PathValue("type"), nil
+		return core.TargetEvent, r.URL.Query().Get("type"), nil
 	}
 	return 0, "", errors.NotFound("")
 }

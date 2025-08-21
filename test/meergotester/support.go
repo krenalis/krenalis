@@ -91,7 +91,7 @@ func (c *Meergo) Action(action int) Action {
 func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) map[string]any {
 	path := fmt.Sprintf("/api/v1/connections/%d/actions/schemas/%s", conn, target)
 	if eventType != "" {
-		path += "/" + eventType
+		path += "?type=" + url.QueryEscape(eventType)
 	}
 	var schemas map[string]any
 	c.MustCall("GET", path, nil, &schemas)

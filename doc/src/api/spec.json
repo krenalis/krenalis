@@ -8742,7 +8742,7 @@
                     "name": "Get event schema",
                     "description": "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
                     "method": "GET",
-                    "url": "/v1/connections/:id/schemas/event/:type",
+                    "url": "/v1/connections/:id/schemas/event",
                     "parameters": [
                         {
                             "name": "id",

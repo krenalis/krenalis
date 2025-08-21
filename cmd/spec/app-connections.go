@@ -165,7 +165,7 @@ func init() {
 				Name:        "Get event schema",
 				Description: "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
 				Method:      GET,
-				URL:         "/v1/connections/:id/schemas/event/:type",
+				URL:         "/v1/connections/:id/schemas/event",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
