@@ -14,6 +14,8 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -158,7 +160,7 @@ func settingsFromEnv() (*Settings, error) {
 			return nil, fmt.Errorf("invalid duration value specified for MEERGO_TERMINATION_DELAY: %s", err)
 		}
 	}
-	settings.JavaScriptSDKURL = os.Getenv("MEERGO_JAVASCRIPT_SDK_URL")
+	settings.JavaScriptSDKURL, err = parseURL("MEERGO_JAVASCRIPT_SDK_URL", 0)
 
 	// Telemetry level.
 	switch os.Getenv("MEERGO_TELEMETRY_LEVEL") {
@@ -189,8 +191,14 @@ func settingsFromEnv() (*Settings, error) {
 	}
 	settings.HTTP.TLS.CertFile = os.Getenv("MEERGO_HTTP_TLS_CERT_FILE")
 	settings.HTTP.TLS.KeyFile = os.Getenv("MEERGO_HTTP_TLS_KEY_FILE")
-	settings.HTTP.ExternalURL = os.Getenv("MEERGO_HTTP_EXTERNAL_URL")
-	settings.HTTP.EventURL = os.Getenv("MEERGO_HTTP_EVENT_URL")
+	settings.HTTP.ExternalURL, err = parseURL("MEERGO_HTTP_EXTERNAL_URL", noPath|noQuery)
+	if err != nil {
+		return nil, err
+	}
+	settings.HTTP.EventURL, err = parseURL("MEERGO_HTTP_EVENT_URL", noQuery)
+	if err != nil {
+		return nil, err
+	}
 	if settings.HTTP.ReadHeaderTimeout, err = parseHTTPDuration("MEERGO_HTTP_READ_HEADER_TIMEOUT", 2*time.Second); err != nil {
 		return nil, err
 	}
@@ -335,4 +343,89 @@ func parseHTTPDuration(key string, defaultValue time.Duration) (time.Duration, e
 		return 0, fmt.Errorf("invalid value specified for %s: it must be greater than 0", key)
 	}
 	return d, nil
+}
+
+type errInvalidURL struct {
+	key string
+	msg string
+}
+
+func (err errInvalidURL) Error() string {
+	return fmt.Sprintf("invalid URL specified for %s: %s", err.key, err.msg)
+}
+
+type urlValidationFlag int
+
+const (
+	noPath urlValidationFlag = 1 << iota
+	noQuery
+)
+
+func hasURLValidationFlag(f, flag urlValidationFlag) bool {
+	return f&flag != 0
+}
+
+// parseURL parses the value of an configuration setting into a normalized URL.
+func parseURL(key string, flags urlValidationFlag) (string, error) {
+	s := os.Getenv(key)
+	if s == "" {
+		return "", nil
+	}
+	if s[0] == ' ' {
+		return "", errInvalidURL{key, `it starts with a space`}
+	}
+	if s[len(s)-1] == ' ' {
+		return "", errInvalidURL{key, `it ends with a space`}
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return "", errInvalidURL{key, err.Error()}
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", errInvalidURL{key, `scheme must be "http" or "https"`}
+	}
+	if u.User != nil {
+		return "", errInvalidURL{key, "user and password cannot be specified"}
+	}
+	if u.Host == "" {
+		return "", errInvalidURL{key, "host must be specified"}
+	}
+	port := u.Port()
+	if port != "" {
+		if p, _ := strconv.Atoi(port); p < 1 || p > 65535 {
+			return "", errInvalidURL{key, "port must be in range [1,65535]"}
+		}
+	}
+	if hasURLValidationFlag(flags, noPath) {
+		if u.Path != "" && u.Path != "/" {
+			return "", errInvalidURL{key, `path must be "/"`}
+		}
+	}
+	if hasURLValidationFlag(flags, noQuery) {
+		if u.RawQuery != "" || u.ForceQuery {
+			return "", errInvalidURL{key, "query cannot be specified"}
+		}
+	}
+	if strings.IndexByte(s, '#') != -1 {
+		return "", errInvalidURL{key, "fragment cannot be specified"}
+	}
+	var normalized bool
+	if port != "" && port[0] == '0' {
+		port = strings.TrimLeft(port, "0")
+		u.Host = net.JoinHostPort(u.Hostname(), port)
+		normalized = true
+	}
+	if u.Scheme == "http" && port == "80" || u.Scheme == "https" && port == "443" {
+		i := strings.LastIndex(u.Host, ":")
+		u.Host = u.Host[:i]
+		normalized = true
+	}
+	if u.Path == "" {
+		u.Path = "/"
+		normalized = true
+	}
+	if normalized {
+		s = u.String()
+	}
+	return s, nil
 }

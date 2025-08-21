@@ -17,6 +17,7 @@ import (
 	"log"
 	"log/slog"
 	"maps"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -101,7 +102,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	// Determine the address, the external URL, the JavaScript SDK URL and the
 	// event URL.
-	addr := settings.HTTP.Host + ":" + strconv.Itoa(settings.HTTP.Port)
+	addr := net.JoinHostPort(settings.HTTP.Host, strconv.Itoa(settings.HTTP.Port))
 	if addr == ":" {
 		addr = "127.0.0.1:9090"
 	}
@@ -111,7 +112,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		if settings.HTTP.TLS.Enabled {
 			protocol = "https"
 		}
-		externalURL = fmt.Sprintf("%s://%s", protocol, addr)
+		externalURL = fmt.Sprintf("%s://%s/", protocol, addr)
 	}
 
 	config := core.Config{
@@ -159,7 +160,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	eventURL := settings.HTTP.EventURL
 	if eventURL == "" {
-		eventURL = strings.TrimRight(externalURL, "/") + "/api/v1/events"
+		eventURL = externalURL + "api/v1/events"
 	}
 
 	sentryErrorTunnel := newSentryErrorTunnel()
@@ -177,7 +178,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	defer assets.Close()
 
 	// Instantiate a new MCP (Model Context Protocol) server.
-	mcpServer := mcp.NewMCPServer(apisServer.core)
+	mcpServer := mcp.NewMCPServer(core)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
