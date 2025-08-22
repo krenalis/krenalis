@@ -19,9 +19,7 @@ import {
 	flattenSchema,
 	getTransformationFunctionParameterName,
 	isRecursiveType,
-	parseMapString,
 	propertyTypesAreEqual,
-	stringifyMapPairs,
 	transformInActionToSet,
 } from '../../../lib/core/action';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
@@ -74,6 +72,7 @@ import JSONbig from 'json-bigint';
 import actionContext from '../../../context/ActionContext';
 import TransformedConnection from '../../../lib/core/connection';
 import appContext from '../../../context/AppContext';
+import { mapExpressionArguments, buildMapExpression } from '../../../utils/mapExpression';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -2397,13 +2396,16 @@ const MapMapping = ({
 		// into corresponding pairs. Also reload the pairs when the
 		// testing mode is open/closed to trigger the re-render of the
 		// component and synchronize the changes between the two modes.
-		const isMapExpression = property.value.startsWith('map(') && property.value !== 'map()';
+		const isMapExpression = /^\s*map\s*\(/.test(property.value);
 		if (isMapExpression) {
-			const p = parseMapString(property.value);
-			setPairs(p);
-			// Validate expressions when the action is opened.
-			validatePairExpressions(p);
-			setReloadLogicalErrors(true);
+			const p = mapExpressionArguments(property.value);
+			if (p.size > 0) {
+				const pairs = Array.from(p);
+				setPairs(pairs);
+				// Validate expressions when the action is opened.
+				validatePairExpressions(pairs);
+				setReloadLogicalErrors(true);
+			}
 		}
 	}, [isFullscreenTransformationOpen]);
 
@@ -2552,7 +2554,8 @@ const MapMapping = ({
 			...pairs.slice(index + 1, pairs.length),
 		];
 		setPairs(newPairs);
-		let value = stringifyMapPairs(newPairs);
+
+		let value = buildMapExpression(new Map(newPairs));
 		if (value === 'map()') {
 			// The user has emptied all inputs so we must empty the
 			// value of the mapping without automatically setting the
@@ -2570,7 +2573,7 @@ const MapMapping = ({
 			...pairs.slice(index + 1, pairs.length),
 		];
 		setPairs(newPairs);
-		let value = stringifyMapPairs(newPairs);
+		let value = buildMapExpression(new Map(newPairs));
 		updateMapping(propertyPath, value);
 		setReloadLogicalErrors(true);
 	};
@@ -2578,9 +2581,9 @@ const MapMapping = ({
 	const onAddPair = (index: number) => {
 		let newPairs = [...pairs.slice(0, index + 1), ['', ''] as ['', ''], ...pairs.slice(index + 1, pairs.length)];
 		setPairs(newPairs);
-		let value = stringifyMapPairs(newPairs);
+		let value = buildMapExpression(new Map(newPairs));
 		if (value === 'map()') {
-			// Avoid automatically setting the "map()"" value in the
+			// Avoid automatically setting the "map()" value in the
 			// action if all the inputs are empty.
 			value = '';
 		}
@@ -2633,7 +2636,7 @@ const MapMapping = ({
 		}
 		let newPairs = [...pairs.slice(0, index), ...pairs.slice(index + 1, pairs.length)];
 		setPairs(newPairs);
-		let value = stringifyMapPairs(newPairs);
+		let value = buildMapExpression(new Map(newPairs));
 		if (value === 'map()') {
 			const isAlreadyEmpty = property.value === '';
 			if (isAlreadyEmpty) {

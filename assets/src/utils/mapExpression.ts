@@ -232,4 +232,130 @@ function isSpace(c: string): boolean {
 	return c === ' ' || c === '\t' || c === '\n' || c === '\r';
 }
 
-export { parseMapExpression, ExpressionFragment };
+// splitMapKey splits a key of a 'map' function, in a valid map expression, from
+// the rest of the expression. For example, given `'a', 5, 'b', false`, it
+// returns ["a", " 5, 'b', false"].
+function splitMapKey(s: string): [string, string] {
+	let key = '';
+	let quote: string | null = null;
+	for (let i = 0; ; i++) {
+		const c = s[i];
+		if (quote == null) {
+			if (c === '"' || c === "'") {
+				quote = c;
+				continue;
+			}
+			if (c === ',') {
+				return [key, s.slice(i + 1)];
+			}
+			continue;
+		}
+		if (c === quote) {
+			quote = null;
+			continue;
+		}
+		if (c === '\\') {
+			i++;
+		}
+		key += s[i];
+	}
+}
+
+// splitMapValue splits a value of a 'map' function, in a valid map expression,
+// from the rest of the expression. For example: given ` 5, 'b', false`, it
+// returns [" 5", " 'b', false"], and given ` false`, it returns [" false", ""].
+function splitMapValue(s: string): [string, string] {
+	let depth = 0;
+	let quote: string | null = null;
+	for (let i = 0; i < s.length; i++) {
+		const c = s[i];
+		if (quote) {
+			if (c === '\\') {
+				i++;
+			} else if (c === quote) {
+				quote = null;
+			}
+			continue;
+		}
+		if (c === '"' || c === "'") {
+			quote = c;
+			continue;
+		}
+		if (c === '(') {
+			depth++;
+			continue;
+		}
+		if (c === ')') {
+			depth--;
+			continue;
+		}
+		if (c === ',' && depth === 0) {
+			return [s.slice(0, i), s.slice(i + 1)];
+		}
+	}
+	return [s, ''];
+}
+
+// mapExpressionArguments returns an array of arguments if expr is a sole
+// call to map(...). Even indexes are keys, odd indexes are the corresponding
+// values. It returns null when the input does not match.
+const mapExpressionArguments = (expr: string): Map<string, string> | null => {
+	const m = expr.trim().match(/^map\s*\(([\s\S]*)\)$/);
+	if (!m) {
+		return null;
+	}
+	let s = m[1].trim();
+	if (s === '') {
+		return new Map();
+	}
+	let args = new Map();
+	let k: string, v: string;
+	while (s != '') {
+		[k, s] = splitMapKey(s);
+		[v, s] = splitMapValue(s);
+		args.set(k, v.trim());
+	}
+	return args;
+};
+
+// buildMapExpression builds a map(...) string from an argument list.
+const buildMapExpression = (args: Map<string, string>): string => {
+	const serialized = Array.from(args.entries()).map(([k, v]) => `${JSON.stringify(k)},${JSON.stringify(v)}`);
+	return `map(${serialized.join(',')})`;
+};
+
+// Simple self-contained tests using console.assert.
+// @ts-ignore: TS6133
+function runTests(): void {
+	const mapsAreEqual = (map1: Map<string, string>, map2: Map<string, string>) => {
+		if (map1.size !== map2.size) {
+			return false;
+		}
+		const entries1 = [...map1];
+		const entries2 = [...map2];
+		return entries1.every(([k, v], i) => {
+			const [k2, v2] = entries2[i];
+			return k === k2 && v === v2;
+		});
+	};
+	console.assert(mapExpressionArguments('foo') === null);
+	console.assert(mapExpressionArguments('map() "boo"') === null);
+	console.assert(mapsAreEqual(mapExpressionArguments('map()'), new Map()));
+	console.assert(
+		mapsAreEqual(
+			mapExpressionArguments('map("a", 5, "b", false)'),
+			new Map([
+				['a', '5'],
+				['b', 'false'],
+			]),
+		),
+	);
+	console.assert(mapsAreEqual(mapExpressionArguments("map('c', \"'s'\")"), new Map([['c', '"\'s\'"']])));
+	const m = new Map<string, string>([
+		['k1', 'foo'],
+		['k2', "if(a,b,c) 'boo'"],
+	]);
+	console.assert(buildMapExpression(m) === 'map("k1","foo","k2","if(a,b,c) \'boo\'")');
+}
+
+export { parseMapExpression, ExpressionFragment, mapExpressionArguments, buildMapExpression };

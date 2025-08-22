@@ -8,7 +8,7 @@ import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
 import { ComboboxItem } from './Combobox.types';
-import { ExpressionFragment, parseMapExpression } from '../../../utils/parseMapExpression';
+import { ExpressionFragment, parseMapExpression } from '../../../utils/mapExpression';
 import { autocompleteExpression } from './Combobox.helpers';
 import { MEERGO_FUNCTIONS, MeergoFunction } from '../../../constants/function';
 import appContext from '../../../context/AppContext';

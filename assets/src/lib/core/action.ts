@@ -1439,33 +1439,6 @@ function sortPropertiesByOriginalSchema(schema: ObjectType, original: ObjectType
 	};
 }
 
-function parseMapString(mapString: string) {
-	const params = mapString
-		.trim()
-		.replace(/^map\s*\(/, '')
-		.replace(/\)$/, '');
-
-	let paramList = params.split(', ');
-	const pairs = [];
-	for (let i = 0; i < paramList.length; i += 2) {
-		pairs.push([paramList[i].trim().replace(/^"|"$/g, ''), paramList[i + 1].trim()]);
-	}
-	return pairs;
-}
-
-function stringifyMapPairs(pairs: Array<[string, string]>) {
-	const format = (v: string | number) => (typeof v === 'string' ? `"${v}"` : String(v));
-	const values: string[] = [];
-	for (const [key, value] of pairs) {
-		if (key === '' && value === '') {
-			// Skip empty pairs.
-			continue;
-		}
-		values.push(format(key), value);
-	}
-	return `map(${values.join(', ')})`;
-}
-
 interface hierarchicalPaths {
 	ancestors: string[];
 	descendants: string[];
@@ -1678,8 +1651,6 @@ export {
 	getTransformationFunctionParameterName,
 	validateMatching,
 	propertyTypesAreEqual,
-	parseMapString,
-	stringifyMapPairs,
 };
 
 export type {
