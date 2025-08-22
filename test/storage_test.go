@@ -42,14 +42,14 @@ func TestStorage(t *testing.T) {
 	}
 	storage := c.CreateSourceFilesystem(storageDir)
 
-	// Test the "/files/{path}/sheets" endpoint.
+	// Test the "/files/sheets" endpoint.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}
 	gotSheets := c.Sheets(storage, "file_with_3_sheets.xlsx", "Excel", meergotester.NoCompression, []byte("{}"))
 	if !reflect.DeepEqual(expectedSheets, gotSheets) {
 		t.Fatalf("expected sheets %#v, got %#v", expectedSheets, gotSheets)
 	}
 
-	// Test the "/files/{path}/absolute" endpoint.
+	// Test the "/files/absolute" endpoint.
 	expectedPathSuffix := "/testdata/storage/file_with_3_sheets.xlsx"
 	if runtime.GOOS == "windows" {
 		expectedPathSuffix = "\\testdata\\storage\\file_with_3_sheets.xlsx"
@@ -59,7 +59,7 @@ func TestStorage(t *testing.T) {
 		t.Fatalf("expected absolute path to end with suffix %q, but it the absolute path is %q", expectedPathSuffix, gotPath)
 	}
 
-	// Test the "/files/{path}" endpoint.
+	// Test the "/files" endpoint.
 	excelSettings := meergotester.JSONEncodeSettings(map[string]any{
 		"HasColumnNames": true,
 	})

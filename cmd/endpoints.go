@@ -47,13 +47,13 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /connections/{id}/actions/schemas/Events":   connection.ActionSchemas, /* only Admin */
 		"GET    /connections/{id}/actions/schemas/{target}": connection.ActionSchemas, /* only Admin */
 		"GET    /connections/{id}/event-write-keys":         connection.EventWriteKeys,
-		"GET    /connections/{id}/files/{path}":             connection.File,
-		"GET    /connections/{id}/files/{path}/absolute":    connection.AbsolutePath,
-		"GET    /connections/{id}/files/{path}/sheets":      connection.Sheets,
+		"GET    /connections/{id}/files":                    connection.File,
+		"GET    /connections/{id}/files/absolute":           connection.AbsolutePath,
+		"GET    /connections/{id}/files/sheets":             connection.Sheets,
 		"GET    /connections/{id}/identities":               connection.Identities,
 		"GET    /connections/{id}/schemas/event":            connection.AppEventSchema,
 		"GET    /connections/{id}/schemas/user":             connection.AppUserSchemas,
-		"GET    /connections/{id}/tables/{name}":            connection.TableSchema,
+		"GET    /connections/{id}/tables":                   connection.TableSchema,
 		"GET    /connections/{id}/ui":                       connection.ServeUI, /* only Admin */
 		"GET    /connections/{id}/users":                    connection.AppUsers,
 		"GET    /connectors":                                api.Connectors,

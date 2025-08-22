@@ -326,6 +326,7 @@ class Connections {
 		limit: number,
 	): Promise<RecordsResponse> => {
 		let params = [];
+		params.push(['path', path]);
 		params.push(['format', format]);
 		if (sheet !== null) {
 			params.push(['sheet', sheet]);
@@ -336,8 +337,7 @@ class Connections {
 		}
 		params.push(['limit', limit]);
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/${encodeURIComponent(path)}` +
-				queryString(params),
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files` + queryString(params),
 			http.GET,
 			this.workspaceID,
 		);
@@ -351,14 +351,14 @@ class Connections {
 		formatSettings: ConnectorSettings | null,
 	): Promise<SheetsResponse> => {
 		let params = [];
+		params.push(['path', path]);
 		params.push(['format', format]);
 		params.push(['compression', compression]);
 		if (formatSettings != null) {
 			params.push(['formatSettings', JSON.stringify(formatSettings)]);
 		}
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/${encodeURIComponent(path)}/sheets` +
-				queryString(params),
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/sheets` + queryString(params),
 			http.GET,
 			this.workspaceID,
 		);
@@ -520,9 +520,7 @@ class Connections {
 
 	absolutePath = async (storageConnection: number, path: string): Promise<AbsolutePathResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/files/${encodeURIComponent(
-				path,
-			)}/absolute`,
+			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/files/absolute?path=${encodeURIComponent(path)}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -530,7 +528,7 @@ class Connections {
 
 	tableSchema = async (connection: number, tableName: string): Promise<TableSchemaResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/tables/${encodeURIComponent(tableName)}`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/tables?name=${encodeURIComponent(tableName)}`,
 			http.GET,
 			this.workspaceID,
 		);

@@ -82,7 +82,7 @@ func (connection connection) AbsolutePath(_ http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	path, err := c.AbsolutePath(r.Context(), r.PathValue("path"))
+	path, err := c.AbsolutePath(r.Context(), r.URL.Query().Get("path"))
 	if err != nil {
 		return nil, err
 	}
@@ -172,10 +172,10 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
-	path := r.PathValue("path")
 
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
+	path := q.Get("path")
 	format := q.Get("format")
 	sheet := q.Get("sheet")
 	var compression core.Compression
@@ -315,10 +315,10 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 	if err != nil {
 		return nil, err
 	}
-	path := r.PathValue("path")
 
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
+	path := q.Get("path")
 	format := q.Get("format")
 	var compression core.Compression
 	switch c := q.Get("compression"); c {
@@ -357,7 +357,7 @@ func (connection connection) TableSchema(_ http.ResponseWriter, r *http.Request)
 	if err != nil {
 		return nil, err
 	}
-	schema, issues, err := c.TableSchema(r.Context(), r.PathValue("name"))
+	schema, issues, err := c.TableSchema(r.Context(), r.URL.Query().Get("name"))
 	if err != nil {
 		return nil, err
 	}

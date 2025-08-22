@@ -10518,7 +10518,7 @@
                     "name": "Retrieve table schema",
                     "description": "Returns the schema of a specified database table of a destination database connection.",
                     "method": "GET",
-                    "url": "/v1/connections/:id/tables/:name",
+                    "url": "/v1/connections/:id/tables",
                     "parameters": [
                         {
                             "name": "id",
@@ -14333,7 +14333,7 @@
                     "name": "Retrieve file",
                     "description": "Returns schema and first rows of a file.",
                     "method": "GET",
-                    "url": "/v1/connections/:id/files/:path",
+                    "url": "/v1/connections/:id/files",
                     "parameters": [
                         {
                             "name": "id",
@@ -14476,7 +14476,7 @@
                     "name": "Read sheets",
                     "description": "Returns the list of sheets in a file, applicable to file formats that support sheets.",
                     "method": "GET",
-                    "url": "/v1/connections/:id/files/:path/sheets",
+                    "url": "/v1/connections/:id/files/sheets",
                     "parameters": [
                         {
                             "name": "id",
@@ -14585,7 +14585,7 @@
                     "name": "Get absolute path",
                     "description": "Returns the file path relative to the root of the file storage.\n\nWhile this absolute path isn't used directly by other API endpoints, it can help confirm that the relative path points to the correct file.",
                     "method": "GET",
-                    "url": "/v1/connections/:id/files/:path/absolute",
+                    "url": "/v1/connections/:id/files/absolute",
                     "parameters": [
                         {
                             "name": "id",

@@ -70,7 +70,10 @@ func (c *Meergo) AbsolutePath(storage int, path string) string {
 	var response struct {
 		Path string `json:"path"`
 	}
-	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/%s/absolute", storage, url.PathEscape(path))
+	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/absolute", storage)
+	if path != "" {
+		endpointPath += "?path=" + url.QueryEscape(path)
+	}
 	c.MustCall("GET", endpointPath, nil, &response)
 	return response.Path
 }
@@ -362,6 +365,7 @@ func (c *Meergo) Executions() []Execution {
 
 func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
 	queryString := url.Values{
+		"path":           []string{path},
 		"format":         []string{format},
 		"sheet":          []string{sheet},
 		"compression":    []string{string(compression)},
@@ -372,7 +376,7 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 		Records []map[string]any `json:"records"`
 		Schema  types.Type       `json:"schema"`
 	}
-	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/%s", storage, url.PathEscape(path))
+	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files", storage)
 	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, &response)
 	return response.Records, response.Schema
 }
@@ -501,6 +505,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 
 func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.RawMessage) []string {
 	queryString := url.Values{
+		"path":           []string{string(path)},
 		"format":         []string{format},
 		"compression":    []string{string(compression)},
 		"formatSettings": []string{string(settings)},
@@ -508,7 +513,7 @@ func (c *Meergo) Sheets(storage int, path string, format string, compression Com
 	var response struct {
 		Sheets []string `json:"sheets"`
 	}
-	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/%s/sheets", storage, url.PathEscape(path))
+	endpointPath := fmt.Sprintf("/api/v1/connections/%d/files/sheets", storage)
 	c.MustCall("GET", endpointPath+"?"+queryString.Encode(), nil, &response)
 	return response.Sheets
 }
@@ -518,7 +523,10 @@ func (c *Meergo) TableSchema(conn int, table string) (types.Type, []string) {
 		Schema types.Type `json:"schema"`
 		Issues []string   `json:"issues"`
 	}
-	path := fmt.Sprintf("/api/v1/connections/%d/tables/%s", conn, url.PathEscape(table))
+	path := fmt.Sprintf("/api/v1/connections/%d/tables", conn)
+	if table != "" {
+		path += "?name=" + url.QueryEscape(table)
+	}
 	c.MustCall("GET", path, nil, &response)
 	return response.Schema, response.Issues
 }

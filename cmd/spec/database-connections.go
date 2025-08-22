@@ -80,7 +80,7 @@ func init() {
 				Name:        "Retrieve table schema",
 				Description: "Returns the schema of a specified database table of a destination database connection.",
 				Method:      GET,
-				URL:         "/v1/connections/:id/tables/:name",
+				URL:         "/v1/connections/:id/tables",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

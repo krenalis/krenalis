@@ -62,7 +62,7 @@ func init() {
 				Name:        "Retrieve file",
 				Description: "Returns schema and first rows of a file.",
 				Method:      GET,
-				URL:         "/v1/connections/:id/files/:path",
+				URL:         "/v1/connections/:id/files",
 				Parameters: []types.Property{
 					idProperty,
 					pathParameter,
@@ -119,7 +119,7 @@ func init() {
 				Name:        "Read sheets",
 				Description: "Returns the list of sheets in a file, applicable to file formats that support sheets.",
 				Method:      GET,
-				URL:         "/v1/connections/:id/files/:path/sheets",
+				URL:         "/v1/connections/:id/files/sheets",
 				Parameters: []types.Property{
 					idProperty,
 					pathParameter,
@@ -150,7 +150,7 @@ func init() {
 				Description: "Returns the file path relative to the root of the file storage.\n\n" +
 					"While this absolute path isn't used directly by other API endpoints, it can help confirm that the relative path points to the correct file.",
 				Method: GET,
-				URL:    "/v1/connections/:id/files/:path/absolute",
+				URL:    "/v1/connections/:id/files/absolute",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
