@@ -161,6 +161,9 @@ func settingsFromEnv() (*Settings, error) {
 		}
 	}
 	settings.JavaScriptSDKURL, err = parseURL("MEERGO_JAVASCRIPT_SDK_URL", 0)
+	if err != nil {
+		return nil, err
+	}
 
 	// Telemetry level.
 	switch os.Getenv("MEERGO_TELEMETRY_LEVEL") {
