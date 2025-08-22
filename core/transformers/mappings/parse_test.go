@@ -62,6 +62,7 @@ func Test_parseExpression(t *testing.T) {
 		{`coalesce( coalesce ( x , 5 ) )`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
 			{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`x`}, decorators: []decorators{0}}, start: 21, end: 23}}, {{value: 5, typ: types.Int(32), start: 25, end: 27}}}, start: 10, end: 28}},
 		}, end: 30}}, ``, nil},
+		{`  coalesce ( a ) `, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`a`}, decorators: []decorators{0}}, start: 13, end: 15}}}, end: 16}}, ``, nil},
 		{`coalesce( , )`, nil, ``, errors.New("expected argument, got ','")},
 		{`coalesce(a, )`, nil, ``, errors.New("expected argument, got ')'")},
 		{`coalesce( @`, nil, ``, errors.New("expected argument, got '@'")},

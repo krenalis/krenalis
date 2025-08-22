@@ -326,7 +326,9 @@ Expression:
 		}
 		p.start = start
 		p.end = end - len(src)
-		expr = append(expr, p)
+		if p.typ.Kind() != types.InvalidKind || p.value != nil || p.path.elements != nil {
+			expr = append(expr, p)
+		}
 		start = p.end
 	}
 	return expr, src, nil
