@@ -46,7 +46,10 @@ func (c *Meergo) AlterUserSchema(schema types.Type, primarySources map[string]in
 		if alterError != nil {
 			c.t.Fatalf("user schema altering failed: %s", *alterError)
 		}
-		if startTime.After(ts) && endTime != nil {
+		// On Windows, it may happen that 'startTime' is exactly equal to 'ts'
+		// because the precision of timestamps is lower: for this reason, it is
+		// necessary to check that 'startTime ≥ ts', not just that it is after.
+		if (startTime.Equal(ts) || startTime.After(ts)) && endTime != nil {
 			break
 		}
 	}
@@ -442,7 +445,10 @@ func (c *Meergo) RunIdentityResolution() {
 	for {
 		time.Sleep(50 * time.Millisecond)
 		startTime, endTime := c.LatestIdentityResolution()
-		if startTime.After(ts) && endTime != nil {
+		// On Windows, it may happen that 'startTime' is exactly equal to 'ts'
+		// because the precision of timestamps is lower: for this reason, it is
+		// necessary to check that 'startTime ≥ ts', not just that it is after.
+		if (startTime.Equal(ts) || startTime.After(ts)) && endTime != nil {
 			break
 		}
 	}
