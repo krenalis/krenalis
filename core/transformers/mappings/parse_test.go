@@ -66,6 +66,8 @@ func Test_parseExpression(t *testing.T) {
 		{`coalesce( , )`, nil, ``, errors.New("expected argument, got ','")},
 		{`coalesce(a, )`, nil, ``, errors.New("expected argument, got ')'")},
 		{`coalesce( @`, nil, ``, errors.New("expected argument, got '@'")},
+		{``, nil, ``, nil},
+		{" \t\n \t", nil, ``, nil},
 	}
 
 	for _, test := range tests {

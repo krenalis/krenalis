@@ -38,9 +38,6 @@ type Expression struct {
 //
 // If schema is invalid, the expression will be compiled without path resolution.
 func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) {
-	if expr == "" {
-		return nil, nil, errors.New("expression is empty")
-	}
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return nil, nil, errors.New("schema is not an object")
 	}
@@ -53,6 +50,9 @@ func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) 
 	}
 	if src != "" {
 		return nil, nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
+	}
+	if parts == nil {
+		return nil, nil, errors.New("expression is empty")
 	}
 	props := map[string]struct{}{}
 	err = typeCheck(parts, schema, dt, true, props)

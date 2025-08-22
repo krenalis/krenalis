@@ -60,6 +60,8 @@ func Test_Compile(t *testing.T) {
 		convertErr error
 		expected   any
 	}{
+		{expr: "", dt: types.Int(32), compileErr: errors.New("expression is empty")},
+		{expr: " \n \t\t ", dt: types.Text(), compileErr: errors.New("expression is empty")},
 		{expr: "null", dt: types.Int(32), nullable: true, expected: nil},
 		{expr: "null", dt: types.Int(32), nullable: false, expected: nil},
 		{expr: "engine.afterburner", dt: types.Text(), nullable: true, expected: nil},
