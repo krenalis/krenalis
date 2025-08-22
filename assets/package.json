@@ -23,7 +23,7 @@
   "scripts": {
     "make-vendor": "go run ./make-vendor",
     "minify-snippet": "node minify-snippet.js",
-    "typecheck": "npx -p typescript@5.2.2 tsc",
+    "typecheck": "npx -p typescript@5.9.2 tsc",
     "prettier": "npx prettier@3.6.2 --log-level warn --write \"src/**/*\" minify-snippet.js"
   },
   "eslintConfig": {
