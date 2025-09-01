@@ -460,6 +460,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								isExpression={false}
 								items={identityColumnList}
 								label='Identity'
+								controlled={true}
 								required
 								caret={true}
 								clearable={action.identityColumn?.length > 0}

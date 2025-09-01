@@ -57,6 +57,9 @@ const getIdentityColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	const flatSchema = flattenSchema(schema);
 	const filteredSchema: TransformedMapping = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
+		if (v.readOptional) {
+			continue;
+		}
 		const typ = flatSchema[k].type;
 		if (typ === 'int' || typ === 'uint' || typ === 'uuid' || typ === 'json' || typ === 'text') {
 			filteredSchema[k] = v;

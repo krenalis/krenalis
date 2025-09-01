@@ -32,6 +32,7 @@ import { flattenSchema } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
 import {
 	filterOrderingPropertySchema,
+	getIdentityColumnComboboxItems,
 	getOrderingPropertyPathComboboxItems,
 } from '../../helpers/getSchemaComboboxItems';
 import { Combobox } from '../../base/Combobox/Combobox';
@@ -631,8 +632,10 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			handleError('Please enter a sheet');
 			return;
 		}
+
 		setIssues([]);
 		fileConfirmButtonRef.current!.load();
+
 		let res: RecordsResponse;
 		try {
 			res = await records(0, true);
@@ -640,7 +643,10 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			fileConfirmButtonRef.current!.stop();
 			return;
 		}
-		if (res.schema == null) {
+
+		const schema = res.schema;
+
+		if (schema == null) {
 			fileConfirmButtonRef.current.error("This file doesn't have any compatible column");
 			setTimeout(() => {
 				setIssues(res.issues);
@@ -650,10 +656,20 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			}, ERROR_ANIMATION_DURATION);
 		} else {
 			fileConfirmButtonRef.current!.confirm();
+			if (action.identityColumn != null) {
+				const compatibleColumns = getIdentityColumnComboboxItems(schema);
+				const isStillCompatible = compatibleColumns.findIndex((c) => c.term === action.identityColumn) !== -1;
+				if (!isStillCompatible) {
+					// Empty the identity column.
+					const a = structuredClone(action);
+					a.identityColumn = '';
+					setAction(a);
+				}
+			}
 			setTimeout(() => {
 				setIssues(res.issues);
 				const actionTyp = { ...actionType };
-				actionTyp.inputSchema = res.schema;
+				actionTyp.inputSchema = schema;
 				setActionType(actionTyp);
 				setIsFormatChanged(false);
 				setTimeout(() => {
