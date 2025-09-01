@@ -187,7 +187,7 @@ func (api api) SentryTelemetryLevel(w http.ResponseWriter, r *http.Request) (any
 	return string(api.sentryTelemetry.level), nil
 }
 
-// SkipMemberEmailVerification returns wheter to skip the verification
+// SkipMemberEmailVerification returns whether to skip the verification
 // of the email during the creation of a new member.
 func (api api) SkipMemberEmailVerification(w http.ResponseWriter, r *http.Request) (any, error) {
 	return api.skipMemberEmailVerification, nil
