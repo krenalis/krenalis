@@ -29,7 +29,8 @@ func TestActionsCreation(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	// Create some connections that will be used by the actions.

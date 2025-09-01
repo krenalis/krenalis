@@ -21,7 +21,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	// Load some users in the data warehouse.

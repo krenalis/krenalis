@@ -26,7 +26,9 @@ func TestParquetTestApacheFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t, meergotester.DoNotPopulateUserSchema)
+	c := meergotester.NewMeergoInstance(t)
+	c.PopulateUserSchema(false)
+	c.Start()
 	defer c.Stop()
 
 	tests := []struct {

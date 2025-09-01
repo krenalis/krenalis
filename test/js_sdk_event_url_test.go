@@ -19,7 +19,8 @@ func TestJavaScriptSDKEventURL(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	const expectedJavaScriptSDKURL = "https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js"

@@ -21,7 +21,8 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	dummy := c.CreateDummy("Dummy (source)", meergotester.Source)

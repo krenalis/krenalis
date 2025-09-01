@@ -19,7 +19,8 @@ func TestRepair(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	// This test verifies that the Repair operation can be run multiple times on

@@ -19,7 +19,8 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	// Test the default value for ResolveIdentitiesOnBatchImport, when a

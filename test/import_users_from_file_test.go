@@ -22,7 +22,8 @@ func TestImportUsersFromFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	// Determine the storage directory and assert that such directory exists.

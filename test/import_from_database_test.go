@@ -15,12 +15,13 @@ import (
 )
 
 func TestImportFromDatabase(t *testing.T) {
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
-
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	pgSQL := c.CreateSourcePostgreSQL()

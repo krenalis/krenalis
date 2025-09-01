@@ -25,7 +25,9 @@ func TestParquetImport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t, meergotester.DoNotPopulateUserSchema)
+	c := meergotester.NewMeergoInstance(t)
+	c.PopulateUserSchema(false)
+	c.Start()
 	defer c.Stop()
 
 	// Change the user schema, leaving only the properties used by this test.

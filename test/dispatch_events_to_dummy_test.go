@@ -41,7 +41,8 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := meergotester.InitAndLaunch(t)
+	c := meergotester.NewMeergoInstance(t)
+	c.Start()
 	defer c.Stop()
 
 	// Create a connection that exports to Dummy
