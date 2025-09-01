@@ -110,7 +110,7 @@ class API {
 	};
 
 	skipMemberEmailVerification = async (): Promise<boolean> => {
-		return await call(`${this.apiURL}/skip-member-email-verification`, http.GET);
+		return await call(`${this.apiURL}/members/skip-member-email-verification`, http.GET);
 	};
 
 	telemetryLevel = async (): Promise<TelemetryLevel> => {

@@ -74,7 +74,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /members/current":                           api.Member,                           /* only Admin */
 		"GET    /members/invitations/{token}":               api.MemberInvitation,                 /* only Admin */
 		"GET    /members/reset-password/{token}":            api.ValidateMemberPasswordResetToken, /* only Admin */
-		"GET    /skip-member-email-verification":            api.SkipMemberEmailVerification,      /* only Admin */
+		"GET    /members/skip-member-email-verification":    api.SkipMemberEmailVerification,      /* only Admin */
 		"GET    /system/transformations/languages":          api.TransformationLanguages,
 		"GET    /telemetry/level":                           api.SentryTelemetryLevel, /* only Admin */
 		"GET    /users":                                     workspace.Users,
