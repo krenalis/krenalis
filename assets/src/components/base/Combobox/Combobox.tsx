@@ -307,7 +307,7 @@ const Combobox = ({
 		updateError(name, errorMessage);
 	};
 
-	const debouncedValidateExpression = useMemo(() => debounceWithAbort(validateExpression, 500), [actionType, type]);
+	const debouncedValidateExpression = useMemo(() => debounceWithAbort(validateExpression, 750), [actionType, type]);
 
 	const validate = async (name: string, value: string) => {
 		debouncedValidateExpression(name, value);
@@ -555,7 +555,7 @@ const Combobox = ({
 				>
 					{children}
 					{error && val !== '' && (
-						<SlIcon className='combobox-input__error-icon' name='exclamation-circle' slot='prefix'></SlIcon>
+						<SlIcon className='combobox-input__error-icon' name='exclamation-circle' slot='suffix'></SlIcon>
 					)}
 					{caret && (
 						<SlIcon className='combobox-input__caret-icon' name='chevron-down' slot='suffix'></SlIcon>
