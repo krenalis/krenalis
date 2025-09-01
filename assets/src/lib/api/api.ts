@@ -175,6 +175,10 @@ class API {
 		return await call(`${this.apiURL}/members`, http.GET, this.workspaceID);
 	};
 
+	canSendMemberPasswordReset = async (): Promise<boolean> => {
+		return await call(`${this.apiURL}/members/can-send-reset-password`, http.GET);
+	};
+
 	inviteMember = async (email: string): Promise<void> => {
 		return await call(`${this.apiURL}/members/invitations`, http.POST, this.workspaceID, {
 			email,

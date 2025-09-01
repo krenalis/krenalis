@@ -12,6 +12,7 @@ const Login = () => {
 	const [password, setPassword] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isTryingPasswordlessLogin, setIsTryingPasswordlessLogin] = useState<boolean>(true);
+	const [canSendMemberPasswordReset, setCanSendMemberPasswordReset] = useState<boolean>(false);
 
 	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, logout, setIsPasswordless } =
 		useContext(AppContext);
@@ -69,6 +70,14 @@ const Login = () => {
 				setIsPasswordless(true);
 			}
 			setIsTryingPasswordlessLogin(false);
+			let canSend: boolean;
+			try {
+				canSend = await api.canSendMemberPasswordReset();
+			} catch (err) {
+				handleError(err);
+				return;
+			}
+			setCanSendMemberPasswordReset(canSend);
 		};
 
 		const removeCookieAndLogout = async () => {
@@ -164,9 +173,11 @@ const Login = () => {
 						minLength={8}
 						required
 					/>
-					<Link path='reset-password' className='login__reset-password'>
-						Forgot your password?
-					</Link>
+					{canSendMemberPasswordReset && (
+						<Link path='reset-password' className='login__reset-password'>
+							Forgot your password?
+						</Link>
+					)}
 					<SlButton className='login__button' type='submit' variant='primary' loading={isLoading}>
 						Login
 					</SlButton>

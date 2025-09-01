@@ -175,6 +175,12 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	return nil, err
 }
 
+// CanSendMemberPasswordReset returns whether it is possible to send the reset
+// password email.
+func (api api) CanSendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (any, error) {
+	return api.core.CanSendMemberPasswordReset(), nil
+}
+
 // SentryTelemetryLevel returns the Sentry telemetry level set. Possible return
 // values are: "none", "errors", "stats" or "all".
 func (api api) SentryTelemetryLevel(w http.ResponseWriter, r *http.Request) (any, error) {

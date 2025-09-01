@@ -70,6 +70,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /javascript-sdk-url":                        api.JavaScriptSDKURL,                 /* only Admin */
 		"GET    /keys":                                      organization.AccessKeys,              /* only Admin */
 		"GET    /members":                                   organization.Members,                 /* only Admin */
+		"GET    /members/can-send-reset-password":           api.CanSendMemberPasswordReset,       /* only Admin */
 		"GET    /members/current":                           api.Member,                           /* only Admin */
 		"GET    /members/invitations/{token}":               api.MemberInvitation,                 /* only Admin */
 		"GET    /members/reset-password/{token}":            api.ValidateMemberPasswordResetToken, /* only Admin */

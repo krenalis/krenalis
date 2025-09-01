@@ -342,6 +342,15 @@ func (core *Core) AccessKey(token string, typ AccessKeyType) (int, int, bool) {
 	return key.Organization, key.Workspace, true
 }
 
+// CanSendMemberPasswordReset returns whether it is possible to send the reset
+// password email.
+func (core *Core) CanSendMemberPasswordReset() bool {
+	if core.smtp == nil || core.memberEmailFrom == "" {
+		return false
+	}
+	return true
+}
+
 // ChangeMemberPasswordByToken changes the password of a member with the given
 // reset password token. password's length must be at least 8 character long.
 //

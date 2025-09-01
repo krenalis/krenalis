@@ -1,4 +1,4 @@
-import React, { FormEvent, useContext, useState } from 'react';
+import React, { FormEvent, useContext, useState, useEffect } from 'react';
 import './ResetPassword.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -11,7 +11,23 @@ const ResetPassword = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isEmailSent, setIsEmailSent] = useState<boolean>(false);
 
-	const { api, handleError } = useContext(appContext);
+	const { api, handleError, redirect } = useContext(appContext);
+
+	useEffect(() => {
+		const checkCanSend = async () => {
+			let canSend: boolean;
+			try {
+				canSend = await api.canSendMemberPasswordReset();
+			} catch (err) {
+				handleError(err);
+				return;
+			}
+			if (!canSend) {
+				redirect('/');
+			}
+		};
+		checkCanSend();
+	}, []);
 
 	const onEmailChange = (e: any) => {
 		setEmail(e.currentTarget.value);
