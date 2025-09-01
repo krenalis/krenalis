@@ -17,14 +17,14 @@ func init() {
 		Name:           "name",
 		Type:           types.Text().WithCharLen(60),
 		CreateRequired: true,
-		Placeholder:    `"Newsletter Subscribers"`,
+		Prefilled:      `"Newsletter Subscribers"`,
 		Description:    "The action's name.",
 	}
 	filterParameter := types.Property{
-		Name:        "filter",
-		Type:        filterType,
-		Nullable:    true,
-		Placeholder: `{ "logical": "and", "conditions": [ { "property": "country", "operator": "is", "values": [ "US" ] } ] }`,
+		Name:      "filter",
+		Type:      filterType,
+		Nullable:  true,
+		Prefilled: `{ "logical": "and", "conditions": [ { "property": "country", "operator": "is", "values": [ "US" ] } ] }`,
 		Description: "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
@@ -32,36 +32,36 @@ func init() {
 		Name:           "format",
 		Type:           types.Text().WithValues("CSV", "Excel", "Parquet", "JSON"),
 		CreateRequired: true,
-		Placeholder:    `"Excel"`,
+		Prefilled:      `"Excel"`,
 		Description:    "The file format. It corresponds to the name of a file connector.",
 	}
 	pathParameter := types.Property{
 		Name:           "path",
 		Type:           types.Text().WithCharLen(1024),
 		CreateRequired: true,
-		Placeholder:    `"subscribers.xlsx"`,
+		Prefilled:      `"subscribers.xlsx"`,
 		Description:    "The file path relative to the root path defined in the file storage connection. Refer to the file storage connector documentation for details on the specific format.",
 	}
 	sheetParameter := types.Property{
 		Name:           "sheet",
 		Type:           types.Text(),
-		Placeholder:    `"Sheet1"`,
+		Prefilled:      `"Sheet1"`,
 		UpdateRequired: true,
 		Description: "The sheet name. It can only be used with the Excel format, where it is required.\n\n" +
 			"When provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",
 	}
 	compressionParameter := types.Property{
-		Name:        "compression",
-		Type:        types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
-		Placeholder: `"Gzip"`,
+		Name:      "compression",
+		Type:      types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
+		Prefilled: `"Gzip"`,
 		Description: "The compression format of the file. It is empty if the file is not compressed.\n\n" +
 			"Note that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed.",
 	}
 	formatSettingsParameter := types.Property{
-		Name:        "formatSettings",
-		Type:        types.Parameter("Settings"),
-		Nullable:    true,
-		Placeholder: `{ "HasColumnNames": true }`,
+		Name:      "formatSettings",
+		Type:      types.Parameter("Settings"),
+		Nullable:  true,
+		Prefilled: `{ "HasColumnNames": true }`,
 		Description: "The settings for the file format. Refer to the documentation for the [file connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
 			"If the file format does not require any settings, the `formatSettings` field must be either omitted or set to null.",
 	}
@@ -69,14 +69,14 @@ func init() {
 		Name:           "identityColumn",
 		Type:           types.Text().WithCharLen(1024),
 		CreateRequired: true,
-		Placeholder:    `"email"`,
+		Prefilled:      `"email"`,
 		Description: "The column that uniquely identifies each user in the file. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\n" +
 			"Only columns with types corresponding to the following Meergo types can be used as an identity: `int`, `uint`, `uuid`, `json`, and `text`.",
 	}
 	lastChangeTimeParameter := types.Property{
-		Name:        "lastChangeTimeColumn",
-		Type:        types.Text().WithCharLen(1024),
-		Placeholder: `"updated_at"`,
+		Name:      "lastChangeTimeColumn",
+		Type:      types.Text().WithCharLen(1024),
+		Prefilled: `"updated_at"`,
 		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user's data, helping to identify when changes occurred.\n\n" +
 			"The value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\n" +
 			"Only columns with types corresponding to the following Meergo types can be used as the last change time: `datetime`, `date`, `json`, and `text`.",
@@ -85,15 +85,15 @@ func init() {
 		Name:           "lastChangeTimeFormat",
 		Type:           types.Text().WithCharLen(64),
 		UpdateRequired: true,
-		Placeholder:    `"ISO8601"`,
+		Prefilled:      `"ISO8601"`,
 		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. If `format` is `\"Excel\"`, it can also be set to `\"Excel\"`. " +
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
 			"This field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `json` or `text`.",
 	}
 	incrementalParameter := types.Property{
-		Name:        "incremental",
-		Type:        types.Boolean(),
-		Placeholder: `true`,
+		Name:      "incremental",
+		Type:      types.Boolean(),
+		Prefilled: `true`,
 		Description: "Determines whether users are imported incrementally:\n" +
 			"* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n" +
 			"* `false`: all users are imported again, regardless of their last change time. `false` is the default value.\n\n" +
@@ -105,7 +105,7 @@ func init() {
 			{
 				Name:           "mapping",
 				Type:           types.Map(types.Text()),
-				Placeholder:    `{ "first_name": "firstName" }`,
+				Prefilled:      `{ "first_name": "firstName" }`,
 				UpdateRequired: true,
 				Nullable:       true,
 				Description:    "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file.",
@@ -116,27 +116,27 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Placeholder:    `"const transform = (user) => { ... }"`,
+						Prefilled:      `"const transform = (user) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
 					{
 						Name:           "language",
 						Type:           types.Text().WithValues("JavaScript", "Python"),
-						Placeholder:    `"JavaScript"`,
+						Prefilled:      `"JavaScript"`,
 						CreateRequired: true,
 						Description:    "The language of the function.",
 					},
 					{
 						Name:        "preserveJSON",
 						Type:        types.Boolean(),
-						Placeholder: "false",
+						Prefilled:   "false",
 						Description: "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding.",
 					},
 					{
 						Name:           "inPaths",
 						Type:           types.Array(types.Text()),
-						Placeholder:    `[ "email", "firstName", "lastName" ]`,
+						Prefilled:      `[ "email", "firstName", "lastName" ]`,
 						CreateRequired: true,
 						Description:    "The paths of the properties that will be passed to the function. At least one path must be present.",
 					},
@@ -144,7 +144,7 @@ func init() {
 						Name:           "outPaths",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Placeholder:    `[ "email_address", "first_name", "last_name" ]`,
+						Prefilled:      `[ "email_address", "first_name", "last_name" ]`,
 						Description:    "The paths of the properties that may be returned by the function. At least one path must be present.",
 					},
 				}),
@@ -153,7 +153,7 @@ func init() {
 				Description:    "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity.",
 			},
 		}),
-		Placeholder:    `...`,
+		Prefilled:      `...`,
 		CreateRequired: true,
 		UpdateRequired: true,
 		Description: "The mapping or function responsible for transforming file users into user identities linked to the action. " +
@@ -163,7 +163,7 @@ func init() {
 	inSchemaParameter := types.Property{
 		Name:           "inSchema",
 		Type:           types.Parameter("schema"),
-		Placeholder:    `{...}`,
+		Prefilled:      `{...}`,
 		CreateRequired: true,
 		Description: "The schema for the properties used in the filter, the identity column, the last change time column, and the input properties for the transformation.\n\n" +
 			"When importing users from files, this should be a subset of the file schema.",
@@ -171,7 +171,7 @@ func init() {
 	outSchemaParameter := types.Property{
 		Name:           "outSchema",
 		Type:           types.Parameter("schema"),
-		Placeholder:    `{...}`,
+		Prefilled:      `{...}`,
 		CreateRequired: true,
 		Description: "The schema for the output properties of the transformation.\n\n" +
 			"When importing users from files, this should be a subset of the user schema.",
@@ -194,20 +194,20 @@ func init() {
 						Name:           "connection",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Placeholder:    "230527183",
+						Prefilled:      "230527183",
 						Description:    "The ID of the connection from which to read the users. It must be a source file storage.",
 					},
 					{
 						Name:           "target",
 						Type:           types.Text().WithValues("User"),
 						CreateRequired: true,
-						Placeholder:    `"User"`,
+						Prefilled:      `"User"`,
 						Description:    "The entity on which the action operates, which must be `\"User\"` in order to create an action that imports users.",
 					},
 					{
 						Name:        "enabled",
 						Type:        types.Boolean(),
-						Placeholder: "true",
+						Prefilled:   "true",
 						Description: "Indicates if the action is enabled once created.",
 					},
 					formatParameter,
@@ -229,7 +229,7 @@ func init() {
 						{
 							Name:        "id",
 							Type:        types.Int(32),
-							Placeholder: "285017124",
+							Prefilled:   "285017124",
 							Description: "The ID of the action.",
 						},
 					},
@@ -252,14 +252,14 @@ func init() {
 						Name:           "id",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Placeholder:    "705981339",
+						Prefilled:      "705981339",
 						Description:    "The ID of the source file action.",
 					},
 					nameParameter,
 					{
 						Name:        "enabled",
 						Type:        types.Boolean(),
-						Placeholder: "true",
+						Prefilled:   "true",
 						Description: "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status.",
 					},
 					pathParameter,
@@ -292,7 +292,7 @@ func init() {
 						Name:           "id",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Placeholder:    "705981339",
+						Prefilled:      "705981339",
 						Description:    "The ID of the source file action.",
 					},
 				},
@@ -301,44 +301,44 @@ func init() {
 						{
 							Name:        "id",
 							Type:        types.Int(32),
-							Placeholder: "705981339",
+							Prefilled:   "705981339",
 							Description: "The ID of the source action.",
 						},
 						nameParameter,
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Placeholder: `"SFTP"`,
+							Prefilled:   `"SFTP"`,
 							Description: "The name of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",
 							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
-							Placeholder: `"FileStorage"`,
+							Prefilled:   `"FileStorage"`,
 							Description: "The type of the connection's connector. It is always `\"FileStorage\"` when the action imports users from a file.",
 						},
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
-							Placeholder: "1371036433",
+							Prefilled:   "1371036433",
 							Description: "The ID of the connection from which the file is read. It is a source file storage.",
 						},
 						{
 							Name:        "connectionRole",
 							Type:        types.Text().WithValues("Source", "Destination"),
-							Placeholder: `"Source"`,
+							Prefilled:   `"Source"`,
 							Description: "The role of the action's connection. It is always `\"Source\"` when the action imports users from a file.",
 						},
 						{
 							Name:        "target",
 							Type:        types.Text().WithValues("User", "Event"),
-							Placeholder: `"User"`,
+							Prefilled:   `"User"`,
 							Description: "The entity on which the action operates. It is always `\"User\"` when the action imports users from a file.",
 						},
 						{
 							Name:        "enabled",
 							Type:        types.Boolean(),
-							Placeholder: "true",
+							Prefilled:   "true",
 							Description: "Indicates if the action is enabled.",
 						},
 						formatParameter,
@@ -347,37 +347,37 @@ func init() {
 							Name:        "sheet",
 							Type:        types.Text(),
 							Nullable:    true,
-							Placeholder: `"Sheet1"`,
+							Prefilled:   `"Sheet1"`,
 							Description: "The name of the sheet. It is empty if the format is not Excel.",
 						},
 						compressionParameter,
 						{
 							Name:        "identityColumn",
 							Type:        types.Text(),
-							Placeholder: `"email"`,
+							Prefilled:   `"email"`,
 							Description: "The column that uniquely identifies each user in the file.",
 						},
 						{
 							Name:        "lastChangeTimeColumn",
 							Type:        types.Text(),
 							Nullable:    true,
-							Placeholder: `"updated_at"`,
+							Prefilled:   `"updated_at"`,
 							Description: "The column that stores the timestamp of the last update to a user record. It is null if no such column exists.",
 						},
 						{
-							Name:        "lastChangeTimeFormat",
-							Type:        types.Text(),
-							Nullable:    true,
-							Placeholder: `"ISO8601"`,
+							Name:      "lastChangeTimeFormat",
+							Type:      types.Text(),
+							Nullable:  true,
+							Prefilled: `"ISO8601"`,
 							Description: "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `datetime` or `date`.\n\n" +
 								"It is `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
 								"It is `\"Excel\"` if the format is `\"Excel\"` and the column value follows the Excel format. " +
 								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).",
 						},
 						{
-							Name:        "incremental",
-							Type:        types.Boolean(),
-							Placeholder: `true`,
+							Name:      "incremental",
+							Type:      types.Boolean(),
+							Prefilled: `true`,
 							Description: "Indicates whether users are imported incrementally:\n" +
 								"* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n" +
 								"* `false`: all users are imported again, regardless of their last change time.",
@@ -388,7 +388,7 @@ func init() {
 								{
 									Name:        "mapping",
 									Type:        types.Map(types.Text()),
-									Placeholder: `{ "first_name": "firstName" }`,
+									Prefilled:   `{ "first_name": "firstName" }`,
 									Nullable:    true,
 									Description: "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file.",
 								},
@@ -398,31 +398,31 @@ func init() {
 										{
 											Name:        "source",
 											Type:        types.Text().WithCharLen(50_000),
-											Placeholder: `"const transform = (user) => { ... }"`,
+											Prefilled:   `"const transform = (user) => { ... }"`,
 											Description: "The source code of the JavaScript or Python function.",
 										},
 										{
 											Name:        "language",
 											Type:        types.Text().WithValues("JavaScript", "Python"),
-											Placeholder: `"JavaScript"`,
+											Prefilled:   `"JavaScript"`,
 											Description: "The language of the function.",
 										},
 										{
 											Name:        "preserveJSON",
 											Type:        types.Boolean(),
-											Placeholder: "false",
+											Prefilled:   "false",
 											Description: "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding.",
 										},
 										{
 											Name:        "inPaths",
 											Type:        types.Array(types.Text()),
-											Placeholder: `[ "email", "firstName", "lastName" ]`,
+											Prefilled:   `[ "email", "firstName", "lastName" ]`,
 											Description: "The paths of the properties that will be passed to the function. At least one path must be present.",
 										},
 										{
 											Name:        "outPaths",
 											Type:        types.Array(types.Text()),
-											Placeholder: `[ "email_address", "first_name", "last_name" ]`,
+											Prefilled:   `[ "email_address", "first_name", "last_name" ]`,
 											Description: "The paths of the properties that may be returned by the function. At least one path must be present.",
 										},
 									}),
@@ -430,7 +430,7 @@ func init() {
 									Description: "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity.",
 								},
 							}),
-							Placeholder: `...`,
+							Prefilled: `...`,
 							Description: "The mapping or function responsible for transforming file users into user identities linked to the action. " +
 								"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
 								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
@@ -438,13 +438,13 @@ func init() {
 						{
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
+							Prefilled:   `{...}`,
 							Description: "The schema for the properties used in the filter, the identity column, the last change time column, and the input properties for the transformation.",
 						},
 						{
 							Name:        "outSchema",
 							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
+							Prefilled:   `{...}`,
 							Description: "The schema for the output properties of the transformation.",
 						},
 						runningParameter,

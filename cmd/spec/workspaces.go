@@ -17,14 +17,14 @@ func init() {
 		Name:           "id",
 		Type:           types.Int(32),
 		CreateRequired: true,
-		Placeholder:    "1371036433",
+		Prefilled:      "1371036433",
 		Description:    "The ID of the workspace.",
 	}
 	nameParameter := types.Property{
 		Name:           "name",
 		Type:           types.Text().WithCharLen(100),
 		CreateRequired: true,
-		Placeholder:    `"Customers"`,
+		Prefilled:      `"Customers"`,
 		Description:    "The workspace's name.",
 	}
 	userSchemaParameter := types.Property{
@@ -34,24 +34,24 @@ func init() {
 		Description:    "The user schema, defining the structure and properties of a user in the customer model of the workspace.",
 	}
 	userPrimarySources := types.Property{
-		Name:        "userPrimarySources",
-		Type:        types.Map(types.Int(32)),
-		Placeholder: "{...}",
+		Name:      "userPrimarySources",
+		Type:      types.Map(types.Int(32)),
+		Prefilled: "{...}",
 		Description: "The primary source for each user schema property that has one, where the key is the property name and the value is the connection identifier.\n\n" +
 			"This source defines where the definitive value for the property is read from, preventing other sources from overwriting it once it is set.",
 	}
 	resolveIdentitiesOnBatchImport := types.Property{
-		Name:        "resolveIdentitiesOnBatchImport",
-		Type:        types.Boolean(),
-		Placeholder: "false",
+		Name:      "resolveIdentitiesOnBatchImport",
+		Type:      types.Boolean(),
+		Prefilled: "false",
 		Description: "Indicates whether identity resolution should be performed immediately after a batch import.\n\n" +
 			"If set to true, Meergo will automatically resolve identities as soon as the import is finished.\n" +
 			"If set to false, identity resolution will not happen automatically and will need to be triggered separately.",
 	}
 	identifiers := types.Property{
-		Name:        "identifiers",
-		Type:        types.Array(types.Text()),
-		Placeholder: `[ "customerId", "email" ]`,
+		Name:      "identifiers",
+		Type:      types.Array(types.Text()),
+		Prefilled: `[ "customerId", "email" ]`,
 		Description: "The user schema properties used to determine if two users are the same. The identity resolution checks these identities in order.\n" +
 			"Two users are considered the same if they have the same value for the first identity, or if neither user has a value for the first identity, the identity resolution moves to the next one, and so on.\n\n" +
 			"If no identifiers are specified, once identity resolution is performed, all users will be considered different from each other.",
@@ -59,26 +59,26 @@ func init() {
 	warehouseTypeParameter := types.Property{
 		Name:        "type",
 		Type:        types.Text().WithValues("Snowflake", "PostgreSQL"),
-		Placeholder: `"Snowflake"`,
+		Prefilled:   `"Snowflake"`,
 		Description: "The data warehouse type.",
 	}
 	warehouseModeParameter := types.Property{
 		Name:        "mode",
 		Type:        types.Text().WithValues("Normal", "Inspection", "Maintenance"),
-		Placeholder: `"Normal"`,
+		Prefilled:   `"Normal"`,
 		Description: "The mode of the data warehouse.",
 	}
 	warehouseSettingsParameter := types.Property{
 		Name:        "settings",
 		Type:        types.Parameter("Warehouse"),
-		Placeholder: "{...}",
+		Prefilled:   "{...}",
 		Description: "The settings of the data warehouse.",
 	}
 	warehouseMCPSettingsParameter := types.Property{
-		Name:        "mcpSettings",
-		Type:        types.Parameter("Warehouse"),
-		Placeholder: "{...}",
-		Nullable:    true,
+		Name:      "mcpSettings",
+		Type:      types.Parameter("Warehouse"),
+		Prefilled: "{...}",
+		Nullable:  true,
 		Description: "The settings of the data warehouse that are used for accessing it from the MCP (Model Context Protocol) server.\n\n" +
 			"When provided, these settings must refer to a read-only access to the data warehouse; this is a security requirement to prevent the MCP client from performing destructive operations on the warehouse data by mistake.\n\n" +
 			"If `null` is passed, the MCP server settings aren't configured, preventing the use of MCP tools for this workspace.",
@@ -92,25 +92,25 @@ func init() {
 					{
 						Name:        "image",
 						Type:        types.Text().WithCharLen(100),
-						Placeholder: `"customer_image"`,
+						Prefilled:   `"customer_image"`,
 						Description: "The path of the property in the user schema that represents the user's image, in base64 format.",
 					},
 					{
 						Name:        "firstName",
 						Type:        types.Text().WithCharLen(100),
-						Placeholder: `"first_name"`,
+						Prefilled:   `"first_name"`,
 						Description: "The path of the property in the user schema to display as the first name in the profile header.",
 					},
 					{
 						Name:        "lastName",
 						Type:        types.Text().WithCharLen(100),
-						Placeholder: `"last_name"`,
+						Prefilled:   `"last_name"`,
 						Description: "The path of the property in the user schema for the user's last name.",
 					},
 					{
 						Name:        "extra",
 						Type:        types.Text().WithCharLen(100),
-						Placeholder: `"email"`,
+						Prefilled:   `"email"`,
 						Description: "The path of the property in the user schema for additional user information. For example, the user schema property that represents the email.",
 					},
 				}),
@@ -220,7 +220,7 @@ func init() {
 								warehouseModeParameter,
 								uiPreferencesParameter,
 							})),
-							Placeholder: "...",
+							Prefilled:   "...",
 							Description: "The workspaces of the organization.",
 						},
 					},

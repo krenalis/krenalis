@@ -62,29 +62,29 @@ func TestPropertySerialization(t *testing.T) {
 			Expected: `{"name":"a","type":{"kind":"text"},"description":"some description"}`,
 		},
 		{
-			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), Description: "some description"},
-			Expected: `{"name":"a","placeholder":"<placeholder>",` +
+			Property: Property{Name: "a", Prefilled: "<prefilled>", Type: Text(), Description: "some description"},
+			Expected: `{"name":"a","prefilled":"<prefilled>",` +
 				`"type":{"kind":"text"},"description":"some description"}`,
 		},
 		{
-			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), Description: "some description"},
-			Expected: `{"name":"a","placeholder":"<placeholder>",` +
+			Property: Property{Name: "a", Prefilled: "<prefilled>", Type: Text(), Description: "some description"},
+			Expected: `{"name":"a","prefilled":"<prefilled>",` +
 				`"type":{"kind":"text"},"description":"some description"}`,
 		},
 		{
-			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), CreateRequired: true, UpdateRequired: true, Description: "some description"},
-			Expected: `{"name":"a","placeholder":"<placeholder>",` +
+			Property: Property{Name: "a", Prefilled: "<prefilled>", Type: Text(), CreateRequired: true, UpdateRequired: true, Description: "some description"},
+			Expected: `{"name":"a","prefilled":"<prefilled>",` +
 				`"type":{"kind":"text"},"createRequired":true,"updateRequired":true,"description":"some description"}`,
 		},
 		{
-			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), CreateRequired: true, Nullable: true, Description: "some description"},
-			Expected: `{"name":"a","placeholder":"<placeholder>",` +
+			Property: Property{Name: "a", Prefilled: "<prefilled>", Type: Text(), CreateRequired: true, Nullable: true, Description: "some description"},
+			Expected: `{"name":"a","prefilled":"<prefilled>",` +
 				`"type":{"kind":"text"},"createRequired":true,` +
 				`"nullable":true,"description":"some description"}`,
 		},
 		{
-			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), UpdateRequired: true, ReadOptional: true, Nullable: true, Description: "some description"},
-			Expected: `{"name":"a","placeholder":"<placeholder>",` +
+			Property: Property{Name: "a", Prefilled: "<prefilled>", Type: Text(), UpdateRequired: true, ReadOptional: true, Nullable: true, Description: "some description"},
+			Expected: `{"name":"a","prefilled":"<prefilled>",` +
 				`"type":{"kind":"text"},"updateRequired":true,"readOptional":true,` +
 				`"nullable":true,"description":"some description"}`,
 		},
@@ -295,8 +295,8 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"object","properties":[{"name":"birthday","type":{"kind":"date"},"description":""}]}`,
 			Type: Object([]Property{{Name: "birthday", Type: Date()}}),
 		}, {
-			Data: `{"kind":"object","properties":[{"name":"birthday","placeholder":"mm/dd/yyyy","type":{"kind":"date"},"description":""}]}`,
-			Type: Object([]Property{{Name: "birthday", Placeholder: "mm/dd/yyyy", Type: Date()}}),
+			Data: `{"kind":"object","properties":[{"name":"birthday","prefilled":"mm/dd/yyyy","type":{"kind":"date"},"description":""}]}`,
+			Type: Object([]Property{{Name: "birthday", Prefilled: "mm/dd/yyyy", Type: Date()}}),
 		},
 	}
 	for _, test := range tests {

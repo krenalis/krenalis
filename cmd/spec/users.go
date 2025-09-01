@@ -14,9 +14,9 @@ import (
 func init() {
 
 	eventsParameter := types.Array(types.Object(append([]types.Property{
-		{Name: "id", Type: types.UUID(), Placeholder: `"b1d868f3-43f6-4965-bbd2-85ca8dd609b3"`},
-		{Name: "user", Type: types.UUID(), ReadOptional: true, Placeholder: `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`},
-		{Name: "connection", Type: types.Int(32), Placeholder: "1371036433"},
+		{Name: "id", Type: types.UUID(), Prefilled: `"b1d868f3-43f6-4965-bbd2-85ca8dd609b3"`},
+		{Name: "user", Type: types.UUID(), ReadOptional: true, Prefilled: `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`},
+		{Name: "connection", Type: types.Int(32), Prefilled: "1371036433"},
 	}, eventGetProperties...)))
 
 	identityType := types.Object([]types.Property{
@@ -67,7 +67,7 @@ func init() {
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Placeholder:    `first_name,last_name`,
+						Prefilled:      `first_name,last_name`,
 						Description: "The names of the properties to return. At least one property must be included.\n\n" +
 							"The properties can be specified in query string in this way:\n" +
 							"```\nproperties=first_name&properties=last_name&properties=email\n```",
@@ -85,25 +85,25 @@ func init() {
 					{
 						Name:        "order",
 						Type:        types.Text(),
-						Placeholder: `email`,
+						Prefilled:   `email`,
 						Description: "The name of the property by which to sort the users to be returned. It can be any property from the user schema with a sortable type, meaning it cannot be of type `json`, `array`, `object`, or `map`.\n\nIf not provided, the users are ordered by their last change time.",
 					},
 					{
 						Name:        "orderDesc",
 						Type:        types.Boolean(),
-						Placeholder: `false`,
+						Prefilled:   `false`,
 						Description: "Indicates if the returned users are sorted in descending order; if not `true`, they are sorted in ascending order.",
 					},
 					{
 						Name:        "first",
 						Type:        types.Int(32),
-						Placeholder: `0`,
+						Prefilled:   `0`,
 						Description: "The number of users to skip before starting to return results. The default value is 0.",
 					},
 					{
 						Name:        "limit",
 						Type:        types.Int(32).WithIntRange(1, 1000),
-						Placeholder: `1000`,
+						Prefilled:   `1000`,
 						Description: "The maximum number of users to return. It can be any value between 1 and 1,000. If not provided, the default value is 100.",
 					},
 				},
@@ -115,35 +115,35 @@ func init() {
 								{
 									Name:        "id",
 									Type:        types.UUID(),
-									Placeholder: `"02bc2281-f801-4f59-9c56-b96ff81df84f"`,
+									Prefilled:   `"02bc2281-f801-4f59-9c56-b96ff81df84f"`,
 									Description: "The ID of the user.",
 								},
 								{
-									Name:        "sourcesLastUpdate",
-									Type:        types.DateTime(),
-									Placeholder: `"2015-01-21T08:51:32.137139Z"`,
+									Name:      "sourcesLastUpdate",
+									Type:      types.DateTime(),
+									Prefilled: `"2015-01-21T08:51:32.137139Z"`,
 									Description: "The date and time when the user's data was last updated on the sources. It corresponds to the most recent last update of its identities.\n\n" +
 										"Its value is independent of which properties were requested.",
 								},
 								{
 									Name:        "traits",
 									Type:        types.Parameter("Traits"),
-									Placeholder: `{ "name": "John Walker", "email": "walker@example.com" }`,
+									Prefilled:   `{ "name": "John Walker", "email": "walker@example.com" }`,
 									Description: "The traits of the user. Only the properties explicitly requested are included.",
 								},
 							})),
-							Placeholder: "...",
+							Prefilled: "...",
 						},
 						{
 							Name:        "schema",
 							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
+							Prefilled:   `{...}`,
 							Description: "The schema of the returned traits. It corresponds to the user schema but includes only the properties that were explicitly requested.",
 						},
 						{
 							Name:        "total",
 							Type:        types.Int(32),
-							Placeholder: `803154`,
+							Prefilled:   `803154`,
 							Description: "An estimate of the total number of users, without considering `first` and `limit`.",
 						},
 					},
@@ -165,7 +165,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.UUID(),
-						Placeholder:    `02bc2281-f801-4f59-9c56-b96ff81df84f`,
+						Prefilled:      `02bc2281-f801-4f59-9c56-b96ff81df84f`,
 						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
@@ -175,7 +175,7 @@ func init() {
 						{
 							Name:        "traits",
 							Type:        types.Parameter("Traits"),
-							Placeholder: `{ "name": "John Walker", "email": "walker@example.com" }`,
+							Prefilled:   `{ "name": "John Walker", "email": "walker@example.com" }`,
 							Description: "The traits of the user.",
 						},
 					},
@@ -196,14 +196,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.UUID(),
-						Placeholder:    `02bc2281-f801-4f59-9c56-b96ff81df84f`,
+						Prefilled:      `02bc2281-f801-4f59-9c56-b96ff81df84f`,
 						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
 					{
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
-						Placeholder:    `timestamp,event`,
+						Prefilled:      `timestamp,event`,
 						CreateRequired: true,
 						Description: "The names of the event properties to return. At least one property must be included.\n\n" +
 							"The properties can be specified in the query string in two ways:\n" +
@@ -220,7 +220,7 @@ func init() {
 						{
 							Name:        "events",
 							Type:        eventsParameter,
-							Placeholder: `...`,
+							Prefilled:   `...`,
 							Description: "The most recent events of the user. An empty array is returned if no events are available or if the specified user does not exist.",
 						},
 					},
@@ -240,7 +240,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.UUID(),
-						Placeholder:    `86de98fe-8f26-49ac-87dc-8a14997a97d9`,
+						Prefilled:      `86de98fe-8f26-49ac-87dc-8a14997a97d9`,
 						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
@@ -260,13 +260,13 @@ func init() {
 						{
 							Name:        "identities",
 							Type:        types.Array(identityType),
-							Placeholder: `{ ... }`,
+							Prefilled:   `{ ... }`,
 							Description: "The user's identities, containing at least one identity.",
 						},
 						{
 							Name:        "total",
 							Type:        types.Int(32),
-							Placeholder: `12`,
+							Prefilled:   `12`,
 							Description: "The total number of identities.",
 						},
 					},

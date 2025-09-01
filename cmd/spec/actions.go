@@ -12,10 +12,10 @@ import (
 )
 
 var scheduleStartParameter = types.Property{
-	Name:        "scheduleStart",
-	Type:        types.Int(32),
-	Placeholder: "15",
-	Nullable:    true,
+	Name:      "scheduleStart",
+	Type:      types.Int(32),
+	Prefilled: "15",
+	Nullable:  true,
 	Description: "The start time of the schedule in minutes, counting from 00:00. It specifies the minute when the first scheduled execution of the day begins. " +
 		"Subsequent executions occur based on the interval defined by the scheduler period. If the scheduler is disabled, this value is null.",
 }
@@ -23,24 +23,24 @@ var scheduleStartParameter = types.Property{
 var runningParameter = types.Property{
 	Name:        "running",
 	Type:        types.Boolean(),
-	Placeholder: "false",
+	Prefilled:   "false",
 	Description: "Indicates if the action is running.",
 }
 
 var importSchedulePeriodParameter = types.Property{
-	Name:        "schedulePeriod",
-	Type:        types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
-	Placeholder: `"1h"`,
-	Nullable:    true,
+	Name:      "schedulePeriod",
+	Type:      types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
+	Prefilled: `"1h"`,
+	Nullable:  true,
 	Description: "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\n" +
 		"To change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint.",
 }
 
 var exportSchedulePeriodParameter = types.Property{
-	Name:        "schedulePeriod",
-	Type:        types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
-	Placeholder: `"1h"`,
-	Nullable:    true,
+	Name:      "schedulePeriod",
+	Type:      types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
+	Prefilled: `"1h"`,
+	Nullable:  true,
 	Description: "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\n" +
 		"To change the schedule period, use the [Set schedule period](actions#set-schedule-period) endpoint.",
 }
@@ -51,44 +51,44 @@ func init() {
 		{
 			Name:        "id",
 			Type:        types.Int(32),
-			Placeholder: "609461413",
+			Prefilled:   "609461413",
 			Description: "The ID of the execution.",
 		},
 		{
 			Name:        "action",
 			Type:        types.Int(32),
-			Placeholder: "705981339",
+			Prefilled:   "705981339",
 			Description: "The ID of the executed action.",
 		},
 		{
 			Name:        "startTime",
 			Type:        types.DateTime(),
-			Placeholder: `"2024-11-27T18:22:47.937Z"`,
+			Prefilled:   `"2024-11-27T18:22:47.937Z"`,
 			Description: "The start time in ISO 8601 format.",
 		},
 		{
 			Name:        "endTime",
 			Type:        types.DateTime(),
 			Nullable:    true,
-			Placeholder: `"2024-11-27T18:49:07.150Z"`,
+			Prefilled:   `"2024-11-27T18:49:07.150Z"`,
 			Description: "The end time in ISO 8601 format. It is null if the execution has not yet finished.",
 		},
 		{
 			Name:        "passed",
 			Type:        types.Array(types.Int(32)),
-			Placeholder: "[ 6029, 6029, 5974, 5974, 5974, 5974 ]",
+			Prefilled:   "[ 6029, 6029, 5974, 5974, 5974, 5974 ]",
 			Description: "The number of users or events that successfully passed each step. All values will be 0 if the execution has not yet finished.",
 		},
 		{
 			Name:        "failed",
 			Type:        types.Array(types.Int(32)),
-			Placeholder: "[ 0, 0, 55, 0, 0, 0 ]",
+			Prefilled:   "[ 0, 0, 55, 0, 0, 0 ]",
 			Description: "The number of users or events that failed at each step. All values will be 0 if the execution has not yet finished.",
 		},
 		{
 			Name:        "error",
 			Type:        types.Text(),
-			Placeholder: `""`,
+			Prefilled:   `""`,
 			Description: "An error occurred during execution, causing it to stop prematurely. It is empty if the execution has not yet finished or if no error occurred.",
 		},
 	}
@@ -111,14 +111,14 @@ func init() {
 						Name:           "id",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Placeholder:    "705981339",
+						Prefilled:      "705981339",
 						Description:    "The ID of the action that imports or exports users.",
 					},
 					{
 						Name:           "enabled",
 						Type:           types.Boolean(),
 						CreateRequired: true,
-						Placeholder:    "true",
+						Prefilled:      "true",
 						Description:    "Indicates if the action is enabled.",
 					},
 				},
@@ -137,14 +137,14 @@ func init() {
 						Name:           "id",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Placeholder:    "705981339",
+						Prefilled:      "705981339",
 						Description:    "The ID of the action that imports or exports users.",
 					},
 					{
 						Name:           "period",
 						Type:           types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
 						CreateRequired: true,
-						Placeholder:    `"1h"`,
+						Prefilled:      `"1h"`,
 						Nullable:       true,
 						Description:    "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic executions will occur.",
 					},
@@ -166,14 +166,14 @@ func init() {
 						Name:           "id",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Placeholder:    "705981339",
+						Prefilled:      "705981339",
 						Description:    "The ID of the action that imports or exports users.",
 					},
 					{
 						Name:           "incremental",
 						Type:           types.Boolean(),
 						CreateRequired: false,
-						Placeholder:    "true",
+						Prefilled:      "true",
 						Nullable:       true,
 						Description: "Determines whether users should be imported from scratch (`false`) or incrementally from the previous import (`true`). " +
 							" If omitted or nil, the action's default setting will be used.\n\n" +
@@ -186,7 +186,7 @@ func init() {
 						{
 							Name:        "id",
 							Type:        types.Int(32),
-							Placeholder: "609461413",
+							Prefilled:   "609461413",
 							Description: "The ID of the started execution.",
 						},
 					},
@@ -231,7 +231,7 @@ func init() {
 						Name:           "id",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Placeholder:    "609461413",
+						Prefilled:      "609461413",
 						Description:    "The ID of the execution.",
 					},
 				},
@@ -252,7 +252,7 @@ func init() {
 						Name:           "id",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Placeholder:    "705981339",
+						Prefilled:      "705981339",
 						Description:    "The ID of the action to delete.",
 					},
 				},

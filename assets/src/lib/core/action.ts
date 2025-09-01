@@ -470,7 +470,7 @@ const flattenSchema = (typ: ObjectType | ArrayType | MapType): TransformedMappin
 
 	const flattenProperty = (property: Property): TransformedProperty => {
 		const flat = {
-			value: property.placeholder || '',
+			value: property.prefilled || '',
 			readOptional: property.readOptional,
 			createRequired: property.createRequired,
 			updateRequired: property.updateRequired,
@@ -664,10 +664,10 @@ const transformInActionToSet = async (
 	const flattenedInputSchema = flattenSchema(actionType.inputSchema);
 	const flattenedOutputSchema = flattenSchema(actionType.outputSchema);
 
-	// Remove the placeholders from the output schema.
+	// Remove the prefilled values from the output schema.
 	for (const p in flattenedOutputSchema) {
-		if (flattenedOutputSchema[p].full.placeholder) {
-			delete flattenedOutputSchema[p].full.placeholder;
+		if (flattenedOutputSchema[p].full.prefilled) {
+			delete flattenedOutputSchema[p].full.prefilled;
 		}
 	}
 

@@ -16,7 +16,7 @@ func init() {
 	idProperty := types.Property{
 		Name:           "id",
 		Type:           types.Int(32),
-		Placeholder:    "1371036433",
+		Prefilled:      "1371036433",
 		CreateRequired: true,
 		Description:    "The ID of the connection from which to read the users. It must be a source file storage.",
 	}
@@ -24,7 +24,7 @@ func init() {
 		Name:           "path",
 		Type:           types.Text(),
 		CreateRequired: true,
-		Placeholder:    `users.csv`,
+		Prefilled:      `users.csv`,
 		Description: "The file path relative to the root of the file storage. " +
 			"For details on the required format, refer to the file storage connector documentation.\n\n" +
 			"The path must not be empty and cannot exceed 1,024 characters in length.\n\n" +
@@ -34,21 +34,21 @@ func init() {
 		Name:           "format",
 		Type:           types.Text().WithValues("CSV", "Excel", "Parquet", "JSON"),
 		CreateRequired: true,
-		Placeholder:    `Excel`,
+		Prefilled:      `Excel`,
 		Description:    "The file format. Note that it corresponds to the name of the file connector used to read the file.",
 	}
 	compressionParameter := types.Property{
-		Name:        "compression",
-		Type:        types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
-		Placeholder: `Gzip`,
+		Name:      "compression",
+		Type:      types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
+		Prefilled: `Gzip`,
 		Description: "The method used to compress the file, if applicable.\n\n" +
 			"**Note:** An Excel file is inherently compressed, so no compression method needs to be specified unless the file has been further compressed.",
 	}
 	formatSettingsParameter := types.Property{
-		Name:        "formatSettings",
-		Type:        types.Parameter("Settings"),
-		Nullable:    true,
-		Placeholder: `{"HasColumnNames":true}`,
+		Name:      "formatSettings",
+		Type:      types.Parameter("Settings"),
+		Nullable:  true,
+		Prefilled: `{"HasColumnNames":true}`,
 		Description: "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
 			"If the file format does not require any settings, the `formatSettings` parameter must be either omitted or set to `null`.",
 	}
@@ -70,7 +70,7 @@ func init() {
 					{
 						Name:           "sheet",
 						Type:           types.Text(),
-						Placeholder:    `Sheet1`,
+						Prefilled:      `Sheet1`,
 						UpdateRequired: true,
 						Description: "The sheet name. It can only be used with the Excel format, where it is required.\n\n" +
 							"When provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",
@@ -80,7 +80,7 @@ func init() {
 					{
 						Name:        "limit",
 						Type:        types.Int(32).WithIntRange(0, 100),
-						Placeholder: `50`,
+						Prefilled:   `50`,
 						Description: "The maximum number of rows to return along with the schema. The maximum is 100; the default is 0, meaning no rows are returned.",
 					},
 				},
@@ -90,20 +90,20 @@ func init() {
 							Name:        "schema",
 							Type:        types.Parameter("schema"),
 							Nullable:    true,
-							Placeholder: `{ ... }`,
+							Prefilled:   `{ ... }`,
 							Description: "The file's schema. It will be null if there are no supported columns.",
 						},
 						{
 							Name:        "rows",
 							Type:        types.Array(types.Map(types.JSON())),
-							Placeholder: `[ { ... } ]`,
+							Prefilled:   `[ { ... } ]`,
 							Description: "The file's rows.",
 						},
 						{
-							Name:        "issues",
-							Type:        types.Array(types.Text()),
-							Nullable:    true,
-							Placeholder: `[ "Column \"score\" cannot be imported because its type \"INT128\" is not supported" ]`,
+							Name:      "issues",
+							Type:      types.Array(types.Text()),
+							Nullable:  true,
+							Prefilled: `[ "Column \"score\" cannot be imported because its type \"INT128\" is not supported" ]`,
 							Description: "The issues encountered while reading the file, such as unsupported columns, which did not prevent processing. " +
 								"If it is not null, it contains at least one issue.",
 						},
@@ -132,7 +132,7 @@ func init() {
 						{
 							Name:        "sheets",
 							Type:        types.Array(types.Text()),
-							Placeholder: `[ "Sheet1", "Sheet2" ]`,
+							Prefilled:   `[ "Sheet1", "Sheet2" ]`,
 							Description: "The sheets of the file. They have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",
 						},
 					},
@@ -155,7 +155,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						Placeholder:    "1371036433",
+						Prefilled:      "1371036433",
 						CreateRequired: true,
 						Description:    "The ID of the file storage connection for which the path should be retrieved.",
 					},
@@ -166,7 +166,7 @@ func init() {
 						{
 							Name:        "path",
 							Type:        types.Text(),
-							Placeholder: `"/data/users.csv"`,
+							Prefilled:   `"/data/users.csv"`,
 							Description: "The absolute path of the file.",
 						},
 					},

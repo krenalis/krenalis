@@ -66,11 +66,11 @@ type Error struct {
 
 type Property struct {
 	Name string
-	// Placeholder holds an example value for documentation purposes.
+	// Prefilled holds an example value for documentation purposes.
 	// When the parameter is passed in the body, it contains JSON code.
 	// When passed in the query string it contains the value directly or,
 	// if the property is an array, the values separated by a comma.
-	Placeholder    string
+	Prefilled      string
 	Type           Type
 	CreateRequired bool // true if the parameter is required.
 	UpdateRequired bool // true if the parameter is conditionally required.
@@ -183,7 +183,7 @@ var filterType = types.Object([]types.Property{
 		Name:           "logical",
 		Type:           types.Text().WithValues("and", "or"),
 		CreateRequired: true,
-		Placeholder:    `"and"`,
+		Prefilled:      `"and"`,
 	},
 	{
 		Name: "conditions",
@@ -207,7 +207,7 @@ var filterType = types.Object([]types.Property{
 			},
 		})),
 		CreateRequired: true,
-		Placeholder:    `[ { "property": "name", "operator": "is", "values": [ "Mary" ] } ]`,
+		Prefilled:      `[ { "property": "name", "operator": "is", "values": [ "Mary" ] } ]`,
 		Description:    "A filter's condition.",
 	},
 })

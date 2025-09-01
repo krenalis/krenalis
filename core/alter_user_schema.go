@@ -23,7 +23,7 @@ import (
 // AlterUserSchema alters the user schema and the primary sources of the
 // workspace. schema must be a valid schema.
 //
-// The properties within user schema cannot specify a placeholder, cannot be
+// The properties within user schema cannot specify a prefilled value, cannot be
 // required for creation or update, must be read optional and cannot be
 // nullable; there are also limits on types, which are documented in
 // "datastore/README.md".
@@ -153,8 +153,8 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 		if isMetaProperty(p.Name) {
 			return errors.New("user schema cannot have meta properties")
 		}
-		if p.Placeholder != "" {
-			return errors.New("user schema properties cannot have a placeholder")
+		if p.Prefilled != "" {
+			return errors.New("user schema properties cannot have a prefilled value")
 		}
 		if p.CreateRequired {
 			return errors.New("user schema properties cannot be required for creation")

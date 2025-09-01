@@ -44,18 +44,18 @@ func init() {
 				Response: &Response{
 					Parameters: []types.Property{
 						{
-							Name:        "startTime",
-							Type:        types.DateTime(),
-							Placeholder: `"2025-01-12T09:37:22"`,
-							Nullable:    true,
+							Name:      "startTime",
+							Type:      types.DateTime(),
+							Prefilled: `"2025-01-12T09:37:22"`,
+							Nullable:  true,
 							Description: "Start timestamp (UTC) of the latest identity resolution, either running or completed.\n\n" +
 								"If null, no identity resolutions have ever been executed for the workspace.",
 						},
 						{
-							Name:        "endTime",
-							Type:        types.DateTime(),
-							Placeholder: `"2025-01-12T09:42:51"`,
-							Nullable:    true,
+							Name:      "endTime",
+							Type:      types.DateTime(),
+							Prefilled: `"2025-01-12T09:42:51"`,
+							Nullable:  true,
 							Description: "End timestamp (UTC) for the latest identity resolution.\n\n" +
 								"If null, it means that the identity resolution is still in progress, or that no identity resolution has ever been executed on the workspace.",
 						},
@@ -71,17 +71,17 @@ func init() {
 				URL:    "/v1/identity-resolution/settings",
 				Parameters: []types.Property{
 					{
-						Name:        "runOnBatchImport",
-						Type:        types.Boolean(),
-						Placeholder: `true`,
+						Name:      "runOnBatchImport",
+						Type:      types.Boolean(),
+						Prefilled: `true`,
 						Description: "Indicates if identity resolution is automatically run when a batch import is completed." +
 							" The default is false.",
 					},
 					{
-						Name:        "identifiers",
-						Type:        types.Array(types.Text()),
-						Nullable:    true,
-						Placeholder: `[ "customer_id", "email" ]`,
+						Name:      "identifiers",
+						Type:      types.Array(types.Text()),
+						Nullable:  true,
+						Prefilled: `[ "customer_id", "email" ]`,
 						Description: "The identifiers of the identity resolution, ordered from the highest precedence to the lowest precedence.\n\n" +
 							"An identifier must be a property path that refers to a property of the user schema of the workspace. " +
 							"The referred property must have type `int`, `uint`, `uuid`, `inet`, `text`, or `decimal` with zero scale. Identifiers cannot be repeated.\n\n" +
@@ -103,16 +103,16 @@ func init() {
 				Response: &Response{
 					Parameters: []types.Property{
 						{
-							Name:        "runOnBatchImport",
-							Type:        types.Boolean(),
-							Placeholder: `true`,
+							Name:      "runOnBatchImport",
+							Type:      types.Boolean(),
+							Prefilled: `true`,
 							Description: "Indicates if identity resolution is automatically run when a batch import is completed." +
 								" The default is false.",
 						},
 						{
-							Name:        "identifiers",
-							Type:        types.Array(types.Text()),
-							Placeholder: `[ "customer_id", "email" ]`,
+							Name:      "identifiers",
+							Type:      types.Array(types.Text()),
+							Prefilled: `[ "customer_id", "email" ]`,
 							Description: "The identifiers of the identity resolution, ordered from the highest precedence to the lowest precedence.\n\n" +
 								"If no identifiers are returned, it means that the identity resolution is performed without comparing any identifiers.",
 						},

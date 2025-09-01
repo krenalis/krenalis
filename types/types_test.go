@@ -451,8 +451,8 @@ func sameProperty(p1, p2 Property) error {
 	if p1.Name != p2.Name {
 		return fmt.Errorf("expected property name %q, got %q", p1.Name, p2.Name)
 	}
-	if p1.Placeholder != p2.Placeholder {
-		return fmt.Errorf("expected property placeholder %q, got %q", p1.Placeholder, p2.Placeholder)
+	if p1.Prefilled != p2.Prefilled {
+		return fmt.Errorf("expected property prefilled %q, got %q", p1.Prefilled, p2.Prefilled)
 	}
 	if err := sameType(p1.Type, p2.Type); err != nil {
 		return err

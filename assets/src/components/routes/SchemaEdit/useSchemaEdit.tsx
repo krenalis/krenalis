@@ -28,7 +28,7 @@ interface PropertyToEdit {
 	root?: string;
 	name?: string;
 	label?: string;
-	placeholder?: string;
+	prefilled?: string;
 	role?: Role;
 	type?: Type | null;
 	readOptional?: boolean;
@@ -148,7 +148,7 @@ const useSchemaEdit = (
 			name: property.name,
 			type: property.type,
 			nullable: property.nullable,
-			placeholder: '',
+			prefilled: '',
 			role: 'Both',
 			readOptional: true,
 			createRequired: false,
@@ -253,7 +253,7 @@ const useSchemaEdit = (
 			name: property.name,
 			type: property.type,
 			nullable: property.nullable,
-			placeholder: current.placeholder,
+			prefilled: current.prefilled,
 			role: current.role,
 			readOptional: current.readOptional,
 			createRequired: current.createRequired,

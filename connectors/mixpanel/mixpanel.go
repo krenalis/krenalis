@@ -123,9 +123,9 @@ func (mp *Mixpanel) SendEvents(ctx context.Context, events meergo.Events) error 
 
 // EventTypeSchema returns the schema of the specified event type.
 func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
-	schema := func(placeholder string) types.Type {
+	schema := func(prefilled string) types.Type {
 		return types.Object([]types.Property{
-			{Name: "event", Placeholder: placeholder, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+			{Name: "event", Prefilled: prefilled, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
 			{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
 		})
 	}

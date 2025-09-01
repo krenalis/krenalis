@@ -294,7 +294,7 @@ An object property is defined as follows:
 ```go
 type Property struct {
     Name           string
-    Placeholder    string
+    Prefilled      string
     Type           Type
     CreateRequired bool
     UpdateRequired bool
@@ -305,7 +305,7 @@ type Property struct {
 ```
 
 * `Name`: The name of the property. It must start with a letter `[A-Za-z_]` and can only contain alphanumeric characters and underscores `[A-Za-z0-9_]` after that. To check if a name is valid, use the `types.IsValidPropertyName` function.
-* `Placeholder`: A placeholder to use in transformation mappings for events sent to applications. It pre-fills the input with the expression that evaluates to the property's value.
+* `Prefilled`: A prefilled value to use in transformation mappings for events sent to applications. It pre-fills the input with the expression that evaluates to the property's value.
 * `Type`: The type of the property, which can be any [data type](#how-to-construct-data-types).
 * `CreateRequired`: Indicates whether the property is required for creation.
 * `UpdateRequired`: Indicates whether the property is required for the update.

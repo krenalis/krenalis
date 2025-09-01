@@ -32,9 +32,9 @@ func init() {
 				Response: &Response{
 					Parameters: []types.Property{
 						{
-							Name:        "schema",
-							Type:        types.Parameter("schema"),
-							Placeholder: "...",
+							Name:      "schema",
+							Type:      types.Parameter("schema"),
+							Prefilled: "...",
 						},
 					},
 				},
@@ -55,9 +55,9 @@ func init() {
 						Description:    "The new user schema. It must include at least one property.",
 					},
 					{
-						Name:        "primarySources",
-						Type:        types.Map(types.Int(32)),
-						Placeholder: `{ "email": 1371036433 }`,
+						Name:      "primarySources",
+						Type:      types.Map(types.Int(32)),
+						Prefilled: `{ "email": 1371036433 }`,
 						Description: "The primary source for each schema property that has one, where the key is the property name and the value is the connection identifier.\n\n" +
 							"This source defines where the definitive value for the property is read from, preventing other sources from overwriting it once it is set.\n\n" +
 							"If no primary source is provided, the new schema will have no primary sources defined.",
@@ -65,7 +65,7 @@ func init() {
 					{
 						Name:        "rePaths",
 						Type:        types.Map(types.Text()),
-						Placeholder: `{ "city": "address.city", "street3": null }`,
+						Prefilled:   `{ "city": "address.city", "street3": null }`,
 						Description: rePathsDescription,
 					},
 				},
@@ -93,7 +93,7 @@ func init() {
 					{
 						Name:        "rePaths",
 						Type:        types.Map(types.Text()),
-						Placeholder: `{ "city": "address.city", "street3": null }`,
+						Prefilled:   `{ "city": "address.city", "street3": null }`,
 						Description: rePathsDescription,
 					},
 				},
@@ -102,7 +102,7 @@ func init() {
 						{
 							Name:        "queries",
 							Type:        types.Array(types.Text()),
-							Placeholder: `[ "ALTER TABLE ..." ]`,
+							Prefilled:   `[ "ALTER TABLE ..." ]`,
 							Description: "The SQL queries that would be executed on the warehouse to alter the user schema.",
 						},
 					},
@@ -124,26 +124,26 @@ func init() {
 				Response: &Response{
 					Parameters: []types.Property{
 						{
-							Name:        "startTime",
-							Type:        types.DateTime(),
-							Placeholder: `"2025-01-12T09:37:22"`,
-							Nullable:    true,
+							Name:      "startTime",
+							Type:      types.DateTime(),
+							Prefilled: `"2025-01-12T09:37:22"`,
+							Nullable:  true,
 							Description: "Start timestamp (UTC) of the latest user schema update, either running or completed.\n\n" +
 								"If null, no user schema update has ever been started for the workspace.",
 						},
 						{
-							Name:        "endTime",
-							Type:        types.DateTime(),
-							Placeholder: `"2025-01-12T09:37:25"`,
-							Nullable:    true,
+							Name:      "endTime",
+							Type:      types.DateTime(),
+							Prefilled: `"2025-01-12T09:37:25"`,
+							Nullable:  true,
 							Description: "End timestamp (UTC) for the latest user schema update.\n\n" +
 								"If null, it means that the user schema update is still in progress, or that no schema update has ever been performed for the workspace.",
 						},
 						{
-							Name:        "error",
-							Type:        types.Text(),
-							Placeholder: "null",
-							Nullable:    true,
+							Name:      "error",
+							Type:      types.Text(),
+							Prefilled: "null",
+							Nullable:  true,
 							Description: "A possible error in the execution of the latest update of the user schema.\n\n" +
 								"If null, it means that no update of the user schema has ever been executed, or that one is in progress, or that the last one executed completed without errors.",
 						},

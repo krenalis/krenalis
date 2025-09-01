@@ -16,8 +16,8 @@ const errorMessageByOauthErrorCode = {
 		'An internal error has occurred. Please try again later and if the issue persists contact our support.',
 	invalid_scope:
 		"The account with which you are logged in on [app-placeholder] doesn't have the permission to complete the operation.",
-	server_error: '[app-placeholder] is temporarely unavailable. Try again later.',
-	temporarily_unavailable: '[app-placeholder] is temporarely unavailable. Try again later.',
+	server_error: '[app-placeholder] is temporarily unavailable. Try again later.',
+	temporarily_unavailable: '[app-placeholder] is temporarily unavailable. Try again later.',
 };
 
 const OAuth = () => {

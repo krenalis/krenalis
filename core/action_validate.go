@@ -778,8 +778,8 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
 
 	for path, p := range types.WalkAll(schema) {
-		if p.Placeholder != "" {
-			return fmt.Errorf("%s action schema property %q has a placeholder, but action schema properties cannot have placeholders", io, path)
+		if p.Prefilled != "" {
+			return fmt.Errorf("%s action schema property %q has a prefilled value, but action schema properties cannot have prefilled values", io, path)
 		}
 		if isUserSchema {
 			if isMetaProperty(path) {

@@ -184,7 +184,7 @@ func newEventForTest(eventType, anonymousID, messageID string, now time.Time) *m
 		}{
 			ID: "track",
 			Schema: types.Object([]types.Property{
-				{Name: "event", Placeholder: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+				{Name: "event", Prefilled: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
 				{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
 			}),
 			Values: map[string]any{

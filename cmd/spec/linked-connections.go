@@ -17,14 +17,14 @@ func init() {
 		Name:           "src",
 		Type:           types.Int(32),
 		CreateRequired: true,
-		Placeholder:    "1371036433",
+		Prefilled:      "1371036433",
 		Description:    "The ID of the source connection. It must be an SDK connection.",
 	}
 	dstParameter := types.Property{
 		Name:           "dst",
 		Type:           types.Int(32),
 		CreateRequired: true,
-		Placeholder:    "1554801134",
+		Prefilled:      "1554801134",
 		Description:    "The ID of a destination connection. It must be an app that supports events.",
 	}
 

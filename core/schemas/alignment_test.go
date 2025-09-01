@@ -56,12 +56,12 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		},
 		{
 			p1:   types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Boolean(), CreateRequired: true}})},
-			p2:   types.Property{Type: types.Object([]types.Property{{Name: "a", Placeholder: "a", Type: types.Boolean(), CreateRequired: true}, {Name: "b", Type: types.Int(64)}})},
+			p2:   types.Property{Type: types.Object([]types.Property{{Name: "a", Prefilled: "a", Type: types.Boolean(), CreateRequired: true}, {Name: "b", Type: types.Int(64)}})},
 			mode: &createOnlyMode,
 		},
 		{
 			p1: types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Boolean(), ReadOptional: true}})},
-			p2: types.Property{Type: types.Object([]types.Property{{Name: "a", Placeholder: "a", Type: types.Boolean(), ReadOptional: true}, {Name: "b", Type: types.Int(64), CreateRequired: true}})},
+			p2: types.Property{Type: types.Object([]types.Property{{Name: "a", Prefilled: "a", Type: types.Boolean(), ReadOptional: true}, {Name: "b", Type: types.Int(64), CreateRequired: true}})},
 		},
 		{
 			p1:   types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Int(32), CreateRequired: true, UpdateRequired: true}})},

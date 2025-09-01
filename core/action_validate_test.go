@@ -2235,11 +2235,11 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.App,
 		},
 		{
-			name: "BAD: Source/App/User - input schema cannot contain a property with a placeholder",
+			name: "BAD: Source/App/User - input schema cannot contain a property with a prefilled value",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), Placeholder: "Your Email"},
+					{Name: "email_in", Type: types.Text(), Prefilled: "Your Email"},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -2253,17 +2253,17 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     `input action schema property "email_in" has a placeholder, but action schema properties cannot have placeholders`,
+			err:                     `input action schema property "email_in" has a prefilled value, but action schema properties cannot have prefilled values`,
 		},
 		{
-			name: "BAD: Source/App/User - output schema cannot contain a property with a placeholder",
+			name: "BAD: Source/App/User - output schema cannot contain a property with a prefilled value",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), Placeholder: "Your Email"},
+					{Name: "email_out", Type: types.Text(), Prefilled: "Your Email"},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
@@ -2274,7 +2274,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     `output action schema property "email_out" has a placeholder, but action schema properties cannot have placeholders`,
+			err:                     `output action schema property "email_out" has a prefilled value, but action schema properties cannot have prefilled values`,
 		},
 		{
 			name: "BAD: Source/App/User - output schema - which refers to users - cannot contain conflicting properties",

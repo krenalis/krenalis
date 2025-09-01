@@ -258,9 +258,9 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	b.WriteByte('"')
 	b.WriteString(p.Name)
 	b.WriteByte('"')
-	if p.Placeholder != "" {
-		b.WriteString(`,"placeholder":`)
-		_ = marshalString(b, p.Placeholder)
+	if p.Prefilled != "" {
+		b.WriteString(`,"prefilled":`)
+		_ = marshalString(b, p.Prefilled)
 	}
 	b.WriteString(`,"type":`)
 	marshalType(b, p.Type)
@@ -920,7 +920,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var hasPlaceholder, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDescription bool
+	var hasPrefilled, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDescription bool
 
 	// Read property keys and values.
 	for {
@@ -969,15 +969,15 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 			if !IsValidPropertyName(p.Name) {
 				return Property{}, errors.New("invalid property name")
 			}
-		case "placeholder":
-			if hasPlaceholder {
-				return Property{}, errors.New("repeated 'placeholder' key")
+		case "prefilled":
+			if hasPrefilled {
+				return Property{}, errors.New("repeated 'prefilled' key")
 			}
-			p.Placeholder, ok = tok.(string)
+			p.Prefilled, ok = tok.(string)
 			if !ok {
-				return Property{}, errors.New("unexpected value for property placeholder")
+				return Property{}, errors.New("unexpected value for property prefilled")
 			}
-			hasPlaceholder = true
+			hasPrefilled = true
 		case "createRequired":
 			if hasCreateRequired {
 				return Property{}, errors.New("repeated 'createRequired' key")

@@ -24,7 +24,7 @@ type FloatBitSize = 32 | 64;
 
 interface Property {
 	name: string;
-	placeholder: string;
+	prefilled: string;
 	role: Role;
 	type: Type;
 	createRequired: boolean;

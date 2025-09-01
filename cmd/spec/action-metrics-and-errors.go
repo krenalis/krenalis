@@ -15,7 +15,7 @@ func init() {
 
 	actionsParameter := types.Property{
 		Name:           "actions",
-		Placeholder:    "705981339,1360924687",
+		Prefilled:      "705981339,1360924687",
 		Type:           types.Array(types.Int(32)),
 		CreateRequired: true,
 		Description: "The IDs of the actions for which metrics should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\n" +
@@ -25,25 +25,25 @@ func init() {
 		{
 			Name:        "start",
 			Type:        types.DateTime(),
-			Placeholder: `"2025-01-02T09:00:00"`,
+			Prefilled:   `"2025-01-02T09:00:00"`,
 			Description: "The starting date in the `YYYY-MM-DDTHH:mm:ss` ISO 8601 format.",
 		},
 		{
 			Name:        "end",
 			Type:        types.DateTime(),
-			Placeholder: `"2025-01-02T18:00:00"`,
+			Prefilled:   `"2025-01-02T18:00:00"`,
 			Description: "The ending date in the `YYYY-MM-DDTHH:mm:ss` ISO 8601 format.",
 		},
 		{
 			Name:        "passed",
 			Type:        types.Array(types.Array(types.Int(32))),
-			Placeholder: `[ [ 6029, 6029, 5974, 5974, 5974, 5974 ] ]`,
+			Prefilled:   `[ [ 6029, 6029, 5974, 5974, 5974, 5974 ] ]`,
 			Description: "The number of users or events that successfully passed each step on each hour within the start and end dates.",
 		},
 		{
 			Name:        "failed",
 			Type:        types.Array(types.Array(types.Int(32))),
-			Placeholder: `[ [ 0, 0, 55, 0, 0, 0 ] ]`,
+			Prefilled:   `[ [ 0, 0, 55, 0, 0, 0 ] ]`,
 			Description: "The number of users or events that failed at each step on each hour within the start and end dates.",
 		},
 	}
@@ -168,7 +168,7 @@ func init() {
 					},
 					{
 						Name:           "actions",
-						Placeholder:    "705981339,1360924687",
+						Prefilled:      "705981339,1360924687",
 						Type:           types.Array(types.Int(32)),
 						CreateRequired: true,
 						Description: "The IDs of the actions for which errors should be returned. At least one action must be provided. The request does not fail if an action does not exist within the workspace.\n\n" +

@@ -267,7 +267,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 
 			if (i === 0) {
 				if (action.filter.conditions.length > 1) {
-					// Add a placeholder to mantain alignment.
+					// Add a placeholder to maintain alignment.
 					logicalElement = (
 						<div className='action__filters-logical action__filters-logical--placeholder'></div>
 					);

@@ -70,7 +70,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 			err: `user schema properties cannot have type array(object)`,
 		},
 		{
-			name: "Property with a placeholder",
+			name: "Property with a prefilled value",
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.Text(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
@@ -81,10 +81,10 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 				{Name: "billing_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.Text(), ReadOptional: true},
 					{Name: "street2", Type: types.Text(), ReadOptional: true},
-					{Name: "number", Type: types.Int(32), Placeholder: "1234"},
+					{Name: "number", Type: types.Int(32), Prefilled: "1234"},
 				}), ReadOptional: true},
 			}),
-			err: "user schema properties cannot have a placeholder",
+			err: "user schema properties cannot have a prefilled value",
 		},
 		{
 			name: "Meta properties",
