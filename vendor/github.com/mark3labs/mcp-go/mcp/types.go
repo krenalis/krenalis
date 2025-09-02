@@ -8,8 +8,9 @@ import (
 	"maps"
 	"strconv"
 
-	"github.com/yosida95/uritemplate/v3"
 	"net/http"
+
+	"github.com/yosida95/uritemplate/v3"
 )
 
 type MCPMethod string
@@ -152,6 +153,18 @@ func (m *Meta) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func NewMetaFromMap(m map[string]any) *Meta {
+	progressToken := m["progressToken"]
+	if progressToken != nil {
+		delete(m, "progressToken")
+	}
+
+	return &Meta{
+		ProgressToken:    progressToken,
+		AdditionalFields: m,
+	}
+}
+
 type Request struct {
 	Method string        `json:"method"`
 	Params RequestParams `json:"params,omitempty"`
@@ -233,7 +246,7 @@ func (p *NotificationParams) UnmarshalJSON(data []byte) error {
 type Result struct {
 	// This result property is reserved by the protocol to allow clients and
 	// servers to attach additional metadata to their responses.
-	Meta map[string]any `json:"_meta,omitempty"`
+	Meta *Meta `json:"_meta,omitempty"`
 }
 
 // RequestId is a uniquely identifying ID for a request in JSON-RPC.
@@ -472,6 +485,8 @@ type ServerCapabilities struct {
 		// list.
 		ListChanged bool `json:"listChanged,omitempty"`
 	} `json:"resources,omitempty"`
+	// Present if the server supports sending sampling requests to clients.
+	Sampling *struct{} `json:"sampling,omitempty"`
 	// Present if the server offers any tools to call.
 	Tools *struct {
 		// Whether this server supports notifications for changes to the tool list.
@@ -644,6 +659,8 @@ type ResourceUpdatedNotificationParams struct {
 // Resource represents a known resource that the server is capable of reading.
 type Resource struct {
 	Annotated
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta *Meta `json:"_meta,omitempty"`
 	// The URI of this resource.
 	URI string `json:"uri"`
 	// A human-readable name for this resource.
@@ -668,6 +685,8 @@ func (r Resource) GetName() string {
 // on the server.
 type ResourceTemplate struct {
 	Annotated
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta *Meta `json:"_meta,omitempty"`
 	// A URI template (according to RFC 6570) that can be used to construct
 	// resource URIs.
 	URITemplate *URITemplate `json:"uriTemplate"`
@@ -697,6 +716,8 @@ type ResourceContents interface {
 }
 
 type TextResourceContents struct {
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta *Meta `json:"_meta,omitempty"`
 	// The URI of this resource.
 	URI string `json:"uri"`
 	// The MIME type of this resource, if known.
@@ -709,6 +730,8 @@ type TextResourceContents struct {
 func (TextResourceContents) isResourceContents() {}
 
 type BlobResourceContents struct {
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta *Meta `json:"_meta,omitempty"`
 	// The URI of this resource.
 	URI string `json:"uri"`
 	// The MIME type of this resource, if known.
@@ -867,6 +890,8 @@ type Content interface {
 // It must have Type set to "text".
 type TextContent struct {
 	Annotated
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta *Meta  `json:"_meta,omitempty"`
 	Type string `json:"type"` // Must be "text"
 	// The text content of the message.
 	Text string `json:"text"`
@@ -878,6 +903,8 @@ func (TextContent) isContent() {}
 // It must have Type set to "image".
 type ImageContent struct {
 	Annotated
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta *Meta  `json:"_meta,omitempty"`
 	Type string `json:"type"` // Must be "image"
 	// The base64-encoded image data.
 	Data string `json:"data"`
@@ -891,6 +918,8 @@ func (ImageContent) isContent() {}
 // It must have Type set to "audio".
 type AudioContent struct {
 	Annotated
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta *Meta  `json:"_meta,omitempty"`
 	Type string `json:"type"` // Must be "audio"
 	// The base64-encoded audio data.
 	Data string `json:"data"`
@@ -922,6 +951,8 @@ func (ResourceLink) isContent() {}
 // benefit of the LLM and/or the user.
 type EmbeddedResource struct {
 	Annotated
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta     *Meta            `json:"_meta,omitempty"`
 	Type     string           `json:"type"`
 	Resource ResourceContents `json:"resource"`
 }
@@ -1056,6 +1087,8 @@ type ListRootsResult struct {
 
 // Root represents a root directory or file that the server can operate on.
 type Root struct {
+	// Meta is a metadata object that is reserved by MCP for storing additional information.
+	Meta *Meta `json:"_meta,omitempty"`
 	// The URI identifying the root. This *must* start with file:// for now.
 	// This restriction may be relaxed in future versions of the protocol to allow
 	// other URI schemes.
@@ -1114,23 +1147,23 @@ func UnmarshalContent(data []byte) (Content, error) {
 	}
 
 	switch contentType {
-	case "text":
+	case ContentTypeText:
 		var content TextContent
 		err := json.Unmarshal(data, &content)
 		return content, err
-	case "image":
+	case ContentTypeImage:
 		var content ImageContent
 		err := json.Unmarshal(data, &content)
 		return content, err
-	case "audio":
+	case ContentTypeAudio:
 		var content AudioContent
 		err := json.Unmarshal(data, &content)
 		return content, err
-	case "resource_link":
+	case ContentTypeLink:
 		var content ResourceLink
 		err := json.Unmarshal(data, &content)
 		return content, err
-	case "resource":
+	case ContentTypeResource:
 		var content EmbeddedResource
 		err := json.Unmarshal(data, &content)
 		return content, err
