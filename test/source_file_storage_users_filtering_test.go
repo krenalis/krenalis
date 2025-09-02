@@ -17,19 +17,22 @@ import (
 
 func TestSourceFileStorageUsersFiltering(t *testing.T) {
 
+	// Determine the storage directory.
+	storageDir, err := filepath.Abs("testdata/source_file_storage_users_filtering")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
-	storageDir, err := filepath.Abs("testdata/source_file_storage_users_filtering")
-	if err != nil {
-		t.Fatal(err)
-	}
-	fs1 := c.CreateSourceFilesystem(storageDir)
+	fs1 := c.CreateSourceFilesystem()
 
 	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
 		Name:    "CSV",

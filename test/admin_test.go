@@ -39,11 +39,14 @@ const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
+	fsTempDir := meergotester.NewTempStorage(t)
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(fsTempDir.Root())
 	c.Start()
 	defer c.Stop()
 
@@ -149,24 +152,28 @@ func TestAdmin(t *testing.T) {
 
 	// Prepare and run the Admin tests.
 	assetsDir := filepath.Join("..", "assets")
-	run(t, "npm", []string{"install"}, assetsDir)
-	run(t, "npx", []string{"playwright", "install", "chromium"}, assetsDir)
+	run(t, "npm", []string{"install"}, assetsDir, fsTempDir.Root())
+	run(t, "npx", []string{"playwright", "install", "chromium"}, assetsDir, fsTempDir.Root())
 	if passUIFlagToPlaywright {
-		run(t, "npx", []string{"playwright", "test", "--ui"}, assetsDir)
+		run(t, "npx", []string{"playwright", "test", "--ui"}, assetsDir, fsTempDir.Root())
 		t.Fatal("The Admin test was run with the constant 'passUIFlagToPlaywright' set to true," +
 			" so the test is considered to have failed as a precaution." +
 			" For more details, see the documentation for the constant 'passUIFlagToPlaywright'.")
 	} else {
-		run(t, "npx", []string{"playwright", "test"}, assetsDir)
+		run(t, "npx", []string{"playwright", "test"}, assetsDir, fsTempDir.Root())
 	}
 
+	// The tests have been run, so the temporary directory used by Filesystem
+	// can be deleted.
+	fsTempDir.Remove()
 }
 
-func run(t *testing.T, name string, args []string, directory string) {
+func run(t *testing.T, name string, args []string, directory, fsTempDir string) {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = directory
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), "MEERGO_TEST_FS_TEMP_DIR="+fsTempDir)
 	err := cmd.Run()
 	if err != nil {
 		t.Fatalf("error while executing %s: %s", name, err)

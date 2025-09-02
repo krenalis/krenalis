@@ -25,15 +25,7 @@ func TestActionsCreation(t *testing.T) {
 	// add them on the action validation function, which is faster to test and
 	// easier to debug.
 
-	// Test's header (copy-paste me in other tests).
-	if testing.Short() {
-		t.Skip()
-	}
-	c := meergotester.NewMeergoInstance(t)
-	c.Start()
-	defer c.Stop()
-
-	// Create some connections that will be used by the actions.
+	// Determine the storage.
 	storageDir, err := filepath.Abs("testdata/storage")
 	if err != nil {
 		t.Fatal(err)
@@ -45,8 +37,19 @@ func TestActionsCreation(t *testing.T) {
 	if !stat.IsDir() {
 		t.Fatalf("%q is not a dir", storageDir)
 	}
-	srcFsID := c.CreateSourceFilesystem(storageDir)
-	dstFsID := c.CreateDestinationFilesystem(storageDir)
+
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storageDir)
+	c.Start()
+	defer c.Stop()
+
+	// Create some connections that will be used by the actions.
+	srcFsID := c.CreateSourceFilesystem()
+	dstFsID := c.CreateDestinationFilesystem()
 	javaScriptConnection := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	postgreSQLConnection := c.CreateSourcePostgreSQL()
 

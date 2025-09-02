@@ -23,11 +23,15 @@ import (
 
 func TestExportZeroUsers(t *testing.T) {
 
+	// Create the temporary storage.
+	storage := meergotester.NewTempStorage(t)
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
 
@@ -65,9 +69,6 @@ func TestExportZeroUsers(t *testing.T) {
 
 	// Test the export of zero users to file (CSV).
 	func() {
-
-		// Create the temporary storage.
-		storage := meergotester.NewTempStorage(t)
 
 		// Create the Filesystem connection.
 		fsID := c.CreateConnection(meergotester.ConnectionToCreate{

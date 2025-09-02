@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createTempDirectory, login, logout, config, adminURL } from './utils';
+import { login, logout, config, adminURL } from './utils';
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
@@ -117,56 +117,38 @@ test(`Add Filesystem source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
 	await page.click(`[data-name="Filesystem"]`);
 	await page.click('.connectors-list__documentation-add');
-
-	await createTempDirectory(async (tempDir: string) => {
-		await page.locator('sl-input >> input[name="Root"]').fill(tempDir);
-
-		await page.click('.connector-settings__save-button');
-
-		await expect(page.locator('.connection-wrapper__name')).toContainText('Filesystem');
-
-		const url = page.url();
-		const fragments = url.split('/');
-		const id = fragments[fragments.length - 2];
-
-		await page.goto(`${adminURL}/connections/sources`);
-		await expect(
-			page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
-		).toBeAttached();
-
-		await page.goto(`${adminURL}/connections`);
-		await expect(
-			page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
-		).toBeAttached();
-	});
+	await page.click('.connector-settings__save-button');
+	await expect(page.locator('.connection-wrapper__name')).toContainText('Filesystem');
+	const url = page.url();
+	const fragments = url.split('/');
+	const id = fragments[fragments.length - 2];
+	await page.goto(`${adminURL}/connections/sources`);
+	await expect(
+		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
+	).toBeAttached();
+	await page.goto(`${adminURL}/connections`);
+	await expect(
+		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
+	).toBeAttached();
 });
 
 test(`Add Filesystem destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
 	await page.click(`[data-name="Filesystem"]`);
 	await page.click('.connectors-list__documentation-add');
-
-	await createTempDirectory(async (tempDir: string) => {
-		await page.locator('sl-input >> input[name="Root"]').fill(tempDir);
-
-		await page.click('.connector-settings__save-button');
-
-		await expect(page.locator('.connection-wrapper__name')).toContainText('Filesystem');
-
-		const url = page.url();
-		const fragments = url.split('/');
-		const id = fragments[fragments.length - 2];
-
-		await page.goto(`${adminURL}/connections/destinations`);
-		await expect(
-			page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
-		).toBeAttached();
-
-		await page.goto(`${adminURL}/connections`);
-		await expect(
-			page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
-		).toBeAttached();
-	});
+	await page.click('.connector-settings__save-button');
+	await expect(page.locator('.connection-wrapper__name')).toContainText('Filesystem');
+	const url = page.url();
+	const fragments = url.split('/');
+	const id = fragments[fragments.length - 2];
+	await page.goto(`${adminURL}/connections/destinations`);
+	await expect(
+		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
+	).toBeAttached();
+	await page.goto(`${adminURL}/connections`);
+	await expect(
+		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
+	).toBeAttached();
 });
 
 test(`Add Javascript source`, async ({ page }) => {

@@ -18,14 +18,6 @@ import (
 
 func TestImportUsersFromFile(t *testing.T) {
 
-	// Test's header (copy-paste me in other tests).
-	if testing.Short() {
-		t.Skip()
-	}
-	c := meergotester.NewMeergoInstance(t)
-	c.Start()
-	defer c.Stop()
-
 	// Determine the storage directory and assert that such directory exists.
 	storageDir, err := filepath.Abs("testdata/storage")
 	if err != nil {
@@ -39,8 +31,17 @@ func TestImportUsersFromFile(t *testing.T) {
 		t.Fatalf("%q is not a dir", storageDir)
 	}
 
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storageDir)
+	c.Start()
+	defer c.Stop()
+
 	// Create the Filesystem connection.
-	fsID := c.CreateSourceFilesystem(storageDir)
+	fsID := c.CreateSourceFilesystem()
 
 	c.UpdateIdentityResolution(true, []string{"email"})
 

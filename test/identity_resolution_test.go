@@ -28,17 +28,19 @@ import (
 // running the import action on the JSON.
 func TestIdentityResolution(t *testing.T) {
 
+	storage := meergotester.NewTempStorage(t)
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
 
 	// Create the Filesystem connection.
-	storage := meergotester.NewTempStorage(t)
-	fsID := c.CreateSourceFilesystem(storage.Root())
+	fsID := c.CreateSourceFilesystem()
 
 	properties := map[string]bool{
 		"dummyId":      true,

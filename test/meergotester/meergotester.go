@@ -72,6 +72,7 @@ type Meergo struct {
 	assetsGenerated      chan struct{}
 
 	// Options.
+	filesystemRoot     string
 	populateUserSchema bool
 }
 
@@ -87,9 +88,9 @@ func (c *Meergo) Addr() string {
 
 // NewMeergoInstance initializes a new instance of Meergo for testing.
 //
-// After initializing an instance, its options can be set (currently, there is
-// only the method [PopulateUserSchema]) and finally the instance can be started
-// with the [Start] method.
+// After initializing an instance, its options can be set (via
+// [PopulateUserSchema] and [SetFilesystemRoot]) and finally the instance can be
+// started with the [Start] method.
 func NewMeergoInstance(t *testing.T) *Meergo {
 
 	if !launchMeergoExternally {
@@ -162,6 +163,13 @@ func NewMeergoInstance(t *testing.T) *Meergo {
 // is considered true.
 func (c *Meergo) PopulateUserSchema(populate bool) {
 	c.populateUserSchema = populate
+}
+
+// SetFilesystemRoot sets the root of the Filesystem connections; the value set
+// here will be passed to Meergo via the MEERGO_CONNECTOR_FILESYSTEM_ROOT
+// environment variable.
+func (c *Meergo) SetFilesystemRoot(root string) {
+	c.filesystemRoot = root
 }
 
 // Start starts the Meergo instance.
@@ -313,6 +321,7 @@ func (c *Meergo) Start() {
 			"MEERGO_DB_SCHEMA=" + testsSettings.Database.Schema,
 			"MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
+			"MEERGO_CONNECTOR_FILESYSTEM_ROOT=" + c.filesystemRoot,
 		}...)
 		if !meergoAlreadyBuilt {
 			buildMeergo(c.t, c.repo, meergoDir)
@@ -347,6 +356,10 @@ func (c *Meergo) Start() {
 		setts.DB.Schema = testsSettings.Database.Schema
 		setts.Transformations.Local.PythonExecutable = testsSettings.PythonExecutable
 		setts.Transformations.Local.FunctionsDir = c.transformationsTempDir
+		err := os.Setenv("MEERGO_CONNECTOR_FILESYSTEM_ROOT", c.filesystemRoot)
+		if err != nil {
+			c.t.Fatal(err)
+		}
 		err = validDatabaseNameForTests(setts.DB.Database)
 		if err != nil {
 			c.t.Fatal(err)

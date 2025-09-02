@@ -702,60 +702,66 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 });
 
 test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => {
-	await addFileSystemSource(page, async (tempDir: string, connectionID: number) => {
-		// Create a temporary file.
-		const fileName = 'test.csv';
-		const tempFilePath = join(tempDir, fileName);
-		writeFile(tempFilePath, 'first_name, last_name, email\nJohn, Doe, example@open2b.com', (err) => {
-			if (err) throw err;
-		});
+	const connectionID = await addFileSystemSource(page);
 
-		await page.goto(`${adminURL}/connectors?role=Source`);
-		await page.click(`[data-name="CSV"]`);
-		await page.click('.connectors-list__documentation-add');
+	const tempDir = process.env.MEERGO_TEST_FS_TEMP_DIR;
+	if (!tempDir) {
+		throw new Error('Missing environment variable: MEERGO_TEST_FS_TEMP_DIR');
+	}
 
-		await page.click('.file-connector__storage sl-select');
-		await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
+	// Create a temporary file.
+	const fileName = 'test.csv';
+	const tempFilePath = join(tempDir, fileName);
+	writeFile(tempFilePath, 'first_name, last_name, email\nJohn, Doe, example@open2b.com', (err) => {
+		if (err) throw err;
+	});
 
-		let name = page.locator('.file-connector__action-types .list-tile__name', {
-			hasText: 'Import users',
-		});
+	await page.goto(`${adminURL}/connectors?role=Source`);
+	await page.click(`[data-name="CSV"]`);
+	await page.click('.connectors-list__documentation-add');
 
-		await expect(name).toBeAttached();
+	await page.click('.file-connector__storage sl-select');
+	await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
 
-		let button = name.locator('..').locator('..').locator('sl-button');
-		await button.click();
-		await expect(page.locator('.action__header')).toBeAttached();
+	let name = page.locator('.file-connector__action-types .list-tile__name', {
+		hasText: 'Import users',
+	});
 
-		// File
-		await page.locator('.action__file-path >> input').fill(fileName);
-		await page.click('.connector-ui .connector-checkbox:last-child sl-checkbox');
+	await expect(name).toBeAttached();
 
-		await page.click('.action__file-confirm');
+	let button = name.locator('..').locator('..').locator('sl-button');
+	await button.click();
+	await expect(page.locator('.action__header')).toBeAttached();
 
-		// Identity column.
-		const identity = page.locator('.action__transformation-identity-column');
-		await identity.locator('sl-input').click();
-		await identity.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
+	// File
+	await page.locator('.action__file-path >> input').fill(fileName);
+	await page.click('.connector-ui .connector-checkbox:last-child sl-checkbox');
 
-		// Mappings.
-		let mappings = page.locator('.action__transformation');
-		let email = mappings.locator('.combobox[data-id="email"]');
-		await email.locator('sl-input').click();
-		await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
-		await page.keyboard.press('Escape');
+	await page.click('.action__file-confirm');
 
-		let firstName = mappings.locator('.combobox[data-id="first_name"]');
-		await firstName.locator('sl-input').click();
-		await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
-		await page.keyboard.press('Escape');
+	// Identity column.
+	const identity = page.locator('.action__transformation-identity-column');
+	await identity.locator('sl-input').click();
+	await identity.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 
-		let lastName = mappings.locator('.combobox[data-id="last_name"]');
-		await lastName.locator('sl-input').click();
-		await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
-		await page.keyboard.press('Escape');
+	// Mappings.
+	let mappings = page.locator('.action__transformation');
+	let email = mappings.locator('.combobox[data-id="email"]');
+	await email.locator('sl-input').click();
+	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
+	await page.keyboard.press('Escape');
 
-		const expectedBody = `
+	let firstName = mappings.locator('.combobox[data-id="first_name"]');
+	await firstName.locator('sl-input').click();
+	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
+	await page.keyboard.press('Escape');
+
+	let lastName = mappings.locator('.combobox[data-id="last_name"]');
+	await lastName.locator('sl-input').click();
+	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
+	await page.keyboard.press('Escape');
+
+	const expectedBody = `
 		{
 			"target": "User",
 			"eventType": null,
@@ -845,69 +851,74 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			}
 		}`;
 
-		let saveButton = page.locator('.action__header-save >> button');
-		const [response] = await Promise.all([
-			page.waitForResponse((response) => {
-				return response.url().includes('/actions') && response.request().method() === 'POST';
-			}),
-			saveButton.click(),
-		]);
+	let saveButton = page.locator('.action__header-save >> button');
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
 
-		const status = response.status();
-		if (status !== 200) {
-			throw new Error(`Unexpected response status while adding the action: ${status}`);
-		}
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
 
-		const got = JSON.parse(response.request().postData());
-		let expected = JSON.parse(expectedBody);
-		expected.connection = connectionID;
-		deepCompareActionSchema(got, expected);
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = connectionID;
+	deepCompareActionSchema(got, expected);
 
-		await expect(page.locator('.connection-actions__grid')).toBeAttached();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
-		await page.reload();
+	await page.reload();
 
-		await expect(page.locator('.connection-actions__grid')).toBeAttached();
-	});
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
 test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => {
-	await addFileSystemDestination(page, async (tempDir: string, connectionID: number) => {
-		// Create a temporary file.
-		const fileName = 'test.csv';
+	const connectionID = await addFileSystemDestination(page);
 
-		const tempFilePath = join(tempDir, fileName);
-		writeFile(tempFilePath, '', (err) => {
-			if (err) throw err;
-		});
+	const tempDir = process.env.MEERGO_TEST_FS_TEMP_DIR;
+	if (!tempDir) {
+		throw new Error('Missing environment variable: MEERGO_TEST_FS_TEMP_DIR');
+	}
 
-		await page.goto(`${adminURL}/connectors?role=Destination`);
-		await page.click(`[data-name="CSV"]`);
-		await page.click('.connectors-list__documentation-add');
+	// Create a temporary file.
+	const fileName = 'test.csv';
 
-		await page.click('.file-connector__storage sl-select');
-		await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
+	const tempFilePath = join(tempDir, fileName);
+	writeFile(tempFilePath, '', (err) => {
+		if (err) throw err;
+	});
 
-		let name = page.locator('.file-connector__action-types .list-tile__name', {
-			hasText: 'Import users',
-		});
+	await page.goto(`${adminURL}/connectors?role=Destination`);
+	await page.click(`[data-name="CSV"]`);
+	await page.click('.connectors-list__documentation-add');
 
-		await expect(name).toBeAttached();
+	await page.click('.file-connector__storage sl-select');
+	await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
 
-		let button = name.locator('..').locator('..').locator('sl-button');
-		await button.click();
-		await expect(page.locator('.action__header')).toBeAttached();
+	let name = page.locator('.file-connector__action-types .list-tile__name', {
+		hasText: 'Import users',
+	});
 
-		// Filters.
-		await fillUserActionFilters(page);
+	await expect(name).toBeAttached();
 
-		// File
-		await page.locator('.action__file-format').click();
-		await page.locator('.action__file-format sl-option[value="CSV"]').click();
+	let button = name.locator('..').locator('..').locator('sl-button');
+	await button.click();
+	await expect(page.locator('.action__header')).toBeAttached();
 
-		await page.locator('.action__file-path >> input').fill(fileName);
+	// Filters.
+	await fillUserActionFilters(page);
 
-		const expectedBody = `
+	// File
+	await page.locator('.action__file-format').click();
+	await page.locator('.action__file-format sl-option[value="CSV"]').click();
+
+	await page.locator('.action__file-path >> input').fill(fileName);
+
+	const expectedBody = `
 		{
 			"target": "User",
 			"eventType": null,
@@ -1178,30 +1189,29 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			}
 		}`;
 
-		let saveButton = page.locator('.action__header-save >> button');
-		const [response] = await Promise.all([
-			page.waitForResponse((response) => {
-				return response.url().includes('/actions') && response.request().method() === 'POST';
-			}),
-			saveButton.click(),
-		]);
+	let saveButton = page.locator('.action__header-save >> button');
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/actions') && response.request().method() === 'POST';
+		}),
+		saveButton.click(),
+	]);
 
-		const status = response.status();
-		if (status !== 200) {
-			throw new Error(`Unexpected response status while adding the action: ${status}`);
-		}
+	const status = response.status();
+	if (status !== 200) {
+		throw new Error(`Unexpected response status while adding the action: ${status}`);
+	}
 
-		const got = JSON.parse(response.request().postData());
-		let expected = JSON.parse(expectedBody);
-		expected.connection = connectionID;
-		deepCompareActionSchema(got, expected);
+	const got = JSON.parse(response.request().postData());
+	let expected = JSON.parse(expectedBody);
+	expected.connection = connectionID;
+	deepCompareActionSchema(got, expected);
 
-		await expect(page.locator('.connection-actions__grid')).toBeAttached();
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 
-		await page.reload();
+	await page.reload();
 
-		await expect(page.locator('.connection-actions__grid')).toBeAttached();
-	});
+	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
 test(`Add "Import events" action on Javascript`, async ({ page }) => {

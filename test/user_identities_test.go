@@ -18,22 +18,25 @@ import (
 
 func Test_UserIdentities(t *testing.T) {
 
+	// Determine the storage directory.
+	storageDir, err := filepath.Abs("testdata/user_identities_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
 	c.UpdateIdentityResolution(true, []string{"email"})
 
-	storageDir, err := filepath.Abs("testdata/user_identities_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	fs1 := c.CreateSourceFilesystem(storageDir)
-	fs2 := c.CreateSourceFilesystem(storageDir)
+	fs1 := c.CreateSourceFilesystem()
+	fs2 := c.CreateSourceFilesystem()
 
 	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
 		Name:    "CSV 1",

@@ -1,9 +1,8 @@
 import { expect, Page } from '@playwright/test';
 import API from '../src/lib/api/api';
 import { Property } from '../src/lib/api/types/types';
-import { readFileSync, rmSync, mkdtempSync } from 'fs';
-import { tmpdir } from 'os';
-import { join, resolve } from 'path';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 interface Config {
 	baseURL: string;
@@ -147,62 +146,48 @@ const addPostgreSQLDestination = async (page: Page): Promise<number> => {
 	return id;
 };
 
-const addFileSystemSource = async (
-	page: Page,
-	func: (tempDir: string, connectionID: number) => Promise<void>,
-): Promise<void> => {
-	await createTempDirectory(async (tempDir: string) => {
-		const id = await page.evaluate(
-			async ({ url, workspace, tempDir }) => {
-				const api = new (window as any).API(url, workspace) as API;
-				return await api.workspaces.createConnection(
-					{
-						name: 'Filesystem',
-						role: 'Source',
-						connector: 'Filesystem',
-						strategy: null,
-						sendingMode: null,
-						settings: {
-							Root: tempDir,
-						},
-						linkedConnections: null,
-					},
-					'',
-				);
-			},
-			{ url: config.baseURL, workspace: config.workspaceID, tempDir: tempDir },
-		);
-		await func(tempDir, id);
-	});
+const addFileSystemSource = async (page: Page): Promise<number> => {
+	const id = await page.evaluate(
+		async ({ url, workspace }) => {
+			const api = new (window as any).API(url, workspace) as API;
+			return await api.workspaces.createConnection(
+				{
+					name: 'Filesystem',
+					role: 'Source',
+					connector: 'Filesystem',
+					strategy: null,
+					sendingMode: null,
+					settings: {},
+					linkedConnections: null,
+				},
+				'',
+			);
+		},
+		{ url: config.baseURL, workspace: config.workspaceID },
+	);
+	return id;
 };
 
-const addFileSystemDestination = async (
-	page: Page,
-	func: (tempDir: string, connectionID: number) => Promise<void>,
-): Promise<void> => {
-	await createTempDirectory(async (tempDir: string) => {
-		const id = await page.evaluate(
-			async ({ url, workspace, tempDir }) => {
-				const api = new (window as any).API(url, workspace) as API;
-				return await api.workspaces.createConnection(
-					{
-						name: 'Filesystem',
-						role: 'Destination',
-						connector: 'Filesystem',
-						strategy: null,
-						sendingMode: null,
-						settings: {
-							Root: tempDir,
-						},
-						linkedConnections: null,
-					},
-					'',
-				);
-			},
-			{ url: config.baseURL, workspace: config.workspaceID, tempDir: tempDir },
-		);
-		await func(tempDir, id);
-	});
+const addFileSystemDestination = async (page: Page): Promise<number> => {
+	const id = await page.evaluate(
+		async ({ url, workspace }) => {
+			const api = new (window as any).API(url, workspace) as API;
+			return await api.workspaces.createConnection(
+				{
+					name: 'Filesystem',
+					role: 'Destination',
+					connector: 'Filesystem',
+					strategy: null,
+					sendingMode: null,
+					settings: {},
+					linkedConnections: null,
+				},
+				'',
+			);
+		},
+		{ url: config.baseURL, workspace: config.workspaceID },
+	);
+	return id;
 };
 
 const addJavascriptSource = async (page: Page): Promise<number> => {
@@ -303,27 +288,6 @@ const deepCompareActionSchema = (actual: object, expected: object) => {
 	expect(actualCopy).toEqual(expectedCopy);
 };
 
-const createTempDirectory = async (func: (tempDir: string) => Promise<void>) => {
-	let tempDir: string;
-	const appPrefix = 'meergo-ui-test';
-	try {
-		tempDir = mkdtempSync(join(tmpdir(), appPrefix));
-		await func(tempDir);
-	} catch (err) {
-		throw err;
-	} finally {
-		try {
-			if (tempDir) {
-				rmSync(tempDir, { recursive: true });
-			}
-		} catch (e) {
-			console.error(
-				`An error has occurred while removing the temp folder at ${tempDir}. Please remove it manually. Error: ${e}`,
-			);
-		}
-	}
-};
-
 export {
 	config,
 	adminPath,
@@ -339,5 +303,4 @@ export {
 	addJavascriptSource,
 	fillUserActionFilters,
 	deepCompareActionSchema,
-	createTempDirectory,
 };

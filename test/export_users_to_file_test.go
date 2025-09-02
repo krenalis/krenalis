@@ -27,11 +27,15 @@ import (
 
 func TestExportUsersToFile(t *testing.T) {
 
+	// Create the temporary storage.
+	storage := meergotester.NewTempStorage(t)
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
 
@@ -67,16 +71,13 @@ func TestExportUsersToFile(t *testing.T) {
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
-	// Create the temporary storage.
-	storage := meergotester.NewTempStorage(t)
-
 	// Create the Filesystem connection.
 	fsID := c.CreateConnection(meergotester.ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      meergotester.Destination,
 		Connector: "Filesystem",
 		Settings: meergotester.JSONEncodeSettings(map[string]any{
-			"Root": storage.Root(),
+			"SimulateHighIOLatency": false,
 		}),
 	})
 

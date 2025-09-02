@@ -21,15 +21,7 @@ import (
 
 func TestStorage(t *testing.T) {
 
-	// Test's header (copy-paste me in other tests).
-	if testing.Short() {
-		t.Skip()
-	}
-	c := meergotester.NewMeergoInstance(t)
-	c.Start()
-	defer c.Stop()
-
-	// Create a file storage connection.
+	// Determine the storage directory.
 	storageDir, err := filepath.Abs("testdata/storage")
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +33,18 @@ func TestStorage(t *testing.T) {
 	if !stat.IsDir() {
 		t.Fatalf("%q is not a dir", storageDir)
 	}
-	storage := c.CreateSourceFilesystem(storageDir)
+
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storageDir)
+	c.Start()
+	defer c.Stop()
+
+	// Create a file storage connection.
+	storage := c.CreateSourceFilesystem()
 
 	// Test the "/files/sheets" endpoint.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}

@@ -24,11 +24,25 @@ import (
 
 func Test_ImportFromManyConnections(t *testing.T) {
 
+	// Determine the storage directory and assert that such directory exists.
+	storageDir, err := filepath.Abs("testdata/import_from_many_connections_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stat, err := os.Stat(storageDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stat.IsDir() {
+		t.Fatalf("%q is not a dir", storageDir)
+	}
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
+	c.SetFilesystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
@@ -75,19 +89,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var fs, csvAction int
 	t.Log("importing from CSV file...")
 	{
-		// Determine the storage directory and assert that such directory exists.
-		storageDir, err := filepath.Abs("testdata/import_from_many_connections_test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		stat, err := os.Stat(storageDir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !stat.IsDir() {
-			t.Fatalf("%q is not a dir", storageDir)
-		}
-		fs = c.CreateSourceFilesystem(storageDir)
+		fs = c.CreateSourceFilesystem()
 		csvAction = c.CreateAction(fs, "User", meergotester.ActionToSet{
 			Name:    "Import users from CSV on Filesystem",
 			Enabled: true,

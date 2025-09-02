@@ -22,12 +22,22 @@ func TestParquetTestApacheFiles(t *testing.T) {
 	// TODO: test column values in addition to column names and types.
 	// See the issue https://github.com/meergo/meergo/issues/1418.
 
+	// Retrieve the storage directory that contains the Parquet file to import.
+	storageDir, err := filepath.Abs("testdata/apache/parquet-testing/data")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(storageDir); err != nil {
+		t.Fatal(err)
+	}
+
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
 	c.PopulateUserSchema(false)
+	c.SetFilesystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
@@ -123,16 +133,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		},
 	}
 
-	// Retrieve the storage directory that contains the Parquet file to import.
-	storageDir, err := filepath.Abs("testdata/apache/parquet-testing/data")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(storageDir); err != nil {
-		t.Fatal(err)
-	}
-
-	fs := c.CreateSourceFilesystem(storageDir)
+	fs := c.CreateSourceFilesystem()
 
 	for _, test := range tests {
 

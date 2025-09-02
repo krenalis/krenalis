@@ -194,13 +194,13 @@ func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
 	return id
 }
 
-func (c *Meergo) CreateDestinationFilesystem(storageDir string) int {
+func (c *Meergo) CreateDestinationFilesystem() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      Destination,
 		Connector: "Filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
-			"Root": storageDir,
+			"SimulateHighIOLatency": false,
 		}),
 	})
 }
@@ -286,13 +286,13 @@ func (c *Meergo) CreateJavaScriptSource(name string, linkedConnections []int) in
 	})
 }
 
-func (c *Meergo) CreateSourceFilesystem(storageDir string) int {
+func (c *Meergo) CreateSourceFilesystem() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      Source,
 		Connector: "Filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
-			"Root": storageDir,
+			"SimulateHighIOLatency": false,
 		}),
 	})
 }

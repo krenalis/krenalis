@@ -24,6 +24,8 @@ Table of contents:
 - [OAuth providers](#oauth-providers)
   - [HubSpot](#hubspot)
   - [Mailchimp](#mailchimp)
+- [Connectors](#connectors)
+  - [Filesystem](#filesystem)
 
 
 ## General
@@ -48,7 +50,7 @@ Table of contents:
 | `MEERGO_HTTP_READ_HEADER_TIMEOUT` | `2s`                     | Max time to read request headers, including TLS handshake.                                                                                                                                                                                                            |
 | `MEERGO_HTTP_READ_TIMEOUT`        | `5s`                     | Max time to read the full request (headers + body), starting from first byte.                                                                                                                                                                                         |
 | `MEERGO_HTTP_WRITE_TIMEOUT`       | `30s`                    | Max time for handler execution and sending response. For TLS, includes handshake.                                                                                                                                                                                     |
-| `MEERGO_HTTP_IDLE_TIMEOUT`        | `120s`                   | Max idle time between requests on keep-alive connections.                                                                                                                                                                                                             | 
+| `MEERGO_HTTP_IDLE_TIMEOUT`        | `120s`                   | Max idle time between requests on keep-alive connections.                                                                                                                                                                                                             |
 
 ## Database
 
@@ -87,9 +89,9 @@ These settings are used to send transactional emails.
 
 ## MaxMind
 
-| Variable                 | Default  | Description                                                                                                                                                                                                                                                                                    |
-|--------------------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MEERGO_MAXMIND_DB_PATH` |          | Path to the MaxMind database file (usually with extension '.mmdb') for automatically adding geolocation information to the events. If not set, no geolocation information are automatically added to the events by Meergo, so it is only possibile to provide location information explicitly. |
+| Variable                 | Default | Description                                                                                                                                                                                                                                                                                    |
+|--------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_MAXMIND_DB_PATH` |         | Path to the MaxMind database file (usually with extension '.mmdb') for automatically adding geolocation information to the events. If not set, no geolocation information are automatically added to the events by Meergo, so it is only possibile to provide location information explicitly. |
 
 
 ## Transformations
@@ -143,3 +145,16 @@ Configuration for OAuth integrations with external applications.
 |----------------------------------------|---------|------------------------------------|
 | `MEERGO_OAUTH_MAILCHIMP_CLIENT_ID`     |         | OAuth Client ID for Mailchimp.     |
 | `MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET` |         | OAuth Client Secret for Mailchimp. |
+
+## Connectors
+
+Configuration for specific connectors.
+
+> 💡 Note that the actual configuration of connectors is done via the graphical interface when instantiating a connection. The settings documented here are low-level settings related to the Meergo installation that can be set only via environment variables.
+
+### Filesystem
+
+| Variable                                     | Default | Description                                                                                                                                                                                                                                      |
+|----------------------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_CONNECTOR_FILESYSTEM_ROOT`           |         | Directory used as root by Filesystem connections. Mandatory when using Filesystem connections.                                                                                                                                                   |
+| `MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT` |         | Directory displayed as root by Filesystem connections. This is purely visual, useful in cases where you want to display a different root than the actual one in the Meergo interface (e.g., symlinks or directories mounted on virtual volumes). |

@@ -12,11 +12,14 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -31,6 +34,12 @@ var sourceOverview string
 
 //go:embed documentation/destination/overview.md
 var destinationOverview string
+
+var (
+	root          string
+	displayedRoot string
+	confMu        sync.Mutex
+)
 
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
@@ -52,6 +61,28 @@ func init() {
 
 // New returns a new Filesystem connector instance.
 func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
+
+	confMu.Lock()
+	defer confMu.Unlock()
+
+	// If root has not been set, it means that the configuration has not yet
+	// been read from the environment variables, and therefore needs to be read
+	// now.
+	if root == "" {
+		envVars, err := meergo.GetEnvVars()
+		if err != nil {
+			return nil, err
+		}
+		root = strings.TrimSpace(envVars.Get("MEERGO_CONNECTOR_FILESYSTEM_ROOT"))
+		displayedRoot = strings.TrimSpace(envVars.Get("MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT"))
+		if root == "" {
+			return nil, errors.New("missing MEERGO_CONNECTOR_FILESYSTEM_ROOT variable")
+		}
+		if err := validateRoot(root); err != nil {
+			return nil, fmt.Errorf("invalid value for MEERGO_CONNECTOR_FILESYSTEM_ROOT: %s", err)
+		}
+	}
+
 	c := Filesystem{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -68,7 +99,6 @@ type Filesystem struct {
 }
 
 type innerSettings struct {
-	Root                  string
 	SimulateHighIOLatency bool
 }
 
@@ -88,7 +118,7 @@ func (filesystem *Filesystem) AbsolutePath(ctx context.Context, name string) (st
 	if name == "." || !fs.ValidPath(name) {
 		return "", meergo.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
 	}
-	return filepath.Join(filesystem.settings.Root, name), nil
+	return filepath.Join(root, name), nil
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
@@ -125,10 +155,23 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 		return nil, meergo.ErrUIEventNotExist
 	}
 
+	var intro string
+	if role == meergo.Source {
+		intro = "This Filesystem connector allows Meergo to read files from this directory of your system:"
+	} else {
+		intro = "This Filesystem connector allows Meergo to write files into this directory of your system:"
+	}
+
+	rootToShow := root
+	if displayedRoot != "" {
+		rootToShow = displayedRoot
+	}
+
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Text{Label: "Warning", Text: "The Filesystem connector exposes your local filesystem to Meergo for read and write operations. Use this with caution."},
-			&meergo.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
+			&meergo.Text{Text: intro},
+			&meergo.Text{Text: rootToShow},
+			&meergo.Text{Label: "For testing"},
 			&meergo.Checkbox{Name: "SimulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
 		},
 		Settings: settings,
@@ -180,21 +223,6 @@ func (filesystem *Filesystem) saveSettings(ctx context.Context, settings json.Va
 	if err != nil {
 		return err
 	}
-	// Validate Root.
-	root := s.Root
-	if n := len(root); n == 0 || n > 253 {
-		return meergo.NewInvalidSettingsError("root path length in bytes must be in range [1,253]")
-	}
-	if !filepath.IsAbs(root) {
-		return meergo.NewInvalidSettingsError(`root path must be absolute`)
-	}
-	st, err := os.Stat(root)
-	if os.IsNotExist(err) {
-		return meergo.NewInvalidSettingsError("root path does not exist")
-	}
-	if !st.IsDir() {
-		return meergo.NewInvalidSettingsError("root path is not a directory")
-	}
 	b, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -204,5 +232,22 @@ func (filesystem *Filesystem) saveSettings(ctx context.Context, settings json.Va
 		return err
 	}
 	filesystem.settings = &s
+	return nil
+}
+
+func validateRoot(root string) error {
+	if n := len(root); n == 0 || n > 253 {
+		return meergo.NewInvalidSettingsError("root path length in bytes must be in range [1,253]")
+	}
+	if !filepath.IsAbs(root) {
+		return meergo.NewInvalidSettingsError("root path must be absolute")
+	}
+	st, err := os.Stat(root)
+	if os.IsNotExist(err) {
+		return meergo.NewInvalidSettingsError("root path does not exist")
+	}
+	if !st.IsDir() {
+		return meergo.NewInvalidSettingsError("root path is not a directory")
+	}
 	return nil
 }

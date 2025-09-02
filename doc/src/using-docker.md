@@ -42,17 +42,3 @@ docker compose up
 Now you can start using Meergo by visiting the Admin console at [http://localhost:9090/admin/](http://localhost:9090/admin/).
 
 Keep reading the documentation to see how [create your first workspace](./create-workspace).
-
-## Import and export local files with Docker
-
-When running Meergo under Docker, for importing and exporting files locally, you can add a Filesystem connection whose Root Path is:
-
-```plain
-/bin/meergo-files/sample-filesystem
-```
-
-which is mapped to the directory:
-
-```plain
-<local Meergo repository>/docker-compose/sample-filesystem
-```
