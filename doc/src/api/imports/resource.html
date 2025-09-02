@@ -64,7 +64,7 @@
       i := 0
       for property in t.properties.([]any) {
         p := property.(map[string]any)
-        placeholder, ok := p.placeholder.(string)
+        prefilled, ok := p.prefilled.(string)
         if !ok {
           continue
         }
@@ -79,10 +79,10 @@
           s += "&nbsp;&nbsp;&nbsp;&nbsp;"
         }
         s += `"` + unsafeconv.ToHTML(p.name.(string)) + `": `
-        if placeholder == "..." {
+        if prefilled == "..." {
           s += requestToHTML(p["type"].(map[string]any), depth+1)
         } else {
-          s += htmlEscape(placeholder)
+          s += htmlEscape(prefilled)
         }
         i++
       }
@@ -107,7 +107,7 @@
       i := 0
       for property in t.properties.([]any) {
         p := property.(map[string]any)
-        placeholder, ok := p.placeholder.(string)
+        prefilled, ok := p.prefilled.(string)
         if !ok {
           continue
         }
@@ -118,10 +118,10 @@
           s += "  "
         }
         s += `"` + unsafeconv.ToJSON(p.name.(string)) + `": `
-        if placeholder == "..." {
+        if prefilled == "..." {
           s += responseToJSON(p["type"].(map[string]any), depth+1)
         } else {
-          s += unsafeconv.ToJSON(placeholder)
+          s += unsafeconv.ToJSON(prefilled)
         }
         i++
       }
@@ -188,6 +188,7 @@
       <span class="api-no-response">No response.</span>
       {% end if %}
     </div>
+
     <div>
       <div class="api-request-box">
         <div>
@@ -204,25 +205,26 @@
           {% queryString := queryStringParameters(endpoint) %}
           <div>  -H "<span>Authorization: Bearer &lt;YOUR_{% if endpoint.writeKeyAuth %}WRITE{% else %}API{% end %}_KEY&gt;</span>"{% if body or queryString %} \{% end %}</div>
           {% if body %}
-          <div>  --json '<span>{{ requestToHTML(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</span>'</div>
+          <div>  --json '<span>{{ requestToHTML(map[string]any{"kind": "object", "properties": parameters, "prefilled": "..."}, 0) }}</span>'</div>
           {% end if %}
           {% if queryString %}
             {% for i, p := range queryString %}
             {% if typ := p["type"].(map[string]any); typ.kind == "array" %}
-            {% placeholders := split(p.placeholder.(string), ",") %}
-            <div>   -d "{% for i, v := range placeholders %}{% if i > 0 %}&{% end if %}{{ p.name}}={{ v }}{% end for %}"{% if i != len(queryString) - 1 %} \{% end if %}</div>
+            {% prefilled := split(p.prefilled.(string), ",") %}
+            <div>   -d "{% for i, v := range prefilled %}{% if i > 0 %}&{% end if %}{{ p.name}}={{ v }}{% end for %}"{% if i != len(queryString) - 1 %} \{% end if %}</div>
             {% else %}
-            <div>   -d "{{ p.name}}={{ p.placeholder }}"{% if i != len(queryString) - 1 %} \{% end if %}</div>
+            <div>   -d "{{ p.name}}={{ p.prefilled }}"{% if i != len(queryString) - 1 %} \{% end if %}</div>
             {% end if %}
             {% end for %}
           {% end if %}
         </code>
       </div>
+
       {% if response, ok := endpoint.response.(map[string]any); ok %}
       {% if parameters, _ := response.parameters.([]any); len(parameters) > 0 %}
       <div class="api-response-box">
         <div>Response</div>
-        <div><pre><code class="language-json hljs">{{ responseToJSON(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</code></pre></div>
+        <div><pre><code class="language-json hljs">{{ responseToJSON(map[string]any{"kind": "object", "properties": parameters, "prefilled": "..."}, 0) }}</code></pre></div>
       </div>
       {% end if %}
       {% end if %}
