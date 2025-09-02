@@ -698,7 +698,7 @@ const computeActionErrorRows = (
 
 const computeActionMetricsData = (actionMetrics: ActionMetrics, range: metricsRange): ActionMetricsPoint[] => {
 	if (actionMetrics == null) {
-		return null;
+		return [];
 	}
 	let points: ActionMetricsPoint[] = [];
 	const timeLength = actionMetrics.passed.length;
