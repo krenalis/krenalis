@@ -55,8 +55,8 @@ type apisServer struct {
 	mux                         *http.ServeMux
 	runsOnHTTPS                 bool
 	javaScriptSDKURL            string
-	eventURL                    string
 	externalURL                 string
+	externalEventURL            string
 	skipMemberEmailVerification bool
 	sentryTelemetry             struct {
 		level       core.TelemetryLevel
@@ -67,16 +67,15 @@ type apisServer struct {
 // newAPIsServer returns an APIs server that handles requests for the given
 // Core.
 // runsOnHTTPs indicates if the server runs on HTTPS.
-func newAPIsServer(core *core.Core, runsOnHTTPS bool,
-	javaScriptSDKURL, eventURL string, externalURL string, skipMemberEmailVerification bool,
-	sentryTelemetryLevel core.TelemetryLevel, sentryErrorTunnel *sentryErrorTunnel) *apisServer {
+func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL, externalEventURL string,
+	skipMemberEmailVerification bool, sentryTelemetryLevel core.TelemetryLevel, sentryErrorTunnel *sentryErrorTunnel) *apisServer {
 
 	s := &apisServer{
 		core:                        core,
 		runsOnHTTPS:                 runsOnHTTPS,
 		javaScriptSDKURL:            javaScriptSDKURL,
-		eventURL:                    eventURL,
 		externalURL:                 externalURL,
+		externalEventURL:            externalEventURL,
 		skipMemberEmailVerification: skipMemberEmailVerification,
 	}
 	s.sentryTelemetry.level = sentryTelemetryLevel

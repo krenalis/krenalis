@@ -198,7 +198,7 @@ func settingsFromEnv() (*Settings, error) {
 	if err != nil {
 		return nil, err
 	}
-	settings.HTTP.EventURL, err = parseURL("MEERGO_HTTP_EVENT_URL", noQuery)
+	settings.HTTP.ExternalEventURL, err = parseURL("MEERGO_HTTP_EXTERNAL_EVENT_URL", noQuery)
 	if err != nil {
 		return nil, err
 	}

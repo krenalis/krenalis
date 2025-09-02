@@ -29,10 +29,10 @@ func TestJavaScriptSDKEventURL(t *testing.T) {
 		t.Fatalf("expected JavaScript SDK URL: %q, got: %q", expectedJavaScriptSDKURL, gotJavaScriptSDKURL)
 	}
 
-	const expectedEventURL = "http://127.0.0.1:9091/api/v1/events"
-	gotEventURL := c.EventURL()
-	if gotEventURL != expectedEventURL {
-		t.Fatalf("expected Event URL: %q, got: %q", expectedEventURL, gotEventURL)
+	const expectedExternalEventURL = "http://127.0.0.1:9091/api/v1/events"
+	gotExternalEventURL := c.ExternalEventURL()
+	if gotExternalEventURL != expectedExternalEventURL {
+		t.Fatalf("expected external event URL: %q, got: %q", expectedExternalEventURL, gotExternalEventURL)
 	}
 
 }

@@ -52,7 +52,7 @@ type Settings struct {
 			KeyFile  string
 		}
 		ExternalURL       string
-		EventURL          string
+		ExternalEventURL  string
 		ReadHeaderTimeout time.Duration
 		ReadTimeout       time.Duration
 		WriteTimeout      time.Duration
@@ -158,18 +158,16 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	if javaScriptSDKURL == "" {
 		javaScriptSDKURL = "https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js"
 	}
-	eventURL := settings.HTTP.EventURL
-	if eventURL == "" {
-		eventURL = externalURL + "api/v1/events"
+	externalEventURL := settings.HTTP.ExternalEventURL
+	if externalEventURL == "" {
+		externalEventURL = externalURL + "api/v1/events"
 	}
 
 	sentryErrorTunnel := newSentryErrorTunnel()
 	defer sentryErrorTunnel.Close()
 
 	runsOnHTTPS := settings.HTTP.TLS.Enabled || strings.HasPrefix(externalURL, "https://")
-	apisServer := newAPIsServer(core, runsOnHTTPS,
-		javaScriptSDKURL, eventURL, externalURL, settings.SkipMemberEmailVerification,
-		settings.SentryTelemetryLevel, sentryErrorTunnel)
+	apisServer := newAPIsServer(core, runsOnHTTPS, javaScriptSDKURL, externalURL, externalEventURL, settings.SkipMemberEmailVerification, settings.SentryTelemetryLevel, sentryErrorTunnel)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {

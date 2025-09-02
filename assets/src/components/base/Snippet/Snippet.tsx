@@ -20,7 +20,7 @@ interface SnippetFile {
 
 const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 	const [keys, setKeys] = useState<string[]>([]);
-	const [eventURL, setEventURL] = useState<string>();
+	const [externalEventURL, setExternalEventURL] = useState<string>();
 	const [javaScriptSDKURL, setJavaScriptSDKURL] = useState<string>();
 	const [snippet, setSnippet] = useState<string>();
 	const [installCommand, setInstallCommand] = useState<string>();
@@ -38,22 +38,22 @@ const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 		);
 	}, [connectorName]);
 
-	// Retrieve the event URL.
+	// Retrieve the external event URL.
 	useEffect(() => {
-		const fetchEventURL = async () => {
-			let eventURL: string;
+		const fetchExternalEventURL = async () => {
+			let externalEventURL: string;
 			try {
-				eventURL = await api.eventURL();
+				externalEventURL = await api.externalEventURL();
 			} catch (err) {
 				setTimeout(() => {
 					handleError(err);
 				}, 300);
 				return;
 			}
-			setEventURL(eventURL);
+			setExternalEventURL(externalEventURL);
 			return;
 		};
-		fetchEventURL();
+		fetchExternalEventURL();
 	}, []);
 
 	// Retrieve the JavaScript SDK URL.
@@ -99,13 +99,13 @@ const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 			return '';
 		}
 		const s1 = snippet.replace('"writekey"', JSON.stringify(keys[0]));
-		const s2 = s1.replace('"endpoint"', JSON.stringify(eventURL));
+		const s2 = s1.replace('"endpoint"', JSON.stringify(externalEventURL));
 		let s3 = s2;
 		if (connectorName === 'Javascript') {
 			s3 = s2.replace('"javaScriptSDKURL"', JSON.stringify(javaScriptSDKURL));
 		}
 		return s3;
-	}, [connectorName, snippet, keys, eventURL]);
+	}, [connectorName, snippet, keys, externalEventURL]);
 
 	let applicationType = 'server';
 	if (connectorName === 'Android' || connectorName === 'Apple') {

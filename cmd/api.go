@@ -93,12 +93,6 @@ func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) 
 	return events.Schema, nil
 }
 
-// EventURL returns the URL that receives the events, for example
-// "https://my.meergo.example.com/api/v1/events".
-func (api api) EventURL(w http.ResponseWriter, r *http.Request) (any, error) {
-	return api.eventURL, nil
-}
-
 // EventsSettings returns the events settings.
 func (api api) EventsSettings(w http.ResponseWriter, r *http.Request) (any, error) {
 	// Removes the headers that were set earlier, as ServeEvents handles the response fully.
@@ -124,6 +118,12 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 		return nil, errors.BadRequest("%s", err)
 	}
 	return api.core.ExpressionsProperties(body.Expressions, body.Schema)
+}
+
+// ExternalEventURL returns the external URL that receives the events, for
+// example "https://my.meergo.example.com/api/v1/events".
+func (api api) ExternalEventURL(w http.ResponseWriter, r *http.Request) (any, error) {
+	return api.externalEventURL, nil
 }
 
 // Member returns the current member.

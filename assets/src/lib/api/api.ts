@@ -121,8 +121,8 @@ class API {
 		return await call(`${this.apiURL}/events/schema`, http.GET, this.workspaceID);
 	};
 
-	eventURL = async (): Promise<string> => {
-		return await call(`${this.apiURL}/event-url`, http.GET);
+	externalEventURL = async (): Promise<string> => {
+		return await call(`${this.apiURL}/external-event-url`, http.GET);
 	};
 
 	validateExpression = async (

@@ -327,9 +327,9 @@ func (c *Meergo) ExecuteAction(action int) int {
 	return response.ID
 }
 
-func (c *Meergo) EventURL() string {
+func (c *Meergo) ExternalEventURL() string {
 	var url string
-	c.MustCall("GET", "/api/v1/event-url", nil, &url)
+	c.MustCall("GET", "/api/v1/external-event-url", nil, &url)
 	return url
 }
 

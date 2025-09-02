@@ -59,7 +59,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /connectors":                                api.Connectors,
 		"GET    /connectors/{name}":                         api.Connector,
 		"GET    /connectors/{name}/documentation":           api.ConnectorDocumentation,
-		"GET    /event-url":                                 api.EventURL,
+		"GET    /external-event-url":                        api.ExternalEventURL,
 		"GET    /events":                                    workspace.Events,
 		"GET    /events/listeners/{id}":                     workspace.ListenedEvents,
 		"GET    /events/schema":                             api.EventSchema,
