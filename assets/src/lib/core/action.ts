@@ -463,14 +463,18 @@ const validateTransformation = (
 // takes the flatten schema and add values, and disableds. In
 // 'transformActionMapping' set the values or set ''. This should only return
 // the list of flattened keys mapping to the full property object.
-const flattenSchema = (typ: ObjectType | ArrayType | MapType): TransformedMapping | null => {
+const flattenSchema = (typ: ObjectType | ArrayType | MapType, insertPrefilled?: boolean): TransformedMapping | null => {
 	if (typ == null || !isRecursiveType(typ)) {
 		return null;
 	}
 
 	const flattenProperty = (property: Property): TransformedProperty => {
+		let val = '';
+		if (insertPrefilled != null && insertPrefilled && property.prefilled) {
+			val = property.prefilled;
+		}
 		const flat = {
-			value: property.prefilled || '',
+			value: val,
 			readOptional: property.readOptional,
 			createRequired: property.createRequired,
 			updateRequired: property.updateRequired,
@@ -1222,7 +1226,7 @@ const computeDefaultAction = (
 		enabled: actionType.target == 'User' && (connection.isApp || connection.isDatabase || connection.isFileStorage),
 		filter: null,
 		transformation: {
-			mapping: flattenSchema(outputSchema),
+			mapping: flattenSchema(outputSchema, true),
 			function: null,
 		},
 		inSchema: null,

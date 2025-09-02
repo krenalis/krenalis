@@ -102,7 +102,7 @@ const ActionTable = () => {
 				actionTyp.outputSchema = res.schema;
 				setActionType(actionTyp);
 				const a = { ...action };
-				const mapping = flattenSchema(res.schema);
+				const mapping = flattenSchema(res.schema, true);
 				if (a.transformation.mapping != null) {
 					// Keep the old mapping (if the column stil exists
 					// in the new out schema and the type is the same).

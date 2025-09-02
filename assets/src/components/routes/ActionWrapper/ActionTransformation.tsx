@@ -728,7 +728,7 @@ const TransformationBox = ({
 		setIsAlertOpen(false);
 		setTimeout(() => {
 			if (pendingTransformationType.current == 'mappings') {
-				a.transformation.mapping = flattenSchema(actionType.outputSchema);
+				a.transformation.mapping = flattenSchema(actionType.outputSchema, true);
 				a.transformation.function = null;
 				setSelectedLanguage('');
 				setTransformationType('mappings');

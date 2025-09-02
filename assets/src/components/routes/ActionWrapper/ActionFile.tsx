@@ -170,7 +170,7 @@ const ActionFile = () => {
 		a.identityColumn = '';
 		a.lastChangeTimeColumn = '';
 		a.lastChangeTimeFormat = '';
-		a.transformation.mapping = flattenSchema(actionType.outputSchema);
+		a.transformation.mapping = flattenSchema(actionType.outputSchema, true);
 		a.transformation.function = null;
 		setSettings(null);
 		setIsFormatLoading(true);
