@@ -252,18 +252,33 @@ func (ew *EventWriter) flush() {
 		return
 	}
 
-	done := ew.close.ctx.Done()
+	ctx, done, err := ew.store.mc.StartOperation(ew.close.ctx, normalMode)
+	if err != nil {
+		// Warehouse mode is not normal: discard events.
+		if ew.ack != nil {
+			events := make([]AckEvent, len(rows))
+			for i, event := range rows {
+				events[i].ID = event[0].(string)
+				events[i].Action = actions[i]
+			}
+			metrics.Increment("EventWriter.ack_sents", 1)
+			ew.ack(events, err)
+		}
+		return
+	}
+	defer done()
+
 	for {
 		metrics.Increment("EventWriter.flush.for_loop_iterations", 1)
-		err := ew.store.warehouse().Merge(ew.close.ctx, eventsMergeTable, rows, nil)
+		err = ew.store.warehouse().Merge(ctx, eventsMergeTable, rows, nil)
 		if err != nil {
-			if ew.close.ctx.Err() != nil {
+			if ctx.Err() != nil {
 				return
 			}
 			slog.Error("core/datastore: cannot flush the event queue", "err", err)
 			select {
 			case <-time.After(time.Duration(rand.IntN(2000)) * time.Millisecond):
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 			continue
