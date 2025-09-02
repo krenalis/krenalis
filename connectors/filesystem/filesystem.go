@@ -171,7 +171,7 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 		Fields: []meergo.Component{
 			&meergo.Text{Text: intro},
 			&meergo.Text{Text: rootToShow},
-			&meergo.Text{Label: "For testing"},
+			&meergo.Text{Label: "Testing options"},
 			&meergo.Checkbox{Name: "SimulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
 		},
 		Settings: settings,
