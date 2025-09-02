@@ -180,15 +180,6 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 
 	metrics.Increment("EventIdentityWriter.Write.calls", 1)
 
-	switch iw.store.Mode() {
-	case state.Inspection:
-		iw.ack(iw.action, []string{ackID}, ErrInspectionMode)
-		return nil
-	case state.Maintenance:
-		iw.ack(iw.action, []string{ackID}, ErrMaintenanceMode)
-		return nil
-	}
-
 	key := identityKey{action: iw.action}
 	if identity.ID == "" {
 		key.isAnonymous = true
@@ -295,7 +286,14 @@ func (iw *EventIdentityWriter) flush() {
 	clear(iw.index)
 	iw.timer = nil
 	iw.close.Go(func() {
-		err := iw.store.warehouse().MergeIdentities(iw.close.ctx, iw.columns, rows)
+		ctx, done, err := iw.store.mc.StartOperation(iw.close.ctx, normalMode)
+		if err != nil {
+			// Warehouse mode is not normal: discard identities.
+			iw.ack(iw.action, ackIDs, err)
+			return
+		}
+		defer done()
+		err = iw.store.warehouse().MergeIdentities(ctx, iw.columns, rows)
 		iw.ack(iw.action, ackIDs, err)
 	})
 }
