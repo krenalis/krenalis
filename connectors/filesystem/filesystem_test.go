@@ -11,31 +11,49 @@ package filesystem
 
 import (
 	"testing"
+
+	"github.com/meergo/meergo"
 )
 
 func TestPathConvert(t *testing.T) {
 
-	// TODO(Gianluca): this test must be rewritten or deleted.
+	t.Run("Root is '/'", func(t *testing.T) {
+		// Mutex access to 'root' is not necessary as it is essential that these
+		// tests are run non-concurrently.
+		root = "/"
+		fs := &Filesystem{settings: &innerSettings{}}
+		tests := []meergo.AbsolutePathTest{
+			{Name: "a", Expected: "/a"},
+			{Name: "a.e", Expected: "/a.e"},
+			{Name: "a/b.e", Expected: "/a/b.e"},
+			{Name: "/a", Expected: "/a"},
+			{Name: "/a/b", Expected: "/a/b"},
+			{Name: "/\x00", Expected: "/\x00"},
+			{Name: "/"},
+			{Name: "a/./b"},
+			{Name: "a/.."},
+			{Name: "../a"},
+			{Name: "a/"},
+		}
+		err := meergo.TestAbsolutePath(fs, tests)
+		if err != nil {
+			t.Errorf("Filesystem connector: %s", err)
+		}
+	})
 
-	// fs := &Filesystem{settings: &innerSettings{Root: "/"}}
-	// fs2 := &Filesystem{settings: &innerSettings{Root: "/root"}}
-	// tests := []meergo.AbsolutePathTest{
-	// 	{Name: "a", Expected: "/a"},
-	// 	{Name: "a.e", Expected: "/a.e"},
-	// 	{Name: "a/b.e", Expected: "/a/b.e"},
-	// 	{Name: "/a", Expected: "/a"},
-	// 	{Name: "/a/b", Expected: "/a/b"},
-	// 	{Name: "/\x00", Expected: "/\x00"},
-	// 	{Name: "/"},
-	// 	{Name: "a/./b"},
-	// 	{Name: "a/.."},
-	// 	{Name: "../a"},
-	// 	{Name: "a/"},
-	// 	{Name: "a", Expected: "/root/a", Storage: fs2},
-	// 	{Name: "/a", Expected: "/root/a", Storage: fs2},
-	// }
-	// err := meergo.TestAbsolutePath(fs, tests)
-	// if err != nil {
-	// 	t.Errorf("Filesystem connector: %s", err)
-	// }
+	t.Run("Root is '/root'", func(t *testing.T) {
+		// Mutex access to 'root' is not necessary as it is essential that these
+		// tests are run non-concurrently.
+		root = "/root"
+		fs := &Filesystem{settings: &innerSettings{}}
+		tests := []meergo.AbsolutePathTest{
+			{Name: "a", Expected: "/root/a"},
+			{Name: "/a", Expected: "/root/a"},
+		}
+		err := meergo.TestAbsolutePath(fs, tests)
+		if err != nil {
+			t.Errorf("Filesystem connector: %s", err)
+		}
+	})
+
 }
