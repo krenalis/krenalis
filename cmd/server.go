@@ -249,6 +249,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	})
 
 	c := http.NewCrossOriginProtection()
+	c.AddInsecureBypassPattern("POST /api/v1/events")
 	origin := strings.TrimSuffix(externalURL, "/")
 	err = c.AddTrustedOrigin(origin)
 	if err != nil {
