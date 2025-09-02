@@ -61,15 +61,13 @@ const useConnectionIdentities = () => {
 			{
 				name: connection.connector.getIdentityIDLabel(),
 			},
+			{
+				name: 'Action',
+			},
 		];
 		if (connection.hasAnonymousIdentifiers) {
-			columns.push({
-				name: 'Anonymous IDs',
-			});
+			columns.splice(2, 0, { name: 'Anonymous IDs' });
 		}
-		columns.push({
-			name: 'Action',
-		});
 
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
@@ -85,7 +83,6 @@ const useConnectionIdentities = () => {
 							anonymous
 						</span>
 					),
-					null,
 					<span className='connection-identities__action'>
 						<Link path={`connections/${connection.id}/actions/edit/${identity.action}`}>{actionName}</Link>
 					</span>,
@@ -99,7 +96,7 @@ const useConnectionIdentities = () => {
 						anonymousIds.push(<code>{id}</code>);
 					}
 				}
-				row.cells[2] = anonymousIds;
+				row.cells.splice(2, 0, anonymousIds);
 			}
 			rows.push(row);
 		}
