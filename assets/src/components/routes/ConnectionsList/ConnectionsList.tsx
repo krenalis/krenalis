@@ -69,7 +69,7 @@ const ConnectionsList = () => {
 		const hasEventConnections = roleConnections.findIndex((c) => c.linkedConnections != null) !== -1;
 		if (hasEventConnections) {
 			columns.push({
-				name: `${role === 'Source' ? 'Linked destinations' : 'Linked sources'}`,
+				name: `${role === 'Source' ? 'Event destinations' : 'Event sources'}`,
 				alignment: 'left',
 			});
 		}
