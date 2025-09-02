@@ -12,6 +12,7 @@ import (
 	_ "github.com/meergo/meergo/connectors/clickhouse"
 	_ "github.com/meergo/meergo/connectors/csv"
 	_ "github.com/meergo/meergo/connectors/excel"
+	_ "github.com/meergo/meergo/connectors/filesystem"
 	_ "github.com/meergo/meergo/connectors/googleanalytics"
 	_ "github.com/meergo/meergo/connectors/httpfiles"
 	_ "github.com/meergo/meergo/connectors/hubspot"
