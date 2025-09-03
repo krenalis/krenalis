@@ -76,10 +76,10 @@ func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
 		root = strings.TrimSpace(envVars.Get("MEERGO_CONNECTOR_FILESYSTEM_ROOT"))
 		displayedRoot = strings.TrimSpace(envVars.Get("MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT"))
 		if root == "" {
-			return nil, errors.New("missing MEERGO_CONNECTOR_FILESYSTEM_ROOT variable")
+			return nil, errors.New("the environment variable MEERGO_CONNECTOR_FILESYSTEM_ROOT has not been set")
 		}
 		if err := validateRoot(root); err != nil {
-			return nil, fmt.Errorf("invalid value for MEERGO_CONNECTOR_FILESYSTEM_ROOT: %s", err)
+			return nil, fmt.Errorf("invalid value for environment variable MEERGO_CONNECTOR_FILESYSTEM_ROOT: %s", err)
 		}
 	}
 
