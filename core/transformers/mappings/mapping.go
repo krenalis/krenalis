@@ -100,14 +100,14 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		}
 		me[i].path = path
 		me[i].expr, me[i].properties, err = Compile(expr, inSchema, p.Type)
+		if err != nil {
+			return nil, err
+		}
 		me[i].dt = p.Type
 		me[i].nullable = p.Nullable
 		me[i].createRequired = p.CreateRequired
 		me[i].updateRequired = p.UpdateRequired
 		me[i].timeLayouts = layouts
-		if err != nil {
-			return nil, err
-		}
 		i++
 	}
 	err := sortMappingExpressions(me)
