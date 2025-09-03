@@ -104,28 +104,12 @@ type innerSettings struct {
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (filesystem *Filesystem) AbsolutePath(ctx context.Context, name string) (string, error) {
-	originalName := name
-	name = filepath.ToSlash(name)
-	if name[0] == '/' {
-		if name == "/" {
-			return "", meergo.InvalidPathErrorf("path name cannot be “%s“", originalName)
-		}
-		name = name[1:]
-	}
-	if name[len(name)-1] == '/' {
-		return "", meergo.InvalidPathErrorf("path name cannot end with a slash")
-	}
-	if name == "." || !fs.ValidPath(name) {
-		return "", meergo.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
-	}
-	confMu.Lock()
-	defer confMu.Unlock()
-	return filepath.Join(root, name), nil
+	return filesystem.absolutePath(ctx, name, true)
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	path, _ := filesystem.AbsolutePath(ctx, name)
+	path, _ := filesystem.absolutePath(ctx, name, false)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -187,7 +171,7 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 
 // Write writes the data read from r into the file with the given path name.
 func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	path, _ := filesystem.AbsolutePath(ctx, name)
+	path, _ := filesystem.absolutePath(ctx, name, false)
 	tmpPath := path + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -219,6 +203,35 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 	}
 	err = os.Rename(tmpPath, path)
 	return err
+}
+
+// AbsolutePath returns the absolute representation of the given path name.
+//
+// forDisplaying indicates whether the returned path will be used in a purely
+// visual context, where it is necessary to use the displayed path, if
+// available, or otherwise whether the returned path must be a real path on the
+// filesystem (e.g. in cases where the connector needs to access files).
+func (filesystem *Filesystem) absolutePath(ctx context.Context, name string, forDisplaying bool) (string, error) {
+	originalName := name
+	name = filepath.ToSlash(name)
+	if name[0] == '/' {
+		if name == "/" {
+			return "", meergo.InvalidPathErrorf("path name cannot be “%s“", originalName)
+		}
+		name = name[1:]
+	}
+	if name[len(name)-1] == '/' {
+		return "", meergo.InvalidPathErrorf("path name cannot end with a slash")
+	}
+	if name == "." || !fs.ValidPath(name) {
+		return "", meergo.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
+	}
+	confMu.Lock()
+	defer confMu.Unlock()
+	if forDisplaying && displayedRoot != "" {
+		return filepath.Join(displayedRoot, name), nil
+	}
+	return filepath.Join(root, name), nil
 }
 
 // saveSettings saves the settings.
