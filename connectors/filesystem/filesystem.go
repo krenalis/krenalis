@@ -205,7 +205,7 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 	return err
 }
 
-// AbsolutePath returns the absolute representation of the given path name.
+// absolutePath returns the absolute representation of the given path name.
 //
 // forDisplaying indicates whether the returned path will be used in a purely
 // visual context, where it is necessary to use the displayed path, if
