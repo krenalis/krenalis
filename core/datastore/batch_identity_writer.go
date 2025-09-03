@@ -39,7 +39,9 @@ type Identity struct {
 type identityKey struct {
 	action      int
 	isAnonymous bool
-	identityID  string
+	// identityID is the identity ID for non-anonymous identities, while it is
+	// the anonymous ID for anonymous ones.
+	identityID string
 }
 
 // BatchIdentityWriter writes user identities into the data warehouse in the
