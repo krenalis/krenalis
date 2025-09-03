@@ -118,6 +118,8 @@ func (filesystem *Filesystem) AbsolutePath(ctx context.Context, name string) (st
 	if name == "." || !fs.ValidPath(name) {
 		return "", meergo.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
 	}
+	confMu.Lock()
+	defer confMu.Unlock()
 	return filepath.Join(root, name), nil
 }
 
@@ -161,6 +163,9 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 	} else {
 		intro = "This Filesystem connector allows Meergo to write files into this directory of your system:"
 	}
+
+	confMu.Lock()
+	defer confMu.Unlock()
 
 	rootToShow := root
 	if displayedRoot != "" {
