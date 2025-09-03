@@ -17,6 +17,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strconv"
 	"time"
@@ -24,6 +25,9 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
+
+	"golang.org/x/net/http/httpguts"
+	"golang.org/x/net/idna"
 )
 
 // Connector icon.
@@ -199,8 +203,8 @@ func (h *HTTPFiles) saveSettings(ctx context.Context, settings json.Value) error
 		return err
 	}
 	// Validate Host.
-	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
+	if err = validateHost(s.Host); err != nil {
+		return meergo.NewInvalidSettingsError(err.Error())
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65535 {
@@ -229,4 +233,29 @@ func (h *HTTPFiles) saveSettings(ctx context.Context, settings json.Value) error
 
 func ishex(c byte) bool {
 	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
+}
+
+// validateHost checks whether the given string is a valid host.
+// It accepts IPv4, IPv6, ASCII hostnames, and IDNs, and rejects hosts
+// containing ports or invalid characters.
+func validateHost(host string) error {
+	if _, err := netip.ParseAddr(host); err == nil {
+		return nil
+	}
+	if _, port, err := net.SplitHostPort(host); err == nil {
+		if _, err = strconv.ParseUint(port, 10, 64); err == nil {
+			return errors.New("host cannot include a port")
+		}
+	}
+	if !httpguts.ValidHostHeader(host) {
+		var err error
+		host, err = idna.Lookup.ToASCII(host)
+		if err != nil {
+			return errors.New("host is not valid")
+		}
+	}
+	if n := len(host); n == 0 || n > 253 {
+		return errors.New("host length in bytes must be in range [1,253]")
+	}
+	return nil
 }
