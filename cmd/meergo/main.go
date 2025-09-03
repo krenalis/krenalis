@@ -25,7 +25,7 @@
 //
 // Note: Re-execute 'go generate' if you change Meergo module version.
 //
-// See also https://github.com/meergo/meergo/blob/main/doc/src/getting-started.md
+// See also https://github.com/meergo/meergo/blob/main/doc/src/from-source.md#building-from-the-repository
 package main
 
 import (
