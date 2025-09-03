@@ -162,12 +162,7 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 		iw.metrics.TransformationPassed(iw.action, 1)
 		iw.metrics.OutputValidationPassed(iw.action, 1)
 		event := events[i]
-		id, ok := event["userId"].(string)
-		// Discard anonymous events with no properties.
-		if !ok && len(record.Properties) == 0 {
-			meergoMetrics.Increment("Collector.IdentityWriter.transformAndWrite.discarded_as_anonymous_and_without_properties", 1)
-			continue
-		}
+		id, _ := event["userId"].(string)
 		// Write the identity on the data warehouse.
 		err = iw.writer.Write(datastore.Identity{
 			ID:             id,
@@ -182,18 +177,11 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 
 // writeDirect writes the identity without performing any transformation.
 func (iw *identityWriter) writeDirect(event events.Event) error {
-	id, ok := event["userId"].(string)
-	// Since there are no properties, do not store anonymous identities.
-	if !ok {
-		meergoMetrics.Increment("Collector.IdentityWriter.write.user_discarded_as_anonymous_and_without_transformation", 1)
-		iw.ack(iw.action, []string{event["id"].(string)}, nil)
-		return nil
-	}
-	err := iw.writer.Write(datastore.Identity{
+	id, _ := event["userId"].(string)
+	return iw.writer.Write(datastore.Identity{
 		ID:             id,
 		AnonymousID:    event["anonymousId"].(string),
 		Properties:     map[string]any{},
 		LastChangeTime: event["timestamp"].(time.Time),
 	}, event["id"].(string))
-	return err
 }

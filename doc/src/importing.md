@@ -64,11 +64,7 @@ If a last change time column is provided and its type is `json` or `text`, a tim
 
 ## Anonymous user identities
 
-It is possibile to import anonymous identities through action that listen to events.
-
-### Import requirements
-
-In order for a user identity to be imported from an anonymous event, it is necessary that **the transformation applied to the event results in at least one property**.
+It is possibile to import anonymous identities through actions that listen to events.
 
 ### Deletion of anonymous identities
 
