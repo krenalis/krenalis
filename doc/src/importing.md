@@ -74,6 +74,14 @@ In order for a user identity to be imported from an anonymous event, it is neces
 
 When a non-anonymous identity is imported from a connection, all anonymous identities with the same Anonymous ID which have been previously imported from the same connection are deleted, and only the non-anonymous identity is retained.
 
+### How anonymous identities are stored in the warehouse
+
+In the data warehouse, anonymous identities are stored in the `_user_identities` table, just like non-anonymous ones.
+
+Note that the anonymous ID of an anonymous identity is stored in the `__identity_id__` column, while the `__anonymous_ids__` field remains empty. This is an implementation choice.
+
+Once an anonymous identity is resolved and its identity ID is determined (for example, if an *identify* event arrives), the anonymous ID is moved to `__anonymous_ids__`, and the `__identity_id__` column will then contain the actual identity ID.
+
 ## Empty objects when importing identities
 
 If a transformation returns an empty Object as the value for a property of an identity, this is equivalent to not returning any value for that property.
