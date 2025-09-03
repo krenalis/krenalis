@@ -325,10 +325,10 @@ func sameType(t1, t2 Type) error {
 	// Precision, byte length or elements minimum length.
 	if t1.p != t2.p {
 		switch t1.kind {
-		case DecimalKind:
-			return fmt.Errorf("expected precision %d, got %d", t1.p, t2.p)
 		case TextKind:
 			return fmt.Errorf("expected byte length %d, got %d", t1.p, t2.p)
+		case DecimalKind:
+			return fmt.Errorf("expected precision %d, got %d", t1.p, t2.p)
 		case ArrayKind:
 			return fmt.Errorf("expected elements minimum length %d, got %d", t1.p, t2.p)
 		}
@@ -337,10 +337,10 @@ func sameType(t1, t2 Type) error {
 	// Scale, character length or elements maximum length.
 	if t1.s != t2.s {
 		switch t1.kind {
-		case DecimalKind:
-			return fmt.Errorf("expected scale %d, got %d", t1.s, t2.s)
 		case TextKind:
 			return fmt.Errorf("expected character length %d, got %d", t1.s, t2.s)
+		case DecimalKind:
+			return fmt.Errorf("expected scale %d, got %d", t1.s, t2.s)
 		case ArrayKind:
 			return fmt.Errorf("expected elements maximum length %d, got %d", t1.s, t2.s)
 		}

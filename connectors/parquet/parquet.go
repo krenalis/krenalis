@@ -625,6 +625,10 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 
 		// Set the column type.
 		switch property.Type.Kind() {
+		case types.TextKind:
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.STRING = parquet.NewStringType()
 		case types.BooleanKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BOOLEAN)
 		case types.IntKind:
@@ -735,10 +739,6 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.JSON = parquet.NewJsonType()
 		case types.InetKind:
-			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
-			col.SchemaElement.LogicalType = parquet.NewLogicalType()
-			col.SchemaElement.LogicalType.STRING = parquet.NewStringType()
-		case types.TextKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.STRING = parquet.NewStringType()

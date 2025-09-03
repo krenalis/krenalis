@@ -23,6 +23,7 @@ In connectors, data types need to be defined for:
 
 Below are the data types and how to construct them using the `types` package functions.
 
+- [text](#text) - text
 - [boolean](#boolean) - boolean
 - [int(n)](#intn) - signed integer
 - [uint(n)](#uintn) - unsigned integer
@@ -35,10 +36,40 @@ Below are the data types and how to construct them using the `types` package fun
 - [uuid](#uuid) - UUID
 - [json](#json) - JSON
 - [inet](#inet) - IP4 or IP6 address
-- [text](#text) - text
 - [array(T)](#arrayt) - array of T
 - [object](#object) - object
 - [map(T)](#mapt) - map of T
+
+### text
+
+Represents UTF-8 encoded text.
+
+```go
+types.Text()
+```
+
+Text can be limited by allowed values, a regular expression, or maximum lengths in bytes and characters, for example:
+
+```go
+// Text limited to specific values.
+types.Text().WithValues("Hearts", "Diamonds", "Clubs", "Spades")
+
+// Text matching a regular expression.
+types.Text().WithRegexp(regexp.MustCompile(`\d+`))
+
+// Text with a maximum length of 1000 bytes.
+types.Text().WithByteLen(1000)
+
+// Text with a maximum length of 2 characters.
+types.Text().WithCharLen(2)
+```
+
+You can combine maximum byte and character lengths:
+
+```go
+// Text with a maximum of 25 bytes and 20 characters.
+types.Text().WithByteLen(25).WithCharLen(20)
+```
 
 ### boolean
 
@@ -143,8 +174,6 @@ Represents a date within the range [1, 9999].
 types.Date()
 ```
 
-
-
 ### time
 
 Represents a time of day with nanosecond precision and no timezone.
@@ -183,37 +212,6 @@ Represents an IP4 or IP6 address.
 
 ```go
 types.Inet()
-```
-
-### text
-
-Represents UTF-8 encoded text.
-
-```go
-types.Text()
-```
-
-Text can be limited by allowed values, a regular expression, or maximum lengths in bytes and characters, for example:
-
-```go
-// Text limited to specific values.
-types.Text().WithValues("Hearts", "Diamonds", "Clubs", "Spades")
-
-// Text matching a regular expression.
-types.Text().WithRegexp(regexp.MustCompile(`\d+`))
-
-// Text with a maximum length of 1000 bytes.
-types.Text().WithByteLen(1000)
-
-// Text with a maximum length of 2 characters.
-types.Text().WithCharLen(2)
-```
-
-You can combine maximum byte and character lengths:
-
-```go
-// Text with a maximum of 25 bytes and 20 characters.
-types.Text().WithByteLen(25).WithCharLen(20)
 ```
 
 ### array(T)

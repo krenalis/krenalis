@@ -46,6 +46,14 @@ func Test_normalize(t *testing.T) {
 		null     bool
 		layout   *state.TimeLayouts
 	}{
+		// text.
+		{types.Text(), "foo", "foo", false, nil},
+		{types.Text().WithValues("foo", "boo"), "boo", "boo", false, nil},
+		{types.Text().WithRegexp(regexp.MustCompile(`oo$`)), "foo", "foo", false, nil},
+		{types.Text().WithByteLen(3), "boo", "boo", false, nil},
+		{types.Text().WithCharLen(3), "bòò", "bòò", false, nil},
+		{types.Text().WithValues("foo", "boo"), "", nil, true, nil},
+		{types.Text(), []byte(nil), nil, true, nil},
 		// boolean.
 		{types.Boolean(), true, true, false, nil},
 		// int(16).
@@ -146,14 +154,6 @@ func Test_normalize(t *testing.T) {
 		{types.Inet(), netip.MustParseAddr("fe80::1ff:fe23:4567:890a%eth0"), "fe80::1ff:fe23:4567:890a", false, nil},
 		{types.Inet(), netip.MustParseAddr("::ffff:192.168.1.10"), "::ffff:192.168.1.10", false, nil},
 		{types.Inet(), net.IP(nil), nil, true, nil},
-		// text.
-		{types.Text(), "foo", "foo", false, nil},
-		{types.Text().WithValues("foo", "boo"), "boo", "boo", false, nil},
-		{types.Text().WithRegexp(regexp.MustCompile(`oo$`)), "foo", "foo", false, nil},
-		{types.Text().WithByteLen(3), "boo", "boo", false, nil},
-		{types.Text().WithCharLen(3), "bòò", "bòò", false, nil},
-		{types.Text().WithValues("foo", "boo"), "", nil, true, nil},
-		{types.Text(), []byte(nil), nil, true, nil},
 		// array.
 		{types.Array(types.Int(32)), []any{1, 2}, []any{1, 2}, false, nil},
 		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, false, nil},

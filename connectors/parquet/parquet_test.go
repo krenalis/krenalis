@@ -412,6 +412,8 @@ func (writer *testRecordWriter) Record(record map[string]any) error {
 		}
 		column := writer.columnByName(name)
 		switch column.Type.Kind() {
+		case types.TextKind:
+			record[name] = string(value.([]byte))
 		case types.IntKind:
 			if column.Type.BitSize() <= 32 {
 				record[name] = int(value.(int32))
@@ -437,8 +439,6 @@ func (writer *testRecordWriter) Record(record map[string]any) error {
 			record[name], _ = types.DecodeUUID(value.([]byte))
 		case types.JSONKind:
 			record[name] = json.Value(value.([]byte))
-		case types.TextKind:
-			record[name] = string(value.([]byte))
 		}
 	}
 	for _, name := range toDelete {

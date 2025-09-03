@@ -76,6 +76,29 @@ func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(t.KindName())
 	b.WriteString(`"`)
 	switch t.kind {
+	case TextKind:
+		if t.p > 0 {
+			b.WriteString(`,"byteLen":`)
+			b.WriteString(strconv.Itoa(int(t.p)))
+		}
+		if t.s > 0 {
+			b.WriteString(`,"charLen":`)
+			b.WriteString(strconv.Itoa(int(t.s)))
+		}
+		switch vl := t.vl.(type) {
+		case *regexp.Regexp:
+			b.WriteString(`,"regexp":`)
+			_ = marshalString(b, vl.String())
+		case []string:
+			b.WriteString(`,"values":[`)
+			for i, v := range vl {
+				if i > 0 {
+					b.WriteByte(',')
+				}
+				_ = marshalString(b, v)
+			}
+			b.WriteByte(']')
+		}
 	case IntKind:
 		b.WriteString(`,"bitSize":`)
 		b.WriteString(strconv.Itoa(t.BitSize()))
@@ -160,29 +183,6 @@ func marshalType(b *bytes.Buffer, t Type) {
 		if t.s > 0 {
 			b.WriteString(`,"scale":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
-		}
-	case TextKind:
-		if t.p > 0 {
-			b.WriteString(`,"byteLen":`)
-			b.WriteString(strconv.Itoa(int(t.p)))
-		}
-		if t.s > 0 {
-			b.WriteString(`,"charLen":`)
-			b.WriteString(strconv.Itoa(int(t.s)))
-		}
-		switch vl := t.vl.(type) {
-		case *regexp.Regexp:
-			b.WriteString(`,"regexp":`)
-			_ = marshalString(b, vl.String())
-		case []string:
-			b.WriteString(`,"values":[`)
-			for i, v := range vl {
-				if i > 0 {
-					b.WriteByte(',')
-				}
-				_ = marshalString(b, v)
-			}
-			b.WriteByte(']')
 		}
 	case ArrayKind:
 		if t.p > 0 {
@@ -568,6 +568,30 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.generic = true
 		t.vl = kind
 	}
+	if re != nil {
+		if t.kind != TextKind {
+			return Type{}, errors.New("unexpected regular expression for non-text type")
+		}
+		t.vl = re
+	}
+	if values != nil {
+		if t.kind != TextKind {
+			return Type{}, errors.New("unexpected values for non-text type")
+		}
+		t.vl = values
+	}
+	if byteLen > 0 {
+		if t.kind != TextKind {
+			return Type{}, errors.New("unexpected length in bytes for non-text type")
+		}
+		t.p = int32(byteLen)
+	}
+	if charLen > 0 {
+		if t.kind != TextKind {
+			return Type{}, errors.New("unexpected length in characters for non-text types")
+		}
+		t.s = int32(charLen)
+	}
 	if bitSize == 0 {
 		if t.kind == IntKind || t.kind == UintKind || t.kind == FloatKind {
 			return Type{}, errors.New("missing 'bitSize' key")
@@ -833,30 +857,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected real for non-float type")
 		}
 		t.real = real
-	}
-	if re != nil {
-		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected regular expression for non-text type")
-		}
-		t.vl = re
-	}
-	if values != nil {
-		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected values for non-text type")
-		}
-		t.vl = values
-	}
-	if byteLen > 0 {
-		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected length in bytes for non-text type")
-		}
-		t.p = int32(byteLen)
-	}
-	if charLen > 0 {
-		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected length in characters for non-text types")
-		}
-		t.s = int32(charLen)
 	}
 	if elementType.Valid() || elementType.Generic() {
 		if t.kind != ArrayKind && t.kind != MapKind {

@@ -482,7 +482,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			return errors.BadRequest("identity column %q not found within input schema", action.IdentityColumn)
 		}
 		switch k := identityColumn.Type.Kind(); k {
-		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
+		case types.TextKind, types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind:
 		default:
 			return errors.BadRequest("identity column %q has kind %s instead of int, uint uuid, json, or text", action.IdentityColumn, k)
 		}
@@ -498,9 +498,9 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 				return errors.BadRequest("last change time column %q not found within input schema", action.LastChangeTimeColumn)
 			}
 			switch k := lastChangeTime.Type.Kind(); k {
-			case types.DateTimeKind, types.DateKind:
-			case types.JSONKind, types.TextKind:
+			case types.TextKind, types.JSONKind:
 				requiresLastChangeTimeFormat = true
+			case types.DateTimeKind, types.DateKind:
 			default:
 				return errors.BadRequest("last change time column %q has kind %s instead of datetime, date, json, or text", action.LastChangeTimeColumn, k)
 			}
@@ -550,7 +550,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		// We can use the same criteria as for the allowed types of workspace identifiers,
 		// to simplify the specifications for warehouse drivers.
 		switch p.Type.Kind() {
-		case types.IntKind, types.UintKind, types.UUIDKind, types.InetKind, types.TextKind:
+		case types.TextKind, types.IntKind, types.UintKind, types.UUIDKind, types.InetKind:
 			// Ok.
 		case types.DecimalKind:
 			if p.Type.Precision() != 0 {
@@ -723,14 +723,14 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 // matching property when exporting users to an app.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
 	// Only int, uint, uuid, and text types are allowed.
-	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
+	return k == types.TextKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
 }
 
 // canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
 func canBeUsedAsTableKey(k types.Kind) bool {
 	// Only int, uint, uuid, and text types are allowed.
-	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
+	return k == types.TextKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
 }
 
 // unusedPropertyPaths returns the paths of the unused properties in schema, if

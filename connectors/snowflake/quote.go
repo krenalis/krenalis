@@ -76,6 +76,8 @@ func quoteString(b *strings.Builder, s string) {
 // a string value.
 func quoteValue(b *strings.Builder, v any, t types.Type) {
 	switch t.Kind() {
+	case types.TextKind:
+		quoteString(b, v.(string))
 	case types.DateTimeKind:
 		b.WriteByte('\'')
 		b.WriteString(v.(time.Time).Format("2006-01-02 15:04:05.000000000"))
@@ -88,8 +90,6 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 		b.WriteString("TO_VARIANT(")
 		quoteString(b, string(v.(json.Value)))
 		b.WriteString(")")
-	case types.TextKind:
-		quoteString(b, v.(string))
 	default:
 		panic(fmt.Errorf("unsupported value type %s", t.Kind()))
 	}

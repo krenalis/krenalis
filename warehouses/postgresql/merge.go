@@ -228,11 +228,11 @@ func newRowEncoder(columns []meergo.Column) (*rowEncoder, bool) {
 	for i, c := range columns {
 		switch c.Type.Kind() {
 		case types.ArrayKind:
-			if k := c.Type.Elem().Kind(); k != types.JSONKind && k != types.TextKind {
+			if k := c.Type.Elem().Kind(); k != types.TextKind && k != types.JSONKind {
 				continue
 			}
 			fallthrough
-		case types.JSONKind, types.TextKind, types.MapKind:
+		case types.TextKind, types.JSONKind, types.MapKind:
 			if ct == nil {
 				ct = map[int]types.Type{i: c.Type}
 			} else {
@@ -255,10 +255,10 @@ func (enc rowEncoder) encode(row []any) error {
 			continue
 		}
 		switch t.Kind() {
-		case types.JSONKind:
-			row[i] = json.Value(json.StripZeroBytes(row[i].(json.Value)))
 		case types.TextKind:
 			row[i] = stripZeroBytes(row[i].(string))
+		case types.JSONKind:
+			row[i] = json.Value(json.StripZeroBytes(row[i].(json.Value)))
 		case types.ArrayKind:
 			arr := row[i].([]any)
 			if k := t.Elem().Kind(); k == types.JSONKind {

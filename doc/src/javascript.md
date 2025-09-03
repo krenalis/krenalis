@@ -29,6 +29,7 @@ The table below outlines the various Meergo types and their corresponding repres
 
 | Meergo&nbsp;Type | JavaScript&nbsp;Type | Example                                  |
 |------------------|----------------------|------------------------------------------|
+| `text`           | `String`             | `'123 Main Street'`                      |
 | `boolean`        | `Boolean`            | `true`                                   |
 | `int(n)` `n≤32`  | `Number`             | `-2586`                                  |
 | `int(64)`        | `BigInt`             | `72750672843726543n`                     |
@@ -43,7 +44,6 @@ The table below outlines the various Meergo types and their corresponding repres
 | `uuid`           | `String`             | `'f956622d-c421-4eca-8d20-efef87f9749c'` |
 | `json`           | `String`             | `'{"score":10}'`                         |
 | `inet`           | `String`             | `'172.16.254.1'`                         |
-| `text`           | `String`             | `'123 Main Street'`                      |
 | `array`          | `Array`              | `[472,182,604]`                          |
 | `object`         | `Object`             | `{fistName:'Emily',lastName:'Johnson'}`  |
 | `map`            | `Object`             | `{'a':8073,'c':206}`                     |

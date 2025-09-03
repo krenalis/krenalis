@@ -120,6 +120,8 @@ func opIs(v any, values []any) bool {
 func opIsLessThan(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
+	case string:
+		return v < v0.(string)
 	case decimal.Decimal:
 		return v.Less(v0.(decimal.Decimal))
 	case int:
@@ -139,8 +141,6 @@ func opIsLessThan(v any, values []any) bool {
 		case json.String:
 			return v.String() < v0.String
 		}
-	case string:
-		return v < v0.(string)
 	}
 	return false
 }
@@ -148,6 +148,8 @@ func opIsLessThan(v any, values []any) bool {
 func opIsLessThanOrEqualTo(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
+	case string:
+		return v <= v0.(string)
 	case decimal.Decimal:
 		return v.LessEqual(v0.(decimal.Decimal))
 	case int:
@@ -167,8 +169,6 @@ func opIsLessThanOrEqualTo(v any, values []any) bool {
 		case json.String:
 			return v.String() <= v0.String
 		}
-	case string:
-		return v <= v0.(string)
 	}
 	return false
 }
@@ -176,6 +176,8 @@ func opIsLessThanOrEqualTo(v any, values []any) bool {
 func opIsGreaterThan(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
+	case string:
+		return v > v0.(string)
 	case decimal.Decimal:
 		return v.Greater(v0.(decimal.Decimal))
 	case int:
@@ -195,8 +197,6 @@ func opIsGreaterThan(v any, values []any) bool {
 		case json.String:
 			return v.String() > v0.String
 		}
-	case string:
-		return v > v0.(string)
 	}
 	return false
 }
@@ -204,6 +204,8 @@ func opIsGreaterThan(v any, values []any) bool {
 func opIsGreaterThanOrEqualTo(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
+	case string:
+		return v >= v0.(string)
 	case decimal.Decimal:
 		return v.GreaterEqual(v0.(decimal.Decimal))
 	case int:
@@ -223,8 +225,6 @@ func opIsGreaterThanOrEqualTo(v any, values []any) bool {
 		case json.String:
 			return v.String() >= v0.String
 		}
-	case string:
-		return v >= v0.(string)
 	}
 	return false
 }
@@ -233,6 +233,8 @@ func opIsBetween(v any, values []any) bool {
 	v0 := values[0]
 	v1 := values[1]
 	switch v := v.(type) {
+	case string:
+		return v0.(string) <= v && v <= v1.(string)
 	case decimal.Decimal:
 		return v.GreaterEqual(v0.(decimal.Decimal)) && v.LessEqual(v1.(decimal.Decimal))
 	case time.Time:
@@ -258,8 +260,6 @@ func opIsBetween(v any, values []any) bool {
 			v := v.String()
 			return v0.String <= v && v <= v1.String
 		}
-	case string:
-		return v0.(string) <= v && v <= v1.(string)
 	}
 	return false
 }
@@ -270,6 +270,8 @@ func opContains(v any, values []any) bool {
 	}
 	v0 := values[0]
 	switch v := v.(type) {
+	case string:
+		return strings.Contains(v, v0.(string))
 	case json.Value:
 		v0 := v0.(state.JSONConditionValue)
 		switch v.Kind() {
@@ -282,8 +284,6 @@ func opContains(v any, values []any) bool {
 				}
 			}
 		}
-	case string:
-		return strings.Contains(v, v0.(string))
 	case []any:
 		for _, ev := range v {
 			if opIs(ev, values) {
@@ -296,6 +296,12 @@ func opContains(v any, values []any) bool {
 
 func opIsIn(v any, values []any) bool {
 	switch v := v.(type) {
+	case string:
+		for _, vi := range values {
+			if v == vi.(string) {
+				return true
+			}
+		}
 	case decimal.Decimal:
 		for _, vi := range values {
 			if v.Equal(vi.(decimal.Decimal)) {
@@ -347,12 +353,6 @@ func opIsIn(v any, values []any) bool {
 				}
 			}
 		}
-	case string:
-		for _, vi := range values {
-			if v == vi.(string) {
-				return true
-			}
-		}
 	}
 	return false
 }
@@ -363,13 +363,13 @@ func opStartsWith(v any, values []any) bool {
 	}
 	v0 := values[0]
 	switch v := v.(type) {
+	case string:
+		return strings.HasPrefix(v, v0.(string))
 	case json.Value:
 		if v.Kind() == json.String {
 			v0 := v0.(state.JSONConditionValue)
 			return strings.HasPrefix(v.String(), v0.String)
 		}
-	case string:
-		return strings.HasPrefix(v, v0.(string))
 	}
 	return false
 }
@@ -380,13 +380,13 @@ func opEndsWith(v any, values []any) bool {
 	}
 	v0 := values[0]
 	switch v := v.(type) {
+	case string:
+		return strings.HasSuffix(v, v0.(string))
 	case json.Value:
 		if v.Kind() == json.String {
 			v0 := v0.(state.JSONConditionValue)
 			return strings.HasSuffix(v.String(), v0.String)
 		}
-	case string:
-		return strings.HasSuffix(v, v0.(string))
 	}
 	return false
 }

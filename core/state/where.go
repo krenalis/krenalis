@@ -218,6 +218,8 @@ func (v JSONConditionValue) MarshalJSON() ([]byte, error) {
 // v is the value to unmarshal, and t is the type of the property.
 func unmarshalConditionValue(v any, t types.Type) (any, error) {
 	switch t.Kind() {
+	case types.TextKind, types.UUIDKind, types.InetKind:
+		return v, nil
 	case types.IntKind:
 		n, err := strconv.ParseInt(string(v.(json.Number)), 10, 64)
 		if err != nil {
@@ -253,8 +255,6 @@ func unmarshalConditionValue(v any, t types.Type) (any, error) {
 			return nil, err
 		}
 		return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
-	case types.UUIDKind, types.TextKind, types.InetKind:
-		return v, nil
 	case types.JSONKind:
 		v := JSONConditionValue{String: v.(string)}
 		if d, err := decimal.Parse(v.String, 0, 0); err == nil {

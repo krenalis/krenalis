@@ -74,6 +74,46 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	var value any
 	var valid bool
 	switch k := typ.Kind(); k {
+	case types.TextKind:
+		var v string
+		switch s := src.(type) {
+		case string:
+			if s == "" {
+				if values := typ.Values(); values != nil && !slices.Contains(values, "") {
+					return nil, nil
+				}
+			}
+			v = s
+			valid = true
+		case []byte:
+			if s == nil && nullable {
+				return nil, nil
+			}
+			v = string(s)
+			valid = true
+		}
+		if valid {
+			if !utf8.ValidString(v) {
+				return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
+			}
+			if values := typ.Values(); values != nil {
+				if !slices.Contains(values, v) {
+					return nil, inputValidationErrorf(name, "contains an unsupported value %q", errors.Abbreviate(v, 20))
+				}
+			} else if rx := typ.Regexp(); rx != nil {
+				if !rx.MatchString(v) {
+					return nil, inputValidationErrorf(name, "contains an unsupported value %q", errors.Abbreviate(v, 20))
+				}
+			} else {
+				if l, ok := typ.ByteLen(); ok && len(v) > l {
+					return nil, inputValidationErrorf(name, "has value %q that is longer than %d bytes", errors.Abbreviate(v, 20), l)
+				}
+				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
+					return nil, inputValidationErrorf(name, "has value %q that is longer than %d characters", errors.Abbreviate(v, 20), l)
+				}
+			}
+			value = v
+		}
 	case types.BooleanKind:
 		switch src.(type) {
 		case bool:
@@ -592,46 +632,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if addr, ok := src.(netip.Addr); ok && addr.IsValid() {
 			value = addr.WithZone("").String()
 			valid = true
-		}
-	case types.TextKind:
-		var v string
-		switch s := src.(type) {
-		case string:
-			if s == "" {
-				if values := typ.Values(); values != nil && !slices.Contains(values, "") {
-					return nil, nil
-				}
-			}
-			v = s
-			valid = true
-		case []byte:
-			if s == nil && nullable {
-				return nil, nil
-			}
-			v = string(s)
-			valid = true
-		}
-		if valid {
-			if !utf8.ValidString(v) {
-				return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
-			}
-			if values := typ.Values(); values != nil {
-				if !slices.Contains(values, v) {
-					return nil, inputValidationErrorf(name, "contains an unsupported value %q", errors.Abbreviate(v, 20))
-				}
-			} else if rx := typ.Regexp(); rx != nil {
-				if !rx.MatchString(v) {
-					return nil, inputValidationErrorf(name, "contains an unsupported value %q", errors.Abbreviate(v, 20))
-				}
-			} else {
-				if l, ok := typ.ByteLen(); ok && len(v) > l {
-					return nil, inputValidationErrorf(name, "has value %q that is longer than %d bytes", errors.Abbreviate(v, 20), l)
-				}
-				if l, ok := typ.CharLen(); ok && utf8.RuneCountInString(v) > l {
-					return nil, inputValidationErrorf(name, "has value %q that is longer than %d characters", errors.Abbreviate(v, 20), l)
-				}
-			}
-			value = v
 		}
 	case types.ArrayKind:
 		if s, ok := src.(string); ok {

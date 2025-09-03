@@ -23,32 +23,32 @@ The table below provides the types that can appears in a schema:
 
 | Type           | Description                                                               |
 |----------------|---------------------------------------------------------------------------|
+| `text`         | An UTF-8 encoded text. [^1]                                               |
 | `boolean`      | A boolean.                                                                |
-| `int(n)`       | A signed integer with `n` bytes. `n` can be 8, 16, 24, 32, or 64. [^1]    |
-| `uint(n)`      | An unsigned integer with `n` bytes. `n` can be 8, 16, 24, 32, or 64. [^1] |
-| `float(n)`     | A floating point number with `n` bytes. `n` can be 32, or 64. [^1] [^2]   |
-| `decimal(p,s)` | A decimal number with precision `p` and scale `s`. [^1] [^3]              |
-| `datetime`     | A date and time with the year in range [1, 9999]. [^4]                    |
+| `int(n)`       | A signed integer with `n` bytes. `n` can be 8, 16, 24, 32, or 64. [^2]    |
+| `uint(n)`      | An unsigned integer with `n` bytes. `n` can be 8, 16, 24, 32, or 64. [^3] |
+| `float(n)`     | A floating point number with `n` bytes. `n` can be 32, or 64. [^1] [^3]   |
+| `decimal(p,s)` | A decimal number with precision `p` and scale `s`. [^2] [^4]              |
+| `datetime`     | A date and time with the year in range [1, 9999]. [^5]                    |
 | `date`         | A date with the year in range [1, 9999].                                  |
-| `time`         | A time in the day. [^4]                                                   |
+| `time`         | A time in the day. [^5]                                                   |
 | `year`         | A year in range [1, 9999].                                                |
 | `uuid`         | A UUID.                                                                   |
 | `json`         | A JSON data.                                                              |
 | `inet`         | An IP4 or IP6 address.                                                    |
-| `text`         | An UTF-8 encoded text. [^5]                                               |
 | `array(T)`     | An array with elements with type `T`. [^6] [^7]                           |
 | `object`       | An object with specified properties.                                      |
 | `map(T)`       | A map with keys of type `text` and values of type `T`.                    |
 
-[^1]: `int(n)`, `uint(n)`, `float(n)`, and `decimal(p,s)` can be limited in the range of the allowed values.
+[^1]: `text` can be restricted by a list of allowed values, a regular expression, or maximum lengths in bytes and characters.
 
-[^2]: `float(n)` can be limited to finite values, excluding `NaN` and `±Infinity` from the allowed values.
+[^2]: `int(n)`, `uint(n)`, `float(n)`, and `decimal(p,s)` can be limited in the range of the allowed values.
 
-[^3]: `decimal(p,s)` has precision `p` in range [1, 76], scale `s` in range [0, 37], and `s` is less or equal to `p`.
+[^3]: `float(n)` can be limited to finite values, excluding `NaN` and `±Infinity` from the allowed values.
 
-[^4]: `datetime` and `time` have nanosecond precision and no time zone.
+[^4]: `decimal(p,s)` has precision `p` in range [1, 76], scale `s` in range [0, 37], and `s` is less or equal to `p`.
 
-[^5]: `text` can be restricted by a list of allowed values, a regular expression, or maximum lengths in bytes and characters.
+[^5]: `datetime` and `time` have nanosecond precision and no time zone.
 
 [^6]: An `array` can have a minimum and maximum limit on the number of elements.
 

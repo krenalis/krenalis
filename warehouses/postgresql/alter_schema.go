@@ -211,6 +211,22 @@ func createViewQuery(usersTableName string, userColumns []meergo.Column, replace
 // specified in the file 'core/datastore/README.md',
 func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
+	case types.TextKind:
+		var charLen int
+		if l, ok := t.ByteLen(); ok {
+			charLen = l // we represent N bytes len as N chars len in PostgreSQL.
+		}
+		if l, ok := t.CharLen(); ok {
+			if charLen == 0 {
+				charLen = l
+			} else {
+				charLen = min(l, charLen)
+			}
+		}
+		if charLen > 0 {
+			return "character varying(" + strconv.Itoa(charLen) + ")"
+		}
+		return "character varying"
 	case types.BooleanKind:
 		return "boolean"
 	case types.IntKind:
@@ -262,22 +278,6 @@ func typeToPostgresType(t types.Type) string {
 		return "jsonb"
 	case types.InetKind:
 		return "inet"
-	case types.TextKind:
-		var charLen int
-		if l, ok := t.ByteLen(); ok {
-			charLen = l // we represent N bytes len as N chars len in PostgreSQL.
-		}
-		if l, ok := t.CharLen(); ok {
-			if charLen == 0 {
-				charLen = l
-			} else {
-				charLen = min(l, charLen)
-			}
-		}
-		if charLen > 0 {
-			return "character varying(" + strconv.Itoa(charLen) + ")"
-		}
-		return "character varying"
 	case types.ArrayKind:
 		typ := typeToPostgresType(t.Elem())
 		return typ + "[]"

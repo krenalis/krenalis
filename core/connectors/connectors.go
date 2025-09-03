@@ -464,15 +464,15 @@ func parseIdentityColumn(name string, typ types.Type, value any, layouts *state.
 	switch id := id.(type) {
 	case nil:
 		return "", fmt.Errorf("identity value is null")
-	case int:
-		return strconv.FormatInt(int64(id), 10), nil
-	case uint:
-		return strconv.FormatUint(uint64(id), 10), nil
 	case string:
 		if id == "" {
 			return "", fmt.Errorf("identity value is empty")
 		}
 		return id, nil
+	case int:
+		return strconv.FormatInt(int64(id), 10), nil
+	case uint:
+		return strconv.FormatUint(uint64(id), 10), nil
 	case float64:
 		if int(math.Round(id)) == int(id) {
 			return strconv.FormatInt(int64(id), 10), nil

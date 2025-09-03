@@ -185,14 +185,14 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 	switch p.typ.Kind() {
 	case types.InvalidKind:
 		return s, t
+	case types.TextKind:
+		return p.value.(string) + s, t
 	case types.BooleanKind:
 		return strconv.FormatBool(p.value.(bool)) + s, t
 	case types.IntKind:
 		return strconv.Itoa(p.value.(int)) + s, t
 	case types.DecimalKind:
 		return p.value.(decimal.Decimal).String() + s, t
-	case types.TextKind:
-		return p.value.(string) + s, t
 	}
 	panic("unexpected value type")
 }

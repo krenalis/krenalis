@@ -19,6 +19,7 @@ func Test_suitableAsIdentifier(t *testing.T) {
 		t        types.Type
 		expected bool
 	}{
+		{types.Text(), true},
 		{types.Boolean(), false},
 		{types.Int(16), true},
 		{types.Int(32), true},
@@ -36,7 +37,6 @@ func Test_suitableAsIdentifier(t *testing.T) {
 		{types.Year(), false},
 		{types.UUID(), true},
 		{types.Inet(), true},
-		{types.Text(), true},
 		{types.Array(types.Text()), false},
 		{types.Array(types.Float(32)), false},
 		{types.Array(types.Decimal(10, 0)), false},

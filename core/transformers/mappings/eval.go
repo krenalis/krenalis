@@ -337,6 +337,8 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		var length int
 		switch v := v.(type) {
 		case nil:
+		case string:
+			length = utf8.RuneCountInString(v)
 		case bool:
 			length = 5
 			if v {
@@ -354,8 +356,6 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 			length = len(strconv.FormatFloat(v, 'g', -1, bitSize))
 		case decimal.Decimal:
 			length = len(v.String())
-		case string:
-			length = utf8.RuneCountInString(v)
 		case time.Time:
 			t := typeOf(p.args[0])
 			switch t.Kind() {

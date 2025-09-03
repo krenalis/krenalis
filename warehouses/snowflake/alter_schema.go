@@ -211,6 +211,22 @@ func createViewQuery(usersTableName string, userColumns []meergo.Column, replace
 // specified in the file 'core/datastore/README.md',
 func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
+	case types.TextKind:
+		var charLen int
+		if l, ok := t.ByteLen(); ok {
+			charLen = l
+		}
+		if l, ok := t.CharLen(); ok {
+			if charLen == 0 {
+				charLen = l
+			} else {
+				charLen = min(l, charLen)
+			}
+		}
+		if charLen > 0 {
+			return "VARCHAR(" + strconv.Itoa(charLen) + ")"
+		}
+		return "VARCHAR"
 	case types.BooleanKind:
 		return "BOOLEAN"
 	case types.IntKind:
@@ -261,22 +277,6 @@ func typeToSnowflakeType(t types.Type) string {
 	case types.JSONKind:
 		return "VARIANT"
 	case types.InetKind:
-		return "VARCHAR"
-	case types.TextKind:
-		var charLen int
-		if l, ok := t.ByteLen(); ok {
-			charLen = l
-		}
-		if l, ok := t.CharLen(); ok {
-			if charLen == 0 {
-				charLen = l
-			} else {
-				charLen = min(l, charLen)
-			}
-		}
-		if charLen > 0 {
-			return "VARCHAR(" + strconv.Itoa(charLen) + ")"
-		}
 		return "VARCHAR"
 	case types.ArrayKind:
 		return "ARRAY"

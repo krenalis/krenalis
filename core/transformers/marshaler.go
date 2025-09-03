@@ -110,6 +110,10 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		return b, nil
 	}
 	switch v := v.(type) {
+	case string:
+		b = append(b, '\'')
+		b = jsStringEscape(b, v)
+		b = append(b, '\'')
 	case bool:
 		if v {
 			b = append(b, "true"...)
@@ -146,10 +150,6 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		b = append(b, "new Date("...)
 		b = strconv.AppendInt(b, v.UnixMilli(), 10)
 		b = append(b, ')')
-	case string:
-		b = append(b, '\'')
-		b = jsStringEscape(b, v)
-		b = append(b, '\'')
 	case []any:
 		b = append(b, '[')
 		elem := t.Elem()
@@ -267,6 +267,16 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 		return b, nil
 	}
 	switch v := v.(type) {
+	case string:
+		if k == types.UUIDKind {
+			b = append(b, "UUID('"...)
+			b = append(b, v...)
+			b = append(b, '\'', ')')
+		} else {
+			b = append(b, '\'')
+			b = pyStringEscape(b, v)
+			b = append(b, '\'')
+		}
 	case bool:
 		if v {
 			b = append(b, "True"...)
@@ -301,16 +311,6 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 			b = fmt.Appendf(b, "date(%d,%d,%d)", v.Year(), v.Month(), v.Day())
 		case types.TimeKind:
 			b = fmt.Appendf(b, "time(%d,%d,%d,%d)", v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
-		}
-	case string:
-		if k == types.UUIDKind {
-			b = append(b, "UUID('"...)
-			b = append(b, v...)
-			b = append(b, '\'', ')')
-		} else {
-			b = append(b, '\'')
-			b = pyStringEscape(b, v)
-			b = append(b, '\'')
 		}
 	case []any:
 		b = append(b, '[')

@@ -138,6 +138,8 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 		for i, value := range cond.Values {
 			var v any
 			switch kind {
+			case types.TextKind:
+				v = value
 			case types.BooleanKind:
 				v = value == "true"
 			case types.IntKind:
@@ -167,8 +169,6 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			case types.InetKind:
 				addr, _ := netip.ParseAddr(value)
 				v = addr.String()
-			case types.TextKind:
-				v = value
 			default:
 				panic(fmt.Errorf("unexpected type for property %s", cond.Property))
 			}
@@ -198,6 +198,8 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 		for i, value := range cond.Values {
 			var v string
 			switch value := value.(type) {
+			case string:
+				v = value
 			case bool:
 				v = strconv.FormatBool(value)
 			case float64:
@@ -221,8 +223,6 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 				}
 			case state.JSONConditionValue:
 				v = value.String
-			case string:
-				v = value
 			}
 			values[i] = v
 		}
@@ -505,18 +505,18 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpIsLessThan, OpIsLessThanOrEqualTo, OpIsGreaterThan, OpIsGreaterThanOrEqualTo:
 			switch kind {
-			case types.IntKind, types.UintKind, types.FloatKind, types.DecimalKind:
 			case types.TextKind:
 				if p.Type.Values() != nil {
 					return nil, fmt.Errorf("operator %q cannot be used with text type that has values", op)
 				}
+			case types.IntKind, types.UintKind, types.FloatKind, types.DecimalKind:
 			case types.JSONKind:
 			default:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 			}
 		case OpContains, OpDoesNotContain:
 			switch kind {
-			case types.JSONKind, types.TextKind:
+			case types.TextKind, types.JSONKind:
 			case types.ArrayKind:
 				switch k := p.Type.Elem().Kind(); k {
 				case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
@@ -527,11 +527,11 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpStartsWith, OpEndsWith:
 			switch kind {
-			case types.JSONKind:
 			case types.TextKind:
 				if p.Type.Values() != nil {
 					return nil, fmt.Errorf("operator %q cannot be used with text type that has values", op)
 				}
+			case types.JSONKind:
 			default:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 			}
@@ -549,7 +549,7 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpIsEmpty, OpIsNotEmpty:
 			switch kind {
-			case types.JSONKind, types.TextKind, types.ArrayKind, types.MapKind:
+			case types.TextKind, types.JSONKind, types.ArrayKind, types.MapKind:
 			case types.ObjectKind:
 				if disallowEmptyOnObject {
 					if target == state.TargetEvent {
@@ -604,6 +604,8 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 			var valid bool
 			switch k {
+			case types.TextKind, types.JSONKind:
+				valid = utf8.ValidString(value)
 			case types.IntKind:
 				_, valid = parseInt(value)
 			case types.UintKind:
@@ -628,8 +630,6 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 				_, valid = parseYear(value)
 			case types.UUIDKind:
 				_, valid = types.ParseUUID(value)
-			case types.JSONKind, types.TextKind:
-				valid = utf8.ValidString(value)
 			case types.InetKind:
 				_, err := netip.ParseAddr(value)
 				valid = err == nil

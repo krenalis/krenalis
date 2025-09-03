@@ -5,6 +5,8 @@
   dataType = func(typ any) string {
     t := typ.(map[string]any)
     switch kind := t.kind.(string); kind {
+    case "text":
+      return "string"
     case "int":
       if t.bitSize == 32.0 {
         return "int"
@@ -17,8 +19,6 @@
       return sprintf("%.0f bit unsigned int", t.bitSize)
     case "decimal":
       return sprintf("decimal(%.0f, %.0f)", t.precision, t.scale)
-    case "text":
-      return "string"
     case "array":
       return sprintf("array of %s", dataType(t.elementType))
     case "map":

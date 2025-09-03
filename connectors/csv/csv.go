@@ -287,6 +287,8 @@ func toString(v any, t types.Type) string {
 		return ""
 	}
 	switch k := t.Kind(); k {
+	case types.TextKind, types.UUIDKind, types.InetKind:
+		return v.(string)
 	case types.BooleanKind:
 		return strconv.FormatBool(v.(bool))
 	case types.IntKind, types.YearKind:
@@ -303,8 +305,6 @@ func toString(v any, t types.Type) string {
 		return v.(time.Time).Format(time.DateOnly)
 	case types.TimeKind:
 		return v.(time.Time).Format("15:04:05.999999999Z07:00")
-	case types.UUIDKind, types.InetKind, types.TextKind:
-		return v.(string)
 	case types.JSONKind:
 		return string(v.(json.Value))
 	case types.ArrayKind, types.ObjectKind, types.MapKind:

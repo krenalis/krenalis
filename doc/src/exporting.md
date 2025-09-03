@@ -64,10 +64,10 @@ When exporting users to a database, both a **table name** and a **table key prop
 
 The table key property must be a property of the table, and it will be used as key for the insert / update queries on the database. It must have one of the following types:
 
+* `text`
 * `int(n)`
 * `uint(n)`
 * `uuid`
-* `text`
 
 A value for the table key property must be returned by the transformation, as, otherwise, would be impossible to match the user with the users on the database's table.
 
@@ -81,9 +81,9 @@ When exporting users to a file, the order of the users is indicated through an a
 
 This property must have one of these types:
 
+* `text`
 * `int(n)`
 * `uint(n)`
 * `decimal(p,s)`, but only if scale `s` is 0
 * `uuid`
 * `inet`
-* `text`

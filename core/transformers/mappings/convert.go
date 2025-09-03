@@ -111,468 +111,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	}
 	// Convert the unparsed cases, v is not nil.
 	switch dk {
-	case types.BooleanKind:
-		switch sk {
-		case types.BooleanKind:
-			return v.(bool), nil
-		case types.IntKind:
-			if st.BitSize() == 8 {
-				return v.(int) != 0, nil
-			}
-		case types.UintKind:
-			if st.BitSize() == 8 {
-				return v.(uint) > 0, nil
-			}
-		case types.TextKind:
-			switch v.(string) {
-			case "false", "False", "FALSE", "no", "No", "NO":
-				return false, nil
-			case "true", "True", "TRUE", "yes", "Yes", "YES":
-				return true, nil
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			if v.IsBool() {
-				return v.Bool(), nil
-			}
-		}
-	case types.IntKind:
-		var err error
-		var n int
-		switch sk {
-		case types.BooleanKind:
-			if v.(bool) {
-				n = 1
-			}
-			if dt.BitSize() != 8 {
-				err = errInvalidConversion
-			}
-		case types.IntKind:
-			n = v.(int)
-		case types.UintKind:
-			u := v.(uint)
-			if u > math.MaxInt64 {
-				return v, errRangeConversion
-			}
-			n = int(u)
-		case types.FloatKind:
-			n, err = floatToInt(v.(float64))
-			if err != nil {
-				return v, err
-			}
-		case types.DecimalKind:
-			n, err = decimalToInt(v.(decimal.Decimal))
-			if err != nil {
-				return v, err
-			}
-		case types.YearKind:
-			n = v.(int)
-		case types.TextKind:
-			n, err = strconv.Atoi(v.(string))
-			if err != nil {
-				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-					return v, errRangeConversion
-				}
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Int()
-			if err == json.ErrRange {
-				return v, errRangeConversion
-			}
-		default:
-			err = errInvalidConversion
-		}
-		if err != nil {
-			return v, errInvalidConversion
-		}
-		min, max := dt.IntRange()
-		if int64(n) < min {
-			return v, errMinConversion
-		}
-		if int64(n) > max {
-			return v, errMaxConversion
-		}
-		return n, nil
-	case types.UintKind:
-		var err error
-		var n uint
-		switch sk {
-		case types.BooleanKind:
-			if v.(bool) {
-				n = 1
-			}
-			if dt.BitSize() != 8 {
-				err = errInvalidConversion
-			}
-		case types.IntKind:
-			i := v.(int)
-			if i < 0 {
-				return v, errRangeConversion
-			}
-			n = uint(i)
-		case types.UintKind:
-			n = v.(uint)
-		case types.FloatKind:
-			n, err = floatToUint(v.(float64))
-			if err != nil {
-				return v, err
-			}
-		case types.DecimalKind:
-			n, err = decimalToUint(v.(decimal.Decimal))
-			if err != nil {
-				return v, err
-			}
-		case types.YearKind:
-			n = uint(v.(int))
-		case types.TextKind:
-			var u uint64
-			u, err = strconv.ParseUint(v.(string), 10, 64)
-			if err != nil {
-				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-					return v, errRangeConversion
-				}
-			}
-			n = uint(u)
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Uint()
-			if err == json.ErrRange {
-				return v, errRangeConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if err != nil {
-			return v, errInvalidConversion
-		}
-		min, max := dt.UintRange()
-		if uint64(n) < min {
-			return v, errMinConversion
-		}
-		if uint64(n) > max {
-			return v, errMaxConversion
-		}
-		return n, nil
-	case types.FloatKind:
-		var err error
-		var n float64
-		switch sk {
-		case types.FloatKind:
-			n = v.(float64)
-			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
-				return v, errRangeConversion
-			}
-			if dt.BitSize() == 32 && st.BitSize() != 32 {
-				n = float64(float32(n))
-			}
-		case types.IntKind:
-			n = float64(v.(int))
-		case types.UintKind:
-			n = float64(v.(uint))
-		case types.DecimalKind:
-			n, _ = v.(decimal.Decimal).Float64()
-			if dt.BitSize() == 32 {
-				n = float64(float32(n))
-			}
-		case types.TextKind:
-			n, err = strconv.ParseFloat(v.(string), dt.BitSize())
-			if err != nil {
-				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-					return v, errRangeConversion
-				}
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Float(dt.BitSize())
-			if err == json.ErrRange {
-				return v, errRangeConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if err != nil {
-			return v, errInvalidConversion
-		}
-		min, max := dt.FloatRange()
-		if n < min {
-			return v, errMinConversion
-		}
-		if n > max {
-			return v, errMaxConversion
-		}
-		return n, nil
-	case types.DecimalKind:
-		var err error
-		var n decimal.Decimal
-		switch sk {
-		case types.DecimalKind:
-			n, _ = v.(decimal.Decimal)
-		case types.IntKind:
-			n, err = decimal.Int(v.(int), dt.Precision(), dt.Scale())
-			if err == decimal.ErrRange {
-				return v, errRangeConversion
-			}
-		case types.UintKind:
-			n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
-			if err == decimal.ErrRange {
-				return v, errRangeConversion
-			}
-		case types.FloatKind:
-			f := v.(float64)
-			if math.IsNaN(f) || math.IsInf(f, 0) {
-				return v, errRangeConversion
-			}
-			n, err = decimal.Float64(f, dt.Precision(), dt.Scale())
-			if err == decimal.ErrRange {
-				return v, errRangeConversion
-			}
-		case types.TextKind:
-			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Decimal(dt.Precision(), dt.Scale())
-			if err == json.ErrRange {
-				return v, errRangeConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if err != nil {
-			return v, errInvalidConversion
-		}
-		min, max := dt.DecimalRange()
-		if n.Less(min) {
-			return v, errMinConversion
-		}
-		if n.Greater(max) {
-			return v, errMaxConversion
-		}
-		return n, nil
-	case types.DateTimeKind:
-		var t time.Time
-		var err error
-		switch sk {
-		case types.DateTimeKind, types.DateKind:
-			t = v.(time.Time)
-		case types.TextKind:
-			t, err = time.Parse(time.RFC3339Nano, v.(string))
-			if err != nil {
-				return v, errParseConversion
-			}
-			t = t.UTC()
-			if y := t.Year(); y < 1 || y > 9999 {
-				return v, errYearRangeConversion
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			if !v.IsString() {
-				return v, errInvalidConversion
-			}
-			t, err = iso8601.Parse(v.Bytes())
-			if err != nil {
-				return v, errParseConversion
-			}
-			t = t.UTC()
-			if y := t.Year(); y < 1 || y > 9999 {
-				return v, errYearRangeConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if layouts != nil {
-			switch layouts.DateTime {
-			case "unix":
-				return t.Unix(), nil
-			case "unixmilli":
-				return t.UnixMilli(), nil
-			case "unixmicro":
-				return t.UnixMicro(), nil
-			case "unixnano":
-				return t.UnixNano(), nil
-			default:
-				layout := layouts.DateTime
-				if layout == "" {
-					layout = "2006-01-02T15:04:05.999Z"
-				}
-				return t.Format(layout), nil
-			}
-		}
-		return t, nil
-	case types.DateKind:
-		var t time.Time
-		var err error
-		switch sk {
-		case types.DateKind:
-			t = v.(time.Time)
-		case types.DateTimeKind:
-			t = v.(time.Time)
-			t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-		case types.TextKind:
-			t, err = convertTextToDate(v.(string))
-			if err != nil {
-				return v, err
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			if !v.IsString() {
-				return v, errInvalidConversion
-			}
-			t, err = time.Parse(time.DateOnly, v.String())
-			if err != nil {
-				return v, errParseConversion
-			}
-			t = t.UTC()
-			if y := t.Year(); y < 1 || y > 9999 {
-				return v, errYearRangeConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if layouts != nil {
-			layout := layouts.Date
-			if layout == "" {
-				layout = "2006-01-02"
-			}
-			return t.Format(layout), nil
-		}
-		return t, nil
-	case types.TimeKind:
-		var t time.Time
-		switch sk {
-		case types.TimeKind:
-			t = v.(time.Time)
-		case types.DateTimeKind:
-			t = v.(time.Time)
-			t = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
-		case types.TextKind:
-			var ok bool
-			t, ok = util.ParseTime(v.(string))
-			if !ok {
-				return v, errParseConversion
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			if !v.IsString() {
-				return v, errInvalidConversion
-			}
-			var ok bool
-			t, ok = util.ParseTime(v.Bytes())
-			if !ok {
-				return v, errParseConversion
-			}
-		}
-		if layouts != nil {
-			layout := layouts.Time
-			if layout == "" {
-				layout = "15:04:05.999Z"
-			}
-			return t.Format(layout), nil
-		}
-		return t, nil
-	case types.YearKind:
-		var err error
-		var n int
-		switch sk {
-		case types.YearKind:
-			return v.(int), nil
-		case types.IntKind:
-			n = v.(int)
-		case types.UintKind:
-			u := v.(uint)
-			if u > math.MaxInt64 {
-				return v, errYearRangeConversion
-			}
-			n = int(u)
-		case types.TextKind:
-			s := v.(string)
-			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
-				return v, errParseConversion
-			}
-			n, err = strconv.Atoi(s)
-			if err != nil {
-				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-					return v, errYearRangeConversion
-				}
-				return v, errParseConversion
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Int()
-			if err != nil {
-				if err == json.ErrRange {
-					return v, errYearRangeConversion
-				}
-				return v, errInvalidConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if n < 1 || n > 9999 {
-			return v, errYearRangeConversion
-		}
-		return n, nil
-	case types.UUIDKind:
-		switch sk {
-		case types.UUIDKind:
-			return v.(string), nil
-		case types.TextKind:
-			u, err := uuid.Parse(v.(string))
-			if err != nil {
-				return v, errParseConversion
-			}
-			return u.String(), nil
-		case types.JSONKind:
-			v := v.(json.Value)
-			if !v.IsString() {
-				return v, errInvalidConversion
-			}
-			u, err := uuid.ParseBytes(v.Bytes())
-			if err != nil {
-				return v, errParseConversion
-			}
-			return u.String(), nil
-		}
-	case types.JSONKind:
-		if sk == types.JSONKind {
-			return v, nil
-		}
-		// TODO(marco): time types are not correctly marshaled
-		if encodeSorted {
-			var b json.Buffer
-			err := b.EncodeSorted(v)
-			if err != nil {
-				return v, errInvalidConversion
-			}
-			value, _ := b.Value()
-			return value, nil
-		}
-		value, err := json.Marshal(v)
-		if err != nil {
-			return v, errInvalidConversion
-		}
-		return value, nil
-	case types.InetKind:
-		switch sk {
-		case types.InetKind:
-			return v.(string), nil
-		case types.TextKind:
-			ip, err := netip.ParseAddr(v.(string))
-			if err != nil {
-				return v, errParseConversion
-			}
-			return ip.String(), nil
-		case types.JSONKind:
-			v := v.(json.Value)
-			if !v.IsString() {
-				return v, errInvalidConversion
-			}
-			ip, err := netip.ParseAddr(v.String())
-			if err != nil {
-				return v, errParseConversion
-			}
-			return ip.String(), nil
-		}
 	case types.TextKind:
 		var s string
 		switch sk {
@@ -641,6 +179,468 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 		}
 		return s, nil
+	case types.BooleanKind:
+		switch sk {
+		case types.TextKind:
+			switch v.(string) {
+			case "false", "False", "FALSE", "no", "No", "NO":
+				return false, nil
+			case "true", "True", "TRUE", "yes", "Yes", "YES":
+				return true, nil
+			}
+		case types.BooleanKind:
+			return v.(bool), nil
+		case types.IntKind:
+			if st.BitSize() == 8 {
+				return v.(int) != 0, nil
+			}
+		case types.UintKind:
+			if st.BitSize() == 8 {
+				return v.(uint) > 0, nil
+			}
+		case types.JSONKind:
+			v := v.(json.Value)
+			if v.IsBool() {
+				return v.Bool(), nil
+			}
+		}
+	case types.IntKind:
+		var err error
+		var n int
+		switch sk {
+		case types.TextKind:
+			n, err = strconv.Atoi(v.(string))
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+					return v, errRangeConversion
+				}
+			}
+		case types.BooleanKind:
+			if v.(bool) {
+				n = 1
+			}
+			if dt.BitSize() != 8 {
+				err = errInvalidConversion
+			}
+		case types.IntKind:
+			n = v.(int)
+		case types.UintKind:
+			u := v.(uint)
+			if u > math.MaxInt64 {
+				return v, errRangeConversion
+			}
+			n = int(u)
+		case types.FloatKind:
+			n, err = floatToInt(v.(float64))
+			if err != nil {
+				return v, err
+			}
+		case types.DecimalKind:
+			n, err = decimalToInt(v.(decimal.Decimal))
+			if err != nil {
+				return v, err
+			}
+		case types.YearKind:
+			n = v.(int)
+		case types.JSONKind:
+			v := v.(json.Value)
+			n, err = v.Int()
+			if err == json.ErrRange {
+				return v, errRangeConversion
+			}
+		default:
+			err = errInvalidConversion
+		}
+		if err != nil {
+			return v, errInvalidConversion
+		}
+		min, max := dt.IntRange()
+		if int64(n) < min {
+			return v, errMinConversion
+		}
+		if int64(n) > max {
+			return v, errMaxConversion
+		}
+		return n, nil
+	case types.UintKind:
+		var err error
+		var n uint
+		switch sk {
+		case types.TextKind:
+			var u uint64
+			u, err = strconv.ParseUint(v.(string), 10, 64)
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+					return v, errRangeConversion
+				}
+			}
+			n = uint(u)
+		case types.BooleanKind:
+			if v.(bool) {
+				n = 1
+			}
+			if dt.BitSize() != 8 {
+				err = errInvalidConversion
+			}
+		case types.IntKind:
+			i := v.(int)
+			if i < 0 {
+				return v, errRangeConversion
+			}
+			n = uint(i)
+		case types.UintKind:
+			n = v.(uint)
+		case types.FloatKind:
+			n, err = floatToUint(v.(float64))
+			if err != nil {
+				return v, err
+			}
+		case types.DecimalKind:
+			n, err = decimalToUint(v.(decimal.Decimal))
+			if err != nil {
+				return v, err
+			}
+		case types.YearKind:
+			n = uint(v.(int))
+		case types.JSONKind:
+			v := v.(json.Value)
+			n, err = v.Uint()
+			if err == json.ErrRange {
+				return v, errRangeConversion
+			}
+		default:
+			return v, errInvalidConversion
+		}
+		if err != nil {
+			return v, errInvalidConversion
+		}
+		min, max := dt.UintRange()
+		if uint64(n) < min {
+			return v, errMinConversion
+		}
+		if uint64(n) > max {
+			return v, errMaxConversion
+		}
+		return n, nil
+	case types.FloatKind:
+		var err error
+		var n float64
+		switch sk {
+		case types.TextKind:
+			n, err = strconv.ParseFloat(v.(string), dt.BitSize())
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+					return v, errRangeConversion
+				}
+			}
+		case types.FloatKind:
+			n = v.(float64)
+			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
+				return v, errRangeConversion
+			}
+			if dt.BitSize() == 32 && st.BitSize() != 32 {
+				n = float64(float32(n))
+			}
+		case types.IntKind:
+			n = float64(v.(int))
+		case types.UintKind:
+			n = float64(v.(uint))
+		case types.DecimalKind:
+			n, _ = v.(decimal.Decimal).Float64()
+			if dt.BitSize() == 32 {
+				n = float64(float32(n))
+			}
+		case types.JSONKind:
+			v := v.(json.Value)
+			n, err = v.Float(dt.BitSize())
+			if err == json.ErrRange {
+				return v, errRangeConversion
+			}
+		default:
+			return v, errInvalidConversion
+		}
+		if err != nil {
+			return v, errInvalidConversion
+		}
+		min, max := dt.FloatRange()
+		if n < min {
+			return v, errMinConversion
+		}
+		if n > max {
+			return v, errMaxConversion
+		}
+		return n, nil
+	case types.DecimalKind:
+		var err error
+		var n decimal.Decimal
+		switch sk {
+		case types.TextKind:
+			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
+		case types.DecimalKind:
+			n, _ = v.(decimal.Decimal)
+		case types.IntKind:
+			n, err = decimal.Int(v.(int), dt.Precision(), dt.Scale())
+			if err == decimal.ErrRange {
+				return v, errRangeConversion
+			}
+		case types.UintKind:
+			n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
+			if err == decimal.ErrRange {
+				return v, errRangeConversion
+			}
+		case types.FloatKind:
+			f := v.(float64)
+			if math.IsNaN(f) || math.IsInf(f, 0) {
+				return v, errRangeConversion
+			}
+			n, err = decimal.Float64(f, dt.Precision(), dt.Scale())
+			if err == decimal.ErrRange {
+				return v, errRangeConversion
+			}
+		case types.JSONKind:
+			v := v.(json.Value)
+			n, err = v.Decimal(dt.Precision(), dt.Scale())
+			if err == json.ErrRange {
+				return v, errRangeConversion
+			}
+		default:
+			return v, errInvalidConversion
+		}
+		if err != nil {
+			return v, errInvalidConversion
+		}
+		min, max := dt.DecimalRange()
+		if n.Less(min) {
+			return v, errMinConversion
+		}
+		if n.Greater(max) {
+			return v, errMaxConversion
+		}
+		return n, nil
+	case types.DateTimeKind:
+		var t time.Time
+		var err error
+		switch sk {
+		case types.TextKind:
+			t, err = time.Parse(time.RFC3339Nano, v.(string))
+			if err != nil {
+				return v, errParseConversion
+			}
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return v, errYearRangeConversion
+			}
+		case types.DateTimeKind, types.DateKind:
+			t = v.(time.Time)
+		case types.JSONKind:
+			v := v.(json.Value)
+			if !v.IsString() {
+				return v, errInvalidConversion
+			}
+			t, err = iso8601.Parse(v.Bytes())
+			if err != nil {
+				return v, errParseConversion
+			}
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return v, errYearRangeConversion
+			}
+		default:
+			return v, errInvalidConversion
+		}
+		if layouts != nil {
+			switch layouts.DateTime {
+			case "unix":
+				return t.Unix(), nil
+			case "unixmilli":
+				return t.UnixMilli(), nil
+			case "unixmicro":
+				return t.UnixMicro(), nil
+			case "unixnano":
+				return t.UnixNano(), nil
+			default:
+				layout := layouts.DateTime
+				if layout == "" {
+					layout = "2006-01-02T15:04:05.999Z"
+				}
+				return t.Format(layout), nil
+			}
+		}
+		return t, nil
+	case types.DateKind:
+		var t time.Time
+		var err error
+		switch sk {
+		case types.TextKind:
+			t, err = convertTextToDate(v.(string))
+			if err != nil {
+				return v, err
+			}
+		case types.DateKind:
+			t = v.(time.Time)
+		case types.DateTimeKind:
+			t = v.(time.Time)
+			t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+		case types.JSONKind:
+			v := v.(json.Value)
+			if !v.IsString() {
+				return v, errInvalidConversion
+			}
+			t, err = time.Parse(time.DateOnly, v.String())
+			if err != nil {
+				return v, errParseConversion
+			}
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return v, errYearRangeConversion
+			}
+		default:
+			return v, errInvalidConversion
+		}
+		if layouts != nil {
+			layout := layouts.Date
+			if layout == "" {
+				layout = "2006-01-02"
+			}
+			return t.Format(layout), nil
+		}
+		return t, nil
+	case types.TimeKind:
+		var t time.Time
+		switch sk {
+		case types.TextKind:
+			var ok bool
+			t, ok = util.ParseTime(v.(string))
+			if !ok {
+				return v, errParseConversion
+			}
+		case types.TimeKind:
+			t = v.(time.Time)
+		case types.DateTimeKind:
+			t = v.(time.Time)
+			t = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
+		case types.JSONKind:
+			v := v.(json.Value)
+			if !v.IsString() {
+				return v, errInvalidConversion
+			}
+			var ok bool
+			t, ok = util.ParseTime(v.Bytes())
+			if !ok {
+				return v, errParseConversion
+			}
+		}
+		if layouts != nil {
+			layout := layouts.Time
+			if layout == "" {
+				layout = "15:04:05.999Z"
+			}
+			return t.Format(layout), nil
+		}
+		return t, nil
+	case types.YearKind:
+		var err error
+		var n int
+		switch sk {
+		case types.TextKind:
+			s := v.(string)
+			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
+				return v, errParseConversion
+			}
+			n, err = strconv.Atoi(s)
+			if err != nil {
+				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
+					return v, errYearRangeConversion
+				}
+				return v, errParseConversion
+			}
+		case types.YearKind:
+			return v.(int), nil
+		case types.IntKind:
+			n = v.(int)
+		case types.UintKind:
+			u := v.(uint)
+			if u > math.MaxInt64 {
+				return v, errYearRangeConversion
+			}
+			n = int(u)
+		case types.JSONKind:
+			v := v.(json.Value)
+			n, err = v.Int()
+			if err != nil {
+				if err == json.ErrRange {
+					return v, errYearRangeConversion
+				}
+				return v, errInvalidConversion
+			}
+		default:
+			return v, errInvalidConversion
+		}
+		if n < 1 || n > 9999 {
+			return v, errYearRangeConversion
+		}
+		return n, nil
+	case types.UUIDKind:
+		switch sk {
+		case types.TextKind:
+			u, err := uuid.Parse(v.(string))
+			if err != nil {
+				return v, errParseConversion
+			}
+			return u.String(), nil
+		case types.UUIDKind:
+			return v.(string), nil
+		case types.JSONKind:
+			v := v.(json.Value)
+			if !v.IsString() {
+				return v, errInvalidConversion
+			}
+			u, err := uuid.ParseBytes(v.Bytes())
+			if err != nil {
+				return v, errParseConversion
+			}
+			return u.String(), nil
+		}
+	case types.JSONKind:
+		if sk == types.JSONKind {
+			return v, nil
+		}
+		// TODO(marco): time types are not correctly marshaled
+		if encodeSorted {
+			var b json.Buffer
+			err := b.EncodeSorted(v)
+			if err != nil {
+				return v, errInvalidConversion
+			}
+			value, _ := b.Value()
+			return value, nil
+		}
+		value, err := json.Marshal(v)
+		if err != nil {
+			return v, errInvalidConversion
+		}
+		return value, nil
+	case types.InetKind:
+		switch sk {
+		case types.TextKind:
+			ip, err := netip.ParseAddr(v.(string))
+			if err != nil {
+				return v, errParseConversion
+			}
+			return ip.String(), nil
+		case types.InetKind:
+			return v.(string), nil
+		case types.JSONKind:
+			v := v.(json.Value)
+			if !v.IsString() {
+				return v, errInvalidConversion
+			}
+			ip, err := netip.ParseAddr(v.String())
+			if err != nil {
+				return v, errParseConversion
+			}
+			return ip.String(), nil
+		}
 	case types.ArrayKind:
 		switch sk {
 		case types.JSONKind:

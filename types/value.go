@@ -38,6 +38,7 @@ import (
 //
 // The following are the expected JSON values for each type:
 //
+//   - text: a JSON String
 //   - boolean: true or false
 //   - int (8, 16, 24, and 32 bits): a JSON Number representing an integer
 //   - int (64 bits): a JSON String representing an integer
@@ -54,7 +55,6 @@ import (
 //   - uuid: a JSON String representing a UUID
 //   - json: a JSON value; JSON null is always interpreted as Value("null")
 //   - inet: a JSON String representing an IP number
-//   - text: a JSON String
 //   - array: a JSON Array
 //   - object: a JSON Object
 //   - map: a JSON Object
@@ -316,6 +316,31 @@ func (d decoder) formatString(v json.Value) string {
 // value returns the unmarshalled value of v according to t.
 func (d decoder) value(v json.Value, t Type) (any, error) {
 	switch t.Kind() {
+	case TextKind:
+		if v.Kind() == '"' {
+			s := string(d.unquoteString(v))
+			if values := t.Values(); values != nil {
+				if !slices.Contains(values, s) {
+					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",
+						d.formatString(v), formatValues(values)), "")
+				}
+				return s, nil
+			} else if rx := t.Regexp(); rx != nil {
+				if !rx.MatchString(s) {
+					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; it does not match the property's regular expression",
+						d.formatString(v)), "")
+				}
+				return s, nil
+			} else {
+				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
+					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "")
+				}
+				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
+					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "")
+				}
+				return s, nil
+			}
+		}
 	case BooleanKind:
 		if v.Kind() == 'f' {
 			return false, nil
@@ -447,31 +472,6 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				return ip.String(), nil
 			}
 		}
-	case TextKind:
-		if v.Kind() == '"' {
-			s := string(d.unquoteString(v))
-			if values := t.Values(); values != nil {
-				if !slices.Contains(values, s) {
-					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",
-						d.formatString(v), formatValues(values)), "")
-				}
-				return s, nil
-			} else if rx := t.Regexp(); rx != nil {
-				if !rx.MatchString(s) {
-					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; it does not match the property's regular expression",
-						d.formatString(v)), "")
-				}
-				return s, nil
-			} else {
-				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "")
-				}
-				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "")
-				}
-				return s, nil
-			}
-		}
 	case ArrayKind, ObjectKind, MapKind:
 	default:
 		return nil, fmt.Errorf("json: unexpected %s type", t)
@@ -520,6 +520,9 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 		return append(b, "null"...), nil
 	}
 	switch v := data.(type) {
+	case string:
+		quoted, _ := json.Quote([]byte(v))
+		b = append(b, quoted...)
 	case bool:
 		if v {
 			b = append(b, "true"...)
@@ -587,9 +590,6 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 	case json.Value:
 		value, _ := json.Compact(v)
 		b = append(b, value...)
-	case string:
-		quoted, _ := json.Quote([]byte(v))
-		b = append(b, quoted...)
 	default:
 		rv := reflect.ValueOf(v)
 		switch t.Kind() {

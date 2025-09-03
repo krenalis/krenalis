@@ -158,10 +158,10 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		b.WriteString(qname)
 		var s string
 		switch c.Type.Kind() {
-		case types.JSONKind:
-			s = " IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.TextKind:
 			s = " = ''"
+		case types.JSONKind:
+			s = " IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:
 			s = " = ARRAY_CONSTRUCT()"
 		case types.MapKind:
@@ -181,10 +181,10 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		b.WriteString(qname)
 		var s string
 		switch c.Type.Kind() {
-		case types.JSONKind:
-			s = " NOT IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.TextKind:
 			s = " <> ''"
+		case types.JSONKind:
+			s = " NOT IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:
 			s = " <> ARRAY_CONSTRUCT()"
 		case types.MapKind:
@@ -218,6 +218,8 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 		b.WriteString("NULL")
 	case meergo.Column:
 		b.WriteString(quoteIdent(v.Name))
+	case string:
+		quoteString(b, v)
 	case bool:
 		if v {
 			b.WriteString("TRUE")
@@ -247,8 +249,6 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 		b.WriteString("PARSE_JSON(")
 		quoteBytes(b, v)
 		b.WriteByte(')')
-	case string:
-		quoteString(b, v)
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}

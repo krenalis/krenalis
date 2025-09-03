@@ -138,47 +138,6 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
 	}
 	switch k1 {
-	case types.IntKind:
-		if t1.BitSize() != t2.BitSize() {
-			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
-		}
-		min1, max1 := t1.IntRange()
-		min2, max2 := t2.IntRange()
-		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
-	case types.UintKind:
-		if t1.BitSize() != t2.BitSize() {
-			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
-		}
-		min1, max1 := t1.UintRange()
-		min2, max2 := t2.UintRange()
-		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
-	case types.FloatKind:
-		if t1.BitSize() != t2.BitSize() {
-			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
-		}
-		if t1.IsReal() && !t2.IsReal() {
-			return &Error{Msg: fmt.Sprintf("%q property's type has changed from real to non-real", name)}
-		}
-		if !t1.IsReal() && t2.IsReal() {
-			return &Error{Msg: fmt.Sprintf("%q property's type has changed from non-real to real", name)}
-		}
-		min1, max1 := t1.FloatRange()
-		min2, max2 := t2.FloatRange()
-		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%g,%g] to [%g,%g]", name, min1, max1, min2, max2)}
-	case types.DecimalKind:
-		p1 := t1.Precision()
-		p2 := t2.Precision()
-		if p1 != p2 {
-			return &Error{Msg: fmt.Sprintf("precision of the %q property's type has changed from %d to %d", name, p1, p2)}
-		}
-		s1 := t1.Scale()
-		s2 := t2.Scale()
-		if s1 != s2 {
-			return &Error{Msg: fmt.Sprintf("scale of the %q property's type has changed from %d to %d", name, s1, s2)}
-		}
-		min1, max1 := t1.DecimalRange()
-		min2, max2 := t2.DecimalRange()
-		return &Error{Msg: fmt.Sprintf("range of %q property's type has changed from [%s,%s] to [%s,%s]", name, min1, max1, min2, max2)}
 	case types.TextKind:
 		c1, ok1 := t1.CharLen()
 		c2, ok2 := t2.CharLen()
@@ -234,6 +193,47 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 			v2 = `"` + re2.String() + `"`
 		}
 		return &Error{Msg: fmt.Sprintf("regular expression of the %q property's type has changed from %s to %s", name, v1, v2)}
+	case types.IntKind:
+		if t1.BitSize() != t2.BitSize() {
+			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
+		}
+		min1, max1 := t1.IntRange()
+		min2, max2 := t2.IntRange()
+		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
+	case types.UintKind:
+		if t1.BitSize() != t2.BitSize() {
+			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
+		}
+		min1, max1 := t1.UintRange()
+		min2, max2 := t2.UintRange()
+		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%d,%d] to [%d,%d]", name, min1, max1, min2, max2)}
+	case types.FloatKind:
+		if t1.BitSize() != t2.BitSize() {
+			return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
+		}
+		if t1.IsReal() && !t2.IsReal() {
+			return &Error{Msg: fmt.Sprintf("%q property's type has changed from real to non-real", name)}
+		}
+		if !t1.IsReal() && t2.IsReal() {
+			return &Error{Msg: fmt.Sprintf("%q property's type has changed from non-real to real", name)}
+		}
+		min1, max1 := t1.FloatRange()
+		min2, max2 := t2.FloatRange()
+		return &Error{Msg: fmt.Sprintf("range of the %q property's type has changed from [%g,%g] to [%g,%g]", name, min1, max1, min2, max2)}
+	case types.DecimalKind:
+		p1 := t1.Precision()
+		p2 := t2.Precision()
+		if p1 != p2 {
+			return &Error{Msg: fmt.Sprintf("precision of the %q property's type has changed from %d to %d", name, p1, p2)}
+		}
+		s1 := t1.Scale()
+		s2 := t2.Scale()
+		if s1 != s2 {
+			return &Error{Msg: fmt.Sprintf("scale of the %q property's type has changed from %d to %d", name, s1, s2)}
+		}
+		min1, max1 := t1.DecimalRange()
+		min2, max2 := t2.DecimalRange()
+		return &Error{Msg: fmt.Sprintf("range of %q property's type has changed from [%s,%s] to [%s,%s]", name, min1, max1, min2, max2)}
 	case types.ArrayKind:
 		err := checkTypeAlignment(name+"[]", t1.Elem(), t2.Elem(), exportMode)
 		if err != nil {

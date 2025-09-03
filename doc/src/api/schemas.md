@@ -43,6 +43,7 @@ Note that a schema has the same representation as an [object type](#object).
 
 Below are the data types and their representations in JSON format:
 
+- [text](#text) - text
 - [boolean](#boolean) - boolean
 - [int](#int) - signed integer
 - [uint](#uint) - unsigned integer
@@ -55,10 +56,72 @@ Below are the data types and their representations in JSON format:
 - [uuid](#uuid) - UUID
 - [json](#json) - JSON
 - [inet](#inet) - IP4 or IP6 address
-- [text](#text) - text
 - [array](#array) - array
 - [object](#object) - object
 - [map](#map) - map
+
+### text
+
+Represents UTF-8 encoded text.
+
+```json
+{
+  "kind": "text"
+}
+```
+
+Text can be limited by allowed values, a regular expression, or maximum lengths in bytes and characters.
+
+For example a text limited to specific values:
+
+```json
+{
+  "kind": "text",
+  "values": [ "Hearts", "Diamonds", "Clubs", "Spades" ] 
+}
+```
+
+For example a text matching a regular expression:
+
+```json
+{
+  "kind": "text",
+  "regexp": "\\d+" 
+}
+```
+
+Regular expression syntax is the same as the [Go syntax](https://pkg.go.dev/regexp/syntax).
+
+For example a text with a maximum length of 1000 bytes:
+
+```json
+{
+  "kind": "text",
+  "byteLen": 1000 
+}
+```
+
+For example a text with a maximum length of 2 characters:
+
+```json
+{
+  "kind": "text",
+  "charLen": 2 
+}
+```
+
+You can combine maximum byte and character lengths. For example a text with a maximum of 25 bytes and 20 characters:
+
+
+```json
+{
+  "kind": "text",
+  "byteLen": 25,
+  "charLen": 20 
+}
+```
+
+Examples of values are `"Everett Hayes"`, `"(555) 123-4567"`.
 
 ### boolean
 
@@ -280,69 +343,6 @@ Represents an IP4 or IP6 address.
 ```
 
 Examples of values are `"192.0.2.1"`, `"2001:db8::1"`.
-
-### text
-
-Represents UTF-8 encoded text.
-
-```json
-{
-  "kind": "text"
-}
-```
-
-Text can be limited by allowed values, a regular expression, or maximum lengths in bytes and characters.
-
-For example a text limited to specific values: 
-
-```json
-{
-  "kind": "text",
-  "values": [ "Hearts", "Diamonds", "Clubs", "Spades" ] 
-}
-```
-
-For example a text matching a regular expression: 
-
-```json
-{
-  "kind": "text",
-  "regexp": "\\d+" 
-}
-```
-
-Regular expression syntax is the same as the [Go syntax](https://pkg.go.dev/regexp/syntax).
-
-For example a text with a maximum length of 1000 bytes:
-
-```json
-{
-  "kind": "text",
-  "byteLen": 1000 
-}
-```
-
-For example a text with a maximum length of 2 characters:
-
-```json
-{
-  "kind": "text",
-  "charLen": 2 
-}
-```
-
-You can combine maximum byte and character lengths. For example a text with a maximum of 25 bytes and 20 characters: 
-
-
-```json
-{
-  "kind": "text",
-  "byteLen": 25,
-  "charLen": 20 
-}
-```
-
-Examples of values are `"Everett Hayes"`, `"(555) 123-4567"`.
 
 ### array
 

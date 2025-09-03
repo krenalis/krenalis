@@ -35,6 +35,7 @@ interface Property {
 }
 
 type Type =
+	| TextType
 	| BooleanType
 	| IntType
 	| UintType
@@ -47,10 +48,17 @@ type Type =
 	| UUIDType
 	| JSONType
 	| InetType
-	| TextType
 	| ArrayType
 	| ObjectType
 	| MapType;
+
+interface TextType {
+	kind: 'text';
+	byteLen?: number;
+	charLen?: number;
+	regexp?: string;
+	values?: string[];
+}
 
 interface BooleanType {
 	kind: 'boolean';
@@ -115,14 +123,6 @@ interface JSONType {
 
 interface InetType {
 	kind: 'inet';
-}
-
-interface TextType {
-	kind: 'text';
-	byteLen?: number;
-	charLen?: number;
-	regexp?: string;
-	values?: string[];
 }
 
 interface ArrayType {

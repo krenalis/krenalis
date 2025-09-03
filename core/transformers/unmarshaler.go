@@ -531,6 +531,29 @@ func (d decoder) skipOut() error {
 // value returns the unmarshalled value of v according to t.
 func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	switch t.Kind() {
+	case types.TextKind:
+		if v.Kind() == '"' {
+			s := d.unquoteString(v)
+			if values := t.Values(); values != nil {
+				if !slices.Contains(values, s) {
+					return nil, newRecordValidationError("", "is not one of the allowed values")
+				}
+				return s, nil
+			} else if re := t.Regexp(); re != nil {
+				if !re.MatchString(s) {
+					return nil, newRecordValidationError("", fmt.Sprintf("does not match «/%s/»", quoteRegExpr(re)))
+				}
+				return s, nil
+			} else {
+				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
+					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
+				}
+				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
+					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
+				}
+				return s, nil
+			}
+		}
 	case types.BooleanKind:
 		if v.Kind() == 'f' {
 			return false, nil
@@ -680,29 +703,6 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				return ip.String(), nil
 			}
 		}
-	case types.TextKind:
-		if v.Kind() == '"' {
-			s := d.unquoteString(v)
-			if values := t.Values(); values != nil {
-				if !slices.Contains(values, s) {
-					return nil, newRecordValidationError("", "is not one of the allowed values")
-				}
-				return s, nil
-			} else if re := t.Regexp(); re != nil {
-				if !re.MatchString(s) {
-					return nil, newRecordValidationError("", fmt.Sprintf("does not match «/%s/»", quoteRegExpr(re)))
-				}
-				return s, nil
-			} else {
-				if n, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
-				}
-				if n, ok := t.ByteLen(); ok && utf8.RuneCountInString(s) > n {
-					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
-				}
-				return s, nil
-			}
-		}
 	}
 	return nil, newRecordValidationError("", fmt.Sprintf("has a value that is not of type «%s»", d.opts.terms.Type(t)))
 }
@@ -721,6 +721,8 @@ func quoteRegExpr(re *regexp.Regexp) string {
 // t, to be used in error messages to represent the type in JavaScript.
 func toJavascriptType(t types.Type) string {
 	switch t.Kind() {
+	case types.TextKind:
+		return "string"
 	case types.BooleanKind:
 		return "boolean"
 	case types.IntKind, types.UintKind:
@@ -736,7 +738,7 @@ func toJavascriptType(t types.Type) string {
 		return "Date"
 	case types.YearKind:
 		return "number"
-	case types.UUIDKind, types.JSONKind, types.InetKind, types.TextKind:
+	case types.UUIDKind, types.JSONKind, types.InetKind:
 		return "string"
 	case types.ArrayKind:
 		et := toJavascriptType(t.Elem())
@@ -755,6 +757,8 @@ func toJavascriptType(t types.Type) string {
 // used in error messages to represent the type in Python.
 func toPythonType(t types.Type) string {
 	switch t.Kind() {
+	case types.TextKind:
+		return "str"
 	case types.BooleanKind:
 		return "bool"
 	case types.IntKind, types.UintKind:
@@ -773,7 +777,7 @@ func toPythonType(t types.Type) string {
 		return "int"
 	case types.UUIDKind:
 		return "uuid.UUID"
-	case types.JSONKind, types.InetKind, types.TextKind:
+	case types.JSONKind, types.InetKind:
 		return "str"
 	case types.ArrayKind:
 		et := toPythonType(t.Elem())

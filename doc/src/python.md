@@ -27,6 +27,7 @@ The table below outlines the various Meergo types and their corresponding repres
 
 | Meergo&nbsp;Type | Python&nbsp;Type    | Example                                        |
 |------------------|---------------------|------------------------------------------------|
+| `text`           | `str`               | `'123 Main Street'`                            |
 | `boolean`        | `bool`              | `True`                                         |
 | `int(n)`         | `int`               | `-2586`                                        |
 | `uint(n)`        | `int`               | `4063`                                         |
@@ -39,7 +40,6 @@ The table below outlines the various Meergo types and their corresponding repres
 | `uuid`           | `uuid.UUID`         | `UUID('f956622d-c421-4eca-8d20-efef87f9749c')` |
 | `json`           | `str`               | `'{"score":10}'`                               |
 | `inet`           | `str`               | `'172.16.254.1'`                               |
-| `text`           | `str`               | `'123 Main Street'`                            |
 | `array`          | `list`              | `[472,182,604]`                                |
 | `object`         | `dict`              | `{'fistName':'Emily','lastName':'Johnson'}`    |
 | `map`            | `dict`              | `{'a':8073,'c':206}`                           |

@@ -380,6 +380,31 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s ", in.Kind()))
 	}
 	switch ex.Kind() {
+	case types.TextKind:
+		var s string
+		switch v := v.(type) {
+		case int:
+			s = strconv.FormatInt(int64(v), 10)
+		case uint:
+			s = strconv.FormatUint(uint64(v), 10)
+		case string:
+			s = v
+		default:
+			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
+		}
+		if byteLen, ok := ex.ByteLen(); ok && len(s) > byteLen {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		if charLen, ok := ex.CharLen(); ok && utf8.RuneCountInString(s) > charLen {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		if re := ex.Regexp(); re != nil && !re.MatchString(s) {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		return s, nil
 	case types.IntKind:
 		var i int64
 		switch v := v.(type) {
@@ -428,41 +453,16 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 			return nil, errMatchingPropertyConversion(inName, exName)
 		}
 		return uint(i), nil
-	case types.TextKind:
-		var s string
-		switch v := v.(type) {
-		case int:
-			s = strconv.FormatInt(int64(v), 10)
-		case uint:
-			s = strconv.FormatUint(uint64(v), 10)
-		case string:
-			s = v
-		default:
-			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
-		}
-		if byteLen, ok := ex.ByteLen(); ok && len(s) > byteLen {
-			return nil, errMatchingPropertyConversion(inName, exName)
-		}
-		if charLen, ok := ex.CharLen(); ok && utf8.RuneCountInString(s) > charLen {
-			return nil, errMatchingPropertyConversion(inName, exName)
-		}
-		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
-			return nil, errMatchingPropertyConversion(inName, exName)
-		}
-		if re := ex.Regexp(); re != nil && !re.MatchString(s) {
-			return nil, errMatchingPropertyConversion(inName, exName)
-		}
-		return s, nil
 	case types.UUIDKind:
 		switch in.Kind() {
-		case types.UUIDKind:
-			return v, nil
 		case types.TextKind:
 			u, ok := types.ParseUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inName, exName)
 			}
 			return u, nil
+		case types.UUIDKind:
+			return v, nil
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
@@ -474,12 +474,12 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 // matching property. v cannot be nil.
 func stringifyMatchingValue(v any) string {
 	switch v := v.(type) {
+	case string: // text and uuid
+		return v
 	case int: // int(n)
 		return strconv.Itoa(v)
 	case uint: // uint(n)
 		return strconv.FormatUint(uint64(v), 10)
-	case string: // text and uuid
-		return v
 	default:
 		panic(fmt.Sprintf("unexpected matching property value with type %T", v))
 	}

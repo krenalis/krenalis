@@ -29,6 +29,7 @@ import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
 
 const TYPE_KINDS: TypeKind[] = [
+	'text',
 	'boolean',
 	'int',
 	'uint',
@@ -41,7 +42,6 @@ const TYPE_KINDS: TypeKind[] = [
 	'uuid',
 	'json',
 	'inet',
-	'text',
 	'array',
 	'object',
 	'map',

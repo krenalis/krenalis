@@ -48,6 +48,8 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 		return append(b, "null"...)
 	}
 	switch k := t.Kind(); k {
+	case types.TextKind:
+		return enc.appendString(b, v.(string))
 	case types.BooleanKind:
 		return strconv.AppendBool(b, v.(bool))
 	case types.IntKind, types.YearKind:
@@ -107,8 +109,6 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 			panic(err)
 		}
 		return enc.appendJSONValue(b, jv)
-	case types.TextKind:
-		return enc.appendString(b, v.(string))
 	case types.ArrayKind:
 		v := v.([]any)
 		b = append(b, '[')

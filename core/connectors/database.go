@@ -129,12 +129,12 @@ func (database *Database) LastChangeTimePlaceholder(action *state.Action) (strin
 	p, _ := action.InSchema.Property(property)
 	var value any
 	switch p.Type.Kind() {
+	case types.TextKind, types.JSONKind:
+		value = formatLastChangeTimeColumn(action.LastChangeTimeFormat, cursor)
 	case types.DateTimeKind:
 		value = execution.Cursor
 	case types.DateKind:
 		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
-	case types.TextKind, types.JSONKind:
-		value = formatLastChangeTimeColumn(action.LastChangeTimeFormat, cursor)
 	}
 	return database.inner.QuoteTime(value, p.Type), nil
 }

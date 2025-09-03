@@ -2022,11 +2022,11 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 // identifier.
 func suitableAsIdentifier(t types.Type) bool {
 	switch t.Kind() {
-	case types.IntKind,
+	case types.TextKind,
+		types.IntKind,
 		types.UintKind,
 		types.UUIDKind,
-		types.InetKind,
-		types.TextKind:
+		types.InetKind:
 		return true
 	case types.DecimalKind:
 		return t.Scale() == 0

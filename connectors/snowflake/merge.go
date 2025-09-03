@@ -279,6 +279,12 @@ func quoteCSVString(b *bytes.Buffer, s string) {
 func serializeValueToCSV(b *bytes.Buffer, t types.Type, v any) error {
 	switch v := v.(type) {
 	case nil:
+	case string:
+		if v == "" || v[0] == '\'' || strings.ContainsAny(v, ",\n") {
+			quoteCSVString(b, v)
+		} else {
+			b.WriteString(v)
+		}
 	case bool:
 		if v {
 			b.WriteString("true")
@@ -295,12 +301,6 @@ func serializeValueToCSV(b *bytes.Buffer, t types.Type, v any) error {
 		_, _ = v.WriteTo(b)
 	case json.Value:
 		quoteCSVBytes(b, v)
-	case string:
-		if v == "" || v[0] == '\'' || strings.ContainsAny(v, ",\n") {
-			quoteCSVString(b, v)
-		} else {
-			b.WriteString(v)
-		}
 	default:
 		switch k := t.Kind(); k {
 		case types.DateTimeKind:

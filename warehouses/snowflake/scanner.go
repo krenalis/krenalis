@@ -66,6 +66,10 @@ func (s *scanner) Scan(dest ...any) error {
 // normalize normalizes the value v read from Snowflake.
 func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	switch typ.Kind() {
+	case types.TextKind:
+		if v, ok := v.(string); ok {
+			return meergo.ValidateText(name, typ, v)
+		}
 	case types.BooleanKind:
 		if _, ok := v.(bool); ok {
 			return v, nil
@@ -129,10 +133,6 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	case types.InetKind:
 		if v, ok := v.(string); ok {
 			return meergo.ValidateInet(name, v)
-		}
-	case types.TextKind:
-		if v, ok := v.(string); ok {
-			return meergo.ValidateText(name, typ, v)
 		}
 	case types.ArrayKind:
 		if v, ok := v.(string); ok {

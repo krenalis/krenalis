@@ -28,10 +28,10 @@ func marshalValueAny(enc *jsontext.Encoder, val any, mo *jsonopts.Struct) error 
 	switch val := val.(type) {
 	case nil:
 		return enc.WriteToken(jsontext.Null)
-	case bool:
-		return enc.WriteToken(jsontext.Bool(val))
 	case string:
 		return enc.WriteToken(jsontext.String(val))
+	case bool:
+		return enc.WriteToken(jsontext.Bool(val))
 	case float64:
 		return enc.WriteToken(jsontext.Float(val))
 	case map[string]any:

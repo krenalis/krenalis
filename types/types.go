@@ -81,6 +81,7 @@ type Kind int8
 
 const (
 	InvalidKind Kind = iota
+	TextKind
 	BooleanKind
 	IntKind
 	UintKind
@@ -93,13 +94,13 @@ const (
 	UUIDKind
 	JSONKind
 	InetKind
-	TextKind
 	ArrayKind
 	ObjectKind
 	MapKind
 )
 
 var kindName = []string{
+	"text",
 	"boolean",
 	"int",
 	"uint",
@@ -112,7 +113,6 @@ var kindName = []string{
 	"uuid",
 	"json",
 	"inet",
-	"text",
 	"array",
 	"object",
 	"map",
@@ -186,12 +186,12 @@ type Type struct {
 	s int32
 
 	// vl can contain one of
+	//   - []string with the values for text
+	//   - *regexp.Regexp value for text
 	//   - intRange value for int with 64 bits
 	//   - uintRange value for uint with 64 bits
 	//   - floatRange value for float
 	//   - decimalRange value for decimal
-	//   - *regexp.Regexp value for text
-	//   - []string with the values for text
 	//   - []Property for object
 	//   - Type of the elements for array
 	//   - Type of the value for map
@@ -215,6 +215,11 @@ func Parameter(name string) Type {
 		panic("parameter name cannot be the same as a kind")
 	}
 	return Type{kind: InvalidKind, generic: true, vl: name}
+}
+
+// Text returns a text type.
+func Text() Type {
+	return Type{kind: TextKind}
 }
 
 // Boolean returns the boolean type.
@@ -338,11 +343,6 @@ func JSON() Type {
 // Inet returns the inet type.
 func Inet() Type {
 	return Type{kind: InetKind}
-}
-
-// Text returns a text type.
-func Text() Type {
-	return Type{kind: TextKind}
 }
 
 // Array returns an array type with elements of type t.

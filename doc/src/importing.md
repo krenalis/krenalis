@@ -30,7 +30,7 @@ Identifying a user identity and understanding how this identification occurs is 
 
 ### User identifier
 
-Actions on **file storage** and **database** source connections **must** indicate an user identifier which identifies an user. It must be a column with one of the following [types](data-validation#data-types): `int(n)`, `uint(n)`, `uuid`, `json` or `text`.
+Actions on **file storage** and **database** source connections **must** indicate an user identifier which identifies an user. It must be a column with one of the following [types](data-validation#data-types): `text`, `int(n)`, `uint(n)`, `uuid`, or `json`.
 
 ### Choosing the user identifier
 
@@ -58,9 +58,9 @@ This means that, if you have **multiple actions for the same connection**, there
 
 ## Last change time column
 
-Actions on **file storage** and **database** source connections **may** indicate a column containing a timestamp indicating the last change time of the user. It must be a column with one of the following [types](data-validation#data-types): `datetime`, `date`, `json` or `text`.
+Actions on **file storage** and **database** source connections **may** indicate a column containing a timestamp indicating the last change time of the user. It must be a column with one of the following [types](data-validation#data-types): `text`, `datetime`, `date`, or `json`.
 
-If a last change time column is provided and its type is `json` or `text`, a timestamp format must be provided for parsing its value.
+If a last change time column is provided and its type is `text` or `json`, a timestamp format must be provided for parsing its value.
 
 ## Anonymous user identities
 

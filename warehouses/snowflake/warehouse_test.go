@@ -31,6 +31,7 @@ func Test_Merge(t *testing.T) {
 		MeergoType  types.Type
 		MeergoValue any
 	}{
+		{types.Text(), "foo"},
 		{types.Boolean(), true},
 		{types.Int(8), 103},
 		{types.Int(16), 8030},
@@ -52,7 +53,6 @@ func Test_Merge(t *testing.T) {
 		{types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
 		{types.JSON(), json.Value(`{"foo":"boo"}`)},
 		{types.Inet(), "127.0.0.1"},
-		{types.Text(), "foo"},
 		{types.Array(types.Boolean()), []any{true, false}},
 		{types.Array(types.Int(8)), []any{5, -2, 12}},
 		{types.Array(types.Int(16)), []any{32057, -9381, 1623}},
