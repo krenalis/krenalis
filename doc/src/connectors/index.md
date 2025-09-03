@@ -18,6 +18,7 @@
   <li><a href="sources/s3"> S3</a></li>
   <li><a href="sources/http-files"> HTTP Files</a></li>
   <li><a href="sources/sftp"> SFTP</a></li>
+  <li><a href="sources/filesystem"> Filesystem</a></li>
   <li><a href="sources/clickhouse"> ClickHouse</a></li>
   <li><a href="sources/postgresql"> PostgreSQL</a></li>
   <li><a href="sources/snowflake"> Snowflake</a></li>
@@ -47,6 +48,7 @@
   <li><a href="destinations/s3"> S3</a></li>
   <li><a href="destinations/http-files"> HTTP Files</a></li>
   <li><a href="destinations/sftp"> SFTP</a></li>
+  <li><a href="destinations/filesystem"> Filesystem</a></li>
   <li><a href="destinations/clickhouse"> ClickHouse</a></li>
   <li><a href="destinations/postgresql"> PostgreSQL</a></li>
   <li><a href="destinations/snowflake"> Snowflake</a></li>

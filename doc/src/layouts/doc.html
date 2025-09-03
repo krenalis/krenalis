@@ -46,6 +46,7 @@
                     <li>{{ item(`connectors/sources/rudderstack`, `RudderStack`) }}</li>
                     <li>{{ item(`connectors/sources/s3`, `S3`) }}</li>
                     <li>{{ item(`connectors/sources/sftp`, `SFTP`) }}</li>
+                    <li>{{ item(`connectors/sources/filesystem`, `Filesystem`) }}</li>
                     <li>{{ item(`connectors/sources/segment`, `Segment`) }}</li>
                     <li>{{ item(`connectors/sources/snowflake`, `Snowflake`) }}</li>
                     <li>{{ item(`connectors/sources/stripe`, `Stripe`) }}</li>
@@ -65,6 +66,7 @@
                     <li>{{ item(`connectors/destinations/postgresql`, `PostgreSQL`) }}</li>
                     <li>{{ item(`connectors/destinations/s3`, `S3`) }}</li>
                     <li>{{ item(`connectors/destinations/sftp`, `SFTP`) }}</li>
+                    <li>{{ item(`connectors/destinations/filesystem`, `Filesystem`) }}</li>
                     <li>{{ item(`connectors/destinations/snowflake`, `Snowflake`) }}</li>
                     <li>{{ item(`connectors/destinations/stripe`, `Stripe`) }}</li>
                     {% else if hasPrefix(filepath, "developers/") %}
