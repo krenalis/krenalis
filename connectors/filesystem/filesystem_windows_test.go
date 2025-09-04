@@ -14,28 +14,44 @@ import (
 )
 
 func TestPathConvert(t *testing.T) {
-	fs := &Filesystem{settings: &innerSettings{Root: "C:\\"}}
-	fs2 := &Filesystem{settings: &innerSettings{Root: "C:\\root"}}
-	tests := []meergo.AbsolutePathTest{
-		{Name: "a", Expected: "C:\\a"},
-		{Name: "a.e", Expected: "C:\\a.e"},
-		{Name: "a/b.e", Expected: "C:\\a\\b.e"},
-		{Name: "a/b.e", Expected: "C:\\a\\b.e"},
-		{Name: "/a", Expected: "C:\\a"},
-		{Name: "/a/b", Expected: "C:\\a\\b"},
-		{Name: "/\x00", Expected: "C:\\\x00"},
-		{Name: "/"},
-		{Name: "a/./b"},
-		{Name: "a/.."},
-		{Name: "../a"},
-		{Name: "a/"},
-		{Name: "a", Expected: "C:\\root\\a", Storage: fs2},
-		{Name: "/a", Expected: "C:\\root\\a", Storage: fs2},
-		{Name: "a/b", Expected: "C:\\a\\b"},
-		{Name: "/a/b", Expected: "C:\\a\\b"},
-	}
-	err := meergo.TestAbsolutePath(fs, tests)
-	if err != nil {
-		t.Errorf("Filesystem connector: %s", err)
-	}
+
+	t.Run("Root is 'C:\\'", func(t *testing.T) {
+		// Mutex access to 'root' is not necessary as it is essential that these
+		// tests are run non-concurrently.
+		root = "C:\\"
+		fs := &Filesystem{settings: &innerSettings{}}
+		tests := []meergo.AbsolutePathTest{
+			{Name: "a", Expected: "C:\\a"},
+			{Name: "a.e", Expected: "C:\\a.e"},
+			{Name: "a/b.e", Expected: "C:\\a\\b.e"},
+			{Name: "/a", Expected: "C:\\a"},
+			{Name: "/a/b", Expected: "C:\\a\\b"},
+			{Name: "/\x00", Expected: "C:\\\x00"},
+			{Name: "/"},
+			{Name: "a/./b"},
+			{Name: "a/.."},
+			{Name: "../a"},
+			{Name: "a/"},
+		}
+		err := meergo.TestAbsolutePath(fs, tests)
+		if err != nil {
+			t.Errorf("Filesystem connector: %s", err)
+		}
+	})
+
+	t.Run("Root is 'C:\\root'", func(t *testing.T) {
+		// Mutex access to 'root' is not necessary as it is essential that these
+		// tests are run non-concurrently.
+		root = "C:\\root"
+		fs := &Filesystem{settings: &innerSettings{}}
+		tests := []meergo.AbsolutePathTest{
+			{Name: "a", Expected: "C:\\root\\a"},
+			{Name: "/a", Expected: "C:\\root\\a"},
+		}
+		err := meergo.TestAbsolutePath(fs, tests)
+		if err != nil {
+			t.Errorf("Filesystem connector: %s", err)
+		}
+	})
+
 }
