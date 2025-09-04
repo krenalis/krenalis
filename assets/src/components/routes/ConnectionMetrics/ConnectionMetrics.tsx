@@ -71,7 +71,13 @@ const ConnectionMetrics = () => {
 	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [selectedTarget, setSelectedTarget] = useState<ActionTarget>(
-		c.actions.findIndex((a) => a.target === 'Event') !== -1 ? 'Event' : 'User',
+		new URLSearchParams(window.location.search).get('target') === 'event'
+			? 'Event'
+			: new URLSearchParams(window.location.search).get('target') === 'user'
+				? 'User'
+				: c.actions.findIndex((a) => a.target === 'Event') !== -1
+					? 'Event'
+					: 'User',
 	);
 	const [selectedMetricsRange, setSelectedMetricsRange] = useState<metricsRange>('last15Minutes');
 	const [isCustomMetricsRangePickerOpen, setIsCustomMetricsRangePickerOpen] = useState<boolean>(false);

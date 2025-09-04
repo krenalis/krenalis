@@ -202,7 +202,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 							ref={executeActionButtonRefs.current[action.id]}
 							className='connection-actions__run-button'
 							size='small'
-							onClick={() => executeAction(connection, action.id)}
+							onClick={() => executeAction(connection, action.id, action.target)}
 							disabled={!action.enabled}
 							hoist={true}
 						>
@@ -263,7 +263,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 								ref={executeActionDropdownButtonRefs.current[action.id]}
 								className='connection-actions__run-button'
 								size='small'
-								onClick={() => executeAction(connection, action.id)}
+								onClick={() => executeAction(connection, action.id, action.target)}
 								disabled={!action.enabled}
 								hoist={true}
 								placement='left'

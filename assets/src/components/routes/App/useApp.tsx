@@ -23,6 +23,7 @@ import { hasFilters } from '../../../lib/core/action';
 import { formatNumber } from '../../../utils/formatNumber';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../../../lib/telemetry/scrubURL';
+import { ActionTarget } from '../../../lib/api/types/action';
 
 const FILTER_STEP = 2;
 
@@ -382,7 +383,7 @@ const useApp = (
 		}
 	}, [selectedWorkspace]);
 
-	const executeAction = async (connection: TransformedConnection, actionID: number) => {
+	const executeAction = async (connection: TransformedConnection, actionID: number, actionTarget: ActionTarget) => {
 		executeActionButtonRefs.current[actionID]?.current?.load();
 		executeActionDropdownButtonRefs.current[actionID]?.current?.load();
 		let executionID: number;
@@ -418,6 +419,7 @@ const useApp = (
 		if (execution.error) {
 			link += `?failed-execution-action=${actionID}`;
 		}
+		link += `?target=${actionTarget === 'Event' ? 'event' : 'user'}`;
 		const metricsLink = (
 			<div className='connection-actions__link-to-metrics'>
 				Go to{' '}
