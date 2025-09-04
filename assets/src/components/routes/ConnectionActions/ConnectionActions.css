@@ -61,6 +61,7 @@
 .connection-actions__action-name-description {
 	font-size: 14px;
 	color: #777;
+	overflow-wrap: anywhere;
 }
 
 .connection-actions__action-filter {
