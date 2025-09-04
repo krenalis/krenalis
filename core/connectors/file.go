@@ -83,6 +83,7 @@ func (connectors *Connectors) File(action *state.Action) *File {
 		Settings:    action.FormatSettings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
+	file.err = connectorError(file.err)
 	return file
 }
 

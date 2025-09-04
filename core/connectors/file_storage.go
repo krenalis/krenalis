@@ -68,6 +68,7 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 		Settings:    storage.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, storage),
 	})
+	s.err = connectorError(s.err)
 	return s
 }
 

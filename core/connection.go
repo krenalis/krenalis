@@ -157,6 +157,8 @@ func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, 
 			err = errors.Unprocessable(InvalidPath, "%s", err)
 		case *connectors.PlaceholderError:
 			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
+		case *connectors.UnavailableError:
+			err = errors.Unavailable("%w", err)
 		}
 		return "", err
 	}

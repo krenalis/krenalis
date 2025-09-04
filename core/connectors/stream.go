@@ -63,7 +63,7 @@ func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, err
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	stream.inner = inner.(streamConnector)
 	return stream, nil

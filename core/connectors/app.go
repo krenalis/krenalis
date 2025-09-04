@@ -99,6 +99,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		HTTPClient:   app.httpClient,
 		// WebhookURL:   webhookURL(connection, accountID), // TODO(marco): implement webhooks
 	})
+	app.err = connectorError(app.err)
 	return app
 }
 
@@ -191,7 +192,8 @@ func (app *App) PreviewSendEvent(ctx context.Context, event meergo.Event) (*http
 // returned schema can be the invalid schema.
 //
 // If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
-// error. It panics if the app does not support the provided target.
+// error. If the connector returns an error, it returns a *UnavailableError.
+// It panics if the app does not support the provided target.
 func (app *App) Schema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
 	return app.SchemaAsRole(ctx, app.role, target, eventType)
 }
@@ -204,8 +206,7 @@ func (app *App) Schema(ctx context.Context, target state.Target, eventType strin
 // error.
 //
 // If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
-// error. If the connector returns an error, it returns a *UnavailableError
-// error.
+// error. If the connector returns an error, it returns a *UnavailableError.
 // It panics if role is not Source or Destination.
 func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
 	if app.err != nil {

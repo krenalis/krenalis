@@ -83,7 +83,7 @@ func (connectors *Connectors) Database(connection *state.Connection) *Database {
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
 	database.inner = inner.(databaseConnector)
-	database.err = err
+	database.err = connectorError(err)
 	return database
 }
 
