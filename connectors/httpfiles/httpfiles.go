@@ -133,6 +133,13 @@ func (h *HTTPFiles) Reader(ctx context.Context, name string) (io.ReadCloser, tim
 		return nil, time.Time{}, fmt.Errorf("server responded with status: %s", res.Status)
 	}
 	ts, _ := time.Parse(time.RFC1123, res.Header.Get("Last-Modified"))
+	if ts.IsZero() {
+		// For now, let's take the current timestamp. This behavior is a bit
+		// implicit at the moment, but when we implement
+		// https://github.com/meergo/meergo/issues/1777, this behavior will be
+		// removed from here.
+		ts = time.Now()
+	}
 	return res.Body, ts.UTC(), nil
 }
 
