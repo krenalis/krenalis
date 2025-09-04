@@ -114,6 +114,8 @@ const ConnectionSettings = () => {
 		);
 	}
 
+	const connectorTypeHumanReadable = c.connector.type === 'FileStorage' ? 'File storage' : c.connector.type;
+
 	return (
 		<div className={`connection-settings${isSmallViewport ? ' connection-settings--small-viewport' : ''}`}>
 			<SlTabGroup placement={isSmallViewport ? 'top' : 'start'}>
@@ -143,10 +145,12 @@ const ConnectionSettings = () => {
 				{tabs.includes('connection') && (
 					<>
 						<SlTab slot='nav' panel='connection'>
-							{c.connector.type} Settings
+							{connectorTypeHumanReadable} settings
 						</SlTab>
 						<SlTabPanel name='connection'>
-							<div className='connection-settings__panel-title'>{c.connector.type} Settings</div>
+							<div className='connection-settings__panel-title'>
+								{connectorTypeHumanReadable} settings
+							</div>
 							<ConnectionConnectorSettings connection={c} />
 						</SlTabPanel>
 					</>
