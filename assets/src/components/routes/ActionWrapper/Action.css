@@ -1591,24 +1591,33 @@ inherit the disabled style */
 
 .action__file-complete-path,
 .action__file-complete-path-error {
-	position: absolute;
+	position: relative;
 	left: 5px;
 	font-size: 13px;
-	margin-top: 1px;
+	margin-top: 3px;
 	opacity: 0;
 	transition: opacity 0.3s;
+	line-height: 1.2;
+	height: 0;
+}
+
+.action__file-complete-path > span {
+	font-weight: 600;
 }
 
 .action__file-complete-path {
 	font-family: var(--monospace-fonts);
+	line-break: anywhere;
 }
 
 .action__file-complete-path--visible {
 	opacity: 0.7;
+	height: unset;
 }
 
 .action__file-complete-path-error--visible {
 	opacity: 1;
+	height: unset;
 }
 
 .action__file-complete-path-error {

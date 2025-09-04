@@ -453,9 +453,9 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			a.sheet = '';
 		}
 		setAction(a);
-		setAbsolutePath('');
-		setAbsolutePathError('');
 		if (path === '') {
+			setAbsolutePath('');
+			setAbsolutePathError('');
 			return;
 		}
 		getAbsolutePathTimeoutID.current = window.setTimeout(async () => {
@@ -468,6 +468,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		try {
 			res = await api.workspaces.connections.absolutePath(connection.id, path);
 		} catch (err) {
+			setAbsolutePath('');
 			if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
 				setAbsolutePathError(err.message);
 				return;
@@ -475,6 +476,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			handleError(err);
 			return;
 		}
+		setAbsolutePathError('');
 		setAbsolutePath(res.path);
 	};
 
@@ -747,7 +749,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<div
 					className={`action__file-complete-path${absolutePath !== '' ? ' action__file-complete-path--visible' : ''}`}
 				>
-					Absolute path: {absolutePath}
+					<span>Absolute path:</span> {absolutePath}
 				</div>
 			</div>
 			{hasSheets &&
