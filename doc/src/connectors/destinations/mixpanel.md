@@ -71,4 +71,3 @@ If you want the user sessions tracked by Meergo to also appear in Mixpanel, you 
 5. In the **Definition Type** field, select **Property Based**.
 6. In the **Session ID Property Name** field, select or enter the property **session_id**.
 7. Click **Update**.
-
