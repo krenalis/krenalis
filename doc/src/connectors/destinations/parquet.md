@@ -6,7 +6,7 @@
 
 The Parquet data destination allows you to export unified users (i.e., users consolidated through identity resolution) into a Parquet file and save it to a storage location, such as S3 or SFTP.
 
-> Before adding a Parquet data destination, ensure that you have configured a storage data destination such as S3, SFTP, or HTTP Files. If you haven’t set up a storage destination yet, please do so before proceeding with the Parquet file export.
+> Before adding a Parquet data destination, ensure that you have configured a storage data destination such as S3, SFTP, or HTTP POST. If you haven’t set up a storage destination yet, please do so before proceeding with the Parquet file export.
 
 ### On this page
 

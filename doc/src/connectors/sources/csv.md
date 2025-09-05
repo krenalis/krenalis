@@ -6,7 +6,7 @@
 
 The CSV data source allows you to import user data from a CSV (Comma-Separated Values) file, which you can then unify as users within Meergo.
 
-> Before adding a CSV data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP Files. If you haven’t set up a storage source yet, please do so before proceeding with the CSV file import.
+> Before adding a CSV data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP GET. If you haven’t set up a storage source yet, please do so before proceeding with the CSV file import.
 
 ### On this page
 

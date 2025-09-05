@@ -6,7 +6,7 @@
 
 The Parquet data source allows you to import user data from Parquet files, which can then be unified as users within Meergo.
 
-> Before adding a Parquet data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP Files. If you haven’t set up a storage source yet, please do so before proceeding with the Parquet file import.
+> Before adding a Parquet data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP GET. If you haven’t set up a storage source yet, please do so before proceeding with the Parquet file import.
 
 ### On this page
 

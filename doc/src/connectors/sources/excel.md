@@ -6,7 +6,7 @@
 
 The Excel data source allows you to import user data from an Excel file, which you can then unify into users within Meergo.
 
-> Before adding an Excel data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP Files. If you haven’t set up a storage source yet, please do so before proceeding with the Excel file import.
+> Before adding an Excel data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP GET. If you haven’t set up a storage source yet, please do so before proceeding with the Excel file import.
 
 ### On this page
 

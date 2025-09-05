@@ -6,7 +6,7 @@
 
 The JSON data destination allows you to export unified users (i.e., users consolidated through identity resolution) into a JSON file and save it to a storage location, such as S3 or SFTP.
 
-> Before adding a JSON data destination, ensure that you have configured a storage data destination such as S3, SFTP, or HTTP Files. If you haven’t set up a storage destination yet, please do so before proceeding with the JSON file export.
+> Before adding a JSON data destination, ensure that you have configured a storage data destination such as S3, SFTP, or HTTP POST. If you haven’t set up a storage destination yet, please do so before proceeding with the JSON file export.
 
 ### On this page
 

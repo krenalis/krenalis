@@ -41,13 +41,18 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name:       "HTTP Files",
+		Name:       "HTTP GET",
 		Categories: meergo.CategoryFileStorage,
 		AsSource: &meergo.AsFileStorageSource{
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
+		Icon: icon,
+	}, New)
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
+		Name:       "HTTP POST",
+		Categories: meergo.CategoryFileStorage,
 		AsDestination: &meergo.AsFileStorageDestination{
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Overview: destinationOverview,

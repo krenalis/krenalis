@@ -16,7 +16,7 @@
   <li><a href="sources/json"> JSON</a></li>
   <li><a href="sources/parquet"> Parquet</a></li>
   <li><a href="sources/s3"> S3</a></li>
-  <li><a href="sources/http-files"> HTTP Files</a></li>
+  <li><a href="sources/http-get"> HTTP GET</a></li>
   <li><a href="sources/sftp"> SFTP</a></li>
   <li><a href="sources/filesystem"> Filesystem</a></li>
   <li><a href="sources/clickhouse"> ClickHouse</a></li>
@@ -46,7 +46,7 @@
   <li><a href="destinations/json"> JSON</a></li>
   <li><a href="destinations/parquet"> Parquet</a></li>
   <li><a href="destinations/s3"> S3</a></li>
-  <li><a href="destinations/http-files"> HTTP Files</a></li>
+  <li><a href="destinations/http-post"> HTTP POST</a></li>
   <li><a href="destinations/sftp"> SFTP</a></li>
   <li><a href="destinations/filesystem"> Filesystem</a></li>
   <li><a href="destinations/clickhouse"> ClickHouse</a></li>
