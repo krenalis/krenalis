@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package httpfiles implements the HTTP Files connector.
+// Package httpfiles implements the HTTP GET and HTTP POST connectors.
 // (https://datatracker.ietf.org/doc/html/rfc7540)
 package httpfiles
 
@@ -62,19 +62,19 @@ func init() {
 	}, New)
 }
 
-// New returns a new HTTP Files connection.
-func New(env *meergo.FileStorageEnv) (*HTTPFiles, error) {
-	c := HTTPFiles{env: env}
+// New returns a new HTTP GET/HTTP POST connection.
+func New(env *meergo.FileStorageEnv) (*HTTP, error) {
+	c := HTTP{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of HTTP Files connector")
+			return nil, errors.New("cannot unmarshal settings of HTTP GET/HTTP POST connector")
 		}
 	}
 	return &c, nil
 }
 
-type HTTPFiles struct {
+type HTTP struct {
 	env      *meergo.FileStorageEnv
 	settings *innerSettings
 }
@@ -86,7 +86,7 @@ type innerSettings struct {
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
-func (h *HTTPFiles) AbsolutePath(ctx context.Context, name string) (string, error) {
+func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 	if name[0] != '/' {
 		name = "/" + name
 	}
@@ -119,7 +119,7 @@ func (h *HTTPFiles) AbsolutePath(ctx context.Context, name string) (string, erro
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
-func (h *HTTPFiles) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	u, err := h.AbsolutePath(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -149,7 +149,7 @@ func (h *HTTPFiles) Reader(ctx context.Context, name string) (io.ReadCloser, tim
 }
 
 // ServeUI serves the connector's user interface.
-func (h *HTTPFiles) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (h *HTTP) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -182,7 +182,7 @@ func (h *HTTPFiles) ServeUI(ctx context.Context, event string, settings json.Val
 }
 
 // Write writes the data read from r into the file with the given path name.
-func (h *HTTPFiles) Write(ctx context.Context, r io.Reader, name, contentType string) error {
+func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string) error {
 	u, err := h.AbsolutePath(ctx, name)
 	if err != nil {
 		return err
@@ -208,7 +208,7 @@ func (h *HTTPFiles) Write(ctx context.Context, r io.Reader, name, contentType st
 }
 
 // saveSettings saves the settings.
-func (h *HTTPFiles) saveSettings(ctx context.Context, settings json.Value) error {
+func (h *HTTP) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {

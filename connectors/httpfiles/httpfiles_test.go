@@ -15,8 +15,8 @@ import (
 )
 
 func TestAbsolutePath(t *testing.T) {
-	httpFiles := &HTTPFiles{settings: &innerSettings{Host: "example.com", Port: 443}}
-	httpFiles2 := &HTTPFiles{settings: &innerSettings{Host: "example.com", Port: 8080}}
+	http := &HTTP{settings: &innerSettings{Host: "example.com", Port: 443}}
+	http2 := &HTTP{settings: &innerSettings{Host: "example.com", Port: 8080}}
 	tests := []meergo.AbsolutePathTest{
 		{Name: "/a", Expected: "https://example.com/a"},
 		{Name: "a", Expected: "https://example.com/a"},
@@ -28,9 +28,9 @@ func TestAbsolutePath(t *testing.T) {
 		{Name: "%5z"},
 		{Name: "/\x00"},
 		{Name: "/a/b?x=y#"},
-		{Name: "/a", Expected: "https://example.com:8080/a", Storage: httpFiles2},
+		{Name: "/a", Expected: "https://example.com:8080/a", Storage: http2},
 	}
-	err := meergo.TestAbsolutePath(httpFiles, tests)
+	err := meergo.TestAbsolutePath(http, tests)
 	if err != nil {
 		t.Errorf("HTTP Files connector: %s", err)
 	}
