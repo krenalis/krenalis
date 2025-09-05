@@ -8,6 +8,7 @@
 package httpclient
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -28,16 +29,23 @@ import (
 
 type contextKey byte
 
-// RateLimiterPatternContextKey is the key used to propagate the rate limiter
-// pattern through the request context. If the request context contains this
-// key, the HTTP client checks whether the associated pattern matches the one
-// used by the rate limiter for that request. If it doesn't match, the client
-// calls the Set function to inform the caller about the actual pattern in use.
-//
-// This allows the caller to later call the HTTP client's Wait method with the
-// correct pattern, determining how long to wait before sending a request to
-// avoid being throttled.
-const RateLimiterPatternContextKey contextKey = 0
+const (
+	// RateLimiterPatternContextKey is the key used to propagate the rate limiter
+	// pattern through the request context. If the request context contains this
+	// key, the HTTP client checks whether the associated pattern matches the one
+	// used by the rate limiter for that request. If it doesn't match, the client
+	// calls the Set function to inform the caller about the actual pattern in use.
+	//
+	// This allows the caller to later call the HTTP client's Wait method with the
+	// correct pattern, determining how long to wait before sending a request to
+	// avoid being throttled.
+	RateLimiterPatternContextKey contextKey = iota + 1
+
+	// CaptureRequestContextKey is the context key used to store the original
+	// *http.Request. The value must always be a non-nil *http.Request, and the
+	// request body must be properly closed after use.
+	CaptureRequestContextKey
+)
 
 // RateLimiterPatternContextValue is the type of the value associated with the
 // RateLimiterPatternContextKey.
@@ -191,6 +199,9 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 	limiter := endpointGroup.rateLimiter
 	policy := endpointGroup.retryPolicy
 
+	hasBody := req.Body != nil && req.Body != http.NoBody
+	retriable := isBodyRetriable(req) && isIdempotent(req)
+
 	if !isRetriveOAuthToken {
 		// Check if the request context contains a rate limiter pattern value.
 		// If the stored pattern differs from the one currently used, update it
@@ -204,10 +215,35 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 				v.Set(pattern)
 			}
 		}
+		// Check if the request context contains a request to capture.
+		if r := ctx.Value(CaptureRequestContextKey); r != nil {
+			r, ok := r.(*http.Request)
+			if !ok {
+				return nil, errors.New(`context key "CaptureRequestContextKey" must have a value of type *http.Request`)
+			}
+			if r == nil {
+				return nil, errors.New(`context key "CaptureRequestContextKey" has nil value`)
+			}
+			captured := req.Clone(req.Context())
+			if hasBody {
+				switch req.GetBody {
+				case nil:
+					data, err := io.ReadAll(req.Body)
+					if err != nil {
+						return nil, err
+					}
+					req.Body = io.NopCloser(bytes.NewReader(data))
+					captured.Body = io.NopCloser(bytes.NewReader(data))
+				default:
+					captured.Body, err = req.GetBody()
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+			*r = *captured
+		}
 	}
-
-	hasBody := req.Body != nil && req.Body != http.NoBody
-	retriable := isBodyRetriable(req) && isIdempotent(req)
 
 	retries := 0
 	netRetries := false // indicates if the last retry was triggered by a network error.
