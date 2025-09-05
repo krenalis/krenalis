@@ -14,7 +14,7 @@ import (
 	_ "github.com/meergo/meergo/connectors/excel"
 	_ "github.com/meergo/meergo/connectors/filesystem"
 	_ "github.com/meergo/meergo/connectors/googleanalytics"
-	_ "github.com/meergo/meergo/connectors/httpfiles"
+	_ "github.com/meergo/meergo/connectors/http"
 	_ "github.com/meergo/meergo/connectors/hubspot"
 	_ "github.com/meergo/meergo/connectors/json"
 	_ "github.com/meergo/meergo/connectors/klaviyo"

@@ -5,9 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package httpfiles implements the HTTP GET and HTTP POST connectors.
+// Package http implements the HTTP GET and HTTP POST connectors.
 // (https://datatracker.ietf.org/doc/html/rfc7540)
-package httpfiles
+package http
 
 import (
 	"context"
