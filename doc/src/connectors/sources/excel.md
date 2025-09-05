@@ -10,7 +10,12 @@ The Excel data source allows you to import user data from an Excel file, which y
 
 ### On this page
 
-* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+- [Supported file formats](#supported-file-formats)
+- [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+
+### Supported file formats
+
+The Excel data source only supports importing XLSX files (Microsoft Excel Spreadsheets). Other formats (e.g., ODS) are not supported at this time.
 
 ### Import users into the workspace's data warehouse
 

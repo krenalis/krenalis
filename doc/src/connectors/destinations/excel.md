@@ -10,7 +10,12 @@ The Excel data destination allows you to export unified users (i.e., users conso
 
 ### On this page
 
-* [Add an Excel data destination](#add-an-excel-data-destination)
+- [Supported file formats](#supported-file-formats)
+- [Add an Excel data destination](#add-an-excel-data-destination)
+
+### Supported file formats
+
+The Excel data destination only supports exporting XLSX files (Microsoft Excel Spreadsheets). Other formats (e.g., ODS) are not supported at this time.
 
 ### Add an Excel data destination
 
