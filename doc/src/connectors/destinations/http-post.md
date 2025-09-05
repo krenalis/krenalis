@@ -20,9 +20,9 @@ Once the HTTP POST data destination is configured, you can easily customize the 
 4. Click on the **HTTP POST** connector. A panel will open on the right with information about **HTTP POST**.
 5. Click on **Add destination**. The `Add HTTP POST destination connection` page will appear.
 6. In the **Name** field, enter a name for the destination to easily recognize it later.
-7. In the `Host` field, enter the host where the file or files you wish to write are located.
-8. In the `Port` field, enter the port.
-9. (Optional) In the `Headers` fields,  specify any headers that should be included in the request for writing the files.
+7. In the **Host** field, enter the host where the file or files you wish to write are located.
+8. In the **Port** field, enter the port.
+9. (Optional) In the **Headers** fields,  specify any headers that should be included in the request for writing the files.
 10. Click **Add**.
 
 Once the HTTP POST data destination is added, the **Actions** page will be displayed. Here, you can add an action for each file you want to generate using the newly added HTTP POST data destination. Configure each action with the desired settings for file format, user filters, endpoint, and scheduling.
