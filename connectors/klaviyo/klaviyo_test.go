@@ -22,7 +22,6 @@ import (
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/testutils"
-	"github.com/meergo/meergo/types"
 )
 
 func TestSendEvents(t *testing.T) {
@@ -42,7 +41,7 @@ func TestSendEvents(t *testing.T) {
 	}
 
 	// Instantiate the Klaviyo connector, with a specific settings for testing.
-	app, err := testutils.NewAppConnectorForTests("Klaviyo", settings)
+	app, err := testutils.NewAppConnector("Klaviyo", settings)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,11 +89,7 @@ func TestSendEvents(t *testing.T) {
 						"type":              "alias",
 						"userId":            nil,
 					}),
-					Type: struct {
-						ID     string
-						Schema types.Type
-						Values map[string]any
-					}{
+					Type: meergo.EventTypeInfo{
 						ID:     "create_event",
 						Schema: schema,
 						Values: map[string]any{

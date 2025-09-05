@@ -23,9 +23,9 @@ import (
 // replies with an HTTP 400 Bad Request.
 func TestBadRequest(t *testing.T) {
 
-	mixpanel := initMixpanelForTests(t)
+	mixpanel := newMixpanelForTests(t)
 
-	ctx := context.WithValue(context.Background(), connectorTestString("sendBadRequest"), true)
+	ctx := context.WithValue(context.Background(), sendBadRequestContextKey, true)
 
 	now := time.Now().UTC()
 
@@ -57,11 +57,7 @@ func TestBadRequest(t *testing.T) {
 			"type":              "alias",
 			"userId":            nil,
 		}),
-		Type: struct {
-			ID     string
-			Schema types.Type
-			Values map[string]any
-		}{
+		Type: meergo.EventTypeInfo{
 			ID: "track",
 			Schema: types.Object([]types.Property{
 				{Name: "event", Prefilled: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
@@ -77,11 +73,11 @@ func TestBadRequest(t *testing.T) {
 	}
 
 	// Create an iterator over the test events.
-	events := testutils.NewEventsIterator([]*meergo.Event{event, event})
+	iter := testutils.NewEventsIterator([]*meergo.Event{event, event})
 
 	// Actually sends the events.
 	t.Log("calling SendEvents")
-	err := mixpanel.SendEvents(ctx, events)
+	err := mixpanel.SendEvents(ctx, iter)
 	if err == nil {
 		t.Fatal("test should fail, but it returned no errors")
 	}

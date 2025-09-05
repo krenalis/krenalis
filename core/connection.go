@@ -1467,11 +1467,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	ev := meergo.Event{
 		ID:       id.String(),
 		Received: events.ReceivedEvent(properties),
-		Type: struct {
-			ID     string
-			Schema types.Type
-			Values map[string]any
-		}{
+		Type: meergo.EventTypeInfo{
 			ID:     typ,
 			Schema: outSchema,
 		},

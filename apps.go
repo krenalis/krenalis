@@ -443,13 +443,17 @@ type EventSender interface {
 
 // Event represents an event that will be sent to an app.
 type Event struct {
-	ID       string        // identifier for the event. Guaranteed to be unique per event within the same connection.
-	Received ReceivedEvent // event as it was received.
-	Type     struct {
-		ID     string         // identifier of the event type (e.g., "user.signup", "order.placed").
-		Schema types.Type     // schema of the event type; will be invalid if the type has no properties in its schema.
-		Values map[string]any // values of the event type; nil if the type has no properties in its schema.
-	}
+	ID       string        // Identifier. Guaranteed to be unique per event within the same connection.
+	Received ReceivedEvent // Event as it was received.
+	Type     EventTypeInfo // Event type.
+}
+
+// EventTypeInfo represents the event type in the context of a specific event
+// to send to an app.
+type EventTypeInfo struct {
+	ID     string         // Identifier.
+	Schema types.Type     // Schema; invalid if the type has no properties.
+	Values map[string]any // Values; nil if the type has no properties.
 }
 
 // EventsError can be returned by the SendEvents and PreviewSendEvents methods

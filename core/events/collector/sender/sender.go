@@ -302,11 +302,7 @@ func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event ev
 		Event: meergo.Event{
 			ID:       id.String(),
 			Received: events.ReceivedEvent(event),
-			Type: struct {
-				ID     string
-				Schema types.Type
-				Values map[string]any
-			}{
+			Type: meergo.EventTypeInfo{
 				ID:     typ,
 				Schema: schema,
 			},

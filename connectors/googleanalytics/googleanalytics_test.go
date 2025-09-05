@@ -45,7 +45,7 @@ func TestSendEvents(t *testing.T) {
 
 	// Instantiate the Google Analytics connector, with a specific configuration
 	// for testing.
-	app, err := testutils.NewAppConnectorForTests("Google Analytics", settings)
+	app, err := testutils.NewAppConnector("Google Analytics", settings)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,11 +88,7 @@ func TestSendEvents(t *testing.T) {
 						"type":              "alias",
 						"userId":            nil,
 					}),
-					Type: struct {
-						ID     string
-						Schema types.Type
-						Values map[string]any
-					}{
+					Type: meergo.EventTypeInfo{
 						ID: "ad_impression",
 						Schema: types.Object([]types.Property{
 							{Name: "ad_platform", Type: types.Text()},

@@ -10,15 +10,15 @@
 package mixpanel
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
-	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -89,10 +89,22 @@ func New(env *meergo.AppEnv) (*Mixpanel, error) {
 func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	return []*meergo.EventType{
 		{
+			ID:          "order_completed",
+			Name:        "Send order completed events",
+			Description: "Send order completed events to Mixpanel",
+			Filter:      "type is 'track' and event is 'Order Completed'",
+		},
+		{
+			ID:          "product_purchased",
+			Name:        "Send product purchased events",
+			Description: "Send an event to Mixpanel for every product purchased",
+			Filter:      "type is 'track' and event is 'Order Completed' and properties.products is not empty",
+		},
+		{
 			ID:          "track",
 			Name:        "Send track events",
 			Description: "Send track events to Mixpanel",
-			Filter:      "type is 'track'",
+			Filter:      "type is 'track' and event is not 'Order Completed'",
 		},
 		{
 			ID:          "page",
@@ -123,21 +135,69 @@ func (mp *Mixpanel) SendEvents(ctx context.Context, events meergo.Events) error 
 
 // EventTypeSchema returns the schema of the specified event type.
 func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
-	schema := func(prefilled string) types.Type {
-		return types.Object([]types.Property{
-			{Name: "event", Prefilled: prefilled, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
-			{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
+
+	var schema types.Type
+
+	switch eventType {
+	case "order_completed":
+		schema = types.Object([]types.Property{
+			{Name: "event", Prefilled: `"Order Completed"`, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{
+				Name: "properties",
+				Prefilled: `map(` +
+					`"order_id", properties.order_id,` +
+					`"affiliation",properties.affiliation,` +
+					`"currency",properties.currency,` +
+					`"revenue",properties.revenue,` +
+					`"coupon",properties.coupon,` +
+					`"discount",properties.discount,` +
+					`"shipping",properties.shipping,` +
+					`"tax",properties.tax,` +
+					`"value",properties.value,` +
+					`"products",properties.products)`,
+				Type:        types.Map(types.JSON()),
+				Description: "Event properties",
+			},
+		})
+	case "product_purchased":
+		schema = types.Object([]types.Property{
+			{Name: "event", Prefilled: `"Product Purchased"`, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{
+				Name:           "products",
+				Prefilled:      "properties.products",
+				Type:           types.Array(types.Map(types.JSON())).WithMinElements(1),
+				CreateRequired: true,
+				Description:    "Purchased products",
+			},
+			{
+				Name:        "properties",
+				Type:        types.Map(types.JSON()),
+				Description: "Event properties",
+			},
+		})
+	default:
+		var event string
+		switch eventType {
+		case "page":
+			event = `"Viewed " name`
+		case "screen":
+			event = `"Viewed " name`
+		case "track":
+			event = "event"
+		default:
+			return types.Type{}, meergo.ErrEventTypeNotExist
+		}
+		schema = types.Object([]types.Property{
+			{Name: "event", Prefilled: event, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event name"},
+			{
+				Name:        "properties",
+				Type:        types.Map(types.JSON()),
+				Description: "Event properties",
+			},
 		})
 	}
-	switch eventType {
-	case "track":
-		return schema("event"), nil
-	case "page":
-		return schema(`"Page View"`), nil
-	case "screen":
-		return schema(`"Screen View"`), nil
-	}
-	return types.Type{}, meergo.ErrEventTypeNotExist
+
+	return schema, nil
 }
 
 // ServeUI serves the connector's user interface.
@@ -159,8 +219,8 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Val
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
-			&meergo.Input{Name: "ProjectToken", Label: "Project Token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
-			&meergo.Switch{Name: "UseEuropeanEndpoint", Label: "Use the European Endpoint"},
+			&meergo.Input{Name: "ProjectToken", Label: "Project token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
+			&meergo.Switch{Name: "UseEuropeanEndpoint", Label: "This project is configured to use Mixpanel's EU data residency"},
 		},
 		Settings: settings,
 	}
@@ -210,6 +270,14 @@ const (
 	maxBodyEventsBytes  = 10 * 1024 * 1024 // 10 MB (uncompressed) per request.
 )
 
+type contextKey byte
+
+// sendBadRequestContextKey, when set to true in the context, signals sendEvents
+// to send an intentionally invalid request to Mixpanel. This is used to
+// simulate a "Bad Request" scenario, where Mixpanel is expected to return a Bad
+// Request error.
+const sendBadRequestContextKey contextKey = 0
+
 // sendEvents sends the given events to the app and returns the sent HTTP
 // request.
 // If preview is true, the HTTP request is built but not sent, so it is
@@ -219,7 +287,7 @@ const (
 // and the error are returned.
 func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 
-	sendBadRequest, _ := ctx.Value(connectorTestString("sendBadRequest")).(bool)
+	sendBadRequest, _ := ctx.Value(sendBadRequestContextKey).(bool)
 
 	// bb contains newline-delimited JSON objects representing the events.
 	bb := mp.env.HTTPClient.GetBodyBuffer(contentEncoding)
@@ -228,57 +296,45 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	n := 0
 	for event := range events.All() {
 
-		if event.Type.Values["event"].(string) == "" {
+		values := event.Type.Values
+
+		if values["event"].(string) == "" {
 			return nil, errors.New("event cannot be empty")
 		}
 
-		properties := event.Type.Values["properties"].(map[string]any)
-		properties["$insert_id"] = event.Received.MessageId()
-		properties["time"] = event.Received.Timestamp().UnixMilli()
+		properties := map[string]any{
+			"$device_id": event.Received.AnonymousId(),
+			"$insert_id": event.Received.MessageId(),
+			"$source":    "meergo",
+			"time":       event.Received.Timestamp().UnixMilli(),
+		}
 		if sendBadRequest {
 			delete(properties, "time")
 		}
-		distinctID := event.Received.AnonymousId()
 		if userId, ok := event.Received.UserId(); ok {
-			distinctID = userId
+			properties["$user_id"] = userId
 		}
-		properties["distinct_id"] = distinctID
-		properties["$device_id"] = event.Received.AnonymousId()
+
+		// Set distinct_id. This has no effect if the project uses the simplified ID Merge API.
+		if userId, ok := event.Received.UserId(); ok {
+			properties["distinct_id"] = userId
+		} else {
+			properties["distinct_id"] = event.Received.AnonymousId()
+		}
+
 		if context, ok := event.Received.Context(); ok {
-			if ip, ok := context.IP(); ok {
-				properties["ip"] = ip
-				// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
-				// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
-				// enrichment occurs for all or none of them.
-				if location, ok := context.Location(); ok {
-					country, hasCountry := location.Country()
-					city, hasCity := location.City()
-					if hasCountry || hasCity {
-						if hasCountry {
-							properties["mp_country_code"] = country
-						} else {
-							properties["mp_country_code"] = nil
-						}
-						if hasCity {
-							properties["$city"] = city
-						} else {
-							properties["$city"] = nil
-						}
-					}
-				} else {
-					if location, ok := context.Location(); ok {
-						if country, ok := location.Country(); ok {
-							properties["mp_country_code"] = country
-						}
-						if city, ok := location.City(); ok {
-							properties["$city"] = city
-						}
-					}
+			if app, ok := context.App(); ok {
+				if name, ok := app.Name(); ok {
+					properties["$app_name"] = name
 				}
-			}
-			if os, ok := context.OS(); ok {
-				if osName, ok := os.Name(); ok {
-					properties["$os"] = osName
+				if version, ok := app.Version(); ok {
+					properties["$app_version_string"] = version
+				}
+				if build, ok := app.Build(); ok {
+					properties["$app_build_number"] = build
+				}
+				if namespace, ok := app.Namespace(); ok {
+					properties["$app_namespace"] = namespace
 				}
 			}
 			if browser, ok := context.Browser(); ok {
@@ -286,8 +342,108 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 					properties["$browser"] = name
 				} else if other, ok := browser.Other(); ok {
 					properties["$browser"] = other
-				} else if version, ok := browser.Version(); ok {
-					properties["$browser"] = version
+				}
+				if _, ok := properties["$browser"]; ok {
+					if version, ok := browser.Version(); ok {
+						properties["$browser_version"] = version
+					}
+				}
+			}
+			if campaign, ok := context.Campaign(); ok {
+				if source, ok := campaign.Source(); ok {
+					properties["utm_source"] = source
+				}
+				if name, ok := campaign.Name(); ok {
+					properties["utm_campaign"] = name
+				}
+				if medium, ok := campaign.Medium(); ok {
+					properties["utm_medium"] = medium
+				}
+				if term, ok := campaign.Term(); ok {
+					properties["utm_term"] = term
+				}
+				if content, ok := campaign.Content(); ok {
+					properties["utm_content"] = content
+				}
+			}
+			if device, ok := context.Device(); ok {
+				if id, ok := device.Id(); ok {
+					properties["device_id"] = id
+				}
+				if advertisingId, ok := device.AdvertisingId(); ok {
+					properties["$ios_ifa"] = advertisingId
+				}
+				if adTrackingEnabled, ok := device.AdTrackingEnabled(); ok {
+					properties["ad_tracking_enabled"] = adTrackingEnabled
+				}
+				if manufacturer, ok := device.Manufacturer(); ok {
+					properties["$manufacturer"] = manufacturer
+				}
+				if model, ok := device.Model(); ok {
+					properties["$model"] = model
+				}
+				if name, ok := device.Name(); ok {
+					properties["$device"] = name
+					properties["$device_name"] = name
+				}
+				if typ, ok := device.Type(); ok {
+					properties["$device_type"] = typ
+				}
+			}
+			if ip, ok := context.IP(); ok {
+				properties["ip"] = ip
+			}
+			if library, ok := context.Library(); ok {
+				if name, ok := library.Name(); ok {
+					if strings.HasPrefix(name, "meergo") || strings.HasPrefix(name, "Meergo") {
+						properties["mp_lib"] = name
+					} else {
+						properties["mp_lib"] = "Meergo: " + name
+					}
+					if version, ok := library.Version(); ok {
+						properties["$lib_version"] = version
+					}
+				}
+			}
+			if locale, ok := context.Locale(); ok {
+				properties["$locale"] = locale
+			}
+			if location, ok := context.Location(); ok {
+				country, okCountry := location.Country()
+				city, okCity := location.City()
+				if okCountry || okCity {
+					if okCountry {
+						properties["mp_country_code"] = country
+					} else {
+						properties["mp_country_code"] = nil
+					}
+					if okCity {
+						properties["$city"] = city
+					} else {
+						properties["$city"] = nil
+					}
+				}
+			}
+			if network, ok := context.Network(); ok {
+				if bluetooth, ok := network.Bluetooth(); ok {
+					properties["$bluetooth_enabled"] = bluetooth
+				}
+				if carrier, ok := network.Carrier(); ok {
+					properties["$carrier"] = carrier
+				}
+				if cellular, ok := network.Cellular(); ok {
+					properties["$cellular_enabled"] = cellular
+				}
+				if wifi, ok := network.WiFi(); ok {
+					properties["$wifi_enabled"] = wifi
+				}
+			}
+			if os, ok := context.OS(); ok {
+				if osName, ok := os.Name(); ok {
+					properties["$os"] = osName
+					if osVersion, ok := os.Version(); ok {
+						properties["$os_version"] = osVersion
+					}
 				}
 			}
 			if page, ok := context.Page(); ok {
@@ -316,18 +472,60 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 				if h, ok := screen.Height(); ok {
 					properties["$screen_height"] = h
 				}
+				if d, ok := screen.Density(); ok {
+					properties["$screen_density"] = d
+				}
+			}
+			if session, ok := context.Session(); ok {
+				if id, ok := session.Id(); ok {
+					properties["session_id"] = id
+				}
+			}
+			if timezone, ok := context.Timezone(); ok {
+				properties["timezone"] = timezone
 			}
 		}
 
-		err := bb.Encode(map[string]any{
-			"event":      event.Type.Values["event"].(string),
-			"properties": properties,
-		})
-		if err != nil {
-			return nil, err
+		if pp, ok := values["properties"].(map[string]any); ok {
+			for name, value := range pp {
+				properties[name] = value
+			}
 		}
 
-		bb.WriteByte('\n')
+		if event.Type.ID == "product_purchased" {
+			// Generate an event for every product purchased.
+			insertID := properties["$insert_id"].(string)
+			delete(properties, "$insert_id")
+			time := properties["time"].(int64)
+			products := values["products"].([]any)
+			for i, product := range products {
+				pp := maps.Clone(properties)
+				pp["$insert_id"] = strconv.Itoa(i+1) + "#" + insertID
+				pp["time"] = time + 1 + int64(i)
+				for name, value := range product.(map[string]any) {
+					if _, ok := pp[name]; !ok {
+						pp[name] = value
+					}
+				}
+				err := bb.Encode(map[string]any{
+					"event":      values["event"].(string),
+					"properties": pp,
+				})
+				if err != nil {
+					return nil, err
+				}
+				bb.WriteByte('\n')
+			}
+		} else {
+			err := bb.Encode(map[string]any{
+				"event":      values["event"].(string),
+				"properties": properties,
+			})
+			if err != nil {
+				return nil, err
+			}
+			bb.WriteByte('\n')
+		}
 
 		if bb.Len() > maxBodyEventsBytes {
 			bb.Truncate(0)
@@ -364,10 +562,6 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		req.SetBasicAuth(mp.settings.ProjectToken, "")
 	}
 
-	if err = storeHTTPRequestWhenTesting(ctx, req); err != nil {
-		return nil, err
-	}
-
 	if preview {
 		return req, nil
 	}
@@ -398,42 +592,12 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 		return nil, fmt.Errorf("cannot decode Mixpanel response: %v", err)
 	}
 	if len(out.FailedRecords) == 0 {
-		return nil, errors.New("Mixpanel responded with status 400, but failed_records was empty")
+		return nil, errors.New("Mixpanel responded with status 400, but 'failed_records' was empty")
 	}
-	errors := make(meergo.EventsError, len(out.FailedRecords))
-	for _, f := range out.FailedRecords {
-		errors[f.Index] = fmt.Errorf("%s: %s", f.Field, f.Message)
+	eventErrors := make(meergo.EventsError, len(out.FailedRecords))
+	for _, record := range out.FailedRecords {
+		eventErrors[record.Index] = fmt.Errorf("%s: %s", record.Field, record.Message)
 	}
 
-	return nil, errors
-}
-
-// connectorTestString is a defined type used solely to pass a typed key to the
-// context. This is to avoid any kind of collisions with other values that may
-// be inserted into the context.
-type connectorTestString string
-
-// storeHTTPRequestWhenTesting stores the HTTP request if requested by tests.
-//
-// To enable saving the HTTP request, the context must include, under the key
-// 'connectorTestString("storeSentHTTPRequest")', a pointer to an http.Request
-// memory location where the sent request will be written.
-func storeHTTPRequestWhenTesting(ctx context.Context, req *http.Request) error {
-	stored := ctx.Value(connectorTestString("storeSentHTTPRequest"))
-	if stored == nil {
-		return nil
-	}
-	storedReq := req.Clone(req.Context())
-	body, err := req.GetBody()
-	if err != nil {
-		return err
-	}
-	defer body.Close()
-	data, err := io.ReadAll(body)
-	if err != nil {
-		return err
-	}
-	storedReq.Body = io.NopCloser(bytes.NewReader(data))
-	*(stored.(*http.Request)) = *storedReq
-	return nil
+	return nil, eventErrors
 }

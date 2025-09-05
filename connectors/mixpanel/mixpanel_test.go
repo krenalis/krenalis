@@ -8,111 +8,581 @@
 package mixpanel
 
 import (
-	"compress/gzip"
+	"bytes"
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
-	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/testutils"
-	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 )
 
 func TestSendEvents(t *testing.T) {
 
-	mixpanel := initMixpanelForTests(t)
+	mixpanel := newMixpanelForTests(t)
 
-	ctx := context.Background()
+	timestamp := time.Now().UTC().Truncate(time.Millisecond)
+	sessionID := int(timestamp.Add(-5 * time.Minute).UnixMilli())
 
-	messageID := uuid.NewString()
-	anonymousID := uuid.NewString()
+	sendAndTestEvent := func(t *testing.T, event *meergo.Event, expected []json.Value) {
+		req := new(http.Request)
+		ctx := context.WithValue(t.Context(), testutils.CaptureRequestContextKey, req)
+		iter := testutils.NewEventsIterator([]*meergo.Event{event})
+		err := mixpanel.SendEvents(ctx, iter)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer req.Body.Close()
+		got, err := testutils.DecodeNDJSON(req.Body, contentEncoding)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(expected) != len(got) {
+			t.Fatalf("expected %d JSON objects, got %d objects", len(expected), len(got))
+		}
+		for i, v := range got {
+			got, err := json.Canonicalize(v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(expected[i], got) {
+				t.Fatalf("unexpected request to Mixpanel:\nexpected %s,\ngot      %s", string(expected[i]), got)
+			}
+		}
+	}
 
-	now := time.Now().UTC()
+	t.Run("order_completed", func(t *testing.T) {
 
-	tests := []struct {
-		events              []*meergo.Event
-		expectedRequestBody map[string]any
-	}{
-		{
-			events: []*meergo.Event{
-				newEventForTest("track", anonymousID, messageID, now),
-			},
-			expectedRequestBody: map[string]any{
-				"event": "Test Event",
-				"properties": map[string]any{
-					"$browser":    "Other",
-					"$device_id":  anonymousID,
-					"$insert_id":  messageID,
-					"$os":         "Other",
-					"X":           json.Number("42"),
-					"distinct_id": anonymousID,
-					"ip":          "127.0.0.1",
-					"time":        json.Number(strconv.FormatInt(now.UnixMilli(), 10)),
+		received := map[string]any{
+			"id":          uuid.NewString(),
+			"connection":  1323607634,
+			"anonymousId": uuid.NewString(),
+			"context": map[string]any{
+				"browser": map[string]any{
+					"name":    "Safari",
+					"version": "18.5",
+				},
+				"device": map[string]any{
+					"advertisingId": "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+				},
+				"ip": "192.0.2.1",
+				"os": map[string]any{
+					"name":    "macOS",
+					"version": "15.5",
+				},
+				"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1",
+				"session": map[string]any{
+					"id": sessionID,
 				},
 			},
-		},
-	}
+			"event":     "Order Completed",
+			"messageId": uuid.NewString(),
+			"properties": marshalJSON(map[string]any{
+				"order_id":    "703924",
+				"affiliation": "AP3383",
+				"currency":    "USD",
+				"revenue":     198.45,
+				"coupon":      "PROMO",
+				"discount":    20.78,
+				"shipping":    5.0,
+				"tax":         28.05,
+				"value":       405.99,
+				"products":    []map[string]any{{"sku": "G7NZ0I5"}, {"sku": "QN72LVRA"}},
+				"other":       true,
+			}),
+			"receivedAt":        timestamp,
+			"sentAt":            timestamp.Add(-10 * time.Millisecond),
+			"originalTimestamp": timestamp,
+			"timestamp":         timestamp,
+			"type":              "track",
+		}
 
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			// Through the context, inform the 'SendEvents' method that the HTTP
-			// request must also be copied to the memory location specified via
-			// 'req', so its content can be verified in tests.
-			var req http.Request
-			ctx = context.WithValue(ctx, connectorTestString("storeSentHTTPRequest"), &req)
+		schema, err := mixpanel.EventTypeSchema(t.Context(), "order_completed")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			// Create an iterator over the test events.
-			events := testutils.NewEventsIterator(test.events)
+		values, err := testutils.TransformEvent(schema, received, nil)
+		if err != nil {
+			t.Fatalf("cannot transform the 'order_completed' event: %s", err)
+		}
 
-			// Actually sends the events.
-			t.Log("calling SendEvents")
-			err := mixpanel.SendEvents(ctx, events)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer req.Body.Close()
-			t.Log("SendEvent returned no errors")
+		event := &meergo.Event{
+			ID:       uuid.NewString(),
+			Received: events.ReceivedEvent(received),
+			Type: meergo.EventTypeInfo{
+				ID:     "order_completed",
+				Schema: schema,
+				Values: values,
+			},
+		}
 
-			// Check that the HTTP request was actually set by the test.
-			if req.Method == "" {
-				t.Fatal("the 'SendEvents' function did not properly stored the HTTP request")
-			}
+		expected := []json.Value{
+			marshalCanonicalJSON(map[string]any{
+				"event": "Order Completed",
+				"properties": map[string]any{
+					"$browser":         "Safari",
+					"$browser_version": "18.5",
+					"$device_id":       event.Received.AnonymousId(),
+					"$insert_id":       event.Received.MessageId(),
+					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+					"$os":              "macOS",
+					"$os_version":      "15.5",
+					"$source":          "meergo",
+					"affiliation":      "AP3383",
+					"coupon":           "PROMO",
+					"currency":         "USD",
+					"discount":         20.78,
+					"distinct_id":      event.Received.AnonymousId(),
+					"ip":               "192.0.2.1",
+					"order_id":         "703924",
+					"products":         []map[string]any{{"sku": "G7NZ0I5"}, {"sku": "QN72LVRA"}},
+					"revenue":          198.45,
+					"session_id":       sessionID,
+					"shipping":         5.0,
+					"tax":              28.05,
+					"time":             timestamp.UnixMilli(),
+					"value":            405.99,
+				},
+			}),
+		}
 
-			// Decode the request body and ensure it matches the expected result.
-			body := req.Body
-			if contentEncoding == meergo.Gzip {
-				body, err = gzip.NewReader(body)
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-			var jsonRequest map[string]any
-			dec := json.NewDecoder(body)
-			dec.UseNumber()
-			err = dec.Decode(&jsonRequest)
-			if err != nil {
-				t.Fatal(err)
-			}
-			eq := reflect.DeepEqual(jsonRequest, test.expectedRequestBody)
-			if !eq {
-				t.Fatalf("expected %#v, got %#v", test.expectedRequestBody, jsonRequest)
-			}
+		// Send the event and test the request body.
+		sendAndTestEvent(t, event, expected)
+
+	})
+
+	t.Run("product_purchased", func(t *testing.T) {
+
+		received := map[string]any{
+			"id":          uuid.NewString(),
+			"connection":  1323607634,
+			"anonymousId": uuid.NewString(),
+			"context": map[string]any{
+				"browser": map[string]any{
+					"name":    "Safari",
+					"version": "18.5",
+				},
+				"device": map[string]any{
+					"advertisingId": "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+				},
+				"ip": "192.0.2.1",
+				"os": map[string]any{
+					"name":    "macOS",
+					"version": "15.5",
+				},
+				"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1",
+				"session": map[string]any{
+					"id": sessionID,
+				},
+			},
+			"event":     "Order Completed",
+			"messageId": uuid.NewString(),
+			"properties": marshalJSON(map[string]any{
+				"order_id":    "703924",
+				"affiliation": "AP3383",
+				"currency":    "USD",
+				"revenue":     198.45,
+				"coupon":      "PROMO",
+				"discount":    20.78,
+				"shipping":    5.0,
+				"tax":         28.05,
+				"value":       405.99,
+				"products":    []map[string]any{{"sku": "G7NZ0I5"}, {"sku": "QN72LVRA"}},
+				"other":       true,
+			}),
+			"receivedAt":        timestamp,
+			"sentAt":            timestamp.Add(-10 * time.Millisecond),
+			"originalTimestamp": timestamp,
+			"timestamp":         timestamp,
+			"type":              "track",
+		}
+
+		schema, err := mixpanel.EventTypeSchema(t.Context(), "product_purchased")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		values, err := testutils.TransformEvent(schema, received, nil)
+		if err != nil {
+			t.Fatalf("cannot transform the 'product_purchased' event: %s", err)
+		}
+
+		event := &meergo.Event{
+			ID:       uuid.NewString(),
+			Received: events.ReceivedEvent(received),
+			Type: meergo.EventTypeInfo{
+				ID:     "product_purchased",
+				Schema: schema,
+				Values: values,
+			},
+		}
+
+		expected := []json.Value{
+			marshalCanonicalJSON(map[string]any{
+				"event": "Product Purchased",
+				"properties": map[string]any{
+					"$browser":         "Safari",
+					"$browser_version": "18.5",
+					"$device_id":       event.Received.AnonymousId(),
+					"$insert_id":       "1#" + event.Received.MessageId(),
+					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+					"$os":              "macOS",
+					"$os_version":      "15.5",
+					"$source":          "meergo",
+					"distinct_id":      event.Received.AnonymousId(),
+					"ip":               "192.0.2.1",
+					"session_id":       sessionID,
+					"sku":              "G7NZ0I5",
+					"time":             timestamp.UnixMilli() + 1,
+				},
+			}),
+			marshalCanonicalJSON(map[string]any{
+				"event": "Product Purchased",
+				"properties": map[string]any{
+					"$browser":         "Safari",
+					"$browser_version": "18.5",
+					"$device_id":       event.Received.AnonymousId(),
+					"$insert_id":       "2#" + event.Received.MessageId(),
+					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+					"$os":              "macOS",
+					"$os_version":      "15.5",
+					"$source":          "meergo",
+					"distinct_id":      event.Received.AnonymousId(),
+					"ip":               "192.0.2.1",
+					"session_id":       sessionID,
+					"sku":              "QN72LVRA",
+					"time":             timestamp.UnixMilli() + 2,
+				},
+			}),
+		}
+
+		// Send the event and test the request body.
+		sendAndTestEvent(t, event, expected)
+
+	})
+
+	t.Run("track", func(t *testing.T) {
+
+		received := map[string]any{
+			"id":          uuid.NewString(),
+			"connection":  1323607634,
+			"anonymousId": uuid.NewString(),
+			"context": map[string]any{
+				"browser": map[string]any{
+					"name":    "Safari",
+					"version": "18.5",
+				},
+				"device": map[string]any{
+					"advertisingId": "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+				},
+				"ip": "192.0.2.1",
+				"os": map[string]any{
+					"name":    "macOS",
+					"version": "15.5",
+				},
+				"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1",
+				"session": map[string]any{
+					"id": sessionID,
+				},
+			},
+			"event":     "Product Viewed",
+			"messageId": uuid.NewString(),
+			"properties": marshalJSON(map[string]any{
+				"product_id": 803916,
+			}),
+			"receivedAt":        timestamp,
+			"sentAt":            timestamp.Add(-10 * time.Millisecond),
+			"originalTimestamp": timestamp,
+			"timestamp":         timestamp,
+			"type":              "track",
+		}
+
+		schema, err := mixpanel.EventTypeSchema(t.Context(), "track")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		values, err := testutils.TransformEvent(schema, received, map[string]string{
+			"event":      "event",
+			"properties": `map("product_id",properties.product_id)`,
 		})
-	}
+		if err != nil {
+			t.Fatalf("cannot transform the 'track' event: %s", err)
+		}
+
+		event := &meergo.Event{
+			ID:       uuid.NewString(),
+			Received: events.ReceivedEvent(received),
+			Type: meergo.EventTypeInfo{
+				ID:     "track",
+				Schema: schema,
+				Values: values,
+			},
+		}
+
+		expected := []json.Value{
+			marshalCanonicalJSON(map[string]any{
+				"event": "Product Viewed",
+				"properties": map[string]any{
+					"$browser":         "Safari",
+					"$browser_version": "18.5",
+					"$device_id":       event.Received.AnonymousId(),
+					"$insert_id":       event.Received.MessageId(),
+					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+					"$os":              "macOS",
+					"$os_version":      "15.5",
+					"$source":          "meergo",
+					"distinct_id":      event.Received.AnonymousId(),
+					"ip":               "192.0.2.1",
+					"product_id":       803916,
+					"session_id":       sessionID,
+					"time":             timestamp.UnixMilli(),
+				},
+			}),
+		}
+
+		// Send the event and test the request body.
+		sendAndTestEvent(t, event, expected)
+
+	})
+
+	t.Run("page", func(t *testing.T) {
+
+		received := map[string]any{
+			"id":          uuid.NewString(),
+			"connection":  1323607634,
+			"anonymousId": uuid.NewString(),
+			"context": map[string]any{
+				"browser": map[string]any{
+					"name":    "Safari",
+					"version": "18.5",
+				},
+				"device": map[string]any{
+					"advertisingId": "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+				},
+				"ip": "192.0.2.1",
+				"os": map[string]any{
+					"name":    "macOS",
+					"version": "15.5",
+				},
+				"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1",
+				"session": map[string]any{
+					"id": sessionID,
+				},
+			},
+			"name":      "Wireless Headphones",
+			"messageId": uuid.NewString(),
+			"properties": marshalJSON(map[string]any{
+				"productId": "WH-001",
+				"name":      "Wireless Headphones",
+				"category":  "Electronics",
+				"price":     99.99,
+				"currency":  "USD",
+			}),
+			"receivedAt":        timestamp,
+			"sentAt":            timestamp.Add(-10 * time.Millisecond),
+			"originalTimestamp": timestamp,
+			"timestamp":         timestamp,
+			"type":              "page",
+		}
+
+		schema, err := mixpanel.EventTypeSchema(t.Context(), "page")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		values, err := testutils.TransformEvent(schema, received, map[string]string{
+			"event": `"Viewed " name`,
+			"properties": `map(` +
+				`"category",properties.category,` +
+				`"currency",properties.currency,` +
+				`"name",properties.name,` +
+				`"price",properties.price,` +
+				`"product_id",properties.productId)`,
+		})
+		if err != nil {
+			t.Fatalf("cannot transform the 'page' event: %s", err)
+		}
+
+		event := &meergo.Event{
+			ID:       uuid.NewString(),
+			Received: events.ReceivedEvent(received),
+			Type: meergo.EventTypeInfo{
+				ID:     "page",
+				Schema: schema,
+				Values: values,
+			},
+		}
+
+		expected := []json.Value{
+			marshalCanonicalJSON(map[string]any{
+				"event": "Viewed Wireless Headphones",
+				"properties": map[string]any{
+					"$browser":         "Safari",
+					"$browser_version": "18.5",
+					"$device_id":       event.Received.AnonymousId(),
+					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+					"$insert_id":       event.Received.MessageId(),
+					"$os":              "macOS",
+					"$os_version":      "15.5",
+					"$source":          "meergo",
+					"category":         "Electronics",
+					"currency":         "USD",
+					"distinct_id":      event.Received.AnonymousId(),
+					"ip":               "192.0.2.1",
+					"name":             "Wireless Headphones",
+					"price":            99.99,
+					"product_id":       "WH-001",
+					"session_id":       sessionID,
+					"time":             timestamp.UnixMilli(),
+				},
+			}),
+		}
+
+		// Send the event and test the request body.
+		sendAndTestEvent(t, event, expected)
+
+	})
+
+	t.Run("screen", func(t *testing.T) {
+
+		received := map[string]any{
+			"id":          uuid.NewString(),
+			"connection":  1323607634,
+			"anonymousId": uuid.NewString(),
+			"context": map[string]any{
+				"app": map[string]any{
+					"name":      "MyFinance",
+					"version":   "3.4.1",
+					"build":     "3410",
+					"namespace": "com.mycompany.myfinance",
+				},
+				"device": map[string]any{
+					"id":            "AEBE52E7-03EE-455A-B3C4-E57283966239",
+					"manufacturer":  "Apple",
+					"model":         "iPhone 16 Pro",
+					"name":          "iPhone",
+					"type":          "ios",
+					"advertisingId": "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+				},
+				"ip": "192.0.2.1",
+				"os": map[string]any{
+					"name":    "iOS",
+					"version": "18",
+				},
+				"session": map[string]any{
+					"id":    sessionID,
+					"start": true,
+				},
+			},
+			"name":      "Transaction History",
+			"messageId": uuid.NewString(),
+			"properties": marshalJSON(map[string]any{
+				"filter":            "Last 30 days",
+				"totalTransactions": 42,
+				"page":              1,
+			}),
+			"receivedAt":        timestamp,
+			"sentAt":            timestamp.Add(-10 * time.Millisecond),
+			"originalTimestamp": timestamp,
+			"timestamp":         timestamp,
+			"type":              "screen",
+			"userId":            "BN8204913066K",
+		}
+
+		schema, err := mixpanel.EventTypeSchema(t.Context(), "screen")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		values, err := testutils.TransformEvent(schema, received, map[string]string{
+			"event":      `"Viewed " name`,
+			"properties": `map("filter",properties.filter,"transactionCount",properties.totalTransactions)`,
+		})
+		if err != nil {
+			t.Fatalf("cannot transform the 'screen' event: %s", err)
+		}
+
+		event := &meergo.Event{
+			ID:       uuid.NewString(),
+			Received: events.ReceivedEvent(received),
+			Type: meergo.EventTypeInfo{
+				ID:     "screen",
+				Schema: schema,
+				Values: values,
+			},
+		}
+
+		expected := []json.Value{
+			marshalCanonicalJSON(map[string]any{
+				"event": "Viewed Transaction History",
+				"properties": map[string]any{
+					"$app_build_number":   "3410",
+					"$app_name":           "MyFinance",
+					"$app_namespace":      "com.mycompany.myfinance",
+					"$app_version_string": "3.4.1",
+					"$device":             "iPhone",
+					"$device_id":          event.Received.AnonymousId(),
+					"$device_name":        "iPhone",
+					"$device_type":        "ios",
+					"$ios_ifa":            "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+					"$insert_id":          event.Received.MessageId(),
+					"$manufacturer":       "Apple",
+					"$model":              "iPhone 16 Pro",
+					"$os":                 "iOS",
+					"$os_version":         "18",
+					"$source":             "meergo",
+					"$user_id":            "BN8204913066K",
+					"device_id":           "AEBE52E7-03EE-455A-B3C4-E57283966239",
+					"distinct_id":         "BN8204913066K",
+					"filter":              "Last 30 days",
+					"ip":                  "192.0.2.1",
+					"session_id":          sessionID,
+					"time":                timestamp.UnixMilli(),
+					"transactionCount":    42,
+				},
+			}),
+		}
+
+		// Send the event and test the request body.
+		sendAndTestEvent(t, event, expected)
+
+	})
 
 }
 
-func initMixpanelForTests(t *testing.T) *Mixpanel {
-	// Read Mixpanel settings from environment variables, then prepare
-	// the settings that will be passed to the connector.
+// marshalCanonicalJSON marshals data as canonical JSON and returns it.
+// It panics if data cannot be marshalled.
+func marshalCanonicalJSON(data any) json.Value {
+	v, err := json.Marshal(data)
+	if err != nil {
+		panic(err)
+	}
+	v, err = json.Canonicalize(v)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// marshalJSON marshals data as JSON and returns it.
+// It panics if data cannot be marshalled.
+func marshalJSON(data any) json.Value {
+	v, err := json.Marshal(data)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func newMixpanelForTests(t *testing.T) *Mixpanel {
 	projectID := os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_ID")
 	if projectID == "" {
 		t.Fatal("env var MEERGO_TEST_MIXPANEL_PROJECT_ID is required but not provided")
@@ -121,78 +591,20 @@ func initMixpanelForTests(t *testing.T) *Mixpanel {
 	if projectToken == "" {
 		t.Fatal("env var MEERGO_TEST_MIXPANEL_PROJECT_TOKEN is required but not provided")
 	}
-
-	sett := innerSettings{
+	useEuropeanEndpoint := os.Getenv("MEERGO_TEST_MIXPANEL_USE_EUROPEAN_ENDPOINT")
+	switch useEuropeanEndpoint {
+	case "", "true", "false":
+	default:
+		t.Fatal("env var MEERGO_TEST_MIXPANEL_USE_EUROPEAN_ENDPOINT, if provided, can only be either 'true' or 'false'")
+	}
+	settings := innerSettings{
 		ProjectID:           projectID,
 		ProjectToken:        projectToken,
-		UseEuropeanEndpoint: false,
+		UseEuropeanEndpoint: useEuropeanEndpoint == "true",
 	}
-	settings, err := json.Marshal(sett)
+	app, err := testutils.NewAppConnector("Mixpanel", settings)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// Instantiate the Mixpanel connector, with a specific settings for testing.
-	app, err := testutils.NewAppConnectorForTests("Mixpanel", settings)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	return app.(*Mixpanel)
-}
-
-// newEventForTest returns a new *meergo.Event that can be used in tests.
-// This utility function helps reduce test code and makes it easier to extend.
-// The choice of parameters is convenience-driven and may change over time
-// depending on how each test is parameterized.
-func newEventForTest(eventType, anonymousID, messageID string, now time.Time) *meergo.Event {
-	eventID := uuid.NewString()
-	receivedEventID := uuid.NewString()
-
-	return &meergo.Event{
-		ID: eventID,
-		Received: events.ReceivedEvent(map[string]any{
-			"anonymousId": anonymousID,
-			"connection":  1323607634,
-			"context": map[string]any{
-				"browser": map[string]any{
-					"name":    "Other",
-					"other":   "Unknown",
-					"version": "0.0",
-				},
-				"ip": "127.0.0.1",
-				"os": map[string]any{
-					"name":    "Other",
-					"version": "0.0",
-				},
-				"userAgent": "python-requests/2.32.4",
-			},
-			"id":                receivedEventID,
-			"messageId":         messageID,
-			"originalTimestamp": now,
-			"previousId":        "IAJVLPBEZJ",
-			"receivedAt":        now,
-			"sentAt":            now.Add(-10 * time.Millisecond),
-			"timestamp":         now,
-			"type":              "alias",
-			"userId":            nil,
-		}),
-		Type: struct {
-			ID     string
-			Schema types.Type
-			Values map[string]any
-		}{
-			ID: "track",
-			Schema: types.Object([]types.Property{
-				{Name: "event", Prefilled: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
-				{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
-			}),
-			Values: map[string]any{
-				"event": "Test Event",
-				"properties": map[string]any{
-					"X": 42,
-				},
-			},
-		},
-	}
 }
