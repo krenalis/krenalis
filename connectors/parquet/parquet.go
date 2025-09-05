@@ -526,6 +526,21 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 				return nil, err
 			}
 			continue
+		case
+			// TODO (Gianluca): as a workaround for the lack of support for
+			// Array properties (https://github.com/meergo/meergo/issues/1325)
+			// and Map properties (https://github.com/meergo/meergo/issues/1371),
+			// we decided at the moment to encode them and export them as JSON.
+			types.ArrayKind,
+			types.MapKind:
+			if v, ok := record[p.Name]; ok {
+				encoded, err := json.Marshal(v)
+				if err != nil {
+					return nil, err
+				}
+				converted[p.Name] = []byte(encoded)
+				continue
+			}
 		}
 		converted[p.Name] = record[p.Name]
 	}
@@ -742,10 +757,16 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
 			col.SchemaElement.LogicalType = parquet.NewLogicalType()
 			col.SchemaElement.LogicalType.STRING = parquet.NewStringType()
-		case types.ArrayKind:
-			return nil, errors.New("array properties are not supported") // TODO: see the issue https://github.com/meergo/meergo/issues/1325.
-		case types.MapKind:
-			return nil, errors.New("map properties are not supported") // TODO: see the issue https://github.com/meergo/meergo/issues/1371.
+		case
+			types.ArrayKind,
+			types.MapKind:
+			// TODO (Gianluca): as a workaround for the lack of support for
+			// Array properties (https://github.com/meergo/meergo/issues/1325)
+			// and Map properties (https://github.com/meergo/meergo/issues/1371),
+			// we decided at the moment to encode them and export them as JSON.
+			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_BYTE_ARRAY)
+			col.SchemaElement.LogicalType = parquet.NewLogicalType()
+			col.SchemaElement.LogicalType.JSON = parquet.NewJsonType()
 		}
 	}
 	return columns, nil

@@ -55,9 +55,9 @@ The following table shows how the user property types in Meergo are mapped to th
 | `json`                             | `BYTE_ARRAY`                             | `JSON`                                                      |
 | `inet`                             | `BYTE_ARRAY`                             | `STRING`                                                    |
 | `text`                             | `BYTE_ARRAY`                             | `STRING`                                                    |
-| `array`                            | Not supported [^array_support]           | -                                                           |
+| `array`                            | `BYTE_ARRAY` [^array_support]            | `JSON` [^array_support]                                     |
 | `object`                           | *(column groups)*                        | -                                                           |
-| `map`                              | Not supported [^map_support]             | -                                                           |
+| `map`                              | `BYTE_ARRAY` [^map_support]              | `JSON` [^map_support]                                       |
 
 [^array_support]: Support for array properties is discussed here: https://github.com/meergo/meergo/issues/1325
 [^map_support]: Support map properties is discussed here: https://github.com/meergo/meergo/issues/1371
