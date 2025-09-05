@@ -24,6 +24,7 @@ import { formatNumber } from '../../../utils/formatNumber';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../../../lib/telemetry/scrubURL';
 import { ActionTarget } from '../../../lib/api/types/action';
+import { IS_PASSWORDLESS_KEY, WORKSPACE_ID_KEY } from '../../../constants/storage';
 
 const FILTER_STEP = 2;
 
@@ -42,12 +43,8 @@ const useApp = (
 	const [warehouse, setWarehouse] = useState<Warehouse | null>(null);
 	const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
 	const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState<boolean>(false);
-	const [isPasswordless, setIsPasswordless] = useState<boolean>(
-		localStorage.getItem('meergo_ui_is_passwordless') != null,
-	);
-	const [selectedWorkspace, setSelectedWorkspace] = useState<number>(
-		Number(localStorage.getItem('meergo_ui_workspace_id')),
-	);
+	const [isPasswordless, setIsPasswordless] = useState<boolean>(localStorage.getItem(IS_PASSWORDLESS_KEY) != null);
+	const [selectedWorkspace, setSelectedWorkspace] = useState<number>(Number(localStorage.getItem(WORKSPACE_ID_KEY)));
 
 	let api = new API(window.location.origin, selectedWorkspace);
 
@@ -210,7 +207,7 @@ const useApp = (
 				if (err instanceof NotFoundError) {
 					// the workspace saved in the local storage doesn't exist
 					// anymore.
-					localStorage.removeItem('meergo_ui_workspace_id');
+					localStorage.removeItem(WORKSPACE_ID_KEY);
 					redirect('workspaces');
 					setIsLoadingState(false);
 					return;
@@ -377,9 +374,9 @@ const useApp = (
 
 	useEffect(() => {
 		if (selectedWorkspace === 0) {
-			localStorage.removeItem('meergo_ui_workspace_id');
+			localStorage.removeItem(WORKSPACE_ID_KEY);
 		} else {
-			localStorage.setItem('meergo_ui_workspace_id', String(selectedWorkspace));
+			localStorage.setItem(WORKSPACE_ID_KEY, String(selectedWorkspace));
 		}
 	}, [selectedWorkspace]);
 

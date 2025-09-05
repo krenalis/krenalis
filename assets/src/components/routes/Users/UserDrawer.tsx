@@ -16,6 +16,7 @@ import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
+import { USERS_EXPANDED_TRAITS_KEY, USERS_TAB_KEY } from '../../../constants/storage';
 
 interface UserDrawerProps {
 	selectedUser: string;
@@ -37,7 +38,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	useEffect(() => {
 		let tab: string;
 		try {
-			tab = localStorage.getItem('meergo_ui_users_tab');
+			tab = localStorage.getItem(USERS_TAB_KEY);
 		} catch (err) {
 			setSelectedTab('traits');
 			return;
@@ -51,7 +52,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 
 	useEffect(() => {
 		try {
-			localStorage.setItem('meergo_ui_users_tab', selectedTab);
+			localStorage.setItem(USERS_TAB_KEY, selectedTab);
 		} catch (err) {
 			console.error(`cannot write the user tab preference on local storage: ${err}`);
 			return;
@@ -369,7 +370,7 @@ const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProp
 
 	useEffect(() => {
 		try {
-			const v = localStorage.getItem('meergo_ui_users_expanded_traits');
+			const v = localStorage.getItem(USERS_EXPANDED_TRAITS_KEY);
 			if (v == null) {
 				isFirstLoad.current = false;
 				return;
@@ -392,7 +393,7 @@ const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProp
 		}
 
 		try {
-			let v = localStorage.getItem('meergo_ui_users_expanded_traits');
+			let v = localStorage.getItem(USERS_EXPANDED_TRAITS_KEY);
 
 			let p: string[] = [];
 			if (v != null) {
@@ -415,7 +416,7 @@ const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProp
 				}
 			}
 
-			localStorage.setItem('meergo_ui_users_expanded_traits', JSON.stringify(p));
+			localStorage.setItem(USERS_EXPANDED_TRAITS_KEY, JSON.stringify(p));
 		} catch (err) {
 			console.error(`cannot write the user trait preference on local storage: ${err}`);
 			return;

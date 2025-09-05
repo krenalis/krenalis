@@ -16,6 +16,7 @@ import { useApp } from './useApp';
 import { UnauthorizedError } from '../../../lib/api/errors';
 import * as Sentry from '@sentry/react';
 import RootError from '../RootError/RootError';
+import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
 
 setBasePath('/admin/src/shoelace/dist');
 
@@ -39,7 +40,7 @@ const App = () => {
 	};
 
 	const logout = () => {
-		localStorage.removeItem('meergo_ui_is_passwordless');
+		localStorage.removeItem(IS_PASSWORDLESS_KEY);
 		setIsPasswordless(false);
 		setSelectedWorkspace(0);
 		setIsLoggedIn(false);

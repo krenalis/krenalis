@@ -12,6 +12,7 @@ import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSetting
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import InitialSchema from './InitialSchema.json';
 import * as icons from '../../../constants/icons';
+import { IS_DOCKER_KEY } from '../../../constants/storage';
 
 const postgresqlIcon = (
 	<img
@@ -32,7 +33,7 @@ const snowflakeIcon = (
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>(
-		localStorage.getItem('meergo_ui_is_docker') != null ? 'PostgreSQL-Docker' : 'PostgreSQL',
+		localStorage.getItem(IS_DOCKER_KEY) != null ? 'PostgreSQL-Docker' : 'PostgreSQL',
 	);
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
@@ -147,14 +148,14 @@ const WorkspaceCreate = () => {
 			setSelectedWorkspace(id);
 			setIsLoadingState(true);
 			redirect('connections');
-			if (localStorage.getItem('meergo_ui_is_docker') != null) {
-				localStorage.removeItem('meergo_ui_is_docker');
+			if (localStorage.getItem(IS_DOCKER_KEY) != null) {
+				localStorage.removeItem(IS_DOCKER_KEY);
 			}
 		}
 	};
 
 	const hasWorkspaces = workspaces.length > 0;
-	const isDocker = localStorage.getItem('meergo_ui_is_docker') != null;
+	const isDocker = localStorage.getItem(IS_DOCKER_KEY) != null;
 
 	return (
 		<div className='workspace-create'>

@@ -14,6 +14,7 @@ import TransformedConnector from '../../../lib/core/connector';
 import * as marked from 'marked';
 import { connectorsInfo } from '../../../lib/api/connectorsInfo';
 import { ConnectorInfo } from '../../../lib/api/types/connector';
+import { ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_NAME_KEY } from '../../../constants/storage';
 
 const ConnectorsList = () => {
 	const [additionalConnectorsInfo, setAdditionalConnectorsInfo] = useState<ConnectorInfo[]>([]);
@@ -124,8 +125,8 @@ const ConnectorsList = () => {
 			if (!c.authConfigured) {
 				return;
 			}
-			localStorage.setItem('meergo_ui_add_connector_name', c.name);
-			localStorage.setItem('meergo_ui_add_connection_role', connectionRole);
+			localStorage.setItem(ADD_CONNECTOR_NAME_KEY, c.name);
+			localStorage.setItem(ADD_CONNECTION_ROLE_KEY, connectionRole);
 			let res: authCodeURLResponse;
 			try {
 				res = await api.connectors.authCodeURL(c.name, connectionRole as Role);

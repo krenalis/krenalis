@@ -13,6 +13,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberToSet } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
 import { useLocation } from 'react-router-dom';
+import { IS_PASSWORDLESS_KEY } from '../../../constants/storage';
 
 const Member = () => {
 	const [avatar, setAvatar] = useState<MemberAvatar | null>(null);
@@ -193,7 +194,7 @@ const Member = () => {
 		if (password != null && isPasswordless) {
 			// The user has updated their password, so they are no
 			// longer in passwordless mode.
-			localStorage.removeItem('meergo_ui_is_passwordless');
+			localStorage.removeItem(IS_PASSWORDLESS_KEY);
 			setIsPasswordless(false);
 		}
 		setTimeout(() => {

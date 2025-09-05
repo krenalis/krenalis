@@ -5,6 +5,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Link } from '../../base/Link/Link';
+import { ADD_CONNECTION_ID_KEY, ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_NAME_KEY } from '../../../constants/storage';
 
 const errorMessageByOauthErrorCode = {
 	invalid_request:
@@ -28,7 +29,7 @@ const OAuth = () => {
 
 	useEffect(() => {
 		const fetchOAuthToken = async () => {
-			const connectorName = localStorage.getItem('meergo_ui_add_connector_name');
+			const connectorName = localStorage.getItem(ADD_CONNECTOR_NAME_KEY);
 			const connector = connectors.find((c) => c.name === connectorName);
 			if (connector == null) {
 				console.error(`connector with name ${connectorName} does not exist`);
@@ -57,9 +58,9 @@ const OAuth = () => {
 				setErrorMessage(`${connector.name} didn't respond with a valid authentication code.`);
 				return;
 			}
-			const connectionRole = localStorage.getItem('meergo_ui_add_connection_role');
-			localStorage.removeItem('meergo_ui_add_connection_id');
-			localStorage.removeItem('meergo_ui_add_connection_role');
+			const connectionRole = localStorage.getItem(ADD_CONNECTION_ROLE_KEY);
+			localStorage.removeItem(ADD_CONNECTION_ID_KEY);
+			localStorage.removeItem(ADD_CONNECTION_ROLE_KEY);
 			let authToken: string;
 			try {
 				authToken = await api.workspaces.authToken(connectorName, authCode);

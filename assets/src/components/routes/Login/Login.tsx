@@ -6,6 +6,7 @@ import AppContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 import { useSearchParams } from 'react-router-dom';
 import * as icons from '../../../constants/icons';
+import { IS_DOCKER_KEY, IS_PASSWORDLESS_KEY } from '../../../constants/storage';
 
 const Login = () => {
 	const [email, setEmail] = useState<string>('');
@@ -42,10 +43,10 @@ const Login = () => {
 				// Automatically login the user in passwordless mode.
 				setIsLoggedIn(true);
 				setIsLoadingState(true);
-				localStorage.setItem('meergo_ui_is_passwordless', '1');
+				localStorage.setItem(IS_PASSWORDLESS_KEY, '1');
 				// Give the user the ability to have the warehouse based
 				// on the PostgreSQL instance provided by Docker.
-				localStorage.setItem('meergo_ui_is_docker', '1');
+				localStorage.setItem(IS_DOCKER_KEY, '1');
 				setIsPasswordless(true);
 				setIsTryingPasswordlessLogin(false);
 				return;
@@ -53,7 +54,7 @@ const Login = () => {
 				// Reset any previous Docker-based state if the
 				// application was launched in a Docker environment but
 				// is no longer running in that mode.
-				localStorage.removeItem('meergo_ui_is_docker');
+				localStorage.removeItem(IS_DOCKER_KEY);
 			}
 			try {
 				[, authError] = await api.login('acme@open2b.com', 'foopass2', true);
@@ -66,7 +67,7 @@ const Login = () => {
 				// Automatically login the user in passwordless mode.
 				setIsLoggedIn(true);
 				setIsLoadingState(true);
-				localStorage.setItem('meergo_ui_is_passwordless', '1');
+				localStorage.setItem(IS_PASSWORDLESS_KEY, '1');
 				setIsPasswordless(true);
 			}
 			setIsTryingPasswordlessLogin(false);

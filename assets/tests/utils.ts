@@ -3,6 +3,7 @@ import API from '../src/lib/api/api';
 import { Property } from '../src/lib/api/types/types';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { IS_PASSWORDLESS_KEY, WORKSPACE_ID_KEY } from '../src/constants/storage';
 
 interface Config {
 	baseURL: string;
@@ -22,24 +23,29 @@ const adminURL = `${config.baseURL}/${adminPath}`;
 const login = async (page: Page) => {
 	await page.goto(`${adminURL}/`);
 	await page.evaluate(
-		async ({ url, workspace }) => {
-			localStorage.setItem('meergo_ui_workspace_id', String(workspace));
+		async ({ url, workspace, workspaceIDKey }) => {
+			localStorage.setItem(workspaceIDKey, String(workspace));
 			const api = new (window as any).API(url, workspace) as API;
 			await api.login('test@open2b.com', 'foopass2');
 		},
-		{ url: config.baseURL, workspace: config.workspaceID },
+		{ url: config.baseURL, workspace: config.workspaceID, workspaceIDKey: WORKSPACE_ID_KEY },
 	);
 };
 
 const logout = async (page: Page) => {
 	await page.evaluate(
-		async ({ url, workspace }) => {
+		async ({ url, workspace, workspaceIDKey, isPasswordlessKey }) => {
 			const api = new (window as any).API(url, workspace) as API;
 			await api.logout();
-			localStorage.removeItem('meergo_ui_workspace_id');
-			localStorage.removeItem('meergo_ui_is_passwordless');
+			localStorage.removeItem(workspaceIDKey);
+			localStorage.removeItem(isPasswordlessKey);
 		},
-		{ url: config.baseURL, workspace: config.workspaceID },
+		{
+			url: config.baseURL,
+			workspace: config.workspaceID,
+			workspaceIDKey: WORKSPACE_ID_KEY,
+			isPasswordlessKey: IS_PASSWORDLESS_KEY,
+		},
 	);
 	await page.goto(`${adminURL}/`);
 };

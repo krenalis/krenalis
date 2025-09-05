@@ -17,6 +17,7 @@ import AppContext from '../../../context/AppContext';
 import { LatestIdentityResolution } from '../../../lib/api/types/workspace';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { formatNumber } from '../../../utils/formatNumber';
+import { USERS_PROPERTIES_KEY } from '../../../constants/storage';
 
 const UsersList = () => {
 	const [selectedUser, setSelectedUser] = useState<string>('');
@@ -97,7 +98,7 @@ const UsersList = () => {
 			}
 			updatedProps.push(cp);
 		}
-		localStorage.setItem('meergo_ui_users_properties', JSON.stringify(updatedProps));
+		localStorage.setItem(USERS_PROPERTIES_KEY, JSON.stringify(updatedProps));
 		fetchUsers();
 	};
 

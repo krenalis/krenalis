@@ -6,6 +6,7 @@ import { UserProperty } from './Users.types';
 import { ObjectType } from '../../../lib/api/types/types';
 import { FindUsersResponse, ResponseUser } from '../../../lib/api/types/responses';
 import { flattenSchema } from '../../../lib/core/action';
+import { USERS_PROPERTIES_KEY } from '../../../constants/storage';
 
 const DEFAULT_USER_LIMIT = 1000;
 
@@ -46,14 +47,14 @@ const useUsers = () => {
 		}
 
 		// check if previous users properties are already saved in the storage.
-		const storageProperties = localStorage.getItem('meergo_ui_users_properties');
+		const storageProperties = localStorage.getItem(USERS_PROPERTIES_KEY);
 		let preferences: UserProperty[] = [];
 		if (storageProperties != null) {
 			try {
 				preferences = JSON.parse(storageProperties);
 			} catch (err) {
 				// the value of the properties in the storage is corrupted.
-				localStorage.removeItem('meergo_ui_users_properties');
+				localStorage.removeItem(USERS_PROPERTIES_KEY);
 			}
 		}
 
@@ -115,7 +116,7 @@ const useUsers = () => {
 		setUsersProperties(toShow);
 
 		// update the value of the properties in the storage.
-		localStorage.setItem('meergo_ui_users_properties', JSON.stringify(toShow));
+		localStorage.setItem(USERS_PROPERTIES_KEY, JSON.stringify(toShow));
 
 		// fetch the users.
 		let res: FindUsersResponse;
