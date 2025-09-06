@@ -18,8 +18,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/util"
+	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 

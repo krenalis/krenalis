@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/transformers"
+	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/types"
 )
 

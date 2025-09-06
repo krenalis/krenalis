@@ -19,9 +19,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/core/testconnector"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/testutils"
 )
 
 func TestSendEvents(t *testing.T) {
@@ -41,7 +40,7 @@ func TestSendEvents(t *testing.T) {
 	}
 
 	// Instantiate the Klaviyo connector, with a specific settings for testing.
-	app, err := testutils.NewAppConnector("Klaviyo", settings)
+	app, err := testconnector.NewApp("Klaviyo", settings)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +64,7 @@ func TestSendEvents(t *testing.T) {
 			events: []*meergo.Event{
 				{
 					ID: "019813cc-6cbb-77a5-9e13-e57724067288",
-					Received: events.ReceivedEvent(map[string]any{
+					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId": "199c664f-66ad-49d8-a088-fadd0f1a7acf",
 						"connection":  347182063,
 						"context": map[string]any{
@@ -169,7 +168,7 @@ func TestSendEvents(t *testing.T) {
 			ctx = context.WithValue(ctx, connectorTestString("storeSentHTTPRequest"), &req)
 
 			// Create an iterator over the test events.
-			events := testutils.NewEventsIterator(test.events)
+			events := testconnector.NewEventsIterator(test.events)
 
 			// Actually sends the events.
 			t.Log("calling SendEvents")

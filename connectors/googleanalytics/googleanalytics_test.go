@@ -16,9 +16,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/core/testconnector"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/testutils"
 	"github.com/meergo/meergo/types"
 )
 
@@ -45,7 +44,7 @@ func TestSendEvents(t *testing.T) {
 
 	// Instantiate the Google Analytics connector, with a specific configuration
 	// for testing.
-	app, err := testutils.NewAppConnector("Google Analytics", settings)
+	app, err := testconnector.NewApp("Google Analytics", settings)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +63,7 @@ func TestSendEvents(t *testing.T) {
 			events: []*meergo.Event{
 				{
 					ID: "7ba8676a-3182-4d76-bf6e-21483fc63893",
-					Received: events.ReceivedEvent(map[string]any{
+					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId": "17fba6ee-8673-4ebc-afd6-69e62124e017",
 						"connection":  1323607634,
 						"context": map[string]any{
@@ -124,7 +123,7 @@ func TestSendEvents(t *testing.T) {
 			ctx = context.WithValue(ctx, connectorTestString("storeSentHTTPRequest"), &req)
 
 			// Create an iterator over the test events.
-			events := testutils.NewEventsIterator(test.events)
+			events := testconnector.NewEventsIterator(test.events)
 
 			// Actually sends the events.
 			t.Log("calling SendEvents")

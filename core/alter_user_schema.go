@@ -13,10 +13,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo/core/datastore"
-	"github.com/meergo/meergo/core/datastore/diffschemas"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/internal/datastore"
+	"github.com/meergo/meergo/core/internal/datastore/diffschemas"
+	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/types"
 )
 

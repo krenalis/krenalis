@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/connectors"
+	"github.com/meergo/meergo/core/internal/connectors"
 )
 
 func Test_newPathPlaceholderReplacer(t *testing.T) {

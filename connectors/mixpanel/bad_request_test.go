@@ -13,8 +13,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/events"
-	"github.com/meergo/meergo/testutils"
+	"github.com/meergo/meergo/core/testconnector"
 	"github.com/meergo/meergo/types"
 )
 
@@ -31,7 +30,7 @@ func TestBadRequest(t *testing.T) {
 
 	event := &meergo.Event{
 		ID: "7ba8676a-3182-4d76-bf6e-21483fc63893",
-		Received: events.ReceivedEvent(map[string]any{
+		Received: testconnector.ReceivedEvent(map[string]any{
 			"anonymousId": "17fba6ee-8673-4ebc-afd6-69e62124e017",
 			"connection":  1323607634,
 			"context": map[string]any{
@@ -73,7 +72,7 @@ func TestBadRequest(t *testing.T) {
 	}
 
 	// Create an iterator over the test events.
-	iter := testutils.NewEventsIterator([]*meergo.Event{event, event})
+	iter := testconnector.NewEventsIterator([]*meergo.Event{event, event})
 
 	// Actually sends the events.
 	t.Log("calling SendEvents")

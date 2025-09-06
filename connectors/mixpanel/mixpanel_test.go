@@ -16,9 +16,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/core/testconnector"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/testutils"
 
 	"github.com/google/uuid"
 )
@@ -32,14 +31,14 @@ func TestSendEvents(t *testing.T) {
 
 	sendAndTestEvent := func(t *testing.T, event *meergo.Event, expected []json.Value) {
 		req := new(http.Request)
-		ctx := context.WithValue(t.Context(), testutils.CaptureRequestContextKey, req)
-		iter := testutils.NewEventsIterator([]*meergo.Event{event})
+		ctx := context.WithValue(t.Context(), testconnector.CaptureRequestContextKey, req)
+		iter := testconnector.NewEventsIterator([]*meergo.Event{event})
 		err := mixpanel.SendEvents(ctx, iter)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer req.Body.Close()
-		got, err := testutils.DecodeNDJSON(req.Body, contentEncoding)
+		got, err := testconnector.DecodeNDJSON(req.Body, contentEncoding)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -108,14 +107,14 @@ func TestSendEvents(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		values, err := testutils.TransformEvent(schema, received, nil)
+		values, err := testconnector.TransformEvent(schema, received, nil)
 		if err != nil {
 			t.Fatalf("cannot transform the 'order_completed' event: %s", err)
 		}
 
 		event := &meergo.Event{
 			ID:       uuid.NewString(),
-			Received: events.ReceivedEvent(received),
+			Received: testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "order_completed",
 				Schema: schema,
@@ -209,14 +208,14 @@ func TestSendEvents(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		values, err := testutils.TransformEvent(schema, received, nil)
+		values, err := testconnector.TransformEvent(schema, received, nil)
 		if err != nil {
 			t.Fatalf("cannot transform the 'product_purchased' event: %s", err)
 		}
 
 		event := &meergo.Event{
 			ID:       uuid.NewString(),
-			Received: events.ReceivedEvent(received),
+			Received: testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "product_purchased",
 				Schema: schema,
@@ -309,7 +308,7 @@ func TestSendEvents(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		values, err := testutils.TransformEvent(schema, received, map[string]string{
+		values, err := testconnector.TransformEvent(schema, received, map[string]string{
 			"event":      "event",
 			"properties": `map("product_id",properties.product_id)`,
 		})
@@ -319,7 +318,7 @@ func TestSendEvents(t *testing.T) {
 
 		event := &meergo.Event{
 			ID:       uuid.NewString(),
-			Received: events.ReceivedEvent(received),
+			Received: testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "track",
 				Schema: schema,
@@ -398,7 +397,7 @@ func TestSendEvents(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		values, err := testutils.TransformEvent(schema, received, map[string]string{
+		values, err := testconnector.TransformEvent(schema, received, map[string]string{
 			"event": `"Viewed " name`,
 			"properties": `map(` +
 				`"category",properties.category,` +
@@ -413,7 +412,7 @@ func TestSendEvents(t *testing.T) {
 
 		event := &meergo.Event{
 			ID:       uuid.NewString(),
-			Received: events.ReceivedEvent(received),
+			Received: testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "page",
 				Schema: schema,
@@ -502,7 +501,7 @@ func TestSendEvents(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		values, err := testutils.TransformEvent(schema, received, map[string]string{
+		values, err := testconnector.TransformEvent(schema, received, map[string]string{
 			"event":      `"Viewed " name`,
 			"properties": `map("filter",properties.filter,"transactionCount",properties.totalTransactions)`,
 		})
@@ -512,7 +511,7 @@ func TestSendEvents(t *testing.T) {
 
 		event := &meergo.Event{
 			ID:       uuid.NewString(),
-			Received: events.ReceivedEvent(received),
+			Received: testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "screen",
 				Schema: schema,
@@ -600,7 +599,7 @@ func newMixpanelForTests(t *testing.T) *Mixpanel {
 	default:
 		t.Fatal("env var MEERGO_TEST_MIXPANEL_DATA_RESIDENCY can only be either US, EU, or IN")
 	}
-	app, err := testutils.NewAppConnector("Mixpanel", s)
+	app, err := testconnector.NewApp("Mixpanel", s)
 	if err != nil {
 		t.Fatal(err)
 	}

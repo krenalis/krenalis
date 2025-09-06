@@ -28,11 +28,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/datastore"
-	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/util"
+	"github.com/meergo/meergo/core/internal/datastore"
+	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 

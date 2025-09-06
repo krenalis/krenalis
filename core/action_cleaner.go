@@ -20,10 +20,10 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/backoff"
-	"github.com/meergo/meergo/core/db"
-	"github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/transformers"
+	"github.com/meergo/meergo/core/internal/db"
+	"github.com/meergo/meergo/core/internal/metrics"
+	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/core/internal/transformers"
 )
 
 // backoffBase is the base used for the backoff.
