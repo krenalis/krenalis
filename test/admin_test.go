@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/testimages"
 
@@ -94,7 +93,7 @@ func TestAdmin(t *testing.T) {
 
 	// Initialize the PostgreSQL database referenced in actions.
 	{
-		db, err := db.Open(&db.Options{
+		pool, err := meergotester.ConnectionPool(t.Context(), &meergotester.DBSettings{
 			Host:     dbHost,
 			Port:     dbPort,
 			Username: dbUsername,
@@ -107,7 +106,7 @@ func TestAdmin(t *testing.T) {
 		}
 		pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		err = db.Ping(pingCtx)
+		err = pool.Ping(pingCtx)
 		if err != nil {
 			t.Fatalf("cannot connect to PostgreSQL: %s", err)
 		}
@@ -117,7 +116,7 @@ func TestAdmin(t *testing.T) {
 			first_name VARCHAR(300),
 			last_name VARCHAR(300)
 		);`
-		_, err = db.Exec(context.Background(), query)
+		_, err = pool.Exec(context.Background(), query)
 		if err != nil {
 			t.Fatalf("error while executing query on PostgreSQL database: %s", err)
 		}

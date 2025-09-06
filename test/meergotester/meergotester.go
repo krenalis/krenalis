@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -31,10 +32,10 @@ import (
 
 	"github.com/meergo/meergo/cmd"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/testimages"
 	"github.com/meergo/meergo/types"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -450,20 +451,13 @@ func (c *Meergo) Start() {
 // CountEventsInWarehouse returns the counts of events stored in the "events"
 // table of the testing data warehouse.
 func (c *Meergo) CountEventsInWarehouse(ctx context.Context) int {
-	db, err := db.Open(&db.Options{
-		Host:     testsSettings.Warehouse.Host,
-		Port:     testsSettings.Warehouse.Port,
-		Username: testsSettings.Warehouse.Username,
-		Password: testsSettings.Warehouse.Password,
-		Database: testsSettings.Warehouse.Database,
-		Schema:   testsSettings.Warehouse.Schema,
-	})
+	pool, err := ConnectionPool(ctx, testsSettings.Warehouse)
 	if err != nil {
 		c.t.Fatalf("cannot open warehouse for executing query tests: %s", err)
 	}
-	defer db.Close()
+	defer pool.Close()
 	var count int
-	err = db.QueryRow(ctx, `SELECT COUNT(*) AS "count" FROM "events"`).Scan(&count)
+	err = pool.QueryRow(ctx, `SELECT COUNT(*) AS "count" FROM "events"`).Scan(&count)
 	if err != nil {
 		c.t.Fatalf("cannot execute count query: %s", err)
 	}
@@ -549,40 +543,26 @@ func initializePostgreSQLDatabase(ctx context.Context, dbSetts *DBSettings) erro
 	if err != nil {
 		return err
 	}
-	db, err := db.Open(&db.Options{
-		Host:     dbSetts.Host,
-		Port:     dbSetts.Port,
-		Username: dbSetts.Username,
-		Password: dbSetts.Password,
-		Database: dbSetts.Database,
-		Schema:   dbSetts.Schema,
-	})
+	pool, err := ConnectionPool(ctx, dbSetts)
 	if err != nil {
 		return fmt.Errorf("cannot establish connection to database: %s", err)
 	}
-	defer db.Close()
-	err = execQueries(ctx, db, "../database/initialization/1 - postgres.sql")
+	defer pool.Close()
+	err = execQueries(ctx, pool, "../database/initialization/1 - postgres.sql")
 	return err
 }
 
 // ExecQueryTestDatabase executes a query on the test database.
 func (c *Meergo) ExecQueryTestDatabase(ctx context.Context, query string, args ...any) {
-	db, err := db.Open(&db.Options{
-		Host:     testsSettings.Database.Host,
-		Port:     testsSettings.Database.Port,
-		Username: testsSettings.Database.Username,
-		Password: testsSettings.Database.Password,
-		Database: testsSettings.Database.Database,
-		Schema:   testsSettings.Database.Schema,
-	})
+	pool, err := ConnectionPool(ctx, testsSettings.Database)
 	if err != nil {
-		c.t.Fatalf("cannot open database for executing query tests: %s", err)
+		c.t.Fatalf("cannot establish connection to database: %s", err)
 	}
-	_, err = db.Exec(ctx, query, args...)
+	defer pool.Close()
+	_, err = pool.Exec(ctx, query, args...)
 	if err != nil {
 		c.t.Fatalf("query %q failed: %s", query, err)
 	}
-	db.Close()
 }
 
 // QueryRowTestDatabase queries a row on the test database, scanning it into
@@ -591,19 +571,12 @@ func (c *Meergo) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 	if reflect.TypeOf(dest).Kind() != reflect.Pointer {
 		panic("dest must be a pointer")
 	}
-	db, err := db.Open(&db.Options{
-		Host:     testsSettings.Database.Host,
-		Port:     testsSettings.Database.Port,
-		Username: testsSettings.Database.Username,
-		Password: testsSettings.Database.Password,
-		Database: testsSettings.Database.Database,
-		Schema:   testsSettings.Database.Schema,
-	})
+	pool, err := ConnectionPool(ctx, testsSettings.Database)
 	if err != nil {
-		c.t.Fatalf("cannot open database for executing query tests: %s", err)
+		c.t.Fatalf("cannot establish connection to database: %s", err)
 	}
-	defer db.Close()
-	err = db.QueryRow(ctx, query, args...).Scan(dest)
+	defer pool.Close()
+	err = pool.QueryRow(ctx, query, args...).Scan(dest)
 	if err != nil {
 		c.t.Fatalf("cannot scan result of QueryRow: %s", err)
 	}
@@ -617,7 +590,7 @@ func (c *Meergo) WorkspaceID() int {
 
 // execQueries executes on db the queries read from queriesFile, separated by a
 // ";" character and a newline.
-func execQueries(ctx context.Context, db *db.DB, queriesFile string) error {
+func execQueries(ctx context.Context, pool *pgxpool.Pool, queriesFile string) error {
 
 	content, err := os.ReadFile(queriesFile)
 	if err != nil {
@@ -638,7 +611,7 @@ func execQueries(ctx context.Context, db *db.DB, queriesFile string) error {
 		if query == "" {
 			continue
 		}
-		_, err := db.Exec(ctx, query)
+		_, err := pool.Exec(ctx, query)
 		if err != nil {
 			return err
 		}
@@ -647,6 +620,27 @@ func execQueries(ctx context.Context, db *db.DB, queriesFile string) error {
 
 	return nil
 
+}
+
+func ConnectionPool(ctx context.Context, s *DBSettings) (*pgxpool.Pool, error) {
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(s.Username, s.Password),
+		Host:   net.JoinHostPort(s.Host, strconv.Itoa(s.Port)),
+		Path:   "/" + url.PathEscape(s.Database),
+	}
+	if s.Schema != "" {
+		u.RawQuery = "search_path=" + url.QueryEscape(s.Schema)
+	}
+	config, err := pgxpool.ParseConfig(u.String())
+	if err != nil {
+		return nil, err
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	return pool, nil
 }
 
 var databaseNameRegexp = regexp.MustCompile(`^test_[a-zA-Z0-9_]+$`)
