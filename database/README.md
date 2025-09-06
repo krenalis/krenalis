@@ -13,4 +13,4 @@ It’s therefore important to carefully check (1) which files are in the [initia
 
 ## About the [`updates.sql`](`updates.sql`) file
 
-The [`updates.sql`](`updates.sql`) file contains various update queries for the PostgreSQL database and is used internally by Meergo developers.
+The [`updates.sql`](updates.sql) file contains various update queries for the PostgreSQL database and is used internally by Meergo developers.
