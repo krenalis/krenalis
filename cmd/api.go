@@ -15,7 +15,6 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
@@ -90,7 +89,7 @@ func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) 
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return events.Schema, nil
+	return core.EventSchema(), nil
 }
 
 // EventsSettings returns the events settings.

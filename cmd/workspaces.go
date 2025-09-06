@@ -15,7 +15,6 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
@@ -459,7 +458,7 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
-	events, _ := types.Marshal(evts, types.Array(events.Schema))
+	events, _ := types.Marshal(evts, types.Array(core.EventSchema()))
 
 	return map[string]any{"events": events}, nil
 }
@@ -875,7 +874,7 @@ func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 
-	events, _ := types.Marshal(evts, types.Array(events.Schema))
+	events, _ := types.Marshal(evts, types.Array(core.EventSchema()))
 
 	return map[string]any{"events": events}, nil
 }

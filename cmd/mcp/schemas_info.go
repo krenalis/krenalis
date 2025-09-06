@@ -10,8 +10,7 @@ package mcp
 import (
 	"strings"
 
-	"github.com/meergo/meergo/core/datastore"
-	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/types"
 )
 
@@ -65,11 +64,11 @@ var eventSchemaInfoForMCPClient []any
 
 func init() {
 	// Initialize eventSchemaInfoForMCPClient.
-	for path, p := range types.WalkAll(events.Schema) {
+	for path, p := range types.WalkAll(core.EventSchema()) {
 		if p.Type.Kind() == types.ObjectKind {
 			continue
 		}
-		column := datastore.EventColumnByPath(path)
+		column := core.EventColumnByPath(path)
 		info := map[string]any{
 			"eventSchemaProperty": map[string]any{
 				"path": path,

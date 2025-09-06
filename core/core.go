@@ -30,6 +30,7 @@ import (
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/core/events"
 	coremetrics "github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
@@ -1574,6 +1575,18 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 		return err
 	}
 	return nil
+}
+
+// EventColumnByPath returns the meergo.Column corresponding to the property of
+// the events schema with the specified path.
+// propertyPath must always refer to an existing property in the events schema.
+func EventColumnByPath(propertyPath string) meergo.Column {
+	return datastore.EventColumnByPath(propertyPath)
+}
+
+// EventSchema returns the event schema.
+func EventSchema() types.Type {
+	return events.Schema
 }
 
 // categoryBitmaskToCategoryNames converts a bitmask representing a connector's
