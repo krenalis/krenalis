@@ -18,7 +18,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -511,7 +510,7 @@ func ValidateJSON(name string, v any) (any, error) {
 func ValidateInet(name string, s string) (any, error) {
 	ip, err := netip.ParseAddr(s)
 	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an inet type", s, name)
+		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an inet type", name)
 	}
 	return ip.String(), nil
 }
@@ -519,25 +518,25 @@ func ValidateInet(name string, s string) (any, error) {
 // ValidateText validates a text value.
 func ValidateText(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which contains invalid UTF-8 characters", errors.Abbreviate(s, 20), name)
+		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
 	}
 	if values := t.Values(); values != nil {
 		if !slices.Contains(values, s) {
-			return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is not valid", s, name)
+			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not valid", name)
 		}
 		return s, nil
 	}
 	if rx := t.Regexp(); rx != nil {
 		if !rx.MatchString(s) {
-			return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is not valid", s, name)
+			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not valid", name)
 		}
 		return s, nil
 	}
 	if max, ok := t.ByteLen(); ok && len(s) > max {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d bytes", errors.Abbreviate(s, 20), name, max)
+		return nil, fmt.Errorf("data warehouse returned a value for column %s, which is longer than %d bytes", name, max)
 	}
 	if max, ok := t.CharLen(); ok && utf8.RuneCountInString(s) > max {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d characters", errors.Abbreviate(s, 20), name, max)
+		return nil, fmt.Errorf("data warehouse returned a value for column %s, which is longer than %d characters", name, max)
 	}
 	return s, nil
 }
