@@ -57,7 +57,7 @@ Now proceed to add a Mixpanel data destination:
 6. In the **Name** field, enter a name for the destination to easily recognize it later.
 7. In the **Project ID** field, enter the Project ID you copied earlier.
 8. In the **Project Token** field, enter the Project Token you copied earlier.
-9. Select **This project is configured to use Mixpanel's EU data residency** if your project is set up for EU data residency.
+9. In the **Data Residency** field, select the project's data residency.
 10. Click **Add**.
 
 ### Track user sessions

@@ -68,9 +68,9 @@ type Mixpanel struct {
 }
 
 type innerSettings struct {
-	ProjectID           string
-	ProjectToken        string
-	UseEuropeanEndpoint bool
+	ProjectID     string
+	ProjectToken  string
+	DataResidency string
 }
 
 // New returns a new Mixpanel connector instance.
@@ -219,8 +219,12 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Val
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
-			&meergo.Input{Name: "ProjectToken", Label: "Project token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
-			&meergo.Switch{Name: "UseEuropeanEndpoint", Label: "This project is configured to use Mixpanel's EU data residency"},
+			&meergo.Input{Name: "ProjectToken", Label: "Project Token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
+			&meergo.Select{Name: "DataResidency", Label: "Data Residency", Options: []meergo.Option{
+				{Text: "United States", Value: "US"},
+				{Text: "European Union", Value: "EU"},
+				{Text: "India", Value: "IN"},
+			}},
 		},
 		Settings: settings,
 	}
@@ -235,9 +239,11 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 	if err != nil {
 		return err
 	}
+	// Validate ProjectID.
 	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
 		return meergo.NewInvalidSettingsError("Project ID must be a positive number")
 	}
+	// Validate ProjectToken.
 	if n := len(s.ProjectToken); n < 1 || n > 100 {
 		return meergo.NewInvalidSettingsError("Project Token length must be in range [1,100]")
 	}
@@ -250,6 +256,12 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 		if c < 33 || c > 126 {
 			return meergo.NewInvalidSettingsError("Project Token must contain only valid characters")
 		}
+	}
+	// Validate DataResidency.
+	switch s.DataResidency {
+	case "US", "EU", "IN":
+	default:
+		return meergo.NewInvalidSettingsError("Data Residency must be set to US, EU, or IN")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -544,8 +556,11 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	}
 
 	u := "https://api.mixpanel.com/"
-	if mp.settings.UseEuropeanEndpoint {
+	switch mp.settings.DataResidency {
+	case "EU":
 		u = "https://api-eu.mixpanel.com/"
+	case "IN":
+		u = "https://api-in.mixpanel.com/"
 	}
 	u += "import?strict=1&project_id=" + mp.settings.ProjectID
 

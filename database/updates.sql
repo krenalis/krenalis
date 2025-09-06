@@ -120,3 +120,20 @@ ALTER TABLE actions
     ALTER COLUMN filter TYPE jsonb
         USING NULLIF(filter, '')::jsonb,
     ALTER COLUMN filter DROP NOT NULL;
+
+-- 22
+UPDATE connections
+SET settings =
+    (
+        jsonb_set(
+            (settings::jsonb - 'UseEuropeanEndpoint' - 'DataResidency'),
+            '{DataResidency}',
+            to_jsonb(
+                CASE
+                WHEN (settings::jsonb ->> 'UseEuropeanEndpoint')::boolean THEN 'EU'::text
+                ELSE 'US'::text
+                END
+            )
+        )
+    )::text
+WHERE connector = 'Mixpanel' AND settings::jsonb ? 'UseEuropeanEndpoint';

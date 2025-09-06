@@ -583,26 +583,24 @@ func marshalJSON(data any) json.Value {
 }
 
 func newMixpanelForTests(t *testing.T) *Mixpanel {
-	projectID := os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_ID")
-	if projectID == "" {
+	var s innerSettings
+	s.ProjectID = os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_ID")
+	if s.ProjectID == "" {
 		t.Fatal("env var MEERGO_TEST_MIXPANEL_PROJECT_ID is required but not provided")
 	}
-	projectToken := os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_TOKEN")
-	if projectToken == "" {
+	s.ProjectToken = os.Getenv("MEERGO_TEST_MIXPANEL_PROJECT_TOKEN")
+	if s.ProjectToken == "" {
 		t.Fatal("env var MEERGO_TEST_MIXPANEL_PROJECT_TOKEN is required but not provided")
 	}
-	useEuropeanEndpoint := os.Getenv("MEERGO_TEST_MIXPANEL_USE_EUROPEAN_ENDPOINT")
-	switch useEuropeanEndpoint {
-	case "", "true", "false":
+	s.DataResidency = os.Getenv("MEERGO_TEST_MIXPANEL_DATA_RESIDENCY")
+	switch s.DataResidency {
+	case "US", "EU", "IN":
+	case "":
+		t.Fatal("env var MEERGO_TEST_MIXPANEL_DATA_RESIDENCY is required but not provided")
 	default:
-		t.Fatal("env var MEERGO_TEST_MIXPANEL_USE_EUROPEAN_ENDPOINT, if provided, can only be either 'true' or 'false'")
+		t.Fatal("env var MEERGO_TEST_MIXPANEL_DATA_RESIDENCY can only be either US, EU, or IN")
 	}
-	settings := innerSettings{
-		ProjectID:           projectID,
-		ProjectToken:        projectToken,
-		UseEuropeanEndpoint: useEuropeanEndpoint == "true",
-	}
-	app, err := testutils.NewAppConnector("Mixpanel", settings)
+	app, err := testutils.NewAppConnector("Mixpanel", s)
 	if err != nil {
 		t.Fatal(err)
 	}
