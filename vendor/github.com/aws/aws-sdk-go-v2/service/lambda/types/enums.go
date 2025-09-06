@@ -234,6 +234,47 @@ func (InvokeMode) Values() []InvokeMode {
 	}
 }
 
+type KafkaSchemaRegistryAuthType string
+
+// Enum values for KafkaSchemaRegistryAuthType
+const (
+	KafkaSchemaRegistryAuthTypeBasicAuth                KafkaSchemaRegistryAuthType = "BASIC_AUTH"
+	KafkaSchemaRegistryAuthTypeClientCertificateTlsAuth KafkaSchemaRegistryAuthType = "CLIENT_CERTIFICATE_TLS_AUTH"
+	KafkaSchemaRegistryAuthTypeServerRootCaCertificate  KafkaSchemaRegistryAuthType = "SERVER_ROOT_CA_CERTIFICATE"
+)
+
+// Values returns all known values for KafkaSchemaRegistryAuthType. Note that this
+// can be expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (KafkaSchemaRegistryAuthType) Values() []KafkaSchemaRegistryAuthType {
+	return []KafkaSchemaRegistryAuthType{
+		"BASIC_AUTH",
+		"CLIENT_CERTIFICATE_TLS_AUTH",
+		"SERVER_ROOT_CA_CERTIFICATE",
+	}
+}
+
+type KafkaSchemaValidationAttribute string
+
+// Enum values for KafkaSchemaValidationAttribute
+const (
+	KafkaSchemaValidationAttributeKey   KafkaSchemaValidationAttribute = "KEY"
+	KafkaSchemaValidationAttributeValue KafkaSchemaValidationAttribute = "VALUE"
+)
+
+// Values returns all known values for KafkaSchemaValidationAttribute. Note that
+// this can be expanded in the future, and so it is only as up to date as the
+// client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (KafkaSchemaValidationAttribute) Values() []KafkaSchemaValidationAttribute {
+	return []KafkaSchemaValidationAttribute{
+		"KEY",
+		"VALUE",
+	}
+}
+
 type LastUpdateStatus string
 
 // Enum values for LastUpdateStatus
@@ -467,6 +508,7 @@ const (
 	RuntimeJava17         Runtime = "java17"
 	RuntimeRuby32         Runtime = "ruby3.2"
 	RuntimeRuby33         Runtime = "ruby3.3"
+	RuntimeRuby34         Runtime = "ruby3.4"
 	RuntimePython311      Runtime = "python3.11"
 	RuntimeNodejs20x      Runtime = "nodejs20.x"
 	RuntimeProvidedal2023 Runtime = "provided.al2023"
@@ -515,6 +557,7 @@ func (Runtime) Values() []Runtime {
 		"java17",
 		"ruby3.2",
 		"ruby3.3",
+		"ruby3.4",
 		"python3.11",
 		"nodejs20.x",
 		"provided.al2023",
@@ -522,6 +565,26 @@ func (Runtime) Values() []Runtime {
 		"java21",
 		"python3.13",
 		"nodejs22.x",
+	}
+}
+
+type SchemaRegistryEventRecordFormat string
+
+// Enum values for SchemaRegistryEventRecordFormat
+const (
+	SchemaRegistryEventRecordFormatJson   SchemaRegistryEventRecordFormat = "JSON"
+	SchemaRegistryEventRecordFormatSource SchemaRegistryEventRecordFormat = "SOURCE"
+)
+
+// Values returns all known values for SchemaRegistryEventRecordFormat. Note that
+// this can be expanded in the future, and so it is only as up to date as the
+// client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (SchemaRegistryEventRecordFormat) Values() []SchemaRegistryEventRecordFormat {
+	return []SchemaRegistryEventRecordFormat{
+		"JSON",
+		"SOURCE",
 	}
 }
 
