@@ -26,7 +26,6 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/state"
 
 	"github.com/getsentry/sentry-go"
 )
@@ -263,18 +262,18 @@ func settingsFromEnv() (*Settings, error) {
 	// OAuth.
 	if clientID := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_ID"); clientID != "" {
 		if settings.OAuth == nil {
-			settings.OAuth = make(map[string]*state.ConnectorOAuth)
+			settings.OAuth = make(map[string]*core.ConnectorOAuth)
 		}
-		settings.OAuth["HubSpot"] = &state.ConnectorOAuth{
+		settings.OAuth["HubSpot"] = &core.ConnectorOAuth{
 			ClientID:     clientID,
 			ClientSecret: envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET"),
 		}
 	}
 	if clientID := envVars.Get("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID"); clientID != "" {
 		if settings.OAuth == nil {
-			settings.OAuth = make(map[string]*state.ConnectorOAuth)
+			settings.OAuth = make(map[string]*core.ConnectorOAuth)
 		}
-		settings.OAuth["Mailchimp"] = &state.ConnectorOAuth{
+		settings.OAuth["Mailchimp"] = &core.ConnectorOAuth{
 			ClientID:     clientID,
 			ClientSecret: envVars.Get("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET"),
 		}

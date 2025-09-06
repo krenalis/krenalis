@@ -28,7 +28,6 @@ import (
 
 	"github.com/meergo/meergo/cmd/mcp"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/metrics"
 
 	"github.com/getsentry/sentry-go"
@@ -71,7 +70,7 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	OAuth map[string]*state.ConnectorOAuth
+	OAuth map[string]*core.ConnectorOAuth
 }
 
 type LambdaConfig struct {

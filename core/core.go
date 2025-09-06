@@ -86,7 +86,7 @@ type Config struct {
 	MaxMindDBPath        string
 	MemberEmailFrom      string
 	SMTP                 SMTPConfig
-	ConnectorsOAuth      map[string]*state.ConnectorOAuth
+	ConnectorsOAuth      map[string]*ConnectorOAuth
 	SentryTelemetryLevel TelemetryLevel
 }
 
@@ -98,6 +98,12 @@ type DBConfig struct {
 	Database       string
 	Schema         string
 	MaxConnections int32 // values less than 2 are treated as 2.
+}
+
+// ConnectorOAuth represents the OAuth client credentials for a connector.
+type ConnectorOAuth struct {
+	ClientID     string
+	ClientSecret string
 }
 
 type LambdaConfig struct {
@@ -200,7 +206,17 @@ func New(conf *Config) (*Core, error) {
 	// Instantiate the state.
 	sendStats := conf.SentryTelemetryLevel == TelemetryLevelAll ||
 		conf.SentryTelemetryLevel == TelemetryLevelStats
-	core.state, err = state.New(db, conf.ConnectorsOAuth, sendStats)
+	var connectorsOAuth map[string]*state.ConnectorOAuth
+	if conf.ConnectorsOAuth != nil {
+		connectorsOAuth = map[string]*state.ConnectorOAuth{}
+		for name, oAuth := range conf.ConnectorsOAuth {
+			connectorsOAuth[name] = &state.ConnectorOAuth{
+				ClientID:     oAuth.ClientID,
+				ClientSecret: oAuth.ClientSecret,
+			}
+		}
+	}
+	core.state, err = state.New(db, connectorsOAuth, sendStats)
 	if err != nil {
 		return nil, err
 	}
