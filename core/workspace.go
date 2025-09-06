@@ -19,12 +19,12 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/collector"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/db"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
-	"github.com/meergo/meergo/core/events/collector"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/util"

@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/meergo/meergo/core/collector/sender"
 	"github.com/meergo/meergo/core/events"
-	"github.com/meergo/meergo/core/events/collector/sender"
 	"github.com/meergo/meergo/core/filters"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"

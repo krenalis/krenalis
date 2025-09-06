@@ -14,9 +14,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/meergo/meergo/core/collector/sender"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/events"
-	"github.com/meergo/meergo/core/events/collector/sender"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
