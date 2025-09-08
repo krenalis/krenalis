@@ -157,6 +157,94 @@ func TestSendEvents(t *testing.T) {
 				},
 			},
 		},
+		// Event without properties.
+		{
+			events: []*meergo.Event{
+				{
+					ID: "019813cc-6cbb-77a5-9e13-e57724067288",
+					Received: testconnector.ReceivedEvent(map[string]any{
+						"anonymousId": "199c664f-66ad-49d8-a088-fadd0f1a7acf",
+						"connection":  347182063,
+						"context": map[string]any{
+							"browser": map[string]any{
+								"name":  "Other",
+								"other": "Unknown",
+							},
+							"ip": "127.0.0.1",
+							"os": map[string]any{
+								"name": "Other",
+							},
+							"userAgent": "python-requests/2.32.4",
+						},
+						"id":                "34122265-1ad6-47e0-8934-ba50c5f395e5",
+						"messageId":         "8f8e652a-2518-4953-a2ed-c70e0894c791",
+						"originalTimestamp": now,
+						"previousId":        "IBEN72PV6",
+						"receivedAt":        now,
+						"sentAt":            now.Add(-10 * time.Millisecond),
+						"timestamp":         now,
+						"type":              "alias",
+						"userId":            nil,
+					}),
+					Type: meergo.EventTypeInfo{
+						ID:     "create_event",
+						Schema: schema,
+						Values: map[string]any{
+							"metric_name":    "Placed Order",
+							"email":          "bill.joel@klaviyo-demo.com",
+							"value":          9.99,
+							"value_currency": "USD",
+						},
+					},
+				},
+			},
+			expectedRequestBody: map[string]any{
+				"data": map[string]any{
+					"type": "event-bulk-create-job",
+					"attributes": map[string]any{
+						"events-bulk-create": map[string]any{
+							"data": []any{
+								map[string]any{
+									"type": "event-bulk-create",
+									"attributes": map[string]any{
+										"profile": map[string]any{
+											"data": map[string]any{
+												"type": "profile",
+												"attributes": map[string]any{
+													"email": "bill.joel@klaviyo-demo.com",
+												},
+											},
+										},
+										"events": map[string]any{
+											"data": []any{
+												map[string]any{
+													"type": "event",
+													"attributes": map[string]any{
+														"properties":     map[string]any{},
+														"time":           now.Format(time.RFC3339Nano),
+														"value":          9.99,
+														"value_currency": "USD",
+														"unique_id":      "019813cc-6cbb-77a5-9e13-e57724067288",
+														"metric": map[string]any{
+															"data": map[string]any{
+																"type": "metric",
+																"attributes": map[string]any{
+																	"name": "Placed Order",
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {

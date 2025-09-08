@@ -631,8 +631,10 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		_ = bb.EncodeKeyValue("email", email) // email
 		bb.WriteString(`}}},"events":{"data":[`)
 		bb.WriteString(`{"type":"event","attributes":{`)
-		if properties != nil {
-			_ = bb.EncodeKeyValue("properties", properties) // properties
+		if properties == nil { // properties
+			bb.WriteString(`"properties":{},`)
+		} else {
+			_ = bb.EncodeKeyValue("properties", properties)
 		}
 		_ = bb.EncodeKeyValue("time", timestamp) // time
 		if value, ok := event.Type.Values["value"]; ok {
