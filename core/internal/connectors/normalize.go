@@ -54,7 +54,7 @@ func inputValidationErrorf(path string, format string, a ...any) InputValidation
 }
 
 func (err InputValidationError) Error() string {
-	return fmt.Sprintf("property %q ", err.path) + err.msg
+	return fmt.Sprintf("property '%s' ", err.path) + err.msg
 }
 
 func (err InputValidationError) appendKey(key string) InputValidationError {

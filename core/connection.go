@@ -614,7 +614,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 
 	for user := range records.All(ctx) {
 		if user.Err != nil {
-			return nil, "", user.Err
+			return nil, "", errors.Unavailable("%s has returned an invalid user; %s", this.app().Connector(), user.Err)
 		}
 		users = append(users, user.Properties)
 		if records.Last() {
