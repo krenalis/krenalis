@@ -113,20 +113,18 @@ const App = () => {
 
 	useEffect(() => {
 		// Determine whether the current route spans the entire viewport or
-		// includes a sidebar, and set the `isFullscreen` state variable to
-		// ensure proper centering of fixed elements.
-		if (isLoadingState) {
-			setIsFullscreen(true);
-			return;
-		}
+		// includes a sidebar. This helps ensure centered positioning of the
+		// fixed elements and to control the visibility of specific UI elements,
+		// such as the automatically opened tooltip when the user is in
+		// passwordless mode.
 		for (const path of FULLSCREEN_PATHS) {
 			const match = matchPath(path, location.pathname);
 			if (match != null) {
-				setTimeout(() => setIsFullscreen(true), 200);
+				setIsFullscreen(true);
 				return;
 			}
 		}
-		setTimeout(() => setIsFullscreen(false), 200);
+		setIsFullscreen(false);
 	}, [location, isLoadingState]);
 
 	let content: ReactNode;

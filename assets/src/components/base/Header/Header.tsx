@@ -19,17 +19,15 @@ interface HeaderProps {
 const Header = ({ title, member }: HeaderProps) => {
 	const [isTooltipOpen, setIsTooltipOpen] = useState<boolean>(false);
 
-	const { isPasswordless, logout } = useContext(appContext);
+	const { isPasswordless, logout, isFullscreen } = useContext(appContext);
 
 	const location = useLocation();
 
 	const dropdownRef = useRef<any>();
 
 	useEffect(() => {
-		if (isPasswordless) {
-			setTimeout(() => {
-				setIsTooltipOpen(true);
-			}, 300);
+		if (isPasswordless && !isFullscreen) {
+			setIsTooltipOpen(true);
 		}
 	}, []);
 
