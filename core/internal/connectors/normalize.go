@@ -57,6 +57,11 @@ func (err InputValidationError) Error() string {
 	return fmt.Sprintf("property %q ", err.path) + err.msg
 }
 
+func (err InputValidationError) appendKey(key string) InputValidationError {
+	err.path += "[" + strconv.Quote(key) + "]"
+	return err
+}
+
 func (err InputValidationError) prependPath(path string) InputValidationError {
 	err.path = path + "." + err.path
 	return err
@@ -756,6 +761,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 					v := iter.Value().Interface()
 					m[k], err = normalize(name, t, v, false, layouts)
 					if err != nil {
+						if err, ok := err.(InputValidationError); ok {
+							return nil, err.appendKey(k)
+						}
 						return nil, err
 					}
 				}
