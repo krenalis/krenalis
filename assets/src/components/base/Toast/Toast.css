@@ -7,7 +7,7 @@
 
 .toast::part(base) {
 	position: relative;
-	left: calc(var(--sidebar-with) / 2);
+	left: calc(var(--sidebar-width) / 2);
 	color: var(--text-onaccent);
 	border: 0;
 	box-shadow: 2px 1px 19px 0px #00000060;

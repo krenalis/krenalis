@@ -131,7 +131,7 @@ body {
 
 #root > .app {
 	padding-top: var(--header-height);
-	padding-left: var(--sidebar-with);
+	padding-left: var(--sidebar-width);
 }
 
 /* || buttons and links */
@@ -279,7 +279,7 @@ sl-dialog::part(panel) {
 }
 
 sl-dialog::part(base) {
-	padding-left: 280px;
+	padding-left: var(--sidebar-width);
 }
 
 sl-dialog.fullscreen::part(base),

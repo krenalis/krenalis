@@ -4,7 +4,7 @@
 
 .connections-map__content {
 	position: relative;
-	left: calc(var(--sidebar-with) / -2);
+	left: calc(var(--sidebar-width) / -2);
 	max-width: 1600px;
 	margin: 0 auto;
 }
