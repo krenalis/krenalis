@@ -629,8 +629,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					record.Err = errors.New("record's last change time is before 1900 or in the future")
 				}
 				if !r.lastChangeTime.IsZero() && record.LastChangeTime.Before(r.lastChangeTime) {
-					r.err = fmt.Errorf("%s returned a record with a last change %s earlier than the required minimum",
-						r.connector, r.lastChangeTime.Sub(record.LastChangeTime))
+					r.err = fmt.Errorf("%s returned a record whose last change time is earlier than the required minimum", r.connector)
 					return
 				}
 
