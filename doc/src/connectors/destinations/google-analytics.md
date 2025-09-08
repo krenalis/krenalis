@@ -49,7 +49,7 @@ Meergo supports all events from Google Analytics' Measurement Protocol. For each
 
 [Here](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference/events) is a complete list of these events, including documentation for each one as well as for every field associated with each type of event.
 
-Once the type of event you want to send has been determined, you can add the corresponding action from the Meergo interface.
+Once the type of event you want to send has been determined, you can add the corresponding action from the Meergo Admin console.
 
 ## What to do if events don't show up
 
