@@ -1466,7 +1466,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	id, _ := uuid.NewV7() // safe to ignore error in Go 1.24+
 	ev := meergo.Event{
 		ID:       id.String(),
-		Received: events.ReceivedEvent(properties),
+		Received: connectors.ReceivedEvent(properties),
 		Type: meergo.EventTypeInfo{
 			ID:     typ,
 			Schema: outSchema,

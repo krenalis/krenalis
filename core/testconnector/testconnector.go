@@ -17,6 +17,7 @@ import (
 	"net/http"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/connectors/httpclient"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/state"
@@ -91,7 +92,7 @@ func NewApp(name string, settings any) (any, error) {
 // The provided event must conform to the event schema (Schema), otherwise
 // calling methods on the returned value may cause a panic.
 func ReceivedEvent(event map[string]any) meergo.ReceivedEvent {
-	return events.ReceivedEvent(event)
+	return connectors.ReceivedEvent(event)
 }
 
 // TransformEvent transforms an event with a mapping and returned the
