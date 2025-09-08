@@ -446,9 +446,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					together with the base event data.
 				</p>
 				<p>
-					The action already builds and and sends the event to {connection.connector.name} with default
-					fields. By adding extra data, you make the event more complete and useful for segmentation,
-					personalization, or reporting.
+					The action already builds and sends the event to {connection.connector.name} with default fields. By
+					adding extra data, you make the event more complete and useful for segmentation, personalization, or
+					reporting.
 				</p>
 			</>
 		);
