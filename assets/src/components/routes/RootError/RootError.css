@@ -26,3 +26,7 @@
 .root-error .icon-wrapper sl-icon {
 	color: var(--sl-color-primary-500);
 }
+
+.root-error__action {
+	margin-top: 35px;
+}

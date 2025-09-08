@@ -282,7 +282,8 @@ sl-dialog::part(base) {
 	padding-left: 280px;
 }
 
-sl-dialog.fullscreen::part(base) {
+sl-dialog.fullscreen::part(base),
+.root-error sl-dialog::part(base) {
 	padding-left: 0;
 }
 
