@@ -24,8 +24,8 @@ import (
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/metrics"
+	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/json"
@@ -805,11 +805,11 @@ func (this *Workspace) CreateEventListener(size int, filter *Filter) (string, er
 	}
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, events.Schema, state.Destination, state.TargetEvent)
+		_, err := validateFilter(filter, schemas.Event, state.Destination, state.TargetEvent)
 		if err != nil {
 			return "", errors.BadRequest("filter is not valid: %w", err)
 		}
-		where = convertFilterToWhere(filter, events.Schema)
+		where = convertFilterToWhere(filter, schemas.Event)
 	}
 	id, err := this.core.events.observer.CreateListener(size, where)
 	if err != nil {
@@ -883,7 +883,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 		return nil, errors.BadRequest("properties is empty")
 	}
 	propertyByName := map[string]types.Property{}
-	for _, p := range events.Schema.Properties() {
+	for _, p := range schemas.Event.Properties() {
 		propertyByName[p.Name] = p
 	}
 	for _, name := range properties {
@@ -901,14 +901,14 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, events.Schema, state.Destination, state.TargetEvent)
+		_, err := validateFilter(filter, schemas.Event, state.Destination, state.TargetEvent)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, errors.BadRequest("filter's property %q does not exist", err.Path)
 			}
 			return nil, errors.BadRequest("filter is not valid: %w", err)
 		}
-		where = convertFilterToWhere(filter, events.Schema)
+		where = convertFilterToWhere(filter, schemas.Event)
 	}
 
 	// Validate the order.

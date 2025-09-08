@@ -24,8 +24,8 @@ import (
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/metrics"
+	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/json"
@@ -661,7 +661,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(c.Connector().Type, c.Role, this.action.Target)
 	dispatchEventsToApps := isDispatchingEventsToApps(c.Connector().Type, c.Role, this.action.Target)
 	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
-		inSchema = events.Schema
+		inSchema = schemas.Event
 	}
 
 	n := state.UpdateAction{

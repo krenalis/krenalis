@@ -19,6 +19,7 @@ import (
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/filters"
+	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -152,7 +153,7 @@ func (observer *Observer) addEvent(event events.Event) {
 			}
 		}
 		if properties == nil {
-			properties, _ = types.Marshal(event, events.Schema)
+			properties, _ = types.Marshal(event, schemas.Event)
 			receivedAt = event["receivedAt"].(time.Time)
 		}
 		if listener.omitted == 0 {

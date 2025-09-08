@@ -29,7 +29,6 @@ import (
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
@@ -255,7 +254,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return actionSchemas, nil
 			}
 		case TargetEvent:
-			return &ActionSchemas{In: events.Schema, Out: eventTypeSchema}, nil
+			return &ActionSchemas{In: schemas.Event, Out: eventTypeSchema}, nil
 		}
 
 	case state.Database:
@@ -318,13 +317,13 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case TargetUser:
 			// Source/SDK/User.
-			return &ActionSchemas{In: events.Schema, Out: users}, nil
+			return &ActionSchemas{In: schemas.Event, Out: users}, nil
 		case TargetGroup:
 			// Source/SDK/Group.
-			return &ActionSchemas{In: events.Schema, Out: groups}, nil
+			return &ActionSchemas{In: schemas.Event, Out: groups}, nil
 		case TargetEvent:
 			// Source/SDK/Event.
-			return &ActionSchemas{In: events.Schema}, nil
+			return &ActionSchemas{In: schemas.Event}, nil
 		}
 		return &ActionSchemas{}, nil
 
@@ -733,7 +732,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	dispatchEventsToApps := isDispatchingEventsToApps(connector.Type, c.Role, state.Target(target))
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(connector.Type, c.Role, state.Target(target))
 	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
-		inSchema = events.Schema
+		inSchema = schemas.Event
 	}
 
 	n := state.CreateAction{
@@ -1458,7 +1457,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
-	properties, err := types.Decode[map[string]any](bytes.NewReader(event), events.Schema)
+	properties, err := types.Decode[map[string]any](bytes.NewReader(event), schemas.Event)
 	if err != nil {
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
@@ -1483,7 +1482,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 
 		action := &state.Action{
-			InSchema:  events.Schema,
+			InSchema:  schemas.Event,
 			OutSchema: outSchema,
 			Transformation: state.Transformation{
 				Mapping: transformation.Mapping,
@@ -1496,7 +1495,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		// Validate the mapping and the transformation.
 		switch {
 		case transformation.Mapping != nil:
-			mapping, err := mappings.New(transformation.Mapping, events.Schema, outSchema, false, nil)
+			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema, false, nil)
 			if err != nil {
 				return nil, errors.BadRequest("mapping is not valid: %s", err)
 			}

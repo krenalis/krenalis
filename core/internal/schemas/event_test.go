@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package events
+package schemas
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ import (
 
 func Test_Schema(t *testing.T) {
 	const expected = 20
-	if n := types.NumProperties(Schema); n != expected {
+	if n := types.NumProperties(Event); n != expected {
 		t.Fatalf("expected %d properties, got %d", expected, n)
 	}
 }

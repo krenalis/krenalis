@@ -30,8 +30,8 @@ import (
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/core/internal/events"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
+	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/lambda"
@@ -1602,7 +1602,7 @@ func EventColumnByPath(propertyPath string) meergo.Column {
 
 // EventSchema returns the event schema.
 func EventSchema() types.Type {
-	return events.Schema
+	return schemas.Event
 }
 
 // categoryBitmaskToCategoryNames converts a bitmask representing a connector's

@@ -19,7 +19,7 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/events"
+	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
@@ -105,7 +105,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 				return errors.BadRequest("input schema must be invalid for actions that send events to apps")
 			}
 		}
-		inSchema = events.Schema
+		inSchema = schemas.Event
 	}
 
 	// Validate the action's connector.

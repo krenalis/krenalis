@@ -9,7 +9,7 @@ package datastore
 
 import (
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/internal/events"
+	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/types"
 )
 
@@ -114,7 +114,7 @@ func init() {
 	eventsColumnsForMerge = make([]meergo.Column, len(eventColumnNameFromPropertyPath)-1)
 
 	i := 0
-	for path, p := range types.WalkAll(events.Schema) {
+	for path, p := range types.WalkAll(schemas.Event) {
 		if p.Type.Kind() == types.ObjectKind || path == "originalTimestamp" {
 			continue
 		}

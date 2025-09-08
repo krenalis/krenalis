@@ -19,7 +19,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/connectors/httpclient"
-	"github.com/meergo/meergo/core/internal/events"
+	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/json"
@@ -108,7 +108,7 @@ func TransformEvent(schema types.Type, event map[string]any, mapping map[string]
 			}
 		}
 	}
-	m, err := mappings.New(mapping, events.Schema, schema, false, nil)
+	m, err := mappings.New(mapping, schemas.Event, schema, false, nil)
 	if err != nil {
 		return nil, err
 	}
