@@ -320,7 +320,7 @@ const mapExpressionArguments = (expr: string): Map<string, string> | null => {
 
 // buildMapExpression builds a map(...) string from an argument list.
 const buildMapExpression = (args: Map<string, string>): string => {
-	const serialized = Array.from(args.entries()).map(([k, v]) => `${JSON.stringify(k)},${JSON.stringify(v)}`);
+	const serialized = Array.from(args.entries()).map(([k, v]) => JSON.stringify(k) + ',' + v);
 	return `map(${serialized.join(',')})`;
 };
 
@@ -354,8 +354,9 @@ function runTests(): void {
 	const m = new Map<string, string>([
 		['k1', 'foo'],
 		['k2', "if(a,b,c) 'boo'"],
+		['k3', 'map("k", "v")'],
 	]);
-	console.assert(buildMapExpression(m) === 'map("k1","foo","k2","if(a,b,c) \'boo\'")');
+	console.assert(buildMapExpression(m) === 'map("k1",foo,"k2",if(a,b,c) \'boo\',"k3",map("k", "v"))');
 }
 
 export { parseMapExpression, ExpressionFragment, mapExpressionArguments, buildMapExpression };
