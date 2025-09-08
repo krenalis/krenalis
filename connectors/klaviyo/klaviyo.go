@@ -228,6 +228,11 @@ func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 		if !hasUpdated {
 			delete(data.Attributes, "updated")
 		}
+		if pp, ok := data.Attributes["properties"].(map[string]any); ok {
+			for k, v := range pp {
+				pp[k], _ = json.Marshal(v)
+			}
+		}
 		users[i].Properties = data.Attributes
 		users[i].LastChangeTime = lastChangeTime.UTC()
 	}
