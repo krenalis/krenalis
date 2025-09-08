@@ -33,7 +33,7 @@ cd meergo
 Create a `main.go` file copying its content from the Meergo repository:
 
 ```bash
-curl -o main.go 'https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/cmd/meergo/main.go?token=GHSAT0AAAAAACG2OK4GJGLTBXJ5J337DZMM2EUZV6A'
+curl -o main.go 'https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/cmd/meergo/main.go?token=GHSAT0AAAAAACG2OK4HH2M7QWHVRAVO322W2F6X3YA'
 ```
 
 Initialize a Go module:
