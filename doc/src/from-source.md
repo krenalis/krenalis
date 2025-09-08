@@ -8,10 +8,14 @@ You can also compile Meergo directly from source. This is recommended for more a
 
 There are two alternatives:
 
-* [**Building using the Go tools**](#building-using-the-go-tools). It uses Go's command-line tools to compile Meergo and doesn't require Git.
+* [**Building using the Go tools**](#building-using-the-go-tools). It uses Go's command-line tools to compile Meergo and doesn't require Git. This is the recommended method if you want to choose which connectors to include in the Meergo executable.
 * [**Building from the repository**](#building-from-the-repository). Downloading and building the Meergo repository. This is a more advanced method, allowing for maximum control and customization of the build.
 
 ## Building using the Go tools
+
+This installation method uses Go's command-line tools to compile Meergo and doesn't require Git. 
+
+> 🧩 This is the recommended method if you want to choose which connectors to include in the Meergo executable.
 
 ### Before you begin
 
@@ -66,6 +70,9 @@ meergo
     └── shoelace
 ```
 
+> 🧩 As an optional step, you can edit the `main.go` file to decide which Meergo
+> connectors to import and optionally add imports for your own connectors.
+
 You are ready to build the `meergo` executable:
 
 ```bash
@@ -76,7 +83,7 @@ go build
 
 Verify it has been built correctly (replace `meergo` with `meergo.exe` on Windows):
 
-```
+```text
 ./meergo --help
 ```
 
