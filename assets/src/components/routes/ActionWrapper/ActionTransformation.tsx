@@ -1403,6 +1403,7 @@ const FullscreenTransformation = ({
 					return;
 				}
 				if (res.users.length === 0) {
+					setIsFetchingSamples(false);
 					return;
 				}
 				const s: Sample[] = [];
