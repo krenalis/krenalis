@@ -143,7 +143,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 						actionType!.fields.includes('UpdateOnDuplicates')) && (
 						<Section
 							title='Export settings'
-							description='Select the matching properties that define a match between users, and specify what can be done with users.'
+							description='Select the matching properties that define a match between users, and specify what can be done with users'
 							padded={true}
 							className='action__export-settings'
 							annotated={true}

@@ -436,6 +436,24 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		/>
 	);
 
+	let transformationDescription: ReactNode =
+		"The relation between the action's input properties and the resulting output properties";
+	if (connection.isDestination && actionType.target === 'Event') {
+		transformationDescription = (
+			<>
+				<p>
+					Enter the <b>additional information</b> you want to include in the event. These values will be sent
+					together with the base event data.
+				</p>
+				<p>
+					The action already builds and and sends the event to {connection.connector.name} with default
+					fields. By adding extra data, you make the event more complete and useful for segmentation,
+					personalization, or reporting.
+				</p>
+			</>
+		);
+	}
+
 	return (
 		<div
 			className={`action__transformation${isTransformationDisabled ? ' action__transformation--disabled' : ''}`}
@@ -566,7 +584,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			)}
 			<Section
 				title='Transformation'
-				description="The relation between the action's input properties and the resulting output properties"
+				description={transformationDescription}
 				padded={false}
 				annotated={true}
 				className='action__transformation-section'
@@ -1033,7 +1051,17 @@ const TransformationBox = ({
 									)}
 								</span>
 								<div className='transformation-box__header-text'>
-									{transformationType === 'mappings' ? 'Mappings' : selectedLanguage}
+									<div className='transformation-box__header-heading'>
+										{transformationType === 'mappings' ? 'Mappings' : selectedLanguage}
+									</div>
+									{connection.isDestination && actionType.target === 'Event' && (
+										<div
+											className='transformation-box__header-description'
+											title='Additional information you want to include in the event'
+										>
+											Additional information you want to include in the event
+										</div>
+									)}
 								</div>
 							</>
 						) : (
