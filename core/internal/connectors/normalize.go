@@ -67,7 +67,7 @@ func (err InputValidationError) prependPath(path string) InputValidationError {
 }
 
 func invalidType(name string, src any, typ types.Type) InputValidationError {
-	return inputValidationErrorf(name, "has type %T that is not allowed for type %s type", src, typ)
+	return inputValidationErrorf(name, "has type %T that is not allowed for type %s", src, typ)
 }
 
 // normalize normalizes a property value, and returns its normalized value. If
@@ -741,16 +741,16 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		return a, nil
 	case types.ObjectKind:
-		src, ok := src.(map[string]any)
+		obj, ok := src.(map[string]any)
 		if !ok {
 			return nil, invalidType(name, src, typ)
 		}
-		if src == nil && nullable {
+		if obj == nil && nullable {
 			return nil, nil
 		}
 		var err error
 		for _, p := range typ.Properties() {
-			value, ok := src[p.Name]
+			value, ok := obj[p.Name]
 			if !ok {
 				if !p.ReadOptional {
 					err := inputValidationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
@@ -758,7 +758,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				}
 				continue
 			}
-			src[p.Name], err = normalize(p.Name, p.Type, value, p.Nullable, layouts)
+			obj[p.Name], err = normalize(p.Name, p.Type, value, p.Nullable, layouts)
 			if err != nil {
 				if err, ok := err.(InputValidationError); ok {
 					return nil, err.prependPath(name)
@@ -766,18 +766,18 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				return nil, err
 			}
 		}
-		if len(src) != types.NumProperties(typ) {
+		if len(obj) != types.NumProperties(typ) {
 		SRC:
-			for name := range src {
+			for name := range obj {
 				for _, p := range typ.Properties() {
 					if p.Name == name {
 						continue SRC
 					}
 				}
-				delete(src, name)
+				delete(obj, name)
 			}
 		}
-		return src, nil
+		return obj, nil
 	case types.MapKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports json as the value type. The driver returns the value as a JSON object.
