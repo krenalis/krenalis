@@ -201,6 +201,10 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target meergo.Targets, ro
 			field.Type = types.Text().WithCharLen(5)
 		case "address":
 			field.Type = addressType
+			// If ADDRESS is an empty string, it will be set to nil.
+			if f.Tag == "ADDRESS" {
+				field.Nullable = true
+			}
 		case "zip":
 			field.Type = types.Text().WithCharLen(5)
 		case "phone":
@@ -236,6 +240,7 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTi
 
 	hasID := false
 	hasLastChanged := false
+	hasMergeFields := false
 
 	var fields strings.Builder
 	for i, name := range properties {
@@ -249,6 +254,8 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTi
 			hasID = true
 		case "last_changed":
 			hasLastChanged = true
+		case "merge_fields":
+			hasMergeFields = true
 		}
 	}
 	if !hasID {
@@ -301,6 +308,12 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTi
 		}
 		if !hasLastChanged {
 			delete(properties, "last_changed")
+		}
+		if hasMergeFields {
+			// merge_fields.ADDRESS is returned as an empty string when the contact has no address.
+			if fields, ok := properties["merge_fields"].(map[string]any); ok && fields["ADDRESS"] == "" {
+				fields["ADDRESS"] = nil
+			}
 		}
 		records[i] = meergo.Record{
 			ID:             id,
@@ -936,7 +949,8 @@ func init() {
 				{Name: "created_by", Type: types.Text(), Description: "Author"},
 				{Name: "note", Type: types.Text(), Description: "Content"},
 			}),
-			Description: "Last note",
+			ReadOptional: true,
+			Description:  "Last note",
 		},
 		{
 			Name:        "source",
