@@ -635,13 +635,13 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			var err error
 			data, err = src.MarshalJSON()
 			if err != nil {
-				return nil, inputValidationErrorf(name, "cannot be unmarshalled")
+				return nil, inputValidationErrorf(name, "has a type that implements json.Marshaler, but MarshalJSON returned an error")
+			}
+			if data == nil {
+				return nil, inputValidationErrorf(name, "has a type that implements json.Marshaler, but MarshalJSON returned nil")
 			}
 		default:
 			return nil, invalidType(name, src, typ)
-		}
-		if data == nil {
-			return nil, inputValidationErrorf(name, "has a nil value")
 		}
 		if !json.Valid(data) {
 			return nil, inputValidationErrorf(name, "is not valid JSON")
