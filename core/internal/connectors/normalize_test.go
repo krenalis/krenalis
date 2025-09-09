@@ -85,6 +85,8 @@ func Test_normalize(t *testing.T) {
 		{types.Decimal(10, 3), "6.639e2", decimal.MustParse("663.9"), false, nil},
 		{types.Decimal(8, 0), 793012, decimal.MustInt(793012), false, nil},
 		{types.Decimal(5, 0), -14044, decimal.MustInt(-14044), false, nil},
+		{types.Decimal(18, 14), 23.94758746151403, decimal.MustParse("23.94758746151403"), false, nil},
+		{types.Decimal(6, 3), float32(23.94758746151403), decimal.MustParse("23.948"), false, nil},
 		{types.Decimal(3, 2), "", nil, true, nil},
 		{types.Decimal(3, 2), decimal.MustInt(0), decimal.MustInt(0), false, nil},
 		{types.Decimal(3, 2), decimal.MustParse("3.14"), decimal.MustParse("3.14"), false, nil},

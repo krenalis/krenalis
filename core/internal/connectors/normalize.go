@@ -386,6 +386,16 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v, err = decimal.Uint(uint(src), p, s)
 		case uint64:
 			v, err = decimal.Uint(uint(src), p, s)
+		case float32:
+			v, err = decimal.Float64(float64(src), p, s)
+			if err != nil {
+				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent a decimal(%d,%d) value", p, s)
+			}
+		case float64:
+			v, err = decimal.Float64(src, p, s)
+			if err != nil {
+				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent a decimal(%d,%d) value", p, s)
+			}
 		case decimal.Decimal:
 			v, err = decimal.Parse(src.String(), p, s)
 		case string:
@@ -394,7 +404,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			}
 			v, err = decimal.Parse(src, p, s)
 			if err != nil {
-				return nil, inputValidationErrorf(name, "has a string value that does not represent a decimal(%d,%d)) value", p, s)
+				return nil, inputValidationErrorf(name, "has a string value that does not represent a decimal(%d,%d) value", p, s)
 			}
 		case []byte:
 			if src == nil && nullable {
@@ -402,12 +412,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			}
 			v, err = decimal.Parse(src, p, s)
 			if err != nil {
-				return nil, inputValidationErrorf(name, "has a []byte value that does not represent a decimal(%d,%d)) value", p, s)
+				return nil, inputValidationErrorf(name, "has a []byte value that does not represent a decimal(%d,%d) value", p, s)
 			}
 		case fmt.Stringer:
 			v, err = decimal.Parse(src.String(), p, s)
 			if err != nil {
-				return nil, inputValidationErrorf(name, "has a fmt.Stringer value that does not represent a decimal(%d,%d)) value", p, s)
+				return nil, inputValidationErrorf(name, "has a fmt.Stringer value that does not represent a decimal(%d,%d) value", p, s)
 			}
 		default:
 			return nil, invalidType(name, src, typ)
