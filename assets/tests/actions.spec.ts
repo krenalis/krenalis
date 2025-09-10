@@ -900,7 +900,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 	await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
 
 	let name = page.locator('.file-connector__action-types .list-tile__name', {
-		hasText: 'Import users',
+		hasText: 'Export users',
 	});
 
 	await expect(name).toBeAttached();

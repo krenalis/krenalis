@@ -10,6 +10,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import ListTile from '../../base/ListTile/ListTile';
 import { Link } from '../../base/Link/Link';
+import { startsWithVowelSound } from '../../../utils/startsWithVowelSound';
 
 const FileConnector = () => {
 	const [selectedStorage, setSelectedStorage] = useState<number>();
@@ -108,8 +109,12 @@ const FileConnector = () => {
 							<ListTile
 								key={'users-action-type'}
 								icon={getConnectorLogo(file.icon)}
-								name='Import users'
-								description={`Import users from ${file.name} into the data warehouse`}
+								name={`${role === 'Source' ? 'Import' : 'Export'} users`}
+								description={
+									role === 'Source'
+										? `Import users from a${startsWithVowelSound(file.name) ? 'n' : ''} ${file.name} file`
+										: `Export users to a${startsWithVowelSound(file.name) ? 'n' : ''} ${file.name} file`
+								}
 								className='file-connector__action-type'
 								action={
 									<SlButton
