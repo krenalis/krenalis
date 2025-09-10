@@ -19,6 +19,7 @@ import Section from '../../base/Section/Section';
 const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [transformationType, setTransformationType] = useState<'mappings' | 'function' | ''>('');
 	const [showEmptyMatchingError, setShowEmptyMatchingError] = useState<boolean>(false);
+	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
 
 	const { connection } = useContext(ConnectionContext);
 	const { closeFullscreen } = useContext(FullscreenContext)!;
@@ -51,8 +52,6 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		setActionType,
 		setAction,
 		saveAction,
-		isSaveHidden,
-		setIsSaveHidden,
 		setIsFileChanged,
 		setIsFileConnectorLoading,
 		isFileConnectorLoading,
@@ -112,6 +111,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				showEmptyMatchingError,
 				isTransformationHidden,
 				isTransformationDisabled,
+				isFullscreenTransformationOpen,
+				setIsFullscreenTransformationOpen,
 				setIsQueryChanged,
 				setIsFileChanged,
 				setIsFormatLoading: setIsFileConnectorLoading,
@@ -119,8 +120,6 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				setIsFormatChanged: setIsFileConnectorChanged,
 				isFormatChanged: isFileConnectorChanged,
 				setIsTableChanged,
-				isSaveHidden,
-				setIsSaveHidden,
 				selectedInPaths,
 				setSelectedInPaths,
 				selectedOutPaths,

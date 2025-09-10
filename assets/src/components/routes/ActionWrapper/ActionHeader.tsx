@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import ActionContext from '../../../context/ActionContext';
 import AppContext from '../../../context/AppContext';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
@@ -9,6 +9,7 @@ import { ActionIssues } from './ActionIssues';
 
 const ActionHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
+	const [isFullscreenClosing, setIsFullscreenClosing] = useState(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
 	const { handleError } = useContext(AppContext);
@@ -21,12 +22,38 @@ const ActionHeader = () => {
 		saveAction,
 		isTransformationHidden,
 		isTransformationDisabled,
+		isFullscreenTransformationOpen,
+		setIsFullscreenTransformationOpen,
 		isEditing,
-		isSaveHidden,
 		onClose,
 		issues,
 		showIssues,
 	} = useContext(ActionContext);
+
+	useEffect(() => {
+		const button = document.querySelector<HTMLButtonElement>('.action__header-save');
+		if (!button) {
+			return;
+		}
+
+		const handleMouseEnter = () => {
+			if (button.disabled) {
+				button.addEventListener('mouseleave', handleMouseLeave, { once: true });
+			}
+		};
+
+		const handleMouseLeave = () => {
+			button.disabled = false;
+			button.classList.remove('action__header-save--fullscreen-closing-disabled');
+		};
+
+		button.addEventListener('mouseenter', handleMouseEnter);
+
+		return () => {
+			button.removeEventListener('mouseenter', handleMouseEnter);
+			button.removeEventListener('mouseleave', handleMouseLeave);
+		};
+	}, []);
 
 	const onUpdateName = (e) => {
 		const a = { ...action };
@@ -62,6 +89,14 @@ const ActionHeader = () => {
 		onClose();
 	};
 
+	const onCloseFullscreenTransformation = () => {
+		setIsFullscreenTransformationOpen(false);
+		setIsFullscreenClosing(true);
+		setTimeout(() => {
+			setIsFullscreenClosing(false);
+		}, 1000);
+	};
+
 	return (
 		<div className='action__header'>
 			<div className='action__header-title'>
@@ -86,20 +121,34 @@ const ActionHeader = () => {
 				{!isNameEditable && <div className='action__header-description'>{actionType.description}</div>}
 			</div>
 			<ActionIssues issues={issues} type={connection.connector.type} role={connection.role} show={showIssues} />
-			<div className={`action__header-buttons${isSaveHidden ? ' action__header-buttons--hidden' : ''}`}>
-				<div className='action__header-buttons-save'>
+
+			<div className='action__header-buttons'>
+				<div
+					className={`action__header-buttons-save${isFullscreenTransformationOpen ? ' action__header-buttons-save--hidden' : ''}`}
+				>
 					<SlButton className='action__header-cancel' variant='default' onClick={onCancel}>
 						Cancel
 					</SlButton>
 					<SlButton
-						className='action__header-save'
+						className={`action__header-save${isFullscreenClosing ? ' action__header-save--fullscreen-closing-disabled' : ''}`}
 						variant='primary'
-						disabled={isTransformationHidden || isTransformationDisabled || isSaving}
+						disabled={isTransformationHidden || isTransformationDisabled || isSaving || isFullscreenClosing}
 						onClick={onSave}
 						loading={isSaving}
 					>
 						{isEditing ? 'Save' : 'Add'}
 					</SlButton>
+				</div>
+				<div
+					className={`action__header-buttons-close-transformation${!isFullscreenTransformationOpen ? ' action__header-buttons-close-transformation--hidden' : ''}`}
+				>
+					<button
+						className='action__header-close-transformation'
+						onClick={onCloseFullscreenTransformation}
+						title='Exit full mode'
+					>
+						×
+					</button>
 				</div>
 			</div>
 		</div>

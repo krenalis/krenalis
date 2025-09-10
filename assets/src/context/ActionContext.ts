@@ -22,6 +22,8 @@ interface ActionContext {
 	showEmptyMatchingError: boolean;
 	isTransformationHidden: boolean;
 	isTransformationDisabled: boolean;
+	isFullscreenTransformationOpen: boolean;
+	setIsFullscreenTransformationOpen: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsQueryChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsFileChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsFormatLoading: React.Dispatch<React.SetStateAction<boolean>>;
@@ -29,8 +31,6 @@ interface ActionContext {
 	setIsFormatChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	isFormatChanged: boolean;
 	setIsTableChanged: React.Dispatch<React.SetStateAction<boolean>>;
-	isSaveHidden: boolean;
-	setIsSaveHidden: React.Dispatch<React.SetStateAction<boolean>>;
 	selectedInPaths: string[];
 	setSelectedInPaths: React.Dispatch<React.SetStateAction<string[]>>;
 	selectedOutPaths: string[];

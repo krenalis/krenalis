@@ -84,15 +84,6 @@
 	gap: 20px;
 }
 
-.action__header-buttons--hidden {
-	gap: 0;
-}
-
-.action__header-buttons--hidden .action__header-buttons-save {
-	visibility: hidden;
-	opacity: 0;
-}
-
 .action__header-buttons-save {
 	display: flex;
 	align-items: center;
@@ -100,12 +91,57 @@
 	width: 370px;
 }
 
+.action__header-buttons-save,
+.action__header-buttons-close-transformation {
+	transition:
+		visibility 0.3s 0.3s,
+		opacity 0.3s 0.3s;
+}
+
+.action__header-buttons-save--hidden,
+.action__header-buttons-close-transformation--hidden {
+	transition:
+		visibility 0s,
+		opacity 0s;
+	visibility: hidden;
+	opacity: 0;
+	gap: 0;
+	width: 0;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
 .action__header-cancel {
 	min-width: 150px;
 }
 
+.action__header-close-transformation {
+	background-color: transparent;
+	border: 0;
+	padding: 0;
+	font-size: 60px;
+	font-weight: 300;
+	color: rgb(202 202 202);
+	transition: color 0.3s;
+	cursor: pointer;
+	position: relative;
+	top: -6px;
+	right: -10px;
+}
+
+.action__header-close-transformation:hover {
+	color: var(--sl-color-neutral-600);
+}
+
 .action__header-save::part(base) {
 	min-width: 200px;
+}
+
+.action__header-save--fullscreen-closing-disabled::part(base),
+.action__header-save--fullscreen-closing-disabled::part(base):hover {
+	background-color: var(--sl-color-primary-600);
+	opacity: 1;
 }
 
 .action__body {
@@ -770,25 +806,6 @@ inherit the disabled style */
 	border-bottom: 0;
 	border-right: 0;
 	background-color: var(--bg-gray);
-}
-
-.transformation-box__edit-tooltip::part(body) {
-	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
-	color: var(--text-primary);
-	padding: 15px 20px;
-}
-
-.transformation-box__edit-tooltip::part(base__popup) {
-	box-shadow: var(--sl-shadow-x-large);
-}
-
-.transformation-box__edit-tooltip::part(base__arrow) {
-	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
-	z-index: 10;
-	border-right: 0;
-	border-bottom: 0;
 }
 
 .transformation-box__fullscreen-button::part(base) {

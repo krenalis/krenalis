@@ -31,6 +31,7 @@ import useEventListener from '../../../hooks/useEventListener';
 import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -82,19 +83,19 @@ const lastChangeTimeFormats = {
 const ActionTransformation = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
-	const [isFullscreenTransformationOpen, setIsFullscreenTransformationOpen] = useState<boolean>(false);
 	const [isCustomLastChangeTimeFormatSelected, setIsCustomLastChangeTimeFormatSelected] = useState<boolean>(false);
 
 	const { api, handleError, workspaces, selectedWorkspace, connectors } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 	const {
 		isTransformationDisabled,
+		isFullscreenTransformationOpen,
+		setIsFullscreenTransformationOpen,
 		action,
 		setAction,
 		actionType,
 		transformationType,
 		setTransformationType,
-		setIsSaveHidden,
 		isFormatChanged,
 		isEditing,
 		handleEmptyMatchingError,
@@ -180,10 +181,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		if (isFullscreenTransformationOpen) {
 			// hide the fullScreen scrollbar.
 			body.style.overflow = 'hidden';
-			setIsSaveHidden(true);
 		} else {
 			body.style.overflow = 'auto';
-			setIsSaveHidden(false);
 		}
 	}, [isFullscreenTransformationOpen]);
 
@@ -402,10 +401,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		setIsFullscreenTransformationOpen(true);
 	};
 
-	const onCloseFullscreenTransformation = () => {
-		setIsFullscreenTransformationOpen(false);
-	};
-
 	if (transformationLanguages == null) {
 		return null;
 	}
@@ -429,7 +424,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			onOpenFullscreenTransformation={onOpenFullscreenTransformation}
 			onChangeTransformationFunction={onChangeTransformationFunction}
 			isFullscreenTransformationOpen={isFullscreenTransformationOpen}
-			onCloseFullscreenTransformation={onCloseFullscreenTransformation}
 			actionType={actionType}
 			hasSchema={actionType.outputSchema != null}
 			flatInputSchema={flatInputSchema}
@@ -621,7 +615,6 @@ interface TransformationBoxProps {
 	onOpenFullscreenTransformation: () => void;
 	onChangeTransformationFunction: (source: string) => void;
 	isFullscreenTransformationOpen: boolean;
-	onCloseFullscreenTransformation: () => void;
 	actionType: TransformedActionType;
 	hasSchema: boolean;
 	flatInputSchema: TransformedMapping;
@@ -682,7 +675,6 @@ const TransformationBox = ({
 	onOpenFullscreenTransformation,
 	onChangeTransformationFunction,
 	isFullscreenTransformationOpen,
-	onCloseFullscreenTransformation,
 	actionType,
 	hasSchema,
 	flatInputSchema,
@@ -690,7 +682,7 @@ const TransformationBox = ({
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [isCompletelyOpen, setIsCompletelyOpen] = useState<boolean>(false);
 	const [isFullscreenAnimating, setIsFullscreenAnimating] = useState<boolean>(false);
-	const [isEditTooltipOpen, setIsEditTooltipOpen] = useState<boolean>();
+	const [isEditButtonAnimated, setIsEditButtonAnimated] = useState<boolean>(false);
 
 	const pendingTransformationType = useRef<string>();
 	const firstValue = useRef<TransformedMapping | TransformationFunction>();
@@ -723,7 +715,7 @@ const TransformationBox = ({
 
 	const onEditorMount = (editor: any) => {
 		editor.onDidAttemptReadOnlyEdit(() => {
-			setIsEditTooltipOpen(true);
+			setIsEditButtonAnimated(true);
 		});
 	};
 
@@ -764,7 +756,6 @@ const TransformationBox = ({
 		if (newTransformationType === transformationType) {
 			return;
 		}
-		setIsEditTooltipOpen(false);
 		pendingTransformationType.current = newTransformationType;
 		if (
 			isMappingModified(
@@ -788,7 +779,6 @@ const TransformationBox = ({
 	};
 
 	const onOpenTransformation = () => {
-		setIsEditTooltipOpen(false);
 		onOpenFullscreenTransformation();
 	};
 
@@ -1135,31 +1125,25 @@ const TransformationBox = ({
 							</SlMenu>
 						</SlDropdown>
 					)}
-					<SlTooltip
-						className='transformation-box__edit-tooltip'
-						trigger='manual'
-						open={isEditTooltipOpen}
-						placement='bottom'
-					>
-						<div className='transformation-box__fullscreen-tooltip' slot='content'>
-							<span>Open the testing mode to edit the function</span>
-						</div>
-						<SlButton
-							className='transformation-box__fullscreen-button'
-							variant='primary'
-							onClick={
-								isFullscreenTransformationOpen ? onCloseFullscreenTransformation : onOpenTransformation
-							}
-							disabled={isTransformationDisabled}
+					{!isFullscreenTransformationOpen && (
+						<SlAnimation
+							name='shake'
+							duration={1000}
+							playbackRate={1.2}
+							iterations={1}
+							play={isEditButtonAnimated}
+							onSlFinish={() => setIsEditButtonAnimated(false)}
 						>
-							{isCompletelyOpen ? (
-								<SlIcon name='arrows-angle-contract' />
-							) : (
-								<SlIcon name='arrows-angle-expand' />
-							)}
-							{isCompletelyOpen ? 'Exit testing mode' : 'Testing mode'}
-						</SlButton>
-					</SlTooltip>
+							<SlButton
+								className='transformation-box__fullscreen-button'
+								variant='primary'
+								onClick={onOpenTransformation}
+								disabled={isTransformationDisabled}
+							>
+								Edit in full mode
+							</SlButton>
+						</SlAnimation>
+					)}
 				</div>
 			</div>
 			<div className='transformation-box__body'>

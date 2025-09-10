@@ -8,8 +8,6 @@ arrow-right-short.svg
 arrow-right.svg
 arrow-up-circle.svg
 arrow-up-right-square.svg
-arrows-angle-contract.svg
-arrows-angle-expand.svg
 arrows-collapse.svg
 arrows-expand.svg
 bar-chart.svg

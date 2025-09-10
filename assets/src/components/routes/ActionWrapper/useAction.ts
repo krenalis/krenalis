@@ -27,7 +27,6 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 	const [action, setAction] = useState<TransformedAction>();
 	const [settings, setSettings] = useState<ConnectorSettings>();
 	const [actionType, setActionType] = useState<TransformedActionType>();
-	const [isSaveHidden, setIsSaveHidden] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
 	const [isFileChanged, setIsFileChanged] = useState<boolean>(false);
 	const [isFileConnectorLoading, setIsFileConnectorLoading] = useState<boolean>(
@@ -379,8 +378,6 @@ const useAction = (connection: TransformedConnection, providedActionType: Action
 		setActionType,
 		setAction,
 		saveAction,
-		isSaveHidden,
-		setIsSaveHidden,
 		setIsFileChanged,
 		isFileConnectorLoading,
 		setIsFileConnectorLoading,
