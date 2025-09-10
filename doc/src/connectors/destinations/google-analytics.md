@@ -14,6 +14,7 @@ In Meergo, it is possible to send events to Google Analytics using the [Measurem
 
 - [Add a Google Analytics data destination](#add-a-google-analytics-data-destination)
 - [Events that can be sent](#events-that-can-be-sent)
+- [What to do if events don't show up](#what-to-do-if-events-dont-show-up)
 
 ### Add a Google Analytics data destination
 

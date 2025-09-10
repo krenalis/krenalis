@@ -12,6 +12,7 @@ Klaviyo is an email marketing and automation platform that enables businesses to
 
 * [Add a Klaviyo data destination](#add-a-klaviyo-data-destination)
 * [Export users as Klaviyo profiles](#export-users-as-klaviyo-profiles)
+* [What to do if events don't show up](#what-to-do-if-events-dont-show-up)
 
 ### Add a Klaviyo data destination
 
