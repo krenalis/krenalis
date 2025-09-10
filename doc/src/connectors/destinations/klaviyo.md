@@ -52,3 +52,11 @@ Once the Klaviyo data destination is added, the **Actions** page will be display
 7. (Optional) If multiple Klaviyo profiles match a single user in Meergo, choose whether to update them anyway or skip the update.
 8. Define the mapping or use a transformation function to convert the users in your workspace's data warehouse to Klaviyo profiles.
 9. Click **Add**.
+
+### What to do if events don't show up
+
+If the Klaviyo connector on Meergo sends events but you don't see them in your Klaviyo dashboard, try the following checks:
+
+* Make sure that the email address sent with events are not considered test email address by Klaviyo, as they would otherwise be silently discarded. Klaviyo considers test email addresses those ending with `@example.com`, `@test.com`, and others not specified. See [Klaviyo’s documentation on this](https://developers.klaviyo.com/en/reference/events_api_overview#create-event).
+
+* See the [**Receiving a 202?**](https://developers.klaviyo.com/en/reference/events_api_overview#receiving-a-202) section of Klaviyo’s documentation, which includes various scenarios where events are considered successfully received but are not displayed in Klaviyo.
