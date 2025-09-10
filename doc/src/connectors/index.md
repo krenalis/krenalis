@@ -41,6 +41,7 @@
   <li><a href="destinations/klaviyo"> Klaviyo</a></li>
   <li><a href="destinations/stripe"> Stripe</a></li>
   <li><a href="destinations/mixpanel"> Mixpanel</a></li>
+  <li><a href="destinations/google-analytics"> Google Analytics</a></li>
   <li><a href="destinations/excel"> Excel</a></li>
   <li><a href="destinations/csv"> CSV</a></li>
   <li><a href="destinations/json"> JSON</a></li>
