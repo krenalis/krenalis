@@ -72,11 +72,7 @@ const Header = ({ title, member }: HeaderProps) => {
 									the default ones.
 								</div>
 								<Link path='organization/members/add'>
-									<SlButton
-										className='header__passwordless-create-account'
-										variant='warning'
-										size='small'
-									>
+									<SlButton className='header__passwordless-create-account' size='small'>
 										Create my account
 									</SlButton>
 								</Link>
