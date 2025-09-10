@@ -1034,12 +1034,7 @@ const transformInActionToSet = async (
 				throw err;
 			}
 
-			const rootProperty = flattenedInputSchema[property.root].full;
-			const isPropertyAlreadyInSchema =
-				inSchema.properties!.findIndex((p) => p.name === rootProperty.name) !== -1;
-			if (!isPropertyAlreadyInSchema) {
-				inSchema.properties.push(rootProperty);
-			}
+			addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
 
 			const c: FilterCondition = { property: condition.property, operator: condition.operator, values: values };
 			f.conditions.push(c);
