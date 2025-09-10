@@ -2,8 +2,6 @@
 
 ## Supported types in User Schema and Warehouse
 
-**IMPORTANT**. This section is under construction and revision, see the issue [#1047](https://github.com/meergo/meergo/issues/1047).
-
 ### Principles
 
 This table is based on the following principles:
