@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -175,11 +176,15 @@ func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string)
 		name = name[1:]
 	}
 	client := ss3.client()
-	_, err := client.PutObject(ctx, &s3.PutObjectInput{
+	u := manager.NewUploader(client, func(u *manager.Uploader) {
+		u.PartSize = 8 * 1024 * 1024
+		u.Concurrency = 2
+	})
+	_, err := u.Upload(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(ss3.settings.Bucket),
 		Key:         aws.String(name),
 		Body:        p,
-		ContentType: &contentType,
+		ContentType: aws.String(contentType),
 	})
 	return err
 }
