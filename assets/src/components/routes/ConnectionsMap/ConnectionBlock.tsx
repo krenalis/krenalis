@@ -56,7 +56,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 		const isHighlighted = hovered && hasRelations;
 
 		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
-		const isHidden = isSomethingHovered && !isHighlighted;
+		const isHidden = !hasRelations || (isSomethingHovered && !isHighlighted);
 
 		const arrow = (
 			<Arrow
@@ -65,7 +65,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 				startAnchor={arrowStartAnchor}
 				endAnchor={arrowEndAnchor}
 				color={isHighlighted ? '#4f46e5' : undefined}
-				strokeWidth={hasRelations ? 1 : 0.3}
+				strokeWidth={1}
 				dashness={isHighlighted ? { strokeLen: 5, nonStrokeLen: 5, animation: c.isSource ? 2 : -2 } : false}
 				data-is-hovered={isHighlighted}
 				isNew={isNew}
