@@ -10,12 +10,12 @@ Google Analytics is a web analytics service that provides insights into website 
 
 In Meergo, it is possible to send events to Google Analytics using the [Measurement Protocol](https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference?client_type=gtag). Once this data destination is configured, the events ingested by Meergo (e.g., from a website or server) are sent to Google Analytics.
 
-## On this page
+### On this page
 
 - [Add a Google Analytics data destination](#add-a-google-analytics-data-destination)
 - [Events that can be sent](#events-that-can-be-sent)
 
-## Add a Google Analytics data destination
+### Add a Google Analytics data destination
 
 Before you can add a Google Analytics data destination, you need to create a private key in your Google Analytics account:
 
@@ -43,7 +43,7 @@ Now proceed to add a Google Analytics data destination:
 
 Once the Google Analytics data destination is added, the **Actions** page will be displayed, indicating the actions required to send events to Google Analytics.
 
-## Events that can be sent
+### Events that can be sent
 
 Meergo supports all events from Google Analytics' Measurement Protocol. For each event you wish to send, you can add a specific action.
 
@@ -51,7 +51,7 @@ Meergo supports all events from Google Analytics' Measurement Protocol. For each
 
 Once the type of event you want to send has been determined, you can add the corresponding action from the Meergo Admin console.
 
-## What to do if events don't show up
+### What to do if events don't show up
 
 If the Google Analytics connector on Meergo sends events but you don't see them in your Google Analytics dashboard, try the following checks:
 
