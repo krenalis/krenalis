@@ -418,6 +418,9 @@ func retrieveFilterProperty(schema types.Type, path string) (types.Property, str
 // Panics if the filter is nil or the schema is not valid.
 func validateFilter(filter *Filter, schema types.Type, role state.Role, target state.Target) ([]string, error) {
 
+	// disallowJSON indicates if "json" properties are disallowed.
+	disallowJSON := role == state.Destination && target == state.TargetUser
+
 	// disallowEmptyOnObject indicates if "is empty" and "is not empty" operators are disallowed on object properties.
 	disallowEmptyOnObject := role == state.Destination && target == state.TargetUser || target == state.TargetEvent
 
@@ -447,6 +450,10 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 
 		op := cond.Operator
 		kind := p.Type.Kind()
+
+		if disallowJSON && kind == types.JSONKind {
+			return nil, fmt.Errorf("property %q has type json, which is not supported in data warehouse exports", path)
+		}
 
 		// Validate the operator and its kind.
 		//

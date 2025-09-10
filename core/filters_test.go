@@ -812,6 +812,17 @@ func Test_validateFilter(t *testing.T) {
 		},
 		{
 			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
+					{Property: "d.p", Operator: OpIsNotEmpty},
+				},
+			},
+			target: state.TargetUser,
+			role:   state.Destination,
+			err:    fmt.Errorf(`property "d" has type json, which is not supported in data warehouse exports`),
+		},
+		{
+			filter: Filter{
 				Logical: OpOr,
 				Conditions: []FilterCondition{
 					{Property: "b", Operator: OpIs, Values: []string{"5"}},

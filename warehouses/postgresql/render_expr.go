@@ -181,8 +181,9 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			switch k {
 			case types.TextKind:
 				s = " = ''"
-			case types.JSONKind:
-				s = ` IN ('{}'::jsonb,'[]'::jsonb,'""'::jsonb,'null'::jsonb)`
+			// See issue https://github.com/meergo/meergo/issues/1804.
+			// case types.JSONKind:
+			//	s = ` IN ('{}'::jsonb,'[]'::jsonb,'""'::jsonb,'null'::jsonb)`
 			case types.MapKind:
 				s = " = '{}'::jsonb"
 			}
@@ -209,8 +210,9 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			switch k {
 			case types.TextKind:
 				s = " <> ''"
-			case types.JSONKind:
-				s = ` NOT IN ('{}'::jsonb,'[]'::jsonb,'""'::jsonb,'null'::jsonb)`
+			// See issue https://github.com/meergo/meergo/issues/1804.
+			// case types.JSONKind:
+			//	s = ` NOT IN ('{}'::jsonb,'[]'::jsonb,'""'::jsonb,'null'::jsonb)`
 			case types.MapKind:
 				s = " <> '{}'::jsonb"
 			}

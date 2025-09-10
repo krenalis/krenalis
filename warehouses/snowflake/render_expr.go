@@ -160,8 +160,9 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		switch c.Type.Kind() {
 		case types.TextKind:
 			s = " = ''"
-		case types.JSONKind:
-			s = " IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
+		// See issue https://github.com/meergo/meergo/issues/1804.
+		// case types.JSONKind:
+		//	s = " IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:
 			s = " = ARRAY_CONSTRUCT()"
 		case types.MapKind:
@@ -183,8 +184,9 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		switch c.Type.Kind() {
 		case types.TextKind:
 			s = " <> ''"
-		case types.JSONKind:
-			s = " NOT IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
+		// See issue https://github.com/meergo/meergo/issues/1804.
+		// case types.JSONKind:
+		//	s = " NOT IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:
 			s = " <> ARRAY_CONSTRUCT()"
 		case types.MapKind:

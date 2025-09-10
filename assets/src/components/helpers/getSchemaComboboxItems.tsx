@@ -44,6 +44,8 @@ const getFilterPropertyComboboxItems = (schema: ObjectType, role: Role, target: 
 			if (compatibleOperators.length === 0) {
 				continue;
 			}
+		} else if (property.type === 'json' && role === 'Destination' && target === 'User') {
+			continue;
 		}
 		filteredSchema[k] = v;
 	}
