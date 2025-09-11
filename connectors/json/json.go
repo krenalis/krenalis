@@ -255,7 +255,6 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error
 	var record map[string]any
-	var id string
 	var comma bool
 	b := make([]byte, 0, 4096)
 	if s.Indent {
@@ -266,11 +265,11 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.
 	}
 	t := types.Object(records.Columns())
 	for {
-		id, record, err = records.Record(ctx)
+		record, err = records.Record(ctx)
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
 			return err
 		}
 		if comma {
@@ -289,7 +288,6 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.
 			}
 			b = b[0:0]
 		}
-		records.Ack(id, nil)
 	}
 	if s.Indent {
 		b = append(b, "\n\t]\n}"...)

@@ -156,12 +156,9 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 // this case a *PlaceholderError may be returned when placeholders are invalid.
 //
 // It returns an *UnavailableError if the connector returns an error.
-func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, ack AckFunc) (Writer, error) {
+func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) (Writer, error) {
 	if file.err != nil {
 		return nil, file.err
-	}
-	if ack == nil {
-		return nil, errors.New("ack function is missing")
 	}
 	storage, err := file.storage()
 	if err != nil {
@@ -187,7 +184,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 	writeCtx, cancelWrite := context.WithCancel(context.Background())
 	// Call the connector's Write method in its own goroutine.
 	go func() {
-		r := newRecordReader(columns, records, ack)
+		r := newRecordReader(columns, records)
 		err = file.inner.(fileWriteConnector).Write(writeCtx, sw, file.action.Sheet, r)
 		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
 			err = err2
@@ -561,11 +558,10 @@ func newFuncWriteCloser(w io.Writer, close func(err error) error) *storageWriteC
 }
 
 // newRecordReader returns a new record reader that read records.
-func newRecordReader(columns []types.Property, records <-chan fileRecord, ack AckFunc) *recordReader {
+func newRecordReader(columns []types.Property, records <-chan fileRecord) *recordReader {
 	return &recordReader{
 		columns: columns,
 		records: records,
-		ack:     ack,
 	}
 }
 
@@ -573,7 +569,6 @@ func newRecordReader(columns []types.Property, records <-chan fileRecord, ack Ac
 type recordReader struct {
 	columns []types.Property
 	records <-chan fileRecord
-	ack     AckFunc
 }
 
 type fileRecord struct {
@@ -581,28 +576,23 @@ type fileRecord struct {
 	record map[string]any
 }
 
-// Ack acknowledges the processing of the record with the given identifier.
-// err is the error occurred processing the record, if any.
-func (rr *recordReader) Ack(id string, err error) {
-	rr.ack([]string{id}, err)
-}
-
-// Columns returns the columns of the records.
+// Columns returns the columns of the records as properties.
 func (rr *recordReader) Columns() []types.Property {
 	return rr.columns
 }
 
-// Record returns the next record as a slice of any. It returns uuid.UUID{}, nil
-// and io.EOF if there are no more records.
-func (rr *recordReader) Record(ctx context.Context) (string, map[string]any, error) {
+// Record returns the next record. The keys of the record are column names.
+// A record may be empty or contain only a subset of columns.
+// It returns nil and io.EOF if there are no more records.
+func (rr *recordReader) Record(ctx context.Context) (map[string]any, error) {
 	select {
 	case r, ok := <-rr.records:
 		if !ok {
-			return "", nil, io.EOF
+			return nil, io.EOF
 		}
-		return r.id, r.record, nil
+		return r.record, nil
 	case <-ctx.Done():
-		return "", nil, ctx.Err()
+		return nil, ctx.Err()
 	}
 }
 

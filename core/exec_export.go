@@ -99,13 +99,16 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	var writer connectors.Writer
 
-	ack := func(ids []string, err error) {
-		meergoMetrics.Increment("Action.exportUsers.ack.calls", 1)
-		if err != nil {
-			this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
-			return
+	var ack func([]string, error)
+	if connector.Type != state.FileStorage {
+		ack = func(ids []string, err error) {
+			meergoMetrics.Increment("Action.exportUsers.ack.calls", 1)
+			if err != nil {
+				this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
+				return
+			}
+			this.core.metrics.FinalizePassed(action.ID, len(ids))
 		}
-		this.core.metrics.FinalizePassed(action.ID, len(ids))
 	}
 
 	// Get the writer.
@@ -123,7 +126,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		alreadyExportedKeys = make(map[any]struct{})
 	case state.FileStorage:
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
-		writer, err = this.file().Writer(ctx, replacer, ack)
+		writer, err = this.file().Writer(ctx, replacer)
 		if err, ok := err.(*connectors.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
 		}
@@ -149,6 +152,16 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	users := make([]User, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
 
+	var readCount int // Total number of records successfully read from the warehouse so far.
+
+	if connector.Type == state.FileStorage {
+		defer func() {
+			if readCount > 0 {
+				this.core.metrics.FinalizeFailed(action.ID, readCount, err.Error())
+			}
+		}()
+	}
+
 Records:
 	for record := range records.All(ctx) {
 
@@ -157,11 +170,12 @@ Records:
 		if record.Err != nil {
 			this.core.metrics.ReceiveFailed(action.ID, 1, record.Err.Error())
 			if connector.Type == state.FileStorage {
-				return record.Err
+				return newActionError(metrics.ReceiveStep, record.Err)
 			}
 			goto Next
 		}
 
+		readCount++
 		this.core.metrics.ReceivePassed(action.ID, 1)
 
 		if connector.Type == state.App {
@@ -274,6 +288,11 @@ Records:
 			return err
 		}
 		return newActionError(metrics.FinalizeStep, err)
+	}
+
+	if connector.Type == state.FileStorage {
+		this.core.metrics.FinalizePassed(action.ID, readCount)
+		readCount = 0 // prevents them from being flagged as failed in the metrics
 	}
 
 	return nil

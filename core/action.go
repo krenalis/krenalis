@@ -940,7 +940,7 @@ func (this *Action) endExecution(err error) {
 				slog.Error("core: cannot execute action", "action", this.action.ID, "execution", execution.ID, "err", err)
 			}
 		}
-		this.core.metrics.Failed(errorStep, this.action.ID, 1, errorMessage)
+		this.core.metrics.Failed(errorStep, this.action.ID, 0, errorMessage)
 	}
 
 	// Waits for the metrics to be saved.

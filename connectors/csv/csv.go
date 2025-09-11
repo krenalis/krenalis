@@ -209,7 +209,7 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.R
 
 	// Write the records.
 	for {
-		id, record, err := records.Record(ctx)
+		record, err := records.Record(ctx)
 		if err == io.EOF {
 			break
 		}
@@ -223,7 +223,6 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.R
 		if err != nil {
 			return err
 		}
-		records.Ack(id, nil)
 	}
 
 	v.Flush()

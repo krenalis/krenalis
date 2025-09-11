@@ -230,31 +230,21 @@ The `Write` method is invoked by Meergo to write records to a new file. This occ
 The `Write` method takes an `io.Writer` as an argument to write the contents of the entire file and a `RecordReader` from which to read the records to be written. `RecordReader` is an interface defined as follows:
 
 ```go
+// A RecordReader interface is used by file connectors to read records
+// before they are written.
 type RecordReader interface {
 
-    // Ack acknowledges the processing of the record with the given GID.
-    // err is the error occurred processing the record, if any.
-    Ack(gid uuid.UUID, err error)
+	// Columns returns the columns of the records as properties.
+	Columns() []types.Property
 
-    // Columns returns the columns of the records as properties.
-    Columns() []types.Property
-
-    // Record returns the next record with its ack ID. The keys of record represent
-    // column names. A record may be empty or contain only a subset of columns.
-    // It returns "", nil, and io.EOF if there are no more records.
-    //
-    // After a record has been read and processed, the caller should call Ack
-    // to acknowledge the processing of the record.
-    Record(ctx context.Context) (ackID string, record map[string]any, err error)}
+	// Record returns the next record. The keys of the record are column names.
+	// A record may be empty or contain only a subset of columns.
+	// It returns nil and io.EOF if there are no more records.
+	Record(ctx context.Context) (map[string]any, error)
+}
 ```
 
-The `Write` method first needs to call the `Columns` method to determine the columns of the records to be written. Then it calls the `Record` method to read each individual record. It can then either immediately write the read record to the `io.Writer` or continue reading to do so later.
-
-#### Acknowledge
-
-The `Ack` method is called to confirm the writing of a record passing its ID.
-
-If an error occurs while writing a record, a connector can call the `Ack` method (indicating the error encountered) and proceed with the next record, but only if the connector is certain that no data for the failing record has been written to the writer and thus that the export can proceed without causing file corruption. In any other case, the `Write` method must return with the error to abort the export.
+The `Write` method first needs to call the `Columns` method to determine the columns of the records to be written. Then it calls the `Record` method to read each individual record. It can then either immediately write the record to the `io.Writer` or continue reading to do so later.
 
 ### Sheets method
 

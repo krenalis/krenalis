@@ -345,7 +345,7 @@ func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records
 		goparquet.WithSchemaDefinition(schemaDef),
 	)
 	for {
-		id, record, err := records.Record(ctx)
+		record, err := records.Record(ctx)
 		if err == io.EOF {
 			break
 		}
@@ -354,14 +354,12 @@ func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records
 		}
 		data, err := convertToParquetData(schema, record)
 		if err != nil {
-			records.Ack(id, err)
-			continue
+			return err
 		}
 		err = fw.AddData(data)
 		if err != nil {
 			return err
 		}
-		records.Ack(id, nil)
 	}
 	err = fw.Close()
 	if err != nil {

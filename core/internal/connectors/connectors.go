@@ -144,16 +144,11 @@ type Writer interface {
 	Close(ctx context.Context) error
 
 	// Write writes a record. Typically, Write returns immediately, deferring the
-	// actual write operation to a later time. If it returns false, no further Write
-	// operations can be performed, and a call to Close will return the occurred
-	// error.
+	// actual write operation to a later time. record must contain at least one
+	// property.
 	//
-	// If the record is written successfully, the ack function is invoked with id
-	// and a nil error. If writing the record fails, the ack function is
-	// invoked with id and a non-nil error. The ack function is
-	// invoked even if Write returns false.
-	//
-	// record must contain at least one property.
+	// If it returns false, no further Write operations can be performed, and a call
+	// to Close will return the occurred error.
 	//
 	// It panics if called on a closed writer.
 	Write(ctx context.Context, id string, properties map[string]any) bool

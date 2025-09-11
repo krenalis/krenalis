@@ -73,24 +73,17 @@ type FileEnv struct {
 // FileNewFunc represents functions that create new file connector instances.
 type FileNewFunc[T any] func(*FileEnv) (T, error)
 
-// A RecordReader interface is used by file connectors to read the records to be
-// written.
+// A RecordReader interface is used by file connectors to read records
+// before they are written.
 type RecordReader interface {
-
-	// Ack acknowledges the processing of the record with the given identifier.
-	// err is the error occurred processing the record, if any.
-	Ack(id string, err error)
 
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
 
-	// Record returns the next record with its ack ID. The keys of record represent
-	// column names. A record may be empty or contain only a subset of columns.
-	// It returns "", nil, and io.EOF if there are no more records.
-	//
-	// After a record has been read and processed, the caller should call Ack
-	// to acknowledge the processing of the record.
-	Record(ctx context.Context) (ackID string, record map[string]any, err error)
+	// Record returns the next record. The keys of the record are column names.
+	// A record may be empty or contain only a subset of columns.
+	// It returns nil and io.EOF if there are no more records.
+	Record(ctx context.Context) (map[string]any, error)
 }
 
 // A RecordWriter interface is used by file connectors to write read records.

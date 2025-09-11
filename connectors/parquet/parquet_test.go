@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -186,12 +185,6 @@ func TestExportAndImportParquet(t *testing.T) {
 	}
 	t.Logf("export completed (%d record(s) should have been written)", len(exportedRecords))
 
-	// Check that all acks have been received.
-	if recordReader.acksReceived != len(exportedRecords) {
-		t.Fatalf("expected to receive %d ack(s), got %v", len(exportedRecords), recordReader.acksReceived)
-	}
-	t.Logf("correctly received %d ack(s)", recordReader.acksReceived)
-
 	// Check the exported file with Pandas.
 	pyExec, err := lookupPythonExecPath()
 	if err != nil {
@@ -341,32 +334,23 @@ func TestExport(t *testing.T) {
 var _ meergo.RecordReader = &testRecordReader{}
 
 type testRecordReader struct {
-	t            *testing.T
-	columns      []types.Property
-	records      []map[string]any
-	index        int
-	acksReceived int
-}
-
-func (records *testRecordReader) Ack(id string, err error) {
-	if err != nil {
-		records.t.Fatalf("called ack function with an error: %v", err)
-	}
-	records.acksReceived++
+	t       *testing.T
+	columns []types.Property
+	records []map[string]any
+	index   int
 }
 
 func (records *testRecordReader) Columns() []types.Property {
 	return records.columns
 }
 
-func (records *testRecordReader) Record(ctx context.Context) (ackID string, record map[string]any, err error) {
+func (records *testRecordReader) Record(ctx context.Context) (map[string]any, error) {
 	if records.index == len(records.records) {
-		return "", nil, io.EOF
+		return nil, io.EOF
 	}
-	ackID = strconv.Itoa(records.index)
-	record = records.records[records.index]
+	record := records.records[records.index]
 	records.index++
-	return ackID, record, nil
+	return record, nil
 }
 
 // Test RecordWriter (used when importing).
