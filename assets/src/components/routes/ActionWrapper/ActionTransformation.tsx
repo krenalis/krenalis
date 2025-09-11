@@ -65,7 +65,13 @@ import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
-import { ActionToSet, ExportMode, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/action';
+import {
+	ActionToSet,
+	ExportMode,
+	Filter,
+	TransformationFunction,
+	TransformationPurpose,
+} from '../../../lib/api/types/action';
 import TransformedConnector from '../../../lib/core/connector';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
@@ -1253,28 +1259,25 @@ const FullscreenTransformation = ({
 	}, [outputSchema]);
 
 	let eventListenerFilter = null;
-	if (isEventBasedUserImport || isAppEventsExport) {
-		let filter = {
-			logical: action.filter != null ? action.filter.logical : 'and',
-			conditions: action.filter != null ? [...action.filter.conditions] : [],
-		};
-		if (isAppEventsExport && connection.linkedConnections == null) {
-			filter = null;
-		} else {
+	if (isEventBasedUserImport || (isAppEventsExport && connection.linkedConnections != null)) {
+		let filter: Filter = { logical: 'and', conditions: [] };
+		if (action.filter != null) {
+			filter.logical = action.filter.logical;
+			filter.conditions = [...action.filter.conditions];
+		}
+		filter.conditions.push({
+			property: 'connection',
+			operator: 'is one of',
+			values: isEventBasedUserImport
+				? [String(connection.id)]
+				: connection.linkedConnections.map((id) => String(id)),
+		});
+		if (isEventBasedUserImport) {
 			filter.conditions.push({
-				property: 'connection',
-				operator: 'is one of',
-				values: isEventBasedUserImport
-					? [String(connection.id)]
-					: connection.linkedConnections.map((id) => String(id)),
+				property: 'traits',
+				operator: 'is not',
+				values: ['null'],
 			});
-			if (isEventBasedUserImport) {
-				filter.conditions.push({
-					property: 'traits',
-					operator: 'is not',
-					values: ['null'],
-				});
-			}
 		}
 	}
 
