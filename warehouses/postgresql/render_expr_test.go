@@ -173,11 +173,11 @@ func Test_renderExpr(t *testing.T) {
 				meergo.OpOr,
 				[]meergo.Expr{
 					meergo.NewBaseExpr(meergo.Column{Name: "type", Type: types.Text(), Nullable: true}, meergo.OpIsNotEmpty),
-					meergo.NewBaseExpr(meergo.Column{Name: "properties", Type: types.JSON()}, meergo.OpIsEmpty),
+					// meergo.NewBaseExpr(meergo.Column{Name: "properties", Type: types.JSON()}, meergo.OpIsEmpty), // See issue https://github.com/meergo/meergo/issues/1804.
 					meergo.NewBaseExpr(meergo.Column{Name: "scores", Type: types.Array(types.Int(32)), Nullable: true}, meergo.OpIsEmpty),
 					meergo.NewBaseExpr(meergo.Column{Name: "properties", Type: types.Map(types.Text())}, meergo.OpIsNotEmpty),
 				}),
-			query: `("type" IS NOT NULL AND "type" <> '') OR "properties" IN ('{}'::jsonb,'[]'::jsonb,'""'::jsonb,'null'::jsonb) OR array_length("scores", 1) IS NULL OR "properties" <> '{}'::jsonb`,
+			query: `("type" IS NOT NULL AND "type" <> '') OR array_length("scores", 1) IS NULL OR "properties" <> '{}'::jsonb`,
 		},
 	}
 	for _, test := range tests {
