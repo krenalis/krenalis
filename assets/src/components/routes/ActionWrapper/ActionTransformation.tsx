@@ -1915,117 +1915,132 @@ const FullscreenTransformation = ({
 			</div>
 		);
 	} else if (samples) {
+		const entries = Array.from(samples.entries());
 		inputPanelContent = (
 			<div className='fullscreen-transformation__samples'>
-				{Array.from(samples.entries()).map(([i, s]) => {
-					const isOpen = JSON.stringify(s) === JSON.stringify(selectedSample);
-					const isLastExecuted =
-						lastExecutedSample.current && JSON.stringify(lastExecutedSample.current) === JSON.stringify(s);
+				{entries.length === 0 ? (
+					<div className='fullscreen-transformation__no-sample'>
+						<div className='fullscreen-transformation__no-sample-text'>
+							<h3>No {connection.connector.terms.users} to test</h3>
+							<div>
+								{connection.name} didn't return any {connection.connector.terms.users} to test the
+								transformation.
+							</div>
+						</div>
+					</div>
+				) : (
+					entries.map(([i, s]) => {
+						const isOpen = JSON.stringify(s) === JSON.stringify(selectedSample);
+						const isLastExecuted =
+							lastExecutedSample.current &&
+							JSON.stringify(lastExecutedSample.current) === JSON.stringify(s);
 
-					let highlightedLines: boolean[] = [true]; // First curly brace is highlighted.
+						let highlightedLines: boolean[] = [true]; // First curly brace is highlighted.
 
-					if (transformationType === 'function') {
-						// Highlight the selected properties.
-						for (const k in s) {
-							const v = s[k];
-							if (typeof v === 'object') {
-								const children = getSelectedChildrenProperties(k, selectedInPaths, v);
-								const keys = Object.keys(children);
+						if (transformationType === 'function') {
+							// Highlight the selected properties.
+							for (const k in s) {
+								const v = s[k];
+								if (typeof v === 'object') {
+									const children = getSelectedChildrenProperties(k, selectedInPaths, v);
+									const keys = Object.keys(children);
 
-								let isSelected = false;
-								if (selectedInPaths.includes(k)) {
-									isSelected = true;
-									highlightedLines.push(true);
-									for (const _ of keys) {
+									let isSelected = false;
+									if (selectedInPaths.includes(k)) {
+										isSelected = true;
 										highlightedLines.push(true);
+										for (const _ of keys) {
+											highlightedLines.push(true);
+										}
+									} else {
+										const hasSelectedChildren =
+											keys.findIndex((key) => children[key] === true) !== -1;
+										isSelected = hasSelectedChildren;
+										highlightedLines.push(hasSelectedChildren);
+										for (const key of keys) {
+											highlightedLines.push(children[key]);
+										}
 									}
+									highlightedLines.push(isSelected); // Final curly brace is highlighted.
+									continue;
 								} else {
-									const hasSelectedChildren = keys.findIndex((key) => children[key] === true) !== -1;
-									isSelected = hasSelectedChildren;
-									highlightedLines.push(hasSelectedChildren);
-									for (const key of keys) {
-										highlightedLines.push(children[key]);
-									}
+									highlightedLines.push(selectedInPaths.includes(k));
+									continue;
 								}
-								highlightedLines.push(isSelected); // Final curly brace is highlighted.
-								continue;
-							} else {
-								highlightedLines.push(selectedInPaths.includes(k));
-								continue;
 							}
+							highlightedLines.push(true); // Final curly brace is highlighted.
 						}
-						highlightedLines.push(true); // Final curly brace is highlighted.
-					}
 
-					return (
-						<Accordion
-							key={i}
-							isOpen={isOpen}
-							summary={
-								<div
-									className={`fullscreen-transformation__sample${isOpen ? ' fullscreen-transformation__sample--open' : ''}${isLastExecuted ? ' fullscreen-transformation__sample--last-executed' : ''}`}
-									onClick={(e) => onSampleClick(e, s)}
-								>
-									<div className='fullscreen-transformation__sample-name'>
-										{actionType.target === 'User' ? (
-											<>
-												{idIdentifier.current && (
-													<div className='fullscreen-transformation__sample-id'>
-														{removeQuotes(s[idIdentifier.current])}
-													</div>
-												)}
-												<div>
-													<div className='fullscreen-transformation__sample-full-name'>
-														{firstNameIdentifier.current && lastNameIdentifier.current
-															? removeQuotes(s[firstNameIdentifier.current]) +
-																' ' +
-																removeQuotes(s[lastNameIdentifier.current])
-															: `Sample ${i}`}
-													</div>
-													{emailIdentifier.current && (
-														<div className='fullscreen-transformation__sample-email'>
-															{removeQuotes(s[emailIdentifier.current])}
+						return (
+							<Accordion
+								key={i}
+								isOpen={isOpen}
+								summary={
+									<div
+										className={`fullscreen-transformation__sample${isOpen ? ' fullscreen-transformation__sample--open' : ''}${isLastExecuted ? ' fullscreen-transformation__sample--last-executed' : ''}`}
+										onClick={(e) => onSampleClick(e, s)}
+									>
+										<div className='fullscreen-transformation__sample-name'>
+											{actionType.target === 'User' ? (
+												<>
+													{idIdentifier.current && (
+														<div className='fullscreen-transformation__sample-id'>
+															{removeQuotes(s[idIdentifier.current])}
 														</div>
 													)}
-												</div>
-											</>
-										) : (
-											''
-										)}
+													<div>
+														<div className='fullscreen-transformation__sample-full-name'>
+															{firstNameIdentifier.current && lastNameIdentifier.current
+																? removeQuotes(s[firstNameIdentifier.current]) +
+																	' ' +
+																	removeQuotes(s[lastNameIdentifier.current])
+																: `Sample ${i}`}
+														</div>
+														{emailIdentifier.current && (
+															<div className='fullscreen-transformation__sample-email'>
+																{removeQuotes(s[emailIdentifier.current])}
+															</div>
+														)}
+													</div>
+												</>
+											) : (
+												''
+											)}
+										</div>
+										<div className='fullscreen-transformation__execute-button'>
+											<SlIconButton
+												disabled={isExecuting}
+												name='play-circle'
+												onClick={(e) => {
+													e.stopPropagation();
+													onTransformSample(s);
+												}}
+											/>
+										</div>
 									</div>
-									<div className='fullscreen-transformation__execute-button'>
-										<SlIconButton
-											disabled={isExecuting}
-											name='play-circle'
-											onClick={(e) => {
-												e.stopPropagation();
-												onTransformSample(s);
+								}
+								details={
+									<div className='fullscreen-transformation__sample-source'>
+										<SyntaxHighlight
+											language='json'
+											showLineNumbers={true}
+											wrapLines={true}
+											lineNumberStyle={{ display: 'none' }}
+											lineProps={(n) => {
+												if (highlightedLines[n - 1] === false) {
+													return { 'data-excluded': '' };
+												}
+												return {};
 											}}
-										/>
+										>
+											{JSONbig.stringify(s, null, 4)}
+										</SyntaxHighlight>
 									</div>
-								</div>
-							}
-							details={
-								<div className='fullscreen-transformation__sample-source'>
-									<SyntaxHighlight
-										language='json'
-										showLineNumbers={true}
-										wrapLines={true}
-										lineNumberStyle={{ display: 'none' }}
-										lineProps={(n) => {
-											if (highlightedLines[n - 1] === false) {
-												return { 'data-excluded': '' };
-											}
-											return {};
-										}}
-									>
-										{JSONbig.stringify(s, null, 4)}
-									</SyntaxHighlight>
-								</div>
-							}
-						/>
-					);
-				})}
+								}
+							/>
+						);
+					})
+				)}
 			</div>
 		);
 	} else if (connection.isDatabase && connection.isSource) {
@@ -2048,10 +2063,10 @@ const FullscreenTransformation = ({
 		if (isAppEventsExport && (connection.linkedConnections == null || connection.linkedConnections.length === 0)) {
 			inputPanelContent = (
 				<div className='fullscreen-transformation__no-sample'>
-					<p className='fullscreen-transformation__no-sample-text'>
+					<div className='fullscreen-transformation__no-sample-text'>
 						<h3>There are no events</h3>
 						<div>Please link an event source to this connection to start collecting events.</div>
-					</p>
+					</div>
 				</div>
 			);
 		} else {
@@ -2129,19 +2144,19 @@ const FullscreenTransformation = ({
 	} else if (connection.isDestination && actionType.target === 'User') {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
-				<p className='fullscreen-transformation__no-sample-text'>
+				<div className='fullscreen-transformation__no-sample-text'>
 					<h3>There are no users</h3>
 					<div>No users have been imported into the warehouse yet.</div>
-				</p>
+				</div>
 			</div>
 		);
 	} else {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
-				<p className='fullscreen-transformation__no-sample-text'>
+				<div className='fullscreen-transformation__no-sample-text'>
 					<h3>There are no samples</h3>
 					<div>No samples can be retrieved to test the transformation.</div>
-				</p>
+				</div>
 			</div>
 		);
 	}
