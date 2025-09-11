@@ -49,18 +49,6 @@ type Authorization struct {
 	ExpiresIn    time.Time // expiration time of the access token.
 }
 
-// CommittableWriter is the interface implemented by writers that support
-// committable writes.
-type CommittableWriter interface {
-
-	// Commit commits executed, ongoing, and pending write operations, ensuring
-	// their completion. If the commit fails, no records are written.
-	// Commit always closes the writer.
-	//
-	// It panics if called on a closed writer.
-	Commit(ctx context.Context) error
-}
-
 var (
 	ErrNoColumnsFound = errors.New("file has no columns")
 	ErrNoWebhooks     = errors.New("app has no webhooks")
@@ -148,22 +136,21 @@ type Record struct {
 // write records.
 type Writer interface {
 
-	// Close closes the writer. For non-committable writers, it ensures the
-	// completion of all pending or ongoing write operations. In the event of a
-	// canceled context, it interrupts ongoing writes, discards pending ones, and
-	// returns. For committable writers, it discards all writes, including those
-	// already executed.
+	// Close terminates the writer, ensuring that all records are processed before
+	// returning, unless the provided context is canceled.
+	// If processing all records fails, an error is returned.
 	//
 	// If the writer is already closed, it does nothing and returns immediately.
 	Close(ctx context.Context) error
 
 	// Write writes a record. Typically, Write returns immediately, deferring the
 	// actual write operation to a later time. If it returns false, no further Write
-	// operations can be performed, and a call to Close will return an error.
+	// operations can be performed, and a call to Close will return the occurred
+	// error.
 	//
-	// If the record is successfully written, the ack function is invoked with id
-	// and a nil error as arguments. If writing the record fails, the ack function
-	// is invoked with id and a non-nil error as arguments. The ack function is
+	// If the record is written successfully, the ack function is invoked with id
+	// and a nil error. If writing the record fails, the ack function is
+	// invoked with id and a non-nil error. The ack function is
 	// invoked even if Write returns false.
 	//
 	// record must contain at least one property.

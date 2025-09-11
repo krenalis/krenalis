@@ -192,7 +192,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
 			err = err2
 		}
-		result <- connectorError(err)
+		result <- err // err will be nil if no error occurred.
 	}()
 	fw := &fileWriter{
 		cancelWrite: cancelWrite,
@@ -434,16 +434,12 @@ func (w *fileWriter) Close(ctx context.Context) error {
 	if w.closed {
 		return w.err
 	}
-	w.cancelWrite()
 	w.closed = true
-	return nil
-}
-
-func (w *fileWriter) Commit(ctx context.Context) error {
-	if w.closed {
-		panic("connectors: Commit called on a closed writer")
-	}
 	close(w.records)
+	// If Write has already recorded an error, return it immediately.
+	if w.err != nil {
+		return w.err
+	}
 	var err error
 	select {
 	case err = <-w.result:
@@ -453,7 +449,6 @@ func (w *fileWriter) Commit(ctx context.Context) error {
 		w.cancelWrite()
 		err = <-w.result
 	}
-	w.closed = true
 	return err
 }
 

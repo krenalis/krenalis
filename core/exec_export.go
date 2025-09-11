@@ -149,6 +149,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	users := make([]User, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
 
+Records:
 	for record := range records.All(ctx) {
 
 		meergoMetrics.Increment("Action.exportUsers.iterations_over_records_All", 1)
@@ -191,8 +192,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 			if transformer == nil {
 				for _, user := range users {
-					if ok := writer.Write(ctx, "", user.Record.Properties); !ok {
-						return writer.Close(ctx)
+					if !writer.Write(ctx, "", user.Record.Properties) {
+						break Records
 					}
 				}
 				clear(users)
@@ -251,8 +252,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 					}
 					alreadyExportedKeys[key] = struct{}{}
 				}
-				if ok := writer.Write(ctx, user.ID, record.Properties); !ok {
-					return writer.Close(ctx)
+				if !writer.Write(ctx, user.ID, record.Properties) {
+					break Records
 				}
 			}
 			clear(users)
@@ -267,16 +268,15 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	users = nil
 
-	if writer2, ok := writer.(connectors.CommittableWriter); ok {
-		err = writer2.Commit(ctx)
-	} else {
-		err = writer.Close(ctx)
-	}
+	err = writer.Close(ctx)
 	if err != nil {
+		if ctx.Err() != nil {
+			return err
+		}
 		return newActionError(metrics.FinalizeStep, err)
 	}
 
-	return err
+	return nil
 }
 
 // syncDestinationUsers syncs the destination users of the action.
