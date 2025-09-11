@@ -2557,16 +2557,11 @@ const MapMapping = ({
 			...pairs.slice(index + 1, pairs.length),
 		];
 		setPairs(newPairs);
-
-		let value = buildMapExpression(new Map(newPairs));
-		if (value === 'map()') {
-			// The user has emptied all inputs so we must empty the
-			// value of the mapping without automatically setting the
-			// "map()" value.
-			value = '';
+		const expression = getMapExpression(newPairs);
+		if (expression === '') {
 			setIsResetting(true);
 		}
-		updateMapping(propertyPath, value);
+		updateMapping(propertyPath, expression);
 	};
 
 	const onSelectPairValue = (index: number, val: string) => {
@@ -2576,26 +2571,21 @@ const MapMapping = ({
 			...pairs.slice(index + 1, pairs.length),
 		];
 		setPairs(newPairs);
-		let value = buildMapExpression(new Map(newPairs));
-		updateMapping(propertyPath, value);
+		const expression = getMapExpression(newPairs);
+		updateMapping(propertyPath, expression);
 		setReloadLogicalErrors(true);
 	};
 
 	const onAddPair = (index: number) => {
 		let newPairs = [...pairs.slice(0, index + 1), ['', ''] as ['', ''], ...pairs.slice(index + 1, pairs.length)];
 		setPairs(newPairs);
-		let value = buildMapExpression(new Map(newPairs));
-		if (value === 'map()') {
-			// Avoid automatically setting the "map()" value in the
-			// action if all the inputs are empty.
-			value = '';
-		}
+		const expression = getMapExpression(newPairs);
 
 		// Shift the errors.
 		setLogicalErrors(shiftErrors(logicalErrors, index));
 		setValidationErrors(shiftErrors(validationErrors, index));
 
-		updateMapping(propertyPath, value);
+		updateMapping(propertyPath, expression);
 		setReloadLogicalErrors(true);
 
 		setTimeout(() => {
@@ -2639,16 +2629,12 @@ const MapMapping = ({
 		}
 		let newPairs = [...pairs.slice(0, index), ...pairs.slice(index + 1, pairs.length)];
 		setPairs(newPairs);
-		let value = buildMapExpression(new Map(newPairs));
-		if (value === 'map()') {
+		const expression = getMapExpression(newPairs);
+		if (expression === '') {
 			const isAlreadyEmpty = property.value === '';
 			if (isAlreadyEmpty) {
 				return;
 			}
-			// The user has emptied all inputs so we must empty the
-			// value of the mapping without automatically setting the
-			// "map()" value.
-			value = '';
 			setIsResetting(true);
 		}
 
@@ -2662,7 +2648,7 @@ const MapMapping = ({
 		setLogicalErrors(unshiftErrors(logicalErr, index));
 		setValidationErrors(unshiftErrors(validationErr, index));
 
-		updateMapping(propertyPath, value);
+		updateMapping(propertyPath, expression);
 		setReloadLogicalErrors(true);
 	};
 
@@ -3253,6 +3239,13 @@ function buildFilteredSample(flatSchema: TransformedMapping, sample: Sample): Re
 		}
 	}
 	return result;
+}
+
+function getMapExpression(pairs: [string, string][]): string {
+	if (pairs.every(([key, value]) => key === '' && value === '')) {
+		return '';
+	}
+	return buildMapExpression(new Map(pairs));
 }
 
 function getValueFromPath(obj: any, path: string): any {
