@@ -5,11 +5,13 @@
 // Copyright (c) 2023 Open2b
 //
 
-package meergo
+package testconnector
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/meergo/meergo"
 )
 
 // AbsolutePathTest is a test for FileStorage.AbsolutePath.
@@ -32,7 +34,7 @@ func TestAbsolutePath(storage any, tests []AbsolutePathTest) error {
 			AbsolutePath(ctx context.Context, name string) (string, error)
 		}).AbsolutePath(ctx, test.Name)
 		if err != nil {
-			_, ok := err.(*InvalidPathError)
+			_, ok := err.(*meergo.InvalidPathError)
 			if !ok {
 				if test.Expected == "" {
 					return fmt.Errorf("%q: expected an *InvalidPathError, got error %#v", test.Name, err)

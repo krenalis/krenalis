@@ -12,7 +12,7 @@ package filesystem
 import (
 	"testing"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/testconnector"
 )
 
 func TestPathConvert(t *testing.T) {
@@ -22,7 +22,7 @@ func TestPathConvert(t *testing.T) {
 		// tests are run non-concurrently.
 		root = "/"
 		fs := &Filesystem{settings: &innerSettings{}}
-		tests := []meergo.AbsolutePathTest{
+		tests := []testconnector.AbsolutePathTest{
 			{Name: "a", Expected: "/a"},
 			{Name: "a.e", Expected: "/a.e"},
 			{Name: "a/b.e", Expected: "/a/b.e"},
@@ -35,7 +35,7 @@ func TestPathConvert(t *testing.T) {
 			{Name: "../a"},
 			{Name: "a/"},
 		}
-		err := meergo.TestAbsolutePath(fs, tests)
+		err := testconnector.TestAbsolutePath(fs, tests)
 		if err != nil {
 			t.Errorf("Filesystem connector: %s", err)
 		}
@@ -46,11 +46,11 @@ func TestPathConvert(t *testing.T) {
 		// tests are run non-concurrently.
 		root = "/root"
 		fs := &Filesystem{settings: &innerSettings{}}
-		tests := []meergo.AbsolutePathTest{
+		tests := []testconnector.AbsolutePathTest{
 			{Name: "a", Expected: "/root/a"},
 			{Name: "/a", Expected: "/root/a"},
 		}
-		err := meergo.TestAbsolutePath(fs, tests)
+		err := testconnector.TestAbsolutePath(fs, tests)
 		if err != nil {
 			t.Errorf("Filesystem connector: %s", err)
 		}
