@@ -68,6 +68,9 @@ func init() {
 				"500 502 503 504": meergo.ExponentialStrategy(meergo.NetFailure, 200*time.Millisecond),
 			},
 		}},
+		TimeLayouts: meergo.TimeLayouts{
+			DateTime: "unix",
+		},
 		Icon: icon,
 	}, New)
 }
@@ -95,16 +98,16 @@ type innerSettings struct {
 
 // RecordSchema returns the schema of the specified target and role.
 func (stripe *Stripe) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
-	// docs: https://stripe.com/docs/api/customers/object
-	//
-	// currently the user schema is the standard schema of the user returned
+	// Currently the user schema is the standard schema of the user returned
 	// when the api is called without specifying the "expand" field.
 	//
 	// Stripe gives the ability to use this additional "expand" field when
 	// calling its APIs to retrieve additional information:
 	// https://stripe.com/docs/api/expanding_objects
-
-	return schema, nil
+	if role == meergo.Source {
+		return sourceSchema, nil
+	}
+	return destinationSchema, nil
 }
 
 // Records returns the records of the specified target.
@@ -172,7 +175,11 @@ func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records
 	bb := stripe.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
 	defer bb.Close()
 	record := records.First()
-	err := encodeRequest(bb, record.Properties, nil)
+	mode := modeCreate
+	if record.ID != "" {
+		mode = modeUpdate
+	}
+	err := encodeRequest(bb, record.Properties, nil, mode)
 	if err != nil {
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
@@ -265,9 +272,36 @@ func (err *stripeError) Error() string {
 	return fmt.Sprintf("unexpected error from Stripe: (%d) %s", err.statusCode, err.Message)
 }
 
-func encodeRequest(bb *meergo.BodyBuffer, request map[string]interface{}, parents []string) error {
+type upsertMode int
+
+const (
+	modeCreate upsertMode = iota + 1
+	modeUpdate
+)
+
+func encodeRequest(bb *meergo.BodyBuffer, request map[string]interface{}, parents []string, mode upsertMode) error {
+
 	if len(request) > 0 {
+
 		for field, value := range request {
+
+			// Ignore fields not matching with create/update mode.
+			switch mode {
+			// When creating, ignore fields specific for updating.
+			case modeCreate:
+				if field == "default_source" && len(parents) == 0 {
+					continue
+				}
+			// When updating, ignore fields specific for creation.
+			case modeUpdate:
+				switch {
+				case
+					field == "payment_method" && len(parents) == 0,
+					field == "tax_id_data" && len(parents) == 0,
+					field == "test_clock" && len(parents) == 0:
+					continue
+				}
+			}
 
 			switch v := value.(type) {
 			case bool, string, int, nil:
@@ -277,11 +311,10 @@ func encodeRequest(bb *meergo.BodyBuffer, request map[string]interface{}, parent
 				writePath(bb, append(parents, field))
 				bb.WriteByte('=')
 			case map[string]interface{}:
-				return encodeRequest(bb, v, append(parents, field))
+				return encodeRequest(bb, v, append(parents, field), mode)
 			default:
 				return errors.New("unsupported type")
 			}
-
 			switch v := value.(type) {
 			case bool:
 				if v {
@@ -296,8 +329,10 @@ func encodeRequest(bb *meergo.BodyBuffer, request map[string]interface{}, parent
 			case nil:
 				bb.WriteString("")
 			}
+
 		}
 	}
+
 	return nil
 }
 
@@ -313,333 +348,3 @@ func writePath(bb *meergo.BodyBuffer, path []string) {
 		}
 	}
 }
-
-var schema = types.Object([]types.Property{
-	{
-		Name: "id",
-		Type: types.Text(),
-	},
-	{
-		Name: "address",
-		Type: types.Object([]types.Property{
-			{
-				Name:     "city",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "country",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "line1",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "line2",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "postal_code",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "state",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-		}),
-		Nullable: true,
-	},
-	{
-		Name:     "description",
-		Type:     types.Text(),
-		Nullable: true,
-	},
-	{
-		Name:     "email",
-		Type:     types.Text(),
-		Nullable: true,
-	},
-	{
-		Name: "metadata",
-		Type: types.Map(types.Text()),
-	},
-	{
-		Name:     "name",
-		Type:     types.Text(),
-		Nullable: true,
-	},
-	{
-		Name:     "phone",
-		Type:     types.Text(),
-		Nullable: true,
-	},
-	{
-		Name: "shipping",
-		Type: types.Object([]types.Property{
-			{
-				Name: "address",
-				Type: types.Object([]types.Property{
-					{
-						Name:     "city",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-					{
-						Name:     "country",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-					{
-						Name:     "line1",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-					{
-						Name:     "line2",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-					{
-						Name:     "postal_code",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-					{
-						Name:     "state",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-				}),
-				Nullable: true,
-			},
-			{
-				Name:     "name",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "phone",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-		}),
-		Nullable: true,
-	},
-	{
-		Name: "object",
-		Type: types.Text(),
-	},
-	{
-		Name: "balance",
-		Type: types.Int(32),
-	},
-	{
-		Name: "created",
-		Type: types.Int(64),
-	},
-	{
-		Name: "currency",
-		Type: types.Text(),
-	},
-	{
-		Name:     "default_source",
-		Type:     types.Text(),
-		Nullable: true,
-	},
-	{
-		Name: "delinquent",
-		Type: types.Boolean(),
-	},
-	{
-		Name: "discount",
-		Type: types.Object([]types.Property{
-			{
-				Name: "id",
-				Type: types.Text(),
-			},
-			{
-				Name: "coupon",
-				Type: types.Object([]types.Property{
-					{
-						Name: "id",
-						Type: types.Text(),
-					},
-					{
-						Name:     "amount_off",
-						Type:     types.Int(32),
-						Nullable: true,
-					},
-					{
-						Name: "currency",
-						Type: types.Text(),
-					},
-					{
-						Name: "duration",
-						Type: types.Text(),
-					},
-					{
-						Name: "duration_in_months",
-						Type: types.Int(32),
-					},
-					{
-						Name: "metadata",
-						Type: types.Map(types.Text()),
-					},
-					{
-						Name: "name",
-						Type: types.Text(),
-					},
-					{
-						Name: "percent_off",
-						Type: types.Float(64),
-					},
-					{
-						Name: "object",
-						Type: types.Text(),
-					},
-					{
-						Name: "created",
-						Type: types.Int(64),
-					},
-					{
-						Name: "livemode",
-						Type: types.Boolean(),
-					},
-					{
-						Name:     "max_redemptions",
-						Type:     types.Int(32),
-						Nullable: true,
-					},
-					{
-						Name:     "redeem_by",
-						Type:     types.Int(64),
-						Nullable: true,
-					},
-					{
-						Name: "times_redeemed",
-						Type: types.Int(32),
-					},
-					{
-						Name: "valid",
-						Type: types.Boolean(),
-					},
-				}),
-			},
-			{
-				Name: "customer",
-				Type: types.Text(),
-			},
-			{
-				Name: "end",
-				Type: types.Int(64),
-			},
-			{
-				Name: "start",
-				Type: types.Int(64),
-			},
-			{
-				Name:     "subscription",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name: "object",
-				Type: types.Text(),
-			},
-			{
-				Name:     "checkout_session",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "invoice",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "invoice_item",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "promotion_code",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-		}),
-		Nullable: true,
-	},
-	{
-		Name: "invoice_prefix",
-		Type: types.Text(),
-	},
-	{
-		Name: "invoice_settings",
-		Type: types.Object([]types.Property{
-			{
-				Name: "custom_fields",
-				Type: types.Array(types.Object([]types.Property{
-					{
-						Name:     "name",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-					{
-						Name:     "value",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-				})),
-				Nullable: true,
-			},
-			{
-				Name:     "default_payment_method",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name:     "footer",
-				Type:     types.Text(),
-				Nullable: true,
-			},
-			{
-				Name: "rendering_options",
-				Type: types.Object([]types.Property{
-					{
-						Name:     "amount_tax_display",
-						Type:     types.Text(),
-						Nullable: true,
-					},
-				}),
-				Nullable: true,
-			},
-		}),
-	},
-	{
-		Name: "livemode",
-		Type: types.Boolean(),
-	},
-	{
-		Name: "next_invoice_sequence",
-		Type: types.Int(32),
-	},
-	{
-		Name: "preferred_locales",
-		Type: types.Array(types.Text()),
-	},
-	{
-		Name: "tax_exempt",
-		Type: types.Text(),
-	},
-	{
-		Name:     "test_clock",
-		Type:     types.Text(),
-		Nullable: true,
-	},
-})
