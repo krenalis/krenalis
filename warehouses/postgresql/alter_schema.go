@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/backoff"
+	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"

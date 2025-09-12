@@ -14,7 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/backoff"
+	"github.com/meergo/meergo/core/backoff"
 )
 
 type warehouseOp string

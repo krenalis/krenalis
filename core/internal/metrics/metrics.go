@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/backoff"
+	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/state"
 )

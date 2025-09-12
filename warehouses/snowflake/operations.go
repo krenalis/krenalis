@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/backoff"
+	"github.com/meergo/meergo/core/backoff"
 )
 
 type warehouseOp string

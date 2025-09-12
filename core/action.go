@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/backoff"
+	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
