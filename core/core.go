@@ -1362,7 +1362,7 @@ func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
 	wh, ok := core.mcp[n.ID]
 	delete(core.mcp, n.ID)
 	core.mcpMu.Unlock()
-	if ok || wh != nil {
+	if ok && wh != nil {
 		go func(workspace int) {
 			err := wh.Close()
 			if err != nil {
