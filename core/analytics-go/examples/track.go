@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/meergo/meergo/analytics-go"
+	"github.com/meergo/meergo/core/analytics-go"
 )
 
 // Use your write key and endpoint.

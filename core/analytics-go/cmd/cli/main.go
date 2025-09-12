@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/meergo/meergo/analytics-go"
+	"github.com/meergo/meergo/core/analytics-go"
 
 	"github.com/segmentio/conf"
 )

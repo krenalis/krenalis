@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/analytics-go"
+	"github.com/meergo/meergo/core/analytics-go"
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
 )

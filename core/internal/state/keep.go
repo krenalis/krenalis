@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/analytics-go"
+	"github.com/meergo/meergo/core/analytics-go"
 	_json "github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
