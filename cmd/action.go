@@ -13,7 +13,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 )
 
 type action struct {

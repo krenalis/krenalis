@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/testconnector"
-	"github.com/meergo/meergo/json"
 )
 
 func TestSendEvents(t *testing.T) {

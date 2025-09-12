@@ -28,7 +28,7 @@ import (
 
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 )
 
 const maxIDLen = len("@9223372036854775807")

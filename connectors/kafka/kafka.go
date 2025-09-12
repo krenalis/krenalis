@@ -20,7 +20,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"

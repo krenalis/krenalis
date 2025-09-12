@@ -16,7 +16,7 @@ import (
 
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 )
 
 // Test_Applies exercises the Applies function with various operators and

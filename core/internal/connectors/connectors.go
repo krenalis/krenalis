@@ -26,7 +26,7 @@ import (
 	"github.com/meergo/meergo/core/internal/connectors/httpclient"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/itchyny/timefmt-go"

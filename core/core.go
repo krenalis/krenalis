@@ -38,7 +38,7 @@ import (
 	"github.com/meergo/meergo/core/internal/transformers/local"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/getsentry/sentry-go"

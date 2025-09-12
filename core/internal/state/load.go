@@ -16,7 +16,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/db"
-	_json "github.com/meergo/meergo/json"
+	_json "github.com/meergo/meergo/core/json"
 )
 
 // load loads the state.

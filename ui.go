@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 )
 
 // ErrUIEventNotExist values are returned by the ServeUI method when the event

@@ -21,7 +21,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 
 	"github.com/gorilla/securecookie"
 	"golang.org/x/text/unicode/norm"

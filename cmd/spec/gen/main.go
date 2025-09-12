@@ -14,7 +14,7 @@ import (
 	"runtime"
 
 	"github.com/meergo/meergo/cmd/spec"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 )
 
 func main() {

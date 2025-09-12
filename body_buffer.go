@@ -17,7 +17,7 @@ import (
 	"sync"
 
 	"github.com/meergo/meergo/bufferpool"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 )
 
 // ContentEncoding represents supported HTTP body encodings.

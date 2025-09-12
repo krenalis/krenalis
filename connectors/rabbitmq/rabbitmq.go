@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )

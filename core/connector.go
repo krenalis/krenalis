@@ -14,7 +14,7 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 )
 
 // Connector represents a connector.

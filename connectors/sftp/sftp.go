@@ -25,7 +25,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/core/json"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
