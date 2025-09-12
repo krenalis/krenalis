@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/meergo/meergo/assets/debugid"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/debugid"
 
 	"github.com/andybalholm/brotli"
 	"github.com/evanw/esbuild/pkg/api"
