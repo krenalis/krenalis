@@ -101,7 +101,7 @@ const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 		const s1 = snippet.replace('"writekey"', JSON.stringify(keys[0]));
 		const s2 = s1.replace('"endpoint"', JSON.stringify(externalEventURL));
 		let s3 = s2;
-		if (connectorName === 'Javascript') {
+		if (connectorName === 'JavaScript') {
 			s3 = s2.replace('"javaScriptSDKURL"', JSON.stringify(javaScriptSDKURL));
 		}
 		return s3;
