@@ -19,12 +19,12 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/connectors/appwriter"
 	"github.com/meergo/meergo/core/internal/connectors/httpclient"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )

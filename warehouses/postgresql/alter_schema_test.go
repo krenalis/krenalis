@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/types"
 )
 

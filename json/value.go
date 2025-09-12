@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/json/internal/json"
 	"github.com/meergo/meergo/json/internal/json/jsontext"
 )

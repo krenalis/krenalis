@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/core/decimal"
 )
 
 func Test_Value(t *testing.T) {

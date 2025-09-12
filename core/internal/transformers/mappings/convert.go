@@ -17,9 +17,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 

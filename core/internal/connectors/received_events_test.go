@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/decimal"
 )
 
 // Test_ReceivedEvent checks that ReceivedEvent exposes all event fields

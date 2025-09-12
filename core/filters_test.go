@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"

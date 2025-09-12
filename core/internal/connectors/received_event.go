@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/decimal"
 )
 
 // receivedEvent implements the meergo.ReceivedEvent interface. A ReceivedEvent

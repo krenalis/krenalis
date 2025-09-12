@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 
 	"github.com/google/go-cmp/cmp"

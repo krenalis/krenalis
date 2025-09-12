@@ -147,7 +147,7 @@ types.Decimal(p, s)
 Decimals can also have a minimum and maximum value range, for example:
 
 ```go
-import "github.com/meergo/meergo/decimal"
+import "github.com/meergo/meergo/core/decimal"
 
 ...
 

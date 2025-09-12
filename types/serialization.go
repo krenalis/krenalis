@@ -19,7 +19,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/core/decimal"
 
 	"golang.org/x/text/unicode/norm"
 )

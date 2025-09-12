@@ -16,7 +16,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/types"
 )
 
