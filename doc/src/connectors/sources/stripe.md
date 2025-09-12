@@ -21,11 +21,11 @@ Before you can add a Stripe data source, you need to create an API key in your S
 2. Click **Developers**.
 3. On the **Developers** page, click **API keys**.
 4. On the **API keys** page, click **Create restricted key**.
-5. On the **Create restricted API key** page, in the **Key name** field, enter a name for the key, for example, "Meergo data source."
-6. In the row **Customers** and first column **PERMISSIONS**, click **Read**.
-7. Click **Create key**.
-8. On the **Your new API key** dialog window, copy the key.
-9. Click **Done**.
+5. If the Stripe interface asks you **How ​​will you use this API key?**, you can choose the second option, **Building your own integration**.
+6. On the **Create restricted API key** page, in the **Key name** field, enter a name for the key, for example, "Meergo data source."
+7. In the row **Customers** and first column **PERMISSIONS**, click **Read**.
+8. Click **Create key**.
+9. In the screen showing the keys, copy the token of the key you just created.
 
 Now proceed to add a Stripe data source:
 
