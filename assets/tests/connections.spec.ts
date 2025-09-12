@@ -151,7 +151,7 @@ test(`Add Filesystem destination`, async ({ page }) => {
 	).toBeAttached();
 });
 
-test(`Add Javascript source`, async ({ page }) => {
+test(`Add JavaScript source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
 	await page.click(`[data-name="JavaScript"]`);
 	await page.click('.connectors-list__documentation-add');
@@ -162,10 +162,10 @@ test(`Add Javascript source`, async ({ page }) => {
 	const id = fragments[fragments.length - 2];
 	await page.goto(`${adminURL}/connections/sources`);
 	await expect(
-		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Javascript' }),
+		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'JavaScript' }),
 	).toBeAttached();
 	await page.goto(`${adminURL}/connections`);
 	await expect(
-		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Javascript' }),
+		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'JavaScript' }),
 	).toBeAttached();
 });

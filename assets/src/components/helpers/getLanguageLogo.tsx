@@ -9,7 +9,7 @@ const getLanguageLogo = (language: string): ReactNode => {
 			languageLogo = <img src={SQL_LOGO} alt='SQL logo' />;
 			break;
 		case 'JavaScript':
-			languageLogo = <img src={JS_LOGO} alt='Javascript logo' />;
+			languageLogo = <img src={JS_LOGO} alt='JavaScript logo' />;
 			break;
 		case 'Python':
 			languageLogo = <img src={PYTHON_LOGO} alt='Python logo' />;

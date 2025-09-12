@@ -1214,7 +1214,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
-test(`Add "Import events" action on Javascript`, async ({ page }) => {
+test(`Add "Import events" action on JavaScript`, async ({ page }) => {
 	const id = await addJavascriptSource(page);
 	await page.goto(`${adminURL}/connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
@@ -1291,7 +1291,7 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
-test(`Add "Import users" action on Javascript`, async ({ page }) => {
+test(`Add "Import users" action on JavaScript`, async ({ page }) => {
 	const id = await addJavascriptSource(page);
 	await page.goto(`${adminURL}/connections/${id}/actions`);
 	let name = page.locator('.connection-actions__no-action-action-types .list-tile__name', {
