@@ -22,7 +22,7 @@ import (
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/embed"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/metrics"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"

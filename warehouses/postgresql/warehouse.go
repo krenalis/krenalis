@@ -23,7 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/metrics"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"

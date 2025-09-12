@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/metrics"
+	"github.com/meergo/meergo/core/metrics"
 )
 
 type EventWriter struct {

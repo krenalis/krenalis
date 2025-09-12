@@ -25,7 +25,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/metrics"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/types"
 )
 

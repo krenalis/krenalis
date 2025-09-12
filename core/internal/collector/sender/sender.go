@@ -23,7 +23,7 @@ import (
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/connectors/httpclient"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/metrics"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"

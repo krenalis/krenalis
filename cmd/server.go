@@ -28,7 +28,7 @@ import (
 
 	"github.com/meergo/meergo/cmd/mcp"
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/metrics"
+	"github.com/meergo/meergo/core/metrics"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

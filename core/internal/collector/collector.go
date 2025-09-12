@@ -28,7 +28,7 @@ import (
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/json"
-	meergoMetrics "github.com/meergo/meergo/metrics"
+	meergoMetrics "github.com/meergo/meergo/core/metrics"
 
 	"github.com/oschwald/maxminddb-golang"
 )

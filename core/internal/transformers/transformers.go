@@ -14,7 +14,7 @@ import (
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
-	meergoMetrics "github.com/meergo/meergo/metrics"
+	meergoMetrics "github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/types"
 )
 
