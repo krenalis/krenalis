@@ -225,8 +225,8 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 	if err != nil {
 		return err
 	}
-	if n := len(s.APIKey); n < 1 || n > 100 {
-		return meergo.NewInvalidSettingsError("API key length must be in [1,100]")
+	if n := len(s.APIKey); n < 1 || n > 200 {
+		return meergo.NewInvalidSettingsError("API key length must be in [1,200]")
 	}
 	for i := 0; i < len(s.APIKey); i++ {
 		c := s.APIKey[i]
