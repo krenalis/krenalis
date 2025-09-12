@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/schemas"
@@ -34,9 +33,34 @@ var (
 	ErrTooManyListeners      = fmt.Errorf("there are already %d listeners", MaxEventListeners)
 )
 
+// Observers maps each workspace to its observer.
+type Observers struct {
+	m sync.Map
+}
+
+// Delete deletes the observer for the provided workspace.
+func (o *Observers) Delete(workspace int) {
+	o.m.LoadAndDelete(workspace)
+}
+
+// Load returns the observer for the given workspace identifier, or nil if none
+// exists.
+// The ok result indicates whether the workspace was found.
+func (o *Observers) Load(workspace int) (observer *Observer, ok bool) {
+	v, ok := o.m.Load(workspace)
+	if !ok {
+		return nil, false
+	}
+	return v.(*Observer), true
+}
+
+// Store sets the observer for a workspace.
+func (o *Observers) Store(workspace int, observer *Observer) {
+	o.m.Store(workspace, observer)
+}
+
 // Observer represents an event observer.
 type Observer struct {
-	db *db.DB
 	sync.RWMutex
 	listeners []*listener
 }
@@ -52,8 +76,8 @@ type listener struct {
 }
 
 // newObserver returns a new observer.
-func newObserver(db *db.DB) *Observer {
-	return &Observer{db: db}
+func newObserver() *Observer {
+	return &Observer{}
 }
 
 // CreateListener creates a listener for events and returns its identifier. size

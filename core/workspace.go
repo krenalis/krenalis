@@ -811,7 +811,11 @@ func (this *Workspace) CreateEventListener(size int, filter *Filter) (string, er
 		}
 		where = convertFilterToWhere(filter, schemas.Event)
 	}
-	id, err := this.core.events.observer.CreateListener(size, where)
+	observer, ok := this.core.collector.Observer(this.workspace.ID)
+	if !ok {
+		return "", errors.New("observer either has not been created yet or has already been removed")
+	}
+	id, err := observer.CreateListener(size, where)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", MaxEventListeners)
@@ -858,7 +862,10 @@ func (this *Workspace) Delete(ctx context.Context) error {
 // does nothing if the listener does not exist.
 func (this *Workspace) DeleteEventListener(listener string) {
 	this.core.mustBeOpen()
-	this.core.events.observer.DeleteListener(listener)
+	observer, ok := this.core.collector.Observer(this.workspace.ID)
+	if ok {
+		observer.DeleteListener(listener)
+	}
 }
 
 // Events returns events that match the provided filter, if not nil, and are
@@ -1151,7 +1158,11 @@ func (this *Workspace) LatestAlterUserSchema(ctx context.Context) (startTime, en
 // errors.NotFoundError.
 func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error) {
 	this.core.mustBeOpen()
-	observedEvents, omitted, err := this.core.events.observer.Events(listener)
+	observer, ok := this.core.collector.Observer(this.workspace.ID)
+	if !ok {
+		return nil, 0, errors.NotFound("workspace %d does not exist", this.workspace.ID)
+	}
+	observedEvents, omitted, err := observer.Events(listener)
 	if err != nil {
 		if err == collector.ErrEventListenerNotFound {
 			return nil, 0, errors.NotFound("event listener %q does not exist", listener)

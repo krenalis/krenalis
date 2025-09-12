@@ -56,7 +56,7 @@ type Collector struct {
 	state            *state.State
 	datastore        *datastore.Datastore
 	metrics          *metrics.Collector
-	observer         *Observer
+	observers        Observers
 	duplicated       sync.Map
 	functionProvider transformers.FunctionProvider
 	maxmindDB        *maxminddb.Reader
@@ -79,7 +79,6 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connec
 		state:            st,
 		datastore:        ds,
 		metrics:          metrics,
-		observer:         newObserver(db),
 		functionProvider: provider,
 		destinations:     newDestinations(st, connectors, provider, metrics),
 	}
@@ -92,6 +91,7 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connec
 	st.AddListener(c.onSetActionStatus)
 	st.AddListener(c.onUpdateAction)
 	for _, ws := range st.Workspaces() {
+		c.observers.Store(ws.ID, newObserver())
 		store := ds.Store(ws.ID)
 		c.eventWriters.Store(ws.ID, store.NewEventWriter(c.eventAck))
 	}
@@ -130,9 +130,11 @@ func (c *Collector) Close() {
 	}
 }
 
-// Observer returns the observer for the collected events.
-func (c *Collector) Observer() *Observer {
-	return c.observer
+// Observer returns the observer for the given workspace, or nil if the
+// workspace does not exist.
+// The bool result reports whether the workspace exists.
+func (c *Collector) Observer(workspace int) (*Observer, bool) {
+	return c.observers.Load(workspace)
 }
 
 // ServeHTTP serves both settings and event messages over HTTP.
@@ -402,6 +404,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	connectionType := connection.Connector().Type
 	ws := connection.Workspace()
+	observer, _ := c.observers.Load(ws.ID)
 
 	var eventErr error
 
@@ -415,7 +418,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 			continue
 		}
-		c.observer.addEvent(event)
+		if observer != nil {
+			observer.addEvent(event)
+		}
 
 		_, duplicated := c.duplicated.LoadOrStore(event["id"].(string), nil)
 		if duplicated {
@@ -502,6 +507,7 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 
 // onCreateWorkspace is called when a workspace is created.
 func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
+	c.observers.Store(n.ID, newObserver())
 	store := c.datastore.Store(n.ID)
 	c.eventWriters.Store(n.ID, store.NewEventWriter(c.eventAck))
 }
@@ -536,6 +542,7 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
+	c.observers.Delete(n.ID)
 	c.eventWriters.Delete(n.ID)
 }
 

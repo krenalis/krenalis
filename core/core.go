@@ -47,16 +47,13 @@ import (
 )
 
 type Core struct {
-	db            *db.DB
-	dbPoolMetrics *dbPoolMetrics
-	state         *state.State
-	datastore     *datastore.Datastore
-	connectors    *connectors.Connectors
-	metrics       *coremetrics.Collector
-	events        struct {
-		collector *collector.Collector
-		observer  *collector.Observer
-	}
+	db               *db.DB
+	dbPoolMetrics    *dbPoolMetrics
+	state            *state.State
+	datastore        *datastore.Datastore
+	connectors       *connectors.Connectors
+	metrics          *coremetrics.Collector
+	collector        *collector.Collector
 	functionProvider transformers.FunctionProvider
 	actionCleaner    *actionCleaner
 	actionScheduler  *actionScheduler
@@ -237,14 +234,13 @@ func New(conf *Config) (*Core, error) {
 	// Init the connectors.
 	core.connectors = connectors.New(core.state)
 
-	// Init the event collector and observer.
-	core.events.collector, err = collector.New(db, core.state, core.datastore, core.connectors, core.functionProvider, core.metrics, conf.MaxMindDBPath)
+	// Init the event collector.
+	core.collector, err = collector.New(db, core.state, core.datastore, core.connectors, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		core.datastore.Close()
 		core.state.Close()
 		return nil, err
 	}
-	core.events.observer = core.events.collector.Observer()
 
 	// Create the action cleaner.
 	core.actionCleaner = newActionCleaner(core, core.functionProvider)
@@ -436,7 +432,7 @@ func (core *Core) Close() {
 	}
 	core.mcpMu.Unlock()
 	// Close event collector, metrics, datastore, and state.
-	core.events.collector.Close()
+	core.collector.Close()
 	core.metrics.Close(context.Background())
 	core.datastore.Close()
 	core.state.Close()
@@ -741,7 +737,7 @@ func (core *Core) Organizations(ctx context.Context, order OrganizationSort, fir
 // ServeEvents serves the events sent via HTTP.
 func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 	core.mustBeOpen()
-	core.events.collector.ServeHTTP(w, r)
+	core.collector.ServeHTTP(w, r)
 }
 
 // ValidateMemberPasswordResetToken validates the given password reset token.
