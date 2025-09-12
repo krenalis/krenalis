@@ -14,7 +14,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // Diff returns the differences between oldSchema and newSchema.

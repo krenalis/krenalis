@@ -21,7 +21,7 @@ import (
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"

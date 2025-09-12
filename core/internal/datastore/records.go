@@ -16,7 +16,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // Record represents a record.

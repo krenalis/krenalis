@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 func Test_suitableAsIdentifier(t *testing.T) {

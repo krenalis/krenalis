@@ -10,7 +10,7 @@ package datastore
 import (
 	"testing"
 
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 func Test_CheckConflictingProperties(t *testing.T) {

@@ -20,7 +20,7 @@ import (
 
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // An encoder writes JSON values to a slice of bytes.

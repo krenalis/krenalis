@@ -25,7 +25,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"

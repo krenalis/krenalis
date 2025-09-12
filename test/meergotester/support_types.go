@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	"github.com/google/uuid"
 )

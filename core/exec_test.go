@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 func Test_convertToExternal(t *testing.T) {

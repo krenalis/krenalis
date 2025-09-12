@@ -10,7 +10,7 @@ package datastore
 import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/schemas"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // EventColumnByPath returns the meergo.Column corresponding to the property of

@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

@@ -23,7 +23,7 @@ import (
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	meergoMetrics "github.com/meergo/meergo/core/metrics"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // exportUsers exports the users for the action.

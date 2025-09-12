@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 func TestConvertibleTo(t *testing.T) {

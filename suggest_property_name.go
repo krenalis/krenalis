@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	"golang.org/x/text/unicode/norm"
 )

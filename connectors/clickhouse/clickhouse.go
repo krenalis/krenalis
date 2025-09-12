@@ -21,7 +21,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"

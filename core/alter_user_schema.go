@@ -17,7 +17,7 @@ import (
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/datastore/diffschemas"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // AlterUserSchema alters the user schema and the primary sources of the

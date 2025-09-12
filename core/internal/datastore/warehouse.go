@@ -12,7 +12,7 @@ import (
 	"fmt"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // UnavailableError represents an error with the data warehouse.

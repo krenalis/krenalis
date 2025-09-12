@@ -8,7 +8,7 @@
 package mappings
 
 import (
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // convertMatrix is a matrix which holds information about valid conversions.

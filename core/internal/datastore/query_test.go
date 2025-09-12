@@ -13,7 +13,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // TestConvertWhereSimple tests convertWhere with a single condition.

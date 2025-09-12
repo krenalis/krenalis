@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/core/internal/util"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 var typ = types.Int(32)

@@ -8,7 +8,7 @@
 package spec
 
 import (
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 func init() {

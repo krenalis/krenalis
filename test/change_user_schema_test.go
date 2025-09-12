@@ -15,8 +15,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/types"
 )
 
 func TestChangeUserSchema(t *testing.T) {

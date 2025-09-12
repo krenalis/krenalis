@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // Test_appendJoins renders join clauses and checks for errors on invalid join

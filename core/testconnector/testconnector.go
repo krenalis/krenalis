@@ -23,7 +23,7 @@ import (
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // CaptureRequestContextKey is the context key used to store the original

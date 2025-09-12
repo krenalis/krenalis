@@ -18,7 +18,7 @@ import (
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 var testName = regexp.MustCompile(`(?m)^(GOOD: |BAD: )(\w+)/(\w+)/(\w+) - (.+)$`)

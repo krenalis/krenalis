@@ -14,7 +14,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // Test_alterUserSchemaQueries checks that alterUserSchema generates the

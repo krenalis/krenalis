@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 func Test_sameValue(t *testing.T) {

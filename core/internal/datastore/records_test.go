@@ -18,8 +18,8 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/testimages"
-	"github.com/meergo/meergo/types"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"

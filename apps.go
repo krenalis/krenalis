@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // ErrEventTypeNotExist is returned by the EventSender.EventTypeSchema method if

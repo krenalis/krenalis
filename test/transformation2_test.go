@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/types"
 )
 
 // TestTransformation2 tests that the transformation functions are behaving

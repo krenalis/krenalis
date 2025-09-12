@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // pgTypeInfo holds information about a PostgreSQL type, as read from the

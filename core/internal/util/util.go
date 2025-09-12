@@ -13,7 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // ParseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as

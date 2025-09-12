@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // eventPostContextType is a types.Type representing the context of an event

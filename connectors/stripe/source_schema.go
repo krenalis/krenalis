@@ -7,7 +7,7 @@
 
 package stripe
 
-import "github.com/meergo/meergo/types"
+import "github.com/meergo/meergo/core/types"
 
 // https://docs.stripe.com/api/customers/object.
 //

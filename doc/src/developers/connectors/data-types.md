@@ -7,7 +7,7 @@
 When defining data types and schemas in a connector, use the functions from the `types` package:
 
 ```go
-"github.com/meergo/meergo/types"
+"github.com/meergo/meergo/core/types"
 ```
 
 This package provides functions to construct data types to use in connectors. For example, `types.Boolean()` returns a `Type` value representing the boolean type, and `types.Array(types.Int(32))` returns a `Type` value representing an array of 32-bit signed integers.

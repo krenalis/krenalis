@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // scanner implements the meergo.Rows interface to read and normalize the rows

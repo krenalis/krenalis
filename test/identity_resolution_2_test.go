@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/types"
 )
 
 // TestIdentityResolution2 tests the behavior of Identity Resolution for arrays

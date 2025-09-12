@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo/core"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // userSchemaInfoForMCPClient takes the user schema, a function that maps a

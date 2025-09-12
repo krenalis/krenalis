@@ -20,7 +20,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/db"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	"github.com/google/uuid"
 )

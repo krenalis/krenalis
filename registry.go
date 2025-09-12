@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 var (

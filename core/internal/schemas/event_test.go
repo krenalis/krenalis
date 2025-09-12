@@ -10,7 +10,7 @@ package schemas
 import (
 	"testing"
 
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 func Test_Schema(t *testing.T) {

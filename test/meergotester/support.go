@@ -21,7 +21,7 @@ import (
 	"github.com/meergo/meergo/analytics-go"
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/backoff"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	"github.com/google/uuid"
 )

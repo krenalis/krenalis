@@ -16,7 +16,7 @@ import (
 
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // quoteIdent quotes the identifier name.

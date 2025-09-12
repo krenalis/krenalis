@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // Test_ParseTime ensures ParseTime correctly handles valid and invalid inputs.

@@ -39,7 +39,7 @@ import (
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"

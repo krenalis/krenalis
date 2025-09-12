@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // appendColumnsFromProperties appends to columns the columns corresponding to

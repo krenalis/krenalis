@@ -12,7 +12,7 @@ import (
 	"slices"
 
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // Error represents an error with a schema.

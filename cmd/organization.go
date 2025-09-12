@@ -16,7 +16,7 @@ import (
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/json"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 type organization struct {

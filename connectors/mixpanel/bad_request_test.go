@@ -14,7 +14,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/testconnector"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // TestBadRequest verifies that the Mixpanel connector correctly deserializes

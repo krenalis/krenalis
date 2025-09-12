@@ -10,7 +10,7 @@ package meergo
 import (
 	"reflect"
 
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // DatabaseInfo represents a database connector info.

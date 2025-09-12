@@ -12,7 +12,7 @@ import (
 	"errors"
 
 	"github.com/meergo/meergo/core/internal/state"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 var ErrFunctionNotExist = errors.New("function does not exist")

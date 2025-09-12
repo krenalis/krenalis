@@ -22,8 +22,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/testimages"
-	"github.com/meergo/meergo/types"
 	_ "github.com/meergo/meergo/warehouses" // for registering warehouses.
 
 	"github.com/testcontainers/testcontainers-go"

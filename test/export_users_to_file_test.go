@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
-	"github.com/meergo/meergo/types"
 
 	"github.com/klauspost/compress/snappy"
 )

@@ -18,7 +18,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/backoff"
-	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/core/types"
 )
 
 // AlterUserSchema alters the user schema.
