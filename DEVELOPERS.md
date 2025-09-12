@@ -151,7 +151,7 @@ Within the root of this repository execute:
 go generate ./cmd/meergo
 ```
 
-Note that the assets will be embedded into the executable. However, in development mode, the assets are rebuilt for each invocation of the Admin console.
+Note that the assets will be embedded into the executable; however, in development mode (i.e. when using the `dev` flag compiling Meergo, see the section below), the assets are rebuilt for each invocation of the Admin console.
 
 ### 4. Compile the server command in dev mode
 
@@ -160,6 +160,8 @@ Within the root of this repository execute:
 ```bash
 go build -tags dev,osusergo,netgo -trimpath ./cmd/meergo
 ```
+
+(please note the `dev` flag, which is specific to Meergo)
 
 ### 5. Populate the database
 
