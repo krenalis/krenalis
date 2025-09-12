@@ -35,7 +35,7 @@ require (
 	github.com/pkg/sftp v1.13.9
 	github.com/prometheus/client_golang v1.23.0
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/relvacode/iso8601 v1.6.0
+	github.com/relvacode/iso8601 v1.7.0
 	github.com/segmentio/backo-go v1.1.0
 	github.com/segmentio/conf v1.3.1
 	github.com/snowflakedb/gosnowflake v1.14.0
