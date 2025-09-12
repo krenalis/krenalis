@@ -10,6 +10,9 @@ package stripe
 import "github.com/meergo/meergo/types"
 
 // https://docs.stripe.com/api/customers/object.
+//
+// Currently, we don't support expanded responses/fields. We have an issue about
+// them: https://github.com/meergo/meergo/issues/1818.
 
 var sourceSchema = types.Object([]types.Property{
 	{

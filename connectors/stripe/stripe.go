@@ -98,12 +98,6 @@ type innerSettings struct {
 
 // RecordSchema returns the schema of the specified target and role.
 func (stripe *Stripe) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
-	// Currently the user schema is the standard schema of the user returned
-	// when the api is called without specifying the "expand" field.
-	//
-	// Stripe gives the ability to use this additional "expand" field when
-	// calling its APIs to retrieve additional information:
-	// https://stripe.com/docs/api/expanding_objects
 	if role == meergo.Source {
 		return sourceSchema, nil
 	}
