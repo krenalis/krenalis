@@ -1241,10 +1241,6 @@ const FullscreenTransformation = ({
 	const selectedInProperties = useRef<string[]>();
 	const selectedOutProperties = useRef<string[]>();
 
-	const collectEvents = (newly: EventListenerEvent[]) => {
-		setEvents((prevEvents) => [...prevEvents, ...newly]);
-	};
-
 	const { isEventBasedUserImport, isAppEventsExport } = useMemo(() => {
 		return {
 			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.target === 'User',
@@ -1258,36 +1254,51 @@ const FullscreenTransformation = ({
 		};
 	}, [outputSchema]);
 
-	let eventListenerFilter = null;
-	if (isEventBasedUserImport || (isAppEventsExport && connection.linkedConnections != null)) {
-		let filter: Filter = { logical: 'and', conditions: [] };
-		if (action.filter != null) {
-			filter.logical = action.filter.logical;
-			filter.conditions = [...action.filter.conditions];
-		}
-		filter.conditions.push({
-			property: 'connection',
-			operator: 'is one of',
-			values: isEventBasedUserImport
-				? [String(connection.id)]
-				: connection.linkedConnections.map((id) => String(id)),
-		});
-		if (isEventBasedUserImport) {
+	const eventListenerFilter = useMemo(() => {
+		let eventListenerFilter = null;
+		if (isEventBasedUserImport || (isAppEventsExport && connection.linkedConnections != null)) {
+			let filter: Filter = { logical: 'and', conditions: [] };
+			if (action.filter != null) {
+				filter.logical = action.filter.logical;
+				filter.conditions = [...action.filter.conditions];
+			}
 			filter.conditions.push({
-				property: 'traits',
-				operator: 'is not',
-				values: ['null'],
+				property: 'connection',
+				operator: 'is one of',
+				values: isEventBasedUserImport
+					? [String(connection.id)]
+					: connection.linkedConnections.map((id) => String(id)),
 			});
+			if (isEventBasedUserImport) {
+				filter.conditions.push({
+					property: 'traits',
+					operator: 'is not',
+					values: ['null'],
+				});
+			}
+			eventListenerFilter = filter;
 		}
-	}
+		return eventListenerFilter;
+	}, [action.filter, connection.linkedConnections, connection.id]);
 
-	const { startListening } = useEventListener(collectEvents, null, eventListenerFilter);
+	const { startListening, stopListening } = useEventListener(
+		(newly: EventListenerEvent[]) => {
+			setEvents((prevEvents) => [...prevEvents, ...newly]);
+		},
+		null,
+		eventListenerFilter,
+	);
 
 	useEffect(() => {
-		if (isEventBasedUserImport || isAppEventsExport) {
-			startListening();
+		if (!isEventBasedUserImport && !isAppEventsExport) {
+			return;
 		}
-	}, []);
+		if (isFullscreenTransformationOpen) {
+			startListening();
+		} else {
+			stopListening();
+		}
+	}, [isFullscreenTransformationOpen]);
 
 	useEffect(() => {
 		// Reset the output of the transformation tests when the user

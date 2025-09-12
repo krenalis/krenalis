@@ -1,4 +1,4 @@
-import { useEffect, useContext, useState } from 'react';
+import { useEffect, useContext, useState, useRef } from 'react';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
 import { Event, CreateEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
@@ -18,9 +18,12 @@ const useEventListener = (
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
-	const [eventID, setEventID] = useState<number>(1);
 
 	const { api, handleError, redirect } = useContext(AppContext);
+
+	const eventListenerID = useRef<string | null>(null);
+	const eventIntervalID = useRef<number | null>(null);
+	const lastEventID = useRef<number | null>(0);
 
 	useEffect(() => {
 		if (!isStarted) {
@@ -30,14 +33,12 @@ const useEventListener = (
 			setIsListenerNotFound(false);
 			return;
 		}
-		let listenerID: string;
-		let interval: number;
-		let id = eventID;
 		const startListener = async () => {
 			let listener: CreateEventListenerResponse;
 			try {
 				listener = await api.workspaces.eventListeners.create(3, filter);
 			} catch (err) {
+				setIsStarted(false);
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExists') {
 						redirect('connections');
@@ -52,8 +53,9 @@ const useEventListener = (
 				handleError(err);
 				return;
 			}
-			listenerID = listener.id;
-			interval = window.setInterval(async () => {
+			const listenerID = listener.id;
+			eventListenerID.current = listener.id;
+			const interval = window.setInterval(async () => {
 				let res: EventListenerEventsResponse;
 				try {
 					res = await api.workspaces.eventListeners.events(listenerID);
@@ -68,31 +70,35 @@ const useEventListener = (
 				const newly: EventListenerEvent[] = [];
 				for (const e of res.events) {
 					newly.push({
-						id: id,
+						id: lastEventID.current,
 						type: e.type,
 						time: e.receivedAt,
 						full: e,
 					});
-					const newID = id + 1;
-					id = newID;
-					setEventID(newID);
+					const newID = lastEventID.current + 1;
+					lastEventID.current = newID;
 				}
 				setEvents(newly);
 				setOmitted && setOmitted((prevOmitted) => prevOmitted + res.omitted);
 			}, 2500);
+			eventIntervalID.current = interval;
 		};
 		startListener();
 		return () => {
-			clearInterval(interval);
 			const removeListener = async () => {
 				try {
-					await api.workspaces.eventListeners.delete(listenerID);
+					await api.workspaces.eventListeners.delete(eventListenerID.current);
 				} catch (err) {
 					handleError(err);
 					return;
 				}
 			};
+			if (eventListenerID.current == null) {
+				return;
+			}
 			removeListener();
+			clearInterval(eventIntervalID.current);
+			setIsStarted(false);
 		};
 	}, [isStarted, isListenerNotFound]);
 
@@ -100,7 +106,21 @@ const useEventListener = (
 		setIsStarted(true);
 	};
 
-	return { startListening };
+	const stopListening = async () => {
+		if (eventListenerID.current == null) {
+			return;
+		}
+		try {
+			await api.workspaces.eventListeners.delete(eventListenerID.current);
+		} catch (err) {
+			handleError(err);
+			return;
+		}
+		clearInterval(eventIntervalID.current);
+		setIsStarted(false);
+	};
+
+	return { startListening, stopListening };
 };
 
 export default useEventListener;
