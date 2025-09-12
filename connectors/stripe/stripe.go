@@ -191,6 +191,8 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, bb *meergo.
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
+	req.Header.Set("Stripe-Version", "2025-08-27.basil")
+
 	if req.Method == "POST" {
 		req.Header.Set("Idempotency-Key", meergo.UUID()) // mark the request as idempotent
 	}
