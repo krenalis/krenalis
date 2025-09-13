@@ -251,13 +251,17 @@ func ishex(c byte) bool {
 // It accepts IPv4, IPv6, ASCII hostnames, and IDNs, and rejects hosts
 // containing ports or invalid characters.
 func validateHost(host string) error {
-	if _, err := netip.ParseAddr(host); err == nil {
+	if addr, err := netip.ParseAddr(host); err == nil {
+		if addr.Zone() != "" {
+			return errors.New("host cannot contain a zone")
+		}
 		return nil
 	}
 	if _, port, err := net.SplitHostPort(host); err == nil {
 		if _, err = strconv.ParseUint(port, 10, 64); err == nil {
 			return errors.New("host cannot include a port")
 		}
+		return errors.New("host is not valid")
 	}
 	if !httpguts.ValidHostHeader(host) {
 		var err error

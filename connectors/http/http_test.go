@@ -71,6 +71,12 @@ func TestValidateHost(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:       "valid IP with zone index",
+			host:       "fe80::1ff:fe23:4567:890a%eth0",
+			wantErr:    true,
+			wantErrMsg: "host cannot contain a zone",
+		},
+		{
 			name:    "valid IDN requiring punycode",
 			host:    "bücher.de", // become xn--bcher-kva.de
 			wantErr: false,
@@ -80,6 +86,12 @@ func TestValidateHost(t *testing.T) {
 			host:       "example.com:80",
 			wantErr:    true,
 			wantErrMsg: "host cannot include a port",
+		},
+		{
+			name:       "hostname with invalid port",
+			host:       "example.com:abc",
+			wantErr:    true,
+			wantErrMsg: "host is not valid",
 		},
 		{
 			name:       "IPv6 with port (forbidden)",
