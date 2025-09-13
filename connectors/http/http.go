@@ -17,7 +17,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/netip"
 	"net/url"
 	"strconv"
 	"time"
@@ -25,9 +24,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
-
-	"golang.org/x/net/http/httpguts"
-	"golang.org/x/net/idna"
+	"github.com/meergo/meergo/core/validation"
 )
 
 // Connector icon.
@@ -215,12 +212,12 @@ func (h *HTTP) saveSettings(ctx context.Context, settings json.Value) error {
 		return err
 	}
 	// Validate Host.
-	if err = validateHost(s.Host); err != nil {
+	if err = validation.ValidateHost(s.Host); err != nil {
 		return meergo.NewInvalidSettingsError(err.Error())
 	}
 	// Validate Port.
-	if s.Port < 1 || s.Port > 65535 {
-		return meergo.NewInvalidSettingsError("port must be in range [1,65535]")
+	if err := validation.ValidatePort(s.Port); err != nil {
+		return meergo.NewInvalidSettingsError(err.Error())
 	}
 	// Validate Headers.
 	for _, header := range s.Headers {
@@ -245,33 +242,4 @@ func (h *HTTP) saveSettings(ctx context.Context, settings json.Value) error {
 
 func ishex(c byte) bool {
 	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
-}
-
-// validateHost checks whether the given string is a valid host.
-// It accepts IPv4, IPv6, ASCII hostnames, and IDNs, and rejects hosts
-// containing ports or invalid characters.
-func validateHost(host string) error {
-	if addr, err := netip.ParseAddr(host); err == nil {
-		if addr.Zone() != "" {
-			return errors.New("host cannot contain a zone")
-		}
-		return nil
-	}
-	if _, port, err := net.SplitHostPort(host); err == nil {
-		if _, err = strconv.ParseUint(port, 10, 64); err == nil {
-			return errors.New("host cannot include a port")
-		}
-		return errors.New("host is not valid")
-	}
-	if !httpguts.ValidHostHeader(host) {
-		var err error
-		host, err = idna.Lookup.ToASCII(host)
-		if err != nil {
-			return errors.New("host is not valid")
-		}
-	}
-	if n := len(host); n == 0 || n > 253 {
-		return errors.New("host length in bytes must be in range [1,253]")
-	}
-	return nil
 }

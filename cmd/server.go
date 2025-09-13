@@ -10,7 +10,6 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"errors"
 	"expvar"
 	"fmt"
 	"io/fs"
@@ -99,26 +98,12 @@ type LocalConfig struct {
 // return any error.
 func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
-	// Determine the address, the external URL, the JavaScript SDK URL and the
-	// event URL.
-	addr := net.JoinHostPort(settings.HTTP.Host, strconv.Itoa(settings.HTTP.Port))
-	if addr == ":" {
-		addr = "127.0.0.1:9090"
-	}
-	externalURL := settings.HTTP.ExternalURL
-	if externalURL == "" {
-		protocol := "http"
-		if settings.HTTP.TLS.Enabled {
-			protocol = "https"
-		}
-		externalURL = fmt.Sprintf("%s://%s/", protocol, addr)
-	}
-
 	config := core.Config{
 		DB:                   settings.DB,
 		MaxMindDBPath:        settings.MaxMindDBPath,
 		MemberEmailFrom:      settings.MemberEmailFrom,
 		SMTP:                 settings.SMTP,
+		ConnectorsOAuth:      maps.Clone(settings.OAuth),
 		SentryTelemetryLevel: settings.SentryTelemetryLevel,
 	}
 
@@ -127,24 +112,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		config.FunctionProvider = core.LambdaConfig(settings.Transformations.Lambda)
 	}
 	if settings.Transformations.Local.NodeExecutable != "" || settings.Transformations.Local.PythonExecutable != "" {
-		if config.FunctionProvider != nil {
-			return errors.New("meergo environment variables cannot specify both the Lambda and the local transformation")
-		}
 		config.FunctionProvider = core.LocalConfig(settings.Transformations.Local)
-	}
-
-	// Validate the settings of the connectors.
-	if settings.OAuth != nil {
-		for name, setting := range settings.OAuth {
-			if (setting.ClientID == "") == (setting.ClientSecret == "") {
-				continue
-			}
-			if setting.ClientID == "" {
-				return fmt.Errorf("OAuth clientID value provided in meergo environment variables for connector %q cannot be empty", name)
-			}
-			return fmt.Errorf("OAuth clientSecret value provided in meergo environment variables for connector %q cannot be empty", name)
-		}
-		config.ConnectorsOAuth = maps.Clone(settings.OAuth)
 	}
 
 	core, err := core.New(&config)
@@ -153,20 +121,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer core.Close()
 
-	javaScriptSDKURL := settings.JavaScriptSDKURL
-	if javaScriptSDKURL == "" {
-		javaScriptSDKURL = "https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js"
-	}
-	externalEventURL := settings.HTTP.ExternalEventURL
-	if externalEventURL == "" {
-		externalEventURL = externalURL + "api/v1/events"
-	}
-
 	sentryErrorTunnel := newSentryErrorTunnel()
 	defer sentryErrorTunnel.Close()
 
-	runsOnHTTPS := settings.HTTP.TLS.Enabled || strings.HasPrefix(externalURL, "https://")
-	apisServer := newAPIsServer(core, runsOnHTTPS, javaScriptSDKURL, externalURL, externalEventURL, settings.SkipMemberEmailVerification, settings.SentryTelemetryLevel, sentryErrorTunnel)
+	runsOnHTTPS := settings.HTTP.TLS.Enabled || strings.HasPrefix(settings.HTTP.ExternalURL, "https://")
+	apisServer := newAPIsServer(core, runsOnHTTPS, settings.JavaScriptSDKURL, settings.HTTP.ExternalURL, settings.HTTP.ExternalEventURL,
+		settings.SkipMemberEmailVerification, settings.SentryTelemetryLevel, sentryErrorTunnel)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {
@@ -247,14 +207,14 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	c := http.NewCrossOriginProtection()
 	c.AddInsecureBypassPattern("POST /api/v1/events")
-	origin := strings.TrimSuffix(externalURL, "/")
+	origin := strings.TrimSuffix(settings.HTTP.ExternalURL, "/")
 	err = c.AddTrustedOrigin(origin)
 	if err != nil {
 		return fmt.Errorf("unexpected error calling CrossOriginProtection.AddTrustedOrigin with %q", origin)
 	}
 
 	httpServer := http.Server{
-		Addr:              addr,
+		Addr:              net.JoinHostPort(settings.HTTP.Host, strconv.Itoa(settings.HTTP.Port)),
 		Handler:           c.Handler(handler),
 		ErrorLog:          log.New(&httpLogger{}, "", 0),
 		ReadHeaderTimeout: settings.HTTP.ReadHeaderTimeout,
@@ -262,29 +222,18 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		WriteTimeout:      settings.HTTP.WriteTimeout,
 		IdleTimeout:       settings.HTTP.IdleTimeout,
 	}
-	var certPem, keyPem string
-	if settings.HTTP.TLS.Enabled {
-		certPem, err = filepath.Abs(settings.HTTP.TLS.CertFile)
-		if err != nil {
-			return err
-		}
-		keyPem, err = filepath.Abs(settings.HTTP.TLS.KeyFile)
-		if err != nil {
-			return err
-		}
-	}
 
 	exited := make(chan error)
 	go func() {
 		if settings.HTTP.TLS.Enabled {
-			exited <- httpServer.ListenAndServeTLS(certPem, keyPem)
+			exited <- httpServer.ListenAndServeTLS(settings.HTTP.TLS.CertFile, settings.HTTP.TLS.KeyFile)
 		} else {
 			exited <- httpServer.ListenAndServe()
 		}
 	}()
 
 	// Print a message with the external URL.
-	_, _ = fmt.Fprintf(os.Stderr, "The Meergo Admin console is now available at: %s\n", strings.TrimRight(externalURL, "/")+"/admin")
+	_, _ = fmt.Fprintf(os.Stderr, "The Meergo Admin console is now available at: %s\n", settings.HTTP.ExternalURL+"admin")
 
 	select {
 	case <-ctx.Done():
