@@ -1404,7 +1404,7 @@ func addLinkedConnection(connections []int, id int) []int {
 // connections, it returns nil.
 func removeLinkedConnection(connections []int, id int) []int {
 	if len(connections) == 1 {
-		return nil
+		return []int{}
 	}
 	cc := make([]int, len(connections)-1)
 	j := 0

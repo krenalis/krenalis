@@ -19,7 +19,7 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 		with    []int
 		without []int
 	}{
-		{1, []int{1}, nil},
+		{1, []int{1}, []int{}},
 		{1, []int{1, 2}, []int{2}},
 		{2, []int{1, 2}, []int{1}},
 		{8, []int{2, 5, 8, 15, 16}, []int{2, 5, 15, 16}},
