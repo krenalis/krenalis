@@ -10,7 +10,6 @@ package state
 import (
 	"encoding/json"
 	"log/slog"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -919,14 +918,12 @@ func (state *State) linkConnection(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	c := state.connections[e.Connections[0]]
-	if !slices.Contains(c.LinkedConnections, e.Connections[1]) {
-		for i := range 2 {
-			state.replaceConnection(e.Connections[i], func(c *Connection) {
-				c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[(i+1)%2])
-			})
-		}
-	}
+	state.replaceConnection(e.Connections[0], func(c *Connection) {
+		c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[1])
+	})
+	state.replaceConnection(e.Connections[1], func(c *Connection) {
+		c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[0])
+	})
 }
 
 // PurgeActions is the event sent when actions of a workspace are purged.
@@ -1366,14 +1363,12 @@ func (state *State) unlinkConnection(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	c := state.connections[e.Connections[0]]
-	if slices.Contains(c.LinkedConnections, e.Connections[1]) {
-		for i := range 2 {
-			state.replaceConnection(e.Connections[i], func(c *Connection) {
-				c.LinkedConnections = removeLinkedConnection(c.LinkedConnections, e.Connections[(i+1)%2])
-			})
-		}
-	}
+	state.replaceConnection(e.Connections[0], func(c *Connection) {
+		c.LinkedConnections = removeLinkedConnection(c.LinkedConnections, e.Connections[1])
+	})
+	state.replaceConnection(e.Connections[1], func(c *Connection) {
+		c.LinkedConnections = removeLinkedConnection(c.LinkedConnections, e.Connections[0])
+	})
 }
 
 // addLinkedConnection adds id to the provided linked connections. It returns

@@ -1397,16 +1397,17 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		const add = "UPDATE connections\n" +
-			"SET linked_connections = (SELECT ARRAY(SELECT DISTINCT unnest(array_append(linked_connections, $1)) ORDER BY 1))\n" +
-			"WHERE id = $2"
-		result, err := tx.Exec(ctx, add, n.Connections[1], n.Connections[0])
+			"SET linked_connections = (SELECT ARRAY(SELECT DISTINCT unnest(array_append(linked_connections, $2)) ORDER BY 1))\n" +
+			"WHERE id = $1"
+		result, err := tx.Exec(ctx, add+" AND NOT COALESCE($2 = ANY(linked_connections), FALSE)", n.Connections[0], n.Connections[1])
 		if err != nil {
 			return nil, err
 		}
+		// Do nothing if the source connection does not exist or if they are already linked.
 		if result.RowsAffected() == 0 {
 			return nil, nil
 		}
-		result, err = tx.Exec(ctx, add, n.Connections[0], n.Connections[1])
+		result, err = tx.Exec(ctx, add, n.Connections[1], n.Connections[0])
 		if err != nil {
 			return nil, err
 		}
@@ -1860,24 +1861,23 @@ func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
 		const remove = "UPDATE connections\n" +
 			"SET linked_connections =\n" +
 			"\tCASE\n" +
-			"\t\tWHEN array_remove(linked_connections, $1) = '{}' THEN NULL\n" +
-			"\t\tELSE array_remove(linked_connections, $1)\n" +
+			"\t\tWHEN array_remove(linked_connections, $2) = '{}' THEN NULL\n" +
+			"\t\tELSE array_remove(linked_connections, $2)\n" +
 			"\tEND\n" +
-			"WHERE id = $2 AND $1 = ANY(linked_connections)"
-		result, err := tx.Exec(ctx, remove, n.Connections[1], n.Connections[0])
+			"WHERE id = $1"
+		result, err := tx.Exec(ctx, remove+" AND $2 = ANY(linked_connections)", n.Connections[0], n.Connections[1])
 		if err != nil {
 			return nil, err
 		}
+		// Do nothing if the source connection does not exist or if they are not linked.
 		if result.RowsAffected() == 0 {
 			return nil, nil
 		}
-		result, err = tx.Exec(ctx, remove, n.Connections[0], n.Connections[1])
+		_, err = tx.Exec(ctx, remove, n.Connections[1], n.Connections[0])
 		if err != nil {
 			return nil, err
 		}
-		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("destination %d does not exist", n.Connections[1])
-		}
+		// No result check is needed because the destination is guaranteed to still exist.
 		return n, nil
 	})
 	return err
