@@ -299,9 +299,8 @@ func (store *Store) NewBatchIdentityWriter(action *state.Action, purge bool, ack
 // identities, relative to the action, on the data warehouse, in case of
 // importing identities from events.
 //
-// It returns an error if an open event identity writer for the provided action
-// already exists.
-func (store *Store) NewEventIdentityWriter(actionID int, ack EventIdentityWriterAckFunc) (*EventIdentityWriter, error) {
+// It must be called on a frozen state.
+func (store *Store) NewEventIdentityWriter(actionID int, ack EventIdentityWriterAckFunc) *EventIdentityWriter {
 	store.mustBeOpen()
 	return newEventIdentityWriter(store, actionID, ack)
 }

@@ -36,6 +36,8 @@ type identityWriter struct {
 }
 
 // newIdentityWriter returns a new identityWriter for the provided action.
+//
+// It must be called on a frozen state.
 func newIdentityWriter(ds *datastore.Datastore, action *state.Action, provider transformers.FunctionProvider, metrics *metrics.Collector) *identityWriter {
 	iw := &identityWriter{
 		action:  action.ID,
@@ -43,7 +45,7 @@ func newIdentityWriter(ds *datastore.Datastore, action *state.Action, provider t
 	}
 	ws := action.Connection().Workspace()
 	store := ds.Store(ws.ID)
-	iw.writer, _ = store.NewEventIdentityWriter(action.ID, iw.ack)
+	iw.writer = store.NewEventIdentityWriter(action.ID, iw.ack)
 	if t := action.Transformation; t.Mapping != nil || t.Function != nil {
 		iw.transformer, _ = transformers.New(action, provider, nil)
 	}
@@ -51,6 +53,8 @@ func newIdentityWriter(ds *datastore.Datastore, action *state.Action, provider t
 }
 
 // Close closes iw.
+//
+// It must be called on a frozen state.
 func (iw *identityWriter) Close(ctx context.Context) error {
 	iw.mu.Lock()
 	if iw.timer != nil {

@@ -9,7 +9,6 @@ package datastore
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -53,9 +52,8 @@ type EventIdentityWriter struct {
 // identities, relative to the action, on the data warehouse, in case of
 // importing identities from events.
 //
-// It returns an error if an open event identity writer for the provided action
-// already exists.
-func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterAckFunc) (*EventIdentityWriter, error) {
+// It must be called on a frozen state.
+func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterAckFunc) *EventIdentityWriter {
 
 	// Initialize the EventIdentityWriter.
 	iw := &EventIdentityWriter{
@@ -66,13 +64,7 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 		actions: map[int]struct{}{},
 	}
 
-	// Finalize the initialization of the EventIdentityWriter in a frozen state.
-	store.ds.state.Freeze()
-	action, ok := store.ds.state.Action(actionID)
-	if !ok {
-		store.ds.state.Unfreeze()
-		return nil, errors.New("action does not exist")
-	}
+	action, _ := store.ds.state.Action(actionID)
 	connection := action.Connection()
 	iw.connection = connection.ID
 	if action.OutSchema.Valid() {
@@ -90,19 +82,9 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 	for _, a := range connection.Actions() {
 		iw.actions[a.ID] = struct{}{}
 	}
-	var err error
 	store.mu.Lock()
-	if _, ok := store.eventIdentityWriters[action.ID]; ok {
-		err = errors.New("event identity writer for action already exists")
-	} else {
-		store.eventIdentityWriters[action.ID] = iw
-	}
+	store.eventIdentityWriters[action.ID] = iw
 	store.mu.Unlock()
-	store.ds.state.Unfreeze()
-
-	if err != nil {
-		return nil, err
-	}
 
 	iw.columns = make([]meergo.Column, 7)
 	iw.columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
@@ -116,7 +98,7 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
-	return iw, nil
+	return iw
 }
 
 // Close closes the Writer, ensuring the completion of all pending or ongoing
@@ -134,6 +116,8 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 // because we still need to discuss the issue
 // https://github.com/meergo/meergo/issues/1224 and understand precisely what
 // model we want to implement for the operations and compatible methods.
+//
+// It must be called on a frozen state.
 func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 	if iw.close.Load() {
 		return nil
@@ -147,6 +131,7 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 	if iw.close.Swap(true) {
 		return nil
 	}
+	delete(iw.store.eventIdentityWriters, iw.action)
 	// Cancel the flushes if the context is cancelled.
 	stop := context.AfterFunc(ctx, func() { iw.close.cancel() })
 	defer stop()

@@ -499,10 +499,8 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 	if action.Connection().Connector().Type != state.SDK {
 		return
 	}
-	go func() {
-		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
-		c.identityWriters.Store(action.ID, iw)
-	}()
+	iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
+	c.identityWriters.Store(action.ID, iw)
 }
 
 // onCreateWorkspace is called when a workspace is created.
@@ -557,15 +555,12 @@ func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 		return
 	}
 	if action.Enabled {
-		go func() {
-			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
-			c.identityWriters.Store(action.ID, iw)
-		}()
+		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
+		c.identityWriters.Store(action.ID, iw)
 		return
 	}
-	if a, ok := c.identityWriters.LoadAndDelete(n.ID); ok {
-		_ = a.(*identityWriter).Close(context.Background())
-	}
+	a, _ := c.identityWriters.LoadAndDelete(n.ID)
+	a.(*identityWriter).Close(context.Background())
 }
 
 // onUpdateAction is called when an action is updated.
@@ -580,16 +575,14 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	}
 	if !action.Enabled {
 		if iw, ok := c.identityWriters.LoadAndDelete(action.ID); ok {
-			_ = iw.(*identityWriter).Close(context.Background())
+			iw.(*identityWriter).Close(context.Background())
 		}
 		return
 	}
 	w, ok := c.identityWriters.Load(action.ID)
 	if !ok {
-		go func() {
-			iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
-			c.identityWriters.Store(action.ID, iw)
-		}()
+		iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
+		c.identityWriters.Store(action.ID, iw)
 		return
 	}
 	// The transformation might have changed.
