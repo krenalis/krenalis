@@ -141,20 +141,30 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, r
 				{Text: "US West (Oregon) us-west-2", Value: "us-west-2"},
 				{Text: "Africa (Cape Town) af-south-1", Value: "af-south-1"},
 				{Text: "Asia Pacific (Hong Kong) ap-east-1", Value: "ap-east-1"},
+				{Text: "Asia Pacific (Hyderabad) ap-south-2", Value: "ap-south-2"},
 				{Text: "Asia Pacific (Jakarta) ap-southeast-3", Value: "ap-southeast-3"},
+				{Text: "Asia Pacific (Malaysia) ap-southeast-5", Value: "ap-southeast-5"},
+				{Text: "Asia Pacific (Melbourne) ap-southeast-4", Value: "ap-southeast-4"},
 				{Text: "Asia Pacific (Mumbai) ap-south-1", Value: "ap-south-1"},
 				{Text: "Asia Pacific (Osaka) ap-northeast-3", Value: "ap-northeast-3"},
 				{Text: "Asia Pacific (Seoul) ap-northeast-2", Value: "ap-northeast-2"},
 				{Text: "Asia Pacific (Singapore) ap-southeast-1", Value: "ap-southeast-1"},
 				{Text: "Asia Pacific (Sydney) ap-southeast-2", Value: "ap-southeast-2"},
+				{Text: "Asia Pacific (Taipei) ap-east-2", Value: "ap-east-2"},
+				{Text: "Asia Pacific (Thailand) ap-southeast-7", Value: "ap-southeast-7"},
 				{Text: "Asia Pacific (Tokyo) ap-northeast-1", Value: "ap-northeast-1"},
 				{Text: "Canada (Central) ca-central-1", Value: "ca-central-1"},
+				{Text: "Canada West (Calgary) ca-west-1", Value: "ca-west-1"},
 				{Text: "Europe (Frankfurt) eu-central-1", Value: "eu-central-1"},
 				{Text: "Europe (Ireland) eu-west-1", Value: "eu-west-1"},
 				{Text: "Europe (London) eu-west-2", Value: "eu-west-2"},
 				{Text: "Europe (Milan) eu-south-1", Value: "eu-south-1"},
 				{Text: "Europe (Paris) eu-west-3", Value: "eu-west-3"},
+				{Text: "Europe (Spain) eu-south-2", Value: "eu-south-2"},
 				{Text: "Europe (Stockholm) eu-north-1", Value: "eu-north-1"},
+				{Text: "Europe (Zurich) eu-central-2", Value: "eu-central-2"},
+				{Text: "Israel (Tel Aviv) il-central-1", Value: "il-central-1"},
+				{Text: "Mexico (Central) mx-central-1", Value: "mx-central-1"},
 				{Text: "Middle East (Bahrain) me-south-1", Value: "me-south-1"},
 				{Text: "Middle East (UAE) me-central-1", Value: "me-central-1"},
 				{Text: "South America (São Paulo) sa-east-1", Value: "sa-east-1"},
@@ -218,10 +228,11 @@ func (ss3 *S3) saveSettings(ctx context.Context, settings json.Value) error {
 		return meergo.NewInvalidSettingsError("secret access key length in bytes must be in range [40,200]")
 	}
 	// Validate Region.
-	const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
-		"ap-northeast-1 ap-northeast-2 ap-northeast-3 ap-southeast-1 ap-southeast-2 ca-central-1 eu-central-1 " +
-		"eu-west-1 eu-west-2 eu-west-3 eu-south-1 eu-north-1 me-south-1 me-central-1 sa-east-1"
-	if !strings.Contains(regions, s.Region+" ") && !strings.HasSuffix(regions, " "+s.Region) {
+	const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-south-2 ap-southeast-3 ap-southeast-5 " +
+		"ap-southeast-4 ap-south-1 ap-northeast-3 ap-northeast-2 ap-southeast-1 ap-southeast-2 ap-east-2 ap-southeast-7 " +
+		"ap-northeast-1 ca-central-1 ca-west-1 eu-central-1 eu-west-1 eu-west-2 eu-south-1 eu-west-3 eu-south-2 eu-north-1 " +
+		"eu-central-2 il-central-1 mx-central-1 me-south-1 me-central-1 sa-east-1"
+	if strings.Contains(s.Region, " ") || !strings.Contains(regions, s.Region+" ") && !strings.HasSuffix(regions, " "+s.Region) {
 		return meergo.NewInvalidSettingsError("region is not valid")
 	}
 	// Validate Bucket.
