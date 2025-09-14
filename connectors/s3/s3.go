@@ -132,9 +132,9 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, r
 
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Input{Name: "AccessKeyID", Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
-			&meergo.Input{Name: "SecretAccessKey", Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 40, MaxLength: 200},
-			&meergo.Select{Name: "Region", Label: "Region", Placeholder: "Region", Options: []meergo.Option{
+			&meergo.Input{Name: "AccessKeyID", Label: "Access Key ID", Placeholder: "", Type: "text", MinLength: 20, MaxLength: 20},
+			&meergo.Input{Name: "SecretAccessKey", Label: "Secret Access Key", Placeholder: "", Type: "password", MinLength: 40, MaxLength: 200},
+			&meergo.Select{Name: "Region", Label: "Region", Placeholder: "", Options: []meergo.Option{
 				{Text: "US East (N. Virginia) us-east-1", Value: "us-east-1"},
 				{Text: "US East (Ohio) us-east-2", Value: "us-east-2"},
 				{Text: "US West (N. California) us-west-1", Value: "us-west-1"},
@@ -159,7 +159,7 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, r
 				{Text: "Middle East (UAE) me-central-1", Value: "me-central-1"},
 				{Text: "South America (São Paulo) sa-east-1", Value: "sa-east-1"},
 			}},
-			&meergo.Input{Name: "Bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
+			&meergo.Input{Name: "Bucket", Label: "Bucket name", Placeholder: "mybucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
 		Settings: settings,
 	}
