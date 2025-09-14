@@ -464,9 +464,9 @@ func (state *State) createConnection(n notification) {
 	ws.connections[c.ID] = c
 	ws.mu.Unlock()
 	// Update the linked connections.
-	for _, ec := range c.LinkedConnections {
-		state.replaceConnection(ec, func(ec *Connection) {
-			ec.LinkedConnections = addLinkedConnection(ec.LinkedConnections, c.ID)
+	for _, lc := range c.LinkedConnections {
+		state.replaceConnection(lc, func(lc *Connection) {
+			lc.LinkedConnections = addLinkedConnection(lc.LinkedConnections, c.ID)
 		})
 	}
 	dispatchNotification(state, e)
@@ -698,9 +698,9 @@ func (state *State) deleteConnection(n notification) {
 	}
 	state.mu.Unlock()
 	// Remove the connection from the linked connections.
-	for _, ec := range e.connection.LinkedConnections {
-		state.replaceConnection(ec, func(ec *Connection) {
-			ec.LinkedConnections = removeLinkedConnection(ec.LinkedConnections, e.ID)
+	for _, lc := range e.connection.LinkedConnections {
+		state.replaceConnection(lc, func(lc *Connection) {
+			lc.LinkedConnections = removeLinkedConnection(lc.LinkedConnections, e.ID)
 		})
 	}
 	dispatchNotification(state, e)
@@ -912,7 +912,7 @@ type LinkConnection struct {
 	Connections [2]int
 }
 
-// addLinkedConnection links two unlinked connections.
+// linkConnection links two unlinked connections.
 func (state *State) linkConnection(n notification) {
 	e := LinkConnection{}
 	if !decodeNotification(n, &e) {

@@ -917,7 +917,7 @@ type Connection struct {
 	account           *Account
 	Strategy          *Strategy
 	SendingMode       *SendingMode
-	LinkedConnections []int // It’s nil if events aren’t supported or if there are no linked connections.
+	LinkedConnections []int // It's nil if events aren't supported or if there are no linked connections.
 	Keys              []string
 	Settings          []byte
 	UsersQuery        string
