@@ -35,17 +35,17 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault }: setting
 		<>
 			<SlInput
 				name='account'
-				label='Account'
-				placeholder='ABCDEFG.TUVWXYZ'
-				minlength={1}
+				label='Account Identifier'
+				placeholder='ABCDEFG-TUVWXYZ'
+				minlength={3}
 				maxlength={255}
 				onSlInput={onSettingInput}
 				value={settings?.account || ''}
 			/>
 			<SlInput
 				name='username'
-				label='Username'
-				placeholder='username'
+				label='User Name'
+				placeholder='USERNAME'
 				type='text'
 				minlength={1}
 				maxlength={255}
@@ -64,6 +64,16 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault }: setting
 				password-toggle
 			/>
 			<SlInput
+				name='role'
+				label='Role'
+				placeholder='CUSTOM_ROLE'
+				type='text'
+				minlength={1}
+				maxlength={255}
+				onSlInput={onSettingInput}
+				value={settings?.role || ''}
+			/>
+			<SlInput
 				name='database'
 				label='Database'
 				placeholder='MY_DATABASE'
@@ -76,32 +86,22 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault }: setting
 			<SlInput
 				name='schema'
 				label='Schema'
-				placeholder='public'
+				placeholder='PUBLIC'
 				type='text'
 				minlength={1}
 				maxlength={255}
 				onSlInput={onSettingInput}
-				value={settings?.schema || ''}
+				value={settings?.schema || 'PUBLIC'}
 			/>
 			<SlInput
 				name='warehouse'
 				label='Warehouse'
-				placeholder='MY_WAREHOUSE'
+				placeholder='COMPUTE_WH'
 				type='text'
 				minlength={1}
 				maxlength={255}
 				onSlInput={onSettingInput}
 				value={settings?.warehouse || ''}
-			/>
-			<SlInput
-				name='role'
-				label='Role'
-				placeholder='SYSADMIN'
-				type='text'
-				minlength={1}
-				maxlength={255}
-				onSlInput={onSettingInput}
-				value={settings?.role || ''}
 			/>
 		</>
 	);

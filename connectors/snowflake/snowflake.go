@@ -40,7 +40,7 @@ func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "Snowflake",
 		Categories:  meergo.CategoryDatabase,
-		SampleQuery: "SELECT *\nFROM users\n",
+		SampleQuery: "SELECT *\nFROM \"USERS\"\n",
 		Icon:        icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
@@ -144,13 +144,13 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, settings json.Va
 
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Input{Name: "Account", Label: "Account", Placeholder: "ABCDEFG.TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Account", Label: "Account Identifier", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 3, MaxLength: 255},
+			&meergo.Input{Name: "Username", Label: "User Name", Placeholder: "USERNAME", Type: "text", MinLength: 1, MaxLength: 255},
 			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Schema", Label: "Schema", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Role", Label: "Role", Placeholder: "CUSTOM_ROLE", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Database", Label: "Database", Placeholder: "MY_DATABASE", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Schema", Label: "Schema", Placeholder: "PUBLIC", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "COMPUTE_WH", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Settings: settings,
 		Buttons: []meergo.Button{
@@ -165,10 +165,10 @@ type innerSettings struct {
 	Account   string
 	Username  string
 	Password  string
-	Warehouse string
+	Role      string
 	Database  string
 	Schema    string
-	Role      string
+	Warehouse string
 }
 
 // connector returns a driver.Connector from the settings.
@@ -181,10 +181,10 @@ func (s *innerSettings) connector() driver.Connector {
 		Account:   account,
 		User:      s.Username,
 		Password:  s.Password,
+		Role:      s.Role,
 		Database:  s.Database,
 		Schema:    s.Schema,
 		Warehouse: s.Warehouse,
-		Role:      s.Role,
 		Params:    make(map[string]*string),
 	})
 }
@@ -266,9 +266,9 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
 		return meergo.NewInvalidSettingsError("password length must be in range [1,255]")
 	}
-	// Validate Warehouse.
-	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return meergo.NewInvalidSettingsError("warehouse length must be in range [1,255]")
+	// Validate Role.
+	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
+		return meergo.NewInvalidSettingsError("role length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
@@ -278,9 +278,9 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
 		return meergo.NewInvalidSettingsError("schema length must be in range [1,255]")
 	}
-	// Validate Role.
-	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return meergo.NewInvalidSettingsError("role length must be in range [1,255]")
+	// Validate Warehouse.
+	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
+		return meergo.NewInvalidSettingsError("warehouse length must be in range [1,255]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

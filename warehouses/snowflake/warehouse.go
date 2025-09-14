@@ -74,11 +74,15 @@ func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("username length must be in range [1,255]")
+		return nil, meergo.WarehouseSettingsErrorf("user name length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
 		return nil, meergo.WarehouseSettingsErrorf("password length must be in range [1,255]")
+	}
+	// Validate Role.
+	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
+		return nil, meergo.WarehouseSettingsErrorf("role length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
@@ -91,10 +95,6 @@ func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
 		return nil, meergo.WarehouseSettingsErrorf("warehouse length must be in range [1,255]")
-	}
-	// Validate Role.
-	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("role length must be in range [1,255]")
 	}
 	return &Snowflake{conf: conf, settings: &s}, nil
 }
