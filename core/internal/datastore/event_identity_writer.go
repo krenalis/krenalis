@@ -65,7 +65,6 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 		ack:     ack,
 		actions: map[int]struct{}{},
 	}
-	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
 	// Finalize the initialization of the EventIdentityWriter in a frozen state.
 	store.ds.state.Freeze()
@@ -114,6 +113,8 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 	iw.columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	iw.columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
 	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.userColumnByProperty())
+
+	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
 	return iw, nil
 }
