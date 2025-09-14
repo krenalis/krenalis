@@ -150,12 +150,12 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		SetSettings: func(ctx context.Context, innerSettings []byte) error { return nil },
 	})
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to register the file: %s", err)
+		return nil, nil, nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
 	}
 	if file.HasSourceSettings {
 		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, connectorError(err)
 		}
 	}
 
@@ -210,12 +210,12 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to register the file: %s", err)
+		return nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
 	}
 	if file.HasSourceSettings {
 		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
 		if err != nil {
-			return nil, err
+			return nil, connectorError(err)
 		}
 	}
 

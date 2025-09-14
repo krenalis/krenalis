@@ -222,7 +222,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 		HTTPClient: connectors.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	account, err := app.(appOAuthConnector).OAuthAccount(ctx)
 	if err != nil {

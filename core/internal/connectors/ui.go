@@ -51,7 +51,7 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, role)
 	if err != nil {
@@ -112,7 +112,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		})
 	}
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, meergo.Role(connection.Role))
 	if err != nil {
@@ -163,7 +163,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamEnv{})
 	}
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, meergo.Role(conf.Role))
 	if err != nil {
@@ -215,7 +215,7 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamEnv{SetSettings: setSettings})
 	}
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	_, err = inner.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(conf.Role))
 	if err != nil {
