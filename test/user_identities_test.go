@@ -146,17 +146,25 @@ func Test_UserIdentities(t *testing.T) {
 	}
 	t.Logf("there is a total of %d identities", totalIdentities)
 
-	// Additional test: test that a call to '/identities' for an user which does not exist
-	// returns a NotFound error.
+	// Additional test: test that a call to '/identities' for a user which does not exist
+	// returns an empty slice.
 	{
-		err := c.Call("GET", "/api/v1/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, nil)
-		if err == nil {
-			t.Fatalf("expected error, got nothing")
+		var res struct {
+			Identities []any `json:"identities"`
+			Total      int   `json:"total"`
 		}
-		errorMsg := err.Error()
-		const expectedErr = `unexpected HTTP status code 404: {"error":{"code":"NotFound","message":"user \"7682c2a8-d85d-458b-9bd8-dc57cc12575a\" does not exist"}}`
-		if expectedErr != errorMsg {
-			t.Fatalf("expected error %q, got %q", expectedErr, errorMsg)
+		err := c.Call("GET", "/api/v1/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, &res)
+		if err != nil {
+			t.Fatalf("expected no identities, got error: %q", err)
+		}
+		if res.Identities == nil {
+			t.Fatal("expected an empty slice for identities, got nil instead")
+		}
+		if n := len(res.Identities); n > 0 {
+			t.Fatalf("expected no identities, got %d", n)
+		}
+		if res.Total != 0 {
+			t.Fatalf("expected total of 0, got %d", res.Total)
 		}
 	}
 

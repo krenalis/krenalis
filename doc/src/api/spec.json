@@ -16042,7 +16042,7 @@
                 },
                 {
                     "name": "Retrieve user identities",
-                    "description": "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.\n\nIdentities are sorted by last change time, in descending order, so the most recently changed identities are returned first.",
+                    "description": "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.\n\nIdentities are sorted by last change time, in descending order, so the most recently changed identities are returned first.\n\nIf the user does not exist, no identities are returned.",
                     "method": "GET",
                     "url": "/v1/users/:id/identities",
                     "parameters": [
@@ -16130,7 +16130,7 @@
                                         ]
                                     }
                                 },
-                                "description": "The user's identities, containing at least one identity."
+                                "description": "The user's identities. It is empty if the user has no identities."
                             },
                             {
                                 "name": "total",
@@ -16153,11 +16153,6 @@
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
-                        },
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "user does not exist"
                         }
                     ]
                 }

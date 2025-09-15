@@ -233,7 +233,8 @@ func init() {
 			{
 				Name: "Retrieve user identities",
 				Description: "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.\n\n" +
-					"Identities are sorted by last change time, in descending order, so the most recently changed identities are returned first.",
+					"Identities are sorted by last change time, in descending order, so the most recently changed identities are returned first.\n\n" +
+					"If the user does not exist, no identities are returned.",
 				Method: GET,
 				URL:    "/v1/users/:id/identities",
 				Parameters: []types.Property{
@@ -261,7 +262,7 @@ func init() {
 							Name:        "identities",
 							Type:        types.Array(identityType),
 							Prefilled:   `{ ... }`,
-							Description: "The user's identities, containing at least one identity.",
+							Description: "The user's identities. It is empty if the user has no identities.",
 						},
 						{
 							Name:        "total",
@@ -274,7 +275,6 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
-					{404, NotFound, "user does not exist"},
 				},
 			},
 		},

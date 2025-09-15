@@ -1092,9 +1092,10 @@ func (this *Workspace) UserPropertiesSuitableAsIdentifiers() types.Type {
 // Identities are sorted by last change time, in descending order, so the most
 // recently changed identities are returned first.
 //
-// It returns an errors.NotFoundError error, if the user does not exist. It
-// returns an errors.UnprocessableError error with code MaintenanceMode if the
-// data warehouse is in maintenance mode.
+// If the user does not exist, still return an empty slice instead of an error.
+//
+// It returns an errors.UnprocessableError error with code MaintenanceMode if
+// the data warehouse is in maintenance mode.
 func (this *Workspace) Identities(ctx context.Context, user string, first, limit int) ([]UserIdentity, int, error) {
 	this.core.mustBeOpen()
 	if _, ok := types.ParseUUID(user); !ok {
@@ -1121,7 +1122,7 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 		return nil, 0, err
 	}
 	if identities == nil {
-		return nil, 0, errors.NotFound("user %q does not exist", user)
+		identities = []UserIdentity{}
 	}
 	return identities, total, nil
 }
