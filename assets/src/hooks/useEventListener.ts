@@ -14,6 +14,7 @@ interface EventListenerEvent {
 const useEventListener = (
 	setEvents: (events: EventListenerEvent[]) => void,
 	setOmitted?: React.Dispatch<React.SetStateAction<number>>,
+	connection?: number | null,
 	filter?: Filter,
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
@@ -36,7 +37,7 @@ const useEventListener = (
 		const startListener = async () => {
 			let listener: CreateEventListenerResponse;
 			try {
-				listener = await api.workspaces.eventListeners.create(3, filter);
+				listener = await api.workspaces.eventListeners.create(connection, 3, filter);
 			} catch (err) {
 				setIsStarted(false);
 				if (err instanceof UnprocessableError) {

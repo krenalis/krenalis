@@ -378,18 +378,23 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	var body struct {
-		Size   *int         `json:"size"`
-		Filter *core.Filter `json:"filter"`
+		Connection *int         `json:"connection"`
+		Size       *int         `json:"size"`
+		Filter     *core.Filter `json:"filter"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	var size = 10
+	connection := 0
+	if body.Connection != nil {
+		connection = *body.Connection
+	}
+	size := 10
 	if body.Size != nil {
 		size = *body.Size
 	}
-	id, err := ws.CreateEventListener(size, body.Filter)
+	id, err := ws.CreateEventListener(connection, size, body.Filter)
 	if err != nil {
 		return nil, err
 	}

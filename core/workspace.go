@@ -790,6 +790,12 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 // CreateEventListener creates an event listener for the workspace that listens
 // to events and returns its identifier.
 //
+// If connection is not 0, it must be the identifier of a connection on events.
+//   - If it is a source, only events received from that source will be
+//     returned.
+//   - If it is a destination, only events received from the linked connections
+//     present at the time of the call will be returned.
+//
 // size specifies the maximum number of observed events to be returned by a
 // subsequent call to the ListenedEvents method and must be in the range
 // [1, 1000].
@@ -798,10 +804,29 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // It returns an errors.UnprocessableError with code TooManyListeners, if there
 // are already too many listeners.
-func (this *Workspace) CreateEventListener(size int, filter *Filter) (string, error) {
+func (this *Workspace) CreateEventListener(connection, size int, filter *Filter) (string, error) {
 	this.core.mustBeOpen()
+	if connection < 0 || connection > maxInt32 {
+		return "", errors.BadRequest("identifier %d is not a valid connection identifier", connection)
+	}
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
+	}
+	var connections []int
+	if connection > 0 {
+		c, ok := this.core.state.Connection(connection)
+		if !ok {
+			return "", errors.NotFound("connection %d does not exist", c.ID)
+		}
+		if c.LinkedConnections == nil {
+			return "", errors.BadRequest("connection %d does not support events", c.ID)
+		}
+		switch c.Role {
+		case state.Source:
+			connections = []int{c.ID}
+		case state.Destination:
+			connections = slices.Clone(c.LinkedConnections)
+		}
 	}
 	var where *state.Where
 	if filter != nil {
@@ -815,7 +840,7 @@ func (this *Workspace) CreateEventListener(size int, filter *Filter) (string, er
 	if !ok {
 		return "", errors.New("observer either has not been created yet or has already been removed")
 	}
-	id, err := observer.CreateListener(size, where)
+	id, err := observer.CreateListener(connections, size, where)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", MaxEventListeners)

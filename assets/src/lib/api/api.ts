@@ -597,8 +597,13 @@ class EventListeners {
 		this.workspaceID = workspaceID;
 	}
 
-	create = async (size: number, filter: Filter): Promise<CreateEventListenerResponse> => {
+	create = async (
+		connection: number | null,
+		size: number | null,
+		filter: Filter | null,
+	): Promise<CreateEventListenerResponse> => {
 		return await call(`${this.apiURL}/events/listeners`, http.POST, this.workspaceID, {
+			connection,
 			size,
 			filter,
 		});

@@ -830,6 +830,13 @@ func init() {
 				URL:         "/v1/events/listeners",
 				Parameters: []types.Property{
 					{
+						Name:        "connection",
+						Type:        types.Int(32),
+						Prefilled:   `1371036433`,
+						Nullable:    true,
+						Description: "The ID of the source connection that received the events, or of the destination connection where the events are sent. The connection must support events.",
+					},
+					{
 						Name:        "size",
 						Type:        types.Int(32),
 						Prefilled:   `10`,
@@ -850,6 +857,7 @@ func init() {
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
+					{404, NotFound, "connection does not exist"},
 					{422, TooManyListeners, fmt.Sprintf("there are already %d listeners", core.MaxEventListeners)},
 				},
 			},

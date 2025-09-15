@@ -13415,6 +13415,16 @@
                     "url": "/v1/events/listeners",
                     "parameters": [
                         {
+                            "name": "connection",
+                            "prefilled": "1371036433",
+                            "type": {
+                                "kind": "int",
+                                "bitSize": 32
+                            },
+                            "nullable": true,
+                            "description": "The ID of the source connection that received the events, or of the destination connection where the events are sent. The connection must support events."
+                        },
+                        {
                             "name": "size",
                             "prefilled": "10",
                             "type": {
@@ -13536,6 +13546,11 @@
                             "status": 404,
                             "code": "NotFound",
                             "message": "workspace does not exist"
+                        },
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "connection does not exist"
                         },
                         {
                             "status": 422,
