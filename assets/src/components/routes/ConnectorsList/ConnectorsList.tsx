@@ -121,6 +121,7 @@ const ConnectorsList = () => {
 
 	const onConnectorAdd = async () => {
 		let c = selectedConnector;
+		setSelectedConnector(null);
 		if (c.requiresAuth) {
 			if (!c.authConfigured) {
 				return;
