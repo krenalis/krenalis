@@ -365,6 +365,15 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				}
 				c.SendingMode = &mode
 			}
+			if c.LinkedConnections == nil {
+				targets := c.connector.SourceTargets
+				if c.Role == Destination {
+					targets = c.connector.DestinationTargets
+				}
+				if targets.Contains(TargetEvent) {
+					c.LinkedConnections = []int{}
+				}
+			}
 			connection, ok := state.connections[c.ID]
 			if ok {
 				*connection = c
