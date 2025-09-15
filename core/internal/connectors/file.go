@@ -365,12 +365,9 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType, exten
 	case state.ZipCompression:
 		z := zip.NewWriter(pw)
 		name := pathPkg.Base(path)
-		if ext := strings.ToLower(pathPkg.Ext(name)); ext == "" {
+		name = strings.TrimSuffix(name, ".zip")
+		if ext := pathPkg.Ext(name); ext == "" {
 			name += "." + extension
-		} else if ext == "." {
-			name += extension
-		} else if ext[1:] != extension {
-			name = strings.TrimSuffix(name, ext[1:]) + extension
 		}
 		zw, err := z.Create(name)
 		if err != nil {
@@ -385,7 +382,6 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType, exten
 	case state.SnappyCompression:
 		w = snappy.NewBufferedWriter(pw)
 	}
-	path += cs.compression.Ext()
 	if ct := cs.compression.ContentType(); ct != "" {
 		contentType = ct
 	}

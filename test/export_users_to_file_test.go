@@ -113,18 +113,8 @@ func TestExportUsersToFile(t *testing.T) {
 
 		t.Logf("[info] export %s compressed file", compression)
 
-		var ext string
-		switch compression {
-		case core.ZipCompression:
-			ext = ".zip"
-		case core.GzipCompression:
-			ext = ".gz"
-		case core.SnappyCompression:
-			ext = ".sz"
-		}
-
 		// Remove the export file, if exists.
-		err := os.Remove(exportFilePath + ext)
+		err := os.Remove(exportFilePath)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			t.Fatal(err)
 		}
@@ -154,7 +144,7 @@ func TestExportUsersToFile(t *testing.T) {
 		c.WaitForExecutionsCompletion(fsID, exec)
 
 		// Check if the file has been created successfully.
-		fi, err := os.Open(exportFilePath + ext)
+		fi, err := os.Open(exportFilePath)
 		if err != nil {
 			t.Fatal(err)
 		}
