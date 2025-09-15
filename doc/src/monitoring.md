@@ -25,7 +25,7 @@ Meergo monitors its own internal service metrics, and makes them available under
 
 - The total number of successful Lambda executions is provided by the metric `meergo_lambda_duration_seconds_count`, which is part of the` meergo_lambda_duration_seconds` histogram. It represents the total number of observations (i.e., completed executions) recorded in the histogram.
 - Possible values for the `type` label in `meergo_lambda_errors_total`:  
-  `connection`, `network`, `lambda_internal`, `function_not_found`, `serialization`, and `function_exec`.
+  `network`, `lambda_internal`, `function_not_found`, `serialization`, and `function_exec`.
 - Buckets defined for `meergo_lambda_duration_seconds`: `0.1`, `0.5`, `1`, `2.5`,  and `5` (in seconds)
 - Buckets defined for `meergo_sender_queue_wait`: `0.005`, `0.01`, `0.025`, `0.05`, `0.075`, `0.1`, `0.15`, `0.2`, `0.3`, `0.5`, `0.75`, `1.0`, `2.0` (in seconds)
 

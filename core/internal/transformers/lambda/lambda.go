@@ -27,7 +27,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
@@ -79,11 +78,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return err
 	}
 
-	client, err := fn.connect(ctx)
-	if err != nil {
-		errorsMetric[errorTypeConnection].Inc()
-		return err
-	}
+	client := fn.lambdaClient()
 
 	// Marshal the values.
 	payload := make([]byte, 0, 1024)
@@ -202,10 +197,7 @@ func (fn *function) Create(ctx context.Context, name string, language state.Lang
 	if err != nil {
 		return "", "", err
 	}
-	client, err := fn.connect(ctx)
-	if err != nil {
-		return "", "", err
-	}
+	client := fn.lambdaClient()
 	var runtime string
 	var layers []string
 	switch language {
@@ -260,10 +252,7 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	client, err := fn.connect(ctx)
-	if err != nil {
-		return err
-	}
+	client := fn.lambdaClient()
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
 		FunctionName: &arn,
 	})
@@ -297,10 +286,7 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	client, err := fn.connect(ctx)
-	if err != nil {
-		return "", err
-	}
+	client := fn.lambdaClient()
 	out, err := client.UpdateFunctionCode(ctx, &lambda.UpdateFunctionCodeInput{
 		FunctionName: &arn,
 		Publish:      true,
@@ -407,21 +393,23 @@ def _handler(event, context):
 	return b.Bytes(), nil
 }
 
-// connect connects to Lambda and returns a client. If it is already connected,
-// it returns the current client.
-func (fn *function) connect(ctx context.Context) (*lambda.Client, error) {
+// lambdaClient returns the Lambda client.
+func (fn *function) lambdaClient() *lambda.Client {
 	if fn.client != nil {
-		return fn.client, nil
+		return fn.client
 	}
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(fn.settings.Region),
-		config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(fn.settings.AccessKeyID, fn.settings.SecretAccessKey, "")))
-	if err != nil {
-		return nil, err
+	cfg := aws.Config{
+		Region: fn.settings.Region,
+		Credentials: aws.NewCredentialsCache(
+			credentials.NewStaticCredentialsProvider(
+				fn.settings.AccessKeyID,
+				fn.settings.SecretAccessKey,
+				"",
+			),
+		),
 	}
 	fn.client = lambda.NewFromConfig(cfg)
-	return fn.client, nil
+	return fn.client
 }
 
 // pythonEscaper is used by escapePythonSourceCode.
@@ -480,8 +468,7 @@ func parseID(id string) (arn string, language state.Language, err error) {
 
 // Metric error types.
 const (
-	errorTypeConnection = iota
-	errorTypeNetwork
+	errorTypeNetwork = iota
 	errorTypeLambdaInternal
 	errorTypeFunctionNotFound
 	errorTypeSerialization
@@ -489,7 +476,6 @@ const (
 )
 
 var metricErrorLabels = [...]string{
-	"connection",
 	"network",
 	"lambda_internal",
 	"function_not_found",

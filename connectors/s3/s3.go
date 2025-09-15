@@ -22,7 +22,6 @@ import (
 	"github.com/meergo/meergo/core/json"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -200,14 +199,16 @@ func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string)
 }
 
 // client returns a S3 client.
-// (https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/).
 func (ss3 *S3) client() *s3.Client {
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion(ss3.settings.Region),
-		config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(ss3.settings.AccessKeyID, ss3.settings.SecretAccessKey, "")))
-	if err != nil {
-		return nil
+	cfg := aws.Config{
+		Region: ss3.settings.Region,
+		Credentials: aws.NewCredentialsCache(
+			credentials.NewStaticCredentialsProvider(
+				ss3.settings.AccessKeyID,
+				ss3.settings.SecretAccessKey,
+				"",
+			),
+		),
 	}
 	return s3.NewFromConfig(cfg)
 }
