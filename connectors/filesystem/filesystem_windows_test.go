@@ -10,7 +10,7 @@ package filesystem
 import (
 	"testing"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/testconnector"
 )
 
 func TestPathConvert(t *testing.T) {
