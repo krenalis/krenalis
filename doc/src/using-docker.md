@@ -24,12 +24,16 @@ Or, alternatively, follow the detailed steps below.
 
 ## Detailed steps
 
+### 1. Cloning the repository
+
 Clone the Meergo's repository and enter into the repository's directory: 
 
 ```bash
 git clone https://github.com/meergo/meergo
 cd meergo
 ```
+
+### 2. Starting Meergo
 
 Launch Meergo with Docker Compose:
 
@@ -39,6 +43,10 @@ docker compose up
 
 > 🧹 If you have previously started Meergo using Docker Compose and want to reset it, perhaps for a clean installation or because you are running a new version of Meergo, you just need to clear the Meergo Docker data by running `docker compose down -v` before starting Meergo with `docker compose up`.
 
-Now you can start using Meergo by visiting the Admin console at [http://localhost:2022/admin/](http://localhost:2022/admin/).
+### 3. Opening the Meergo Admin console
 
-Keep reading the documentation to see how [create your first workspace](./create-workspace).
+⏳ Wait until the initialization of Meergo's databases is complete. This may take a few seconds.
+
+Once the initialization is finished, as indicated by the console message stating that the Meergo Admin Console is available, you can access it by opening the address [http://localhost:2022/admin/](http://localhost:2022/admin/) in a browser.
+
+Keep reading the documentation to see how to [create your first workspace](./create-workspace).
