@@ -28,7 +28,7 @@ Meergo exposes an **MCP (Model Context Protocol)** server to interact using your
 
 Some details:
 
-* The MCP server is exposed at the `/mcp` endpoint, e.g., `http://localhost:9090/mcp`. This endpoint is always exposed, and there's currently no configuration to enable, modify, or disable it.
+* The MCP server is exposed at the `/mcp` endpoint, e.g., `http://localhost:2022/mcp`. This endpoint is always exposed, and there's currently no configuration to enable, modify, or disable it.
 
 * Authentication is done via an API key passed in the `Authorization` header, using the same format as Meergo’s HTTP APIs. Some LLM applications have a built-in support for this kind of MCP server authentication; for example, **fast-agent** implements this through the `--auth` CLI option.
 
@@ -105,7 +105,7 @@ Once you understand this example, you can adapt it to your needs (eg. another LL
 ### Starting the chat
 
 ```bash
-fast-agent go --model openai --url=http://localhost:9090/mcp --auth=$MEERGO_MCP_KEY
+fast-agent go --model openai --url=http://localhost:2022/mcp --auth=$MEERGO_MCP_KEY
 ```
 
 By changing the command-line parameters and environment variables, you can configure **fast-agent** to connect to a different model or a different Meergo instance. See the [documentation for the `fast-agent go` command](https://fast-agent.ai/ref/go_command/) for more details.
@@ -122,8 +122,8 @@ You might see errors like:
 
 ```plain
 [mcp_agent.mcp.mcp_agent_client_session] send_request failed: resources not supported
-[mcp_agent.mcp.mcp_aggregator.default] Failed to list_resources '' on server 'localhost_9090_mcp': resources not supported
-[mcp_agent.mcp.mcp_aggregator.default] Error fetching resources from localhost_9090_mcp: resources not supported
+[mcp_agent.mcp.mcp_aggregator.default] Failed to list_resources '' on server 'localhost_2022_mcp': resources not supported
+[mcp_agent.mcp.mcp_aggregator.default] Error fetching resources from localhost_2022_mcp: resources not supported
 ```
 
 when interacting via `fast-agent`. These errors don’t seem to affect usability and will be resolved in the future.
@@ -149,6 +149,6 @@ letter or an underscore. Must be alphameric (a-z, A-Z, 0-9), underscores (_), do
 maximum length of 64.
 ```
 
-This depends on the fact that in the interaction between the server and the MCP client, a prefix is added to the tool names that makes those tools invalid (for example `127_0_0_1_9090_mcp-user-schema`). It's not clear why this happens.
+This depends on the fact that in the interaction between the server and the MCP client, a prefix is added to the tool names that makes those tools invalid (for example `127_0_0_1_2022_mcp-user-schema`). It's not clear why this happens.
 
 This is resolved by having **fast-agent** connect to `localhost` instead of `127.0.0.1`. The interaction example shown above already takes this into account.

@@ -72,7 +72,7 @@ func parseSettings() (*Settings, error) {
 	}
 
 	if port := envVars.Get("MEERGO_HTTP_PORT"); port == "" {
-		settings.HTTP.Port = 9090
+		settings.HTTP.Port = 2022
 	} else if port, err := validation.ValidatePortString(port); err != nil {
 		return nil, fmt.Errorf("MEERGO_HTTP_PORT must be a valid port: %s", err)
 	} else {

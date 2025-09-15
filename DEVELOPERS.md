@@ -89,7 +89,7 @@ Also, note that:
 
 Now metrics are exposed at:
 
-https://localhost:9090/debug/vars
+https://localhost:2022/debug/vars
 
 ## Local Testing Cookbook
 
@@ -169,13 +169,13 @@ Populate the Meergo's database with the queries in [database/initialization/1 - 
 
 ### 7. Run and open the browser
 
-Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) and visit https://localhost:9090/admin/.
+Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) and visit https://localhost:2022/admin/.
 
 ## Expose on the Internet (optional)
 
 1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
 2. Check that it is installed correctly: `cloudflared --version`
-3. Run cloudflared: `cloudflared tunnel --url https://localhost:9090`
+3. Run cloudflared: `cloudflared tunnel --url https://localhost:2022`
 4. Make a note of the URL listed in the standard output (example: https://xxxxxxx.trycloudflare.com)
 5. Open the URL in a browser
 

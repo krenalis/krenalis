@@ -22,7 +22,7 @@ Before you can add a Mailchimp data destination, you need to create a private ke
 3. On the **Profile** page, click **Extras > Registered apps**.
 4. On the **Registered apps** page, click **Register An App**.
 5. In the **App name** field, enter a name for the new app, for example, "Meergo data destination."
-6. In the **Redirect URI** field, enter “https://your-meergo-domain/admin/oauth/authorize” where “your-meergo-domain” is the domain, and port if present, of your Meergo domain. If you are running Meergo locally through Docker Compose, with the default configuration provided within the Meergo repository, you can use `http://127.0.0.1:9090/admin/oauth/authorize` as the Redirect URI.
+6. In the **Redirect URI** field, enter “https://your-meergo-domain/admin/oauth/authorize” where “your-meergo-domain” is the domain, and port if present, of your Meergo domain. If you are running Meergo locally through Docker Compose, with the default configuration provided within the Meergo repository, you can use `http://127.0.0.1:2022/admin/oauth/authorize` as the Redirect URI.
 7. Fill in the remaining fields as desired.
 8. Click **Create**.
 9. Copy the **Client ID** and **Client Secret** field values.

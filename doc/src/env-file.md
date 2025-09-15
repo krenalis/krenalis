@@ -38,7 +38,7 @@ An example of `.env` file syntax:
 ```ini
 # Server settings
 MEERGO_HTTP_HOST=127.0.0.1
-MEERGO_HTTP_PORT=9090
+MEERGO_HTTP_PORT=2022
 
 # TLS settings
 MEERGO_HTTP_TLS_ENABLED=true

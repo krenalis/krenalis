@@ -2,7 +2,7 @@ services:
   meergo:
     image: gianlucamondini/prova-meergo:dev
     ports:
-      - 9090:9090
+      - 2022:2022
     environment:
       # Sets the telemetry level in Meergo. You can set this to "none" to
       # completely disable telemetry. Default is "all". See the environment
@@ -41,8 +41,8 @@ services:
       # These settings configure Meergo to run optimally within Docker, so it is
       # not recommended that you change them.
       MEERGO_HTTP_HOST: meergo
-      MEERGO_HTTP_PORT: 9090
-      MEERGO_HTTP_EXTERNAL_URL: http://localhost:9090/
+      MEERGO_HTTP_PORT: 2022
+      MEERGO_HTTP_EXTERNAL_URL: http://localhost:2022/
       MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION: true
       MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
