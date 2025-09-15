@@ -23,13 +23,13 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
 5. Click on **Add source**. The `Add Snowflake source connection` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. In the remaining fields, provide the necessary information to access your Snowflake data warehouse:
-    * **Account**: The account ID of the Snowflake warehouse.
-    * **Username**: A username with read access to the tables.
+    * **Account Identifier**: The account ID of the Snowflake warehouse.
+    * **User Name**: A username with read access to the tables.
     * **Password**: The password for the user.
+    * **Role**: The role to be assigned to the user.
     * **Database**: The name of the database.
     * **Schema**: The name of the schema.
     * **Warehouse**: The name of the warehouse.
-    * **Role**: The role to be assigned to the user.
 8. (Optional) Click **Test connection** to check if the inserted data is correct.
 9. Click **Add**.
 
