@@ -209,7 +209,7 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 		}
 	}
 
-	records, schema, issues, err := c.File(r.Context(), path, format, sheet, compression, json.Value(formatSettings), limit)
+	records, schema, issues, err := c.File(r.Context(), path, format, sheet, compression, formatSettings, limit)
 	if err != nil {
 		return nil, err
 	}
