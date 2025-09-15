@@ -139,7 +139,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	s := newCompressedStorage(storage.inner, compression)
 	r, storageTimestamp, err := s.Reader(ctx, name)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, connectorError(err)
 	}
 	defer r.Close()
 	if err = validateLastChangeTime(storageTimestamp); err != nil {
