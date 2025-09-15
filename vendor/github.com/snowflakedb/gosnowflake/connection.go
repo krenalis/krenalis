@@ -18,6 +18,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel/propagation"
+
 	"github.com/apache/arrow-go/v18/arrow/ipc"
 )
 
@@ -92,7 +94,8 @@ func (sc *snowflakeConn) exec(
 	*execResponse, error) {
 	var err error
 	counter := atomic.AddUint64(&sc.SequenceCounter, 1) // query sequence counter
-
+	_, _, sessionID := safeGetTokens(sc.rest)
+	ctx = context.WithValue(ctx, SFSessionIDKey, sessionID)
 	queryContext, err := buildQueryContext(sc.queryContextCache)
 	if err != nil {
 		logger.WithContext(ctx).Errorf("error while building query context: %v", err)
@@ -128,6 +131,11 @@ func (sc *snowflakeConn) exec(
 	if isFileTransfer(query) {
 		headers[httpHeaderAccept] = headerContentTypeApplicationJSON
 	}
+
+	// propagate traceID and spanID via traceparent header. this is a no-op if invalid IDs
+	propagator := propagation.TraceContext{}
+	propagator.Inject(ctx, propagation.MapCarrier(headers))
+
 	paramsMutex.Lock()
 	if serviceName, ok := sc.cfg.Params[serviceName]; ok {
 		headers[httpHeaderServiceName] = *serviceName
@@ -270,8 +278,6 @@ func (sc *snowflakeConn) cleanup() {
 	if sc.rest != nil && sc.rest.Client != nil {
 		sc.rest.Client.CloseIdleConnections()
 	}
-	sc.rest = nil
-	sc.cfg = nil
 }
 
 func (sc *snowflakeConn) Close() (err error) {
@@ -280,6 +286,7 @@ func (sc *snowflakeConn) Close() (err error) {
 		logger.WithContext(sc.ctx).Warnf("error while sending telemetry. %v", err)
 	}
 	sc.stopHeartBeat()
+	sc.rest.HeartBeat = nil
 	defer sc.cleanup()
 
 	if sc.cfg != nil && !sc.cfg.KeepSessionAlive {
@@ -311,10 +318,12 @@ func (sc *snowflakeConn) ExecContext(
 	query string,
 	args []driver.NamedValue) (
 	driver.Result, error) {
-	logger.WithContext(ctx).Infof("Exec: %#v, %v", query, args)
 	if sc.rest == nil {
 		return nil, driver.ErrBadConn
 	}
+	_, _, sessionID := safeGetTokens(sc.rest)
+	ctx = context.WithValue(ctx, SFSessionIDKey, sessionID)
+	logger.WithContext(ctx).Infof("Exec: %#v, %v", query, args)
 	noResult := isAsyncMode(ctx)
 	isDesc := isDescribeOnly(ctx)
 	isInternal := isInternal(ctx)
@@ -398,14 +407,15 @@ func (sc *snowflakeConn) queryContextInternal(
 	query string,
 	args []driver.NamedValue) (
 	driver.Rows, error) {
-	logger.WithContext(ctx).Infof("Query: %#v, %v", query, args)
 	if sc.rest == nil {
 		return nil, driver.ErrBadConn
 	}
 
+	_, _, sessionID := safeGetTokens(sc.rest)
+	ctx = context.WithValue(setResultType(ctx, queryResultType), SFSessionIDKey, sessionID)
+	logger.WithContext(ctx).Infof("Query: %#v, %v", query, args)
 	noResult := isAsyncMode(ctx)
 	isDesc := isDescribeOnly(ctx)
-	ctx = setResultType(ctx, queryResultType)
 	isInternal := isInternal(ctx)
 	data, err := sc.exec(ctx, query, noResult, isInternal, isDesc, args)
 	if err != nil {
@@ -786,21 +796,23 @@ func buildSnowflakeConn(ctx context.Context, config Config) (*snowflakeConn, err
 	if err != nil {
 		return nil, err
 	}
-	var st http.RoundTripper = SnowflakeTransport
-	if sc.cfg.Transporter == nil {
-		if sc.cfg.DisableOCSPChecks || sc.cfg.InsecureMode {
-			// no revocation check with OCSP. Think twice when you want to enable this option.
-			st = snowflakeNoOcspTransport
-		} else {
-			// set OCSP fail open mode
-			ocspResponseCacheLock.Lock()
-			atomic.StoreUint32((*uint32)(&ocspFailOpen), uint32(sc.cfg.OCSPFailOpen))
-			ocspResponseCacheLock.Unlock()
-		}
+
+	telemetry := &snowflakeTelemetry{}
+	if config.DisableTelemetry {
+		telemetry.enabled = false
 	} else {
-		// use the custom transport
-		st = sc.cfg.Transporter
+		telemetry.flushSize = defaultFlushSize
+		telemetry.sr = sc.rest
+		telemetry.mutex = &sync.Mutex{}
+		telemetry.enabled = true
 	}
+
+	transportFactory := newTransportFactory(&config, telemetry)
+	st, err := transportFactory.createTransport()
+	if err != nil {
+		return nil, err
+	}
+
 	if err = setupOCSPEnvVars(ctx, sc.cfg.Host); err != nil {
 		return nil, err
 	}
@@ -843,34 +855,8 @@ func buildSnowflakeConn(ctx context.Context, config Config) (*snowflakeConn, err
 		FuncGetSSO:          getSSO,
 	}
 
-	if sc.cfg.DisableTelemetry {
-		sc.telemetry = &snowflakeTelemetry{enabled: false}
-	} else {
-		sc.telemetry = &snowflakeTelemetry{
-			flushSize: defaultFlushSize,
-			sr:        sc.rest,
-			mutex:     &sync.Mutex{},
-			enabled:   true,
-		}
-	}
+	telemetry.sr = sc.rest
+	sc.telemetry = telemetry
 
 	return sc, nil
-}
-
-func getTransport(cfg *Config) http.RoundTripper {
-	if cfg == nil {
-		logger.Debug("getTransport: got nil Config, will perform OCSP validation for cloud storage")
-		return SnowflakeTransport
-	}
-	// if user configured a custom Transporter, prioritize that
-	if cfg.Transporter != nil {
-		logger.Debug("getTransport: using Transporter configured by the user")
-		return cfg.Transporter
-	}
-	if cfg.DisableOCSPChecks || cfg.InsecureMode {
-		logger.Debug("getTransport: skipping OCSP validation for cloud storage")
-		return snowflakeNoOcspTransport
-	}
-	logger.Debug("getTransport: will perform OCSP validation for cloud storage")
-	return SnowflakeTransport
 }

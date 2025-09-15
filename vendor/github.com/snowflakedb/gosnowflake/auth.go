@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"slices"
 	"strconv"
@@ -54,6 +55,8 @@ const (
 	AuthTypeOAuthAuthorizationCode
 	// AuthTypeOAuthClientCredentials is to use non-interactive OAuth2 flow
 	AuthTypeOAuthClientCredentials
+	// AuthTypeWorkloadIdentityFederation is to use CSP identity for authentication
+	AuthTypeWorkloadIdentityFederation
 )
 
 func (authType AuthType) isOauthNativeFlow() bool {
@@ -95,6 +98,9 @@ func determineAuthenticatorType(cfg *Config, value string) error {
 		return nil
 	} else if upperCaseValue == AuthTypeOAuthClientCredentials.String() {
 		cfg.Authenticator = AuthTypeOAuthClientCredentials
+		return nil
+	} else if upperCaseValue == AuthTypeWorkloadIdentityFederation.String() {
+		cfg.Authenticator = AuthTypeWorkloadIdentityFederation
 		return nil
 	} else {
 		// possibly Okta case
@@ -151,6 +157,8 @@ func (authType AuthType) String() string {
 		return "OAUTH_AUTHORIZATION_CODE"
 	case AuthTypeOAuthClientCredentials:
 		return "OAUTH_CLIENT_CREDENTIALS"
+	case AuthTypeWorkloadIdentityFederation:
+		return "WORKLOAD_IDENTITY"
 	default:
 		return "UNKNOWN"
 	}
@@ -172,11 +180,14 @@ var userAgent = fmt.Sprintf("%v/%v (%v-%v) %v/%v",
 	runtime.Version())
 
 type authRequestClientEnvironment struct {
-	Application string `json:"APPLICATION"`
-	Os          string `json:"OS"`
-	OsVersion   string `json:"OS_VERSION"`
-	OCSPMode    string `json:"OCSP_MODE"`
-	GoVersion   string `json:"GO_VERSION"`
+	Application             string `json:"APPLICATION"`
+	ApplicationPath         string `json:"APPLICATION_PATH"`
+	Os                      string `json:"OS"`
+	OsVersion               string `json:"OS_VERSION"`
+	OCSPMode                string `json:"OCSP_MODE"`
+	GoVersion               string `json:"GO_VERSION"`
+	OAuthType               string `json:"OAUTH_TYPE,omitempty"`
+	CertRevocationCheckMode string `json:"CERT_REVOCATION_CHECK_MODE,omitempty"`
 }
 
 type authRequestData struct {
@@ -195,7 +206,7 @@ type authRequestData struct {
 	BrowserModeRedirectPort string                       `json:"BROWSER_MODE_REDIRECT_PORT,omitempty"`
 	ProofKey                string                       `json:"PROOF_KEY,omitempty"`
 	Token                   string                       `json:"TOKEN,omitempty"`
-	OauthType               string                       `json:"OAUTH_TYPE,omitempty"`
+	Provider                string                       `json:"PROVIDER,omitempty"`
 }
 type authRequest struct {
 	Data authRequestData `json:"data"`
@@ -342,12 +353,28 @@ func authenticate(
 	}
 
 	headers := getHeaders()
+	// Get the current application path
+	applicationPath, err := os.Executable()
+	if err != nil {
+		applicationPath = "unknown"
+	}
+
+	oauthType := ""
+	if sc.cfg.Authenticator == AuthTypeOAuthAuthorizationCode {
+		oauthType = "OAUTH_AUTHORIZATION_CODE"
+	} else if sc.cfg.Authenticator == AuthTypeOAuthClientCredentials {
+		oauthType = "OAUTH_CLIENT_CREDENTIALS"
+	}
+
 	clientEnvironment := authRequestClientEnvironment{
-		Application: sc.cfg.Application,
-		Os:          operatingSystem,
-		OsVersion:   platform,
-		OCSPMode:    sc.cfg.ocspMode(),
-		GoVersion:   runtime.Version(),
+		Application:             sc.cfg.Application,
+		ApplicationPath:         applicationPath,
+		Os:                      operatingSystem,
+		OsVersion:               platform,
+		OCSPMode:                sc.cfg.ocspMode(),
+		GoVersion:               runtime.Version(),
+		OAuthType:               oauthType,
+		CertRevocationCheckMode: sc.cfg.CertRevocationCheckMode.String(),
 	}
 
 	sessionParameters := make(map[string]interface{})
@@ -505,7 +532,7 @@ func createRequestBody(sc *snowflakeConn, sessionParameters map[string]interface
 		}
 	case AuthTypeOAuthAuthorizationCode:
 		logger.WithContext(sc.ctx).Debug("OAuth authorization code")
-		oauthClient, err := newOauthClient(sc.ctx, sc.cfg)
+		oauthClient, err := newOauthClient(sc.ctx, sc.cfg, sc)
 		if err != nil {
 			return nil, err
 		}
@@ -515,10 +542,9 @@ func createRequestBody(sc *snowflakeConn, sessionParameters map[string]interface
 		}
 		requestMain.LoginName = sc.cfg.User
 		requestMain.Token = token
-		requestMain.OauthType = "OAUTH_AUTHORIZATION_CODE"
 	case AuthTypeOAuthClientCredentials:
 		logger.WithContext(sc.ctx).Debug("OAuth client credentials")
-		oauthClient, err := newOauthClient(sc.ctx, sc.cfg)
+		oauthClient, err := newOauthClient(sc.ctx, sc.cfg, sc)
 		if err != nil {
 			return nil, err
 		}
@@ -528,7 +554,19 @@ func createRequestBody(sc *snowflakeConn, sessionParameters map[string]interface
 		}
 		requestMain.LoginName = sc.cfg.User
 		requestMain.Token = token
-		requestMain.OauthType = "OAUTH_CLIENT_CREDENTIALS"
+	case AuthTypeWorkloadIdentityFederation:
+		logger.WithContext(sc.ctx).Debug("Workload Identity Federation")
+		wifAttestationProvider := createWifAttestationProvider(sc.ctx, sc.cfg, sc.telemetry)
+		wifAttestation, err := wifAttestationProvider.getAttestation(sc.cfg.WorkloadIdentityProvider)
+		if err != nil {
+			return nil, err
+		}
+		if wifAttestation == nil {
+			return nil, errors.New("workload identity federation attestation is not available, please check your configuration")
+		}
+		requestMain.Authenticator = AuthTypeWorkloadIdentityFederation.String()
+		requestMain.Token = wifAttestation.Credential
+		requestMain.Provider = wifAttestation.ProviderType
 	}
 
 	authRequest := authRequest{
@@ -638,7 +676,7 @@ func authenticateWithConfig(sc *snowflakeConn) error {
 
 			if sc.cfg.Authenticator == AuthTypeOAuthAuthorizationCode {
 				var oauthClient *oauthClient
-				if oauthClient, err = newOauthClient(sc.ctx, sc.cfg); err != nil {
+				if oauthClient, err = newOauthClient(sc.ctx, sc.cfg, sc); err != nil {
 					logger.Warnf("failed to create oauth client. %v", err)
 				} else {
 					if err = oauthClient.refreshToken(); err != nil {

@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 	"html"
 	"io"
 	"net"
@@ -18,6 +16,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
@@ -26,6 +27,7 @@ const (
 <body>
 OAuth authentication completed successfully.
 </body></html>`
+	localApplicationClientCredentials = "LOCAL_APPLICATION"
 )
 
 var defaultAuthorizationCodeProviderFactory = func() authorizationCodeProvider {
@@ -43,7 +45,7 @@ type oauthClient struct {
 	authorizationCodeProviderFactory func() authorizationCodeProvider
 }
 
-func newOauthClient(ctx context.Context, cfg *Config) (*oauthClient, error) {
+func newOauthClient(ctx context.Context, cfg *Config, sc *snowflakeConn) (*oauthClient, error) {
 	port := 0
 	if cfg.OauthRedirectURI != "" {
 		logger.Debugf("Using oauthRedirectUri from config: %v", cfg.OauthRedirectURI)
@@ -61,12 +63,16 @@ func newOauthClient(ctx context.Context, cfg *Config) (*oauthClient, error) {
 
 	redirectURITemplate := ""
 	if cfg.OauthRedirectURI == "" {
-		redirectURITemplate = "http://127.0.0.1:%v/"
+		redirectURITemplate = "http://127.0.0.1:%v"
 	}
 	logger.Debugf("Redirect URI template: %v, port: %v", redirectURITemplate, port)
 
+	transport, err := newTransportFactory(cfg, sc.telemetry).createTransport()
+	if err != nil {
+		return nil, err
+	}
 	client := &http.Client{
-		Transport: getTransport(cfg),
+		Transport: transport,
 	}
 	return &oauthClient{
 		ctx:                              context.WithValue(ctx, oauth2.HTTPClient, client),
@@ -206,7 +212,11 @@ func (oauthClient *oauthClient) exchangeAccessToken(codeReq *http.Request, state
 	}
 
 	code := queryParams.Get("code")
-	token, err := oauth2cfg.Exchange(oauthClient.ctx, code, oauth2.VerifierOption(codeVerifier))
+	opts := []oauth2.AuthCodeOption{oauth2.VerifierOption(codeVerifier)}
+	if oauthClient.cfg.EnableSingleUseRefreshTokens {
+		opts = append(opts, oauth2.SetAuthURLParam("enable_single_use_refresh_tokens", "true"))
+	}
+	token, err := oauth2cfg.Exchange(oauthClient.ctx, code, opts...)
 	if err != nil {
 		responseBodyChan <- err.Error()
 		return nil, err
@@ -216,9 +226,13 @@ func (oauthClient *oauthClient) exchangeAccessToken(codeReq *http.Request, state
 }
 
 func (oauthClient *oauthClient) buildAuthorizationCodeConfig(callbackPort int) *oauth2.Config {
+	clientID, clientSecret := oauthClient.cfg.OauthClientID, oauthClient.cfg.OauthClientSecret
+	if oauthClient.eligibleForDefaultClientCredentials() {
+		clientID, clientSecret = localApplicationClientCredentials, localApplicationClientCredentials
+	}
 	return &oauth2.Config{
-		ClientID:     oauthClient.cfg.OauthClientID,
-		ClientSecret: oauthClient.cfg.OauthClientSecret,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
 		RedirectURL:  oauthClient.buildRedirectURI(callbackPort),
 		Scopes:       oauthClient.buildScopes(),
 		Endpoint: oauth2.Endpoint{
@@ -227,6 +241,14 @@ func (oauthClient *oauthClient) buildAuthorizationCodeConfig(callbackPort int) *
 			AuthStyle: oauth2.AuthStyleInHeader,
 		},
 	}
+}
+func (oauthClient *oauthClient) eligibleForDefaultClientCredentials() bool {
+	return oauthClient.cfg.OauthClientID == "" && oauthClient.cfg.OauthClientSecret == "" && oauthClient.isSnowflakeAsIDP()
+}
+
+func (oauthClient *oauthClient) isSnowflakeAsIDP() bool {
+	return (oauthClient.cfg.OauthAuthorizationURL == "" || strings.Contains(oauthClient.cfg.OauthAuthorizationURL, oauthClient.cfg.Host)) &&
+		(oauthClient.cfg.OauthTokenRequestURL == "" || strings.Contains(oauthClient.cfg.OauthTokenRequestURL, oauthClient.cfg.Host))
 }
 
 func (oauthClient *oauthClient) authorizationURL() string {

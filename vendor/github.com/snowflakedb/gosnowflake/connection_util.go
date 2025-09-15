@@ -132,7 +132,7 @@ func (sc *snowflakeConn) processFileTransfer(
 	return data, nil
 }
 
-func getFileStream(ctx context.Context) (*bytes.Buffer, error) {
+func getFileStream(ctx context.Context) (io.Reader, error) {
 	s := ctx.Value(fileStreamFile)
 	if s == nil {
 		return nil, nil
@@ -141,9 +141,7 @@ func getFileStream(ctx context.Context) (*bytes.Buffer, error) {
 	if !ok {
 		return nil, errors.New("incorrect io.Reader")
 	}
-	buf := new(bytes.Buffer)
-	_, err := buf.ReadFrom(r)
-	return buf, err
+	return r, nil
 }
 
 func getFileTransferOptions(ctx context.Context) *SnowflakeFileTransferOptions {
@@ -297,11 +295,13 @@ func populateChunkDownloader(
 	if useStreamDownloader(ctx) && resultFormat(data.QueryResultFormat) == jsonFormat {
 		// stream chunk downloading only works for row based data formats, i.e. json
 		fetcher := &httpStreamChunkFetcher{
-			ctx:      ctx,
-			client:   sc.rest.Client,
-			clientIP: sc.cfg.ClientIP,
-			headers:  data.ChunkHeaders,
-			qrmk:     data.Qrmk,
+			ctx:           ctx,
+			client:        sc.rest.Client,
+			clientIP:      sc.cfg.ClientIP,
+			headers:       data.ChunkHeaders,
+			maxRetryCount: sc.rest.MaxRetryCount,
+			qrmk:          data.Qrmk,
+			timeout:       sc.rest.RequestTimeout,
 		}
 		return newStreamChunkDownloader(ctx, fetcher, data.Total, data.RowType,
 			data.RowSet, data.Chunks)

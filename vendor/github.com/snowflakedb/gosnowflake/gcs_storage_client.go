@@ -22,7 +22,8 @@ const (
 )
 
 type snowflakeGcsClient struct {
-	cfg *Config
+	cfg       *Config
+	telemetry *snowflakeTelemetry
 }
 
 type gcsLocation struct {
@@ -30,7 +31,7 @@ type gcsLocation struct {
 	path       string
 }
 
-func (util *snowflakeGcsClient) createClient(info *execResponseStageInfo, _ bool) (cloudClient, error) {
+func (util *snowflakeGcsClient) createClient(info *execResponseStageInfo, _ bool, telemetry *snowflakeTelemetry) (cloudClient, error) {
 	if info.Creds.GcsAccessToken != "" {
 		logger.Debug("Using GCS downscoped token")
 		return info.Creds.GcsAccessToken, nil
@@ -71,7 +72,10 @@ func (util *snowflakeGcsClient) getFileHeader(meta *fileMetadata, filename strin
 			for k, v := range gcsHeaders {
 				req.Header.Add(k, v)
 			}
-			client := newGcsClient(util.cfg)
+			client, err := newGcsClient(util.cfg, util.telemetry)
+			if err != nil {
+				return nil, err
+			}
 			// for testing only
 			if meta.mockGcsClient != nil {
 				client = meta.mockGcsClient
@@ -223,7 +227,10 @@ func (util *snowflakeGcsClient) uploadFile(
 		for k, v := range gcsHeaders {
 			req.Header.Add(k, v)
 		}
-		client := newGcsClient(util.cfg)
+		client, err := newGcsClient(util.cfg, util.telemetry)
+		if err != nil {
+			return nil, err
+		}
 		// for testing only
 		if meta.mockGcsClient != nil {
 			client = meta.mockGcsClient
@@ -304,7 +311,10 @@ func (util *snowflakeGcsClient) nativeDownloadFile(
 		for k, v := range gcsHeaders {
 			req.Header.Add(k, v)
 		}
-		client := newGcsClient(util.cfg)
+		client, err := newGcsClient(util.cfg, util.telemetry)
+		if err != nil {
+			return nil, err
+		}
 		// for testing only
 		if meta.mockGcsClient != nil {
 			client = meta.mockGcsClient
@@ -394,10 +404,22 @@ func (util *snowflakeGcsClient) extractBucketNameAndPath(location string) *gcsLo
 func (util *snowflakeGcsClient) generateFileURL(stageInfo *execResponseStageInfo, filename string) (*url.URL, error) {
 	gcsLoc := util.extractBucketNameAndPath(stageInfo.Location)
 	fullFilePath := gcsLoc.path + filename
-	endPoint := util.getGcsCustomEndpoint(stageInfo)
+	endPoint := "https://storage.googleapis.com"
+
+	// TODO: SNOW-1789759 hardcoded region will be replaced in the future
+	isRegionalURLEnabled := (strings.ToLower(stageInfo.Region) == gcsRegionMeCentral2) || stageInfo.UseRegionalURL
+	if stageInfo.EndPoint != "" {
+		endPoint = fmt.Sprintf("https://%s", stageInfo.EndPoint)
+	} else if stageInfo.UseVirtualURL {
+		endPoint = fmt.Sprintf("https://%s.storage.googleapis.com", gcsLoc.bucketName)
+	} else if stageInfo.Region != "" && isRegionalURLEnabled {
+		endPoint = fmt.Sprintf("https://storage.%s.rep.googleapis.com", strings.ToLower(stageInfo.Region))
+	}
+
 	if stageInfo.UseVirtualURL {
 		return url.Parse(endPoint + "/" + url.QueryEscape(fullFilePath))
 	}
+
 	return url.Parse(endPoint + "/" + gcsLoc.bucketName + "/" + url.QueryEscape(fullFilePath))
 }
 
@@ -405,24 +427,12 @@ func (util *snowflakeGcsClient) isTokenExpired(resp *http.Response) bool {
 	return resp.StatusCode == 401
 }
 
-func newGcsClient(cfg *Config) gcsAPI {
+func newGcsClient(cfg *Config, telemetry *snowflakeTelemetry) (gcsAPI, error) {
+	transport, err := newTransportFactory(cfg, telemetry).createTransport()
+	if err != nil {
+		return nil, err
+	}
 	return &http.Client{
-		Transport: getTransport(cfg),
-	}
-}
-
-func (util *snowflakeGcsClient) getGcsCustomEndpoint(info *execResponseStageInfo) string {
-	endpoint := "https://storage.googleapis.com"
-
-	// TODO: SNOW-1789759 hardcoded region will be replaced in the future
-	isRegionalURLEnabled := (strings.ToLower(info.Region) == gcsRegionMeCentral2) || info.UseRegionalURL
-	if info.EndPoint != "" {
-		endpoint = fmt.Sprintf("https://%s", info.EndPoint)
-	} else if info.UseVirtualURL {
-		bucketName := util.extractBucketNameAndPath(info.Location).bucketName
-		endpoint = fmt.Sprintf("https://%s.storage.googleapis.com", bucketName)
-	} else if info.Region != "" && isRegionalURLEnabled {
-		endpoint = fmt.Sprintf("https://storage.%s.rep.googleapis.com", strings.ToLower(info.Region))
-	}
-	return endpoint
+		Transport: transport,
+	}, nil
 }
