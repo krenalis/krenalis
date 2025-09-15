@@ -346,9 +346,12 @@ func (c *Meergo) Start() {
 		// Meergo settings.
 		// Keep these in sync with the environment variables set above.
 		setts := cmd.Settings{}
+		setts.JavaScriptSDKURL = "https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.HTTP.Host = testsSettings.HTTP.Host
 		setts.HTTP.Port = testsSettings.HTTP.Port
+		setts.HTTP.ExternalURL = fmt.Sprintf("http://%s:%d/", setts.HTTP.Host, setts.HTTP.Port)
+		setts.HTTP.ExternalEventURL = setts.HTTP.ExternalURL + "api/v1/events"
 		setts.DB.Host = testsSettings.Database.Host
 		setts.DB.Port = testsSettings.Database.Port
 		setts.DB.Username = testsSettings.Database.Username
