@@ -5,6 +5,7 @@
 # Using Docker
 
 This is the easiest and fastest way to start using Meergo on your PC.
+
 ## Before you begin
 
 To use Meergo using Docker, you will need:
