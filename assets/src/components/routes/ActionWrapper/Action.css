@@ -447,7 +447,7 @@
 	font-size: 14px;
 	bottom: 1px;
 	white-space: nowrap;
-	line-height: .8;
+	line-height: 0.8;
 }
 
 .action__transformation-output-property-key {
@@ -1122,7 +1122,8 @@ inherit the disabled style */
 .fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected
 	> sl-checkbox,
 .fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected
-	.fullscreen-transformation__property-name * {
+	.fullscreen-transformation__property-name
+	* {
 	opacity: 1;
 }
 
