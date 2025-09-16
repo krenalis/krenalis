@@ -176,7 +176,7 @@ func (database *Database) Schema(ctx context.Context, table string, role state.R
 
 // Query executes a query and returns the resulting rows and schema, along with
 // any issues encountered while reading the schema, such as unsupported column
-// types.
+// types. The returned schema can be the invalid schema.
 //
 // If queryReplacer is not nil, then the placeholders in the query are replaced
 // using it; in this case, a *PlaceholderError error may be returned in case of
@@ -208,6 +208,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	}
 	issues, err := columnsIssues(columns)
 	if err != nil {
+		_ = rows.Close()
 		return nil, types.Type{}, nil, connectorError(fmt.Errorf("connector %s %s", database.connector, err))
 	}
 	for i, c := range columns {
