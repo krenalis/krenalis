@@ -210,6 +210,11 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	if err != nil {
 		return nil, types.Type{}, nil, connectorError(fmt.Errorf("connector %s %s", database.connector, err))
 	}
+	for i, c := range columns {
+		if !c.Type.Valid() {
+			columns[i] = meergo.Column{}
+		}
+	}
 	return newRows(rows, columns, database.timeLayouts), schema, issues, nil
 }
 
@@ -505,10 +510,10 @@ func (rs *Rows) Next() bool {
 func (rs *Rows) Scan() (map[string]any, error) {
 	row := make(map[string]any, len(rs.columns))
 	for i, c := range rs.columns {
-		if c.Type.Valid() {
-			rs.dst[i] = queryScanValue{column: c, row: row, timeLayouts: rs.timeLayouts}
+		if c.Name == "" {
+			rs.dst[i] = queryScanValue{}
 		} else {
-			rs.dst[i] = nil
+			rs.dst[i] = queryScanValue{column: c, row: row, timeLayouts: rs.timeLayouts}
 		}
 	}
 	if err := rs.rows.Scan(rs.dst...); err != nil {
@@ -683,6 +688,9 @@ type queryScanValue struct {
 
 func (sv queryScanValue) Scan(src any) error {
 	c := sv.column
+	if c.Name == "" {
+		return nil
+	}
 	value, err := normalize(c.Name, c.Type, src, c.Nullable, sv.timeLayouts)
 	if err != nil {
 		return err
