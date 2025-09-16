@@ -14,8 +14,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault }: setting
 		if (settings === undefined && precompileDefault) {
 			// Precompile schema and role.
 			setSettings({
-				schema: 'public',
-				role: 'SYSADMIN',
+				schema: 'PUBLIC',
 			});
 		}
 	}, []);
@@ -91,7 +90,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault }: setting
 				minlength={1}
 				maxlength={255}
 				onSlInput={onSettingInput}
-				value={settings?.schema || 'PUBLIC'}
+				value={settings?.schema || ''}
 			/>
 			<SlInput
 				name='warehouse'
