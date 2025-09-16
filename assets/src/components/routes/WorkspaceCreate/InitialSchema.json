@@ -7,7 +7,8 @@
 			"type": {
 				"charLen": 36,
 				"kind": "text"
-			}
+			},
+			"description": "Customer ID"
 		},
 		{
 			"name": "first_name",
@@ -15,7 +16,8 @@
 			"type": {
 				"charLen": 100,
 				"kind": "text"
-			}
+			},
+			"description": "First name"
 		},
 		{
 			"name": "last_name",
@@ -23,7 +25,8 @@
 			"type": {
 				"charLen": 100,
 				"kind": "text"
-			}
+			},
+			"description": "Last name"
 		},
 		{
 			"name": "email",
@@ -31,7 +34,8 @@
 			"type": {
 				"charLen": 254,
 				"kind": "text"
-			}
+			},
+			"description": "Email"
 		},
 		{
 			"name": "phone_number",
@@ -39,21 +43,24 @@
 			"type": {
 				"charLen": 20,
 				"kind": "text"
-			}
+			},
+			"description": "Phone number"
 		},
 		{
 			"name": "birth_date",
 			"readOptional": true,
 			"type": {
 				"kind": "date"
-			}
+			},
+			"description": "Birth date"
 		},
 		{
 			"name": "gender",
 			"readOptional": true,
 			"type": {
 				"kind": "text"
-			}
+			},
+			"description": "Gender"
 		},
 		{
 			"name": "address",
@@ -67,7 +74,8 @@
 						"type": {
 							"charLen": 255,
 							"kind": "text"
-						}
+						},
+						"description": "Street"
 					},
 					{
 						"name": "city",
@@ -75,7 +83,8 @@
 						"type": {
 							"charLen": 100,
 							"kind": "text"
-						}
+						},
+						"description": "City"
 					},
 					{
 						"name": "postal_code",
@@ -83,7 +92,8 @@
 						"type": {
 							"charLen": 20,
 							"kind": "text"
-						}
+						},
+						"description": "Postal code"
 					},
 					{
 						"name": "country",
@@ -91,10 +101,12 @@
 						"type": {
 							"charLen": 2,
 							"kind": "text"
-						}
+						},
+						"description": "Country"
 					}
 				]
-			}
+			},
+			"description": "Address"
 		},
 		{
 			"name": "preferences",
@@ -107,7 +119,8 @@
 						"readOptional": true,
 						"type": {
 							"kind": "boolean"
-						}
+						},
+						"description": "Newsletter subscription"
 					},
 					{
 						"name": "categories",
@@ -117,7 +130,8 @@
 							"elementType": {
 								"kind": "text"
 							}
-						}
+						},
+						"description": "Preferences categories"
 					},
 					{
 						"name": "language",
@@ -125,10 +139,12 @@
 						"type": {
 							"kind": "text",
 							"charLen": 2
-						}
+						},
+						"description": "Language"
 					}
 				]
-			}
+			},
+			"description": "Preferences"
 		}
 	]
 }
