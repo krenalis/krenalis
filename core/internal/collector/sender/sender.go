@@ -341,6 +341,8 @@ func (s *Sender) SetApp(app *connectors.App) {
 }
 
 // appendToReadyQueue adds the given event to the ready queue.
+//
+// It must be called holding the s.mu mutex.
 func (s *Sender) appendToReadyQueue(event *Event) {
 	s.events = append(s.events, event)
 	u := event.user
@@ -357,6 +359,8 @@ func (s *Sender) appendToReadyQueue(event *Event) {
 }
 
 // appendToWaitingQueue adds the given event to the user's waiting queue.
+//
+// It must be called holding the s.mu mutex.
 func (s *Sender) appendToWaitingQueue(event *Event) {
 	u := event.user
 	index, _ := slices.BinarySearchFunc(u.waiting, event, func(a, b *Event) int {
@@ -600,7 +604,7 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 // releaseUsers releases the iterated users, making their events available
 // again. They cannot be released while an iteration is in progress.
 //
-// Must be called while holding s.mu.
+// It must be called holding the s.mu mutex.
 func (s *Sender) releaseUsers() {
 	if s.iterator != nil {
 		panic("core/events/collector/sender: releaseUsers called while an iteration is still in progress")
@@ -625,7 +629,8 @@ func (s *Sender) releaseUsers() {
 
 // resetTimerLocked schedules the timer so that the oldest available event is
 // sent within maxQueueDelay.
-// The caller must hold s.mu.
+//
+// It must be called holding the s.mu mutex.
 func (s *Sender) resetTimerLocked() {
 	if s.available == 0 {
 		s.timer.Stop()
@@ -754,6 +759,7 @@ func (s *Sender) setRateLimiterPattern(pattern string) {
 }
 
 // _assertAvailable asserts that the available events are n.
+//
 // It must be called holding the s.mu mutex.
 func (s *Sender) _assertAvailable(n int) {
 	available := 0
