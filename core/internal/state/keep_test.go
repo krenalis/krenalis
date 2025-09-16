@@ -45,8 +45,8 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 	for _, test := range tests {
 		with := slices.Clone(test.with)
 		got := removeLinkedConnection(test.with, test.id)
-		if test.without == nil && got != nil {
-			t.Fatalf("expected nil, got %#v", got)
+		if got == nil {
+			t.Fatal("unexpected nil")
 		}
 		if !slices.Equal(test.without, got) {
 			t.Fatalf("expected %#v, got %#v", test.without, got)

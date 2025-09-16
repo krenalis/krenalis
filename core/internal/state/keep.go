@@ -1396,7 +1396,7 @@ func addLinkedConnection(connections []int, id int) []int {
 // removeLinkedConnection removes id from the provided linked connections. It
 // returns a copy of connections with id removed. It is assumed that connections
 // is sorted and id exists in connections. If id is the sole connection in
-// connections, it returns nil.
+// connections, it returns an empty slice.
 func removeLinkedConnection(connections []int, id int) []int {
 	if len(connections) == 1 {
 		return []int{}
