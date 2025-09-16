@@ -946,7 +946,7 @@ const TransformationBox = ({
 						>
 							{isIdentifier && (
 								<div className='action__transformation-property-icon' slot='prefix'>
-									<SlTooltip content='Used as identifier in Identity Resolution' hoist>
+									<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
 										<SlIcon
 											name='person-check'
 											className='action__transformation-property-identifier'
@@ -968,12 +968,26 @@ const TransformationBox = ({
 								} as React.CSSProperties
 							}
 						>
-							<PropertyTooltip propertyName={path} typeName={typeName} type={property.full.type}>
-								<span className='action__transformation-output-property-key'>{property.full.name}</span>
-								<span className='action__transformation-output-property-type'>{typeName}</span>
-							</PropertyTooltip>
-							{showRequired && (
-								<span className='action__transformation-output-property-required'>required</span>
+							<div className='action__transformation-output-property-head'>
+								<PropertyTooltip
+									propertyName={path}
+									description={property.full.description}
+									typeName={typeName}
+									type={property.full.type}
+								>
+									<span className='action__transformation-output-property-key'>
+										{property.full.name}
+									</span>
+									<span className='action__transformation-output-property-type'>{typeName}</span>
+								</PropertyTooltip>
+								{showRequired && (
+									<span className='action__transformation-output-property-required'>required</span>
+								)}
+							</div>
+							{property.full.description && (
+								<div className='action__transformation-output-property-description'>
+									{property.full.description}
+								</div>
 							)}
 						</div>
 					</React.Fragment>,
@@ -2314,7 +2328,7 @@ const FullscreenTransformation = ({
 							></SlSpinner>
 						) : output !== '' || outputError !== '' ? (
 							<div className='fullscreen-transformation__output-code'>
-								<SlTooltip content='Clear' placement='left' onClick={onClear}>
+								<SlTooltip content='Clear' placement='left' onClick={onClear} hoist={true}>
 									<SlIconButton className='fullscreen-transformation__output-clear' name='x-lg' />
 								</SlTooltip>
 								{outputError !== '' ? (
@@ -2693,7 +2707,12 @@ const MapMapping = ({
 					} as React.CSSProperties
 				}
 			>
-				<PropertyTooltip propertyName={propertyPath} typeName={typeName} type={property.full.type}>
+				<PropertyTooltip
+					propertyName={propertyPath}
+					description={property.full.description}
+					typeName={typeName}
+					type={property.full.type}
+				>
 					<span className='action__transformation-output-property-key'>{property.full.name}</span>
 					<span className='action__transformation-output-property-type'>{typeName}</span>
 				</PropertyTooltip>
@@ -2751,10 +2770,15 @@ const MapMapping = ({
 								}}
 							/>{' '}
 							"
-							<PropertyTooltip propertyName={''} typeName={elementType.kind} type={elementType}>
+							<PropertyTooltip
+								propertyName={''}
+								description={property.full.description}
+								typeName={elementType.kind}
+								type={elementType}
+							>
 								<span className='action__transformation-output-property-type'>{elementType.kind}</span>
 							</PropertyTooltip>
-							<SlTooltip content='Add key'>
+							<SlTooltip content='Add key' hoist={true}>
 								<SlButton
 									className='action__transformation-output-property-add'
 									size='small'
@@ -2764,7 +2788,7 @@ const MapMapping = ({
 									<SlIcon name='plus-circle' slot='prefix' />
 								</SlButton>
 							</SlTooltip>
-							<SlTooltip content={pairs.length === 1 ? 'Clear key' : 'Remove key'}>
+							<SlTooltip content={pairs.length === 1 ? 'Clear key' : 'Remove key'} hoist={true}>
 								<SlButton
 									className='action__transformation-output-property-remove'
 									size='small'
@@ -2866,7 +2890,9 @@ const TransformationNestedProperties = ({
 	if (searchTerm === '') {
 		isSearched = true;
 	} else {
-		isSearched = property.name.toLowerCase().includes(searchTerm.toLowerCase());
+		isSearched =
+			property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			(property.description != '' && property.description.toLowerCase().includes(searchTerm.toLowerCase()));
 	}
 
 	let hasSearchedChildren = false;
@@ -2880,7 +2906,10 @@ const TransformationNestedProperties = ({
 					continue;
 				}
 				const name = flatSchema[key].full.name;
-				const isSearched = name.toLowerCase().includes(searchTerm.toLowerCase());
+				const description = flatSchema[key].full.description;
+				const isSearched =
+					name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+					(description != '' && description.toLowerCase().includes(searchTerm.toLowerCase()));
 				if (isSearched) {
 					hasSearchedChildren = true;
 					break;
@@ -2893,7 +2922,10 @@ const TransformationNestedProperties = ({
 			const s = flattenSchema(property.type as ArrayType | MapType);
 			for (const key in s) {
 				const name = s[key].full.name;
-				const isSearched = name.toLowerCase().includes(searchTerm.toLowerCase());
+				const description = s[key].full.description;
+				const isSearched =
+					name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+					(description != '' && description.toLowerCase().includes(searchTerm.toLowerCase()));
 				if (isSearched) {
 					hasSearchedChildren = true;
 					break;
@@ -3070,7 +3102,9 @@ const TransformationProperty = ({
 
 	let isSearched = true;
 	if (searchTerm != null && searchTerm !== '') {
-		isSearched = property.name.toLowerCase().includes(searchTerm.toLowerCase());
+		isSearched =
+			property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			(property.description != '' && property.description.toLowerCase().includes(searchTerm.toLowerCase()));
 	}
 
 	if (!isSearched) {
@@ -3157,44 +3191,64 @@ const TransformationProperty = ({
 			<div className='fullscreen-transformation__property'>
 				<div className='fullscreen-transformation__property-name'>
 					{parentName != null && <span className='fullscreen-transformation__property-nested-icon' />}
-					{isIdentifier && (
-						<SlTooltip content='Used as identifier in Identity Resolution'>
-							<SlIcon
-								className='fullscreen-transformation__property-identifier-icon'
-								name='person-check'
-							/>
-						</SlTooltip>
-					)}
-					<PropertyTooltip propertyName={path} typeName={typeName} type={property.type}>
-						<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
-						<span className='fullscreen-transformation__property-type'>
-							<span>{typeName}</span>
-							{side === 'input' && property.readOptional && <span>- optional</span>}
-							{showRequired && (
-								<span className='fullscreen-transformation__property-required'>required</span>
+					<div className='fullscreen-transformation__property-content'>
+						<div className='fullscreen-transformation__property-head'>
+							{isIdentifier && (
+								<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
+									<SlIcon
+										className='fullscreen-transformation__property-identifier-icon'
+										name='person-check'
+									/>
+								</SlTooltip>
 							)}
-						</span>
-					</PropertyTooltip>
-					{!isOutMatchingProperty && (
-						<SlCopyButton
-							className='fullscreen-transformation__property-copy'
-							value={parentName ? `${parentName}.${property.name}` : property.name}
-							copyLabel='Click to copy'
-							successLabel='✓ Copied'
-							errorLabel='Copying to clipboard is not supported by your browser'
-						/>
-					)}
-					{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
-						<SlTooltip content='You cannot select this property since it is already used as matching property'>
-							<SlIcon className='fullscreen-transformation__property-disabled-info' name='info-circle' />
-						</SlTooltip>
-					)}
-					{transformationType === 'function' && isOutMatchingProperty && isSelected && (
-						<div className='fullscreen-transformation__property-error'>
-							Ensure that this property is not returned by the transformation function, and then deselect
-							this
+							<PropertyTooltip
+								propertyName={path}
+								description={property.description}
+								typeName={typeName}
+								type={property.type}
+							>
+								<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
+								<span className='fullscreen-transformation__property-type'>
+									<span>{typeName}</span>
+									{side === 'input' && property.readOptional && <span>- optional</span>}
+									{showRequired && (
+										<span className='fullscreen-transformation__property-required'>required</span>
+									)}
+								</span>
+							</PropertyTooltip>
+							{!isOutMatchingProperty && (
+								<SlCopyButton
+									className='fullscreen-transformation__property-copy'
+									value={parentName ? `${parentName}.${property.name}` : property.name}
+									copyLabel='Click to copy'
+									successLabel='✓ Copied'
+									errorLabel='Copying to clipboard is not supported by your browser'
+								/>
+							)}
+							{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
+								<SlTooltip
+									content='You cannot select this property since it is already used as matching property'
+									hoist={true}
+								>
+									<SlIcon
+										className='fullscreen-transformation__property-disabled-info'
+										name='info-circle'
+									/>
+								</SlTooltip>
+							)}
+							{transformationType === 'function' && isOutMatchingProperty && isSelected && (
+								<div className='fullscreen-transformation__property-error'>
+									Ensure that this property is not returned by the transformation function, and then
+									deselect this
+								</div>
+							)}
 						</div>
-					)}
+						{property.description && (
+							<div className='fullscreen-transformation__property-description'>
+								{property.description}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 		</div>
@@ -3203,19 +3257,21 @@ const TransformationProperty = ({
 
 interface TypeTooltipProps {
 	propertyName: string;
+	description: string | null;
 	typeName: string;
 	type: Type;
 	children: ReactNode;
 }
 
-const PropertyTooltip = ({ propertyName, typeName, type, children }: TypeTooltipProps) => {
+const PropertyTooltip = ({ propertyName, description, typeName, type, children }: TypeTooltipProps) => {
 	return (
-		<SlTooltip className='type-tooltip' placement='top-start' distance={5}>
+		<SlTooltip className='type-tooltip' placement='top-start' distance={5} hoist={true}>
 			<div slot='content'>
 				<div className='type-tooltip__title'>
 					<span className='type-tooltip__property-name'>{propertyName}</span>{' '}
 					<span className='type-tooltip__type-name'>{typeName}</span>
 				</div>
+				{description && <div className='type-tooltip__description'>{description}</div>}
 				{typeDescription(type)}
 			</div>
 			{children}
@@ -3314,15 +3370,7 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 }
 
 function typeDescription(type: Type): ReactNode[] {
-	let elements: ReactNode[] = [
-		<div>
-			A Meergo {meergoTypeDescription(type)}
-			{type.kind !== 'decimal' && type.kind !== 'object' && type.kind !== 'array' && type.kind !== 'map'
-				? ' ' + 'type'
-				: ''}
-			.
-		</div>,
-	];
+	let elements: ReactNode[] = [];
 	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
 		if (type.minimum != null) {
 			elements.push(<div>Minimum: {type.minimum}</div>);
@@ -3361,30 +3409,6 @@ function typeDescription(type: Type): ReactNode[] {
 		elements = [...elements, ...elementTypeDescription.slice(1)];
 	}
 	return elements;
-}
-
-function meergoTypeDescription(type: Type): ReactNode {
-	let description = <code>{type.kind}</code>;
-	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
-		description = (
-			<>
-				{type.bitSize}-bit <code>{type.kind}</code>
-			</>
-		);
-	} else if (type.kind === 'decimal') {
-		description = (
-			<>
-				<code>{type.kind}</code> type with precision {type.precision} and scale {type.scale}
-			</>
-		);
-	} else if (type.kind === 'array' || type.kind === 'map') {
-		description = (
-			<code>
-				{type.kind} of {meergoTypeDescription(type.elementType)}
-			</code>
-		);
-	}
-	return description;
 }
 
 function toMeergoStringType(type: Type) {
