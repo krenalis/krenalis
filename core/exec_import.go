@@ -182,15 +182,11 @@ func (this *Action) importUsers(ctx context.Context) error {
 				user.Properties = record.Properties
 				this.core.metrics.TransformationPassed(action.ID, 1)
 				this.core.metrics.OutputValidationPassed(action.ID, 1)
-				err = iw.Write(datastore.Identity{
+				iw.Write(datastore.Identity{
 					ID:             user.ID,
 					Properties:     user.Properties,
 					LastChangeTime: user.LastChangeTime,
-				}, "")
-				if err != nil {
-					err := iw.Close(ctx)
-					return newActionError(metrics.FinalizeStep, err)
-				}
+				})
 			}
 
 			// Set the cursor.

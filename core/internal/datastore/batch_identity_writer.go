@@ -240,14 +240,13 @@ func (iw *BatchIdentityWriter) Keep(id string) {
 // properties must comply with it. It returns immediately, deferring the
 // validation of the properties and the actual write operation to a later time.
 //
-// If an error occurs during validation of the properties, it calls the ack
-// function with the value of ackID and the error.
+// If property validation fails, the ack function is called with the error.
 //
-// When a batch of identities has been written to the data warehouse, it calls
-// the ack function with the ackID of the written identities and a nil error.
+// When a batch of identities has been written to the data warehouse, the ack
+// function is called with a nil error.
 //
 // It panics if called on a closed writer.
-func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
+func (iw *BatchIdentityWriter) Write(identity Identity) {
 	if iw.close.Load() {
 		panic("call Write on a closed identity writer")
 	}
@@ -260,8 +259,7 @@ func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 	row["__connection__"] = iw.connection
 	row["__last_change_time__"] = identity.LastChangeTime
 	row["__execution__"] = iw.execution
-	iw.appendRow(key, row, ackID)
-	return nil
+	iw.appendRow(key, row, "")
 }
 
 // appendRow appends a row to the rows or replaces an existing row with the same key.
