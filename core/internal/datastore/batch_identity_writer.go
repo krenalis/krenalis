@@ -180,8 +180,11 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 	iw.flush()
 	iw.mu.Unlock()
 	iw.close.Wait()
-	// Purge identities unless the context has been canceled.
-	if iw.purge && ctx.Err() == nil {
+	// Purge identities.
+	if iw.purge {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		where := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 			meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, iw.action),
 			meergo.NewBaseExpr(meergo.Column{Name: "__execution__", Type: types.Int(32)}, meergo.OpIsNot, iw.execution),
