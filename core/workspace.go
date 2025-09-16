@@ -1364,6 +1364,10 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		return err
 	}
 	if mcpSettings != nil {
+		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
+		if this.workspace.Warehouse.Type == "Snowflake" {
+			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
+		}
 		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*meergo.WarehouseSettingsError); ok {
@@ -1601,6 +1605,10 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	}
 
 	if mcpSettings != nil {
+		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
+		if this.workspace.Warehouse.Type == "Snowflake" {
+			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
+		}
 		var err error
 		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
 		if err != nil {

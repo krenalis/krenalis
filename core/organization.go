@@ -886,6 +886,10 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 
 	// Normalize the warehouse MCP settings, if provided.
 	if whMCPSettings != nil {
+		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
+		if whType == "Snowflake" {
+			return nil, nil, errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
+		}
 		var err error
 		whMCPSettings, err = this.core.datastore.NormalizeWarehouseSettings(whType, whMCPSettings)
 		if err != nil {
