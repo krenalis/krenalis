@@ -259,15 +259,24 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 		}
 	}()
 	var identityColumn, lastChangeTimeColumn types.Property
-	for _, c := range columns {
+	for i, c := range columns {
 		if !c.Type.Valid() {
+			columns[i] = meergo.Column{}
+			continue
+		}
+		if !types.IsValidPropertyName(c.Name) {
+			return nil, connectorError(fmt.Errorf("connector %s has returned an invalid column name %q", database.connector, c.Name))
+		}
+		p, ok := action.InSchema.Property(c.Name)
+		if !ok {
+			columns[i] = meergo.Column{}
 			continue
 		}
 		if c.Name == action.IdentityColumn {
-			identityColumn, _ = action.InSchema.Property(c.Name)
+			identityColumn = p
 		}
 		if c.Name == action.LastChangeTimeColumn {
-			lastChangeTimeColumn, _ = action.InSchema.Property(c.Name)
+			lastChangeTimeColumn = p
 		}
 	}
 	if identityColumn.Name == "" {
@@ -388,7 +397,7 @@ func columnsOfType(t types.Type) []meergo.Column {
 // also excludes non-writable columns. If there are no properties to return,
 // it returns a nil slice.
 func columnsProperties(columns []meergo.Column, role state.Role) []types.Property {
-	var n int
+	var n int // number of valid columns to return
 	for i := 0; i < len(columns); i++ {
 		if columns[i].Type.Valid() && (role == state.Source || columns[i].Writable) {
 			n++
@@ -535,6 +544,7 @@ type databaseRecords struct {
 }
 
 func newDatabaseRecords(rows meergo.Rows, columns []meergo.Column, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
+	// Unused columns are represented by the zero value of meergo.Column in columns.
 	records := databaseRecords{
 		rows:        rows,
 		columns:     columns,
@@ -561,10 +571,10 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 		properties := make([]types.Property, len(r.columns))
 		for i, c := range r.columns {
 			dest[i] = &scanner
-			p, ok := r.action.InSchema.Property(c.Name)
-			if !ok {
+			if c.Name == "" { // skip unused columns
 				continue
 			}
+			p, _ := r.action.InSchema.Property(c.Name)
 			properties[i] = p
 			if p.Name == r.action.IdentityColumn {
 				identityIndex = i
@@ -636,7 +646,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			record.Properties = make(map[string]any, n)
 			for i, v := range scanner.values {
 				p := properties[i]
-				if p.Name == "" {
+				if p.Name == "" { // skip unused properties
 					continue
 				}
 				value, err := normalize(p.Name, p.Type, v, p.Nullable, r.timeLayouts)
