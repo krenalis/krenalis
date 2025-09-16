@@ -64,7 +64,13 @@ func init() {
 			Users: "customers",
 		},
 		IdentityIDLabel: "Dummy Unique ID",
-		Icon:            icon,
+		EndpointGroups: []meergo.EndpointGroup{
+			{
+				Patterns:  []string{"/"},
+				RateLimit: meergo.RateLimit{RequestsPerSecond: 100, Burst: 100},
+			},
+		},
+		Icon: icon,
 	}, New)
 }
 
