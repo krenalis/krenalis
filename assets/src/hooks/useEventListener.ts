@@ -41,7 +41,7 @@ const useEventListener = (
 			} catch (err) {
 				setIsStarted(false);
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'ConnectionNotExists') {
+					if (err.code === 'ConnectionNotExist') {
 						redirect('connections');
 						handleError('The connection does not exist anymore');
 						return;

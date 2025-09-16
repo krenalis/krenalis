@@ -816,7 +816,7 @@ func (this *Workspace) CreateEventListener(connection, size int, filter *Filter)
 	if connection > 0 {
 		c, ok := this.workspace.Connection(connection)
 		if !ok {
-			return "", errors.NotFound("connection %d does not exist", c.ID)
+			return "", errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", connection)
 		}
 		if c.LinkedConnections == nil {
 			return "", errors.BadRequest("connection %d does not support events", c.ID)

@@ -857,7 +857,7 @@ func init() {
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "connection does not exist"},
+					{422, ConnectionNotExist, "connection does not exist"},
 					{422, TooManyListeners, fmt.Sprintf("there are already %d listeners", core.MaxEventListeners)},
 				},
 			},

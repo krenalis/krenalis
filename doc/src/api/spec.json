@@ -13548,8 +13548,8 @@
                             "message": "workspace does not exist"
                         },
                         {
-                            "status": 404,
-                            "code": "NotFound",
+                            "status": 422,
+                            "code": "ConnectionNotExist",
                             "message": "connection does not exist"
                         },
                         {
