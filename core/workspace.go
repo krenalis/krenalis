@@ -1915,7 +1915,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, f
 
 		// Retrieve the connection.
 		connID := record["__connection__"].(int)
-		conn, ok := this.core.state.Connection(connID)
+		conn, ok := this.workspace.Connection(connID)
 		if !ok {
 			// The connection for this user identity no longer exists, so skip
 			// this identity.
