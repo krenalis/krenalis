@@ -210,7 +210,7 @@ const WarehouseInfo = ({
 					</div>
 				) : (
 					<div className='warehouse-info__mcp-not-configured'>
-						No credentials have been set, so the MCP server has no access the data warehouse.
+						No credentials have been set, so the MCP server has no access to the data warehouse.
 					</div>
 				)}
 			</Section>
