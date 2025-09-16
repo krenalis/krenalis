@@ -222,7 +222,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 	// https://github.com/meergo/meergo/issues/1224.
 	err = iw.Close(ctx)
 	if err != nil {
-		return newActionError(metrics.FinalizeStep, err)
+		if err != datastore.ErrPurgeSkipped {
+			return newActionError(metrics.FinalizeStep, err)
+		}
+		this.core.metrics.FinalizeFailed(action.ID, 0, "unimported records not deleted because at least one with errors could not be identified")
 	}
 
 	return nil

@@ -592,6 +592,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				if !yield(record) {
 					return
 				}
+				record.ID = ""
 				record.Properties = nil
 				record.Err = nil
 			}

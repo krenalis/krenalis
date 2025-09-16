@@ -24,6 +24,10 @@ import (
 
 var ErrActionNotExist = errors.New("action does not exist")
 
+// ErrPurgeSkipped is returned when the purge phase is skipped because some
+// records without known IDs encountered an error.
+var ErrPurgeSkipped = errors.New("purge skipped")
+
 var maxQueuedIdentityRows = 1000
 var maxQueuedIdentityTime = 500 * time.Millisecond
 
@@ -55,6 +59,7 @@ type BatchIdentityWriter struct {
 	flatter    *flatter
 	columns    []meergo.Column
 	purge      bool
+	skipPurge  bool
 
 	mu     sync.Mutex
 	index  map[identityKey]int // Access using 'mu'.
@@ -144,7 +149,9 @@ func (iw *BatchIdentityWriter) Cancel(ctx context.Context) {
 // writes, discards pending ones, and returns.
 //
 // If purge needs to be done, it purges all identities of the action for which
-// neither the Write method nor the Keep method has been called.
+// neither the Write method nor the Keep method has been called. If Keep was
+// called with an empty identifier, the purge is skipped and ErrPurgeSkipped is
+// returned.
 //
 // If the writer is already closed, it does nothing and returns immediately.
 //
@@ -185,6 +192,9 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		if iw.skipPurge {
+			return ErrPurgeSkipped
+		}
 		where := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 			meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, iw.action),
 			meergo.NewBaseExpr(meergo.Column{Name: "__execution__", Type: types.Int(32)}, meergo.OpIsNot, iw.execution),
@@ -200,11 +210,18 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 // Keep keeps the identity with the identifier id. Use Keep instead of Write
 // when there is no need to modify the identity, but to ensure it is not purged
 // in case of reload.
+//
+// If id is empty, the purge will be skipped because it would be impossible to
+// determine which unimported records failed due to an error.
 func (iw *BatchIdentityWriter) Keep(id string) {
 	if iw.close.Load() {
 		panic("call Keep on a closed identity writer")
 	}
-	if !iw.purge {
+	if !iw.purge || iw.skipPurge {
+		return
+	}
+	if id == "" {
+		iw.skipPurge = true
 		return
 	}
 	key := identityKey{action: iw.action, identityID: id}
