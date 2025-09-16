@@ -814,7 +814,7 @@ func (this *Workspace) CreateEventListener(connection, size int, filter *Filter)
 	}
 	var connections []int
 	if connection > 0 {
-		c, ok := this.core.state.Connection(connection)
+		c, ok := this.workspace.Connection(connection)
 		if !ok {
 			return "", errors.NotFound("connection %d does not exist", c.ID)
 		}
