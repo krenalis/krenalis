@@ -607,6 +607,21 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				scanner.reset()
 				continue Rows
 			}
+			// Get the identity.
+			if identityIndex >= 0 {
+				v := scanner.values[identityIndex]
+				if v == nil {
+					record.Err = errors.New("identity value is NULL")
+					continue Rows
+				}
+				p := properties[identityIndex]
+				id, err := parseIdentityColumn(p.Name, p.Type, v, r.timeLayouts)
+				if err != nil {
+					record.Err = err
+					continue Rows
+				}
+				record.ID = id
+			}
 			// Get the last change time.
 			if lastChangeTimeIndex >= 0 {
 				v := scanner.values[lastChangeTimeIndex]
@@ -627,21 +642,6 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			}
 			if record.LastChangeTime.IsZero() {
 				record.LastChangeTime = time.Now().UTC()
-			}
-			// Get the identity.
-			if identityIndex >= 0 {
-				v := scanner.values[identityIndex]
-				if v == nil {
-					record.Err = errors.New("identity value is NULL")
-					continue Rows
-				}
-				p := properties[identityIndex]
-				id, err := parseIdentityColumn(p.Name, p.Type, v, r.timeLayouts)
-				if err != nil {
-					record.Err = err
-					continue Rows
-				}
-				record.ID = id
 			}
 			// Get the properties.
 			record.Properties = make(map[string]any, n)
