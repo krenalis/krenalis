@@ -2707,16 +2707,23 @@ const MapMapping = ({
 					} as React.CSSProperties
 				}
 			>
-				<PropertyTooltip
-					propertyName={propertyPath}
-					description={property.full.description}
-					typeName={typeName}
-					type={property.full.type}
-				>
-					<span className='action__transformation-output-property-key'>{property.full.name}</span>
-					<span className='action__transformation-output-property-type'>{typeName}</span>
-				</PropertyTooltip>
-				{showRequired && <span className='action__transformation-output-property-required'>required</span>}
+				<div className='action__transformation-output-property-head'>
+					<PropertyTooltip
+						propertyName={propertyPath}
+						description={property.full.description}
+						typeName={typeName}
+						type={property.full.type}
+					>
+						<span className='action__transformation-output-property-key'>{property.full.name}</span>
+						<span className='action__transformation-output-property-type'>{typeName}</span>
+					</PropertyTooltip>
+					{showRequired && <span className='action__transformation-output-property-required'>required</span>}
+				</div>
+				{property.full.description && (
+					<div className='action__transformation-output-property-description'>
+						{property.full.description}
+					</div>
+				)}
 			</div>
 			{pairs.map(([key, value], i) => {
 				const elementType = (property.full.type as MapType).elementType;
