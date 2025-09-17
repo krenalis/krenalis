@@ -1,6 +1,8 @@
 
 # Connectors Data Types
 
+> **This file is used internally by Meergo developers.** It keeps track of the value type returned by each connector in relation to the Meergo type. This is required to implement data normalization functions.
+
 | Kind      | Go              | json.Unmarshal               | ClickHouse           | PostgreSQL  | MySQL     | Snowflake   | Parquet      | JSON            | CSV    | Excel  |
 |-----------|-----------------|------------------------------|----------------------|-------------|-----------|-------------|--------------|-----------------|--------|--------|
 | text      | string          | string                       | string               | string      | []byte    | string      | []byte       | -               | string | string |
