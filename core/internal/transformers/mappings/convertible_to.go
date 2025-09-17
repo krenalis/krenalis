@@ -14,7 +14,7 @@ import (
 // convertMatrix is a matrix which holds information about valid conversions.
 //
 // NOTE: keep this in sync with the content of the file
-// 'core/transformers/mappings/Conversions.md'.
+// 'core/internal/transformers/mappings/Conversions.md'.
 var convertMatrix = [...]int32{
 	//                ┌─── text
 	//                │ ┌─── boolean
