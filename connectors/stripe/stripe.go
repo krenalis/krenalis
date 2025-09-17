@@ -279,57 +279,54 @@ const (
 	modeUpdate
 )
 
-func encodeRequest(bb *meergo.BodyBuffer, request map[string]interface{}, parents []string, mode upsertMode) error {
+func encodeRequest(bb *meergo.BodyBuffer, request map[string]any, parents []string, mode upsertMode) error {
 
-	if len(request) > 0 {
+	for field, value := range request {
 
-		for field, value := range request {
-
-			// Ignore fields not matching with create/update mode.
-			switch mode {
-			// When creating, ignore fields specific for updating.
-			case modeCreate:
-				if field == "default_source" && len(parents) == 0 {
-					continue
-				}
-			// When updating, ignore fields specific for creation.
-			case modeUpdate:
-				switch {
-				case
-					field == "payment_method" && len(parents) == 0,
-					field == "tax_id_data" && len(parents) == 0:
-					continue
-				}
+		// Ignore fields not matching with create/update mode.
+		switch mode {
+		// When creating, ignore fields specific for updating.
+		case modeCreate:
+			if field == "default_source" && len(parents) == 0 {
+				continue
 			}
-
-			switch v := value.(type) {
-			case bool, string, int, nil:
-				if bb.Len() > 0 {
-					bb.WriteByte('&')
-				}
-				writePath(bb, append(parents, field))
-				bb.WriteByte('=')
-			case map[string]interface{}:
-				return encodeRequest(bb, v, append(parents, field), mode)
-			default:
-				return errors.New("unsupported type")
+		// When updating, ignore fields specific for creation.
+		case modeUpdate:
+			switch {
+			case
+				field == "payment_method" && len(parents) == 0,
+				field == "tax_id_data" && len(parents) == 0:
+				continue
 			}
-			switch v := value.(type) {
-			case bool:
-				if v {
-					bb.WriteString("true")
-				} else {
-					bb.WriteString("false")
-				}
-			case string:
-				bb.WriteString(url.QueryEscape(v))
-			case int:
-				bb.WriteString(strconv.Itoa(v))
-			case nil:
-				bb.WriteString("")
-			}
-
 		}
+
+		switch v := value.(type) {
+		case bool, string, int, nil:
+			if bb.Len() > 0 {
+				bb.WriteByte('&')
+			}
+			writePath(bb, append(parents, field))
+			bb.WriteByte('=')
+		case map[string]any:
+			return encodeRequest(bb, v, append(parents, field), mode)
+		default:
+			return errors.New("unsupported type")
+		}
+		switch v := value.(type) {
+		case bool:
+			if v {
+				bb.WriteString("true")
+			} else {
+				bb.WriteString("false")
+			}
+		case string:
+			bb.WriteString(url.QueryEscape(v))
+		case int:
+			bb.WriteString(strconv.Itoa(v))
+		case nil:
+			bb.WriteString("")
+		}
+
 	}
 
 	return nil
