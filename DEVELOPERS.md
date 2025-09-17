@@ -82,6 +82,8 @@ Also, note that:
 
 ## Expose and see Meergo metrics
 
+> ⚠️ Note that this type of metric is deprecated in favor of Prometheus metrics. See https://github.com/meergo/meergo/issues/1840.
+
 > Note that the concept of "Meergo metrics" is completely different from telemetry. "Meergo metrics" simply refers to an endpoint exposed by Meergo (disabled by default) to monitor certain internal software values.
 
 1. **Enable metrics** by setting to `true` the `Enabled` constant in file `metrics/metrics.go`
@@ -173,6 +175,8 @@ Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) an
 
 ## Expose on the Internet (optional)
 
+These steps document how to expose a locally running Meergo instance to the internet.
+
 1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
 2. Check that it is installed correctly: `cloudflared --version`
 3. Run cloudflared: `cloudflared tunnel --url https://localhost:2022`
@@ -181,9 +185,11 @@ Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) an
 
 ## Docker
 
-The documentation on how to start Meergo inside Docker is available inside the [Getting started](doc/src/getting-started.md) documentation page, so it will not be repeated here.
-
-Only more technical information is kept here.
+> ❗ **Why this section?**
+>
+> The documentation on how to start Meergo inside Docker is available inside the [Using Docker](doc/src/using-docker.md) documentation page, so it will not be repeated here.
+> 
+> Only more technical information is kept here.
 
 ### Building Meergo Image
 
@@ -196,7 +202,9 @@ Only more technical information is kept here.
 
 ### Running Meergo within a Container
 
-**Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the Admin console.
+> ✋ You'll probably prefer [using Meergo with Docker Compose](doc/src/using-docker.md). Otherwsie, if you know you're in the right place, then continue reading this section.
+
+**🌐 Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the Admin console.
 
 1. Cd the root of this repository
 2. Run this command, replacing the paths for `--env-file` and on the left of `:` as needed (and leaving the paths on the right, `./cmd/meergo/cert.pem`, etc... as they are):
