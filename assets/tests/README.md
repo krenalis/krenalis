@@ -1,5 +1,9 @@
-# assets tests
+# Assets tests
 
-These Admin tests are designed to be run using 'go test', which takes care of setting up the environment in which these tests should run.
+This directory contains the tests on the Admin console assets.
 
-Please refer to the file `test/admin_test.go`.
+## How to run
+
+These tests are meant to be run through Meergo's Go tests, since they require Meergo to be instantiated with a specific environment.
+
+For execution details, please refer to the file [`test/admin_test.go`](../../test/admin_test.go).
