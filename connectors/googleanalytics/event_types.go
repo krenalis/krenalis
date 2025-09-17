@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	currencyType = types.Text().WithByteLen(3)
 	monetaryType = types.Decimal(20, 2)
 	intType      = types.Int(32)
 	// genericNumberType should be used to represent the types of those values for
@@ -93,7 +94,7 @@ func init() {
 				{Name: "ad_source", Type: types.Text()},
 				{Name: "ad_format", Type: types.Text()},
 				{Name: "ad_unit_name", Type: types.Text()},
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: genericNumberType},
 			}),
 		},
@@ -101,7 +102,7 @@ func init() {
 			ID:   "add_payment_info",
 			Name: "Add Payment Info",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: genericNumberType},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 				{Name: "coupon", Type: types.Text()},
 				{Name: "payment_type", Type: types.Text()},
@@ -112,39 +113,39 @@ func init() {
 			ID:   "add_shipping_info",
 			Name: "Add Shipping Info",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 				{Name: "coupon", Type: types.Text()},
-				{Name: "payment_type", Type: types.Text()},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "shipping_tier", Type: types.Text()},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
 			ID:   "add_to_cart",
 			Name: "Add To Cart",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
 			ID:   "add_to_wishlist",
 			Name: "Add To Wishlist",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
 			ID:   "begin_checkout",
 			Name: "Begin Checkout",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 				{Name: "coupon", Type: types.Text()},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
@@ -163,7 +164,7 @@ func init() {
 			ID:   "close_convert_lead",
 			Name: "Close Convert Lead",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 			}),
 		},
@@ -171,7 +172,7 @@ func init() {
 			ID:   "close_unconvert_lead",
 			Name: "Close Unconvert Lead",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 				{Name: "unconvert_lead_reason", Type: types.Text()},
 			}),
@@ -180,7 +181,7 @@ func init() {
 			ID:   "disqualify_lead",
 			Name: "Disqualify Lead",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 				{Name: "disqualified_lead_reason", Type: types.Text()},
 			}),
@@ -197,7 +198,7 @@ func init() {
 			ID:   "generate_lead",
 			Name: "Generate Lead",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 				{Name: "lead_source", Type: types.Text()},
 			}),
@@ -237,20 +238,21 @@ func init() {
 			ID:   "purchase",
 			Name: "Purchase",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
+				{Name: "customer_type", Type: types.Text().WithValues("new", "returning")},
 				{Name: "transaction_id", Type: types.Text(), CreateRequired: true},
 				{Name: "coupon", Type: types.Text()},
 				{Name: "shipping", Type: monetaryType},
 				{Name: "tax", Type: monetaryType},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
 			ID:   "qualify_lead",
 			Name: "Qualify Lead",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 			}),
 		},
@@ -258,22 +260,22 @@ func init() {
 			ID:   "refund",
 			Name: "Refund",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "transaction_id", Type: types.Text(), CreateRequired: true},
 				{Name: "value", Type: monetaryType},
 				{Name: "coupon", Type: types.Text()},
 				{Name: "shipping", Type: monetaryType},
 				{Name: "tax", Type: monetaryType},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType)},
 			}),
 		},
 		{
 			ID:   "remove_from_cart",
 			Name: "Remove From Cart",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
@@ -305,7 +307,7 @@ func init() {
 			Schema: types.Object([]types.Property{
 				{Name: "item_list_id", Type: types.Text()},
 				{Name: "item_list_name", Type: types.Text()},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
@@ -365,28 +367,28 @@ func init() {
 			ID:   "view_cart",
 			Name: "View Cart",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
 			ID:   "view_item",
 			Name: "View Item",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
 			ID:   "view_item_list",
 			Name: "View Item List",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "item_list_id", Type: types.Text()},
 				{Name: "item_list_name", Type: types.Text()},
-				{Name: "items", Type: types.Array(itemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(itemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
@@ -397,7 +399,7 @@ func init() {
 				{Name: "creative_slot", Type: types.Text()},
 				{Name: "promotion_id", Type: types.Text()},
 				{Name: "promotion_name", Type: types.Text()},
-				{Name: "items", Type: types.Array(promotionItemType), CreateRequired: true},
+				{Name: "items", Type: types.Array(promotionItemType).WithMinElements(1), CreateRequired: true},
 			}),
 		},
 		{
@@ -411,7 +413,7 @@ func init() {
 			ID:   "working_lead",
 			Name: "Working Lead",
 			Schema: types.Object([]types.Property{
-				{Name: "currency", Type: types.Text()},
+				{Name: "currency", Type: currencyType},
 				{Name: "value", Type: monetaryType},
 				{Name: "lead_status", Type: types.Text()},
 			}),
