@@ -127,8 +127,12 @@ func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time
 
 	users := make([]meergo.Record, len(response.Data))
 	for i, customer := range response.Data {
+		id, _ := customer["id"].(string)
+		if id == "" {
+			return nil, "", errors.New("unexpected customer identifier from Stripe")
+		}
 		users[i] = meergo.Record{
-			ID:             customer["id"].(string),
+			ID:             id,
 			Properties:     customer,
 			LastChangeTime: time.Now().UTC(),
 		}
