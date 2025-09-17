@@ -297,8 +297,7 @@ func encodeRequest(bb *meergo.BodyBuffer, request map[string]interface{}, parent
 				switch {
 				case
 					field == "payment_method" && len(parents) == 0,
-					field == "tax_id_data" && len(parents) == 0,
-					field == "test_clock" && len(parents) == 0:
+					field == "tax_id_data" && len(parents) == 0:
 					continue
 				}
 			}

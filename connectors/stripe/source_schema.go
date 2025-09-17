@@ -13,6 +13,9 @@ import "github.com/meergo/meergo/core/types"
 //
 // Currently, we don't support expanded responses/fields. We have an issue about
 // them: https://github.com/meergo/meergo/issues/1818.
+//
+// The "object" and "livemode" fields have been excluded because they are not relevant to Meergo.
+//
 
 var sourceSchema = types.Object([]types.Property{
 	{
@@ -54,10 +57,6 @@ var sourceSchema = types.Object([]types.Property{
 		Nullable: true,
 	},
 	{
-		Name: "object",
-		Type: types.Text(),
-	},
-	{
 		Name: "balance",
 		Type: types.Int(64),
 	},
@@ -88,10 +87,6 @@ var sourceSchema = types.Object([]types.Property{
 	{
 		Name: "invoice_settings",
 		Type: sourceInvoiceSettings,
-	},
-	{
-		Name: "livemode",
-		Type: types.Boolean(),
 	},
 	{
 		Name:         "next_invoice_sequence",
@@ -166,10 +161,6 @@ var sourceDiscount = types.Object([]types.Property{
 		Type: types.Text(),
 	},
 	{
-		Name: "object",
-		Type: types.Text(),
-	},
-	{
 		Name:     "checkout_session",
 		Type:     types.Text(),
 		Nullable: true,
@@ -215,10 +206,6 @@ var sourceCoupon = types.Object([]types.Property{
 		Type: types.Text(),
 	},
 	{
-		Name: "object",
-		Type: types.Text(),
-	},
-	{
 		Name:     "amount_off",
 		Type:     types.Int(64),
 		Nullable: true,
@@ -239,10 +226,6 @@ var sourceCoupon = types.Object([]types.Property{
 		Name:     "duration_in_months",
 		Type:     types.Int(64),
 		Nullable: true,
-	},
-	{
-		Name: "livemode",
-		Type: types.Boolean(),
 	},
 	{
 		Name:     "max_redemptions",

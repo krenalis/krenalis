@@ -11,6 +11,8 @@ import "github.com/meergo/meergo/core/types"
 
 // https://docs.stripe.com/api/customers/create and
 // https://docs.stripe.com/api/customers/update.
+//
+// The "test_clock" field has been excluded because it is not relevant to Meergo.
 
 var destinationSchema = types.Object([]types.Property{
 	{
@@ -126,13 +128,6 @@ var destinationSchema = types.Object([]types.Property{
 				CreateRequired: true,
 			},
 		})),
-		Description: "Used only when creating a customer, ignored when updating.",
-	},
-	{
-		// Only when creating.
-		Name:        "test_clock",
-		Type:        types.Text(),
-		Nullable:    true,
 		Description: "Used only when creating a customer, ignored when updating.",
 	},
 })
