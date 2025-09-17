@@ -11,6 +11,6 @@ It serves two purposes:
 
 It’s therefore important to carefully check (1) which files are in the [initialization](./initialization/) directory and (2) their alphabetical order, since this determines the execution order used by PostgreSQL in Docker.
 
-## About the [`updates.sql`](`updates.sql`) file
+## About the [`updates.sql`](updates.sql) file
 
 The [`updates.sql`](updates.sql) file contains various update queries for the PostgreSQL database and is used internally by Meergo developers.
