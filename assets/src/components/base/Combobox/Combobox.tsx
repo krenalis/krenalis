@@ -71,8 +71,11 @@ const Combobox = ({
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [listWidth, setListWidth] = useState<number>();
 	const [selectedTab, setSelectedTab] = useState<string>();
+	const [isErrorExpanded, setIsErrorExpanded] = useState<boolean>(false);
+	const [isErrorOverflowing, setIsErrorOverflowing] = useState<boolean>(false);
 
 	const inputRef = useRef<any>();
+	const errorContainerRef = useRef<any>();
 	const listRef = useRef<any>();
 	const tabGroupRef = useRef<any>();
 	const programmaticFocus = useRef(false);
@@ -80,6 +83,17 @@ const Combobox = ({
 	const { api, handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
 	const { actionType } = useContext(actionContext);
+
+	useLayoutEffect(() => {
+		setIsErrorExpanded(false);
+		if (error !== '') {
+			const container = errorContainerRef.current;
+			if (container == null) {
+				return;
+			}
+			setIsErrorOverflowing(container.scrollWidth > container.clientWidth);
+		}
+	}, [error]);
 
 	const updateCursorPosition = (setStart?: boolean) => {
 		const inputElement = inputRef.current?.input;
@@ -561,68 +575,112 @@ const Combobox = ({
 						<SlIcon className='combobox-input__caret-icon' name='chevron-down' slot='suffix'></SlIcon>
 					)}
 				</SlInput>
-				{error && <div className='combobox-input__error'>{error}</div>}
-			</div>
-			{isOpen && (
-				<SlMenu
-					tabIndex={-1}
-					data-is-combobox-list
-					className='combobox-list'
-					ref={listRef}
-					style={listWidth != null ? { width: `${listWidth}px` } : null}
-				>
-					{isExpression && selectedFunction != null && (
-						<div className='combobox-list__function'>
-							<div className='combobox-list__function-signature'>
-								{selectedFunction.name}(
-								{selectedFunction.params.map((p, i) => {
-									let param = '';
-									if (i > 0) {
-										param += ', ';
-									}
-									return (
-										<span
-											key={p}
-											className={`combobox-list__function-param${i === fragment.func.parameter ? ' combobox-list__function-param--current' : ''}`}
-										>
-											{param + p}
-										</span>
-									);
-								})}
-								): {selectedFunction.return}
+				{error && (
+					<div
+						className={`combobox-input__error${isErrorExpanded ? ' combobox-input__error--expanded' : ''}`}
+						ref={errorContainerRef}
+					>
+						{isErrorOverflowing && !isErrorExpanded && (
+							<div className='combobox-input__error-overlay' onClick={() => setIsErrorExpanded(true)}>
+								<SlIcon className='combobox-input__error-expand' name='three-dots' />
 							</div>
-							<div className='combobox-list__function-description'>{selectedFunction.description}</div>
-						</div>
-					)}
-					{hasTabs ? (
-						<SlTabGroup className='combobox-list__tabs' onSlTabShow={onTabClick} ref={tabGroupRef}>
-							{enumValues != null && (
-								<SlTab slot='nav' panel='enum'>
-									Enum ({enumValues.length})
-								</SlTab>
-							)}
-							{filteredProperties && (
-								<SlTab slot='nav' panel='properties'>
-									Properties ({filteredProperties.length})
-								</SlTab>
-							)}
-							{filteredFunctions && (
-								<SlTab slot='nav' panel='functions'>
-									Functions ({filteredFunctions.length})
-								</SlTab>
-							)}
-							{enumValues != null && (
-								<SlTabPanel name='enum'>
-									{enumValues.map((v) => {
+						)}
+						{error}
+					</div>
+				)}
+			</div>
+			{isOpen &&
+				((isExpression && selectedFunction != null) ||
+					enumValues != null ||
+					filteredProperties?.length > 0 ||
+					filteredFunctions?.length > 0) && (
+					<SlMenu
+						tabIndex={-1}
+						data-is-combobox-list
+						className={`combobox-list${isErrorExpanded ? ' combobox-list--expanded' : ''}`}
+						ref={listRef}
+						style={listWidth != null ? { width: `${listWidth}px` } : null}
+					>
+						{isExpression && selectedFunction != null && (
+							<div className='combobox-list__function'>
+								<div className='combobox-list__function-signature'>
+									{selectedFunction.name}(
+									{selectedFunction.params.map((p, i) => {
+										let param = '';
+										if (i > 0) {
+											param += ', ';
+										}
 										return (
-											<SlMenuItem key={v} onClick={(e) => onSelect(e, v, 'enum')}>
-												<div className='enum-item'>{v}</div>
+											<span
+												key={p}
+												className={`combobox-list__function-param${i === fragment.func.parameter ? ' combobox-list__function-param--current' : ''}`}
+											>
+												{param + p}
+											</span>
+										);
+									})}
+									): {selectedFunction.return}
+								</div>
+								<div className='combobox-list__function-description'>
+									{selectedFunction.description}
+								</div>
+							</div>
+						)}
+						{hasTabs ? (
+							<SlTabGroup className='combobox-list__tabs' onSlTabShow={onTabClick} ref={tabGroupRef}>
+								{enumValues != null && (
+									<SlTab slot='nav' panel='enum'>
+										Enum ({enumValues.length})
+									</SlTab>
+								)}
+								{filteredProperties && (
+									<SlTab slot='nav' panel='properties'>
+										Properties ({filteredProperties.length})
+									</SlTab>
+								)}
+								{filteredFunctions && (
+									<SlTab slot='nav' panel='functions'>
+										Functions ({filteredFunctions.length})
+									</SlTab>
+								)}
+								{enumValues != null && (
+									<SlTabPanel name='enum'>
+										{enumValues.map((v) => {
+											return (
+												<SlMenuItem key={v} onClick={(e) => onSelect(e, v, 'enum')}>
+													<div className='enum-item'>{v}</div>
+												</SlMenuItem>
+											);
+										})}
+									</SlTabPanel>
+								)}
+								<SlTabPanel name='properties'>
+									{filteredProperties?.map((item) => {
+										return (
+											<SlMenuItem
+												key={item.term}
+												onClick={(e) => onSelect(e, item.term, 'property')}
+											>
+												{item.content}
 											</SlMenuItem>
 										);
 									})}
 								</SlTabPanel>
-							)}
-							<SlTabPanel name='properties'>
+								<SlTabPanel name='functions'>
+									{filteredFunctions?.map((item) => {
+										return (
+											<SlMenuItem
+												key={item.term}
+												onClick={(e) => onSelect(e, item.term, 'function')}
+											>
+												{item.content}
+											</SlMenuItem>
+										);
+									})}
+								</SlTabPanel>
+							</SlTabGroup>
+						) : (
+							<div>
 								{filteredProperties?.map((item) => {
 									return (
 										<SlMenuItem key={item.term} onClick={(e) => onSelect(e, item.term, 'property')}>
@@ -630,30 +688,10 @@ const Combobox = ({
 										</SlMenuItem>
 									);
 								})}
-							</SlTabPanel>
-							<SlTabPanel name='functions'>
-								{filteredFunctions?.map((item) => {
-									return (
-										<SlMenuItem key={item.term} onClick={(e) => onSelect(e, item.term, 'function')}>
-											{item.content}
-										</SlMenuItem>
-									);
-								})}
-							</SlTabPanel>
-						</SlTabGroup>
-					) : (
-						<div>
-							{filteredProperties?.map((item) => {
-								return (
-									<SlMenuItem key={item.term} onClick={(e) => onSelect(e, item.term, 'property')}>
-										{item.content}
-									</SlMenuItem>
-								);
-							})}
-						</div>
-					)}
-				</SlMenu>
-			)}
+							</div>
+						)}
+					</SlMenu>
+				)}
 		</div>
 	);
 };
