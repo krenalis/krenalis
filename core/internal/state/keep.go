@@ -679,7 +679,7 @@ func (state *State) deleteConnection(n notification) {
 		}
 		var pendingSources map[string]int
 		if ws.AlterUserSchema.ID != nil {
-			var pendingSources = map[string]int{}
+			pendingSources = map[string]int{}
 			for path, source := range ws.AlterUserSchema.PrimarySources {
 				if source != e.ID {
 					pendingSources[path] = source
