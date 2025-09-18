@@ -300,6 +300,72 @@ func (bb *BodyBuffer) NewRequest(ctx context.Context, method, url string) (*http
 	return req, nil
 }
 
+const hex = "0123456789ABCDEF" // uppercase hex digits for percent-encoding
+
+// QueryEscape escapes s so it can be safely placed inside a URL query and
+// writes the value to the buffer.
+func (bb *BodyBuffer) QueryEscape(s []byte) {
+	start := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case (c >= 'A' && c <= 'Z') ||
+			(c >= 'a' && c <= 'z') ||
+			(c >= '0' && c <= '9') ||
+			c == '-' || c == '.' || c == '_' || c == '~':
+			// Emit later as part of the current raw segment.
+			continue
+		default:
+			if start < i {
+				_, _ = bb.Write(s[start:i])
+			}
+			start = i + 1
+			if c == ' ' {
+				_ = bb.WriteByte('+')
+				continue
+			}
+			_ = bb.WriteByte('%')
+			_ = bb.WriteByte(hex[c>>4])
+			_ = bb.WriteByte(hex[c&15])
+		}
+	}
+	if start < len(s) {
+		_, _ = bb.Write(s[start:])
+	}
+}
+
+// QueryEscapeString escapes s so it can be safely placed inside a URL query
+// and writes the value to the buffer.
+func (bb *BodyBuffer) QueryEscapeString(s string) {
+	start := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case (c >= 'A' && c <= 'Z') ||
+			(c >= 'a' && c <= 'z') ||
+			(c >= '0' && c <= '9') ||
+			c == '-' || c == '.' || c == '_' || c == '~':
+			// Emit later as part of the current raw segment.
+			continue
+		default:
+			if start < i {
+				_, _ = bb.WriteString(s[start:i])
+			}
+			start = i + 1
+			if c == ' ' {
+				_ = bb.WriteByte('+')
+				continue
+			}
+			_ = bb.WriteByte('%')
+			_ = bb.WriteByte(hex[c>>4])
+			_ = bb.WriteByte(hex[c&15])
+		}
+	}
+	if start < len(s) {
+		_, _ = bb.WriteString(s[start:])
+	}
+}
+
 // Truncate discards unflushed bytes after the first n.
 // It panics if n is negative, greater than the number of unflushed bytes,
 // or if Truncate is called after NewRequest.

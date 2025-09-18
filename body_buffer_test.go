@@ -13,6 +13,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"testing"
 )
 
@@ -427,6 +428,83 @@ func TestBodyBuffer(t *testing.T) {
 		}()
 		bb2.Truncate(-1)
 
+	})
+
+	t.Run("QueryEscapeCases", func(t *testing.T) {
+		cases := []struct {
+			name  string
+			input string
+		}{
+			{name: "Empty", input: ""},
+			{name: "Unescaped", input: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~"},
+			{name: "Spaces", input: "hello world"},
+			{name: "Reserved", input: "name+ field"},
+			{name: "Mixed", input: "value?/=& spaces"},
+			{name: "PercentSign", input: "100% legit"},
+			{name: "NonASCII", input: "☃ café"},
+			{name: "Control", input: "line\nbreak"},
+		}
+
+		for _, tc := range cases {
+			caseName := tc
+			t.Run(caseName.name+"Bytes", func(t *testing.T) {
+				bb := GetBodyBuffer(NoEncoding, 0)
+				defer bb.Close()
+				bb.QueryEscape([]byte(caseName.input))
+				if got, want := string(bb.plain.Bytes()), url.QueryEscape(caseName.input); got != want {
+					t.Fatalf("QueryEscape mismatch: got %q, want %q", got, want)
+				}
+			})
+
+			t.Run(caseName.name+"String", func(t *testing.T) {
+				bb := GetBodyBuffer(NoEncoding, 0)
+				defer bb.Close()
+				bb.QueryEscapeString(caseName.input)
+				if got, want := string(bb.plain.Bytes()), url.QueryEscape(caseName.input); got != want {
+					t.Fatalf("QueryEscapeString mismatch: got %q, want %q", got, want)
+				}
+			})
+		}
+	})
+
+	t.Run("QueryEscapeForm", func(t *testing.T) {
+		bb := GetBodyBuffer(NoEncoding, 0)
+		defer bb.Close()
+
+		bb.QueryEscapeString("name+ field")
+		if err := bb.WriteByte('='); err != nil {
+			t.Fatalf("unexpected error writing '=': %v", err)
+		}
+		bb.QueryEscape([]byte("value?/=& spaces"))
+
+		got := string(bb.plain.Bytes())
+		want := url.QueryEscape("name+ field") + "=" + url.QueryEscape("value?/=& spaces")
+		if got != want {
+			t.Fatalf("encoded form value mismatch: got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("QueryEscapeAllBytes", func(t *testing.T) {
+		for i := 0; i <= 0xFF; i++ {
+			b := byte(i)
+			input := string([]byte{b})
+
+			bb := GetBodyBuffer(NoEncoding, 0)
+			bb.QueryEscape([]byte{b})
+			if got, want := string(bb.plain.Bytes()), url.QueryEscape(input); got != want {
+				bb.Close()
+				t.Fatalf("byte input mismatch for 0x%02X: got %q, want %q", b, got, want)
+			}
+			bb.Close()
+
+			bb = GetBodyBuffer(NoEncoding, 0)
+			bb.QueryEscapeString(input)
+			if got, want := string(bb.plain.Bytes()), url.QueryEscape(input); got != want {
+				bb.Close()
+				t.Fatalf("string input mismatch for 0x%02X: got %q, want %q", b, got, want)
+			}
+			bb.Close()
+		}
 	})
 
 }
