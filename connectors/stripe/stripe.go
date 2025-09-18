@@ -173,14 +173,13 @@ func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records
 	bb := stripe.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
 	defer bb.Close()
 	record := records.First()
-	mode := modeCreate
-	if record.ID != "" {
-		mode = modeUpdate
+	if record.ID == "" {
+		delete(record.Properties, "default_source")
+	} else {
+		delete(record.Properties, "payment_method")
+		delete(record.Properties, "tax_id_data")
 	}
-	err := encodeRequest(bb, record.Properties, nil, mode)
-	if err != nil {
-		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
-	}
+	encodeProperties(bb, record.Properties)
 	u := "/v1/customers"
 	if record.ID != "" {
 		u += "/" + record.ID
@@ -272,75 +271,98 @@ func (err *stripeError) Error() string {
 	return fmt.Sprintf("unexpected error from Stripe: (%d) %s", err.statusCode, err.Message)
 }
 
-type upsertMode int
+const maxDestinationSchemaDepth = 4 // maximum nesting depth of the destination schema
 
-const (
-	modeCreate upsertMode = iota + 1
-	modeUpdate
-)
+// encodeProperties encodes properties as application/x-www-form-urlencoded,
+// compatible with Stripe, and writes the result to dst.
+//
+// Only destination-schema types are serialized: text, bool, array, object, and
+// map. Accordingly, property values must be nil or one of: string, int,
+// map[string]any, or []any. Map keys must be non-empty.
+func encodeProperties(dst *meergo.BodyBuffer, properties map[string]any) {
 
-func encodeRequest(bb *meergo.BodyBuffer, request map[string]any, parents []string, mode upsertMode) error {
+	type seg struct {
+		name  string
+		index int // >=0 for numbered array entries, -1 for []
+	}
+	var path [maxDestinationSchemaDepth]seg
+	var depth int
+	var wrote bool
 
-	for field, value := range request {
+	const noIndex = -1
 
-		// Ignore fields not matching with create/update mode.
-		switch mode {
-		// When creating, ignore fields specific for updating.
-		case modeCreate:
-			if field == "default_source" && len(parents) == 0 {
-				continue
-			}
-		// When updating, ignore fields specific for creation.
-		case modeUpdate:
-			switch {
-			case
-				field == "payment_method" && len(parents) == 0,
-				field == "tax_id_data" && len(parents) == 0:
-				continue
-			}
+	var buf [64]byte // numeric scratch
+
+	// Emits the path like a[b][] and a[b][0][c].
+	writePath := func() {
+		if wrote {
+			_ = dst.WriteByte('&')
+		} else {
+			wrote = true
 		}
-
-		switch v := value.(type) {
-		case bool, string, int, nil:
-			if bb.Len() > 0 {
-				bb.WriteByte('&')
-			}
-			writePath(bb, append(parents, field))
-			bb.WriteByte('=')
-		case map[string]any:
-			return encodeRequest(bb, v, append(parents, field), mode)
-		default:
-			return errors.New("unsupported type")
+		// First segment (property name) does not require escaping by contract.
+		dst.WriteString(path[0].name)
+		// Subsequent segments.
+		for i := 1; i < depth; i++ {
+			_ = dst.WriteByte('[')
+			seg := path[i]
+			if seg.name != "" {
+				dst.QueryEscapeString(seg.name)
+			} else if seg.index != noIndex {
+				n := strconv.AppendInt(buf[:0], int64(seg.index), 10)
+				_, _ = dst.Write(n)
+			} // else: []
+			_ = dst.WriteByte(']')
 		}
-		switch v := value.(type) {
-		case bool:
-			if v {
-				bb.WriteString("true")
-			} else {
-				bb.WriteString("false")
-			}
-		case string:
-			bb.WriteString(url.QueryEscape(v))
-		case int:
-			bb.WriteString(strconv.Itoa(v))
-		case nil:
-			bb.WriteString("")
-		}
-
 	}
 
-	return nil
-}
-
-func writePath(bb *meergo.BodyBuffer, path []string) {
-	for i, v := range path {
-		switch i {
-		case 0:
-			bb.WriteString(url.QueryEscape(v))
+	var walkValue func(v any)
+	walkValue = func(v any) {
+		switch v := v.(type) {
+		case nil:
+			writePath()
+			_ = dst.WriteByte('=')
+		case string:
+			writePath()
+			_ = dst.WriteByte('=')
+			dst.QueryEscapeString(v)
+		case int:
+			writePath()
+			_ = dst.WriteByte('=')
+			n := strconv.AppendInt(buf[:0], int64(v), 10)
+			dst.QueryEscape(n)
+		case []any:
+			for i := 0; i < len(v); i++ {
+				if depth == len(path) {
+					panic("stripe: maximum nesting exceeded")
+				}
+				segVal := seg{index: noIndex}
+				if _, ok := v[i].(map[string]any); ok {
+					segVal.index = i
+				}
+				path[depth] = segVal
+				depth++
+				walkValue(v[i])
+				depth--
+			}
+		case map[string]any:
+			for name, v := range v {
+				if depth == len(path) {
+					panic("stripe: maximum nesting exceeded")
+				}
+				path[depth] = seg{name: name}
+				depth++
+				walkValue(v)
+				depth--
+			}
 		default:
-			bb.WriteByte('[')
-			bb.WriteString(url.QueryEscape(v))
-			bb.WriteByte(']')
+			panic(fmt.Sprintf("stripe: unexpected type: %T", v))
 		}
+	}
+
+	for name, value := range properties {
+		path[0] = seg{name: name}
+		depth = 1
+		walkValue(value)
 	}
 }
