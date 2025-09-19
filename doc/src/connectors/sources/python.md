@@ -1,49 +1,68 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Python data source{% end %}
+{% macro Title string %}Python SDK data source{% end %}
 {% Article %}
 
-# Python data source
+# Python SDK data source
 
-The **Python** data source is designed for applications built with Python that require integration with Meergo for event tracking and user data management. This data source enables you to receive events from a server-based Python application, including user information. Once events are received, you can:
+The **Python** data source allows you to send customer event data using the **Python SDK** from your Python applications to Meergo.
 
-- **Send events to destinations**: These are applications or services capable of processing the events.
-- **Store events in the workspace's data warehouse**: Ideal for data analysis and reporting purposes.
-- **Extract user data for identification**: Helps in identifying both authenticated and anonymous users, facilitating unification within the workspace's data warehouse.
+- [Using the SDK](#using-the-sdk)
+  - [1. Create a source Python connection](#1-create-a-source-python-connection)
+  - [2. Import the SDK in your Python application](#2-import-the-sdk-in-your-python-application)
+  - [3. Add an action](#3-add-an-action)
+  - [4. Test the integration](#4-test-the-integration)
+- [License](#license)
 
-To use the Python data source, you will need the [Python SDK](../../developers/python-sdk) from Meergo. The SDK provides the necessary functionality for sending different types of events, ensuring a smooth integration with the Meergo platform.
+## Using the SDK
 
-> The [Python SDK](../../developers/python-sdk) is an open-source Python library licensed under the MIT License.
+### 1. Create a source Python connection
 
-### On this page
+First of all, you need a connection in Meergo that can receive events from the Python SDK. To do so:
 
-* [Add a Python data source](#add-a-python-data-source)
-* [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
-* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+1. Click on **Connections**.
+2. Click on **Add a new source**.
+3. From the list of connectors, select the **Python** connector.
+4. Click on **Add**.
 
-### Add a Python data source
+### 2. Import the SDK in your Python application
 
-1. From the **Meergo Admin console**, navigate to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
-3. Search for the **Python** source; you can use the search bar at the top or filter by category.
-4. Click on the **Python** connector. A panel will open on the right with information about **Python**.
-5. Click on **Add source**. The `Add Python source connection` page will appear.
-6. In the **Name** field, provide a name to easily identify the source later (e.g., the name of the Python application or server).
-7. Click **Add**.
+1. In the new created Python connection, navigate to **Settings**.
+2. Select **Event write keys**.
+3. Copy the Write Key and the Endpoint.
+4. Install `meergo-analytics-python` using pip:
+    ```sh
+    pip3 install meergo-analytics-python
+    ```
+5. Import and use the package in your application, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
+    ```python
+    import meergo.analytics as analytics
 
-Once the Python data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
+    analytics.write_key = '<write key>'
+    analytics.endpoint = '<endpoint>'
 
-### Import events into the workspace's data warehouse
+    analytics.track('er56789012', 'Product added to cart', {
+        'price': 32.50
+    })
+    ```
 
-1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Python data source from which you want to import the events.
-3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import events**.
-5. Click **Add** to add the action.
+### 3. Add an action
 
-### Import users into the workspace's data warehouse
+Now you can choose to collect only the events, or import the users, or both:
 
-1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Python data source from which you want to import the users.
-3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import users**.
-5. Click **Add** to add the action.
+1. Go to the Python connection you just created and click on **Actions**.
+2. Choose **Import events** (to import event data) or **Import users** (to import user data from events).
+3. Fill in the necessary information in the action.
+4. Confirm by clicking **Add**.
+4. Enable the action by toggling the switch in the **Enabled** column.
+
+### 4. Test the integration
+
+1. Go to the Python connection created at step 1 and click on **Live events**.
+2. Execute your application to send some events.
+3. Click on a received event in **Live events** to view its details.
+
+Refer to the [Meergo events documentation](../../events) for more information on the supported event types.
+
+## License
+
+The Meergo Python SDK is released under the MIT license.

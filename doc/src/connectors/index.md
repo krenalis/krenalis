@@ -23,9 +23,9 @@
   <li><a href="sources/postgresql"> PostgreSQL</a></li>
   <li><a href="sources/snowflake"> Snowflake</a></li>
   <li><a href="sources/mysql"> MySQL</a></li>
-  <li><a href="sources/javascript"> JavaScript</a></li>
-  <li><a href="sources/dotnet"> .Net</a></li>
-  <li><a href="sources/android"> Android</a></li>
+  <li><a href="sources/javascript-sdk"> JavaScript</a></li>
+  <li><a href="sources/dotnet"> .NET</a></li>
+  <li><a href="sources/android-sdk"> Android</a></li>
   <li><a href="sources/go"> Go</a></li>
   <li><a href="sources/java"> Java</a></li>
   <li><a href="sources/nodejs"> Node.js</a></li>

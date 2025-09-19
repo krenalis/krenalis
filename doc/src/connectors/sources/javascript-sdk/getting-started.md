@@ -72,6 +72,7 @@ The JavaScript SDK can be imported with `require` into JavaScript projects, usin
 When the JavaScript SDK is installed on your website, using the snippet or imported in your project, you can choose to collect only the events, or import the users, or both:
 
 1. Go to the JavaScript connection you just created and click on **Actions**.
-2. Under the **Import events** action, click on **Add**.
-3. Confirm by clicking **Add**.
-4. Enable the action by toggling the switch in the **Enabled** column.
+2. Choose **Import events** (to import event data) or **Import users** (to import user data from events).
+3. Fill in the necessary information in the action.
+4. Confirm by clicking **Add**.
+5. Enable the action by toggling the switch in the **Enabled** column.

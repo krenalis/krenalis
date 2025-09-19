@@ -1,49 +1,76 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Java data source{% end %}
+{% macro Title string %}Java SDK data source{% end %}
 {% Article %}
 
-# Java data source
+# Java SDK data source
 
-The **Java** data source is designed for applications built on the Java platform that require integration with Meergo for event tracking and user data management. This data source enables you to receive events from a server-based Java application, including user information. Once events are received, you can:
+The **Java** data source allows you to send customer event data using the **Java SDK** from your Java applications to Meergo.
 
-- **Send events to destinations**: These are applications or services capable of processing the events.
-- **Store events in the workspace's data warehouse**: Ideal for data analysis and reporting purposes.
-- **Extract user data for identification**: Helps in identifying both authenticated and anonymous users, facilitating unification within the workspace's data warehouse.
+- [Using the SDK](#using-the-sdk)
+  - [1. Create a source Java connection](#1-create-a-source-python-connection)
+  - [2. Import the SDK in your Java application](#2-import-the-sdk-in-your-python-application)
+  - [3. Add an action](#3-add-an-action)
+  - [4. Test the integration](#4-test-the-integration)
+- [License](#license)
 
-To use the Java data source, you will need the [Java SDK](../../developers/java-sdk) from Meergo. The SDK provides the necessary functionality for sending different types of events, ensuring a smooth integration with the Meergo platform.
+## Using the SDK
 
-> The [Java SDK](../../developers/java-sdk) is an open-source Java library licensed under the MIT License.
+### 1. Create a source Java connection
 
-### On this page
+First of all, you need a connection in Meergo that can receive events from the Java SDK. To do so:
 
-* [Add a Java data source](#add-a-java-data-source)
-* [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
-* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+1. Click on **Connections**.
+2. Click on **Add a new source**.
+3. From the list of connectors, select the **Java** connector.
+4. Click on **Add**.
 
-### Add a Java data source
+### 2. Import the SDK in your Java application
 
-1. From the **Meergo Admin console**, navigate to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
-3. Search for the **Java** source; you can use the search bar at the top or filter by category.
-4. Click on the **Java** connector. A panel will open on the right with information about **Java**.
-5. Click on **Add source**. The `Add Java source connection` page will appear.
-6. In the **Name** field, provide a name to easily identify the source later (e.g., the name of the Java application or server).
-7. Click **Add**.
+1. In the new created Java connection, navigate to **Settings**.
+2. Select **Event write keys**.
+3. Copy the Write Key and the Endpoint.
+4. Add `com.meergo.analytics.java` to `pom.xml`:
+    ```xml
+    <dependency>
+      <groupId>com.meergo.analytics.java</groupId>
+      <artifactId>analytics</artifactId>
+      <version>LATEST</version>
+    </dependency>
+    ```
+5. Import and use the SDK, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
+    ```java
+    import com.meergo.analytics.Analytics;
+    import com.meergo.analytics.messages.TrackMessage;
 
-Once the Java data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
+    final Analytics analytics =
+        Analytics.builder("<write key>")
+            .endpoint("<endpoint>")
+            .build();
 
-### Import events into the workspace's data warehouse
+    analytics.enqueue(
+        TrackMessage.builder("Test")
+            .anonymousId(anonymousId)
+            .userId(userId));
+    ```
 
-1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Java data source from which you want to import the events.
-3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import events**.
-5. Click **Add** to add the action.
+### 3. Add an action
 
-### Import users into the workspace's data warehouse
+Now you can choose to collect only the events, or import the users, or both:
 
-1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Java data source from which you want to import the users.
-3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import users**.
-5. Click **Add** to add the action.
+1. Go to the Java connection you just created and click on **Actions**.
+2. Choose **Import events** (to import event data) or **Import users** (to import user data from events).
+3. Fill in the necessary information in the action.
+4. Confirm by clicking **Add**.
+4. Enable the action by toggling the switch in the **Enabled** column.
+
+### 4. Test the integration
+
+1. Go to the Java connection created at step 1 and click on **Live events**.
+2. Execute your application to send some events.
+3. Click on a received event in **Live events** to view its details.
+
+Refer to the [Meergo events documentation](../../events) for more information on the supported event types.
+
+## License
+
+The Meergo Java SDK is released under the MIT license.

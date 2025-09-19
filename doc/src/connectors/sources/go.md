@@ -1,49 +1,67 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Go data source{% end %}
+{% macro Title string %}Go SDK data source{% end %}
 {% Article %}
 
-# Go data source
+# Go SDK data source
 
-The **Go** data source is designed for applications built with the Go language that require integration with Meergo for event tracking and user data management. This data source enables you to receive events from a server-based Go application, including user information. Once events are received, you can:
+The **Go** data source allows you to send customer event data using the **Go SDK** from your Go applications to Meergo.
 
-- **Send events to destinations**: These are applications or services capable of processing the events.
-- **Store events in the workspace's data warehouse**: Ideal for data analysis and reporting purposes.
-- **Extract user data for identification**: Helps in identifying both authenticated and anonymous users, facilitating unification within the workspace's data warehouse.
+- [Using the SDK](#using-the-sdk)
+  - [1. Create a source Go connection](#1-create-a-source-go-connection)
+  - [2. Import the SDK in your Go application](#2-import-the-sdk-in-your-go-application)
+  - [3. Add an action](#3-add-an-action)
+  - [4. Test the integration](#4-test-the-integration)
+- [License](#license)
 
-To use the Go data source, you will need the [Go SDK](../../developers/go-sdk) from Meergo. The SDK provides the necessary functionality for sending different types of events, ensuring a smooth integration with the Meergo platform.
+## Using the SDK
 
-> The [Go SDK](../../developers/go-sdk) is an open-source Go library licensed under the MIT License.
+### 1. Create a source Go connection
 
-### On this page
+First of all, you need a connection in Meergo that can receive events from the Go SDK. To do so:
 
-* [Add a Go data source](#add-a-go-data-source)
-* [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
-* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+1. Click on **Connections**.
+2. Click on **Add a new source**.
+3. From the list of connectors, select the **Go** connector.
+4. Click on **Add**.
 
-### Add a Go data source
+### 2. Import the SDK in your Go application
 
-1. From the **Meergo Admin console**, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
-3. Search for the **Go** source; you can use the search bar at the top or filter by category.
-4. Click on the **Go** connector. A panel will open on the right with information about **Go**.
-5. Click on **Add source**. The `Add Go source connection` page will appear.
-6. In the **Name** field, provide a name to easily identify the source later (e.g., the name of the Go application or server).
-7. Click **Add**.
+1. In the new created Go connection, navigate to **Settings**.
+2. Select **Event write keys**.
+3. Copy the Write Key and the Endpoint.
+4. In your Go module, go get the `"github.com/open2b/analytics-go"` package:
+    ```sh
+    $ go get github.com/open2b/analytics-go
+    ```
+5. Import and use the package, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
+    ```go
+    import "github.com/open2b/analytics-go"
 
-Once the Go data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
+    client := analytics.New("<write key>", "<endpoint>")
+    client.Enqueue(analytics.Track{
+        UserId: "test-user",
+        Event:  "test-snippet",
+    })
+   ```
 
-### Import events into the workspace's data warehouse
+### 3. Add an action
 
-1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Go data source from which you want to import the events.
-3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import events**.
-5. Click **Add** to add the action.
+Now you can choose to collect only the events, or import the users, or both:
 
-### Import users into the workspace's data warehouse
+1. Go to the Go connection you just created and click on **Actions**.
+2. Choose **Import events** (to import event data) or **Import users** (to import user data from events).
+3. Fill in the necessary information in the action.
+4. Confirm by clicking **Add**.
+4. Enable the action by toggling the switch in the **Enabled** column.
 
-1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Go data source from which you want to import the users.
-3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import users**.
-5. Click **Add** to add the action.
+### 4. Test the integration
+
+1. Go to the Go connection created at step 1 and click on **Live events**.
+2. Execute your application to send some events.
+3. Click on a received event in **Live events** to view its details.
+
+Refer to the [Meergo events documentation](../../events) for more information on the supported event types.
+
+## License
+
+The Meergo Go SDK is released under the MIT license.
