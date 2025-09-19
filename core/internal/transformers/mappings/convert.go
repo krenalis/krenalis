@@ -796,6 +796,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					return nil, err
 				}
 			}
+		default:
+			return v, errInvalidConversion
 		}
 		switch purpose {
 		case Create:
