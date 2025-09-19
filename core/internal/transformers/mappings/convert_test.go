@@ -266,10 +266,10 @@ func TestConvert(t *testing.T) {
 			nil,
 		},
 		{
-			types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}),
-			types.Map(types.Text()),
-			map[string]any{"foo": 572},
-			map[string]any{"foo": "572"},
+			types.Map(types.Boolean()),
+			types.Object([]types.Property{{Name: "x", Type: types.Text()}, {Name: "y", Type: types.Boolean()}}),
+			map[string]any{"x": true, "y": false},
+			map[string]any{"x": "true", "y": false},
 			true,
 			nil,
 		},
@@ -279,7 +279,7 @@ func TestConvert(t *testing.T) {
 		{types.Map(types.Int(16)), types.Map(types.Float(32)), map[string]any{"a": 4032, "b": -721}, map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},
 		{types.JSON(), types.Map(types.Float(32)), json.Value(`{"a":4032,"b":-721}`), map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},
 		{types.JSON(), types.Map(types.Float(32)), json.Value(`{"a":4032,"b":-721}`), map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},
-		{types.Map(types.Boolean()), types.Object([]types.Property{{Name: "x", Type: types.Text()}, {Name: "y", Type: types.Boolean()}}), map[string]any{"x": true, "y": false}, map[string]any{"x": "true", "y": false}, true, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), types.Map(types.Text()), map[string]any{"foo": 572}, map[string]any{"foo": "572"}, true, nil},
 	}
 
 	for _, test := range tests {
