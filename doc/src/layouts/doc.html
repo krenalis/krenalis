@@ -96,25 +96,6 @@
                     <li>{{ item(`connectors/destinations/filesystem`, `Filesystem`) }}</li>
                     <li>{{ item(`connectors/destinations/snowflake`, `Snowflake`) }}</li>
                     <li>{{ item(`connectors/destinations/stripe`, `Stripe`) }}</li>
-                    {% else if hasPrefix(filepath, "developers/") %}
-                    <li>
-                        <div>Developers</div>
-                    </li>
-                    <div>Building connectors</div>
-                    <li>{{ item(`developers/connectors/data-types`, `Data types`) }}</li>
-                    <li>{{ item(`developers/connectors/data-values`, `Data values`) }}</li>
-                    <li>{{ item(`developers/connectors/settings-and-ui`, `Settings and UI`) }}</li>
-                    <li>{{ item(`developers/connectors/app`, `App connectors`) }}
-                        <ul>
-                            <li>{{ item(`developers/connectors/app/oauth`, `OAuth`) }}</li>
-                            <li>{{ item(`developers/connectors/app/endpoint-groups`, `Endpoint groups`) }}</li>
-                            <li>{{ item(`developers/connectors/app/users`, `Users`) }}</li>
-                            <li>{{ item(`developers/connectors/app/send-events`, `Send events`) }}</li>
-                        </ul>
-                    </li>
-                    <li>{{ item(`developers/connectors/database`, `Database connectors`) }}</li>
-                    <li>{{ item(`developers/connectors/file`, `File connectors`) }}</li>
-                    <li>{{ item(`developers/connectors/file-storage`, `File Storage connectors`) }}</li>
                     {% else if hasPrefix(filepath, "api/") %}
                     <li>
                         <div>API reference</div>
@@ -221,6 +202,25 @@
                     <li>{{ item(`ai-features`, `AI features`) }}</li>
                     <li>{{ item(`monitoring`, `Monitoring`) }}</li>
                     <li>{{ item(`telemetry`, `Telemetry`) }}</li>
+                    <li>
+                        {{ item(`developers/index`, `Developers`) }}
+                        <ul>
+                            <li>{{ item(`developers/connectors/data-types`, `Data types`) }}</li>
+                            <li>{{ item(`developers/connectors/data-values`, `Data values`) }}</li>
+                            <li>{{ item(`developers/connectors/settings-and-ui`, `Settings and UI`) }}</li>
+                            <li>{{ item(`developers/connectors/app`, `App connectors`) }}
+                                <ul>
+                                    <li>{{ item(`developers/connectors/app/oauth`, `OAuth`) }}</li>
+                                    <li>{{ item(`developers/connectors/app/endpoint-groups`, `Endpoint groups`) }}</li>
+                                    <li>{{ item(`developers/connectors/app/users`, `Users`) }}</li>
+                                    <li>{{ item(`developers/connectors/app/send-events`, `Send events`) }}</li>
+                                </ul>
+                            </li>
+                            <li>{{ item(`developers/connectors/database`, `Database connectors`) }}</li>
+                            <li>{{ item(`developers/connectors/file`, `File connectors`) }}</li>
+                            <li>{{ item(`developers/connectors/file-storage`, `File Storage connectors`) }}</li>
+                        </ul>
+                    </li>
                     {% end if %}
                 </ul>
             </nav>
@@ -228,9 +228,8 @@
         <div class="main">
             <div class="header">
                 <nav class="sections">
-                    <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "developers/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
+                    <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
                     <a href="/connectors/"{% if hasPrefix(filepath, "connectors/") %} class="selected"{% end %}>Connectors</a>
-                    <a href="/developers/"{% if hasPrefix(filepath, "developers/") %} class="selected"{% end %}>Developers</a>
                     <a href="/api/"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
                 </nav>
             </div>
