@@ -16,8 +16,11 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
@@ -168,23 +171,135 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 	return ui, nil
 }
 
+var arrayIndex = regexp.MustCompile(`^\w+\[(\d+)\]`)
+var localeCode = regexp.MustCompile(`^[a-z]{2}(?:-[A-Z]{2})?$`)
+
 // Upsert updates or creates records in the app for the specified target.
 func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
-	bb := stripe.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
-	defer bb.Close()
+
 	record := records.First()
+
+	// Validate 'metadata' property.
+	if metadata, ok := record.Properties["metadata"].(map[string]any); ok {
+		if len(metadata) > 50 {
+			return errors.New("«metadata» contains more than 50 keys")
+		}
+		for k := range metadata {
+			if k == "" {
+				return errors.New("«metadata» contains an empty key")
+			}
+			if utf8.RuneCountInString(k) > 40 {
+				return errors.New("«metadata» contains a key longer than 40 characters")
+			}
+			if strings.ContainsAny(k, "[]") {
+				return errors.New("«metadata» contains a key with square brackets")
+			}
+		}
+	}
+	// Validate 'invoice_prefix'.
+	if prefix, ok := record.Properties["invoice_prefix"].(string); ok {
+		for i := 0; i < len(prefix); i++ {
+			if c := prefix[i]; '0' <= c && c <= '9' || 'A' <= c && c <= 'Z' {
+				continue
+			}
+			return errors.New("«invoice_prefix» does not contain only uppercase letters and numbers")
+		}
+		if len(prefix) < 3 {
+			return errors.New("«invoice_prefix» is shorter than 3 characters")
+		}
+	}
+	// Validate 'preferred_locales'.
+	if locales, ok := record.Properties["preferred_locales"].([]any); ok {
+		for _, lc := range locales {
+			if !localeCode.MatchString(lc.(string)) {
+				return errors.New("«preferred_locales» contains an invalid locale identifier")
+			}
+		}
+	}
+
+	// Drop create/update-only fields.
 	if record.ID == "" {
 		delete(record.Properties, "default_source")
+		if tax, ok := record.Properties["tax"].(map[string]any); ok {
+			if validate, ok := tax["validate_location"]; ok && validate == "auto" {
+				delete(tax, "validate_location")
+			}
+		}
 	} else {
 		delete(record.Properties, "payment_method")
 		delete(record.Properties, "tax_id_data")
 	}
+
+	// Stripe requires empty arrays and maps to be serialized as empty strings.
+	// Apply this only when updating a customer.
+	if record.ID != "" {
+		if metadata, ok := record.Properties["metadata"].(map[string]any); ok && len(metadata) == 0 {
+			record.Properties["metadata"] = nil
+		}
+		if settings, ok := record.Properties["invoice_settings"].(map[string]any); ok {
+			if fields, ok := settings["custom_fields"].([]any); ok && len(fields) == 0 {
+				settings["custom_fields"] = nil
+			}
+		}
+		if locales, ok := record.Properties["preferred_locales"].([]any); ok && len(locales) == 0 {
+			record.Properties["preferred_locales"] = nil
+		}
+	}
+
+	bb := stripe.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	defer bb.Close()
 	encodeProperties(bb, record.Properties)
+
 	u := "/v1/customers"
 	if record.ID != "" {
 		u += "/" + record.ID
 	}
-	return stripe.call(ctx, "POST", u, bb, 200, nil)
+
+	err := stripe.call(ctx, "POST", u, bb, 200, nil)
+	if err != nil {
+		if sErr, ok := err.(*stripeError); ok {
+			if sErr.Type == "invalid_request_error" {
+				switch sErr.Param {
+				case "email":
+					return errors.New("«email» is not a valid email address")
+				case "source":
+					// Stripe returns "source" instead of "default_source" when the resource is missing.
+					sErr.Param = "default_source"
+					fallthrough
+				case "default_source":
+					if sErr.Code == "resource_missing" {
+						return errors.New("«default_source» is not valid or does not match any resource")
+					}
+				case "invoice_settings[default_payment_method]":
+					if sErr.Code == "resource_missing" {
+						return errors.New("«invoice_settings.default_payment_method» does not match any payment method")
+					}
+				case "invoice_settings[rendering_options][template]":
+					if sErr.Code == "resource_missing" {
+						return errors.New("«invoice_settings.rendering_options.template» does not match any invoice rendering template")
+					}
+				case "tax[ip_address]":
+					return errors.New("«tax.ip_address» is not a valid IP address")
+				}
+				if sErr.Code == "tax_id_invalid" {
+					var typ string
+					if matches := arrayIndex.FindStringSubmatch(sErr.Param); matches != nil {
+						if i, err := strconv.Atoi(matches[1]); err == nil && i >= 0 {
+							if data, ok := record.Properties["tax_id_data"].([]any); ok && i < len(data) {
+								typ, _ = data[i].(map[string]any)["type"].(string)
+							}
+						}
+					}
+					return fmt.Errorf("«tax_id_data» contains an invalid value for tax ID type «\"%s\"»", typ)
+				}
+				return fmt.Errorf("«%s» is invalid: %s", sErr.Param, sErr.Code)
+			}
+			return fmt.Errorf("Stripe API returned an error: %q", sErr.Message)
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (stripe *Stripe) call(ctx context.Context, method, path string, bb *meergo.BodyBuffer, expectedStatus int, response any) error {

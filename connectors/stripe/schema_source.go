@@ -58,7 +58,7 @@ var sourceSchema = types.Object([]types.Property{
 	},
 	{
 		Name: "balance",
-		Type: types.Int(64),
+		Type: types.Int(64).WithIntRange(-1000000000000, 1000000000000),
 	},
 	{
 		Name: "created",
@@ -81,7 +81,7 @@ var sourceSchema = types.Object([]types.Property{
 	},
 	{
 		Name:     "invoice_prefix",
-		Type:     types.Text(),
+		Type:     types.Text().WithByteLen(12),
 		Nullable: true,
 	},
 	{
@@ -90,7 +90,7 @@ var sourceSchema = types.Object([]types.Property{
 	},
 	{
 		Name:         "next_invoice_sequence",
-		Type:         types.Int(64),
+		Type:         types.Int(32).WithIntRange(1, 1000000000),
 		Nullable:     true,
 		ReadOptional: true, // if the Stripe account applies account-level sequencing, this parameter is ignored in API requests and excluded from API responses.
 	},
@@ -265,11 +265,11 @@ var sourceInvoiceSettings = types.Object([]types.Property{
 		Type: types.Array(types.Object([]types.Property{
 			{
 				Name: "name",
-				Type: types.Text(),
+				Type: types.Text().WithCharLen(40),
 			},
 			{
 				Name: "value",
-				Type: types.Text(),
+				Type: types.Text().WithByteLen(140),
 			},
 		})),
 		Nullable: true,
