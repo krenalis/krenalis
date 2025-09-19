@@ -21,19 +21,13 @@ var sourceSchema = types.Object([]types.Property{
 	{
 		Name:        "id",
 		Type:        types.Text(),
-		Description: "Unique identifier of the customer",
+		Description: "Identifier",
 	},
 	{
-		Name:        "address",
-		Type:        sourceAddress,
-		Nullable:    true,
-		Description: "Address",
-	},
-	{
-		Name:        "description",
+		Name:        "name",
 		Type:        types.Text(),
 		Nullable:    true,
-		Description: "Description",
+		Description: "Name",
 	},
 	{
 		Name:        "email",
@@ -42,43 +36,74 @@ var sourceSchema = types.Object([]types.Property{
 		Description: "Account email",
 	},
 	{
-		Name:        "metadata",
-		Type:        types.Map(types.Text()),
-		Description: "Metadata",
-	},
-	{
-		Name:        "name",
+		Name:        "description",
 		Type:        types.Text(),
 		Nullable:    true,
-		Description: "Customer name",
+		Description: "Description",
 	},
 	{
-		Name:        "phone",
-		Type:        types.Text(),
+		Name:        "address",
+		Type:        sourceAddress,
 		Nullable:    true,
-		Description: "Phone number",
+		Description: "Billing details",
 	},
 	{
 		Name:        "shipping",
 		Type:        sourceShipping,
 		Nullable:    true,
-		Description: "Mailing and shipping address",
+		Description: "Shipping details",
 	},
 	{
-		Name:        "balance",
-		Type:        types.Int(64).WithIntRange(-1000000000000, 1000000000000),
-		Description: "Current balance",
+		Name:        "phone",
+		Type:        types.Text(),
+		Nullable:    true,
+		Description: "Phone",
 	},
 	{
-		Name:        "created",
-		Type:        types.DateTime(),
-		Description: "Created",
+		Name:        "preferred_locales",
+		Type:        types.Array(types.Text()),
+		Nullable:    true,
+		Description: "Locales",
 	},
 	{
 		Name:        "currency",
 		Type:        types.Text(),
 		Nullable:    true,
 		Description: "Currency",
+	},
+	{
+		Name:        "invoice_prefix",
+		Type:        types.Text().WithByteLen(12),
+		Nullable:    true,
+		Description: "Invoice prefix",
+	},
+	{
+		Name:         "next_invoice_sequence",
+		Type:         types.Int(32).WithIntRange(1, 1000000000),
+		Nullable:     true,
+		ReadOptional: true, // if the Stripe account applies account-level sequencing, this parameter is ignored in API requests and excluded from API responses.
+		Description:  "Next invoice sequence",
+	},
+	{
+		Name:        "tax_exempt",
+		Type:        types.Text().WithValues("none", "exempt", "reverse"),
+		Nullable:    true,
+		Description: "Tax status",
+	},
+	{
+		Name:        "metadata",
+		Type:        types.Map(types.Text()),
+		Description: "Metadata",
+	},
+	{
+		Name:        "balance",
+		Type:        types.Int(64).WithIntRange(-1000000000000, 1000000000000),
+		Description: "Balance",
+	},
+	{
+		Name:        "created",
+		Type:        types.DateTime(),
+		Description: "Created",
 	},
 	{
 		Name:        "delinquent",
@@ -90,37 +115,12 @@ var sourceSchema = types.Object([]types.Property{
 		Name:        "discount",
 		Type:        sourceDiscount,
 		Nullable:    true,
-		Description: "Current active discount",
-	},
-	{
-		Name:        "invoice_prefix",
-		Type:        types.Text().WithByteLen(12),
-		Nullable:    true,
-		Description: "Invoice prefix",
+		Description: "Active discount",
 	},
 	{
 		Name:        "invoice_settings",
 		Type:        sourceInvoiceSettings,
 		Description: "Invoice settings",
-	},
-	{
-		Name:         "next_invoice_sequence",
-		Type:         types.Int(32).WithIntRange(1, 1000000000),
-		Nullable:     true,
-		ReadOptional: true, // if the Stripe account applies account-level sequencing, this parameter is ignored in API requests and excluded from API responses.
-		Description:  "Next invoice sequence",
-	},
-	{
-		Name:        "preferred_locales",
-		Type:        types.Array(types.Text()),
-		Nullable:    true,
-		Description: "Preferred locales",
-	},
-	{
-		Name:        "tax_exempt",
-		Type:        types.Text().WithValues("none", "exempt", "reverse"),
-		Nullable:    true,
-		Description: "Tax exempt status",
 	},
 })
 
@@ -238,15 +238,47 @@ var sourceDiscount = types.Object([]types.Property{
 
 var sourceCoupon = types.Object([]types.Property{
 	{
+		Name:        "name",
+		Type:        types.Text(),
+		Description: "Name",
+	},
+	{
 		Name:        "id",
 		Type:        types.Text(),
-		Description: "Coupon ID",
+		Description: "ID",
+	},
+	{
+		Name:        "percent_off",
+		Type:        types.Float(64),
+		Description: "Percent off",
 	},
 	{
 		Name:        "amount_off",
 		Type:        types.Int(64),
 		Nullable:    true,
 		Description: "Amount off",
+	},
+	{
+		Name:        "duration",
+		Type:        types.Text().WithValues("forever", "once", "repeating"),
+		Description: "Duration",
+	},
+	{
+		Name:        "redeem_by",
+		Type:        types.DateTime(),
+		Nullable:    true,
+		Description: "Redeem by date",
+	},
+	{
+		Name:        "max_redemptions",
+		Type:        types.Int(32),
+		Nullable:    true,
+		Description: "Maximum redemptions",
+	},
+	{
+		Name:        "times_redeemed",
+		Type:        types.Int(32),
+		Description: "Times redeemed",
 	},
 	{
 		Name:        "created",
@@ -259,47 +291,15 @@ var sourceCoupon = types.Object([]types.Property{
 		Description: "Currency",
 	},
 	{
-		Name:        "duration",
-		Type:        types.Text().WithValues("forever", "once", "repeating"),
-		Description: "Duration",
-	},
-	{
 		Name:        "duration_in_months",
-		Type:        types.Int(64),
+		Type:        types.Int(32),
 		Nullable:    true,
 		Description: "Duration in months",
-	},
-	{
-		Name:        "max_redemptions",
-		Type:        types.Int(64),
-		Nullable:    true,
-		Description: "Maximum redemptions",
 	},
 	{
 		Name:        "metadata",
 		Type:        types.Map(types.Text()),
 		Description: "Metadata",
-	},
-	{
-		Name:        "name",
-		Type:        types.Text(),
-		Description: "Name",
-	},
-	{
-		Name:        "percent_off",
-		Type:        types.Float(64),
-		Description: "Percent off",
-	},
-	{
-		Name:        "redeem_by",
-		Type:        types.DateTime(),
-		Nullable:    true,
-		Description: "Redemption end date",
-	},
-	{
-		Name:        "times_redeemed",
-		Type:        types.Int(64),
-		Description: "Times redeemed",
 	},
 	{
 		Name:        "valid",
@@ -309,29 +309,6 @@ var sourceCoupon = types.Object([]types.Property{
 })
 
 var sourceInvoiceSettings = types.Object([]types.Property{
-	{
-		Name: "custom_fields",
-		Type: types.Array(types.Object([]types.Property{
-			{
-				Name:        "name",
-				Type:        types.Text().WithCharLen(40),
-				Description: "Field name",
-			},
-			{
-				Name:        "value",
-				Type:        types.Text().WithByteLen(140),
-				Description: "Field value",
-			},
-		})),
-		Nullable:    true,
-		Description: "Custom fields",
-	},
-	{
-		Name:        "footer",
-		Type:        types.Text(),
-		Nullable:    true,
-		Description: "Footer",
-	},
 	{
 		Name: "rendering_options",
 		Type: types.Object([]types.Property{
@@ -350,5 +327,28 @@ var sourceInvoiceSettings = types.Object([]types.Property{
 		}),
 		Nullable:    true,
 		Description: "Rendering options",
+	},
+	{
+		Name:        "footer",
+		Type:        types.Text(),
+		Nullable:    true,
+		Description: "Footer",
+	},
+	{
+		Name: "custom_fields",
+		Type: types.Array(types.Object([]types.Property{
+			{
+				Name:        "name",
+				Type:        types.Text().WithCharLen(40),
+				Description: "Field name",
+			},
+			{
+				Name:        "value",
+				Type:        types.Text().WithByteLen(140),
+				Description: "Field value",
+			},
+		})),
+		Nullable:    true,
+		Description: "Custom fields",
 	},
 })
