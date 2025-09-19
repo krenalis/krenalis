@@ -6,7 +6,16 @@
 
 This guide provides clear instructions for installing the JavaScript SDK in web browsers and seamlessly integrating it into both JavaScript and TypeScript applications.
 
-## Step 1: Create a source JavaScript connection
+## Using the SDK
+
+- [1. Create a source JavaScript connection](#1-create-a-source-javascript-connection)
+- [2. Install or import the SDK](#2-install-or-import-the-sdk)
+  - [Install the SDK on the website](#install-the-sdk-on-the-website)
+  - [Import into an application using `import`](#import-into-an-application-using-import)
+  - [Import into an application using `require`](#import-into-an-application-using-require)
+- [3. Add an action](#3-add-an-action)
+
+### 1. Create a source JavaScript connection
 
 To create a source JavaScript connection in Meergo:
 
@@ -16,11 +25,11 @@ To create a source JavaScript connection in Meergo:
 4. Enter the display name and the hostname where the SDK will be installed.
 5. Click on **Add**.
 
-## Step 2: Install or import the SDK
+### 2. Install or import the SDK
 
 Below are outlined the various alternative methods for installing or importing the SDK to suit your requirements.
 
-### Install the SDK on the website
+#### Install the SDK on the website
 
 This is the simplest method to start collecting events.
 
@@ -29,7 +38,7 @@ This is the simplest method to start collecting events.
 3. Copy the SDK snippet.
 4. Paste the snippet into your website between `<head>` and `</head>`.
 
-### Import into an application using `import`
+#### Import into an application using `import`
 
 The JavaScript SDK can be imported with `import` into TypeScript and JavaScript projects, using ES6 modules, that will be bundled to run in the browser.
 
@@ -48,7 +57,7 @@ The JavaScript SDK can be imported with `import` into TypeScript and JavaScript 
     meergo.page('home');
     ```
 
-### Import into an application using `require`
+#### Import into an application using `require`
 
 The JavaScript SDK can be imported with `require` into JavaScript projects, using CommonJS modules, that will be bundled to run in the browser.
 
@@ -67,7 +76,7 @@ The JavaScript SDK can be imported with `require` into JavaScript projects, usin
     meergo.page('home');
     ```
 
-## Step 3: Add an action
+### 3. Add an action
 
 When the JavaScript SDK is installed on your website, using the snippet or imported in your project, you can choose to collect only the events, or import the users, or both:
 
