@@ -114,27 +114,27 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 	switch eventType {
 	case "send_add_to_cart":
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), CreateRequired: true},
-			{Name: "itemName", Type: types.Text()},
-			{Name: "itemId", Type: types.Int(32)},
+			{Name: "email", Type: types.Text(), CreateRequired: true, Description: "Email"},
+			{Name: "itemName", Type: types.Text(), Description: "Item name"},
+			{Name: "itemId", Type: types.Int(32), Description: "Item ID"},
 		}), nil
 	case "send_custom_event":
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Description: "Email"},
 		}), nil
 	case "send_identity":
 		return types.Object([]types.Property{
-			{Name: "email", CreateRequired: true, Type: types.Text()},
+			{Name: "email", CreateRequired: true, Type: types.Text(), Description: "Email"},
 			{Name: "traits", Type: types.Object([]types.Property{
 				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.Text()},
-					{Name: "street2", Type: types.Text()},
-				})},
-			})},
+					{Name: "street1", Type: types.Text(), Description: "Street"},
+					{Name: "street2", Type: types.Text(), Description: "Street (second line)"},
+				}), Description: "Address"},
+			}), Description: "Traits"},
 		}), nil
 	case "send_generic_event":
 		return types.Object([]types.Property{
-			{Name: "properties", Type: types.JSON()},
+			{Name: "properties", Type: types.JSON(), Description: "Properties"},
 		}), nil
 	case "send_event_with_no_schema":
 		return types.Type{}, nil
@@ -185,25 +185,25 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target meergo.Targets, rol
 	dummy.simulateHTTPDelay()
 	var properties []types.Property
 	if role == meergo.Source {
-		properties = append(properties, types.Property{Name: "dummyId", Type: types.Text()})
+		properties = append(properties, types.Property{Name: "dummyId", Type: types.Text(), Description: "Dummy ID"})
 	}
 	properties = append(properties, []types.Property{
-		{Name: "email", Type: types.Text(), Nullable: true},
-		{Name: "firstName", Type: types.Text(), Nullable: true},
-		{Name: "fullName", Type: types.Text(), Nullable: true},
-		{Name: "lastName", Type: types.Text(), Nullable: true},
-		{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Nullable: true},
-		{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
+		{Name: "email", Type: types.Text(), Nullable: true, Description: "Email"},
+		{Name: "firstName", Type: types.Text(), Nullable: true, Description: "First name"},
+		{Name: "fullName", Type: types.Text(), Nullable: true, Description: "Full name"},
+		{Name: "lastName", Type: types.Text(), Nullable: true, Description: "Last name"},
+		{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Nullable: true, Description: "Favourite drink"},
+		{Name: "favourite_movie", Type: types.Text(), ReadOptional: true, Description: "Favourite movie"},
 	}...)
 	if role == meergo.Destination {
-		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.Text())})
+		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.Text()), Description: "Additional properties"})
 	}
 	properties = append(properties, []types.Property{
 		{Name: "address", Type: types.Object([]types.Property{
-			{Name: "street", Type: types.Text(), Nullable: true},
-			{Name: "postal_code", Type: types.Text(), Nullable: true},
-			{Name: "city", Type: types.Text(), Nullable: true},
-		}), Nullable: true},
+			{Name: "street", Type: types.Text(), Nullable: true, Description: "Street"},
+			{Name: "postal_code", Type: types.Text(), Nullable: true, Description: "Postal code"},
+			{Name: "city", Type: types.Text(), Nullable: true, Description: "City"},
+		}), Nullable: true, Description: "Address"},
 	}...)
 	return types.Object(properties), nil
 }

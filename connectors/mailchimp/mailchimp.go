@@ -338,12 +338,12 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTi
 
 // addressType is the types.Type corresponding to the Mailchimp "address" type.
 var addressType = types.Object([]types.Property{
-	{Name: "addr1", Type: types.Text(), UpdateRequired: true},
-	{Name: "addr2", Type: types.Text()},
-	{Name: "city", Type: types.Text(), UpdateRequired: true},
-	{Name: "state", Type: types.Text(), UpdateRequired: true},
-	{Name: "zip", Type: types.Text(), UpdateRequired: true},
-	{Name: "country", Type: types.Text()},
+	{Name: "addr1", Type: types.Text(), UpdateRequired: true, Description: "Street Address"},
+	{Name: "addr2", Type: types.Text(), Description: "Address Line 2"},
+	{Name: "city", Type: types.Text(), UpdateRequired: true, Description: "City"},
+	{Name: "state", Type: types.Text(), UpdateRequired: true, Description: "State/Province/Region"},
+	{Name: "zip", Type: types.Text(), UpdateRequired: true, Description: "Postal/Zip Code"},
+	{Name: "country", Type: types.Text(), Description: "Country"},
 })
 
 // ServeUI serves the connector's user interface.

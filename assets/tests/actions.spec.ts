@@ -67,10 +67,10 @@ test(`Add "Import customers" action on Dummy`, async ({ page }) => {
 		"inSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "text" }, "description": "", "nullable": true },
-				{ "name": "dummyId", "type": { "kind": "text" }, "description": "" },
-				{ "name": "firstName", "type": { "kind": "text" }, "description": "", "nullable": true },
-				{ "name": "lastName", "type": { "kind": "text" }, "description": "", "nullable": true }
+				{ "name": "email", "type": { "kind": "text" }, "description": "Email", "nullable": true },
+				{ "name": "dummyId", "type": { "kind": "text" }, "description": "Dummy ID" },
+				{ "name": "firstName", "type": { "kind": "text" }, "description": "First name", "nullable": true },
+				{ "name": "lastName", "type": { "kind": "text" }, "description": "Last name", "nullable": true }
 			]
 		},
 		"outSchema": {
@@ -245,7 +245,7 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 						"kind": "text"
 					},
 					"nullable": true,
-					"description": ""
+					"description": "First name"
 				},
 				{
 					"name": "lastName",
@@ -253,7 +253,7 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 						"kind": "text"
 					},
 					"nullable": true,
-					"description": ""
+					"description": "Last name"
 				},
 				{
 					"name": "email",
@@ -261,7 +261,7 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 						"kind": "text"
 					},
 					"nullable": true,
-					"description": ""
+					"description": "Email"
 				}
 			]
 		},
@@ -342,7 +342,7 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 						"kind": "text"
 					},
 					"createRequired": true,
-					"description": ""
+					"description": "Email"
 				}
 			]
 		},
@@ -1188,7 +1188,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 				"UseCRLF": false
 			}
 		}`;
-
 	let saveButton = page.locator('.action__header-save >> button');
 	const [response] = await Promise.all([
 		page.waitForResponse((response) => {

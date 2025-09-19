@@ -144,7 +144,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role
 			Name:        r.Name,
 			Type:        typ,
 			Nullable:    true,
-			Description: r.Label + "\n\n" + r.Description,
+			Description: r.Label,
 		}
 		if typ.Kind() == types.TextKind {
 			if len(r.Options) == 0 {
