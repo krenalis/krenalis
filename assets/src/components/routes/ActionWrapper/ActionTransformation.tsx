@@ -1626,9 +1626,9 @@ const FullscreenTransformation = ({
 
 		let inSchema = actionToSet.inSchema;
 
-		// Only send the sample's properties that are actually present
-		// in the input schema of the "ActionToSet".
-		let s = buildFilteredSample(flattenSchema(actionToSet.inSchema), sample);
+		// Only send the sample's properties that are actually present in the
+		// input schema of the action to set.
+		let s = normalizeSample(actionToSet.inSchema, sample);
 
 		let purpose: TransformationPurpose =
 			action.exportMode != null && action.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
@@ -3286,19 +3286,22 @@ const PropertyTooltip = ({ propertyName, description, typeName, type, children }
 	);
 };
 
-function buildFilteredSample(flatSchema: TransformedMapping, sample: Sample): Record<string, any> {
-	const result: Record<string, any> = {};
-	const keys = Object.keys(flatSchema);
-	for (const key of keys) {
-		if (flatSchema[key].type === 'object') {
+// normalizeSample filter the properties of the sample, mantaining only those
+// that are also present in schema.
+function normalizeSample(schema: ObjectType, sample: Sample): Record<string, any> {
+	const normalized: Record<string, any> = {};
+	for (const key in sample) {
+		const property = schema.properties.find((p) => p.name === key);
+		if (property == null) {
 			continue;
 		}
-		const value = getValueFromPath(sample, key);
-		if (value !== undefined) {
-			setValueAtPath(result, key, value);
+		let value = sample[key];
+		if (property.type.kind === 'object' && value !== null) {
+			value = normalizeSample(property.type, value);
 		}
+		normalized[key] = value;
 	}
-	return result;
+	return normalized;
 }
 
 function getMapExpression(pairs: [string, string][]): string {
@@ -3306,33 +3309,6 @@ function getMapExpression(pairs: [string, string][]): string {
 		return '';
 	}
 	return buildMapExpression(new Map(pairs));
-}
-
-function getValueFromPath(obj: any, path: string): any {
-	const keys = path.split('.');
-	let current = obj;
-	for (const key of keys) {
-		if (current == null || typeof current !== 'object') {
-			return undefined;
-		}
-		current = current[key];
-	}
-	return current;
-}
-
-function setValueAtPath(obj: any, path: string, value: any): void {
-	const keys = path.split('.');
-	let current = obj;
-	let i = 0;
-	for (const k of keys) {
-		if (i === keys.length - 1) {
-			current[k] = value;
-		} else {
-			current[k] = current[k] || {};
-			current = current[k];
-		}
-		i++;
-	}
 }
 
 function getSelectedChildrenProperties(
