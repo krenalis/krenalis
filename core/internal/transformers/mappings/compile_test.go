@@ -82,6 +82,8 @@ func Test_Compile(t *testing.T) {
 		{expr: "jsonNull", dt: types.JSON(), nullable: true, expected: json.Value("null")},
 		{expr: "jsonNil", dt: types.JSON(), nullable: false, expected: nil},
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expected: nil},
+		{expr: "array(67, -12)", dt: types.Array(types.Int(32)), nullable: false, expected: []any{67, -12}},
+		{expr: "array('foo', true, 5)", dt: types.Array(types.Text()), nullable: false, expected: []any{"foo", "true", "5"}},
 
 		{expr: "''", dt: types.Map(types.Text()), compileErr: errors.New("\"\" is not convertible to the map(text) type")},
 		{expr: "' '   '  '", dt: types.Text(), expected: "   "},
@@ -158,6 +160,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "engine.pover", dt: types.Int(32), compileErr: errors.New(`invalid engine.pover: property "pover" does not exist`)},
 		{expr: "engin.power", dt: types.Int(32), compileErr: errors.New(`property "engin" does not exist`)},
 		{expr: "manufacturer.power", dt: types.Int(32), compileErr: errors.New(`invalid manufacturer.power: manufacturer (type text) cannot have properties or keys`)},
+		{expr: "array(67)", dt: types.Array(types.Date()), compileErr: errors.New("67 is not convertible to the date type")},
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(32), convertErr: errors.New(`cannot convert`)},

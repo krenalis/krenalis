@@ -93,8 +93,15 @@ func checkAnd(args [][]part, schema, dt types.Type, nullable bool, properties ma
 
 // checkArray type checks a call to 'array' with the given arguments.
 func checkArray(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	// Ensure that all arguments can be converted to the element type of the destination array.
+	// If the destination type (dt) is not an array, no checks are performed,
+	// and it is left to the caller to fail later.
+	et := types.JSON()
+	if dt.Kind() == types.ArrayKind {
+		et = dt.Elem()
+	}
 	for _, arg := range args {
-		err := typeCheck(arg, schema, types.JSON(), false, properties)
+		err := typeCheck(arg, schema, et, false, properties)
 		if err != nil {
 			return types.Type{}, err
 		}
