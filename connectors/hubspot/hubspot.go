@@ -62,8 +62,8 @@ func init() {
 		OAuth: meergo.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL:          "https://api.hubapi.com/oauth/v1/token",
-			SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
-			DestinationScopes: []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
+			SourceScopes:      []string{"oauth", "crm.objects.contacts.read", "crm.schemas.contacts.read"},
+			DestinationScopes: []string{"oauth", "crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
 		EndpointGroups: []meergo.EndpointGroup{{
 			RequireOAuth: true,
