@@ -82,8 +82,6 @@ func Test_Compile(t *testing.T) {
 		{expr: "jsonNull", dt: types.JSON(), nullable: true, expected: json.Value("null")},
 		{expr: "jsonNil", dt: types.JSON(), nullable: false, expected: nil},
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expected: nil},
-		{expr: "array(67, -12)", dt: types.Array(types.Int(32)), nullable: false, expected: []any{67, -12}},
-		{expr: "array('foo', true, 5)", dt: types.Array(types.Text()), nullable: false, expected: []any{"foo", "true", "5"}},
 
 		{expr: "''", dt: types.Map(types.Text()), compileErr: errors.New("\"\" is not convertible to the map(text) type")},
 		{expr: "' '   '  '", dt: types.Text(), expected: "   "},
@@ -160,7 +158,6 @@ func Test_Compile(t *testing.T) {
 		{expr: "engine.pover", dt: types.Int(32), compileErr: errors.New(`invalid engine.pover: property "pover" does not exist`)},
 		{expr: "engin.power", dt: types.Int(32), compileErr: errors.New(`property "engin" does not exist`)},
 		{expr: "manufacturer.power", dt: types.Int(32), compileErr: errors.New(`invalid manufacturer.power: manufacturer (type text) cannot have properties or keys`)},
-		{expr: "array(67)", dt: types.Array(types.Date()), compileErr: errors.New("67 is not convertible to the date type")},
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(32), convertErr: errors.New(`cannot convert`)},
@@ -186,7 +183,11 @@ func Test_Compile(t *testing.T) {
 		{expr: "array(1)", dt: types.Array(types.Int(32)), nullable: false, expected: []any{1}},
 		{expr: "array(1, \"a\", false)", dt: types.Array(types.JSON()), nullable: true, expected: []any{json.Value("1"), json.Value(`"a"`), json.Value("false")}},
 		{expr: "array(array(1,2,3))", dt: types.Array(types.Array(types.Int(32))), nullable: true, expected: []any{[]any{1, 2, 3}}},
-		{expr: "array(null)", dt: types.Array(types.JSON()), expected: []any{json.Value("null")}},
+		{expr: "array(67, -12)", dt: types.Array(types.Int(32)), nullable: false, expected: []any{67, -12}},
+		{expr: "array('foo', true, 5)", dt: types.Array(types.Text()), nullable: false, expected: []any{"foo", "true", "5"}},
+		{expr: "array(67)", dt: types.Array(types.Date()), compileErr: errors.New("67 is not convertible to the date type")},
+		{expr: "array(5, null)", dt: types.Array(types.JSON()), expected: []any{json.Value("5"), json.Value("null")}},
+		{expr: "array(null)", dt: types.Array(types.Text()), compileErr: errors.New("null is not convertible to the text type")},
 
 		// coalesce.
 		{expr: "coalesce(1, 2)", dt: types.Int(32), nullable: true, expected: 1},
