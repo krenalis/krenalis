@@ -15,18 +15,29 @@ HubSpot is a cloud application that offers tools for customer relationship manag
 
 ### Add a HubSpot data destination
 
-Before you can add a HubSpot data destination, you need to create an app in HubSpot and configure the Meergo settings file with OAuth credentials:
+Before you can add a HubSpot data destination, you need to create an app in HubSpot and configure the Meergo settings file with OAuth credentials. You only need to create the HubSpot app once, even if you add, remove, or re-add data destinations.
 
-1. Create a <a href="https://developers.hubspot.com/" target="_blank">HubSpot developer account</a> or log in to an existing developer account. Note that this developer account will not be linked as a data destination; you will specify that later.
-2. Open the **Apps** page.
-3. Click on **Create app**.
-4. (Optional) Fill in the **Public app name** and **Description** fields to help you recognize the app later. The app does not need to be published on the HubSpot Marketplace, so it can remain private.
-5. Click on the **Auth** tab.
-6. Click **Add new scope** and add the scopes **crm.objects.contacts.read** and **crm.objects.contacts.write**.
-7. Click **Create app** and confirm the creation.
-8. Copy the client ID and the client secret.
-9. Set the `MEERGO_OAUTH_HUBSPOT_CLIENT_ID` and `MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET` environment variables  with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the `.env` file in the same directory of the Meergo executable.
-10. Restart the Meergo server.
+> HubSpot does not support authentication via IP addresses. When using "127.0.0.1" as the Meergo domain, replace it with "localhost" when adding a HubSpot data destination.
+
+1. Log in to your <a href="https://www.hubspot.com/" target="_blank">HubSpot</a> account.
+2. In the right sidebar, click the last item **Development** (the name may vary depending on the language of your account).
+3. Click on **Legacy Apps**.
+4. Click on **Create**.
+5. Click on **Public** (the app will remain private and does not need to be made public).
+6. Fill in the **Public app name** and **Description** fields to help you recognize the app later.
+7. Click on the **Auth** tab.
+8. Under **Redirect URLs**, enter the URL address of Meergo with the `/admin/oauth/authorize` path. For example: `https://example.com/admin/oauth/authorize`.
+9. Click **Add new scope**.
+10. Select the following scopes:
+    * `crm.objects.contacts.read` - leave as **Required**
+    * `crm.objects.contacts.write` - mark as **Conditionally required**
+    * `crm.schemas.contacts.read` - leave as **Required**
+11. Click **Update**.
+12. At the bottom left, click **Create app**. The app will be created and its configuration page will open.
+13. Click on the **Auth** tab again.
+14. Copy the Client ID and the Client secret.
+15. Set the `MEERGO_OAUTH_HUBSPOT_CLIENT_ID` and `MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET` environment variables with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the `.env` file in the same directory of the Meergo executable.
+16. Restart the Meergo server to load the new environment variables.
 
 Now proceed to add a HubSpot data destination:
 
