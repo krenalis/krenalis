@@ -72,7 +72,7 @@ func convertibleTo(st, dt types.Type) bool {
 			return convertibleTo(st.Elem(), dt.Elem())
 		case types.ObjectKind:
 			mapElemType := dt.Elem()
-			for _, sp := range st.Properties() {
+			for _, sp := range st.Properties().All() {
 				if !convertibleTo(sp.Type, mapElemType) {
 					return false
 				}
@@ -83,7 +83,7 @@ func convertibleTo(st, dt types.Type) bool {
 		switch sk {
 		case types.ObjectKind:
 			var hasSameNameProperty bool
-			for _, p := range st.Properties() {
+			for _, p := range st.Properties().All() {
 				if dp, ok := dt.Property(p.Name); ok {
 					if !convertibleTo(p.Type, dp.Type) {
 						return false
@@ -94,7 +94,7 @@ func convertibleTo(st, dt types.Type) bool {
 			return hasSameNameProperty
 		case types.MapKind:
 			mapElemType := st.Elem()
-			for _, p := range dt.Properties() {
+			for _, p := range dt.Properties().All() {
 				if !convertibleTo(mapElemType, p.Type) {
 					return false
 				}

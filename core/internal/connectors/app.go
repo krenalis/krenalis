@@ -512,7 +512,7 @@ func sameValue(t types.Type, v, v2 any) bool {
 		if !ok || len(v1) != len(v2) {
 			return false
 		}
-		for _, p := range t.Properties() {
+		for _, p := range t.Properties().All() {
 			e1, ok := v1[p.Name]
 			if !ok {
 				continue
@@ -564,11 +564,8 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 		var cursor string
 
-		properties := types.Properties(r.schema)
-		names := make([]string, len(properties))
-		for i, p := range properties {
-			names[i] = p.Name
-		}
+		properties := r.schema.Properties()
+		names := properties.Names()
 
 		// processedIDs contains the already read ID.
 		// It is used to deduplicate returned records.
@@ -635,8 +632,8 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 				if record.Err == nil {
 					// Read the properties.
-					record.Properties = make(map[string]any, len(properties))
-					for _, p := range properties {
+					record.Properties = make(map[string]any, properties.Count())
+					for _, p := range properties.All() {
 						v, ok := user.Properties[p.Name]
 						if !ok {
 							if !p.ReadOptional {

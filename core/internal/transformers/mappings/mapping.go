@@ -94,7 +94,7 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 	me := make([]mappingExpr, len(expressions))
 	i := 0
 	for path, expr := range expressions {
-		p, err := types.PropertyByPath(outSchema, path)
+		p, err := outSchema.Properties().ByPath(path)
 		if err != nil {
 			return nil, err
 		}

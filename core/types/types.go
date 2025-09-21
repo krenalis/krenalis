@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"iter"
 	"math"
 	"regexp"
 	"slices"
@@ -192,7 +191,7 @@ type Type struct {
 	//   - uintRange value for uint with 64 bits
 	//   - floatRange value for float
 	//   - decimalRange value for decimal
-	//   - []Property for object
+	//   - Properties{properties, names} for object
 	//   - Type of the elements for array
 	//   - Type of the value for map
 	vl any
@@ -375,8 +374,10 @@ func ObjectOf(properties []Property) (Type, error) {
 		return Type{}, errors.New("no property in type")
 	}
 	var generic bool
-	indexOf := make(map[string]int, len(properties))
-	ps := make([]Property, len(properties))
+	pn := Properties{
+		properties: make([]Property, len(properties)),
+		names:      make(map[string]int, len(properties)),
+	}
 	for i, property := range properties {
 		if property.Name == "" {
 			return Type{}, errors.New("property name is empty")
@@ -384,10 +385,10 @@ func ObjectOf(properties []Property) (Type, error) {
 		if !IsValidPropertyName(property.Name) {
 			return Type{}, InvalidPropertyNameError{i, property.Name}
 		}
-		if j, ok := indexOf[property.Name]; ok {
+		if j, ok := pn.names[property.Name]; ok {
 			return Type{}, RepeatedPropertyNameError{j, i, property.Name}
 		}
-		indexOf[property.Name] = i
+		pn.names[property.Name] = i
 		prefilled, err := normalizedUTF8(property.Prefilled)
 		if err != nil {
 			return Type{}, err
@@ -401,7 +402,7 @@ func ObjectOf(properties []Property) (Type, error) {
 		if err != nil {
 			return Type{}, err
 		}
-		ps[i] = Property{
+		pn.properties[i] = Property{
 			Name:           property.Name,
 			Prefilled:      prefilled,
 			Type:           property.Type,
@@ -412,7 +413,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			Description:    description,
 		}
 	}
-	return Type{kind: ObjectKind, generic: generic, vl: ps}, nil
+	return Type{kind: ObjectKind, generic: generic, vl: pn}, nil
 }
 
 // AsReal returns t but as a real number. As a real number, t does not allow
@@ -930,7 +931,8 @@ func (t Type) Property(name string) (Property, bool) {
 	if t.kind != ObjectKind {
 		panic("cannot get the properties of a non-object type")
 	}
-	for _, p := range t.vl.([]Property) {
+	ps := t.vl.(Properties)
+	for _, p := range ps.properties {
 		if p.Name == name {
 			return p, true
 		}
@@ -941,20 +943,13 @@ func (t Type) Property(name string) (Property, bool) {
 	return Property{}, false
 }
 
-// Properties returns an iterator over the properties of t.
+// Properties returns the properties of t.
 // It panics if t is not an object.
-func (t Type) Properties() iter.Seq2[int, Property] {
+func (t Type) Properties() Properties {
 	if t.kind != ObjectKind {
-		panic("cannot iterate over a non-object type")
+		panic("cannot get properties of a non-object type")
 	}
-	return func(yield func(i int, property Property) bool) {
-		pp := t.vl.([]Property)
-		for i := 0; i < len(pp); i++ {
-			if !yield(i, pp[i]) {
-				return
-			}
-		}
-	}
+	return t.vl.(Properties)
 }
 
 // Elem returns a type's element type.

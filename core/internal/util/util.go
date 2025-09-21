@@ -56,8 +56,8 @@ func ParseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 // PropertiesToColumns returns the columns of properties of t.
 func PropertiesToColumns(t types.Type) []meergo.Column {
 
-	columns := make([]meergo.Column, 0, types.NumProperties(t))
-	for _, p := range t.Properties() {
+	columns := make([]meergo.Column, 0, t.Properties().Count())
+	for _, p := range t.Properties().All() {
 		if p.Type.Kind() == types.ObjectKind {
 			for _, column := range PropertiesToColumns(p.Type) {
 				column.Name = p.Name + "_" + column.Name

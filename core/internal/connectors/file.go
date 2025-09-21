@@ -178,7 +178,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	columns := types.Properties(file.action.InSchema)
+	columns := file.action.InSchema.Properties().Slice()
 	records := make(chan fileRecord, 100)
 	result := make(chan error, 1)
 	writeCtx, cancelWrite := context.WithCancel(context.Background())

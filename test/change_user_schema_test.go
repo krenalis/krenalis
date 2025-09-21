@@ -30,7 +30,7 @@ func TestChangeUserSchema(t *testing.T) {
 	defer c.Stop()
 
 	ws := c.Workspace()
-	if n := types.NumProperties(ws.UserSchema); n != 10 {
+	if n := ws.UserSchema.Properties().Count(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
@@ -65,7 +65,7 @@ func TestChangeUserSchema(t *testing.T) {
 	c.AlterUserSchema(file.Schema, file.PrimarySources, file.RePaths)
 
 	ws = c.Workspace()
-	if n := types.NumProperties(ws.UserSchema); n != 10 {
+	if n := ws.UserSchema.Properties().Count(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
@@ -76,7 +76,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 
 	// Add a single property.
-	schema := types.Object(append(types.Properties(file.Schema), types.Property{
+	schema := types.Object(append(file.Schema.Properties().Slice(), types.Property{
 		Name: "new_prop", Type: types.Text(), ReadOptional: true,
 	}))
 	queries = c.PreviewAlterUserSchema(schema, nil)
@@ -93,7 +93,7 @@ func TestChangeUserSchema(t *testing.T) {
 	c.AlterUserSchema(schema, nil, nil)
 
 	ws = c.Workspace()
-	if n := types.NumProperties(ws.UserSchema); n != 11 {
+	if n := ws.UserSchema.Properties().Count(); n != 11 {
 		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
@@ -105,12 +105,12 @@ func TestChangeUserSchema(t *testing.T) {
 
 	// Rename the property "android.id" to "android.identifier" and drop "email".
 	var properties []types.Property
-	for _, p := range schema.Properties() {
+	for _, p := range schema.Properties().All() {
 		switch p.Name {
 		case "email":
 			continue
 		case "android":
-			props := types.Properties(p.Type)
+			props := p.Type.Properties().Slice()
 			for i := 0; i < len(props); i++ {
 				if props[i].Name == "id" {
 					props[i].Name = "identifier"
@@ -140,7 +140,7 @@ func TestChangeUserSchema(t *testing.T) {
 	identifiers = []string{"android.identifier"}
 
 	ws = c.Workspace()
-	if n := types.NumProperties(ws.UserSchema); n != 10 {
+	if n := ws.UserSchema.Properties().Count(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
@@ -149,10 +149,10 @@ func TestChangeUserSchema(t *testing.T) {
 	if p, ok := ws.UserSchema.Property("email"); ok {
 		t.Fatalf("expected no \"email\" property, got property %#v", p)
 	}
-	if p, err := types.PropertyByPath(ws.UserSchema, "android.id"); err == nil {
+	if p, err := ws.UserSchema.Properties().ByPath("android.id"); err == nil {
 		t.Fatalf("expected no \"android.id\" property, got property %#v", p)
 	}
-	if _, err := types.PropertyByPath(ws.UserSchema, "android.identifier"); err != nil {
+	if _, err := ws.UserSchema.Properties().ByPath("android.identifier"); err != nil {
 		t.Fatalf("expected property \"android.identifier\", got no property: %s", err)
 	}
 	if !types.Equal(schema, ws.UserSchema) {
@@ -164,11 +164,11 @@ func TestChangeUserSchema(t *testing.T) {
 
 	// Drop "android.identifier".
 	properties = []types.Property{}
-	for _, p := range schema.Properties() {
+	for _, p := range schema.Properties().All() {
 		switch p.Name {
 		case "android":
 			var props []types.Property
-			for _, p := range p.Type.Properties() {
+			for _, p := range p.Type.Properties().All() {
 				if p.Name == "identifier" {
 					continue
 				}
@@ -194,17 +194,17 @@ func TestChangeUserSchema(t *testing.T) {
 	c.AlterUserSchema(schema, nil, rePaths)
 
 	ws = c.Workspace()
-	if n := types.NumProperties(ws.UserSchema); n != 10 {
+	if n := ws.UserSchema.Properties().Count(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 	p, _ := ws.UserSchema.Property("android")
-	if n := types.NumProperties(p.Type); n != 2 {
+	if n := p.Type.Properties().Count(); n != 2 {
 		t.Fatalf("expected 2 properties in the \"android\" object of the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
 		t.Fatalf("invalid user schema: %s", err)
 	}
-	if p, err := types.PropertyByPath(ws.UserSchema, "android.identifier"); err == nil {
+	if p, err := ws.UserSchema.Properties().ByPath("android.identifier"); err == nil {
 		t.Fatalf("expected no \"android.identifier\" property, got property %#v", p)
 	}
 	if !types.Equal(schema, ws.UserSchema) {
@@ -215,7 +215,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 
 	// Create a schema with two properties that would conflict each other.
-	schema = types.Object(append(types.Properties(file.Schema),
+	schema = types.Object(append(file.Schema.Properties().Slice(),
 		types.Property{Name: "a_b", Type: types.Text(), ReadOptional: true},
 		types.Property{Name: "a", Type: types.Object([]types.Property{
 			{Name: "b", Type: types.Text(), ReadOptional: true},
@@ -238,7 +238,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 
 	// Create a schema with a null property.
-	schema = types.Object(append(types.Properties(file.Schema),
+	schema = types.Object(append(file.Schema.Properties().Slice(),
 		types.Property{Name: "a", Type: types.Object([]types.Property{
 			{Name: "b", Type: types.Text(), ReadOptional: true, Nullable: true},
 		}), ReadOptional: true},
@@ -260,7 +260,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 
 	// Create a primary source for the first property.
-	firstProperty := types.PropertyNames(file.Schema)[0]
+	firstProperty := file.Schema.Properties().Names()[0]
 	primarySource := c.CreateDummy("Primary Source", meergotester.Source)
 	primarySources := map[string]int{firstProperty: primarySource}
 	c.AlterUserSchema(file.Schema, primarySources, nil)
@@ -297,7 +297,7 @@ func TestChangeUserSchema(t *testing.T) {
 // checkSchemaProperties is used internally by the tests and checks that the
 // users schema does not contain 'nullable' or 'required' properties.
 func checkSchemaProperties(schema types.Type) error {
-	for path, p := range types.WalkAll(schema) {
+	for path, p := range schema.Properties().WalkAll() {
 		if p.Nullable {
 			return fmt.Errorf("unexpected nullable property %q", path)
 		}

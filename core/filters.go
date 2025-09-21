@@ -203,7 +203,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			case bool:
 				v = strconv.FormatBool(value)
 			case float64:
-				p, _ := types.PropertyByPathSlice(schema, cond.Property)
+				p, _ := schema.Properties().ByPathSlice(cond.Property)
 				v = strconv.FormatFloat(value, 'g', -1, p.Type.BitSize())
 			case int:
 				v = strconv.FormatInt(int64(value), 10)
@@ -212,7 +212,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			case decimal.Decimal:
 				v = value.String()
 			case time.Time:
-				p, _ := types.PropertyByPathSlice(schema, cond.Property)
+				p, _ := schema.Properties().ByPathSlice(cond.Property)
 				switch p.Type.Kind() {
 				case types.DateTimeKind:
 					v = value.Format("2006-01-02T15:04:05.999999999")
@@ -397,7 +397,7 @@ func parseUint(s string) (uint, bool) {
 // a json property, it returns the path to that json property.
 // path must be a valid property path.
 func retrieveFilterProperty(schema types.Type, path string) (types.Property, string, error) {
-	p, err := types.PropertyByPath(schema, path)
+	p, err := schema.Properties().ByPath(path)
 	if err != nil {
 		if p.Type.Kind() != types.JSONKind {
 			return types.Property{}, "", err

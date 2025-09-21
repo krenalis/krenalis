@@ -408,7 +408,7 @@ func convertInt96(v any) (time.Time, error) {
 // required by the Parquet library for export to file.
 func convertToParquetData(schema types.Type, record map[string]any) (map[string]any, error) {
 	converted := make(map[string]any, len(record))
-	for _, p := range schema.Properties() {
+	for _, p := range schema.Properties().All() {
 		switch p.Type.Kind() {
 		case types.IntKind:
 			if p.Type.BitSize() <= 32 {
@@ -614,7 +614,7 @@ func schemaToParquetSchema(schema types.Type) (*parquetschema.SchemaDefinition, 
 // This method panics if obj is not an Object.
 func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) {
 	columns := []*parquetschema.ColumnDefinition{}
-	for _, property := range obj.Properties() {
+	for _, property := range obj.Properties().All() {
 
 		// Create the column corresponding to the property.
 		col := &parquetschema.ColumnDefinition{}

@@ -760,7 +760,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		var n int
 		var err error
-		for _, p := range typ.Properties() {
+		for _, p := range typ.Properties().All() {
 			value, ok := obj[p.Name]
 			if !ok {
 				if !p.ReadOptional {
@@ -781,7 +781,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if n < len(obj) {
 		SRC:
 			for name := range obj {
-				for _, p := range typ.Properties() {
+				for _, p := range typ.Properties().All() {
 					if p.Name == name {
 						continue SRC
 					}

@@ -278,7 +278,7 @@ func unmarshalWhere(b []byte, schema types.Type) (*Where, error) {
 	}
 	// Normalize values.
 	for _, c := range where.Conditions {
-		p, err := types.PropertyByPathSlice(schema, c.Property)
+		p, err := schema.Properties().ByPathSlice(c.Property)
 		if err != nil && p.Type.Kind() != types.JSONKind {
 			return nil, err
 		}

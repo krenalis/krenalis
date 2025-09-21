@@ -915,7 +915,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 		return nil, errors.BadRequest("properties is empty")
 	}
 	propertyByName := map[string]types.Property{}
-	for _, p := range schemas.Event.Properties() {
+	for _, p := range schemas.Event.Properties().All() {
 		propertyByName[p.Name] = p
 	}
 	for _, name := range properties {
@@ -1418,7 +1418,7 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 		return nil, errors.BadRequest("user %q is not a valid user identifier", user)
 	}
 
-	properties := types.PropertyNames(this.workspace.UserSchema)
+	properties := this.workspace.UserSchema.Properties().Names()
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 		Property: []string{"__id__"},
 		Operator: state.OpIs,
@@ -1551,7 +1551,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 				return nil, err
 			}
 			for _, path := range identifiers {
-				p, err := types.PropertyByPath(schema, path)
+				p, err := schema.Properties().ByPath(path)
 				if err != nil {
 					return nil, errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
 				}
@@ -1762,7 +1762,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
 	}
 	propertyByName := map[string]types.Property{}
-	for _, p := range ws.UserSchema.Properties() {
+	for _, p := range ws.UserSchema.Properties().All() {
 		propertyByName[p.Name] = p
 	}
 	for _, name := range properties {

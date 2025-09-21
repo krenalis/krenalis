@@ -10,7 +10,6 @@ package test
 import (
 	"testing"
 
-	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
 )
 
@@ -28,7 +27,7 @@ func TestUserPropertiesSuitableAsIdentifiers(t *testing.T) {
 	// it has the correct number of properties.
 	schema := c.UserPropertiesSuitableAsIdentifiers()
 	const expectedLen = 5
-	if n := types.NumProperties(schema); expectedLen != n {
+	if n := schema.Properties().Count(); expectedLen != n {
 		t.Fatalf("expected %d properties suitable as identifiers, got %d", expectedLen, n)
 	}
 

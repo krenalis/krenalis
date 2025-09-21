@@ -45,7 +45,7 @@ func CheckAlignment(t1, t2 types.Type, exportMode *state.ExportMode) error {
 		if exportMode == nil {
 			return nil
 		}
-		for path, p := range types.WalkAll(t2) {
+		for path, p := range t2.Properties().WalkAll() {
 			if *exportMode != state.UpdateOnly && p.CreateRequired {
 				return &Error{Msg: fmt.Sprintf("%q property is required for creation", path)}
 			}
@@ -56,7 +56,7 @@ func CheckAlignment(t1, t2 types.Type, exportMode *state.ExportMode) error {
 		return nil
 	}
 	if t2.Kind() == types.InvalidKind {
-		for _, p := range t1.Properties() {
+		for _, p := range t1.Properties().All() {
 			return &Error{Msg: fmt.Sprintf("%q property no longer exists", p.Name)}
 		}
 	}
@@ -72,7 +72,7 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		if k2 != types.ObjectKind {
 			return &Error{Msg: fmt.Sprintf("%q property's type has changed from object to %s", name, t2)}
 		}
-		for _, p1 := range t1.Properties() {
+		for _, p1 := range t1.Properties().All() {
 			path := p1.Name
 			if name != "" {
 				path = name + "." + path
@@ -115,13 +115,13 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		if exportMode == nil {
 			return nil
 		}
-		for _, p := range t2.Properties() {
+		for _, p := range t2.Properties().All() {
 			checkCreate := p.CreateRequired && *exportMode != state.UpdateOnly
 			checkUpdate := p.UpdateRequired && *exportMode != state.CreateOnly
 			if !checkCreate && !checkUpdate {
 				continue
 			}
-			if types.PropertyExists(t1, p.Name) {
+			if t1.Properties().ContainsPath(p.Name) {
 				continue
 			}
 			if checkCreate {

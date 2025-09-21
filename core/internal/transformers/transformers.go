@@ -181,7 +181,7 @@ func schemaSubset(schema types.Type, paths []string) types.Type {
 // setCreateRequired returns a copy of schema with all first-level properties'
 // CreateRequired attribute set to true.
 func setCreateRequired(schema types.Type) types.Type {
-	properties := types.Properties(schema)
+	properties := schema.Properties().Slice()
 	for i := 0; i < len(properties); i++ {
 		properties[i].CreateRequired = true
 	}

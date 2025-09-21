@@ -149,7 +149,7 @@ func (this *Workspace) PreviewAlterUserSchema(ctx context.Context, schema types.
 // error in case it contains properties which are not allowed in data warehouse
 // user schemas.
 func checkAllowedPropertyUserSchema(schema types.Type) error {
-	for _, p := range schema.Properties() {
+	for _, p := range schema.Properties().All() {
 		if isMetaProperty(p.Name) {
 			return errors.New("user schema cannot have meta properties")
 		}
@@ -209,7 +209,7 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 // not valid.
 func validatePrimarySources(schema types.Type, primarySources map[string]int) error {
 	for path, source := range primarySources {
-		p, err := types.PropertyByPath(schema, path)
+		p, err := schema.Properties().ByPath(path)
 		if err != nil {
 			return err
 		}

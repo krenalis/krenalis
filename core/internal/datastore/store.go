@@ -425,7 +425,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	// Determine the identifiers columns.
 	identifiers := make([]meergo.Column, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
-		identifier, err := types.PropertyByPath(ws.UserSchema, ident)
+		identifier, err := ws.UserSchema.Properties().ByPath(ident)
 		if err != nil {
 			return errors.New("unexpected error: identifier does not exist in user schema")
 		}
@@ -583,7 +583,7 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 	}
 	query.table = "users"
 	query.Properties = []string{}
-	for path := range types.WalkObjects(schema) {
+	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
 	return records(ctx, store.warehouse(), query, "__id__", store.userColumnByProperty(), true, matching)

@@ -200,7 +200,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 		marshalType(b, t.vl.(Type))
 	case ObjectKind:
 		b.WriteString(`,"properties":[`)
-		properties := t.vl.([]Property)
+		properties := t.vl.(Properties).properties
 		for i, p := range properties {
 			if i > 0 {
 				b.WriteString(",")
@@ -909,7 +909,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				break
 			}
 		}
-		t.vl = properties
+		names := make(map[string]int, len(properties))
+		for i, p := range properties {
+			names[p.Name] = i
+		}
+		t.vl = Properties{properties: properties, names: names}
 	}
 
 	return t, nil

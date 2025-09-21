@@ -102,7 +102,7 @@ func ReceivedEvent(event map[string]any) meergo.ReceivedEvent {
 func TransformEvent(schema types.Type, event map[string]any, mapping map[string]string) (map[string]any, error) {
 	if mapping == nil {
 		mapping = map[string]string{}
-		for _, p := range schema.Properties() {
+		for _, p := range schema.Properties().All() {
 			if p.Prefilled != "" {
 				mapping[p.Name] = p.Prefilled
 			}

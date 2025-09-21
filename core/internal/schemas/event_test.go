@@ -9,13 +9,11 @@ package schemas
 
 import (
 	"testing"
-
-	"github.com/meergo/meergo/core/types"
 )
 
 func Test_Schema(t *testing.T) {
 	const expected = 20
-	if n := types.NumProperties(Event); n != expected {
+	if n := Event.Properties().Count(); n != expected {
 		t.Fatalf("expected %d properties, got %d", expected, n)
 	}
 }

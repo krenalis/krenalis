@@ -76,7 +76,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "full_name", Type: types.Text()},
 		})
 		if !types.Equal(expectedSchema, schema) {
-			t.Fatalf("\nexpected:  %#v\ngot:        %#v", types.Properties(expectedSchema), types.Properties(schema))
+			t.Fatalf("\nexpected:  %#v\ngot:        %#v", expectedSchema.Properties().Slice(), schema.Properties().Slice())
 		}
 		if issues != nil {
 			t.Fatalf("\nexpected nil issues\ngot issues: %#v", issues)

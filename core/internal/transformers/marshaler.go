@@ -170,7 +170,7 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		b = append(b, '{')
 		i := 0
 		if k == types.ObjectKind {
-			for _, p := range t.Properties() {
+			for _, p := range t.Properties().All() {
 				e, ok := v[p.Name]
 				if !ok {
 					continue
@@ -333,7 +333,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 		b = append(b, '{')
 		i := 0
 		if k == types.ObjectKind {
-			for _, p := range t.Properties() {
+			for _, p := range t.Properties().All() {
 				e, ok := v[p.Name]
 				if !ok {
 					continue

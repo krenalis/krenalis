@@ -251,7 +251,7 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 				}
 				o[name] = value
 			}
-			for _, p := range t.Properties() {
+			for _, p := range t.Properties().All() {
 				if p.ReadOptional {
 					continue
 				}
@@ -612,7 +612,7 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 			b = append(b, '{')
 			var err error
 			i := 0
-			for _, p := range t.Properties() {
+			for _, p := range t.Properties().All() {
 				rv := rv.MapIndex(reflect.ValueOf(p.Name))
 				if !rv.IsValid() {
 					continue

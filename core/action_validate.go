@@ -542,7 +542,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if action.OrderBy == "" {
 			return errors.BadRequest("order by property cannot be empty when exporting users to file")
 		}
-		p, err := types.PropertyByPath(inSchema, action.OrderBy)
+		p, err := inSchema.Properties().ByPath(action.OrderBy)
 		if err != nil {
 			return errors.BadRequest("order by property cannot be found in action's input schema: %s", err)
 		}
@@ -738,7 +738,7 @@ func canBeUsedAsTableKey(k types.Kind) bool {
 func unusedPropertyPaths(schema types.Type, usedPaths []string) []string {
 	var unusedPaths []string
 walk:
-	for schemaPath, property := range types.WalkObjects(schema) {
+	for schemaPath, property := range schema.Properties().WalkObjects() {
 		if property.Type.Kind() == types.ObjectKind {
 			// Do not report unused errors for Object properties, only for their
 			// sub-properties.
@@ -777,7 +777,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 	isUserSchema := target == state.TargetUser &&
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
 
-	for path, p := range types.WalkAll(schema) {
+	for path, p := range schema.Properties().WalkAll() {
 		if p.Prefilled != "" {
 			return fmt.Errorf("%s action schema property %q has a prefilled value, but action schema properties cannot have prefilled values", io, path)
 		}
@@ -940,7 +940,7 @@ func validateTransformationFunctionPaths(io string, schema types.Type, paths []s
 	}
 	if schema.Valid() {
 		for _, p := range paths {
-			if _, err := types.PropertyByPath(schema, p); err != nil {
+			if _, err := schema.Properties().ByPath(p); err != nil {
 				return fmt.Errorf("%s property %q of transformation function does not exist in schema", io, p)
 			}
 		}

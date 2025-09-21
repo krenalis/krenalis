@@ -141,7 +141,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 
 			// Read the file.
 			_, gotSchema := c.File(fs, test.path, "Parquet", "", meergotester.NoCompression, nil, 0)
-			gotProperties := types.Properties(gotSchema)
+			gotProperties := gotSchema.Properties().Slice()
 
 			// Validate the properties.
 			if len(gotProperties) != len(test.expectedProperties) {

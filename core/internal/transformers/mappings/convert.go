@@ -763,7 +763,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			vt := st.Elem()
 			var err error
-			for _, p := range dt.Properties() {
+			for _, p := range dt.Properties().All() {
 				if value, ok := s[p.Name]; ok {
 					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, inPlace, layouts, purpose)
 					if err != nil {
@@ -801,7 +801,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 		switch purpose {
 		case Create:
-			for _, p := range dt.Properties() {
+			for _, p := range dt.Properties().All() {
 				if !p.CreateRequired {
 					continue
 				}
@@ -810,7 +810,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				}
 			}
 		case Update:
-			for _, p := range dt.Properties() {
+			for _, p := range dt.Properties().All() {
 				if !p.UpdateRequired {
 					continue
 				}
@@ -849,7 +849,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			vt := dt.Elem()
 			var err error
-			for _, p := range st.Properties() {
+			for _, p := range st.Properties().All() {
 				if value, ok := s[p.Name]; ok {
 					d[p.Name], err = convert(value, p.Type, vt, true, inPlace, layouts, purpose)
 					if err != nil {

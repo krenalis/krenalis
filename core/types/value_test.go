@@ -440,7 +440,7 @@ func equalValues(t Type, v1, v2 any) error {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
 		}
 		unexpected := maps.Clone(o2)
-		for _, p := range t.Properties() {
+		for _, p := range t.Properties().All() {
 			s1, ok := o1[p.Name]
 			if !ok {
 				_, ok := o2[p.Name]

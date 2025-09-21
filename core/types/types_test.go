@@ -170,26 +170,6 @@ func Test_ObjectOf_Errors(t *testing.T) {
 
 }
 
-func Test_Properties(t *testing.T) {
-	properties := []Property{
-		{Name: "a", Type: Text()},
-		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
-		})},
-		{Name: "c", Type: Boolean()},
-	}
-	i := 0
-	for k, p := range Object(properties).Properties() {
-		if k != i {
-			t.Fatalf("expected i=%d, got i=%d", i, k)
-		}
-		if err := sameProperty(p, properties[i]); err != nil {
-			t.Fatal(err)
-		}
-		i++
-	}
-}
-
 func Test_Unique(t *testing.T) {
 	t.Run("array unique", func(t *testing.T) {
 		a := Array(Text()).WithUnique()
@@ -405,22 +385,37 @@ func sameType(t1, t2 Type) error {
 		if t2.vl == nil {
 			return errors.New("expected properties, got nil")
 		}
-		properties2, ok := t2.vl.([]Property)
+		pn2, ok := t2.vl.(Properties)
 		if !ok {
 			return fmt.Errorf("expected properties, got a %T value", t2.vl)
 		}
-		if properties2 == nil {
-			return fmt.Errorf("unexpected []Property(nil)")
+		if pn2.properties == nil {
+			return fmt.Errorf("unexpected nil properties")
 		}
-		properties1 := t1.vl.([]Property)
-		if len(properties1) != len(properties2) {
-			return fmt.Errorf("expected %d properties, got %d", len(properties1), len(properties2))
+		if pn2.names == nil {
+			return fmt.Errorf("unexpected nil names")
 		}
-		for i, p1 := range properties1 {
-			p2 := properties2[i]
+		pn1 := t1.vl.(Properties)
+		if len(pn1.properties) != len(pn2.properties) {
+			return fmt.Errorf("expected %d properties, got %d", len(pn1.properties), len(pn2.properties))
+		}
+		if len(pn1.names) != len(pn2.names) {
+			return fmt.Errorf("expected %d names, got %d", len(pn1.names), len(pn2.names))
+		}
+		for i, p1 := range pn1.properties {
+			p2 := pn2.properties[i]
 			err := sameProperty(p1, p2)
 			if err != nil {
 				return err
+			}
+		}
+		for n1, i1 := range pn1.names {
+			i2, ok := pn2.names[n1]
+			if !ok {
+				return fmt.Errorf("expected name %q, got no name", n1)
+			}
+			if i1 != i2 {
+				return fmt.Errorf("expected index %d, got %d", i1, i2)
 			}
 		}
 	}

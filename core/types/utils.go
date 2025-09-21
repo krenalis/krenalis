@@ -9,7 +9,6 @@ package types
 
 import (
 	"fmt"
-	"iter"
 	"regexp"
 	"slices"
 	"strings"
@@ -90,13 +89,14 @@ func Equal(t1, t2 Type) bool {
 	case decimalRange:
 		vl2 := t2.vl.(decimalRange)
 		return vl1.min.Equal(vl2.min) && vl1.max.Equal(vl2.max)
-	case []Property:
-		vl2 := t2.vl.([]Property)
-		if len(vl1) != len(vl2) {
+	case Properties:
+		pp1 := vl1.properties
+		pp2 := t2.vl.(Properties).properties
+		if len(pp1) != len(pp2) {
 			return false
 		}
-		for i, p1 := range vl1 {
-			p2 := (vl2)[i]
+		for i, p1 := range pp1 {
+			p2 := (pp2)[i]
 			if p1.Name != p2.Name ||
 				p1.Prefilled != p2.Prefilled ||
 				p1.CreateRequired != p2.CreateRequired ||
@@ -119,51 +119,6 @@ func Equal(t1, t2 Type) bool {
 	panic("unreachable code")
 }
 
-// IsValidPropertyName reports whether name is a valid property name.
-// A property name must:
-//   - start with [A-Za-z_]
-//   - subsequently contain only [A-Za-z0-9_]
-func IsValidPropertyName(name string) bool {
-	if name == "" {
-		return false
-	}
-	for i := 0; i < len(name); i++ {
-		c := name[i]
-		if !('a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return false
-		}
-	}
-	return true
-}
-
-// IsValidPropertyPath reports whether path is a valid property path.
-// A property path is formed by property names separated by periods.
-func IsValidPropertyPath(path string) bool {
-	for path != "" {
-		i := strings.IndexByte(path, '.')
-		if i == -1 {
-			i = len(path)
-		}
-		if !IsValidPropertyName(path[:i]) {
-			return false
-		}
-		if i == len(path) {
-			return true
-		}
-		path = path[i+1:]
-	}
-	return false
-}
-
-// NumProperties returns the count of properties in t.
-// Panics if t is not an object type.
-func NumProperties(t Type) int {
-	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-object type")
-	}
-	return len(t.vl.([]Property))
-}
-
 // ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
 // and returns it in the canonical form without uppercase letters. The boolean
 // return value reports whether s is a UUID in the standard form.
@@ -176,163 +131,6 @@ func ParseUUID(s string) (string, bool) {
 		return "", false
 	}
 	return id.String(), true
-}
-
-// Properties returns the properties of the object type t.
-// Panics if t is not an object type.
-func Properties(t Type) []Property {
-	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-object type")
-	}
-	properties := t.vl.([]Property)
-	pp := make([]Property, len(properties))
-	copy(pp, properties)
-	return pp
-}
-
-// PropertyByPath returns the property with the given path in the object t.
-// If the property does not exist, it returns the last valid property found (if
-// any), and a PathNotExistError error.
-//
-// Unlike Walk, it does not traverse through arrays and maps. If path is "x.y"
-// and the type of "x" is not an object, it returns a PathNotExistError error.
-//
-// It panics if t is not of type object or if path is not a valid path.
-func PropertyByPath(t Type, path string) (Property, error) {
-	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-object type")
-	}
-	var p *Property
-	name, rest := "", path
-Rest:
-	for {
-		name, rest, _ = strings.Cut(rest, ".")
-		if t.kind != ObjectKind {
-			break
-		}
-		properties := t.vl.([]Property)
-		for j := 0; j < len(properties); j++ {
-			if properties[j].Name != name {
-				continue
-			}
-			if rest == "" {
-				return properties[j], nil
-			}
-			p = &properties[j]
-			t = p.Type
-			continue Rest
-		}
-		break
-	}
-	if !IsValidPropertyPath(path) {
-		panic("invalid property path")
-	}
-	err := PathNotExistError{strings.TrimSuffix(strings.TrimSuffix(path, rest), ".")}
-	if p == nil {
-		return Property{}, err
-	}
-	return *p, err
-}
-
-// PropertyByPathSlice is like PropertyByPath but takes a slice of property
-// names as the path.
-// It also panics if path is empty.
-func PropertyByPathSlice(t Type, path []string) (Property, error) {
-	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-object type")
-	}
-	if len(path) == 0 {
-		panic("path is empty")
-	}
-	var p *Property
-	last := len(path) - 1
-	i := 0
-	var name string
-Rest:
-	for i, name = range path {
-		if t.kind != ObjectKind {
-			break
-		}
-		properties := t.vl.([]Property)
-		for j := 0; j < len(properties); j++ {
-			if properties[j].Name != name {
-				continue
-			}
-			if i == last {
-				return properties[j], nil
-			}
-			p = &properties[j]
-			t = p.Type
-			continue Rest
-		}
-		break
-	}
-	for _, name := range path {
-		if !IsValidPropertyName(name) {
-			panic("invalid property path")
-		}
-	}
-	err := PathNotExistError{strings.Join(path[:i+1], ".")}
-	if p == nil {
-		return Property{}, err
-	}
-	return *p, err
-}
-
-// PropertyExists reports whether property with the given path exists in the
-// object t.
-//
-// If path is "x.y" and the property "x" has type array(T) or map(T), it reports
-// whether T has the property "y".
-//
-// It panics if t is not of type object or if path is not a valid path.
-func PropertyExists(t Type, path string) bool {
-	if t.kind != ObjectKind {
-		panic("cannot check the properties of a non-object type")
-	}
-	if !IsValidPropertyPath(path) {
-		panic("invalid property path")
-	}
-	var name string
-Object:
-	for {
-		name, path, _ = strings.Cut(path, ".")
-		properties := t.vl.([]Property)
-		for i := 0; i < len(properties); i++ {
-			if properties[i].Name != name {
-				continue
-			}
-			if path == "" {
-				return true
-			}
-			t = properties[i].Type
-			for {
-				switch t.kind {
-				case ObjectKind:
-					continue Object
-				case ArrayKind, MapKind:
-					t = t.Elem()
-				default:
-					return false
-				}
-			}
-		}
-		return false
-	}
-}
-
-// PropertyNames returns the names of the properties of the object t.
-// Panics if t is not an object type.
-func PropertyNames(t Type) []string {
-	if t.kind != ObjectKind {
-		panic("cannot get the property names of a non-object type")
-	}
-	pp := t.vl.([]Property)
-	names := make([]string, len(pp))
-	for i := 0; i < len(pp); i++ {
-		names[i] = pp[i].Name
-	}
-	return names
 }
 
 // SubsetByPathFunc returns a subset of the object t, including the properties
@@ -362,7 +160,7 @@ func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 	propByPath := map[string]Property{} // every property in t.
 	var maxDepth int                    // 1 means: top level property, such as "a".
 	fReturnedTrue := map[string]struct{}{}
-	for path, property := range WalkObjects(t) {
+	for path, property := range t.Properties().WalkObjects() {
 		propByPath[path] = property
 		if !f(path) {
 			continue
@@ -411,7 +209,11 @@ func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 					vl = append(vl, propByPath[p])
 				}
 			}
-			property.Type.vl = vl
+			names := make(map[string]int, len(vl))
+			for i, p := range vl {
+				names[p.Name] = i
+			}
+			property.Type.vl = Properties{properties: vl, names: names}
 			propByPath[path] = property
 		}
 	}
@@ -442,7 +244,7 @@ func SubsetFunc(t Type, f func(p Property) bool) Type {
 		panic("cannot get a subset of a non-object type")
 	}
 	var ps []Property
-	pp := t.vl.([]Property)
+	pp := t.vl.(Properties).properties
 	all := true
 	for i := 0; i < len(pp); i++ {
 		if f(pp[i]) {
@@ -462,42 +264,11 @@ func SubsetFunc(t Type, f func(p Property) bool) Type {
 	if ps == nil {
 		return Type{}
 	}
-	return Type{kind: ObjectKind, vl: ps}
-}
-
-// WalkAll returns an iterator over all the properties in t in a depth-first
-// order.
-//
-// For example:
-//
-//	for path, property := range WalkAll(t) {
-//	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
-//	}
-//
-// WalkAll - unlike WalkObjects - navigates into array and maps, so if a
-// property "x" has type array(T) or map(T) and T has the property "y", its path
-// is "x.y".
-//
-// It panics if t is not an object.
-func WalkAll(t Type) iter.Seq2[string, Property] {
-	return walk(t, true)
-}
-
-// WalkObjects returns an iterator over all the object properties in t in a
-// depth-first order.
-//
-// For example:
-//
-//	for path, property := range WalkObjects(t) {
-//	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
-//	}
-//
-// WalkObjects - unlike WalkAll - does not navigate through array or map
-// properties, navigating only through object properties.
-//
-// It panics if t is not an object.
-func WalkObjects(t Type) iter.Seq2[string, Property] {
-	return walk(t, false)
+	names := make(map[string]int, len(ps))
+	for i, p := range ps {
+		names[p.Name] = i
+	}
+	return Type{kind: ObjectKind, vl: Properties{properties: ps, names: names}}
 }
 
 // asRole is a recursive function called by the Type.AsRole method. t must be an
@@ -505,7 +276,7 @@ func WalkObjects(t Type) iter.Seq2[string, Property] {
 // resulting type and a boolean indicating whether the returned type is
 // different from t.
 func asRole(t Type, role Role) (Type, bool) {
-	var pp = t.vl.([]Property)
+	pp := t.vl.(Properties).properties
 	var ppc []Property
 	for i := 0; i < len(pp); i++ {
 		if pp[i].Type.Kind() == ObjectKind {
@@ -537,47 +308,9 @@ func asRole(t Type, role Role) (Type, bool) {
 	if ppc == nil {
 		return t, false
 	}
-	return Type{kind: ObjectKind, vl: ppc}, true
-}
-
-// walk is the internal function underlying the exported functions WalkAll and
-// WalkObjects. descendIntoArrayMap determines whether navigation should descend
-// inside the array and map properties, thus navigating inside them, or not do
-// so and limit navigation to objects only.
-func walk(t Type, descendIntoArrayMap bool) iter.Seq2[string, Property] {
-	if t.kind != ObjectKind {
-		panic("cannot iterate over a non-object type")
+	names := make(map[string]int, len(ppc))
+	for i, p := range ppc {
+		names[p.Name] = i
 	}
-	return func(yield func(path string, property Property) bool) {
-		type entry struct {
-			base string
-			prop *Property
-		}
-		properties := t.vl.([]Property)
-		n := len(properties)
-		pp := make([]entry, n)
-		for i := 0; i < n; i++ {
-			pp[i].prop = &properties[n-1-i]
-		}
-		for len(pp) > 0 {
-			var e entry
-			n := len(pp)
-			e, pp = pp[n-1], pp[:n-1]
-			t := e.prop.Type
-			if descendIntoArrayMap {
-				for t.kind == MapKind || t.kind == ArrayKind {
-					t = t.Elem()
-				}
-			}
-			if t.kind == ObjectKind {
-				properties := t.vl.([]Property)
-				for i := len(properties) - 1; i >= 0; i-- {
-					pp = append(pp, entry{base: e.base + e.prop.Name + ".", prop: &properties[i]})
-				}
-			}
-			if !yield(e.base+e.prop.Name, *e.prop) {
-				return
-			}
-		}
-	}
+	return Type{kind: ObjectKind, vl: Properties{properties: ppc, names: names}}, true
 }

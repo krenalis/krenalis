@@ -44,12 +44,12 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	}
 
 	oldPropsByName := map[string]types.Property{}
-	for _, p := range oldSchema.Properties() {
+	for _, p := range oldSchema.Properties().All() {
 		oldPropsByName[p.Name] = p
 	}
 
 	newPropsByName := map[string]types.Property{}
-	for _, p := range newSchema.Properties() {
+	for _, p := range newSchema.Properties().All() {
 		newPropsByName[p.Name] = p
 	}
 
@@ -96,8 +96,8 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	//   They appear in "rePaths" (the key is the name of the property that
 	//   "occupied the name", the value is the name of the deleted property).
 
-	oldNames := types.PropertyNames(oldSchema)
-	newNames := types.PropertyNames(newSchema)
+	oldNames := oldSchema.Properties().Names()
+	newNames := newSchema.Properties().Names()
 
 	addedNames := difference(newNames, oldNames)
 	droppedNames := difference(oldNames, newNames)
@@ -354,7 +354,7 @@ func propPathToName(path string) string {
 
 func propertyPaths(obj types.Type) []string {
 	paths := []string{}
-	for _, p := range obj.Properties() {
+	for _, p := range obj.Properties().All() {
 		if p.Type.Kind() == types.ObjectKind {
 			for _, sub := range propertyPaths(p.Type) {
 				paths = append(paths, appendPath(p.Name, sub))

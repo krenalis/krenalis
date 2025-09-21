@@ -463,7 +463,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			if t.Valid() {
 				switch purpose {
 				case Create:
-					for _, p := range t.Properties() {
+					for _, p := range t.Properties().All() {
 						if !p.CreateRequired {
 							continue
 						}
@@ -472,7 +472,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 						}
 					}
 				case Update:
-					for _, p := range t.Properties() {
+					for _, p := range t.Properties().All() {
 						if !p.UpdateRequired {
 							continue
 						}
