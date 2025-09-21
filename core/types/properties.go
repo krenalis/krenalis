@@ -36,17 +36,13 @@ const (
 )
 
 // ByName returns the property with the given name and a boolean indicating
-// whether it exists. If not found, it returns the zero Property and false.
-//
-// It panics if name is not a valid property name.
+// whether it exists. If the name is invalid or not found, it returns the zero
+// Property and false.
 func (pp Properties) ByName(name string) (Property, bool) {
 	if i, ok := pp.names[name]; ok {
 		return pp.properties[i], true
 	}
-	if IsValidPropertyName(name) {
-		return Property{}, false
-	}
-	panic(invalidNameMsg)
+	return Property{}, false
 }
 
 // ByPath returns the property with the given path. If the property does not
@@ -123,17 +119,11 @@ func (pp Properties) ByPathSlice(path []string) (Property, error) {
 	return *p, err
 }
 
-// Contains reports whether a property with the given name exists.
-//
-// It panics if name is not a valid property name.
-func (pp Properties) Contains(name string) bool {
-	if _, ok := pp.names[name]; ok {
-		return true
-	}
-	if IsValidPropertyName(name) {
-		return false
-	}
-	panic(invalidNameMsg)
+// ContainsName reports whether a property with the given name exists.
+// If the name is invalid or not found, it returns the zero Property and false.
+func (pp Properties) ContainsName(name string) bool {
+	_, ok := pp.names[name]
+	return ok
 }
 
 // ContainsPath reports whether property with the given path exists.

@@ -45,6 +45,9 @@ func Test_Properties_ByName(t *testing.T) {
 		{"b", Property{Name: "b", Type: Object([]Property{{Name: "x", Type: Text()}})}, true},
 		{"a", Property{Name: "a", Type: Boolean()}, true},
 		{"x", Property{}, false},
+		{"", Property{}, false},
+		{"a.", Property{}, false},
+		{"6", Property{}, false},
 	}
 	properties := schema.Properties()
 	for _, test := range tests {
@@ -58,17 +61,6 @@ func Test_Properties_ByName(t *testing.T) {
 		if err := sameProperty(test.expected, got); err != nil {
 			t.Fatal(err)
 		}
-	}
-	// Test invalid names.
-	for _, name := range []string{"", ".", " ", "b.x"} {
-		func() {
-			defer func() {
-				if recover() == nil {
-					t.Fatal("expected panic")
-				}
-			}()
-			properties.ByName(name)
-		}()
 	}
 }
 
@@ -245,7 +237,7 @@ func Test_Properties_ByPath(t *testing.T) {
 	}
 }
 
-func Test_Properties_Contain(t *testing.T) {
+func Test_Properties_ContainsName(t *testing.T) {
 	properties := []Property{
 		{Name: "k", Type: Text()},
 		{Name: "b", Type: Object([]Property{
@@ -261,24 +253,17 @@ func Test_Properties_Contain(t *testing.T) {
 		{"b", true},
 		{"a", true},
 		{"x", false},
+		{"", false},
+		{".", false},
+		{"a.", false},
+		{"2", false},
 	}
 	pn := Object(properties).Properties()
 	for _, test := range tests {
-		got := pn.Contains(test.name)
+		got := pn.ContainsName(test.name)
 		if test.expected != got {
 			t.Fatalf("expected %t, got %t", test.expected, got)
 		}
-	}
-	// Test invalid names.
-	for _, name := range []string{"", ".", " ", "b.x"} {
-		func() {
-			defer func() {
-				if recover() == nil {
-					t.Fatal("expected panic")
-				}
-			}()
-			pn.Contains(name)
-		}()
 	}
 }
 
