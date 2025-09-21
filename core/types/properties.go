@@ -30,7 +30,24 @@ func (pp Properties) All() iter.Seq2[int, Property] {
 	}
 }
 
-const invalidPathMsg = "invalid property path"
+const (
+	invalidNameMsg = "invalid property name"
+	invalidPathMsg = "invalid property path"
+)
+
+// ByName returns the property with the given name and a boolean indicating
+// whether it exists. If not found, it returns the zero Property and false.
+//
+// It panics if name is not a valid property name.
+func (pp Properties) ByName(name string) (Property, bool) {
+	if i, ok := pp.names[name]; ok {
+		return pp.properties[i], true
+	}
+	if IsValidPropertyName(name) {
+		return Property{}, false
+	}
+	panic(invalidNameMsg)
+}
 
 // ByPath returns the property with the given path. If the property does not
 // exist, it returns the last valid property found (if any), and a
@@ -39,7 +56,7 @@ const invalidPathMsg = "invalid property path"
 // Unlike Walk, it does not traverse through arrays and maps. If path is "x.y"
 // and the type of "x" is not an object, it returns a PathNotExistError error.
 //
-// It panics if path is not a valid path.
+// It panics if path is not a valid property path.
 func (pp Properties) ByPath(path string) (Property, error) {
 	var p *Property
 	name, rest := "", path
@@ -108,7 +125,7 @@ func (pp Properties) ByPathSlice(path []string) (Property, error) {
 
 // Contains reports whether a property with the given name exists.
 //
-// It panics if path is not a valid property name.
+// It panics if name is not a valid property name.
 func (pp Properties) Contains(name string) bool {
 	if _, ok := pp.names[name]; ok {
 		return true
@@ -116,7 +133,7 @@ func (pp Properties) Contains(name string) bool {
 	if IsValidPropertyName(name) {
 		return false
 	}
-	panic("invalid property name")
+	panic(invalidNameMsg)
 }
 
 // ContainsPath reports whether property with the given path exists.

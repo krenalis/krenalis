@@ -27,6 +27,51 @@ func Test_Properties_All(t *testing.T) {
 	}
 }
 
+// Test_Properties_ByName tests Properties.ByName.
+func Test_Properties_ByName(t *testing.T) {
+	schema := Object([]Property{
+		{Name: "k", Type: Text()},
+		{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})},
+		{Name: "a", Type: Boolean()},
+	})
+	tests := []struct {
+		name     string
+		expected Property
+		ok       bool
+	}{
+		{"k", Property{Name: "k", Type: Text()}, true},
+		{"b", Property{Name: "b", Type: Object([]Property{{Name: "x", Type: Text()}})}, true},
+		{"a", Property{Name: "a", Type: Boolean()}, true},
+		{"x", Property{}, false},
+	}
+	properties := schema.Properties()
+	for _, test := range tests {
+		got, ok := properties.ByName(test.name)
+		if ok {
+			if !test.ok {
+				t.Fatal("expected not found, got found")
+			}
+			return
+		}
+		if err := sameProperty(test.expected, got); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Test invalid names.
+	for _, name := range []string{"", ".", " ", "b.x"} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("expected panic")
+				}
+			}()
+			properties.ByName(name)
+		}()
+	}
+}
+
 // Test_Properties_ByPath tests Properties.ByPath and Properties.ByPathSlice
 // methods.
 func Test_Properties_ByPath(t *testing.T) {
