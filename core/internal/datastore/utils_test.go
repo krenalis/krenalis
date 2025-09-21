@@ -16,7 +16,7 @@ import (
 
 var typ = types.Int(32)
 
-var properties = []types.Property{
+var schema = types.Object([]types.Property{
 	{Name: "__id__", Type: typ},
 	{Name: "a", Type: typ},
 	{Name: "b", Type: typ},
@@ -57,7 +57,7 @@ var properties = []types.Property{
 	{Name: "k", Type: typ},
 	{Name: "k_", Type: typ},
 	{Name: "k_a", Type: typ},
-}
+})
 
 func Test_propertiesToColumns(t *testing.T) {
 
@@ -88,7 +88,7 @@ func Test_propertiesToColumns(t *testing.T) {
 		{Name: "k_a", Type: typ},
 	}
 
-	got := util.PropertiesToColumns(types.Object(properties))
+	got := util.PropertiesToColumns(schema.Properties())
 	if len(got) != len(columns) {
 		t.Fatalf("expected %d columns, got %d", len(columns), len(got))
 	}

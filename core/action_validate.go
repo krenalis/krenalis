@@ -135,11 +135,19 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		return errors.BadRequest("%s", err)
 	}
 	// Check that, if the schemas are valid, they have type object.
-	if inSchema.Valid() && inSchema.Kind() != types.ObjectKind {
-		return errors.BadRequest("input schema, if provided, must be an object")
+	var inProperties types.Properties
+	if inSchema.Valid() {
+		if inSchema.Kind() != types.ObjectKind {
+			return errors.BadRequest("input schema, if provided, must be an object")
+		}
+		inProperties = inSchema.Properties()
 	}
-	if outSchema.Valid() && outSchema.Kind() != types.ObjectKind {
-		return errors.BadRequest("out schema, if provided, must be an object")
+	var outProperties types.Properties
+	if outSchema.Valid() {
+		if outSchema.Kind() != types.ObjectKind {
+			return errors.BadRequest("out schema, if provided, must be an object")
+		}
+		outProperties = outSchema.Properties()
 	}
 	// Validate the filter.
 	var usedInPaths []string
@@ -289,7 +297,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
-		in, ok := inSchema.Properties().ByName(action.Matching.In)
+		in, ok := inProperties.ByName(action.Matching.In)
 		if !ok {
 			return errors.BadRequest("input matching property %q not found within the input schema", action.Matching.In)
 		}
@@ -307,7 +315,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			}
 			return errors.BadRequest("output matching property %q is not a valid property name", action.Matching.Out)
 		}
-		out, ok := outSchema.Properties().ByName(action.Matching.Out)
+		out, ok := outProperties.ByName(action.Matching.Out)
 		if !ok {
 			return errors.BadRequest("output matching property %q not found within the output schema", action.Matching.Out)
 		}
@@ -477,7 +485,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if action.IdentityColumn == "" {
 			return errors.BadRequest("identity column is mandatory")
 		}
-		identityColumn, ok := inSchema.Properties().ByName(action.IdentityColumn)
+		identityColumn, ok := inProperties.ByName(action.IdentityColumn)
 		if !ok {
 			return errors.BadRequest("identity column %q not found within input schema", action.IdentityColumn)
 		}
@@ -493,7 +501,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		// Validate the last change time column and format.
 		var requiresLastChangeTimeFormat bool
 		if action.LastChangeTimeColumn != "" {
-			lastChangeTime, ok := inSchema.Properties().ByName(action.LastChangeTimeColumn)
+			lastChangeTime, ok := inProperties.ByName(action.LastChangeTimeColumn)
 			if !ok {
 				return errors.BadRequest("last change time column %q not found within input schema", action.LastChangeTimeColumn)
 			}
@@ -580,7 +588,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !outSchema.Valid() {
 			return errors.BadRequest("out schema must be valid")
 		}
-		p, ok := outSchema.Properties().ByName(action.TableKey)
+		p, ok := outProperties.ByName(action.TableKey)
 		if !ok {
 			return errors.BadRequest("table key %q not found within output schema", action.TableKey)
 		}
@@ -939,8 +947,9 @@ func validateTransformationFunctionPaths(io string, schema types.Type, paths []s
 		}
 	}
 	if schema.Valid() {
+		properties := schema.Properties()
 		for _, p := range paths {
-			if _, err := schema.Properties().ByPath(p); err != nil {
+			if _, err := properties.ByPath(p); err != nil {
 				return fmt.Errorf("%s property %q of transformation function does not exist in schema", io, p)
 			}
 		}

@@ -80,11 +80,13 @@ func convertibleTo(st, dt types.Type) bool {
 			return true
 		}
 	case types.ObjectKind:
+		dProperties := dt.Properties()
 		switch sk {
 		case types.ObjectKind:
+			sProperties := st.Properties()
 			var hasSameNameProperty bool
-			for _, p := range st.Properties().All() {
-				if dp, ok := dt.Properties().ByName(p.Name); ok {
+			for _, p := range sProperties.All() {
+				if dp, ok := dProperties.ByName(p.Name); ok {
 					if !convertibleTo(p.Type, dp.Type) {
 						return false
 					}
@@ -94,7 +96,7 @@ func convertibleTo(st, dt types.Type) bool {
 			return hasSameNameProperty
 		case types.MapKind:
 			mapElemType := st.Elem()
-			for _, p := range dt.Properties().All() {
+			for _, p := range dProperties.All() {
 				if !convertibleTo(mapElemType, p.Type) {
 					return false
 				}

@@ -142,7 +142,7 @@ func (ds *Datastore) Initialize(ctx context.Context, typ string, settings []byte
 		return err
 	}
 	defer dw.Close()
-	userColumns := util.PropertiesToColumns(userSchema)
+	userColumns := util.PropertiesToColumns(userSchema.Properties())
 	err = dw.Initialize(ctx, userColumns)
 	if err != nil {
 		return err
@@ -293,7 +293,7 @@ func (ds *Datastore) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 // A property conflicts with another if their representation as columns in the
 // data warehouse has the same name when compared case-insensitively.
 func CheckConflictingProperties(io string, schema types.Type) error {
-	columns := util.PropertiesToColumns(schema)
+	columns := util.PropertiesToColumns(schema.Properties())
 	names := make(map[string]struct{})
 	for _, c := range columns {
 		name := strings.ToLower(c.Name)

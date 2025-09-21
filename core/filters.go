@@ -125,8 +125,9 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 		Logical:    convertFilterLogicalToWhere(filter.Logical),
 		Conditions: make([]state.WhereCondition, len(filter.Conditions)),
 	}
+	properties := schema.Properties()
 	for i, cond := range filter.Conditions {
-		p, _, _ := retrieveFilterProperty(schema, cond.Property)
+		p, _, _ := retrieveFilterProperty(properties, cond.Property)
 		var values []any
 		if cond.Values != nil {
 			values = make([]any, len(cond.Values))
@@ -190,6 +191,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 		Logical:    convertLogicalFromWhere(where.Logical),
 		Conditions: make([]FilterCondition, len(where.Conditions)),
 	}
+	properties := schema.Properties()
 	for i, cond := range where.Conditions {
 		var values []string
 		if cond.Values != nil {
@@ -203,7 +205,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			case bool:
 				v = strconv.FormatBool(value)
 			case float64:
-				p, _ := schema.Properties().ByPathSlice(cond.Property)
+				p, _ := properties.ByPathSlice(cond.Property)
 				v = strconv.FormatFloat(value, 'g', -1, p.Type.BitSize())
 			case int:
 				v = strconv.FormatInt(int64(value), 10)
@@ -212,7 +214,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			case decimal.Decimal:
 				v = value.String()
 			case time.Time:
-				p, _ := schema.Properties().ByPathSlice(cond.Property)
+				p, _ := properties.ByPathSlice(cond.Property)
 				switch p.Type.Kind() {
 				case types.DateTimeKind:
 					v = value.Format("2006-01-02T15:04:05.999999999")
@@ -392,12 +394,12 @@ func parseUint(s string) (uint, bool) {
 	return n, true
 }
 
-// retrieveFilterProperty retrieves a property located at a specific path within
-// a schema and returns the property along with its path. If the path points to
-// a json property, it returns the path to that json property.
+// retrieveFilterProperty retrieves a property. in properties, located at a
+// specific path and returns the property along with its path. If the path
+// points to a json property, it returns the path to that json property.
 // path must be a valid property path.
-func retrieveFilterProperty(schema types.Type, path string) (types.Property, string, error) {
-	p, err := schema.Properties().ByPath(path)
+func retrieveFilterProperty(properties types.Properties, path string) (types.Property, string, error) {
+	p, err := properties.ByPath(path)
 	if err != nil {
 		if p.Type.Kind() != types.JSONKind {
 			return types.Property{}, "", err
@@ -431,7 +433,8 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 		return nil, errors.New("conditions are missing")
 	}
 
-	var properties []string
+	var pp []string
+	properties := schema.Properties()
 
 	for _, cond := range filter.Conditions {
 
@@ -439,13 +442,13 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			return nil, errors.New("property path is not valid")
 		}
 
-		p, path, err := retrieveFilterProperty(schema, cond.Property)
+		p, path, err := retrieveFilterProperty(properties, cond.Property)
 		if err != nil {
 			return nil, err
 		}
 
-		if i, ok := slices.BinarySearch(properties, path); !ok {
-			properties = slices.Insert(properties, i, path)
+		if i, ok := slices.BinarySearch(pp, path); !ok {
+			pp = slices.Insert(pp, i, path)
 		}
 
 		op := cond.Operator
@@ -649,5 +652,5 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 		}
 	}
 
-	return properties, nil
+	return pp, nil
 }

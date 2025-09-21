@@ -718,6 +718,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 	case types.ObjectKind:
 		var d map[string]any
+		dProperties := dt.Properties()
 		switch sk {
 		case types.ObjectKind:
 			if types.Equal(st, dt) {
@@ -729,8 +730,9 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				d = make(map[string]any)
 			}
 			var err error
+			sProperties := st.Properties()
 			for name, value := range s {
-				dp, ok := dt.Properties().ByName(name)
+				dp, ok := dProperties.ByName(name)
 				if !ok {
 					if inPlace {
 						delete(d, name)
@@ -746,7 +748,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					}
 					continue
 				}
-				sp, ok := st.Properties().ByName(name)
+				sp, ok := sProperties.ByName(name)
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
@@ -763,7 +765,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			vt := st.Elem()
 			var err error
-			for _, p := range dt.Properties().All() {
+			for _, p := range dProperties.All() {
 				if value, ok := s[p.Name]; ok {
 					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, inPlace, layouts, purpose)
 					if err != nil {
@@ -787,7 +789,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				if !types.IsValidPropertyName(name) {
 					continue
 				}
-				p, ok := dt.Properties().ByName(name)
+				p, ok := dProperties.ByName(name)
 				if !ok {
 					continue
 				}
@@ -801,7 +803,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 		switch purpose {
 		case Create:
-			for _, p := range dt.Properties().All() {
+			for _, p := range dProperties.All() {
 				if !p.CreateRequired {
 					continue
 				}
@@ -810,7 +812,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				}
 			}
 		case Update:
-			for _, p := range dt.Properties().All() {
+			for _, p := range dProperties.All() {
 				if !p.UpdateRequired {
 					continue
 				}

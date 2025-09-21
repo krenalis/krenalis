@@ -140,7 +140,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // same ID.
 func (store *Store) AlterUserSchema(ctx context.Context, opID string, schema types.Type, operations []meergo.AlterOperation) error {
 	store.mustBeOpen()
-	columns := util.PropertiesToColumns(schema)
+	columns := util.PropertiesToColumns(schema.Properties())
 	return store.warehouse().AlterUserSchema(ctx, opID, columns, operations)
 }
 
@@ -334,7 +334,7 @@ func (store *Store) PreviewAlterUserSchema(ctx context.Context, schema types.Typ
 		return nil, err
 	}
 	defer done()
-	userColumns := util.PropertiesToColumns(schema)
+	userColumns := util.PropertiesToColumns(schema.Properties())
 	return store.warehouse().PreviewAlterUserSchema(ctx, userColumns, operations)
 }
 
@@ -380,7 +380,7 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 		return err
 	}
 	defer done()
-	userColumns := util.PropertiesToColumns(userSchema)
+	userColumns := util.PropertiesToColumns(userSchema.Properties())
 	return store.warehouse().Repair(ctx, userColumns)
 }
 
@@ -424,8 +424,9 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 
 	// Determine the identifiers columns.
 	identifiers := make([]meergo.Column, len(ws.Identifiers))
+	properties := ws.UserSchema.Properties()
 	for i, ident := range ws.Identifiers {
-		identifier, err := ws.UserSchema.Properties().ByPath(ident)
+		identifier, err := properties.ByPath(ident)
 		if err != nil {
 			return errors.New("unexpected error: identifier does not exist in user schema")
 		}
@@ -437,7 +438,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	}
 
 	// Determine the user columns.
-	userColumns := util.PropertiesToColumns(ws.UserSchema)
+	userColumns := util.PropertiesToColumns(properties)
 
 	// Determine the primary sources for every user column.
 	userPrimarySources := make(map[string]int, len(ws.UserPrimarySources))

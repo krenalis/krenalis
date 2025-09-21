@@ -72,12 +72,14 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		if k2 != types.ObjectKind {
 			return &Error{Msg: fmt.Sprintf("%q property's type has changed from object to %s", name, t2)}
 		}
-		for _, p1 := range t1.Properties().All() {
+		properties1 := t1.Properties()
+		properties2 := t2.Properties()
+		for _, p1 := range properties1.All() {
 			path := p1.Name
 			if name != "" {
 				path = name + "." + path
 			}
-			p2, ok := t2.Properties().ByName(p1.Name)
+			p2, ok := properties2.ByName(p1.Name)
 			if !ok {
 				return &Error{Msg: fmt.Sprintf("%q property no longer exists", path)}
 			}
@@ -115,13 +117,13 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		if exportMode == nil {
 			return nil
 		}
-		for _, p := range t2.Properties().All() {
+		for _, p := range properties2.All() {
 			checkCreate := p.CreateRequired && *exportMode != state.UpdateOnly
 			checkUpdate := p.UpdateRequired && *exportMode != state.CreateOnly
 			if !checkCreate && !checkUpdate {
 				continue
 			}
-			if t1.Properties().ContainsPath(p.Name) {
+			if properties1.ContainsPath(p.Name) {
 				continue
 			}
 			if checkCreate {

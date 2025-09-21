@@ -910,16 +910,14 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 
 	this.core.mustBeOpen()
 
+	eventProperties := schemas.Event.Properties()
+
 	// Validate the properties.
 	if len(properties) == 0 {
 		return nil, errors.BadRequest("properties is empty")
 	}
-	propertyByName := map[string]types.Property{}
-	for _, p := range schemas.Event.Properties().All() {
-		propertyByName[p.Name] = p
-	}
 	for _, name := range properties {
-		if _, ok := propertyByName[name]; !ok {
+		if _, ok := eventProperties.ByName(name); !ok {
 			if name == "" {
 				return nil, errors.BadRequest("a property name is empty")
 			}
@@ -945,11 +943,11 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 
 	// Validate the order.
 	if order != "" {
-		if !types.IsValidPropertyName(order) {
-			return nil, errors.BadRequest("order %q is not a valid property name", order)
-		}
-		orderProperty, ok := propertyByName[order]
+		orderProperty, ok := eventProperties.ByName(order)
 		if !ok {
+			if !types.IsValidPropertyName(order) {
+				return nil, errors.BadRequest("order %q is not a valid property name", order)
+			}
 			return nil, errors.BadRequest("order property %q does not exist", order)
 		}
 		switch orderProperty.Type.Kind() {
@@ -1550,8 +1548,9 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 			if err != nil {
 				return nil, err
 			}
+			properties := schema.Properties()
 			for _, path := range identifiers {
-				p, err := schema.Properties().ByPath(path)
+				p, err := properties.ByPath(path)
 				if err != nil {
 					return nil, errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
 				}
@@ -1757,16 +1756,14 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	ws := this.workspace
 
+	userProperties := ws.UserSchema.Properties()
+
 	// Validate the properties.
 	if len(properties) == 0 {
 		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
 	}
-	propertyByName := map[string]types.Property{}
-	for _, p := range ws.UserSchema.Properties().All() {
-		propertyByName[p.Name] = p
-	}
 	for _, name := range properties {
-		if _, ok := propertyByName[name]; !ok {
+		if _, ok := userProperties.ByName(name); !ok {
 			if name == "" {
 				return nil, types.Type{}, 0, errors.BadRequest("a property name is empty")
 			}
@@ -1792,11 +1789,11 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	// Validate the order.
 	if order != "" {
-		if !types.IsValidPropertyName(order) {
-			return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
-		}
-		orderProperty, ok := propertyByName[order]
+		orderProperty, ok := userProperties.ByName(order)
 		if !ok {
+			if !types.IsValidPropertyName(order) {
+				return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
+			}
 			return nil, types.Type{}, 0, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.Kind() {
@@ -1838,7 +1835,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	// Create the schema to return, with only the requested properties.
 	props := make([]types.Property, len(properties))
 	for i, name := range properties {
-		props[i] = propertyByName[name]
+		props[i], _ = userProperties.ByName(name)
 	}
 	schema := types.Object(props)
 

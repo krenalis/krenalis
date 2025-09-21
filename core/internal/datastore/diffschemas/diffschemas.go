@@ -43,15 +43,8 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		panic("not an object")
 	}
 
-	oldPropsByName := map[string]types.Property{}
-	for _, p := range oldSchema.Properties().All() {
-		oldPropsByName[p.Name] = p
-	}
-
-	newPropsByName := map[string]types.Property{}
-	for _, p := range newSchema.Properties().All() {
-		newPropsByName[p.Name] = p
-	}
+	oldProperties := oldSchema.Properties()
+	newProperties := newSchema.Properties()
 
 	operations := []meergo.AlterOperation{}
 
@@ -116,15 +109,15 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		newPath := appendPath(path, addedName)
 		if oldPath, ok := rePaths[newPath].(string); ok {
 			oldName := propPathToName(oldPath)
-			oldProp := oldPropsByName[oldName]
-			newProp := newPropsByName[addedName]
+			oldProp, _ := oldProperties.ByName(oldName)
+			newProp, _ := newProperties.ByName(addedName)
 			newNameOf[oldName] = addedName
 			if newProp.Type.Kind() == types.ObjectKind {
 				if !types.Equal(oldProp.Type, newProp.Type) {
 					return nil, fmt.Errorf("it is not possible to rename an object property (%q, renamed to %q) and simultaneously make changes to its descendant properties", appendPath(path, oldName), appendPath(path, addedName))
 
 				}
-				for _, c := range util.PropertiesToColumns(newProp.Type) {
+				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
 					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
@@ -146,9 +139,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 
 		// New properties, whose name did not already exist in the schema.
 		// They do not appear in "rePaths".
-		p := newPropsByName[addedName]
+		p, _ := newProperties.ByName(addedName)
 		if p.Type.Kind() == types.ObjectKind {
-			for _, c := range util.PropertiesToColumns(p.Type) {
+			for _, c := range util.PropertiesToColumns(p.Type.Properties()) {
 				operations = append(operations, meergo.AlterOperation{
 					Operation: meergo.OperationAddColumn,
 					Column:    pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
@@ -185,7 +178,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 
 		// Deleted properties, whose name has not been reused by any property.
 		// They do not appear in "rePaths".
-		droppedProp := oldPropsByName[droppedName]
+		droppedProp, _ := oldProperties.ByName(droppedName)
 		if droppedProp.Type.Kind() == types.ObjectKind {
 			for _, p := range propertyPaths(droppedProp.Type) {
 				operations = append(operations, meergo.AlterOperation{
@@ -204,8 +197,8 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	// Iterate over KeptNames.
 	for _, keptName := range keptNames {
 
-		oldProp := oldPropsByName[keptName]
-		newProp := newPropsByName[keptName]
+		oldProp, _ := oldProperties.ByName(keptName)
+		newProp, _ := newProperties.ByName(keptName)
 		keptPath := appendPath(path, keptName)
 
 		if v, ok := rePaths[keptPath]; ok && v == nil {
@@ -238,7 +231,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					})
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
-				for _, c := range util.PropertiesToColumns(newProp.Type) {
+				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
 					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationAddColumn,
 						Column:    pathToColumn(appendPath(path, keptPath)) + "_" + c.Name,
@@ -269,7 +262,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			}
 			newNameOf[propPathToName(oldPath)] = keptName
 			if newProp.Type.Kind() == types.ObjectKind {
-				for _, c := range util.PropertiesToColumns(newProp.Type) {
+				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
 					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,

@@ -417,6 +417,10 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		switch t.Kind() {
 		case types.ObjectKind, types.InvalidKind:
 			o := map[string]any{}
+			var tProperties types.Properties
+			if t.Valid() {
+				tProperties = t.Properties()
+			}
 			for {
 				if d.peekKind() == '}' {
 					break
@@ -427,14 +431,17 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					return nil, err
 				}
 				name := tok.String()
-				if !types.IsValidPropertyName(name) {
-					return nil, newRecordValidationError(name, "does not exist")
-				}
 				if !t.Valid() {
+					if !types.IsValidPropertyName(name) {
+						return nil, newRecordValidationError(name, "does not exist")
+					}
 					return nil, newRecordValidationError(name, "does not exist")
 				}
-				p, ok := t.Properties().ByName(name)
+				p, ok := tProperties.ByName(name)
 				if !ok {
+					if !types.IsValidPropertyName(name) {
+						return nil, newRecordValidationError(name, "does not exist")
+					}
 					return nil, newRecordValidationError(name, "does not exist")
 				}
 				// Read the property's value.
@@ -463,7 +470,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			if t.Valid() {
 				switch purpose {
 				case Create:
-					for _, p := range t.Properties().All() {
+					for _, p := range tProperties.All() {
 						if !p.CreateRequired {
 							continue
 						}
@@ -472,7 +479,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 						}
 					}
 				case Update:
-					for _, p := range t.Properties().All() {
+					for _, p := range tProperties.All() {
 						if !p.UpdateRequired {
 							continue
 						}

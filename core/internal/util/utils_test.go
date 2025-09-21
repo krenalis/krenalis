@@ -180,7 +180,7 @@ func Test_PropertiesToColumns(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := PropertiesToColumns(tc.typ)
+			got := PropertiesToColumns(tc.typ.Properties())
 			if len(got) != len(tc.want) {
 				t.Fatalf("expected %d columns, got %d", len(tc.want), len(got))
 			}

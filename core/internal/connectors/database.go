@@ -258,17 +258,18 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			_ = rows.Close()
 		}
 	}()
+	properties := action.InSchema.Properties()
 	var identityColumn, lastChangeTimeColumn types.Property
 	for i, c := range columns {
 		if !c.Type.Valid() {
 			columns[i] = meergo.Column{}
 			continue
 		}
-		if !types.IsValidPropertyName(c.Name) {
-			return nil, connectorError(fmt.Errorf("connector %s has returned an invalid column name %q", database.connector, c.Name))
-		}
-		p, ok := action.InSchema.Properties().ByName(c.Name)
+		p, ok := properties.ByName(c.Name)
 		if !ok {
+			if !types.IsValidPropertyName(c.Name) {
+				return nil, connectorError(fmt.Errorf("connector %s has returned an invalid column name %q", database.connector, c.Name))
+			}
 			columns[i] = meergo.Column{}
 			continue
 		}
@@ -285,9 +286,8 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	if action.LastChangeTimeColumn != "" && lastChangeTimeColumn.Name == "" {
 		return nil, &schemas.Error{Msg: fmt.Sprintf("there is no last change time column %q", action.LastChangeTimeColumn)}
 	}
-	properties := columnsProperties(columns, state.Source)
 	// Check that schema is aligned with the query's schema.
-	schema, err := types.ObjectOf(properties)
+	schema, err := types.ObjectOf(columnsProperties(columns, state.Source))
 	if err != nil {
 		return nil, connectorError(rewriteColumnErrors(err))
 	}
@@ -383,8 +383,9 @@ func columnsIssues(columns []meergo.Column) ([]string, error) {
 
 // columnsOfType returns the properties of a type as meergo.Column values.
 func columnsOfType(t types.Type) []meergo.Column {
-	columns := make([]meergo.Column, t.Properties().Len())
-	for i, p := range t.Properties().All() {
+	properties := t.Properties()
+	columns := make([]meergo.Column, properties.Len())
+	for i, p := range properties.All() {
 		columns[i].Name = p.Name
 		columns[i].Type = p.Type
 		columns[i].Nullable = p.Nullable
@@ -568,13 +569,14 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			values: make([]any, len(r.columns)),
 		}
 		dest := make([]any, len(r.columns))
+		inSchemaProperties := r.action.InSchema.Properties()
 		properties := make([]types.Property, len(r.columns))
 		for i, c := range r.columns {
 			dest[i] = &scanner
 			if c.Name == "" { // skip unused columns
 				continue
 			}
-			p, _ := r.action.InSchema.Properties().ByName(c.Name)
+			p, _ := inSchemaProperties.ByName(c.Name)
 			properties[i] = p
 			if p.Name == r.action.IdentityColumn {
 				identityIndex = i

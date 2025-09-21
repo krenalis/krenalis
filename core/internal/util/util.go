@@ -53,13 +53,12 @@ func ParseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
 }
 
-// PropertiesToColumns returns the columns of properties of t.
-func PropertiesToColumns(t types.Type) []meergo.Column {
-
-	columns := make([]meergo.Column, 0, t.Properties().Len())
-	for _, p := range t.Properties().All() {
+// PropertiesToColumns returns the columns of properties.
+func PropertiesToColumns(properties types.Properties) []meergo.Column {
+	columns := make([]meergo.Column, 0, properties.Len())
+	for _, p := range properties.All() {
 		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range PropertiesToColumns(p.Type) {
+			for _, column := range PropertiesToColumns(p.Type.Properties()) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)
 			}

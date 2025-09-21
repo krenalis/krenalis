@@ -540,9 +540,11 @@ func Test_resolveFilterProperty(t *testing.T) {
 		{"d.z", types.Property{}, "", types.PathNotExistError{Path: "d.z"}},
 	}
 
+	properties := schema.Properties()
+
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			gotProperty, gotPath, err := retrieveFilterProperty(schema, test.path)
+			gotProperty, gotPath, err := retrieveFilterProperty(properties, test.path)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q  (type %T)", err, err)

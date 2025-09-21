@@ -64,8 +64,7 @@ func Test_Properties_ByName(t *testing.T) {
 	}
 }
 
-// Test_Properties_ByPath tests Properties.ByPath and Properties.ByPathSlice
-// methods.
+// Test_Properties_ByPath tests Properties.ByPath and Properties.ByPathSlice.
 func Test_Properties_ByPath(t *testing.T) {
 	cases := []struct {
 		name     string
