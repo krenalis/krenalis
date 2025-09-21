@@ -758,6 +758,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if obj == nil && nullable {
 			return nil, nil
 		}
+		var n int
 		var err error
 		for _, p := range typ.Properties() {
 			value, ok := obj[p.Name]
@@ -768,6 +769,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				}
 				continue
 			}
+			n++
 			obj[p.Name], err = normalize(p.Name, p.Type, value, p.Nullable, layouts)
 			if err != nil {
 				if err, ok := err.(InputValidationError); ok {
@@ -776,7 +778,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				return nil, err
 			}
 		}
-		if len(obj) != types.NumProperties(typ) {
+		if n < len(obj) {
 		SRC:
 			for name := range obj {
 				for _, p := range typ.Properties() {
