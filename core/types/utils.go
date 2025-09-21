@@ -268,7 +268,7 @@ Rest:
 			panic("invalid property path")
 		}
 	}
-	err := PathNotExistError{strings.Join(path[:i], ".")}
+	err := PathNotExistError{strings.Join(path[:i+1], ".")}
 	if p == nil {
 		return Property{}, err
 	}

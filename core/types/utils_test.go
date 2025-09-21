@@ -433,7 +433,7 @@ func Test_PropertyByPath(t *testing.T) {
 		},
 	}
 	for _, cas := range cases {
-		t.Run(cas.name, func(t *testing.T) {
+		t.Run("PropertyByPath: "+cas.name, func(t *testing.T) {
 			// Test PropertyByPath.
 			got, err := PropertyByPath(cas.t, cas.path)
 			if err != nil {
@@ -454,8 +454,10 @@ func Test_PropertyByPath(t *testing.T) {
 			if err := sameProperty(cas.expected, got); err != nil {
 				t.Fatal(err)
 			}
+		})
+		t.Run("PropertyByPathSlice: "+cas.name, func(t *testing.T) {
 			// Test PropertyByPathSlice.
-			got, err = PropertyByPathSlice(cas.t, strings.Split(cas.path, "."))
+			got, err := PropertyByPathSlice(cas.t, strings.Split(cas.path, "."))
 			if err != nil {
 				if cas.err == nil {
 					t.Fatalf("unexpected error: %s", err)
