@@ -236,9 +236,13 @@ Rest:
 
 // PropertyByPathSlice is like PropertyByPath but takes a slice of property
 // names as the path.
+// It also panics if path is empty.
 func PropertyByPathSlice(t Type, path []string) (Property, error) {
 	if t.kind != ObjectKind {
 		panic("cannot get the properties of a non-object type")
+	}
+	if len(path) == 0 {
+		panic("path is empty")
 	}
 	var p *Property
 	last := len(path) - 1

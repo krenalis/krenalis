@@ -478,6 +478,22 @@ func Test_PropertyByPath(t *testing.T) {
 			}
 		})
 	}
+	typ := Object([]Property{{Name: "first_name", Type: Text()}})
+	// Test PropertyByPathSlice with nil and empty path values.
+	for _, path := range [][]string{nil, {}} {
+		func() {
+			defer func() {
+				err := recover()
+				if err == nil {
+					t.Fatalf("PropertyByPathSlice(%#v): expected panic, got no panic", path)
+				}
+				if err != "path is empty" {
+					t.Fatalf("PropertyByPathSlice(%#v): expected panic message \"path is empty\", got panic message %q", path, err)
+				}
+			}()
+			_, _ = PropertyByPathSlice(typ, path)
+		}()
+	}
 }
 
 func Test_PropertyExists(t *testing.T) {
