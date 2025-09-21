@@ -178,12 +178,12 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	columns := file.action.InSchema.Properties().Slice()
 	records := make(chan fileRecord, 100)
 	result := make(chan error, 1)
 	writeCtx, cancelWrite := context.WithCancel(context.Background())
 	// Call the connector's Write method in its own goroutine.
 	go func() {
+		columns := file.action.InSchema.Properties().Slice()
 		r := newRecordReader(columns, records)
 		err = file.inner.(fileWriteConnector).Write(writeCtx, sw, file.action.Sheet, r)
 		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
@@ -193,7 +193,6 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 	}()
 	fw := &fileWriter{
 		cancelWrite: cancelWrite,
-		columns:     columns,
 		records:     records,
 		result:      result,
 	}
@@ -416,7 +415,6 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType, exten
 // fileWriter implements the Writer interface for files.
 type fileWriter struct {
 	cancelWrite context.CancelFunc
-	columns     []types.Property
 	records     chan<- fileRecord
 	result      <-chan error
 	closed      bool
