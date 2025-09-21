@@ -77,7 +77,7 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 			if name != "" {
 				path = name + "." + path
 			}
-			p2, ok := t2.Property(p1.Name)
+			p2, ok := t2.Properties().ByName(p1.Name)
 			if !ok {
 				return &Error{Msg: fmt.Sprintf("%q property no longer exists", path)}
 			}

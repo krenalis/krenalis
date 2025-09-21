@@ -48,8 +48,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	var matchingOut types.Property
 	if connector.Type == state.App {
 		// Get the matching properties.
-		matchingIn, _ = action.InSchema.Property(action.Matching.In)
-		matchingOut, _ = action.OutSchema.Property(action.Matching.Out)
+		matchingIn, _ = action.InSchema.Properties().ByName(action.Matching.In)
+		matchingOut, _ = action.OutSchema.Properties().ByName(action.Matching.Out)
 		matching = &datastore.Matching{
 			Action:             action.ID,
 			InProperty:         matchingIn.Name,
@@ -310,7 +310,7 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 	}
 
 	// Create a schema with only the out matching property.
-	matchingOut, _ := this.action.OutSchema.Property(this.action.Matching.Out)
+	matchingOut, _ := this.action.OutSchema.Properties().ByName(this.action.Matching.Out)
 	schema := types.Object([]types.Property{matchingOut})
 
 	records, err := this.app().Users(ctx, schema, time.Time{})

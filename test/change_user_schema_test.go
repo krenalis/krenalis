@@ -146,7 +146,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
 		t.Fatalf("invalid user schema: %s", err)
 	}
-	if p, ok := ws.UserSchema.Property("email"); ok {
+	if p, ok := ws.UserSchema.Properties().ByName("email"); ok {
 		t.Fatalf("expected no \"email\" property, got property %#v", p)
 	}
 	if p, err := ws.UserSchema.Properties().ByPath("android.id"); err == nil {
@@ -197,7 +197,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if n := ws.UserSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
-	p, _ := ws.UserSchema.Property("android")
+	p, _ := ws.UserSchema.Properties().ByName("android")
 	if n := p.Type.Properties().Len(); n != 2 {
 		t.Fatalf("expected 2 properties in the \"android\" object of the \"users\" schema, got %d", n)
 	}

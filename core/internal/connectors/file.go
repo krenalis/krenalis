@@ -655,7 +655,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		}
 		rw.properties = make([]types.Property, len(columns))
 		for i, c := range columns {
-			p, ok := rw.action.InSchema.Property(c.Name)
+			p, ok := rw.action.InSchema.Properties().ByName(c.Name)
 			if !ok {
 				continue
 			}

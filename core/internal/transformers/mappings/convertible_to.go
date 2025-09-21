@@ -84,7 +84,7 @@ func convertibleTo(st, dt types.Type) bool {
 		case types.ObjectKind:
 			var hasSameNameProperty bool
 			for _, p := range st.Properties().All() {
-				if dp, ok := dt.Property(p.Name); ok {
+				if dp, ok := dt.Properties().ByName(p.Name); ok {
 					if !convertibleTo(p.Type, dp.Type) {
 						return false
 					}

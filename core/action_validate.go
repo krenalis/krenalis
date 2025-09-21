@@ -289,7 +289,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
-		in, ok := inSchema.Property(action.Matching.In)
+		in, ok := inSchema.Properties().ByName(action.Matching.In)
 		if !ok {
 			return errors.BadRequest("input matching property %q not found within the input schema", action.Matching.In)
 		}
@@ -307,7 +307,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			}
 			return errors.BadRequest("output matching property %q is not a valid property name", action.Matching.Out)
 		}
-		out, ok := outSchema.Property(action.Matching.Out)
+		out, ok := outSchema.Properties().ByName(action.Matching.Out)
 		if !ok {
 			return errors.BadRequest("output matching property %q not found within the output schema", action.Matching.Out)
 		}
@@ -477,7 +477,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if action.IdentityColumn == "" {
 			return errors.BadRequest("identity column is mandatory")
 		}
-		identityColumn, ok := inSchema.Property(action.IdentityColumn)
+		identityColumn, ok := inSchema.Properties().ByName(action.IdentityColumn)
 		if !ok {
 			return errors.BadRequest("identity column %q not found within input schema", action.IdentityColumn)
 		}
@@ -493,7 +493,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		// Validate the last change time column and format.
 		var requiresLastChangeTimeFormat bool
 		if action.LastChangeTimeColumn != "" {
-			lastChangeTime, ok := inSchema.Property(action.LastChangeTimeColumn)
+			lastChangeTime, ok := inSchema.Properties().ByName(action.LastChangeTimeColumn)
 			if !ok {
 				return errors.BadRequest("last change time column %q not found within input schema", action.LastChangeTimeColumn)
 			}
@@ -580,7 +580,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !outSchema.Valid() {
 			return errors.BadRequest("out schema must be valid")
 		}
-		p, ok := outSchema.Property(action.TableKey)
+		p, ok := outSchema.Properties().ByName(action.TableKey)
 		if !ok {
 			return errors.BadRequest("table key %q not found within output schema", action.TableKey)
 		}

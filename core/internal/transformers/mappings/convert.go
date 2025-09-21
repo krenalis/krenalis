@@ -730,7 +730,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			var err error
 			for name, value := range s {
-				dp, ok := dt.Property(name)
+				dp, ok := dt.Properties().ByName(name)
 				if !ok {
 					if inPlace {
 						delete(d, name)
@@ -746,7 +746,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					}
 					continue
 				}
-				sp, ok := st.Property(name)
+				sp, ok := st.Properties().ByName(name)
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
@@ -787,7 +787,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				if !types.IsValidPropertyName(name) {
 					continue
 				}
-				p, ok := dt.Property(name)
+				p, ok := dt.Properties().ByName(name)
 				if !ok {
 					continue
 				}

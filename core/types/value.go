@@ -223,7 +223,7 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 				if !IsValidPropertyName(name) {
 					return nil, json.NewSyntaxError(errors.New("property name is not valid"), 0)
 				}
-				p, ok := t.Property(name)
+				p, ok := t.Properties().ByName(name)
 				if !ok {
 					return nil, newErrPropertyNotExist(name)
 				}

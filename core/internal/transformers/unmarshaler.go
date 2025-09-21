@@ -433,7 +433,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				if !t.Valid() {
 					return nil, newRecordValidationError(name, "does not exist")
 				}
-				p, ok := t.Property(name)
+				p, ok := t.Properties().ByName(name)
 				if !ok {
 					return nil, newRecordValidationError(name, "does not exist")
 				}

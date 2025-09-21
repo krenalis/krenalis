@@ -126,7 +126,7 @@ func (database *Database) LastChangeTimePlaceholder(action *state.Action) (strin
 	if property == "" || cursor.IsZero() {
 		return database.inner.QuoteTime(nil, types.Type{}), nil
 	}
-	p, _ := action.InSchema.Property(property)
+	p, _ := action.InSchema.Properties().ByName(property)
 	var value any
 	switch p.Type.Kind() {
 	case types.TextKind, types.JSONKind:
@@ -267,7 +267,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 		if !types.IsValidPropertyName(c.Name) {
 			return nil, connectorError(fmt.Errorf("connector %s has returned an invalid column name %q", database.connector, c.Name))
 		}
-		p, ok := action.InSchema.Property(c.Name)
+		p, ok := action.InSchema.Properties().ByName(c.Name)
 		if !ok {
 			columns[i] = meergo.Column{}
 			continue
@@ -574,7 +574,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			if c.Name == "" { // skip unused columns
 				continue
 			}
-			p, _ := r.action.InSchema.Property(c.Name)
+			p, _ := r.action.InSchema.Properties().ByName(c.Name)
 			properties[i] = p
 			if p.Name == r.action.IdentityColumn {
 				identityIndex = i

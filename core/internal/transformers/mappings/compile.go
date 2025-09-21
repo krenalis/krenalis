@@ -417,7 +417,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 					var property types.Property
 					var ok bool
 					if t.Valid() {
-						property, ok = t.Property(name)
+						property, ok = t.Properties().ByName(name)
 					}
 					if !ok {
 						msg := fmt.Sprintf("property %q does not exist", name)
