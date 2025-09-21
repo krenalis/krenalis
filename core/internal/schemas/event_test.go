@@ -13,7 +13,7 @@ import (
 
 func Test_Schema(t *testing.T) {
 	const expected = 20
-	if n := Event.Properties().Count(); n != expected {
+	if n := Event.Properties().Len(); n != expected {
 		t.Fatalf("expected %d properties, got %d", expected, n)
 	}
 }

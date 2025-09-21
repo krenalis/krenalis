@@ -383,7 +383,7 @@ func columnsIssues(columns []meergo.Column) ([]string, error) {
 
 // columnsOfType returns the properties of a type as meergo.Column values.
 func columnsOfType(t types.Type) []meergo.Column {
-	columns := make([]meergo.Column, t.Properties().Count())
+	columns := make([]meergo.Column, t.Properties().Len())
 	for i, p := range t.Properties().All() {
 		columns[i].Name = p.Name
 		columns[i].Type = p.Type

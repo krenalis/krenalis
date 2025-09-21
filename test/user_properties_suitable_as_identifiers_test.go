@@ -27,7 +27,7 @@ func TestUserPropertiesSuitableAsIdentifiers(t *testing.T) {
 	// it has the correct number of properties.
 	schema := c.UserPropertiesSuitableAsIdentifiers()
 	const expectedLen = 5
-	if n := schema.Properties().Count(); expectedLen != n {
+	if n := schema.Properties().Len(); expectedLen != n {
 		t.Fatalf("expected %d properties suitable as identifiers, got %d", expectedLen, n)
 	}
 

@@ -169,8 +169,8 @@ Object:
 	}
 }
 
-// Count returns the number of properties.
-func (pp Properties) Count() int {
+// Len returns the number of properties.
+func (pp Properties) Len() int {
 	return len(pp.properties)
 }
 

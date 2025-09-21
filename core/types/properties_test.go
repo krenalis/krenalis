@@ -321,13 +321,13 @@ func Test_Properties_ContainsPath(t *testing.T) {
 	}
 }
 
-func Test_Properties_Count(t *testing.T) {
+func Test_Properties_Len(t *testing.T) {
 	properties := []Property{
 		{Name: "a", Type: Text()},
 		{Name: "b", Type: Text()},
 		{Name: "c", Type: Text()},
 	}
-	if got := Object(properties).Properties().Count(); len(properties) != got {
+	if got := Object(properties).Properties().Len(); len(properties) != got {
 		t.Errorf("expected %d, got %d", len(properties), got)
 	}
 }

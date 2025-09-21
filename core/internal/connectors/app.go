@@ -632,7 +632,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 				if record.Err == nil {
 					// Read the properties.
-					record.Properties = make(map[string]any, properties.Count())
+					record.Properties = make(map[string]any, properties.Len())
 					for _, p := range properties.All() {
 						v, ok := user.Properties[p.Name]
 						if !ok {

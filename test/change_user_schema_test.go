@@ -30,7 +30,7 @@ func TestChangeUserSchema(t *testing.T) {
 	defer c.Stop()
 
 	ws := c.Workspace()
-	if n := ws.UserSchema.Properties().Count(); n != 10 {
+	if n := ws.UserSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
@@ -65,7 +65,7 @@ func TestChangeUserSchema(t *testing.T) {
 	c.AlterUserSchema(file.Schema, file.PrimarySources, file.RePaths)
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.Properties().Count(); n != 10 {
+	if n := ws.UserSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
@@ -93,7 +93,7 @@ func TestChangeUserSchema(t *testing.T) {
 	c.AlterUserSchema(schema, nil, nil)
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.Properties().Count(); n != 11 {
+	if n := ws.UserSchema.Properties().Len(); n != 11 {
 		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
@@ -140,7 +140,7 @@ func TestChangeUserSchema(t *testing.T) {
 	identifiers = []string{"android.identifier"}
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.Properties().Count(); n != 10 {
+	if n := ws.UserSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
@@ -194,11 +194,11 @@ func TestChangeUserSchema(t *testing.T) {
 	c.AlterUserSchema(schema, nil, rePaths)
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.Properties().Count(); n != 10 {
+	if n := ws.UserSchema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
 	}
 	p, _ := ws.UserSchema.Property("android")
-	if n := p.Type.Properties().Count(); n != 2 {
+	if n := p.Type.Properties().Len(); n != 2 {
 		t.Fatalf("expected 2 properties in the \"android\" object of the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
