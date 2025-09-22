@@ -6,7 +6,13 @@
 
 This guide provides clear instructions for integrating the Android SDK into Android applications.
 
-## Step 1: Create a source Android connection
+## Using the SDK
+
+- [1. Create a source Android connection](#1-create-a-source-android-connection)
+- [2. Import the SDK](#2-import-the-sdk)
+- [3. Add an action](#3-add-an-action)
+
+### 1. Create a source Android connection
 
 To create a source Android connection in Meergo:
 
@@ -15,13 +21,14 @@ To create a source Android connection in Meergo:
 3. From the list of connectors, select the **Android** connector.
 4. Click on **Add**.
 
-## Step 2: Import the SDK
+### 2. Import the SDK
 
 To integrate the Android SDK inside your application:
 
 1. Add the dependency to your `build.gradle`. Make sure to replace `<latest_version>` with the latest version of the SDK.
 
-    #### Kotlin
+    **Kotlin**
+
     ```kotlin
     repositories {
       mavenCentral()
@@ -31,7 +38,8 @@ To integrate the Android SDK inside your application:
     }
     ```
 
-   #### Java
+   **Java**
+
     ```java
     repositories {
       mavenCentral()
@@ -43,7 +51,8 @@ To integrate the Android SDK inside your application:
 
 2. Initialize and configure the client. You can find the write key in Meergo inside the Android connection in **Settings > Event write keys**. See [Options](options) for the list of configuration options.
 
-    #### Kotlin
+    **Kotlin**
+
     ```kotlin
     import com.meergo.analytics.kotlin.android.Analytics
     import com.meergo.analytics.kotlin.core.*
@@ -56,7 +65,8 @@ To integrate the Android SDK inside your application:
     }
     ```
 
-    #### Java
+    **Java**
+
     ```Java
     AndroidAnalytics analytics = AndroidAnalyticsKt.Analytics(BuildConfig.YOUR_WRITE_KEY, getApplicationContext(), configuration -> {
       configuration.setFlushAt(1);
@@ -77,7 +87,7 @@ To integrate the Android SDK inside your application:
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     ``` 
 
-## Step 3: Add an action
+### 3. Add an action
 
 When the Android SDK is imported in your application, you can choose to collect only the events, or import the users, or both:
 
