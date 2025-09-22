@@ -10,6 +10,10 @@ You can interact with Meergo through AI. This feature allows you to query Meergo
 
 ⚙️ Please note that, currently, using this feature requires some technical knowledge and it is highly experimental. It will be made more accessible, complete and stable in the future.
 
+## Warehouse compatibility
+
+ⓘ Currently, AI features (i.e., MCP server) are **only implemented** on workspaces connected to **PostgreSQL warehouses**. Therefore, the features described on this page do not apply to workspaces connected to Snowflake warehouses.
+
 ## Model compatibility
 
 Meergo's AI features have been tested with **OpenAI's GPT-4.1 mini** model. Other models *might* work, but compatibility is not guaranteed as they haven't been tested. ⚠️ 🤖
