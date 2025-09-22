@@ -6,7 +6,7 @@
 //
 
 // Package hubspot implements the HubSpot connector.
-// (https://developers.hubspot.com/docs/guides/api/crm/understanding-the-crm)
+// (https://developers.hubspot.com/docs/api-reference/overview)
 package hubspot
 
 import (
@@ -67,9 +67,9 @@ func init() {
 		},
 		EndpointGroups: []meergo.EndpointGroup{{
 			RequireOAuth: true,
-			// https://developers.hubspot.com/docs/guides/apps/api-usage/usage-details#public-apps
+			// https://developers.hubspot.com/docs/developer-tooling/platform/usage-guidelines
 			RateLimit: meergo.RateLimit{RequestsPerSecond: 11, Burst: 110},
-			// https://developers.hubspot.com/docs/reference/api/other-resources/error-handling
+			// https://developers.hubspot.com/docs/api-reference/error-handling
 			RetryPolicy: meergo.RetryPolicy{
 				"429":                         meergo.HeaderStrategy(meergo.RateLimited, "X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
 				"477":                         meergo.RetryAfterStrategy(),
@@ -372,7 +372,7 @@ func parseMilliseconds(s string) (time.Duration, error) {
 
 // propertyType returns the type of the HubSpot property with type t.
 // If the property type is not supported, it returns an invalid type.
-// (https://developers.hubspot.com/docs/guides/api/crm/properties#property-type-and-fieldtype-values).
+// (https://developers.hubspot.com/docs/api-reference/crm-properties-v3/guide).
 func propertyType(t string) types.Type {
 	switch t {
 	case "bool":
