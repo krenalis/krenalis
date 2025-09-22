@@ -33,6 +33,7 @@ const useApp = (
 	redirect: (url: string) => void,
 	logout: () => void,
 	location: Location,
+	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
 	const [isLoadingState, setIsLoadingState] = useState<boolean>(true);
 	const [member, setMember] = useState<Member | null>();
@@ -120,6 +121,10 @@ const useApp = (
 				return;
 			}
 			setWorkspaces(ws);
+
+			// if the API call succeeds without errors, it confirms that the
+			// user is logged in.
+			setIsLoggedIn(true);
 
 			const isDeleted = workspaces != null && ws.length < workspaces.length;
 			if (selectedWorkspace === 0) {

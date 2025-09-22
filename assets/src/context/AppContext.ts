@@ -30,7 +30,7 @@ interface AppContext {
 	setIsLoadingState: React.Dispatch<React.SetStateAction<boolean>>;
 	isFullscreen: boolean;
 	title: ReactNode;
-	logout: () => void;
+	logout: () => Promise<void>;
 	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 	toastRef: React.MutableRefObject<SlAlert>;
 	executeAction: (connection: TransformedConnection, actionID: number, actionTarget: ActionTarget) => Promise<void>;

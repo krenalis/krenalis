@@ -37,9 +37,9 @@ const Header = ({ title, member }: HeaderProps) => {
 		}
 	}, [location]);
 
-	const onLogout = () => {
+	const onLogout = async () => {
 		closeMenu();
-		logout();
+		await logout();
 	};
 
 	const closeMenu = () => {

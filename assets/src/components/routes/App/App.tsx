@@ -24,7 +24,7 @@ const App = () => {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
-	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
+	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
 	const toastRef = useRef<SlAlert | null>(null);
 	const navigate = useNavigate();
@@ -39,7 +39,14 @@ const App = () => {
 		}, 300);
 	};
 
-	const logout = () => {
+	const logout = async () => {
+		try {
+			// remove the session cookie.
+			await api.logout();
+		} catch (err) {
+			handleError(err);
+			return;
+		}
 		localStorage.removeItem(IS_PASSWORDLESS_KEY);
 		setIsPasswordless(false);
 		setSelectedWorkspace(0);
@@ -98,18 +105,16 @@ const App = () => {
 		executeActionDropdownButtonRefs,
 		isPasswordless,
 		setIsPasswordless,
-	} = useApp(handleError, redirect, logout, location);
+	} = useApp(handleError, redirect, logout, location, setIsLoggedIn);
 
 	useEffect(() => {
-		if (
-			!isLoggedIn &&
-			location.pathname !== UI_BASE_PATH &&
-			!location.pathname.startsWith(SIGN_UP_PATH) &&
-			!location.pathname.startsWith(RESET_PASSWORD_PATH)
-		) {
+		if (!isLoadingState && !isLoggedIn && !isAuthRelatedRoute(location.pathname)) {
+			// if the app is initialized but the user is not logged in and they
+			// try to access a non-authentication page, redirect them to the
+			// login form first.
 			redirect('');
 		}
-	}, [isLoggedIn, location]);
+	}, [isLoadingState, isLoggedIn, location]);
 
 	useEffect(() => {
 		// Determine whether the current route spans the entire viewport or
@@ -128,13 +133,7 @@ const App = () => {
 	}, [location, isLoadingState]);
 
 	let content: ReactNode;
-	if (
-		isLoadingState ||
-		(!isLoggedIn &&
-			location.pathname !== UI_BASE_PATH &&
-			!location.pathname.startsWith(SIGN_UP_PATH) &&
-			!location.pathname.startsWith(RESET_PASSWORD_PATH))
-	) {
+	if (isLoadingState || (!isLoggedIn && !isAuthRelatedRoute(location.pathname))) {
 		content = (
 			<SlSpinner
 				className='app-spinner'
@@ -192,6 +191,10 @@ const App = () => {
 			</div>
 		</Sentry.ErrorBoundary>
 	);
+};
+
+const isAuthRelatedRoute = (path: string): boolean => {
+	return path === UI_BASE_PATH || path.startsWith(SIGN_UP_PATH) || path.startsWith(RESET_PASSWORD_PATH);
 };
 
 export default App;

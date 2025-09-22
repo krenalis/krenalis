@@ -15,7 +15,7 @@ const Login = () => {
 	const [isTryingPasswordlessLogin, setIsTryingPasswordlessLogin] = useState<boolean>(true);
 	const [canSendMemberPasswordReset, setCanSendMemberPasswordReset] = useState<boolean>(false);
 
-	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, logout, setIsPasswordless } =
+	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, setIsPasswordless } =
 		useContext(AppContext);
 
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -81,19 +81,6 @@ const Login = () => {
 			setCanSendMemberPasswordReset(canSend);
 		};
 
-		const removeCookieAndLogout = async () => {
-			try {
-				// remove the session cookie.
-				await api.logout();
-			} catch (err) {
-				handleError(err);
-				return;
-			}
-			// ensure user is logged out even when they navigate to this route
-			// via the back/forward button of the browser.
-			logout();
-		};
-		removeCookieAndLogout();
 		tryPasswordlessLogin();
 	}, []);
 

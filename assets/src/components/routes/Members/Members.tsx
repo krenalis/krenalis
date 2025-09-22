@@ -81,8 +81,8 @@ const Members = () => {
 		setIsLoading(true);
 	};
 
-	const onLogout = () => {
-		logout();
+	const onLogout = async () => {
+		await logout();
 	};
 
 	if (isLoading) {

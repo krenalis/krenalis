@@ -29,7 +29,7 @@ const SignUp = () => {
 				handleError(err);
 				return;
 			}
-			logout();
+			await logout();
 			if (token.length === 0) {
 				handleError('Missing invitation token');
 				redirect('');
