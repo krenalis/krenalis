@@ -824,8 +824,8 @@ class Workspaces {
 		});
 	};
 
-	warehouse = async (): Promise<WarehouseResponse> => {
-		return await call(`${this.apiURL}/warehouse`, http.GET, this.workspaceID);
+	warehouse = async (workspaceID?: number): Promise<WarehouseResponse> => {
+		return await call(`${this.apiURL}/warehouse`, http.GET, workspaceID != null ? workspaceID : this.workspaceID);
 	};
 
 	updateWarehouseMode = async (mode: WarehouseMode, cancelIncompatibleOperations: boolean): Promise<void> => {

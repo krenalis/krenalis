@@ -185,38 +185,40 @@ const DataWarehouseSettings = ({
 						)}
 					</div>
 				</Section>
-				<Section
-					title={warehouseSectionTexts.mcp.title}
-					description={warehouseSectionTexts.mcp.description}
-					padded={true}
-					annotated={true}
-				>
-					<SlCheckbox
-						checked={isMCPEnabled}
-						onSlChange={onEnableMCPSettings}
-						className='warehouse-settings__mcp-checkbox'
+				{selectedWarehouse.name !== 'Snowflake' && (
+					<Section
+						title={warehouseSectionTexts.mcp.title}
+						description={warehouseSectionTexts.mcp.description}
+						padded={true}
+						annotated={true}
 					>
-						Grant read-only access to the MCP server
-					</SlCheckbox>
-					{isMCPEnabled && (
-						<div className='warehouse-settings__mcp-form'>
-							{selectedWarehouse.name === 'PostgreSQL' ? (
-								<PostgreSQLSettings
-									setSettings={setMCPSettings}
-									settings={mcpSettings}
-									precompileDefault={false}
-									inputRef={usernameRef}
-								/>
-							) : (
-								<SnowflakeSettings
-									setSettings={setMCPSettings}
-									settings={mcpSettings}
-									precompileDefault={false}
-								/>
-							)}
-						</div>
-					)}
-				</Section>
+						<SlCheckbox
+							checked={isMCPEnabled}
+							onSlChange={onEnableMCPSettings}
+							className='warehouse-settings__mcp-checkbox'
+						>
+							Grant read-only access to the MCP server
+						</SlCheckbox>
+						{isMCPEnabled && (
+							<div className='warehouse-settings__mcp-form'>
+								{selectedWarehouse.name === 'PostgreSQL' ? (
+									<PostgreSQLSettings
+										setSettings={setMCPSettings}
+										settings={mcpSettings}
+										precompileDefault={false}
+										inputRef={usernameRef}
+									/>
+								) : (
+									<SnowflakeSettings
+										setSettings={setMCPSettings}
+										settings={mcpSettings}
+										precompileDefault={false}
+									/>
+								)}
+							</div>
+						)}
+					</Section>
+				)}
 			</div>
 			<div className='warehouse-settings__buttons'>
 				<SlButton disabled={isCheckLoading || isActionButtonLoading} variant='default' onClick={onCancelClick}>

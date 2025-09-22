@@ -198,22 +198,24 @@ const WarehouseInfo = ({
 			>
 				<Grid rows={rows} columns={warehouseInfoColumns} />
 			</Section>
-			<Section
-				title={warehouseSectionTexts.mcp.title}
-				description={warehouseSectionTexts.mcp.description}
-				padded={mcpRows.length === 0}
-				annotated={true}
-			>
-				{mcpRows.length > 0 ? (
-					<div className='warehouse-info__settings'>
-						<Grid rows={mcpRows} columns={warehouseInfoColumns} />
-					</div>
-				) : (
-					<div className='warehouse-info__mcp-not-configured'>
-						No credentials have been set, so the MCP server has no access to the data warehouse.
-					</div>
-				)}
-			</Section>
+			{warehouseName !== 'Snowflake' && (
+				<Section
+					title={warehouseSectionTexts.mcp.title}
+					description={warehouseSectionTexts.mcp.description}
+					padded={mcpRows.length === 0}
+					annotated={true}
+				>
+					{mcpRows.length > 0 ? (
+						<div className='warehouse-info__settings'>
+							<Grid rows={mcpRows} columns={warehouseInfoColumns} />
+						</div>
+					) : (
+						<div className='warehouse-info__mcp-not-configured'>
+							No credentials have been set, so the MCP server has no access to the data warehouse.
+						</div>
+					)}
+				</Section>
+			)}
 		</div>
 	);
 };

@@ -17,6 +17,7 @@ import { NotFoundError } from '../../../lib/api/errors';
 import { Link } from '../../base/Link/Link';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { AccessKeyType } from '../../../lib/api/types/organization';
+import { WarehouseResponse } from '../../../lib/api/types/warehouse';
 
 const GRID_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -36,11 +37,12 @@ const AccessKeys = () => {
 	const [isDeletingAccessKey, setIsDeletingAccessKey] = useState<boolean>(false);
 	const [accessKeyToEdit, setAccessKeyToEdit] = useState<AccessKey | null>();
 	const [accessKeyToDeleteType, setAccessKeyToDeleteType] = useState<AccessKeyType>();
+	const [warehouseByWorkspace, setWarehouseByWorkspace] = useState<Record<number, string>>();
 
 	const { api, handleError, workspaces } = useContext(AppContext);
 
 	useEffect(() => {
-		const fetchAccessKeys = async () => {
+		const fetchData = async () => {
 			let res: AccessKeyResponse;
 			try {
 				res = await api.keys();
@@ -57,7 +59,29 @@ const AccessKeys = () => {
 				return;
 			}
 			setAccessKeys(res.keys);
+
+			let warehouseByWorkspace = {};
+			for (const w of workspaces) {
+				let res: WarehouseResponse;
+				try {
+					res = await api.workspaces.warehouse(w.id);
+				} catch (err) {
+					setTimeout(() => {
+						handleError(err);
+						if (isLoadingMCPKeys) {
+							setIsLoadingMCPKeys(false);
+						}
+						if (isLoadingAPIKeys) {
+							setIsLoadingAPIKeys(false);
+						}
+					}, 300);
+					return;
+				}
+				warehouseByWorkspace[w.id] = res.name;
+			}
+
 			setTimeout(() => {
+				setWarehouseByWorkspace(warehouseByWorkspace);
 				if (isLoadingMCPKeys) {
 					setIsLoadingMCPKeys(false);
 				}
@@ -71,7 +95,7 @@ const AccessKeys = () => {
 			return;
 		}
 
-		fetchAccessKeys();
+		fetchData();
 	}, [isLoadingAPIKeys, isLoadingMCPKeys]);
 
 	useEffect(() => {
@@ -164,6 +188,10 @@ const AccessKeys = () => {
 		return [apiRows, mcpRows];
 	}, [accessKeys]);
 
+	const hasWorkspaceSupportingMCP =
+		warehouseByWorkspace != null &&
+		Object.keys(warehouseByWorkspace).findIndex((id) => warehouseByWorkspace[id] !== 'Snowflake') !== -1;
+
 	return (
 		<div className='access-keys'>
 			<div className='access-keys__content'>
@@ -195,15 +223,19 @@ const AccessKeys = () => {
 				<SlDivider style={{ '--spacing': '30px' } as React.CSSProperties} />
 				<div className='access-keys__title access-keys__title--mcp'>
 					<p className='access-keys__title-text'>MCP keys</p>
-					<SlButton size='small' variant='primary' onClick={() => setIsCreatingMCPKey(true)}>
-						Add a new MCP key
-					</SlButton>
+					{hasWorkspaceSupportingMCP && (
+						<SlButton size='small' variant='primary' onClick={() => setIsCreatingMCPKey(true)}>
+							Add a new MCP key
+						</SlButton>
+					)}
 				</div>
 				<Grid
 					className='access-keys__grid'
 					rows={mcpRows}
 					columns={GRID_COLUMNS}
-					noRowsMessage='No MCP keys to show'
+					noRowsMessage={
+						hasWorkspaceSupportingMCP ? 'No MCP keys to show' : 'None of your workspaces support MCP'
+					}
 					isLoading={isLoadingMCPKeys}
 				/>
 				<div className='access-keys__grid-learn-more'>
@@ -240,6 +272,7 @@ const AccessKeys = () => {
 					setIsOpen={isCreatingMCPKey ? setIsCreatingMCPKey : setIsCreatingAPIKey}
 					setIsLoadingAPIKeys={setIsLoadingAPIKeys}
 					setIsLoadingMCPKeys={setIsLoadingMCPKeys}
+					warehouseByWorkspace={warehouseByWorkspace}
 				/>
 			</div>
 		</div>
@@ -356,6 +389,7 @@ interface CreateAccessKeyDialogProps {
 	setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsLoadingAPIKeys: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsLoadingMCPKeys: React.Dispatch<React.SetStateAction<boolean>>;
+	warehouseByWorkspace: Record<number, string>;
 }
 
 const CreateAccessKeyDialog = ({
@@ -364,6 +398,7 @@ const CreateAccessKeyDialog = ({
 	setIsOpen,
 	setIsLoadingAPIKeys,
 	setIsLoadingMCPKeys,
+	warehouseByWorkspace,
 }: CreateAccessKeyDialogProps) => {
 	const [name, setName] = useState<string>('');
 	const [workspace, setWorkspace] = useState<number | null>();
@@ -532,9 +567,13 @@ const CreateAccessKeyDialog = ({
 						helpText='Note that you will no longer be able to edit the workspace after the creation of the key'
 					>
 						{!isMCP && <SlOption value='0'>Any workspace</SlOption>}
-						{workspaces.map((w) => (
-							<SlOption value={String(w.id)}>{w.name}</SlOption>
-						))}
+						{warehouseByWorkspace != null &&
+							workspaces.map((w) => {
+								if (warehouseByWorkspace[w.id] !== 'Snowflake') {
+									return <SlOption value={String(w.id)}>{w.name}</SlOption>;
+								}
+								return null;
+							})}
 					</SlSelect>
 					{workspaceError && (
 						<div className='access-keys__dialog-error'>
