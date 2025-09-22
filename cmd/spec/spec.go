@@ -172,6 +172,8 @@ var filterOperators = []string{
 	"is on or after",
 	"is true",
 	"is false",
+	"is empty",
+	"is not empty",
 	"is null",
 	"is not null",
 	"exists",
