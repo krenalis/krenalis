@@ -86,16 +86,20 @@ func New(connector string, target state.Target, upsert UpsertFunc, acks AcksFunc
 			case <-w.timer.C:
 				var iter *iterator
 				w.mu.Lock()
+				if w.close.closed.Load() {
+					w.mu.Unlock()
+					return
+				}
 				if w.iterator == nil && w.available > 0 {
 					iter = newIterator(w)
 					w.iterator = iter
 				}
 				w.timer.Reset(maxQueueDelay)
-				w.mu.Unlock()
 				if iter != nil {
 					w.close.iterators.Add(1)
 					go w.consume(iter)
 				}
+				w.mu.Unlock()
 			case <-w.close.ctx.Done():
 				return
 			}
@@ -116,39 +120,43 @@ func (w *Writer) Close(ctx context.Context) error {
 	if trace {
 		fmt.Print("Writer.Close: start closing down\n")
 	}
+	w.mu.Lock()
 	for {
-		var iter *iterator
-		w.mu.Lock()
 		if w.iterator != nil {
 			if trace {
 				fmt.Printf("Writer.Close: wait for the iteration of iterator %p to complete\n", w.iterator)
 			}
 			w.close.completed.Wait()
 		}
-		if w.available > 0 {
-			iter = newIterator(w)
-			w.iterator = iter
+		if ctx.Err() != nil {
 			if trace {
-				fmt.Printf("Writer.Close: %d records available; create new iterator %p\n", w.available, iter)
+				fmt.Print("Writer.Close: context has been cancelled\n")
 			}
-		}
-		w.mu.Unlock()
-		if iter == nil {
 			break
+		}
+		if w.available == 0 {
+			break
+		}
+		iter := newIterator(w)
+		w.iterator = iter
+		if trace {
+			fmt.Printf("Writer.Close: %d records available; create new iterator %p\n", w.available, iter)
 		}
 		w.close.iterators.Add(1)
 		go w.consume(iter)
 	}
+	w.mu.Unlock()
 	if trace {
 		fmt.Print("Writer.Close: wait for iterators to terminate\n")
 	}
 	w.close.iterators.Wait()
-	if assert && ctx.Done() == nil {
-		w._assertAvailable(0)
-	}
 	if trace {
 		fmt.Print("Writer.Close: iterators are terminated; writer is now closed\n")
 	}
+	if assert && ctx.Err() == nil {
+		w._assertAvailable(0)
+	}
+	w.close.cancel()
 	return nil
 }
 
@@ -214,8 +222,8 @@ func (w *Writer) complete() {
 	if w.available >= minBatchSize {
 		w.timer.Reset(0)
 	}
-	w.mu.Unlock()
 	w.close.completed.Signal()
+	w.mu.Unlock()
 }
 
 // discard discards the most recently read event with the provided error. It is
