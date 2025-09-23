@@ -54,7 +54,9 @@ class TransformedConnector {
 	}
 
 	get hasSnippet() {
-		return this.type === 'SDK' && this.name !== 'Meergo API';
+		return (
+			this.type === 'SDK' && this.name !== 'Meergo API' && this.name !== 'Segment' && this.name !== 'RudderStack'
+		);
 	}
 
 	get isApp() {
