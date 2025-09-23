@@ -42,7 +42,7 @@ services:
       # not recommended that you change them.
       MEERGO_HTTP_HOST: meergo
       MEERGO_HTTP_PORT: 2022
-      MEERGO_HTTP_EXTERNAL_URL: http://localhost:2022/
+      MEERGO_HTTP_EXTERNAL_URL: http://127.0.0.1:2022/
       MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION: true
       MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE: /usr/bin/node
       MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python

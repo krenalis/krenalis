@@ -17,8 +17,6 @@ HubSpot is a cloud application that offers tools for customer relationship manag
 
 Before you can add a HubSpot data destination, you need to create an app in HubSpot and configure the Meergo settings file with OAuth credentials. You only need to create the HubSpot app once, even if you add, remove, or re-add data destinations.
 
-> HubSpot does not support authentication via IP addresses. When using "127.0.0.1" as the Meergo domain, replace it with "localhost" when adding a HubSpot data destination.
-
 1. Log in to your <a href="https://www.hubspot.com/" target="_blank">HubSpot</a> account.
 2. In the right sidebar, click the last item **Development** (the name may vary depending on the language of your account).
 3. Click on **Legacy Apps**.
@@ -26,7 +24,10 @@ Before you can add a HubSpot data destination, you need to create an app in HubS
 5. Click on **Public** (the app will remain private and does not need to be made public).
 6. Fill in the **Public app name** and **Description** fields to help you recognize the app later.
 7. Click on the **Auth** tab.
-8. Under **Redirect URLs**, enter the URL address of Meergo with the `/admin/oauth/authorize` path. For example: `https://example.com/admin/oauth/authorize`.
+8. Under **Redirect URLs**, enter the (external) URL of Meergo with the `/admin/oauth/authorize` path. For example: `https://example.com/admin/oauth/authorize`.
+    
+    > 💡 If your are using `127.0.0.1` as domain for the Meergo external URL (as in the default configuration), you need to change it (for example using `localhost`) to make OAuth with HubSpot work. This limitation is due to HubSpot that does not accept `127.0.0.1` in redirect URLs. To do so, set the explicitly the `MEERGO_HTTP_EXTERNAL_URL` environment variable in such a way that it refers to `localhost` instead of `127.0.0.1`, for example `http://localhost:2022/`. Then, set the HubSpot redirect URL accordingly, for example to `http://localhost:2022/admin/oauth/authorize`.
+
 9. Click **Add new scope**.
 10. Select the following scopes:
     * `crm.objects.contacts.read` - leave as **Required**
@@ -38,8 +39,6 @@ Before you can add a HubSpot data destination, you need to create an app in HubS
 14. Copy the Client ID and the Client secret.
 15. Set the `MEERGO_OAUTH_HUBSPOT_CLIENT_ID` and `MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET` environment variables with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the `.env` file in the same directory of the Meergo executable.
 16. Restart the Meergo server to load the new environment variables.
-
-> 💡 If Meergo is running locally on the address 127.0.0.1 (for example when running Meergo with Docker Compose), you must use "localhost" in the app configuration on HubSpot instead of "127.0.0.1".
 
 Now proceed to add a HubSpot data destination:
 
