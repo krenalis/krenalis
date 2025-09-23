@@ -107,7 +107,7 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role
 }
 
 // Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
     // ...
 }
 

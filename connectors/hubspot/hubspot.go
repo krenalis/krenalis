@@ -181,7 +181,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
 
 	path := "/crm/v3/objects/contacts/"
 
@@ -231,12 +231,12 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 	bb.WriteString(`"after":"`)
 	bb.WriteString(cursor)
 	bb.WriteString(`","limit":100,"properties":[`)
-	for i, p := range properties {
+	for i, p := range schema.Properties().All() {
 		if i > 0 {
 			bb.WriteByte(',')
 		}
 		bb.WriteByte('"')
-		bb.WriteString(p)
+		bb.WriteString(p.Name)
 		bb.WriteByte('"')
 	}
 	bb.WriteString(`]}`)

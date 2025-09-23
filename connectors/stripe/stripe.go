@@ -108,7 +108,7 @@ func (stripe *Stripe) RecordSchema(ctx context.Context, target meergo.Targets, r
 }
 
 // Records returns the records of the specified target.
-func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, _ []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
+func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _ []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
 	path := "/v1/customers"
 	if cursor != "" {

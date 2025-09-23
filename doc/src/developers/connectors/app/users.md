@@ -36,7 +36,7 @@ Let's start by looking at how to read records using the `Records` method.
 Meergo calls the connector's `Records` method to read records from the app:
 
 ```go
-Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error)
+Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error)
 ```
 
 The parameters for this method are:
@@ -44,11 +44,9 @@ The parameters for this method are:
 - `ctx`: The context.
 - `target`: Specifies the type of entities to return. Currently, only `TargetUser` is supported.
 - `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
-- `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
-- `properties`: Contains the names of the properties that must be returned for each record.
+- `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.Ho corretto la documen
 - `cursor`: Indicates the starting position for reading records. This is the cursor value from a previous call in a paginated query. For the first call, it is empty.
-- `schema`: It is a recent user source schema, as returned by the `RecordSchema` method.
-
+- `schema`: The user source schema containing only the properties that must be returned. This schema is derived from the most recently returned result of `RecordSchema`.
 
 > Typically, the `Records` method returns at least one record if there are no errors. However, it is valid for it to return no records even when there are no errors. Additionally, the `Records` method may return duplicate records (i.e., records with the same ID), but only the first record in such cases will be processed.
 

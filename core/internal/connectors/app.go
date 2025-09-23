@@ -297,6 +297,10 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	if err != nil {
 		return nil, err
 	}
+	properties := schema.Properties()
+	appSchema = types.SubsetByPathFunc(appSchema, func(path string) bool {
+		return properties.ContainsPath(path)
+	})
 	if !lastChangeTime.IsZero() {
 		if lastChangeTime.Location() != time.UTC {
 			return nil, fmt.Errorf("lastChangeTime is not UTC")
@@ -565,7 +569,6 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 		var cursor string
 
 		properties := r.schema.Properties()
-		names := properties.Names()
 
 		// processedIDs contains the already read ID.
 		// It is used to deduplicate returned records.
@@ -576,7 +579,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []meergo.Record
 			var err error
-			users, cursor, err = r.inner.(meergo.RecordFetcher).Records(ctx, meergo.TargetUser, r.lastChangeTime, nil, names, cursor, r.appSchema)
+			users, cursor, err = r.inner.(meergo.RecordFetcher).Records(ctx, meergo.TargetUser, r.lastChangeTime, nil, cursor, r.appSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

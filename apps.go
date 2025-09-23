@@ -260,14 +260,13 @@ type RecordFetcher interface {
 	// microseconds. If ids is not nil, only records with identifiers in ids should
 	// be returned, if any.
 	//
-	// properties are the names of the properties to read. cursor represents the
-	// position from which to start reading the records; it is the cursor value
-	// returned by the previous call in a paginated query. Subsequent calls will use
-	// this cursor value to retrieve the next batch of records.
+	// cursor represents the position from which to start reading the records; it is
+	// the cursor value returned by the previous call in a paginated query.
+	// Subsequent calls will use this cursor value to retrieve the next batch of
+	// records.
 	//
-	// schema must be a recent schema returned by the Schema method of the
-	// connector. There is no guarantee that the returned properties will match this
-	// schema, so the caller must validate them.
+	// schema is a recent schema from the connector's Schema method, restricted to
+	// the properties to return.
 	//
 	// Records may return duplicate records, i.e., records with the same ID. The
 	// caller is responsible for deduplicating them.
@@ -278,7 +277,7 @@ type RecordFetcher interface {
 	// with the io.EOF error.
 	//
 	// In case of an error, it returns a non-nil and non-EOF error.
-	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
+	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]Record, string, error)
 }
 
 // RecordUpserter is implemented by app connectors that support updating and

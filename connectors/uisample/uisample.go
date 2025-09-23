@@ -69,7 +69,7 @@ func (uiSample *UISample) RecordSchema(ctx context.Context, target meergo.Target
 }
 
 // Records returns the records of the specified target.
-func (uiSample *UISample) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+func (uiSample *UISample) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
 	return nil, "", io.EOF
 }
 

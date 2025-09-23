@@ -142,7 +142,7 @@ func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events meergo.Events) 
 }
 
 // Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
 
 	var hasID bool
 	var hasUpdated bool
@@ -152,16 +152,16 @@ func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 		var b strings.Builder
 		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
 		i := 0
-		for _, p := range properties {
-			if p == "id" {
+		for _, p := range schema.Properties().All() {
+			if p.Name == "id" {
 				hasID = true
 				continue
 			}
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteString(p)
-			if p == "updated" {
+			b.WriteString(p.Name)
+			if p.Name == "updated" {
 				hasUpdated = true
 			}
 			i++

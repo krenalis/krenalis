@@ -234,7 +234,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target meergo.Targets, ro
 }
 
 // Records returns the records of the specified target.
-func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, _, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
+func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, _ []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
 
 	path := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
@@ -243,13 +243,13 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTi
 	hasMergeFields := false
 
 	var fields strings.Builder
-	for i, name := range properties {
+	for i, p := range schema.Properties().All() {
 		if i > 0 {
 			fields.WriteByte(',')
 		}
 		fields.WriteString("members.")
-		fields.WriteString(name)
-		switch name {
+		fields.WriteString(p.Name)
+		switch p.Name {
 		case "id":
 			hasID = true
 		case "last_changed":

@@ -209,7 +209,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target meergo.Targets, rol
 }
 
 // Records returns the records of the specified target.
-func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, _ []string, _ string, _ types.Type) ([]meergo.Record, string, error) {
+func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids []string, _ string, _ types.Type) ([]meergo.Record, string, error) {
 	metrics.Increment("Dummy.Records.calls", 1)
 	dummy.simulateHTTPDelay()
 	select {
