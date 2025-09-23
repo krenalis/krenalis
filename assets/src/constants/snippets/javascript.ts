@@ -4,4 +4,4 @@ export const SNIPPET = `<script>
   }})();
 </script>`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/developers/javascript-sdk';
+export const DOCUMENTATION_LINK = 'http://localhost:8080/connectors/sources/javascript-sdk';

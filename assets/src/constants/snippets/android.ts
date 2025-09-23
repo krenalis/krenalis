@@ -10,4 +10,4 @@ Analytics("writekey", applicationContext) {
   // ...other config options
 }`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/developers/android-sdk';
+export const DOCUMENTATION_LINK = 'http://localhost:8080/connectors/sources/android-sdk';

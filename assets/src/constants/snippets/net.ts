@@ -7,4 +7,4 @@ var config = new Config()
 
 Analytics.Initialize("writekey", config);`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/developers/csharp-sdk';
+export const DOCUMENTATION_LINK = 'http://localhost:8080/connectors/sources/dotnet';
