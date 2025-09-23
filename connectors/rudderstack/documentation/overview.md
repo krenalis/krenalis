@@ -5,7 +5,7 @@ RudderStack is a warehouse-native Customer Data Platform that helps data teams c
 
 Using this connector, which interfaces with RudderStack, you can integrate customer event data from RudderStack into Meergo in real time. This allows you to:
 
-* Store customer events in your data warehouse in real-time.
+* Stream customer events in real time to your data warehouse and to SaaS applications.
 * Import user data into your data warehouse and unify it into Meergo's user profiles.
 
 ## What does it require?
