@@ -19,10 +19,13 @@ The **Go** data source allows you to send customer event data using the **Go SDK
 
 First of all, you need a connection in Meergo that can receive events from the Go SDK. To do so:
 
-1. Click on **Connections**.
-2. Click on **Add a new source**.
-3. From the list of connectors, select the **Go** connector.
-4. Click on **Add**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
+2. On the **Sources** page, click **Add new source**.
+3. Search for the **Go** source; you can use the search bar at the top or filter by category.
+4. Click on the **Go** connector. A panel will open on the right with information about **Go**.
+5. Click on **Add source**. The `Add Go source connection` page will appear.
+6. In the **Name** field, enter a name for the source to easily recognize it later.
+7. Click **Add**.
 
 ### 2. Import the SDK in your Go application
 

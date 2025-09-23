@@ -16,10 +16,14 @@ This guide provides clear instructions for integrating the Android SDK into Andr
 
 To create a source Android connection in Meergo:
 
-1. Click on **Connections**.
-2. Click on **Add a new source**.
-3. From the list of connectors, select the **Android** connector.
-4. Click on **Add**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
+2. On the **Sources** page, click **Add new source**.
+3. Search for the **Android** source; you can use the search bar at the top or filter by category.
+4. Click on the **Android** connector. A panel will open on the right with information about **Android**.
+5. Click on **Add source**. The `Add Android source connection` page will appear.
+6. In the **Name** field, enter a name for the source to easily recognize it later.
+7. In the **Strategy** field, choose the strategy with which anonymous users will be treated.
+8. Click **Add**.
 
 ### 2. Import the SDK
 
