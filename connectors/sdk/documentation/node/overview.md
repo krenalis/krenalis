@@ -7,3 +7,6 @@ This connector lets you send events from your node.js application to Meergo. The
 
 * Integration of the Meergo Node.js SDK into your application.
 * Basic knowledge of JavaScript or TypeScript and the ability to write code.
+
+> Node.js is a trademark of the OpenJS Foundation.
+> This connector is not affiliated with or endorsed by the OpenJS Foundation.

@@ -7,3 +7,6 @@ This connector lets you send events from your Go application to Meergo. The even
 
 * Integration of the Meergo Go SDK into your application.
 * Basic knowledge of Go and the ability to write code.
+
+> Go is a trademark of Google LLC.
+> This connector is not affiliated with or endorsed by Google LLC.

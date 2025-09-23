@@ -5,8 +5,11 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package mixpanel implements the Mixpanel connector.
+// Package mixpanel provides a connector for Mixpanel.
 // (https://developer.mixpanel.com/reference/overview)
+//
+// Mixpanel is a trademark of Mixpanel, Inc.
+// This connector is not affiliated with or endorsed by Mixpanel, Inc.
 package mixpanel
 
 import (
@@ -73,13 +76,13 @@ type innerSettings struct {
 	DataResidency string
 }
 
-// New returns a new Mixpanel connector instance.
+// New returns a new connector instance for Mixpanel.
 func New(env *meergo.AppEnv) (*Mixpanel, error) {
 	c := Mixpanel{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Mixpanel connector")
+			return nil, errors.New("cannot unmarshal settings of connector for Mixpanel")
 		}
 	}
 	return &c, nil

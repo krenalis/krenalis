@@ -5,8 +5,11 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package mysql implements the MySQL connector.
-// (https://dev.mysql.com/doc/refman/8.0/en/)
+// Package mysql provides a connector for MySQL.
+// (https://dev.mysql.com/doc/refman/8.4/en/)
+//
+// MySQL is a trademark of Oracle Corporation.
+// This connector is not affiliated with or endorsed by Oracle Corporation.
 package mysql
 
 import (
@@ -52,13 +55,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new MySQL connector instance.
+// New returns a new connector instance for MySQL.
 func New(env *meergo.DatabaseEnv) (*MySQL, error) {
 	c := MySQL{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of MySQL connector")
+			return nil, errors.New("cannot unmarshal settings of connector for MySQL")
 		}
 	}
 	return &c, nil

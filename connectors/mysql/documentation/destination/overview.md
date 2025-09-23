@@ -8,3 +8,6 @@ This connector lets you write the unified users from your data warehouse into a 
 ## What does it require?
 
 * A MySQL database with a table in which to store the users.
+
+> MySQL is a trademark of Oracle Corporation.
+> This connector is not affiliated with or endorsed by Oracle Corporation.

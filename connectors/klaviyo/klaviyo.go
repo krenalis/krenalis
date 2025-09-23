@@ -5,8 +5,11 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package klaviyo implements the Klaviyo connector.
+// Package klaviyo provides a connector for Klaviyo.
 // (https://developers.klaviyo.com/)
+//
+// Klaviyo is a trademark of Klaviyo, Inc.
+// This connector is not affiliated with or endorsed by Klaviyo, Inc.
 package klaviyo
 
 import (
@@ -89,13 +92,13 @@ var retryPolicy = meergo.RetryPolicy{
 // apiRevision is the API revision to use for calls to the Klaviyo API methods.
 const apiRevision = "2024-07-15"
 
-// New returns a new Klaviyo connector instance.
+// New returns a new connector instance for Klaviyo.
 func New(env *meergo.AppEnv) (*Klaviyo, error) {
 	c := Klaviyo{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Klaviyo connector")
+			return nil, errors.New("cannot unmarshal settings of connector for Klaviyo")
 		}
 	}
 	return &c, nil

@@ -8,3 +8,6 @@ This connector lets you read users from a Snowflake database, store them in your
 ## What does it require?
 
 * A Snowflake database to read the users from.
+
+> Snowflake is a trademark of Snowflake Inc.
+> This connector is not affiliated with or endorsed by Snowflake Inc.

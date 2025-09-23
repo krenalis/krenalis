@@ -5,8 +5,12 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package mailchimp implements the Mailchimp connector.
+// Package mailchimp provides a connector for Mailchimp.
 // (https://mailchimp.com/developer/marketing/)
+//
+// Mailchimp is a trademark of The Rocket Science Group LLC.
+// This connector is not affiliated with or endorsed by The Rocket Science Group
+// LLC.
 package mailchimp
 
 import (
@@ -102,13 +106,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Mailchimp connector instance.
+// New returns a new connector instance for Mailchimp.
 func New(env *meergo.AppEnv) (*MailChimp, error) {
 	c := MailChimp{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Mailchimp connector")
+			return nil, errors.New("cannot unmarshal settings of connector for Mailchimp")
 		}
 		// TODO(marco): re-enable webhooks when a public IP is used.
 		//err = c.initWebhooks()

@@ -5,8 +5,11 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package snowflake implements the Snowflake connector.
+// Package snowflake provides a connector for Snowflake.
 // (https://docs.snowflake.com/)
+//
+// Snowflake is a trademark of Snowflake Inc.
+// This connector is not affiliated with or endorsed by Snowflake Inc.
 package snowflake
 
 import (
@@ -53,13 +56,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Snowflake connector instance.
+// New returns a new connector instance for Snowflake.
 func New(env *meergo.DatabaseEnv) (*Snowflake, error) {
 	c := Snowflake{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Snowflake connector")
+			return nil, errors.New("cannot unmarshal settings of connector for Snowflake")
 		}
 	}
 	return &c, nil

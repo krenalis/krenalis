@@ -8,3 +8,6 @@ This connector lets you import user data from files stored in S3 buckets into yo
 ## What does it require?
 
 * An S3 account with a bucket to read files from.
+
+> S3 is a trademark of Amazon Technologies, Inc.
+> This connector is not affiliated with or endorsed by Amazon Technologies, Inc.

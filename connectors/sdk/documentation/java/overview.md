@@ -7,3 +7,6 @@ This connector lets you send events from your Java application to Meergo. The ev
 
 * Integration of the Meergo Java SDK into your application.
 * Basic knowledge of Java and the ability to write code.
+
+> Java is a trademark of Oracle Corporation.
+> This connector is not affiliated with or endorsed by Oracle Corporation.

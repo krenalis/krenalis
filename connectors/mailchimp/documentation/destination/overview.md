@@ -8,3 +8,6 @@ Using this connector you can you create and update unified Meergo users from you
 ## What does it require?
 
 * An account with [Mailchimp](https://mailchimp.com/).
+
+> Mailchimp is a trademark of The Rocket Science Group LLC.
+> This connector is not affiliated with or endorsed by The Rocket Science Group LLC.

@@ -5,7 +5,11 @@
 // Copyright (c) 2025 Open2b
 //
 
-// Package rudderstack implements the RudderStack connector.
+// Package rudderstack provides a connector for RudderStack.
+// (https://www.rudderstack.com/docs/)
+//
+// RudderStack is a trademark of RudderStack, Inc.
+// This connector is not affiliated with or endorsed by RudderStack, Inc.
 package rudderstack
 
 import (
@@ -34,7 +38,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new RudderStack connector instance.
+// New returns a new connector instance for RudderStack.
 func New(env *meergo.SDKEnv) (*RudderStack, error) {
 	return &RudderStack{}, nil
 }

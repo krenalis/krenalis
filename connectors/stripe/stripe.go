@@ -5,8 +5,11 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package stripe implements the Stripe connector.
+// Package stripe provides a connector for Stripe.
 // (https://docs.stripe.com/api)
+//
+// Stripe is a trademark of Stripe, Inc.
+// This connector is not affiliated with or endorsed by Stripe, Inc.
 package stripe
 
 import (
@@ -78,13 +81,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Stripe connector instance.
+// New returns a new connector instance for Stripe.
 func New(env *meergo.AppEnv) (*Stripe, error) {
 	c := Stripe{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Stripe connector")
+			return nil, errors.New("cannot unmarshal settings of connector for Stripe")
 		}
 	}
 	return &c, nil

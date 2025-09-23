@@ -5,8 +5,8 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package postgresql implements the PostgreSQL connector.
-// (https://www.postgresql.org/docs/15/)
+// Package postgresql provides a connector for PostgreSQL.
+// (https://www.postgresql.org/docs/16/)
 package postgresql
 
 import (
@@ -57,13 +57,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new PostgreSQL connector instance.
+// New returns a new connector instance for PostgreSQL.
 func New(env *meergo.DatabaseEnv) (*PostgreSQL, error) {
 	c := PostgreSQL{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of PostgreSQL connector")
+			return nil, errors.New("cannot unmarshal settings of connector for PostgreSQL")
 		}
 	}
 	return &c, nil

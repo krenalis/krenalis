@@ -8,3 +8,6 @@ Using this connector you can create and update unified Meergo users from your da
 ## What does it require?
 
 * An account with [klaviyo](https://www.klaviyo.com/).
+
+> Klaviyo is a trademark of Klaviyo, Inc.
+> This connector is not affiliated with or endorsed by Klaviyo, Inc.

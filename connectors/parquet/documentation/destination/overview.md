@@ -6,3 +6,6 @@ This connector lets you export unified users from your data warehouse (users con
 ## What does it require?
 
 * A file storage data destination (such as S3 or SFTP) for writing a Parquet file.
+
+> Parquet is a trademark of Apache Software Foundation.
+> This connector is not affiliated with or endorsed by Apache Software Foundation.

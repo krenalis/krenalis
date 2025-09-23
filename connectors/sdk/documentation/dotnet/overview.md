@@ -7,3 +7,6 @@ This connector lets you send events from your .NET application to Meergo. The ev
 
 * Integration of the Meergo .NET SDK into your application.
 * Basic knowledge of C# and the ability to write code.
+
+> .NET is a trademark of Microsoft Corporation.
+> This connector is not affiliated with or endorsed by Microsoft Corporation.

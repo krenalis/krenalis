@@ -8,3 +8,6 @@ Using this connector you can you send events — for example, those received fro
 ## What does it require?
 
 * An account with [Google Analytics](https://analytics.google.com/).
+
+> Google and Google Analytics are trademarks of Google LLC.
+> This connector is not affiliated with or endorsed by Google LLC.

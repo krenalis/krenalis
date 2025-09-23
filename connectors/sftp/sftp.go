@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package sftp implements the SFTP connector.
+// Package sftp provides a connector for SFTP.
 // (https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-02)
 package sftp
 
@@ -58,13 +58,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new SFTP connector instance.
+// New returns a new connector instance for SFTP.
 func New(env *meergo.FileStorageEnv) (*SFTP, error) {
 	c := SFTP{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of SFTP connector")
+			return nil, errors.New("cannot unmarshal settings of connector for SFTP")
 		}
 	}
 	return &c, nil

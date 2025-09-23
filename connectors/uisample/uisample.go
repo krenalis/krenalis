@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package uisample implements the UISample connector.
+// Package uisample provides a sample connector for UI integration.
 package uisample
 
 import (
@@ -46,13 +46,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new UISample connector instance.
+// New returns a new connector instance for UI sample.
 func New(env *meergo.AppEnv) (*UISample, error) {
 	c := UISample{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of UISample connector")
+			return nil, errors.New("cannot unmarshal settings of connector for UI Sample")
 		}
 	}
 	return &c, nil

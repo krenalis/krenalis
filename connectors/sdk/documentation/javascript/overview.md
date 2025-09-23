@@ -7,3 +7,6 @@ This connector lets you send events from the JavaScript on your website or web a
 
 * Integration of the Meergo JavaScript SDK into your website or application.
 * Basic knowledge of JavaScript or TypeScript and the ability to write code.
+
+> JavaScript is a trademark of Oracle Corporation.
+> This connector is not affiliated with or endorsed by Oracle Corporation.

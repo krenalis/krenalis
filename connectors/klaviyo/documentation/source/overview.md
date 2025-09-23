@@ -8,3 +8,6 @@ Using this connector you can read profiles from Klaviyo, import them into your d
 ## What does it require?
 
 * An account with [klaviyo](https://www.klaviyo.com/).
+
+> Klaviyo is a trademark of Klaviyo, Inc.
+> This connector is not affiliated with or endorsed by Klaviyo, Inc.

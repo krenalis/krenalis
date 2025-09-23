@@ -5,7 +5,11 @@
 // Copyright (c) 2025 Open2b
 //
 
-// Package segment implements the Segment connector.
+// Package segment provides a connector for Segment.
+// (https://segment.com/docs/)
+//
+// Segment is a trademark of Twilio, Inc.
+// This connector is not affiliated with or endorsed by Twilio, Inc.
 package segment
 
 import (
@@ -34,7 +38,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new Segment connector instance.
+// New returns a new connector instance for Segment.
 func New(env *meergo.SDKEnv) (*Segment, error) {
 	return &Segment{}, nil
 }

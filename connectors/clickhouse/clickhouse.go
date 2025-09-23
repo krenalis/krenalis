@@ -5,8 +5,11 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package clickhouse implements the ClickHouse connector.
+// Package clickhouse provides a connector for ClickHouse.
 // (https://clickhouse.com/docs/)
+//
+// ClickHouse is a trademark of ClickHouse, Inc.
+// This connector is not affiliated with or endorsed by ClickHouse, Inc.
 package clickhouse
 
 import (
@@ -53,13 +56,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new ClickHouse connector instance.
+// New returns a new connector instance for ClickHouse.
 func New(env *meergo.DatabaseEnv) (*ClickHouse, error) {
 	c := ClickHouse{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of ClickHouse connector")
+			return nil, errors.New("cannot unmarshal settings of connector for ClickHouse")
 		}
 	}
 	return &c, nil

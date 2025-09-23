@@ -5,8 +5,11 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package googleanalytics implements the Google Analytics connector.
+// Package googleanalytics provides a connector for Google Analytics.
 // (https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference)
+//
+// Google and Google Analytics are trademarks of Google LLC.
+// This connector is not affiliated with or endorsed by Google LLC.
 package googleanalytics
 
 import (
@@ -52,13 +55,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Google Analytics connector instance.
+// New returns a new connector instance for Google Analytics.
 func New(env *meergo.AppEnv) (*Analytics, error) {
 	c := Analytics{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Google Analytics connector")
+			return nil, errors.New("cannot unmarshal settings of connector for Google Analytics")
 		}
 	}
 	return &c, nil

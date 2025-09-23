@@ -8,3 +8,6 @@ This connector exports unified users (i.e., users consolidated through identity 
 ## What does it require?
 
 * An S3 account with a bucket to write files to.
+
+> S3 is a trademark of Amazon Technologies, Inc.
+> This connector is not affiliated with or endorsed by Amazon Technologies, Inc.

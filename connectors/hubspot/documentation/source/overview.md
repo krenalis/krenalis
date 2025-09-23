@@ -10,3 +10,6 @@ Using this connector you can read contacts from HubSpot, import them into your d
 * Any [HubSpot](https://www.hubspot.com/) account.
 * A [HubSpot developer account](https://developers.hubspot.com/).
 * The ability to set environment variables when starting Meergo.
+
+> HubSpot is a trademark of HubSpot, Inc.
+> This connector is not affiliated with or endorsed by HubSpot, Inc.

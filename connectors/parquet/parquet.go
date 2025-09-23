@@ -5,8 +5,12 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package parquet implements the Parquet connector.
+// Package parquet provides a connector for Parquet.
 // (https://github.com/apache/parquet-format)
+//
+// Parquet is a trademark of Apache Software Foundation.
+// This connector is not affiliated with or endorsed by Apache Software
+// Foundation.
 package parquet
 
 import (
@@ -61,7 +65,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new Parquet connector instance.
+// New returns a new connector instance for Parquet.
 func New(env *meergo.FileEnv) (*Parquet, error) {
 	return &Parquet{}, nil
 }

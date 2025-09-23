@@ -5,8 +5,12 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package s3 implements the S3 connector.
+// Package s3 provides a connector for S3.
 // (https://docs.aws.amazon.com/AmazonS3/latest/API/)
+//
+// S3 is a trademark of Amazon Technologies, Inc.
+// This connector is not affiliated with or endorsed by Amazon Technologies,
+// Inc.
 package s3
 
 import (
@@ -54,13 +58,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new S3 connector instance.
+// New returns a new connector instance for S3.
 func New(env *meergo.FileStorageEnv) (*S3, error) {
 	c := S3{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of S3 connector")
+			return nil, errors.New("cannot unmarshal settings of connector for S3")
 		}
 	}
 	return &c, nil

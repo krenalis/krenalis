@@ -5,8 +5,12 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package kafka implements the Kafka connector.
+// Package kafka provides a connector for Kafka.
 // (https://kafka.apache.org/documentation/)
+//
+// Kafka is a trademark of Apache Software Foundation.
+// This connector is not affiliated with or endorsed by Apache Software
+// Foundation.
 package kafka
 
 import (
@@ -46,13 +50,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Kafka connector instance.
+// New returns a new connector instance for Kafka.
 func New(env *meergo.StreamEnv) (*Kafka, error) {
 	c := Kafka{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Kafka connector")
+			return nil, errors.New("cannot unmarshal settings of connector for Kafka")
 		}
 	}
 	return &c, nil

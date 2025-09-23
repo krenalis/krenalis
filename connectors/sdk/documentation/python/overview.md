@@ -7,3 +7,6 @@ This connector lets you send events from your Python application to Meergo. The 
 
 * Integration of the Meergo Python SDK into your application.
 * Basic knowledge of Python and the ability to write code.
+
+> Python is a trademark of the Python Software Foundation.
+> This connector is not affiliated with or endorsed by the Python Software Foundation.

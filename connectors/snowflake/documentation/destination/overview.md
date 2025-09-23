@@ -8,3 +8,6 @@ This connector lets you write the unified users from your data warehouse into a 
 ## What does it require?
 
 * A Snowflake database with a table in which to store the users.
+
+> Snowflake is a trademark of Snowflake Inc.
+> This connector is not affiliated with or endorsed by Snowflake Inc.

@@ -8,3 +8,6 @@ Using this connector you can you send events — for example, those received fro
 ## What does it require?
 
 * An account with [Mixpanel](https://mixpanel.com/).
+
+> Mixpanel is a trademark of Mixpanel, Inc.
+> This connector is not affiliated with or endorsed by Mixpanel, Inc.

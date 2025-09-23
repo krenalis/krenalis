@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package filesystem implements the Filesystem connector.
+// Package filesystem provides a connector for local file system.
 package filesystem
 
 import (
@@ -59,7 +59,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new Filesystem connector instance.
+// New returns a new connector instance for file system.
 func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
 
 	confMu.Lock()
@@ -87,7 +87,7 @@ func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of Filesystem connector")
+			return nil, errors.New("cannot unmarshal settings of connector for file system")
 		}
 	}
 	return &c, nil
@@ -143,9 +143,9 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 
 	var intro string
 	if role == meergo.Source {
-		intro = "This Filesystem connector allows Meergo to read files from this directory of your system:"
+		intro = "This connector for file system allows Meergo to read files from this directory of your system:"
 	} else {
-		intro = "This Filesystem connector allows Meergo to write files into this directory of your system:"
+		intro = "This connector for file system allows Meergo to write files into this directory of your system:"
 	}
 
 	confMu.Lock()

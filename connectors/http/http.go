@@ -5,8 +5,8 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package http implements the HTTP GET and HTTP POST connectors.
-// (https://datatracker.ietf.org/doc/html/rfc7540)
+// Package http provides a connector for HTTP.
+// (https://www.ietf.org/rfc/rfc7540.txt)
 package http
 
 import (
@@ -59,13 +59,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new HTTP GET/HTTP POST connection.
+// New returns a new connection instance for HTTP GET/HTTP POST requests.
 func New(env *meergo.FileStorageEnv) (*HTTP, error) {
 	c := HTTP{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of HTTP GET/HTTP POST connector")
+			return nil, errors.New("cannot unmarshal settings of connector for HTTP GET/HTTP POST")
 		}
 	}
 	return &c, nil

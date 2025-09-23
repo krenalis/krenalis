@@ -5,8 +5,11 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package rabbitmq implements the RabbitMQ connector.
-// (https://www.rabbitmq.com/documentation.html)
+// Package rabbitmq provides a connector for RabbitMQ.
+// (https://www.rabbitmq.com/docs)
+//
+// RabbitMQ is a trademark of Broadcom, Inc.
+// This connector is not affiliated with or endorsed by Broadcom, Inc.
 package rabbitmq
 
 import (
@@ -43,13 +46,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new RabbitMQ connector instance.
+// New returns a new connector instance for RabbitMQ.
 func New(env *meergo.StreamEnv) (*RabbitMQ, error) {
 	c := RabbitMQ{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of RabbitMQ connector")
+			return nil, errors.New("cannot unmarshal settings of connector for RabbitMQ")
 		}
 	}
 	return &c, nil

@@ -5,8 +5,11 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package excel implements the Excel connector.
-// (http://www.office.microsoft.com/excel)
+// Package excel provides a connector for Excel.
+// (https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/f780b2d6-8252-4074-9fe3-5d7bc4830968)
+//
+// Microsoft and Excel are trademarks of Microsoft Corporation.
+// This connector is not affiliated with or endorsed by Microsoft Corporation.
 package excel
 
 import (
@@ -54,13 +57,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new Excel connector instance.
+// New returns a new connector instance for Excel.
 func New(env *meergo.FileEnv) (*Excel, error) {
 	c := Excel{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of CSV connector")
+			return nil, errors.New("cannot unmarshal settings of connector for Excel")
 		}
 	}
 	return &c, nil

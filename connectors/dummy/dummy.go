@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package dummy implements the Dummy connector.
+// Package dummy provides a dummy connector for testing.
 package dummy
 
 import (
@@ -74,7 +74,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new Dummy connector instance.
+// New returns a new connector instance for testing.
 func New(env *meergo.AppEnv) (*Dummy, error) {
 	c := Dummy{env: env}
 	if len(env.Settings) > 0 {

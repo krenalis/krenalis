@@ -8,3 +8,6 @@ This connector lets you read users from a MySQL database, store them in your dat
 ## What does it require?
 
 * A MySQL database to read the users from.
+
+> MySQL is a trademark of Oracle Corporation.
+> This connector is not affiliated with or endorsed by Oracle Corporation.

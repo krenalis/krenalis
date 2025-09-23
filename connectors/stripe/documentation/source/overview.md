@@ -8,3 +8,6 @@ This connector lets you read customers from Stripe, import them into your data w
 ## What does it require?
 
 * An account with [Stripe](https://stripe.com/).
+
+> Stripe is a trademark of Stripe, Inc.
+> This connector is not affiliated with or endorsed by Stripe, Inc.

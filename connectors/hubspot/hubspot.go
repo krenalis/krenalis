@@ -5,8 +5,11 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package hubspot implements the HubSpot connector.
+// Package hubspot provides a connector for HubSpot.
 // (https://developers.hubspot.com/docs/api-reference/overview)
+//
+// HubSpot is a trademark of HubSpot, Inc.
+// This connector is not affiliated with or endorsed by HubSpot, Inc.
 package hubspot
 
 import (
@@ -80,7 +83,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new HubSpot connector instance.
+// New returns a new connector instance for HubSpot.
 func New(env *meergo.AppEnv) (*HubSpot, error) {
 	c := HubSpot{env: env}
 	return &c, nil
@@ -101,7 +104,7 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if res.PortalId <= 0 {
-		return "", fmt.Errorf("connector HubSpot has returned an invalid account (portalId): %d", res.PortalId)
+		return "", fmt.Errorf("HubSpot has returned an invalid account (portalId): %d", res.PortalId)
 	}
 	return strconv.Itoa(res.PortalId), nil
 }

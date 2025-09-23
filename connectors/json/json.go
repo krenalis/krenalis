@@ -5,8 +5,8 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package json implements the JSON connector.
-// (https://datatracker.ietf.org/doc/html/rfc8259)
+// Package json provides a connector for JSON.
+// (https://www.ietf.org/rfc/rfc8259.txt)
 package json
 
 import (
@@ -52,13 +52,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new JSON connector instance.
+// New returns a new connector instance for JSON.
 func New(env *meergo.FileEnv) (*JSON, error) {
 	c := JSON{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of JSON connector")
+			return nil, errors.New("cannot unmarshal settings of connector for JSON")
 		}
 	}
 	return &c, nil

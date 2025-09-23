@@ -11,3 +11,6 @@ Using this connector, which interfaces with Segment, you can integrate customer 
 ## What does it require?
 
 * Any [Segment](https://segment.com/) account.
+
+> Segment is a trademark of Twilio, Inc.
+> This connector is not affiliated with or endorsed by Twilio, Inc.

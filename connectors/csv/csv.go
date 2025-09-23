@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package csv implements the CSV connector.
+// Package csv provides a connector for CSV.
 // (https://www.ietf.org/rfc/rfc4180.txt)
 package csv
 
@@ -56,13 +56,13 @@ func init() {
 	}, New)
 }
 
-// New returns a new CSV connector instance.
+// New returns a new connector instance for CSV.
 func New(env *meergo.FileEnv) (*CSV, error) {
 	c := CSV{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of CSV connector")
+			return nil, errors.New("cannot unmarshal settings of connector for CSV")
 		}
 	}
 	return &c, nil

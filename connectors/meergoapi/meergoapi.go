@@ -5,7 +5,7 @@
 // Copyright (c) 2025 Open2b
 //
 
-// Package meergoapi implements the meergoapi connector.
+// Package meergoapi provides a connector for Meergo API.
 package meergoapi
 
 import (
@@ -34,7 +34,7 @@ func init() {
 	}, New)
 }
 
-// New returns a new Meergo API connector instance.
+// New returns a new connector instance for Meergo API.
 func New(env *meergo.SDKEnv) (*MeergoAPI, error) {
 	return &MeergoAPI{}, nil
 }

@@ -10,3 +10,6 @@ Using this connector you can create and update unified Meergo users from your da
 * An account with [HubSpot](https://www.hubspot.com/).
 * A [HubSpot developer account](https://developers.hubspot.com/).
 * The ability to set environment variables when starting Meergo.
+
+> HubSpot is a trademark of HubSpot, Inc.
+> This connector is not affiliated with or endorsed by HubSpot, Inc.

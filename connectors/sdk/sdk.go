@@ -5,9 +5,24 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package server implements the .Net, Android, Go, Java, JavaScript, Node.js,
-// and Python connectors.
-package server
+// Package sdk implements connectors for .Net, Android, Go, Java, JavaScript,
+// Node.js, and Python.
+//
+// .NET is a trademark of Microsoft Corporation.
+// This connector is not affiliated with or endorsed by Microsoft Corporation.
+//
+// Android and Go are trademarks of Google LLC.
+// This connector is not affiliated with or endorsed by Google LLC.
+//
+// Java and JavaScript are trademarks of Oracle Corporation.
+// This connector is not affiliated with or endorsed by Oracle Corporation.
+//
+// Node.js is a trademark of the OpenJS Foundation.
+// This connector is not affiliated with or endorsed by the OpenJS Foundation.
+//
+// Python is a trademark of the Python Software Foundation.
+// This connector is not affiliated with or endorsed by the Python Software Foundation.
+package sdk
 
 import (
 	_ "embed"
@@ -58,7 +73,7 @@ var nodeOverview string
 var pythonOverview string
 
 func init() {
-	servers := []meergo.SDKInfo{
+	sdks := []meergo.SDKInfo{
 		{
 			Name:       ".NET",
 			Categories: meergo.CategorySDKAndAPI,
@@ -139,8 +154,8 @@ func init() {
 			},
 		},
 	}
-	for _, srv := range servers {
-		meergo.RegisterSDK(srv, New)
+	for _, sdk := range sdks {
+		meergo.RegisterSDK(sdk, New)
 	}
 }
 
