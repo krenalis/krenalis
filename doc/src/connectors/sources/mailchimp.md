@@ -24,7 +24,7 @@ Before you can add a Mailchimp data source, you need to create a private key in 
 5. In the **App name** field, enter a name for the new app, for example, "Meergo data source."
 6. In the **Redirect URI** field, enter the (external) URL of Meergo with the `/admin/oauth/authorize` path. For example: `https://example.com/admin/oauth/authorize`. If you are running Meergo locally through Docker Compose, with the default configuration provided within the Meergo repository, you can use `http://127.0.0.1:2022/admin/oauth/authorize` as the Redirect URI.
     
-    > 💡 If your are using `localhost` as domain for the Meergo external URL, you need to change it (for example using `127.0.0.1`) to make OAuth with Mailchimp work. This limitation is due to Mailchimp that does not accept `localhost` in the Redirect URI. To do so, set the explicitly the `MEERGO_HTTP_EXTERNAL_URL` environment variable in such a way that it refers to `127.0.0.1` instead of `localhost`, for example `http://127.0.0.1:2022/`. Then, set the Mailchimp Redirect URI accordingly, for example to `http://127.0.0.1:2022/admin/oauth/authorize`.
+    > 💡 If your are using `localhost` as domain for the Meergo external URL, you need to change it (for example using `127.0.0.1`) to make OAuth with Mailchimp work. This limitation is due to Mailchimp that does not accept `localhost` in the Redirect URI. To do so, explicitly set the`MEERGO_HTTP_EXTERNAL_URL` environment variable in such a way that it refers to `127.0.0.1` instead of `localhost`, for example `http://127.0.0.1:2022/`. Then, set the Mailchimp Redirect URI accordingly, for example to `http://127.0.0.1:2022/admin/oauth/authorize`.
 
 7. Fill in the remaining fields as desired.
 8. Click **Create**.

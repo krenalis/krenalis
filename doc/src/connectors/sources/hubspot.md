@@ -26,7 +26,7 @@ Before you can add a HubSpot data source, you need to create an app in HubSpot a
 7. Click on the **Auth** tab.
 8. Under **Redirect URLs**, enter the (external) URL of Meergo with the `/admin/oauth/authorize` path. For example: `https://example.com/admin/oauth/authorize`.
     
-    > 💡 If your are using `127.0.0.1` as domain for the Meergo external URL (as in the default configuration), you need to change it (for example using `localhost`) to make OAuth with HubSpot work. This limitation is due to HubSpot that does not accept `127.0.0.1` in redirect URLs. To do so, set the explicitly the `MEERGO_HTTP_EXTERNAL_URL` environment variable in such a way that it refers to `localhost` instead of `127.0.0.1`, for example `http://localhost:2022/`. Then, set the HubSpot redirect URL accordingly, for example to `http://localhost:2022/admin/oauth/authorize`.
+    > 💡 If your are using `127.0.0.1` as domain for the Meergo external URL (as in the default configuration), you need to change it (for example using `localhost`) to make OAuth with HubSpot work. This limitation is due to HubSpot that does not accept `127.0.0.1` in redirect URLs. To do so, explicitly set the`MEERGO_HTTP_EXTERNAL_URL` environment variable in such a way that it refers to `localhost` instead of `127.0.0.1`, for example `http://localhost:2022/`. Then, set the HubSpot redirect URL accordingly, for example to `http://localhost:2022/admin/oauth/authorize`.
 
 9.  Click **Add new scope**.
 10. Select the following scopes:
