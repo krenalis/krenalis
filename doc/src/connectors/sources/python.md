@@ -60,9 +60,9 @@ Now you can choose to collect only the events, or import the users, or both:
 
 ### 4. Test the integration
 
-1. Go to the Python connection created at step 1 and click on **Live events**.
+1. Go to the Python connection created at step 1 and click on **Event debugger**.
 2. Execute your application to send some events.
-3. Click on a received event in **Live events** to view its details.
+3. Click on a received event in the **Live events** section to view its details.
 
 Refer to the [Meergo events documentation](../../events) for more information on the supported event types.
 
