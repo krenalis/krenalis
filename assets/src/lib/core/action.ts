@@ -774,10 +774,6 @@ const transformInActionToSet = async (
 			inPaths.push(p);
 		}
 
-		if (inPaths.length === 0 && !allowsConstantTransformation) {
-			throw new Error('You must select at least one input property');
-		}
-
 		const outPaths: string[] = [];
 		for (const p of selectedOutPaths) {
 			// Add the property to the output schema of the action.
@@ -793,8 +789,10 @@ const transformInActionToSet = async (
 			outPaths.push(p);
 		}
 
-		if (outPaths.length === 0) {
-			throw new Error('You must select at least one output property');
+		if ((inPaths.length === 0 && !allowsConstantTransformation) || outPaths.length === 0) {
+			throw new Error(
+				'After selecting a transformation function, select at least one input and one output property in Full mode before saving',
+			);
 		}
 
 		const keys = Object.keys(flattenedOutputSchema);
