@@ -1926,6 +1926,7 @@ const FullscreenTransformation = ({
 					</div>
 				) : (
 					entries.map(([i, s]) => {
+						i += 1;
 						const isOpen = JSON.stringify(s) === JSON.stringify(selectedSample);
 						const isLastExecuted =
 							lastExecutedSample.current &&
@@ -1986,7 +1987,10 @@ const FullscreenTransformation = ({
 													)}
 													<div>
 														<div className='fullscreen-transformation__sample-full-name'>
-															{firstNameIdentifier.current && lastNameIdentifier.current
+															{firstNameIdentifier.current &&
+															lastNameIdentifier.current &&
+															s[firstNameIdentifier.current] &&
+															s[lastNameIdentifier.current]
 																? removeQuotes(s[firstNameIdentifier.current]) +
 																	' ' +
 																	removeQuotes(s[lastNameIdentifier.current])
