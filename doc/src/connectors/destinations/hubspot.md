@@ -43,7 +43,7 @@ Before you can add a HubSpot data destination, you need to create an app in HubS
 Now proceed to add a HubSpot data destination:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. On the **Destinations** page, click **Add new destination**.
+2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search for the **HubSpot** destination; you can use the search bar at the top or filter by category.
 4. Click on the **HubSpot** connector. A panel will open on the right with information about **HubSpot**.
 5. Click on **Add destination**.

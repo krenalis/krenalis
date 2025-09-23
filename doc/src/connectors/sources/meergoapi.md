@@ -29,7 +29,7 @@ To use the Meergo API data source, you will need any language or application tha
 ### Add a Meergo API data source
 
 1. From the **Meergo Admin console**, navigate to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **Meergo API** source; you can use the search bar at the top or filter by category.
 4. Click on the **Meergo API** connector. A panel will open on the right with information about **Meergo API**.
 5. Click on **Add source**. The `Add Meergo API source connection` page will appear.

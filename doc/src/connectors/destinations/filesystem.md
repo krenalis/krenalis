@@ -17,7 +17,7 @@ Its sole purpose is to test file exports and explore the various file formats su
 ### Add an Filesystem data destination
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. On the **Destinations** page, click **Add new destination**.
+2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search for the **Filesystem** destination; you can use the search bar at the top or filter by category.
 4. Click on the **Filesystem** connector. A panel will open on the right with information about **Filesystem**.
 5. Click on **Add destination**. The `Add Filesystem destination connection` page will appear.

@@ -17,7 +17,7 @@ MySQL is an open-source relational database management system. It's popular for 
 ### Add a MySQL data source
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **MySQL** source; you can use the search bar at the top or filter by category.
 4. Click on the **MySQL** connector. A panel will open on the right with information about **MySQL**.
 5. Click on **Add source**. The `Add MySQL source connection` page will appear.

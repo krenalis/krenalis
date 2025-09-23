@@ -16,7 +16,7 @@ Once the HTTP GET data source is configured, you can easily customize how the da
 ### Add an HTTP GET data source
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **HTTP GET** source; you can use the search bar at the top or filter by category.
 4. Click on the **HTTP GET** connector. A panel will open on the right with information about **HTTP GET**.
 5. Click on **Add source**. The `Add HTTP GET source connection` page will appear.

@@ -35,7 +35,7 @@ Before you can add a Mailchimp data destination, you need to create a private ke
 Now proceed to add a Mailchimp data destination:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. On the **Sources** page, click **Add New source**.
+2. On the **Sources** page, click **Add a new destination ⊕** .
 3. Search for the **Mailchimp** destination; you can use the search bar at the top or filter by category.
 4. Click on the **Mailchimp** connector. A panel will open on the right with information about **Mailchimp**.
 5. Click on **Add destination**.

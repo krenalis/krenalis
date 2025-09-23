@@ -16,7 +16,7 @@ SFTP (Secure File Transfer Protocol) is a secure network protocol used for trans
 ### Add an SFTP Data Source
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **SFTP** source; you can use the search bar at the top or filter by category.
 4. Click on the **SFTP** connector. A panel will open on the right with information about **SFTP**.
 5. Click on **Add source**. The `Add SFTP source connection` page will appear.

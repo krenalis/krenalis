@@ -15,7 +15,7 @@ Once the HTTP POST data destination is configured, you can easily customize the 
 ### Add an HTTP POST data destination
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. On the **Destinations** page, click **Add new destination**.
+2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search for the **HTTP POST** destination; you can use the search bar at the top or filter by category.
 4. Click on the **HTTP POST** connector. A panel will open on the right with information about **HTTP POST**.
 5. Click on **Add destination**. The `Add HTTP POST destination connection` page will appear.

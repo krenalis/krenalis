@@ -20,7 +20,7 @@ The **Java** data source allows you to send customer event data using the **Java
 First of all, you need a connection in Meergo that can receive events from the Java SDK. To do so:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **Java** source; you can use the search bar at the top or filter by category.
 4. Click on the **Java** connector. A panel will open on the right with information about **Java**.
 5. Click on **Add source**. The `Add Java source connection` page will appear.

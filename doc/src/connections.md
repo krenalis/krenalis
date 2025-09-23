@@ -21,7 +21,7 @@ There are many connection types that you can add based on the type of the extern
 
 A source connection enables you to retrieve customer and event data from an external location, then transform and consolidate it within your data warehouse. Meergo allows you to add multiple sources from which to receive data and events.
 
-You can create a source in the "connections" page of a workspace clicking on the **Add new source ⊕** button.
+You can create a source in the "connections" page of a workspace clicking on the **Add a new source ⊕** button.
 
 ### Destinations
 

@@ -20,7 +20,7 @@ The **Node.js** data source allows you to send customer event data using the **N
 First of all, you need a connection in Meergo that can receive events from the Node.js SDK. To do so:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **Node.js** source; you can use the search bar at the top or filter by category.
 4. Click on the **Node.js** connector. A panel will open on the right with information about **Node.js**.
 5. Click on **Add source**. The `Add Node.js source connection` page will appear.

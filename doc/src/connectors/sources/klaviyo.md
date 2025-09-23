@@ -29,7 +29,7 @@ Before you can add a Klaviyo data source, you need to create a private key in yo
 Now proceed to add a Klaviyo data source:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **Klaviyo** source; you can use the search bar at the top or filter by category.
 4. Click on the **Klaviyo** connector. A panel will open on the right with information about **Klaviyo**.
 5. Click on **Add source**. The `Add Klaviyo source connection` page will appear.

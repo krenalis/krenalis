@@ -20,7 +20,7 @@ The **Python** data source allows you to send customer event data using the **Py
 First of all, you need a connection in Meergo that can receive events from the Python SDK. To do so:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **Python** source; you can use the search bar at the top or filter by category.
 4. Click on the **Python** connector. A panel will open on the right with information about **Python**.
 5. Click on **Add source**. The `Add Python source connection` page will appear.

@@ -16,7 +16,7 @@ PostgreSQL is an advanced open-source relational database system known for its r
 ### Add a PostgreSQL data destination
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. On the **Destinations** page, click **Add new destinations**.
+2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search for the **PostgreSQL** destination; you can use the search bar at the top or filter by category.
 4. Click on the **PostgreSQL** connector. A panel will open on the right with information about **PostgreSQL**.
 5. Click on **Add destination**. The `Add PostgreSQL destination connection` page will appear.

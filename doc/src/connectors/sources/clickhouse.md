@@ -17,7 +17,7 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 ### Add a ClickHouse data source
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **ClickHouse** source; you can use the search bar at the top or filter by category.
 4. Click on the **ClickHouse** connector. A panel will open on the right with information about **ClickHouse**.
 5. Click on **Add source**. The `Add ClickHouse source connection` page will appear.

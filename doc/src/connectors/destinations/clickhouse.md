@@ -16,7 +16,7 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 ### Add a ClickHouse data destination
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. On the **Destinations** page, click **Add new destinations**.
+2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search for the **ClickHouse** destination; you can use the search bar at the top or filter by category.
 4. Click on the **ClickHouse** connector. A panel will open on the right with information about **ClickHouse**.
 5. Click on **Add destination**. The `Add ClickHouse destination connection` page will appear.

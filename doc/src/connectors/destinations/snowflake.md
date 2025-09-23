@@ -16,7 +16,7 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
 ### Add a Snowflake data destination
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. On the **Destinations** page, click **Add new destinations**.
+2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search for the **Snowflake** destination; you can use the search bar at the top or filter by category.
 4. Click on the **Snowflake** connector. A panel will open on the right with information about **Snowflake**.
 5. Click on **Add destination**. The `Add Snowflake destination connection` page will appear.

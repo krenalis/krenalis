@@ -30,7 +30,7 @@ Before you can add a Stripe data destination, you need to create an API key in y
 Now proceed to add a Stripe data destination:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. On the **Destinations** page, click **Add new destination**.
+2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search for the **Stripe** destination; you can use the search bar at the top or filter by category.
 4. Click on the **Stripe** connector. A panel will open on the right with information about **Stripe**.
 5. Click on **Add destination**. The `Add Stripe destination connection` page will appear.

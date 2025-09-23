@@ -20,7 +20,7 @@ This guide provides clear instructions for installing the JavaScript SDK in web 
 To create a source JavaScript connection in Meergo:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. On the **Sources** page, click **Add new source**.
+2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **JavaScript** source; you can use the search bar at the top or filter by category.
 4. Click on the **JavaScript** connector. A panel will open on the right with information about **JavaScript**.
 5. Click on **Add source**. The `Add JavaScript source connection` page will appear.
