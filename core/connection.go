@@ -2169,62 +2169,64 @@ func serializeCursor(cursor time.Time) (string, error) {
 }
 
 // validateLinkedConnections checks whether the provided connections can be
-// linked to, or unlinked from, a connection with the specified connector,
-// workspace, and role.
+// linked to a connection with the specified connector, workspace, and role.
+// If they can be linked, it returns the normalized set of connection IDs.
 //
 // If the connections cannot be linked or unlinked, it returns an
 // errors.BadRequestError. If any connection does not exist, it returns an
 // errors.UnprocessableError with the code LinkedConnectionNotExist.
-func validateLinkedConnections(connections []int, c *state.Connector, ws *state.Workspace, role state.Role) error {
+func validateLinkedConnections(connections []int, c *state.Connector, ws *state.Workspace, role state.Role) ([]int, error) {
+	targets := c.SourceTargets
+	if role == state.Destination {
+		targets = c.DestinationTargets
+	}
+	if !targets.Contains(state.TargetEvent) {
+		if connections != nil {
+			return nil, errors.BadRequest("connector %q, used as %s, does not support events", c.Name, strings.ToLower(role.String()))
+		}
+		return nil, nil
+	}
 	if connections == nil {
-		return nil
+		connections = []int{}
 	}
 	if len(connections) == 0 {
-		return errors.BadRequest("event connections cannot be empty")
-	}
-	if role == state.Source {
-		if !c.SourceTargets.Contains(state.TargetEvent) {
-			return errors.BadRequest("connector %s, used as destination, does not support event connections", c.Name)
-		}
-	} else {
-		if !c.DestinationTargets.Contains(state.TargetEvent) {
-			return errors.BadRequest("connector %s, used as source, does not support event connections", c.Name)
-		}
+		return connections, nil
 	}
 	for i, id := range connections {
 		if id < 1 || id > maxInt32 {
-			return errors.BadRequest("event connection %d is not a valid connection identifier", id)
+			return nil, errors.BadRequest("event connection %d is not a valid connection identifier", id)
 		}
 		for j := i + 1; j < len(connections); j++ {
 			if connections[j] == id {
-				return errors.BadRequest("event connection %d is repeated", id)
+				return nil, errors.BadRequest("event connection %d is repeated", id)
 			}
 		}
 		ec, ok := ws.Connection(id)
 		if !ok {
-			return errors.Unprocessable(LinkedConnectionNotExist, "linked connection %d does not exist", id)
+			return nil, errors.Unprocessable(LinkedConnectionNotExist, "linked connection %d does not exist", id)
 		}
 		if role == state.Source {
 			// If the connector is Source, the connection's connector must
 			// support events as Destination.
 			if !ec.Connector().DestinationTargets.Contains(state.TargetEvent) {
-				return errors.BadRequest("event connection %d does not support events", id)
+				return nil, errors.BadRequest("event connection %d does not support events", id)
 			}
 		} else {
 			// If the connector is Destination, the connection's connector must
 			// support events as Source.
 			if !ec.Connector().SourceTargets.Contains(state.TargetEvent) {
-				return errors.BadRequest("event connection %d does not support events", id)
+				return nil, errors.BadRequest("event connection %d does not support events", id)
 			}
 		}
 		if ec.Role == role {
 			if ec.Role == state.Source {
-				return errors.BadRequest("event connection %d is not a destination", id)
+				return nil, errors.BadRequest("event connection %d is not a destination", id)
 			}
-			return errors.BadRequest("event connection %d is not a source", id)
+			return nil, errors.BadRequest("event connection %d is not a source", id)
 		}
 	}
-	return nil
+	slices.Sort(connections)
+	return connections, nil
 }
 
 // Compression represents the compression of a file connection.

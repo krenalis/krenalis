@@ -582,8 +582,9 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		return 0, errors.BadRequest("stream connectors are not currently supported")
 	}
 
-	// Validate linked connections.
-	err := validateLinkedConnections(connection.LinkedConnections, c, this.workspace, state.Role(connection.Role))
+	// Validate and normalize linked connections.
+	var err error
+	connection.LinkedConnections, err = validateLinkedConnections(connection.LinkedConnections, c, this.workspace, state.Role(connection.Role))
 	if err != nil {
 		return 0, err
 	}
@@ -600,7 +601,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if n.Name == "" {
 		n.Name = c.Name
 	}
-	slices.Sort(n.LinkedConnections)
 
 	// Validate the strategy.
 	if connection.Role == Source {
@@ -761,7 +761,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			return nil, err
 		}
 		// Link connections.
-		if n.LinkedConnections != nil {
+		if len(n.LinkedConnections) > 0 {
 			result, err := tx.Exec(ctx, add, n.ID)
 			if err != nil {
 				return nil, err
@@ -1993,8 +1993,8 @@ type ConnectionToAdd struct {
 	SendingMode *SendingMode `json:"sendingMode"`
 
 	// LinkedConnections, for connections supporting events, indicate the
-	// connections to which events can be sent or received. It is nil if there
-	// are no linked connections or if the connection do not support events.
+	// connections to which events can be sent or received. It must be nil if the
+	// connection do not support events.
 	LinkedConnections []int `json:"linkedConnections"`
 
 	// Settings represents the settings of the connector.
