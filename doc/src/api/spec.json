@@ -15062,10 +15062,86 @@
             ]
         },
         {
-            "id": "system",
-            "name": "System",
-            "description": "System endpoints provide generic information about the server. Currently they expose the languages supported for transformation functions.",
+            "id": "others",
+            "name": "Others",
+            "description": "These endpoints provide general information about the server.At the moment, they allow to retrieve the set of languages supported by transformation functions, as well as public information that is primarily consumed by the Admin Console.",
             "endpoints": [
+                {
+                    "name": "Get public metadata",
+                    "description": "Retrieves public, non-sensitive metadata about the server. The endpoint is unauthenticated and safe for client-side use, exposing only data intended for discovery such as server capabilities and configuration hints.",
+                    "method": "GET",
+                    "url": "/v1/public/metadata",
+                    "parameters": null,
+                    "moreParameters": null,
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "installationID",
+                                "prefilled": "\"9d16fb0b-adf1-4b84-b1b9-be1d017f0dfc\"",
+                                "type": {
+                                    "kind": "uuid"
+                                },
+                                "description": "Uniquely identifies the Meergo installation."
+                            },
+                            {
+                                "name": "externalURL",
+                                "prefilled": "\"https://example.com/\"",
+                                "type": {
+                                    "kind": "text"
+                                },
+                                "description": "Public address used to access the server from outside the internal network."
+                            },
+                            {
+                                "name": "externalEventURL",
+                                "prefilled": "\"https://example.com/api/v1/events\"",
+                                "type": {
+                                    "kind": "text"
+                                },
+                                "description": "Public address for the event ingestion endpoint `/api/v1/events`, making it reachable externally."
+                            },
+                            {
+                                "name": "javascriptSDKURL",
+                                "prefilled": "\"https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js\"",
+                                "type": {
+                                    "kind": "text"
+                                },
+                                "description": "Location where the JavaScript SDK is served."
+                            },
+                            {
+                                "name": "skipMemberEmailVerification",
+                                "prefilled": "false",
+                                "type": {
+                                    "kind": "boolean"
+                                },
+                                "description": "Indicates whether email verification is required when a member registers."
+                            },
+                            {
+                                "name": "canSendMemberPasswordReset",
+                                "prefilled": "true",
+                                "type": {
+                                    "kind": "boolean"
+                                },
+                                "description": "Indicates whether the system can send password reset emails to members."
+                            },
+                            {
+                                "name": "telemetryLevel",
+                                "prefilled": "\"all\"",
+                                "type": {
+                                    "kind": "text",
+                                    "values": [
+                                        "none",
+                                        "errors",
+                                        "stats",
+                                        "all"
+                                    ]
+                                },
+                                "description": "Required telemetry data reporting mode in Meergo:\n\n- `\"none\"`: no telemetry data must be sent\n- `\"errors\"`: only error-related telemetry data must be sent\n- `\"stats\"`: only usage statistics must be sent\n- `\"all\"`: both error-related data and usage statistics must be sent\n\n"
+                            }
+                        ]
+                    },
+                    "errors": null
+                },
                 {
                     "name": "List transformation languages",
                     "description": "Returns a list of supported languages that can be used for transformation functions.",
