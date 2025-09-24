@@ -43,13 +43,15 @@ Once the Meergo API data source is added, you will be directed to the **Actions*
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the Meergo API data source from which you want to import the events.
 3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import events**.
-5. Click **Add** to add the action.
+4. Click **Import events into warehouse**.
+5. Fill in the necessary information in the action.
+6. Click **Add** to add the action.
 
 ### Import users into the workspace's data warehouse
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. Click on the Meergo API data source from which you want to import the users.
 3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import users**.
-5. Click **Add** to add the action.
+4. Click **Import users into warehouse**.
+5. Fill in the necessary information in the action.
+6. Click **Add** to add the action.
