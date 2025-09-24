@@ -4,6 +4,8 @@
 
 # JavaScript SDK data source
 
+[![GitHub Repo](https://img.shields.io/badge/Github-Meergo_JavaScript_SDK-blue?logo=github)](https://github.com/open2b/analytics-javascript)
+
 The **JavaScript** SDK empowers developers to effortlessly integrate robust event tracking and advanced data analytics directly into their web applications. Developers can seamlessly transmit tracking data to both the data warehouse and a multiple analytics tools, all without the hassle of individual integrations.
 
 This streamlined approach simplifies the development process, enabling teams to gain comprehensive insights into user behavior and optimize their applications with ease.
@@ -38,3 +40,7 @@ Here is a list of the minimum browser versions required to run the JavaScript SD
 * Firefox 21
 * Opera 14
 * IE 11
+
+## SDK source code
+
+The source code of the Meergo JavaScript SDK is [available on GitHub](https://github.com/open2b/analytics-javascript).

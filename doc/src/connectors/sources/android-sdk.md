@@ -4,6 +4,8 @@
 
 # Android SDK data source
 
+[![GitHub Repo](https://img.shields.io/badge/Github-Meergo_Kotlin_SDK-blue?logo=github)](https://github.com/open2b/analytics-kotlin)
+
 The **Android** SDK empowers developers to effortlessly integrate robust event tracking and advanced data analytics directly into their Android applications. Developers can seamlessly transmit tracking data to both the data warehouse and a multiple analytics tools, all without the hassle of individual integrations.
 
 This streamlined approach simplifies the development process, enabling teams to gain comprehensive insights into user behavior and optimize their applications with ease.
@@ -24,3 +26,7 @@ This streamlined approach simplifies the development process, enabling teams to 
 | [Getting&nbsp;started](android-sdk/getting-started) | How to install the SDK and import it into Android applications. |
 | [Options](android-sdk/options)                      | The available options when installing the SDK.                  |
 | [Methods&nbsp;of&nbsp;SDK](android-sdk/methods)     | The methods of the SDK, including the methods to send events.   |
+
+## SDK source code
+
+The source code of the Meergo Kotlin SDK is [available on GitHub](https://github.com/open2b/analytics-kotlin).

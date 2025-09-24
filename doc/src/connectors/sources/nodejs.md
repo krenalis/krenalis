@@ -4,13 +4,16 @@
 
 # Node.js SDK data source
 
+[![GitHub Repo](https://img.shields.io/badge/Github-Meergo_Node_SDK-blue?logo=github)](https://github.com/open2b/analytics-node)
+
 The **Node.js** data source allows you to send customer event data using the **Node.js SDK** from your Node.js applications to Meergo.
 
 - [Using the SDK](#using-the-sdk)
-  - [1. Create a source Node.js connection](#1-create-a-source-Node.js-connection)
-  - [2. Import the SDK in your Node.js application](#2-import-the-sdk-in-your-Node.js-application)
+  - [1. Create a source Node.js connection](#1-create-a-source-nodejs-connection)
+  - [2. Import the SDK in your Node.js application](#2-import-the-sdk-in-your-nodejs-application)
   - [3. Add an action](#3-add-an-action)
   - [4. Test the integration](#4-test-the-integration)
+- [SDK source code](#sdk-source-code)
 - [License](#license)
 
 ## Using the SDK
@@ -66,6 +69,10 @@ Now you can choose to collect only the events, or import the users, or both:
 3. Click on a received event in the **Live events** section to view its details.
 
 Refer to the [Meergo events documentation](../../events) for more information on the supported event types.
+
+## SDK source code
+
+The source code of the Meergo Node SDK is [available on GitHub](https://github.com/open2b/analytics-node).
 
 ## License
 

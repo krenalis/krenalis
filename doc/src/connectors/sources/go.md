@@ -4,6 +4,8 @@
 
 # Go SDK data source
 
+[![GitHub Repo](https://img.shields.io/badge/Github-Meergo_Go_SDK-blue?logo=github)](https://github.com/open2b/analytics-go)
+
 The **Go** data source allows you to send customer event data using the **Go SDK** from your Go applications to Meergo.
 
 - [Using the SDK](#using-the-sdk)
@@ -11,6 +13,7 @@ The **Go** data source allows you to send customer event data using the **Go SDK
   - [2. Import the SDK in your Go application](#2-import-the-sdk-in-your-go-application)
   - [3. Add an action](#3-add-an-action)
   - [4. Test the integration](#4-test-the-integration)
+- [SDK source code](#sdk-source-code)
 - [License](#license)
 
 ## Using the SDK
@@ -64,6 +67,10 @@ Now you can choose to collect only the events, or import the users, or both:
 3. Click on a received event in the **Live events** section to view its details.
 
 Refer to the [Meergo events documentation](../../events) for more information on the supported event types.
+
+## SDK source code
+
+The source code of the Meergo Go SDK is [available on GitHub](https://github.com/open2b/analytics-go).
 
 ## License
 
