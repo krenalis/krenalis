@@ -50,7 +50,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	switch connector.Type {
 	case state.App:
 		purge = execution.Cursor.IsZero()
-		records, err = this.app().Users(ctx, action.InSchema, execution.Cursor)
+		records, err = this.app().Users(ctx, action.InSchema, nil, execution.Cursor)
 	case state.Database:
 		database := this.database()
 		defer database.Close()

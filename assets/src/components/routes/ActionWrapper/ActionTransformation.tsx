@@ -1331,7 +1331,13 @@ const FullscreenTransformation = ({
 			if (actionType.target !== 'User') {
 				return;
 			}
-			if (!isFullscreenTransformationOpen || hasAlreadyFetchedSamples.current) {
+			if (!isFullscreenTransformationOpen) {
+				return;
+			}
+			if (!(connection.isApp && connection.isSource) && hasAlreadyFetchedSamples.current) {
+				// App import is the only case where samples must be refetched
+				// every time the full mode is opened, to apply any updated
+				// filter.
 				return;
 			}
 			setIsFetchingSamples(true);
@@ -1362,7 +1368,7 @@ const FullscreenTransformation = ({
 			} else if (connection.isApp && connection.isSource) {
 				let res: AppUsersResponse;
 				try {
-					res = await api.workspaces.connections.appUsers(connection.id, inputSchema);
+					res = await api.workspaces.connections.appUsers(connection.id, inputSchema, action.filter);
 				} catch (err) {
 					setIsFetchingSamples(false);
 					handleError(err);
@@ -1917,10 +1923,9 @@ const FullscreenTransformation = ({
 				{entries.length === 0 ? (
 					<div className='fullscreen-transformation__no-sample'>
 						<div className='fullscreen-transformation__no-sample-text'>
-							<h3>No {connection.connector.terms.users} to test</h3>
+							<h3>No samples found</h3>
 							<div>
-								{connection.name} didn't return any {connection.connector.terms.users} to test the
-								transformation.
+								No {connection.connector.terms.users} in {connection.name} match your filter.
 							</div>
 						</div>
 					</div>

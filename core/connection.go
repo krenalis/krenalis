@@ -570,11 +570,12 @@ func (this *Connection) AppUserSchemas(ctx context.Context) (src, dst types.Type
 }
 
 // AppUsers returns the users of an app connection and the cursor to get the
-// next users. The returned cursor is empty if there are no other users.
+// next users. If filter is not nil, only users matching its conditions will be
+// returned.The returned cursor is empty if there are no other users.
 //
 // It returns an errors.UnprocessableError error with code SchemaNotAligned if
 // the provided schema is not aligned with the app's source schema.
-func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) (json.Value, string, error) {
+func (this *Connection) AppUsers(ctx context.Context, schema types.Type, filter *Filter, cursor string) (json.Value, string, error) {
 
 	this.core.mustBeOpen()
 
@@ -587,6 +588,21 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	if !schema.Valid() {
 		return nil, "", errors.BadRequest("schema is not valid")
 	}
+
+	// Validate the filter.
+	var where *state.Where
+	if filter != nil {
+		_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+		if err != nil {
+			if err, ok := err.(types.PathNotExistError); ok {
+				return nil, "", errors.BadRequest("filter's property %q does not exist", err.Path)
+			}
+			return nil, "", errors.BadRequest("filter is not valid: %w", err)
+		}
+		where = convertFilterToWhere(filter, schema)
+	}
+
+	// Validate the cursor.
 	var lastChangeTime time.Time
 	if cursor != "" {
 		var err error
@@ -597,7 +613,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	// Get the users.
-	records, err := this.app().Users(ctx, schema, lastChangeTime)
+	records, err := this.app().Users(ctx, schema, where, lastChangeTime)
 	if err != nil {
 		switch err.(type) {
 		case *connectors.UnavailableError:

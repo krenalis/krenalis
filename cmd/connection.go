@@ -66,9 +66,19 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 			return nil, errors.BadRequest("invalid schema: %s", err)
 		}
 	}
+	var filter *core.Filter
+	if f := q.Get("filter"); f != "" {
+		err := json.Unmarshal([]byte(f), &filter)
+		if err != nil {
+			return nil, errors.BadRequest("invalid filter")
+		}
+		if filter == nil {
+			return nil, errors.BadRequest("filter cannot be null")
+		}
+	}
 	cursor := q.Get("cursor")
 
-	users, cursor, err := c.AppUsers(r.Context(), schema, cursor)
+	users, cursor, err := c.AppUsers(r.Context(), schema, filter, cursor)
 	if err != nil {
 		return nil, err
 	}

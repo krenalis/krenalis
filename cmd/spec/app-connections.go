@@ -40,6 +40,11 @@ func init() {
 						Description:    "The schema that the returned users must satisfy",
 					},
 					{
+						Name:        "filter",
+						Type:        filterType,
+						Description: "The filter applied to the users. If not empty, only users that match the filter will be returned.",
+					},
+					{
 						Name:        "cursor",
 						Type:        types.Text(),
 						Prefilled:   `...`,

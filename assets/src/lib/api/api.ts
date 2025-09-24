@@ -538,9 +538,17 @@ class Connections {
 		);
 	};
 
-	appUsers = async (connection: number, schema: ObjectType, cursor?: string): Promise<AppUsersResponse> => {
+	appUsers = async (
+		connection: number,
+		schema: ObjectType,
+		filter: Filter | null,
+		cursor?: string,
+	): Promise<AppUsersResponse> => {
 		let params = [];
 		params.push(['schema', JSON.stringify(schema)]);
+		if (filter != null) {
+			params.push(['filter', JSON.stringify(filter)]);
+		}
 		if (cursor !== undefined) {
 			params.push(['cursor', cursor]);
 		}

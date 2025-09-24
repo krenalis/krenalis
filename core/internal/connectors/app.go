@@ -22,6 +22,7 @@ import (
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/connectors/appwriter"
 	"github.com/meergo/meergo/core/internal/connectors/httpclient"
+	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/util"
@@ -269,7 +270,8 @@ func (app *App) SendEvents(ctx context.Context, events meergo.Events) error {
 
 // Users returns an iterator to iterate over the app's users. Each returned
 // record will contain, in the Properties field, the properties in schema, with
-// the same types.
+// the same types. If where is not nil, only users matching its conditions will
+// be returned.
 //
 // If lastChangeTime is not the zero time, it must be in UTC, and its year
 // cannot be before 1900. In this case, only records changed or created at or
@@ -281,7 +283,7 @@ func (app *App) SendEvents(ctx context.Context, events meergo.Events) error {
 //
 // The Err method of the returned iterator may return an *UnavailableError if
 // the connector encounters an error.
-func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime time.Time) (Records, error) {
+func (app *App) Users(ctx context.Context, schema types.Type, where *state.Where, lastChangeTime time.Time) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -312,6 +314,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	}
 	records := &appRecords{
 		schema:         schema,
+		where:          where,
 		appSchema:      appSchema,
 		timeLayouts:    app.timeLayouts,
 		lastChangeTime: lastChangeTime,
@@ -547,6 +550,7 @@ func sameValue(t types.Type, v, v2 any) bool {
 // appRecords implements the Records interface for apps.
 type appRecords struct {
 	schema         types.Type
+	where          *state.Where
 	appSchema      types.Type
 	timeLayouts    *state.TimeLayouts
 	lastChangeTime time.Time
@@ -651,6 +655,11 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 							break
 						}
 						record.Properties[p.Name] = v
+					}
+					if record.Err == nil && r.where != nil {
+						if !filters.Applies(r.where, record.Properties) {
+							continue
+						}
 					}
 				}
 

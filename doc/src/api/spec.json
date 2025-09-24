@@ -8573,6 +8573,95 @@
                             "description": "The schema that the returned users must satisfy"
                         },
                         {
+                            "name": "filter",
+                            "type": {
+                                "kind": "object",
+                                "properties": [
+                                    {
+                                        "name": "logical",
+                                        "prefilled": "\"and\"",
+                                        "type": {
+                                            "kind": "text",
+                                            "values": [
+                                                "and",
+                                                "or"
+                                            ]
+                                        },
+                                        "createRequired": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "conditions",
+                                        "prefilled": "[ { \"property\": \"name\", \"operator\": \"is\", \"values\": [ \"Mary\" ] } ]",
+                                        "type": {
+                                            "kind": "array",
+                                            "elementType": {
+                                                "kind": "object",
+                                                "properties": [
+                                                    {
+                                                        "name": "property",
+                                                        "type": {
+                                                            "kind": "text"
+                                                        },
+                                                        "createRequired": true,
+                                                        "description": "The name or path of the property. If the property has a `json` type, it can include a json path."
+                                                    },
+                                                    {
+                                                        "name": "operator",
+                                                        "type": {
+                                                            "kind": "text",
+                                                            "values": [
+                                                                "is",
+                                                                "is not",
+                                                                "is less than",
+                                                                "is less than or equal to",
+                                                                "is greater than",
+                                                                "is greater than or equal to",
+                                                                "is between",
+                                                                "is not between",
+                                                                "contains",
+                                                                "does not contain",
+                                                                "is one of",
+                                                                "is not one of",
+                                                                "starts with",
+                                                                "ends with",
+                                                                "is before",
+                                                                "is on or before",
+                                                                "is after",
+                                                                "is on or after",
+                                                                "is true",
+                                                                "is false",
+                                                                "is null",
+                                                                "is not null",
+                                                                "exists",
+                                                                "does not exist"
+                                                            ]
+                                                        },
+                                                        "createRequired": true,
+                                                        "description": "The condition's operator. The allowed values depend on the property's type."
+                                                    },
+                                                    {
+                                                        "name": "values",
+                                                        "type": {
+                                                            "kind": "array",
+                                                            "elementType": {
+                                                                "kind": "text",
+                                                                "charLen": 60
+                                                            }
+                                                        },
+                                                        "description": "The values the operator applies to, if any. These depend on both the operator and the property's type, including whether they're present and how many there are."
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        "createRequired": true,
+                                        "description": "A filter's condition."
+                                    }
+                                ]
+                            },
+                            "description": "The filter applied to the users. If not empty, only users that match the filter will be returned."
+                        },
+                        {
                             "name": "cursor",
                             "prefilled": "...",
                             "type": {
