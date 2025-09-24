@@ -59,24 +59,19 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /connectors":                                api.Connectors,
 		"GET    /connectors/{name}":                         api.Connector,
 		"GET    /connectors/{name}/documentation":           api.ConnectorDocumentation,
-		"GET    /external-event-url":                        api.ExternalEventURL,
 		"GET    /events":                                    workspace.Events,
 		"GET    /events/listeners/{id}":                     workspace.ListenedEvents,
 		"GET    /events/schema":                             api.EventSchema,
 		"GET    /events/settings/{write_key}":               api.EventsSettings,
 		"GET    /identity-resolution/latest":                workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":              workspace.IdentityResolutionSettings,
-		"GET    /installation-id":                           api.InstallationID,                   /* only Admin */
-		"GET    /javascript-sdk-url":                        api.JavaScriptSDKURL,                 /* only Admin */
 		"GET    /keys":                                      organization.AccessKeys,              /* only Admin */
 		"GET    /members":                                   organization.Members,                 /* only Admin */
-		"GET    /members/can-send-reset-password":           api.CanSendMemberPasswordReset,       /* only Admin */
 		"GET    /members/current":                           api.Member,                           /* only Admin */
 		"GET    /members/invitations/{token}":               api.MemberInvitation,                 /* only Admin */
 		"GET    /members/reset-password/{token}":            api.ValidateMemberPasswordResetToken, /* only Admin */
-		"GET    /members/skip-member-email-verification":    api.SkipMemberEmailVerification,      /* only Admin */
+		"GET    /public/metadata":                           api.PublicMetadata,
 		"GET    /system/transformations/languages":          api.TransformationLanguages,
-		"GET    /telemetry/level":                           api.SentryTelemetryLevel, /* only Admin */
 		"GET    /users":                                     workspace.Users,
 		"GET    /users/schema":                              workspace.UserSchema,
 		"GET    /users/schema/latest-alter":                 workspace.LatestAlterUserSchema,

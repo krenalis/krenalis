@@ -14,7 +14,7 @@ import { Connection } from '../../../lib/api/types/connection';
 import Workspace from '../../../lib/api/types/workspace';
 import { Warehouse } from './App.types';
 import { WarehouseResponse } from '../../../lib/api/types/warehouse';
-import { Execution, Member, TelemetryLevel } from '../../../lib/api/types/responses';
+import { Execution, Member, PublicMetadata } from '../../../lib/api/types/responses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { sleep } from '../../../utils/sleep';
@@ -46,6 +46,7 @@ const useApp = (
 	const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState<boolean>(false);
 	const [isPasswordless, setIsPasswordless] = useState<boolean>(localStorage.getItem(IS_PASSWORDLESS_KEY) != null);
 	const [selectedWorkspace, setSelectedWorkspace] = useState<number>(Number(localStorage.getItem(WORKSPACE_ID_KEY)));
+	const [publicMetadata, setPublicMetadata] = useState<PublicMetadata>();
 
 	let api = new API(window.location.origin, selectedWorkspace);
 
@@ -61,26 +62,18 @@ const useApp = (
 
 	useEffect(() => {
 		const loadAppState = async () => {
-			// Retrieve telemetry level from server.
-			let telemetryLevel: TelemetryLevel = 'all';
+			// Retrieve the public metadata.
+			let publicMetadata: PublicMetadata;
 			try {
-				telemetryLevel = await api.telemetryLevel();
+				publicMetadata = await api.publicMetadata();
 			} catch (err) {
 				handleError(err);
 				setIsLoadingState(false);
 				return;
 			}
-			if (telemetryLevel == 'errors' || telemetryLevel == 'all') {
-				// Retrieves the installation ID from the server, which will
-				// then be added as a tag to events sent to Sentry.
-				let installationID: string;
-				try {
-					installationID = await api.installationID();
-				} catch (err) {
-					handleError(err);
-					setIsLoadingState(false);
-					return;
-				}
+			setPublicMetadata(publicMetadata);
+
+			if (publicMetadata.telemetryLevel == 'errors' || publicMetadata.telemetryLevel == 'all') {
 				// Initialize the Sentry SDK.
 				Sentry.init({
 					dsn: 'https://4bc227ec8dc487e9bae1f3aea7f3ede1@o4509282180136960.ingest.de.sentry.io/4509292547211344',
@@ -107,8 +100,8 @@ const useApp = (
 						return breadcrumb;
 					},
 				});
-				// Add the installation ID as tag
-				Sentry.setTag('meergo_installation_id', installationID);
+				// Add the installation ID as tag.
+				Sentry.setTag('meergo_installation_id', publicMetadata.installationID);
 			}
 
 			// get the workspaces list.
@@ -503,6 +496,7 @@ const useApp = (
 		executeActionDropdownButtonRefs,
 		isPasswordless,
 		setIsPasswordless,
+		publicMetadata,
 	};
 };
 

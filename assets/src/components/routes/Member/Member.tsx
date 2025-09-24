@@ -37,6 +37,7 @@ const Member = () => {
 		redirect,
 		isPasswordless,
 		setIsPasswordless,
+		publicMetadata,
 	} = useContext(appContext);
 
 	const nameInputRef = useRef<any>();
@@ -54,15 +55,7 @@ const Member = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			let skipEmailVerification: boolean;
-			try {
-				skipEmailVerification = await api.skipMemberEmailVerification();
-			} catch (err) {
-				handleError(err);
-				setTimeout(() => setIsLoading(false), 300);
-				return;
-			}
-			if (!skipEmailVerification) {
+			if (!publicMetadata.skipMemberEmailVerifiation) {
 				handleError('Email verification is required');
 				redirect('organization/members');
 				return;

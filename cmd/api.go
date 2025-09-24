@@ -79,11 +79,6 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 	return map[string]any{"connectors": api.core.Connectors()}, nil
 }
 
-// InstallationID returns the installation ID.
-func (api api) InstallationID(w http.ResponseWriter, r *http.Request) (any, error) {
-	return api.core.InstallationID(), nil
-}
-
 // EventSchema returns the event schema.
 func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
@@ -119,12 +114,6 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 	return api.core.ExpressionsProperties(body.Expressions, body.Schema)
 }
 
-// ExternalEventURL returns the external URL that receives the events, for
-// example "https://my.meergo.example.com/api/v1/events".
-func (api api) ExternalEventURL(w http.ResponseWriter, r *http.Request) (any, error) {
-	return api.externalEventURL, nil
-}
-
 // Member returns the current member.
 func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
 	org, memberID, err := api.memberCredentials(r)
@@ -154,6 +143,38 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 	return map[string]any{"email": email, "organization": organization}, nil
 }
 
+type publicMetadata struct {
+	InstallationID              string `json:"installationID"`
+	ExternalURL                 string `json:"externalURL"`
+	ExternalEventURL            string `json:"externalEventURL"`
+	JavaScriptSDKURL            string `json:"javascriptSDKURL"`
+	SkipMemberEmailVerification bool   `json:"skipMemberEmailVerification"`
+	CanSendMemberPasswordReset  bool   `json:"canSendMemberPasswordReset"`
+	TelemetryLevel              string `json:"telemetryLevel"`
+}
+
+// PublicMetadata returns public information about the server installation:
+//
+//   - installationID: installation ID
+//   - externalURL: canonical external URL - https://example.com/
+//   - externalEventURL: external event URL - https://example.com/api/v1/events
+//   - canSendMemberPasswordReset: can send the reset password email?
+//   - telemetryLevel: telemetry level - none, errors, stats, or all
+//
+// Login is not required to call PublicMetadata.
+func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
+	metadata := publicMetadata{
+		InstallationID:              api.core.InstallationID(),
+		ExternalURL:                 api.externalURL,
+		ExternalEventURL:            api.externalEventURL,
+		JavaScriptSDKURL:            api.javaScriptSDKURL,
+		SkipMemberEmailVerification: api.skipMemberEmailVerification,
+		CanSendMemberPasswordReset:  api.core.CanSendMemberPasswordReset(),
+		TelemetryLevel:              string(api.sentryTelemetry.level),
+	}
+	return metadata, nil
+}
+
 // SendMemberPasswordReset sends a reset password email.
 //
 // Login is not required to call SendMemberPasswordReset.
@@ -174,24 +195,6 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	return nil, err
 }
 
-// CanSendMemberPasswordReset returns whether it is possible to send the reset
-// password email.
-func (api api) CanSendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (any, error) {
-	return api.core.CanSendMemberPasswordReset(), nil
-}
-
-// SentryTelemetryLevel returns the Sentry telemetry level set. Possible return
-// values are: "none", "errors", "stats" or "all".
-func (api api) SentryTelemetryLevel(w http.ResponseWriter, r *http.Request) (any, error) {
-	return string(api.sentryTelemetry.level), nil
-}
-
-// SkipMemberEmailVerification returns whether to skip the verification
-// of the email during the creation of a new member.
-func (api api) SkipMemberEmailVerification(w http.ResponseWriter, r *http.Request) (any, error) {
-	return api.skipMemberEmailVerification, nil
-}
-
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // Login is not required to call ValidateMemberPasswordResetToken.
@@ -201,11 +204,6 @@ func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.R
 		return nil, err
 	}
 	return nil, nil
-}
-
-// JavaScriptSDKURL returns the URL that serves the JavaScript SDK.
-func (api api) JavaScriptSDKURL(w http.ResponseWriter, r *http.Request) (any, error) {
-	return api.javaScriptSDKURL, nil
 }
 
 // TransformData transforms data using a mapping or a function transformation

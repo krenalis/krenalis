@@ -328,9 +328,9 @@ func (c *Meergo) ExecuteAction(action int) int {
 }
 
 func (c *Meergo) ExternalEventURL() string {
-	var url string
-	c.MustCall("GET", "/api/v1/external-event-url", nil, &url)
-	return url
+	var metadata map[string]any
+	c.MustCall("GET", "/api/v1/public/metadata", nil, &metadata)
+	return metadata["externalEventURL"].(string)
 }
 
 func (c *Meergo) Events(properties []string) []map[string]any {
@@ -382,9 +382,9 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 }
 
 func (c *Meergo) JavaScriptSDKURL() string {
-	var url string
-	c.MustCall("GET", "/api/v1/javascript-sdk-url", nil, &url)
-	return url
+	var metadata map[string]any
+	c.MustCall("GET", "/api/v1/public/metadata", nil, &metadata)
+	return metadata["javascriptSDKURL"].(string)
 }
 
 func (c *Meergo) LatestAlterUserSchema() (startTime, endTime *time.Time, alterError *string) {

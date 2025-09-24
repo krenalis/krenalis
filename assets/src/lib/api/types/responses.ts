@@ -173,6 +173,16 @@ interface ActionErrorsResponse {
 	errors: ActionError[];
 }
 
+interface PublicMetadata {
+	installationID: string;
+	externalURL: string;
+	externalEventURL: string;
+	javascriptSDKURL: string;
+	skipMemberEmailVerifiation: boolean;
+	canSendMemberPasswordReset: boolean;
+	telemetryLevel: TelemetryLevel;
+}
+
 export type {
 	authCodeURLResponse,
 	userTraitsResponse,
@@ -210,4 +220,5 @@ export type {
 	TransformationLanguagesResponse,
 	UserEventsResponse,
 	UserIdentitiesResponse,
+	PublicMetadata,
 };

@@ -20,13 +20,11 @@ interface SnippetFile {
 
 const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 	const [keys, setKeys] = useState<string[]>([]);
-	const [externalEventURL, setExternalEventURL] = useState<string>();
-	const [javaScriptSDKURL, setJavaScriptSDKURL] = useState<string>();
 	const [snippet, setSnippet] = useState<string>();
 	const [installCommand, setInstallCommand] = useState<string>();
 	const [documentationLink, setDocumentationLink] = useState<string>();
 
-	const { api, handleError, redirect } = useContext(AppContext);
+	const { api, handleError, redirect, publicMetadata } = useContext(AppContext);
 
 	useEffect(() => {
 		import(`../../../constants/snippets/${connectorName.toLowerCase().replace(/\./g, '')}.ts`).then(
@@ -37,42 +35,6 @@ const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 			},
 		);
 	}, [connectorName]);
-
-	// Retrieve the external event URL.
-	useEffect(() => {
-		const fetchExternalEventURL = async () => {
-			let externalEventURL: string;
-			try {
-				externalEventURL = await api.externalEventURL();
-			} catch (err) {
-				setTimeout(() => {
-					handleError(err);
-				}, 300);
-				return;
-			}
-			setExternalEventURL(externalEventURL);
-			return;
-		};
-		fetchExternalEventURL();
-	}, []);
-
-	// Retrieve the JavaScript SDK URL.
-	useEffect(() => {
-		const fetchJavaScriptSDKURL = async () => {
-			let javaScriptSDKURL: string;
-			try {
-				javaScriptSDKURL = await api.javaScriptSDKURL();
-			} catch (err) {
-				setTimeout(() => {
-					handleError(err);
-				}, 300);
-				return;
-			}
-			setJavaScriptSDKURL(javaScriptSDKURL);
-			return;
-		};
-		fetchJavaScriptSDKURL();
-	}, []);
 
 	useEffect(() => {
 		const fetchKeys = async () => {
@@ -99,13 +61,13 @@ const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 			return '';
 		}
 		const s1 = snippet.replace('"writekey"', JSON.stringify(keys[0]));
-		const s2 = s1.replace('"endpoint"', JSON.stringify(externalEventURL));
+		const s2 = s1.replace('"endpoint"', JSON.stringify(publicMetadata.externalEventURL));
 		let s3 = s2;
 		if (connectorName === 'JavaScript') {
-			s3 = s2.replace('"javaScriptSDKURL"', JSON.stringify(javaScriptSDKURL));
+			s3 = s2.replace('"javaScriptSDKURL"', JSON.stringify(publicMetadata.javascriptSDKURL));
 		}
 		return s3;
-	}, [connectorName, snippet, keys, externalEventURL]);
+	}, [connectorName, snippet, keys, publicMetadata.externalEventURL]);
 
 	let applicationType = 'server';
 	if (connectorName === 'Android' || connectorName === 'Apple') {

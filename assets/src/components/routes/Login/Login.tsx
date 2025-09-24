@@ -13,9 +13,8 @@ const Login = () => {
 	const [password, setPassword] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isTryingPasswordlessLogin, setIsTryingPasswordlessLogin] = useState<boolean>(true);
-	const [canSendMemberPasswordReset, setCanSendMemberPasswordReset] = useState<boolean>(false);
 
-	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, setIsPasswordless } =
+	const { api, handleError, showStatus, setIsLoadingState, setIsLoggedIn, setIsPasswordless, publicMetadata } =
 		useContext(AppContext);
 
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -71,14 +70,6 @@ const Login = () => {
 				setIsPasswordless(true);
 			}
 			setIsTryingPasswordlessLogin(false);
-			let canSend: boolean;
-			try {
-				canSend = await api.canSendMemberPasswordReset();
-			} catch (err) {
-				handleError(err);
-				return;
-			}
-			setCanSendMemberPasswordReset(canSend);
 		};
 
 		tryPasswordlessLogin();
@@ -161,7 +152,7 @@ const Login = () => {
 						minLength={8}
 						required
 					/>
-					{canSendMemberPasswordReset && (
+					{publicMetadata.canSendMemberPasswordReset && (
 						<Link path='reset-password' className='login__reset-password'>
 							Forgot your password?
 						</Link>

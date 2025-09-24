@@ -105,6 +105,7 @@ const App = () => {
 		executeActionDropdownButtonRefs,
 		isPasswordless,
 		setIsPasswordless,
+		publicMetadata,
 	} = useApp(handleError, redirect, logout, location, setIsLoggedIn);
 
 	useEffect(() => {
@@ -176,6 +177,7 @@ const App = () => {
 					executeActionDropdownButtonRefs,
 					isPasswordless,
 					setIsPasswordless,
+					publicMetadata,
 				}}
 			>
 				<Outlet />

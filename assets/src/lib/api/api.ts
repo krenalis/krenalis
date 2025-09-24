@@ -49,13 +49,13 @@ import {
 	RecordsResponse,
 	SheetsResponse,
 	TableSchemaResponse,
-	TelemetryLevel,
 	TransformDataResponse,
 	TransformationLanguagesResponse,
 	UserEventsResponse,
 	UserIdentitiesResponse,
 	authCodeURLResponse,
 	userTraitsResponse,
+	PublicMetadata,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
 
@@ -74,14 +74,6 @@ class API {
 		this.workspaces = new Workspaces(origin, apiURL, workspaceID);
 		this.connectors = new Connectors(origin, apiURL);
 	}
-
-	installationID = async (): Promise<string> => {
-		return await call(`${this.apiURL}/installation-id`, http.GET);
-	};
-
-	javaScriptSDKURL = async (): Promise<string> => {
-		return await call(`${this.apiURL}/javascript-sdk-url`, http.GET);
-	};
 
 	login = async (email: string, password: string, isUnique?: boolean): Promise<[number, string]> => {
 		return await call(`${this.apiURL}/members/login`, http.POST, this.workspaceID, {
@@ -109,20 +101,12 @@ class API {
 		});
 	};
 
-	skipMemberEmailVerification = async (): Promise<boolean> => {
-		return await call(`${this.apiURL}/members/skip-member-email-verification`, http.GET);
-	};
-
-	telemetryLevel = async (): Promise<TelemetryLevel> => {
-		return await call(`${this.apiURL}/telemetry/level`, http.GET);
-	};
-
 	eventsSchema = async (): Promise<ObjectType> => {
 		return await call(`${this.apiURL}/events/schema`, http.GET, this.workspaceID);
 	};
 
-	externalEventURL = async (): Promise<string> => {
-		return await call(`${this.apiURL}/external-event-url`, http.GET);
+	publicMetadata = async (): Promise<PublicMetadata> => {
+		return await call(`${this.apiURL}/public/metadata`, http.GET);
 	};
 
 	validateExpression = async (
@@ -173,10 +157,6 @@ class API {
 
 	members = async (): Promise<Member[]> => {
 		return await call(`${this.apiURL}/members`, http.GET, this.workspaceID);
-	};
-
-	canSendMemberPasswordReset = async (): Promise<boolean> => {
-		return await call(`${this.apiURL}/members/can-send-reset-password`, http.GET);
 	};
 
 	inviteMember = async (email: string): Promise<void> => {

@@ -11,23 +11,13 @@ const ResetPassword = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const [isEmailSent, setIsEmailSent] = useState<boolean>(false);
 
-	const { api, handleError, redirect } = useContext(appContext);
+	const { api, handleError, redirect, publicMetadata } = useContext(appContext);
 
 	useEffect(() => {
-		const checkCanSend = async () => {
-			let canSend: boolean;
-			try {
-				canSend = await api.canSendMemberPasswordReset();
-			} catch (err) {
-				handleError(err);
-				return;
-			}
-			if (!canSend) {
-				redirect('/');
-			}
-		};
-		checkCanSend();
-	}, []);
+		if (!publicMetadata.canSendMemberPasswordReset) {
+			redirect('/');
+		}
+	}, [publicMetadata.canSendMemberPasswordReset]);
 
 	const onEmailChange = (e: any) => {
 		setEmail(e.currentTarget.value);

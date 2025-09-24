@@ -7,7 +7,7 @@ import { Warehouse } from '../components/routes/App/App.types';
 import Workspace from '../lib/api/types/workspace';
 import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import { FeedbackButtonRef } from '../components/base/FeedbackButton/FeedbackButton';
-import { Member } from '../lib/api/types/responses';
+import { Member, PublicMetadata } from '../lib/api/types/responses';
 import { ActionTarget } from '../lib/api/types/action';
 
 interface AppContext {
@@ -42,6 +42,7 @@ interface AppContext {
 	}>;
 	isPasswordless: boolean;
 	setIsPasswordless: React.Dispatch<React.SetStateAction<boolean>>;
+	publicMetadata: PublicMetadata;
 }
 
 const appContext = createContext<AppContext>({} as AppContext);

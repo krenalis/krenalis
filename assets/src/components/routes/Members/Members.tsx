@@ -20,9 +20,8 @@ const Members = () => {
 	const [isRemoveAlertOpen, setIsRemoveAlertOpen] = useState<boolean>(false);
 	const [isInviteMemberDialogOpen, setIsInviteMemberDialogOpen] = useState<boolean>(false);
 	const [members, setMembers] = useState<Member[]>();
-	const [skipEmailVerification, setSkipEmailVerification] = useState<boolean>();
 
-	const { api, handleError, member: loggedMember, logout } = useContext(AppContext);
+	const { api, handleError, member: loggedMember, logout, publicMetadata } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<number>(0);
 
@@ -37,16 +36,6 @@ const Members = () => {
 				return;
 			}
 			setMembers(members);
-
-			let skipEmailVerification: boolean;
-			try {
-				skipEmailVerification = await api.skipMemberEmailVerification();
-			} catch (err) {
-				handleError(err);
-				setTimeout(() => setIsLoading(false), 300);
-				return;
-			}
-			setSkipEmailVerification(skipEmailVerification);
 
 			setTimeout(() => setIsLoading(false), 300);
 		};
@@ -112,7 +101,7 @@ const Members = () => {
 					</Link>
 					<div className='members__title'>
 						<p className='members__title-text'>Members</p>
-						{skipEmailVerification ? (
+						{publicMetadata.skipMemberEmailVerifiation ? (
 							<Link path={'organization/members/add'}>
 								<SlButton size='small' variant='primary' onClick={() => null}>
 									Add a new member
