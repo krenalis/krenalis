@@ -54,7 +54,7 @@ The Node SDK can be imported with `import` into Node projects, using ES6 modules
 Now you can choose to collect only the events, or import the users, or both:
 
 1. Go to the Node.js connection you just created and click on **Actions**.
-2. Choose **Import events** (to import event data) or **Import users** (to import user data from events).
+2. Choose **Import events into warehouse** (to import event data) or **Import users into warehouse** (to import user data from events).
 3. Fill in the necessary information in the action.
 4. Confirm by clicking **Add**.
 4. Enable the action by toggling the switch in the **Enabled** column.
