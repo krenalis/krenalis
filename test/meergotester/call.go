@@ -27,7 +27,7 @@ type StatusCodeError struct {
 
 func (e *StatusCodeError) Error() string {
 	if e.ResponseText != "" {
-		return fmt.Sprintf("unexpected HTTP status code %d: %s", e.Code, e.ResponseText)
+		return fmt.Sprintf("unexpected HTTP status code %d: %q", e.Code, e.ResponseText)
 	}
 	return fmt.Sprintf("unexpected HTTP status code %d", e.Code)
 }
@@ -51,7 +51,7 @@ func (c *Meergo) Call(method, path string, body, response any) error {
 func (c *Meergo) MustCall(method, path string, body, response any) {
 	err := c.call(method, path, body, response)
 	if err != nil {
-		c.t.Logf("an error occurred: %s. The stack trace is:\n%s", err, string(debug.Stack()))
+		c.t.Logf("%s %s: %s\n[has body: %t, has response: %t]\nStack trace:\n%s", method, path, err, body != nil, response != nil, string(debug.Stack()))
 		c.t.Fatal("the test failed. See the error message and the stack trace above")
 	}
 }
