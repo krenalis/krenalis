@@ -6,6 +6,15 @@
 
 **Meergo API** is a connector to interact directly with Meergo APIs from your application.
 
+- [Description](#description)
+- [How to send events](#how-to-send-events)
+  - [1. Create a source Meergo API connection](#1-create-a-source-meergo-api-connection)
+  - [2. Add an action](#2-add-an-action)
+  - [3. Open the Live events page](#3-open-the-live-events-page)
+  - [4. Send some events](#4-send-some-events)
+
+## Description
+
 This connector allows you to call Meergo APIs and import events and users directly from your application, regardless of the technology and programming language you use, since it allows you to interact directly via HTTP calls with Meergo APIs.
 
 **This connector is useful in those cases where Meergo does not provide a dedicated SDK for your language**. It can also be used in those cases where you want to interact with Meergo directly via the command line, making the calls with tools like `curl`.
@@ -20,38 +29,77 @@ Once events are received, you can:
 
 To use the Meergo API data source, you will need any language or application that can make HTTP calls.
 
-### On this page
+## How to send events
 
-* [Add a Meergo API data source](#add-a-meergo-api-data-source)
-* [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
-* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+### 1. Create a source Meergo API connection
 
-### Add a Meergo API data source
+First of all, you need a connection in Meergo that can receive events from your application that sends HTTP requests. To do so:
 
-1. From the **Meergo Admin console**, navigate to **Connections > Sources**.
+1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search for the **Meergo API** source; you can use the search bar at the top or filter by category.
 4. Click on the **Meergo API** connector. A panel will open on the right with information about **Meergo API**.
 5. Click on **Add source**. The `Add Meergo API source connection` page will appear.
-6. In the **Name** field, provide a name to easily identify the source later (e.g., the name of the application or server).
+6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. Click **Add**.
 
-Once the Meergo API data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
+### 2. Add an action
 
-### Import events into the workspace's data warehouse
+Now you can choose to collect only the events, or import the users, or both:
 
-1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Meergo API data source from which you want to import the events.
-3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import events into warehouse**.
-5. Fill in the necessary information in the action.
-6. Click **Add** to add the action.
+1. Go to the Meergo API connection you just created and click on **Actions**.
+2. Choose **Import events into warehouse** (to import event data) or **Import users into warehouse** (to import user data from events).
+3. Fill in the necessary information in the action.
+4. Confirm by clicking **Add**.
+4. Enable the action by toggling the switch in the **Enabled** column.
 
-### Import users into the workspace's data warehouse
+### 3. Open the Live events page
 
-1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Meergo API data source from which you want to import the users.
-3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
-4. Click **Import users into warehouse**.
-5. Fill in the necessary information in the action.
-6. Click **Add** to add the action.
+1. Go to the Meergo API connection created at step 1 and click on **Event debugger**.
+2. Go on with the next step for sending events; you will see the incoming events in the **Live events** view.
+
+### 4. Send some events
+
+You can use any tool or language you like for sending HTTP requests containing the events to the Meergo API connector.
+
+For example, if you're using `curl`:
+
+```bash
+curl <MEERGO ENDPOINT> \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <YOUR_WRITE_KEY>" \
+    -d '[
+    {
+            "type": "track",
+            "anonymousId": "2ab4facf-ca73-4361-b1b2-4472ce053122",
+            "event": "page",
+            "properties": {
+                "answer": 42
+            }
+        }
+    ]
+'
+```
+
+You can get the values for `<MEERGO ENDPOINT>` and `<YOUR_WRITE_KEY>` by clicking on the Meergo API connection you created > Settings > Event write keys.
+
+So, for example, you can send an event with `curl` like this:
+
+```bash
+curl http://localhost:2022/api/v1/events \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer 4qwwvXGRa0R2PeJsUwSv1juy2MRrY8bA" \
+    -d '[
+    {
+            "type": "track",
+            "anonymousId": "2ab4facf-ca73-4361-b1b2-4472ce053122",
+            "event": "page",
+            "properties": {
+                "answer": 42
+            }
+        }
+    ]
+'
+```
+
+Refer to the [Meergo events documentation](../../events) for more information on the supported event types.
