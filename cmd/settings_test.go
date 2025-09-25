@@ -7,9 +7,11 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -400,27 +402,35 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("TLS file paths must exist", func(t *testing.T) {
 		setBaseline(t)
+		nonexistentFile := "/no/such/cert.pem"
+		if runtime.GOOS == "windows" {
+			nonexistentFile = `C:\no\such\cert.pem`
+		}
 		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
-		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", "/no/such/cert.pem")
+		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", nonexistentFile)
 		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
 		_, err := parseSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing cert file, got nil")
 		}
-		want := "MEERGO_HTTP_TLS_CERT_FILE points to a non-existent file: \"/no/such/cert.pem\""
+		want := fmt.Sprintf("MEERGO_HTTP_TLS_CERT_FILE points to a non-existent file: %q", nonexistentFile)
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 
 		setBaseline(t)
+		nonexistentFile = "/no/such/key.pem"
+		if runtime.GOOS == "windows" {
+			nonexistentFile = `C:\no\such\key.pem`
+		}
 		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
 		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
-		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", "/no/such/key.pem")
+		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", nonexistentFile)
 		_, err = parseSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing key file, got nil")
 		}
-		want = "MEERGO_HTTP_TLS_KEY_FILE points to a non-existent file: \"/no/such/key.pem\""
+		want = fmt.Sprintf("MEERGO_HTTP_TLS_KEY_FILE points to a non-existent file: %q", nonexistentFile)
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
@@ -811,13 +821,17 @@ func TestParseSettings(t *testing.T) {
 	})
 
 	t.Run("maxmind path missing", func(t *testing.T) {
+		nonexistentFile := "/no/such.mmdb"
+		if runtime.GOOS == "windows" {
+			nonexistentFile = `C:\no\such.mmdb`
+		}
 		setBaseline(t)
-		t.Setenv("MEERGO_MAXMIND_DB_PATH", "/no/such.mmdb")
+		t.Setenv("MEERGO_MAXMIND_DB_PATH", nonexistentFile)
 		_, err := parseSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing MaxMind db file, got nil")
 		}
-		want := "MEERGO_MAXMIND_DB_PATH points to a non-existent file: \"/no/such.mmdb\""
+		want := fmt.Sprintf("MEERGO_MAXMIND_DB_PATH points to a non-existent file: %q", nonexistentFile)
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
