@@ -71,9 +71,10 @@ func init() {
 			Users: "contacts",
 		},
 		OAuth: meergo.OAuth{
-			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
-			TokenURL:  "https://login.mailchimp.com/oauth2/token",
-			ExpiresIn: math.MaxInt32,
+			AuthURL:           "https://login.mailchimp.com/oauth2/authorize?response_type=code",
+			TokenURL:          "https://login.mailchimp.com/oauth2/token",
+			ExpiresIn:         math.MaxInt32,
+			DisallowLocalhost: true,
 		},
 		EndpointGroups: []meergo.EndpointGroup{
 			// Endpoint group used for the Mailchimp API.

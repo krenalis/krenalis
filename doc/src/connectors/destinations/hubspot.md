@@ -24,10 +24,9 @@ Before you can add a HubSpot data destination, you need to create an app in HubS
 5. Click on **Public** (the app will remain private and does not need to be made public).
 6. Fill in the **Public app name** and **Description** fields to help you recognize the app later.
 7. Click on the **Auth** tab.
-8. Under **Redirect URLs**, enter the (external) URL of Meergo with the `/admin/oauth/authorize` path. For example: `https://example.com/admin/oauth/authorize`.
-    
-    > 💡 If your are using `127.0.0.1` as domain for the Meergo external URL (as in the default configuration), you need to change it (for example using `localhost`) to make OAuth with HubSpot work. This limitation is due to HubSpot that does not accept `127.0.0.1` in redirect URLs. To do so, explicitly set the`MEERGO_HTTP_EXTERNAL_URL` environment variable in such a way that it refers to `localhost` instead of `127.0.0.1`, for example `http://localhost:2022/`. Then, set the HubSpot redirect URL accordingly, for example to `http://localhost:2022/admin/oauth/authorize`.
-
+8. Under **Redirect URLs**, enter the (external) URL of Meergo with the `/admin/oauth/authorize` path.
+   * For example: `https://example.com/admin/oauth/authorize`. 
+   * If your Meergo external URL is configured as `127.0.0.1` (the default), replace it with `localhost` when entering the value in HubSpot (e.g., use `http://localhost:2022/admin/oauth/authorize` instead of `http://127.0.0.1:2022/admin/oauth/authorize`).
 9. Click **Add new scope**.
 10. Select the following scopes:
     * `crm.objects.contacts.read` - leave as **Required**

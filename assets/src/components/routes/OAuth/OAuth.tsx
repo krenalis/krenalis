@@ -6,6 +6,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Link } from '../../base/Link/Link';
 import { ADD_CONNECTION_ID_KEY, ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_NAME_KEY } from '../../../constants/storage';
+import { UI_BASE_PATH } from '../../../constants/paths';
 
 const errorMessageByOauthErrorCode = {
 	invalid_request:
@@ -61,9 +62,15 @@ const OAuth = () => {
 			const connectionRole = localStorage.getItem(ADD_CONNECTION_ROLE_KEY);
 			localStorage.removeItem(ADD_CONNECTION_ID_KEY);
 			localStorage.removeItem(ADD_CONNECTION_ROLE_KEY);
+			const redirectURI = new URL(`${api.workspaces.origin}${UI_BASE_PATH}oauth/authorize`);
+			if (connector.oauth.disallow127_0_0_1 && redirectURI.hostname === '127.0.0.1') {
+				redirectURI.hostname = 'localhost';
+			} else if (connector.oauth.disallowLocalhost && redirectURI.hostname === 'localhost') {
+				redirectURI.hostname = '127.0.0.1';
+			}
 			let authToken: string;
 			try {
-				authToken = await api.workspaces.authToken(connectorName, authCode);
+				authToken = await api.workspaces.authToken(connectorName, authCode, redirectURI.toString());
 			} catch (err) {
 				console.error(err);
 				setErrorMessage(

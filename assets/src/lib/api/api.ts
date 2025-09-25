@@ -14,7 +14,6 @@ import {
 	ActionMetrics,
 	Filter,
 } from './types/action';
-import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector, ConnectorDocumentation } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
 import Workspace, {
@@ -796,8 +795,7 @@ class Workspaces {
 		});
 	};
 
-	authToken = async (connector: string, authCode: string): Promise<string> => {
-		const redirectURI = `${this.origin}${UI_BASE_PATH}oauth/authorize`;
+	authToken = async (connector: string, authCode: string, redirectURI: string): Promise<string> => {
 		return await call(
 			`${this.apiURL}/connections/auth-token?connector=${encodeURIComponent(connector)}&redirectURI=${encodeURIComponent(redirectURI)}&authCode=${encodeURIComponent(authCode)}`,
 			http.GET,
@@ -983,8 +981,7 @@ class Connectors {
 		this.apiURL = apiURL;
 	}
 
-	authCodeURL = async (connector: string, role: Role): Promise<authCodeURLResponse> => {
-		const redirectURI = `${this.origin}${UI_BASE_PATH}oauth/authorize`;
+	authCodeURL = async (connector: string, role: Role, redirectURI: string): Promise<authCodeURLResponse> => {
 		return await call(
 			`${this.apiURL}/connections/auth-url?connector=${encodeURIComponent(connector)}&role=${role}&redirectURI=${encodeURIComponent(redirectURI)}`,
 			http.GET,

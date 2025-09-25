@@ -255,7 +255,7 @@ func parseSettings() (*Settings, error) {
 		if secret == "" {
 			return nil, fmt.Errorf("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET is required when MEERGO_OAUTH_HUBSPOT_CLIENT_ID is set")
 		}
-		settings.OAuth = map[string]*core.ConnectorOAuth{
+		settings.OAuthCredentials = map[string]*core.OAuthCredentials{
 			"HubSpot": {
 				ClientID:     id,
 				ClientSecret: secret,
@@ -269,10 +269,10 @@ func parseSettings() (*Settings, error) {
 		if secret == "" {
 			return nil, fmt.Errorf("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET is required when MEERGO_OAUTH_MAILCHIMP_CLIENT_ID is set")
 		}
-		if settings.OAuth == nil {
-			settings.OAuth = make(map[string]*core.ConnectorOAuth)
+		if settings.OAuthCredentials == nil {
+			settings.OAuthCredentials = make(map[string]*core.OAuthCredentials)
 		}
-		settings.OAuth["Mailchimp"] = &core.ConnectorOAuth{
+		settings.OAuthCredentials["Mailchimp"] = &core.OAuthCredentials{
 			ClientID:     id,
 			ClientSecret: secret,
 		}

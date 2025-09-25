@@ -15,6 +15,7 @@ import * as marked from 'marked';
 import { connectorsInfo } from '../../../lib/api/connectorsInfo';
 import { ConnectorInfo } from '../../../lib/api/types/connector';
 import { ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_NAME_KEY } from '../../../constants/storage';
+import { UI_BASE_PATH } from '../../../constants/paths';
 
 const ConnectorsList = () => {
 	const [additionalConnectorsInfo, setAdditionalConnectorsInfo] = useState<ConnectorInfo[]>([]);
@@ -122,15 +123,21 @@ const ConnectorsList = () => {
 	const onConnectorAdd = async () => {
 		let c = selectedConnector;
 		setSelectedConnector(null);
-		if (c.requiresAuth) {
-			if (!c.authConfigured) {
+		if (c.oauth != null) {
+			if (!c.oauth.configured) {
 				return;
 			}
 			localStorage.setItem(ADD_CONNECTOR_NAME_KEY, c.name);
 			localStorage.setItem(ADD_CONNECTION_ROLE_KEY, connectionRole);
 			let res: authCodeURLResponse;
+			const redirectURI = new URL(`${api.connectors.origin}${UI_BASE_PATH}oauth/authorize`);
+			if (c.oauth.disallow127_0_0_1 && redirectURI.hostname === '127.0.0.1') {
+				redirectURI.hostname = 'localhost';
+			} else if (c.oauth.disallowLocalhost && redirectURI.hostname === 'localhost') {
+				redirectURI.hostname = '127.0.0.1';
+			}
 			try {
-				res = await api.connectors.authCodeURL(c.name, connectionRole as Role);
+				res = await api.connectors.authCodeURL(c.name, connectionRole as Role, redirectURI.toString());
 			} catch (err) {
 				handleError(err);
 				return;
@@ -248,7 +255,7 @@ const ConnectorsList = () => {
 						className='connectors-list__documentation-add'
 						variant='primary'
 						onClick={onConnectorAdd}
-						disabled={selectedConnector?.requiresAuth && !selectedConnector?.authConfigured}
+						disabled={selectedConnector?.oauth != null && !selectedConnector?.oauth.configured}
 					>
 						Add {connectionRole.toLowerCase()}...
 					</SlButton>
@@ -268,7 +275,7 @@ const ConnectorsList = () => {
 							className='connectors-list__documentation'
 							dangerouslySetInnerHTML={{ __html: documentation }}
 						/>
-						{selectedConnector?.requiresAuth && !selectedConnector?.authConfigured && (
+						{selectedConnector?.oauth != null && !selectedConnector?.oauth.configured && (
 							<div className='connectors-list__oauth-not-configured'>
 								OAuth authentication for this connector is not configured. Please contact your Meergo
 								administrator to set it up.{' '}

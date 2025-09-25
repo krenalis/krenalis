@@ -20,7 +20,7 @@ import (
 )
 
 // load loads the state.
-func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
+func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all connectors.
 	connectors := meergo.Connectors()
@@ -66,8 +66,8 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			c.EndpointGroups = connector.EndpointGroups
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 			c.Icon = connector.Icon
-			if connectorsOAuth != nil {
-				if oAuth, ok := connectorsOAuth[c.Name]; ok {
+			if oauthCredentials != nil {
+				if oAuth, ok := oauthCredentials[c.Name]; ok {
 					c.OAuth.ClientID = oAuth.ClientID
 					c.OAuth.ClientSecret = oAuth.ClientSecret
 				}

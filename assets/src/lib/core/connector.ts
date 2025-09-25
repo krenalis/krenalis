@@ -7,6 +7,7 @@ import {
 } from '../api/types/connector';
 import * as icons from '../../constants/icons';
 import { Role } from '../api/types/types';
+import { ConnectorOAuth } from '../api/types/connector';
 
 class TransformedConnector {
 	name: string;
@@ -17,8 +18,7 @@ class TransformedConnector {
 	identityIDLabel: string;
 	hasSheets: boolean;
 	fileExtension: string;
-	requiresAuth: boolean;
-	authConfigured: boolean;
+	oauth: ConnectorOAuth;
 	terms: ConnectorTerms;
 	icon: string;
 	strategies: boolean;
@@ -32,8 +32,7 @@ class TransformedConnector {
 		identityIDLabel: string,
 		hasSheets: boolean,
 		fileExtension: string,
-		requiresAuth: boolean,
-		authConfigured: boolean,
+		oauth: ConnectorOAuth,
 		terms: ConnectorTerms,
 		icon: string,
 		strategies: boolean,
@@ -46,8 +45,7 @@ class TransformedConnector {
 		this.identityIDLabel = identityIDLabel;
 		this.hasSheets = hasSheets;
 		this.fileExtension = fileExtension;
-		this.requiresAuth = requiresAuth;
-		this.authConfigured = authConfigured;
+		this.oauth = oauth;
 		this.terms = terms;
 		this.icon = icon ? icon : icons.PLUG;
 		this.strategies = strategies;

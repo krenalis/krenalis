@@ -29,11 +29,16 @@ type Connector struct {
 	IdentityIDLabel string                `json:"identityIDLabel"`
 	HasSheets       bool                  `json:"hasSheets"`
 	FileExtension   string                `json:"fileExtension"`
-	RequiresAuth    bool                  `json:"requiresAuth"`
-	AuthConfigured  bool                  `json:"authConfigured"`
+	OAuth           *ConnectorOAuth       `json:"oauth"`
 	Terms           ConnectorTerms        `json:"terms"`
 	Icon            string                `json:"icon"`
 	Strategies      bool                  `json:"strategies"`
+}
+
+type ConnectorOAuth struct {
+	Configured        bool `json:"configured"`
+	Disallow127_0_0_1 bool `json:"disallow127_0_0_1"`
+	DisallowLocalhost bool `json:"disallowLocalhost"`
 }
 
 type ConnectorTerms struct {

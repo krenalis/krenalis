@@ -69,7 +69,7 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	OAuth map[string]*core.ConnectorOAuth
+	OAuthCredentials map[string]*core.OAuthCredentials
 }
 
 type LambdaConfig struct {
@@ -103,7 +103,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		MaxMindDBPath:        settings.MaxMindDBPath,
 		MemberEmailFrom:      settings.MemberEmailFrom,
 		SMTP:                 settings.SMTP,
-		ConnectorsOAuth:      maps.Clone(settings.OAuth),
+		OAuthCredentials:     maps.Clone(settings.OAuthCredentials),
 		SentryTelemetryLevel: settings.SentryTelemetryLevel,
 	}
 

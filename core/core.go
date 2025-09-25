@@ -83,7 +83,7 @@ type Config struct {
 	MaxMindDBPath        string
 	MemberEmailFrom      string
 	SMTP                 SMTPConfig
-	ConnectorsOAuth      map[string]*ConnectorOAuth
+	OAuthCredentials     map[string]*OAuthCredentials
 	SentryTelemetryLevel TelemetryLevel
 }
 
@@ -97,8 +97,8 @@ type DBConfig struct {
 	MaxConnections int32 // values less than 2 are treated as 2.
 }
 
-// ConnectorOAuth represents the OAuth client credentials for a connector.
-type ConnectorOAuth struct {
+// OAuthCredentials represents the OAuth client credentials for a connector.
+type OAuthCredentials struct {
 	ClientID     string
 	ClientSecret string
 }
@@ -203,11 +203,11 @@ func New(conf *Config) (*Core, error) {
 	// Instantiate the state.
 	sendStats := conf.SentryTelemetryLevel == TelemetryLevelAll ||
 		conf.SentryTelemetryLevel == TelemetryLevelStats
-	var connectorsOAuth map[string]*state.ConnectorOAuth
-	if conf.ConnectorsOAuth != nil {
-		connectorsOAuth = map[string]*state.ConnectorOAuth{}
-		for name, oAuth := range conf.ConnectorsOAuth {
-			connectorsOAuth[name] = &state.ConnectorOAuth{
+	var connectorsOAuth map[string]*state.OAuthCredentials
+	if conf.OAuthCredentials != nil {
+		connectorsOAuth = map[string]*state.OAuthCredentials{}
+		for name, oAuth := range conf.OAuthCredentials {
+			connectorsOAuth[name] = &state.OAuthCredentials{
 				ClientID:     oAuth.ClientID,
 				ClientSecret: oAuth.ClientSecret,
 			}
@@ -460,7 +460,6 @@ func (core *Core) Connector(name string) (*Connector, error) {
 		IdentityIDLabel: c.IdentityIDLabel,
 		HasSheets:       c.HasSheets,
 		FileExtension:   c.FileExtension,
-		RequiresAuth:    c.OAuth != nil,
 		Terms:           ConnectorTerms(c.Terms),
 		Icon:            c.Icon,
 		Strategies:      c.Strategies,
@@ -483,7 +482,11 @@ func (core *Core) Connector(name string) (*Connector, error) {
 		}
 	}
 	if c.OAuth != nil {
-		connector.AuthConfigured = c.OAuth.ClientID != "" && c.OAuth.ClientSecret != ""
+		connector.OAuth = &ConnectorOAuth{
+			Configured:        c.OAuth.ClientID != "" && c.OAuth.ClientSecret != "",
+			Disallow127_0_0_1: c.OAuth.Disallow127_0_0_1,
+			DisallowLocalhost: c.OAuth.DisallowLocalhost,
+		}
 	}
 	if connector.Terms.User == "" {
 		connector.Terms.User = "user"
@@ -545,7 +548,6 @@ func (core *Core) Connectors() []*Connector {
 			IdentityIDLabel: c.IdentityIDLabel,
 			HasSheets:       c.HasSheets,
 			FileExtension:   c.FileExtension,
-			RequiresAuth:    c.OAuth != nil,
 			Terms:           ConnectorTerms(c.Terms),
 			Icon:            c.Icon,
 			Strategies:      c.Strategies,
@@ -568,7 +570,13 @@ func (core *Core) Connectors() []*Connector {
 			}
 		}
 		if c.OAuth != nil {
-			connector.AuthConfigured = c.OAuth.ClientID != "" && c.OAuth.ClientSecret != ""
+			if c.OAuth != nil {
+				connector.OAuth = &ConnectorOAuth{
+					Configured:        c.OAuth.ClientID != "" && c.OAuth.ClientSecret != "",
+					Disallow127_0_0_1: c.OAuth.Disallow127_0_0_1,
+					DisallowLocalhost: c.OAuth.DisallowLocalhost,
+				}
+			}
 		}
 		if connector.Terms.User == "" {
 			connector.Terms.User = "user"

@@ -76,8 +76,8 @@ type State struct {
 	}
 }
 
-// ConnectorOAuth represents the OAuth client credentials for a connector.
-type ConnectorOAuth struct {
+// OAuthCredentials represents the OAuth client credentials for a connector.
+type OAuthCredentials struct {
 	ClientID     string
 	ClientSecret string
 }
@@ -85,7 +85,7 @@ type ConnectorOAuth struct {
 // New returns a state given the database, and the OAuth client credentials for
 // connectors.
 // sendStats indicates whether the state should send statistics or not.
-func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth, sendStats bool) (*State, error) {
+func New(db *db.DB, credentials map[string]*OAuthCredentials, sendStats bool) (*State, error) {
 
 	id, err := uuid.NewUUID()
 	if err != nil {
@@ -114,7 +114,7 @@ func New(db *db.DB, connectorsOAuth map[string]*ConnectorOAuth, sendStats bool) 
 	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
 
 	// Load the state.
-	err = state.load(connectorsOAuth)
+	err = state.load(credentials)
 	if err != nil {
 		state.notifications.Close()
 		return nil, err

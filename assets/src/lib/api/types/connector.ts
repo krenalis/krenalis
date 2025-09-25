@@ -15,11 +15,16 @@ interface Connector {
 	identityIDLabel: string;
 	hasSheets: boolean;
 	fileExtension: string;
-	requiresAuth: boolean;
-	authConfigured: boolean;
+	oauth: ConnectorOAuth;
 	terms: ConnectorTerms;
 	icon: string;
 	strategies: boolean;
+}
+
+interface ConnectorOAuth {
+	configured: boolean;
+	disallow127_0_0_1: boolean;
+	disallowLocalhost: boolean;
 }
 
 interface ConnectorImplementation {
@@ -72,6 +77,7 @@ interface DestinationConnector {
 
 export type {
 	Connector,
+	ConnectorOAuth,
 	ConnectorTerms,
 	SourceConnector,
 	DestinationConnector,

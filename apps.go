@@ -104,6 +104,12 @@ type OAuth struct {
 	// ExpiresIn represents the lifetime of the access token in seconds.
 	// If the value is zero or negative, the lifetime is provided by the TokenURL endpoint.
 	ExpiresIn int32
+
+	// Disallow127_0_0_1 forbids using "127.0.0.1" as the host in the redirect URL.
+	Disallow127_0_0_1 bool
+
+	// DisallowLocalhost forbids using "localhost" as the host in the redirect URL.
+	DisallowLocalhost bool
 }
 
 // ReflectType returns the type of the value implementing the app connector

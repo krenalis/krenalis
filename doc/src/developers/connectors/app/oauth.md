@@ -26,6 +26,7 @@ meergo.RegisterApp(meergo.AppInfo{
                 "crm.objects.contacts.write",
                 "crm.schemas.contacts.read"
         },
+        Disallow127_0_0_1: true,
     },
     // other fields are omitted.
 }, New)
@@ -38,6 +39,8 @@ The `meergo.OAuth` type contains this information:
 - `SourceScopes`: required scopes when used as a source. Leave empty if there are no source scopes.
 - `DestinationScopes`: required scopes when used as a destination. Leave empty if there are no destination scopes.
 - `ExpiresIn`: lifetime of the access token in seconds. If the value is zero or negative, the lifetime is provided by the `TokenURL` endpoint.
+- `Disallow127_0_0_1`: if `true`, the redirect URL cannot use `127.0.0.1` as its host.
+- `DisallowLocalhost`: if `true`, the redirect URL cannot use `localhost` as its host.
 
 If `AuthURL` and `TokenURL` contain query string arguments, they will be preserved.
 
