@@ -15,7 +15,7 @@ Note that it is possible to implement a file connector that supports only readin
 In the creation of a new Go module, for your file connector, you can utilize the following template by pasting it into a Go file. Customize the template with your desired package name, type name, and pertinent connector information:
 
 ```go
-// Package csv implements the CSV file connector.
+// Package csv provides a connector for CSV.
 package csv
 
 import (
@@ -43,7 +43,7 @@ type CSV struct {
     // Your connector fields.
 }
 
-// New returns a new CSV connector instance.
+// New returns a new connector instance for CSV.
 func New(env *meergo.FileEnv) (*CSV, error) {
     // ...
 }

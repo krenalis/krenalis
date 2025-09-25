@@ -15,7 +15,7 @@ Note that it is possible to implement an app connector that supports only readin
 In the creation of a new Go module, for your app connector, you can utilize the following template by pasting it into a Go file. Not all methods in the file need to be implemented; see below for descriptions of individual methods. Customize the template with your desired package name, type name, and pertinent connector information:
 
 ```go
-// Package klaviyo implements the Klaviyo app connector.
+// Package klaviyo provides a connector for Klaviyo.
 package klaviyo
 
 import (
@@ -74,7 +74,7 @@ type Klaviyo struct {
     // Your connector fields.
 }
 
-// New returns a new Klaviyo connector instance.
+// New returns a new connector instance for Klaviyo.
 func New(env *meergo.AppEnv) (*Klaviyo, error) {
     // ...
 }

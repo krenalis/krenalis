@@ -15,8 +15,17 @@ meergo.RegisterApp(meergo.AppInfo{
     OAuth:   meergo.OAuth{
         AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
         TokenURL:          "https://api.hubapi.com/oauth/v1/token",
-        SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
-        DestinationScopes: []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
+        SourceScopes:      []string{
+                "oauth",
+                "crm.objects.contacts.read",
+                "crm.schemas.contacts.read"
+        },
+        DestinationScopes: []string{
+                "oauth",
+                "crm.objects.contacts.read",
+                "crm.objects.contacts.write",
+                "crm.schemas.contacts.read"
+        },
     },
     // other fields are omitted.
 }, New)
@@ -40,7 +49,7 @@ If `AuthURL` and `TokenURL` contain query string arguments, they will be preserv
 OAuthAccount(ctx context.Context) (string, error)
 ```
 
-The `OAuthAccount` method, part of the `AppOAuth` interface, is called by Meergo after a successful OAuth authentication to obtain the app's account associated with the given authorization. The connector uses the HTTP client provided to the constructor to call the app's API to obtain the account. The account must be a non-empty UTF-8 encoded string.
+The `OAuthAccount` method is called by Meergo after a successful OAuth authentication to obtain the app's account associated with the given authorization. The connector uses the HTTP client provided to the constructor to call the app's API to obtain the account. The account must be a non-empty UTF-8 encoded string.
 
 ## ClientSecret and AccessToken
 

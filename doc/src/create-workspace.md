@@ -4,7 +4,7 @@
 
 # Create a workspace
 
-Meergo is a **warehouse-native Customer Data Platform (CDP)**. This means that your customer data remains stored directly in **your own data warehouse** — not within the application itself.
+Meergo is a **warehouse-native** Customer Data Platform (CDP). This means that your customer data remains stored directly in **your own data warehouse** — not within the application itself.
 
 In Meergo each **workspace** is linked to its own data warehouse. Workspaces are fully isolated from each other and do not share any data.
 
@@ -38,13 +38,12 @@ The following fields are required to connect a PostgreSQL data warehouse:
 
 The following fields are required to connect a Snowflake data warehouse:
 
-| Field       | Description                                                                   |
-|-------------|-------------------------------------------------------------------------------|
-| `Account`   | Account ID of the Snowflake warehouse in the form `<orgname>-<account_name>`. |
-| `Port`      | Port used to connect (default is `443` for HTTPS).                            |
-| `Username`  | Username used to authenticate with Snowflake.                                 |
-| `Password`  | Password associated with the provided username.                               |
-| `Database`  | Name of the database to be used as the data warehouse.                        |
-| `Schema`    | Name of the schema within the database where tables will be created.          |
-| `Warehouse` | name of the virtual warehouse to execute queries.                             |
-| `Role`      | Role that will be used for accessing the data in Snowflake.                   |
+| Field                | Description                                                              |
+|----------------------|--------------------------------------------------------------------------|
+| `Account Identifier` | Account ID of the Snowflake warehouse in the form `<orgname>-<account>`. |
+| `User Name`          | Username used to authenticate with Snowflake.                            |
+| `Password`           | Password associated with the provided user name.                         |
+| `Role`               | Role that will be used for accessing the data in Snowflake.              |
+| `Database`           | Name of the database to be used as the data warehouse.                   |
+| `Schema`             | Name of the schema within the database where tables will be created.     |
+| `Warehouse`          | Name of the virtual warehouse to execute queries.                        |

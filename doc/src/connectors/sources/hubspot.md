@@ -18,7 +18,7 @@ HubSpot is a cloud application that offers tools for customer relationship manag
 Before you can add a HubSpot data source, you need to create an app in HubSpot and configure the Meergo settings file with OAuth credentials. You only need to create the HubSpot app once, even if you add, remove, or re-add data sources.
 
 1. Log in to your <a href="https://www.hubspot.com/" target="_blank">HubSpot</a> account.
-2. In the right sidebar, click the last item **Development** (the name may vary depending on the language of your account).
+2. In the left sidebar, click the last item **Development** (the name may vary depending on the language of your account).
 3. Click on **Legacy Apps**. 
 4. Click on **Create**.
 5. Click on **Public** (the app will remain private and does not need to be made public).

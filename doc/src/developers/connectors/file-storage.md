@@ -15,7 +15,7 @@ Note that it is possible to implement a file storage connector that supports onl
 In the creation of a new Go module, for your file storage connector, you can utilize the following template by pasting it into a Go file. Customize the template with your desired package name, type name, and pertinent connector information:
 
 ```go
-// Package s3 implements the S3 file storage connector.
+// Package s3 provides a connector for S3.
 package s3
 
 import (
@@ -40,7 +40,7 @@ type S3 struct {
     // Your connector fields.
 }
 
-// New returns a new S3 connector instance.
+// New returns a new connector instance for S3.
 func New(env *meergo.FileStorageEnv) (*S3, error) {
     // ...
 }

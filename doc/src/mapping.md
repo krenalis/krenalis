@@ -147,7 +147,7 @@ To avoid this error, append a `?` after the key. This prevents the error if the 
 └─────────────────────────────────┘
 ```
 
-### Functions
+## Functions
 
 In expressions, you can use some functions to do slightly more complex tasks.
 
@@ -169,7 +169,7 @@ marital_status: "Unknown"
 
 Below is a list of available functions:
 
-#### **and** function
+### **and** function
 
 The `and` function returns `true` only when all of its arguments are `true`; otherwise, it returns `false`. For example:
 ```
@@ -189,7 +189,7 @@ and(null, false)  -> false
 
 The arguments of the `and` function should have type `boolean`, and the result has type `boolean`.
 
-#### **array** function
+### **array** function
 
 The `array` function returns an array with the passed arguments as elements. For example:
 ```
@@ -200,7 +200,7 @@ The `array` function returns an array with the passed arguments as elements. For
 
 The result of the `array` function has type `array(json)`.
 
-#### **coalesce** function
+### **coalesce** function
 
 The `coalesce` function returns the first non-null argument, or `null` if all arguments are `null`.  For example:
 
@@ -218,7 +218,7 @@ coalesce(null, null) -> null
 
 The result of the `coalesce` function has type `json`.
 
-#### **eq** function
+### **eq** function
 
 The `eq` function takes two values and returns `true` if they are equal; otherwise, it returns `false`. For example:
 ```
@@ -237,7 +237,7 @@ eq('a', null) -> null
 
 The result of the `eq` function has type `boolean`.
 
-#### **if** function
+### **if** function
 
 The `if` function evaluates the first boolean argument. If it is `true`, the function returns the second argument. If the first argument is `false` or `null`, the function returns the third argument. For example, if `hasCode` is `true`, the following code evaluates to the value of `code`; otherwise, it evaluates to an empty `text` value.
 ```
@@ -270,7 +270,7 @@ if(null, 5)  -> null
 
 The result of the `if` function has type `json`.
 
-#### **initcap** function
+### **initcap** function
 
 The `initcap` function returns its argument with the first letter of each word in uppercase, all other letters in lowercase. For example:
 ```
@@ -289,7 +289,7 @@ initcap(null)             -> null
 
 The argument of the `initcap` function should have type `text`, and the result has type `text`.
 
-#### **json_parse** function
+### **json_parse** function
 
 The `json_parse` function parses its argument as JSON and returns the corresponding `json` value. For example:
 ```
@@ -311,7 +311,7 @@ If the input is not valid JSON, `json_parse` will produce an error, causing the 
 
 The argument of the `json_parse` function should have type `text` or `json`. If the argument has type `json`, the value must be a JSON string. The result has type `json`.
 
-#### **len** function
+### **len** function
 
 The `len` function returns the length of the given argument based on its type.
 ```
@@ -352,7 +352,7 @@ len(88.0300) -> 5
 
 The result of the `len` function has type `int(32)`.
 
-#### **lower** function
+### **lower** function
 
 The `lower` function returns its argument with all letters in lower case. For example:
 ```
@@ -369,7 +369,7 @@ lower(null)  -> null
 
 The argument of the `lower` function should have type `text`, and the result has type `text`.
 
-#### **ltrim** function
+### **ltrim** function
 
 The `ltrim` function returns its argument with all leading Unicode whitespace removed. For example:
 ```
@@ -387,7 +387,7 @@ ltrim(null)  -> null
 
 Both the argument and the result of the  `trim` function have type `text`.
 
-#### **map** function
+### **map** function
 
 The `map` function builds a `map` from the provided key-value pairs. It must be
 called with an even number of arguments where text keys and values
@@ -424,7 +424,7 @@ ne('a', null) -> null
 
 The result of the `eq` function has type `boolean`.
 
-#### **not** function
+### **not** function
 
 The `not` function returns `false` if its argument is `true`, and `true` if its argument is `false`. For example:
 ```
@@ -442,7 +442,7 @@ not(null)  -> null
 
 The argument of the `not` function should have type `boolean`, and the result has type `boolean`.
 
-#### **or** function
+### **or** function
 
 The `or` function returns `true` if at least one of its arguments is `true`; otherwise, it returns `false`. For example:
 ```
@@ -462,7 +462,7 @@ or(null, false)  -> null
 
 The arguments of the `or` function should have type `boolean`, and the result has type `boolean`.
 
-#### **rtrim** function
+### **rtrim** function
 
 The `rtrim` function returns its argument with all trailing Unicode whitespace removed. For example:
 ```
@@ -480,7 +480,7 @@ rtrim(null)  -> null
 
 Both the argument and the result of the `rtrim` function have type `text`.
 
-#### **substring** function
+### **substring** function
 
 The `substring` function extracts a portion of a string based on a specified starting position and length. The indices are 1-based, meaning the first character of the string has an index of 1.
 
@@ -516,7 +516,7 @@ Note:
 
 The `start` and `length` arguments should be of type `integer`, and the `s` argument and the result are of type `text`.
 
-#### **trim** function
+### **trim** function
 
 The `trim` function returns its argument with all leading and trailing Unicode whitespace removed. For example:
 ```
@@ -534,7 +534,7 @@ trim(null)  -> null
 
 Both the argument and the result of the `trim` function have type `text`.
 
-#### **upper** function
+### **upper** function
 
 The `upper` function returns its argument with all letters in upper case. For example:
 ```

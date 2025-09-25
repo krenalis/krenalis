@@ -25,7 +25,7 @@ def transform(user: dict) -> dict:
 
 The table below outlines the various Meergo types and their corresponding representations in the Python code for the transformation.
 
-| Meergo&nbsp;Type | Python&nbsp;Type    | Example                                        |
+| Meergo&nbsp;type | Python&nbsp;type    | Example                                        |
 |------------------|---------------------|------------------------------------------------|
 | `text`           | `str`               | `'123 Main Street'`                            |
 | `boolean`        | `bool`              | `True`                                         |

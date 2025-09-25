@@ -4,7 +4,7 @@
 
 # Database connectors
 
-Database connectors allow to connect to databases (DBMS), such as PostgreSQL, MySQL, or Snowflake, to execute queries to import and export data.
+Database connectors allow to connect to databases, such as PostgreSQL, MySQL, or Snowflake, to execute queries to import and export data.
 
 Database connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
 
@@ -13,7 +13,7 @@ Database connectors, like other types of connectors, are written in Go. A connec
 In the creation of a new Go module, for your database connector, you can utilize the following template by pasting it into a Go file. Customize the template with your desired package name, type name, and pertinent connector information:
 
 ```go
-// Package postgresql implements the PostgreSQL database connector.
+// Package postgresql provides a connector for PostgreSQL.
 package postgresql
 
 import (
@@ -35,7 +35,7 @@ type PostgreSQL struct {
     // Your connector fields.
 }
 
-// New returns a new PostgreSQL connector instance.
+// New returns a new connector instance for PostgreSQL.
 func New(env *meergo.DatabaseEnv) (*PostgreSQL, error) {
     // ...
 }

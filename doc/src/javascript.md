@@ -27,13 +27,13 @@ const transform = (user) => {
 
 The table below outlines the various Meergo types and their corresponding representations in the JavaScript code for the transformation.
 
-| Meergo&nbsp;Type | JavaScript&nbsp;Type | Example                                  |
+| Meergo&nbsp;type | JavaScript&nbsp;type | Example                                  |
 |------------------|----------------------|------------------------------------------|
 | `text`           | `String`             | `'123 Main Street'`                      |
 | `boolean`        | `Boolean`            | `true`                                   |
-| `int(n)` `n≤32`  | `Number`             | `-2586`                                  |
+| `int(n)` n≤32    | `Number`             | `-2586`                                  |
 | `int(64)`        | `BigInt`             | `72750672843726543n`                     |
-| `uint(n)` `n≤32` | `Number`             | `4063`                                   |
+| `uint(n)` n≤32   | `Number`             | `4063`                                   |
 | `uint(64)`       | `BigInt`             | `160386761048264895n`                    |
 | `float(n)`       | `Number`             | `37.81`                                  |
 | `decimal(p,s)`   | `BigInt`,`String`    | `5930174.18n`                            |

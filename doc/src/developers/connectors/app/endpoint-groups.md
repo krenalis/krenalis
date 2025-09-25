@@ -148,7 +148,7 @@ A request is idempotent if:
 * its HTTP method is `GET`, `HEAD`, `OPTIONS`, or `TRACE`, or
 * it includes the header `Idempotency-Key` or `X-Idempotency-Key`.
 
-If the idempotency header is present but is empty (nil or empty slice), the request is still treated as idempotent — but the header won't be sent over the network.
+If the idempotency header is present but is empty (`nil` or empty slice), the request is still treated as idempotent — but the header won't be sent over the network.
 
 #### Example
 
@@ -239,10 +239,17 @@ If the `parse` function returns an error, the request will not be retried. If `p
 
 #### Custom strategy
 
-To create a custom strategy, implement a function with the `meergo.BackoffStrategy` type:
+To create a custom strategy, implement a function with the following type:
 
 ```go
-type RetryStrategy func(res *http.Response, retries int) (reason meergo.FailureReason, waitTime time.Duration)
+// RetryStrategy represents a strategy for determining retry behavior.
+// It returns a FailureReason and the duration to wait before the next attempt,
+// based on the HTTP response from the previous attempt and the number of
+// retries made. retries parameter starts at 0 before the first retry and
+// increments by 1 on each retry.
+//
+// If the returned waitTime is negative, it is considered zero.
+type RetryStrategy func(res *http.Response, retries int) (reason FailureReason, waitTime time.Duration)
 ```
 
 This function takes the failed response and the number of retries so far, and returns a failure reason and time to wait before retrying. Parameters include: 

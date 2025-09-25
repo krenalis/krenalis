@@ -48,6 +48,6 @@ docker compose up
 
 ⏳ Wait until the initialization of Meergo's databases is complete. This may take a few seconds.
 
-Once the initialization is finished, as indicated by the console message stating that the Meergo Admin Console is available, you can access it by opening the address [http://localhost:2022/admin/](http://localhost:2022/admin/) in a browser.
+Once the initialization is finished, as indicated by the console message stating that the Meergo Admin Console is available, you can access it by opening the address [http://127.0.0.1:2022/admin/](http://127.0.0.1:2022/admin/) in a browser.
 
 Keep reading the documentation to see how to [create your first workspace](./create-workspace).
