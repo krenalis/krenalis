@@ -24,7 +24,7 @@ import { formatNumber } from '../../../utils/formatNumber';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../../../lib/telemetry/scrubURL';
 import { ActionTarget } from '../../../lib/api/types/action';
-import { IS_PASSWORDLESS_KEY, WORKSPACE_ID_KEY } from '../../../constants/storage';
+import { IS_PASSWORDLESS_KEY, storageKeysToBeRemoved, WORKSPACE_ID_KEY } from '../../../constants/storage';
 
 const FILTER_STEP = 2;
 
@@ -71,6 +71,27 @@ const useApp = (
 				setIsLoadingState(false);
 				return;
 			}
+
+			// Redirect the user to the external URL if it doesn't match the
+			// current URL.
+			{
+				const c = new URL(window.location.href);
+				const e = new URL(publicMetadata.externalURL);
+				if (c.protocol !== e.protocol || c.host !== e.host || c.port !== e.port) {
+					// Clear the browser storage.
+					sessionStorage.clear();
+					for (const key of storageKeysToBeRemoved) {
+						localStorage.removeItem(key);
+					}
+					// Redirect to the external URL, restarting the application.
+					c.protocol = e.protocol;
+					c.host = e.host;
+					c.port = e.port;
+					window.location.replace(c.toString());
+					return;
+				}
+			}
+
 			setPublicMetadata(publicMetadata);
 
 			if (publicMetadata.telemetryLevel == 'errors' || publicMetadata.telemetryLevel == 'all') {
