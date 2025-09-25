@@ -39,7 +39,7 @@ In the **RudderStack** source on Meergo:
 
 Then proceed to create a Webhook destination in RudderStack:
 
-1. From the [RudderStack web app](https://app.rudderstack.com/), go to **Connect > Destinations**.
+1. From the [RudderStack web app](https://app.rudderstack.com/), go to **Collect > Destinations**.
 2. Click **New destination**.
 3. Search for the **Webhook** destination; you can use the search bar at the top or filter by category.
 4. On the Webhook page, in the **Name destination** field, enter a name for the destination to easily recognize it later.
