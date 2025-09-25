@@ -76,7 +76,7 @@ $ go mod init s3
 
 Then add a Go file to the new directory. For example copy the previous template file.
 
-Later on, you can [build an executable with your connector](../../getting-started#build-with-your-custom-connectors).
+Later on, you can [build an executable with your connector](../../from-source#building-using-the-go-tools).
 
 ### About the connector
 
