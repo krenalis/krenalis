@@ -111,7 +111,11 @@ func TestExportUsersToFile(t *testing.T) {
 
 	for _, compression := range compressions {
 
-		t.Logf("[info] export %s compressed file", compression)
+		if compression == core.NoCompression {
+			t.Logf("[info] exporting file without compression")
+		} else {
+			t.Logf("[info] exporting file with compression %q", compression)
+		}
 
 		// Remove the export file, if exists.
 		err := os.Remove(exportFilePath)
@@ -140,7 +144,7 @@ func TestExportUsersToFile(t *testing.T) {
 		// Execute the action that export users.
 		exec := c.ExecuteAction(exportUsersActionID)
 
-		// Wait for the import to finish.
+		// Wait for the export to finish.
 		c.WaitForExecutionsCompletion(fsID, exec)
 
 		// Check if the file has been created successfully.
@@ -172,6 +176,10 @@ func TestExportUsersToFile(t *testing.T) {
 			r = snappy.NewReader(fi)
 		}
 		content, err := io.ReadAll(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = fi.Close()
 		if err != nil {
 			t.Fatal(err)
 		}
