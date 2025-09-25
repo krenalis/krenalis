@@ -8,7 +8,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -21,11 +20,6 @@ import (
 	"time"
 )
 
-// expectedDenoVersion is the expected Deno version.
-//
-// Keep in sync with the version within ".github/workflows/main.yml".
-const expectedDenoVersion = "2.3.1"
-
 func main() {
 
 	cliOptions := parseCli()
@@ -36,9 +30,6 @@ func main() {
 	}
 
 	start := time.Now()
-
-	// Check if the locally installed Deno version is correct.
-	checkDenoVersion()
 
 	// Find modules and packages in the current working directory, then ensure
 	// that the script has been launched with the correct working directory.
@@ -194,32 +185,6 @@ func parseCli() cliOptions {
 		noGoTest:         noGoTest,
 		short:            short,
 	}
-}
-
-func checkDenoVersion() {
-	fmt.Println("Checking the Deno version")
-	cmd := exec.Command("deno", "--version")
-	var stdout bytes.Buffer
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = &stdout
-	err := cmd.Run()
-	if err != nil {
-		fatal("cannot execute the command 'deno --version': %s", err)
-	}
-	firstLine := strings.Split(stdout.String(), "\n")[0]
-	parts := strings.Split(firstLine, " ")
-	if len(parts) < 2 {
-		fatal("unexpected output from 'deno --version': %q", stdout.String())
-	}
-	version := parts[1]
-	if version != expectedDenoVersion {
-		fatal(fmt.Sprintf("it is not possible to run the tests because they require Deno %s, but the installed version is Deno %s.\n"+
-			"To proceed with the tests, please update the Deno version:\n"+
-			"\n\tdeno upgrade --version %s\n\n"+
-			"If your intention is to update the tests to use Deno %s instead, please modify the specified version in the 'commit/commit.go' script.\n",
-			expectedDenoVersion, version, expectedDenoVersion, version))
-	}
-	fmt.Printf("Locally installed Deno version is correct: %s\n", version)
 }
 
 // findModulesPackages finds the Go modules and packages within the given dir.
