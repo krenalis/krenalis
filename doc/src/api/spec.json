@@ -15064,7 +15064,7 @@
         {
             "id": "others",
             "name": "Others",
-            "description": "These endpoints provide general information about the server.At the moment, they allow to retrieve the set of languages supported by transformation functions, as well as public information that is primarily consumed by the Admin Console.",
+            "description": "These endpoints provide general information about the server. At the moment, they allow to retrieve the set of languages supported by transformation functions, as well as public information that is primarily consumed by the Admin Console.",
             "endpoints": [
                 {
                     "name": "Get public metadata",
