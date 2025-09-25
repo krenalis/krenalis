@@ -142,10 +142,8 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 			if i%100 != 0 {
 				continue
 			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
+			if err := ctx.Err(); err != nil {
+				return err
 			}
 		}
 		return nil

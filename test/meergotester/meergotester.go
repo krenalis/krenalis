@@ -334,12 +334,8 @@ func (c *Meergo) Start() {
 				close(c.meergoRunning)
 			}()
 			err := launchMeergo(ctxWithCancel, env)
-			if err != nil {
-				select {
-				case <-ctxWithCancel.Done():
-				default:
-					log.Printf("[error] %s", err)
-				}
+			if err != nil && ctxWithCancel.Err() == nil {
+				log.Printf("[error] %s", err)
 			}
 		}()
 	} else {

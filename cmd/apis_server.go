@@ -94,10 +94,8 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 			w.Header().Set("Expires", "0")
 			response, err := handler(w, r)
 			if err != nil {
-				select {
-				case <-r.Context().Done():
+				if r.Context().Err() != nil {
 					return
-				default:
 				}
 				if err == errInvalidSessionCookie {
 					_, _ = s.logout(w, r)

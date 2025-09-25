@@ -190,11 +190,9 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			last := len(r.columns) - 1
 			row := make([]any, len(r.columns))
 			for r.rows.Next() {
-				select {
-				case <-ctx.Done():
-					r.err = ctx.Err()
+				if err := ctx.Err(); err != nil {
+					r.err = err
 					return
-				default:
 				}
 				if err := r.rows.Scan(row...); err != nil {
 					r.err = err
@@ -285,11 +283,9 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 		last := len(r.columns) - 1
 		row := make([]any, len(r.columns))
 		for r.rows.Next() {
-			select {
-			case <-ctx.Done():
-				r.err = ctx.Err()
+			if err := ctx.Err(); err != nil {
+				r.err = err
 				return
-			default:
 			}
 			if err := r.rows.Scan(row...); err != nil {
 				r.err = err

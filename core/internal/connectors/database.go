@@ -598,11 +598,9 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				record.Properties = nil
 				record.Err = nil
 			}
-			select {
-			case <-ctx.Done():
-				r.err = ctx.Err()
+			if err := ctx.Err(); err != nil {
+				r.err = err
 				return
-			default:
 			}
 			if err := r.rows.Scan(dest...); err != nil {
 				record.Err = err

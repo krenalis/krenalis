@@ -605,11 +605,9 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 			for _, user := range users {
 
-				select {
-				case <-ctx.Done():
-					r.err = ctx.Err()
+				if err := ctx.Err(); err != nil {
+					r.err = err
 					return
-				default:
 				}
 
 				if user.ID == "" {
