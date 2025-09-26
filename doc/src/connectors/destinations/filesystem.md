@@ -19,8 +19,8 @@ Its sole purpose is to test file exports and explore the various file formats su
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search **Filesystem** ; you can use the search bar at the top or filter by category.
-4. Click on the connector **Filesystem**. A panel will open on the right with information about **Filesystem**.
-5. Click on **Add destination**. The `Add Filesystem destination connection` page will appear.
+4. Click on the connector **Filesystem**. A panel will open on the right.
+5. Click on **Add destination...**. The `Add destination connection for Filesystem` page will appear.
 6. Click **Add**.
 
 Once the destination connection Filesystem is added, the **Actions** page will be displayed. Here, you can configure multiple files for export by selecting the file format, applying filters to determine which users to include, and setting a schedule for how frequently each export should occur.

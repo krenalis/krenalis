@@ -18,8 +18,8 @@ MySQL is an open-source relational database management system. It's popular for 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search **MySQL**; you can use the search bar at the top or filter by category.
-4. Click on the connector for **MySQL**. A panel will open on the right with information about **MySQL**.
-5. Click on **Add destination**. The `Add MySQL destination connection` page will appear.
+4. Click on the connector for **MySQL**. A panel will open on the right.
+5. Click on **Add destination...**. The `Add destination connection for MySQL` page will appear.
 6. In the **Name** field, enter a name for the destination to easily recognize it later.
 7. In the remaining fields, provide the necessary information to access your MySQL instance:
     * **Host**: The name of the host.

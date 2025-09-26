@@ -44,9 +44,9 @@ Now proceed to add destination connection for a:
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search **HubSpot**; you can use the search bar at the top or filter by category.
-4. Click on the connector for **HubSpot**. A panel will open on the right with information about **HubSpot**.
-5. Click on **Add destination**.
-6. Follow the instructions provided by HubSpot to authorize access to your account for writing contacts. Once finished, the `Add HubSpot destination connection` page will appear.
+4. Click on the connector for **HubSpot**. A panel will open on the right.
+5. Click on **Add destination...**.
+6. Follow the instructions provided by HubSpot to authorize access to your account for writing contacts. Once finished, the `Add destination connection for HubSpot` page will appear.
 7. In the **Name** field, enter a name for the destination to easily recognize it later.
 8. Click **Add**.
 

@@ -22,8 +22,8 @@ Segment is a customer data platform that collects, unifies, and integrates custo
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search **Segment**; you can use the search bar at the top or filter by category.
-4. Click on the connector for **Segment**. A panel will open on the right with information about **Segment**.
-5. Click on **Add source**. The `Add Segment source connection` page will appear.
+4. Click on the connector for **Segment**. A panel will open on the right.
+5. Click on **Add source...**. The `Add source connection for Segment` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. Click **Add**.
 

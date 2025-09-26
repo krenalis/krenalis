@@ -32,8 +32,8 @@ Now proceed to add source connection for a:
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search **Stripe**; you can use the search bar at the top or filter by category.
-4. Click on the connector for **Stripe**. A panel will open on the right with information about **Stripe**.
-5. Click on **Add source**. The `Add Stripe source connection` page will appear.
+4. Click on the connector for **Stripe**. A panel will open on the right.
+5. Click on **Add source...**. The `Add source connection for Stripe` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. In the **API Key** field, enter the previously copied key.
 8. Click **Add**.

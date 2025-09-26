@@ -36,9 +36,9 @@ Now proceed to add destination connection for a:
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Sources** page, click **Add a new destination ⊕** .
 3. Search **Mailchimp**; you can use the search bar at the top or filter by category.
-4. Click on the connection for **Mailchimp**. A panel will open on the right with information about **Mailchimp**.
-5. Click on **Add destination**.
-6. Follow the instructions provided by Mailchimp to authorize access to your account to write contacts. Once finished, the `Add Mailchimp destination connection` page will appear.
+4. Click on the connection for **Mailchimp**. A panel will open on the right.
+5. Click on **Add destination...**.
+6. Follow the instructions provided by Mailchimp to authorize access to your account to write contacts. Once finished, the `Add destination connection for Mailchimp` page will appear.
 7. In the **Name** field, enter a name for the destination to easily recognize it later.
 8. In the **List** field, select the Mailchimp list to which write the contacts. You can change it later.
 9. Click **Add**.

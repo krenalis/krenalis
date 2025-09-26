@@ -17,8 +17,8 @@ SFTP (Secure File Transfer Protocol) is a secure network protocol used for trans
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search **SFTP**; you can use the search bar at the top or filter by category.
-4. Click on the connector for **SFTP**. A panel will open on the right with information about **SFTP**.
-5. Click on **Add destination**. The `Add SFTP destination connection` page will appear.
+4. Click on the connector for **SFTP**. A panel will open on the right.
+5. Click on **Add destination...**. The `Add destination connection for SFTP` page will appear.
 6. In the **Name** field, enter a name for the destination to easily recognize it later.
 7. In the **Host** field, enter the hostname or IP address of the SFTP server where the files will be uploaded.
 8. In the **Port** field, specify the port number used for the SFTP connection (default is usually 22).

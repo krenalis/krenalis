@@ -36,8 +36,8 @@ Now proceed to add source connection for a:
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search **Mailchimp**; you can use the search bar at the top or filter by category.
-4. Click on the connection for **Mailchimp**. A panel will open on the right with information about **Mailchimp**.
-5. Follow the instructions provided by Mailchimp to authorize access to your account to read contacts. Once finished, the `Add Mailchimp source connection` page will appear.
+4. Click on the connection for **Mailchimp**. A panel will open on the right.
+5. Follow the instructions provided by Mailchimp to authorize access to your account to read contacts. Once finished, the `Add source connection for Mailchimp` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. In the **Audience** field, select the Mailchimp audience from which to read the contacts. You can change it later.
 8. Click **Add**.

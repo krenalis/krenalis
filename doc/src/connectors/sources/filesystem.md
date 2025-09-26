@@ -20,8 +20,8 @@ Its sole purpose is to test file imports and explore the various file formats su
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search **Filesystem**; you can use the search bar at the top or filter by category.
-4. Click on the connector **Filesystem**. A panel will open on the right with information about **Filesystem**.
-5. Click on **Add source**. The `Add Filesystem source connection` page will appear.
+4. Click on the connector **Filesystem**. A panel will open on the right.
+5. Click on **Add source...**. The `Add source connection for Filesystem` page will appear.
 6. Click **Add**.
 
 Once the source connection Filesystem is added, the **Actions** page will be displayed. Here, you can add an action for each file to be read using the newly added Filesystem data source. Configure each action with the desired settings for file format, filters for user data, and any additional processing requirements.

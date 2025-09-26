@@ -88,7 +88,7 @@ const ConnectorSettings = () => {
 				<Flex alignItems='baseline' gap={10}>
 					<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(connector.icon)}</span>
 					<span>
-						Add {connector.name} {connectionRole.toLowerCase()} connection
+						Add {connectionRole.toLowerCase()} connection for {connector.name}
 					</span>
 				</Flex>,
 			);

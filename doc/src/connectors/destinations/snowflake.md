@@ -18,8 +18,8 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search **Snowflake**; you can use the search bar at the top or filter by category.
-4. Click on the connection for **Snowflake**. A panel will open on the right with information about **Snowflake**.
-5. Click on **Add destination**. The `Add Snowflake destination connection` page will appear.
+4. Click on the connection for **Snowflake**. A panel will open on the right.
+5. Click on **Add destination...**. The `Add destination connection for Snowflake` page will appear.
 6. In the **Name** field, enter a name for the destination to easily recognize it later.
 7. In the remaining fields, provide the necessary information to access your Snowflake data warehouse:
     * **Account Identifier**: The account ID of the Snowflake warehouse.

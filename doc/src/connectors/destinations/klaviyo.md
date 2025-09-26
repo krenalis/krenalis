@@ -34,8 +34,8 @@ Now proceed to add destination connection for a:
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
 3. Search **Klaviyo**; you can use the search bar at the top or filter by category.
-4. Click on the connector for **Klaviyo**r. A panel will open on the right with information about **Klaviyo**.
-5. Click on **Add destination**. The `Add Klaviyo destination connection` page will appear.
+4. Click on the connector for **Klaviyo**r. A panel will open on the right.
+5. Click on **Add destination...**. The `Add destination connection for Klaviyo` page will appear.
 6. In the **Name** field, enter a name for the destination to easily recognize it later.
 7. In the **Your Private Key** field, enter the previously copied private key.
 8. Click **Add**.

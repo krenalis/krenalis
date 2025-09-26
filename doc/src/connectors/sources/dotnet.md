@@ -25,8 +25,8 @@ First of all, you need a connection in Meergo that can receive events from the C
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
 3. Search **.NET**; you can use the search bar at the top or filter by category.
-4. Click on the connection for **.NET**. A panel will open on the right with information about **.NET**.
-5. Click on **Add source**. The `Add .NET source connection` page will appear.
+4. Click on the connection for **.NET**. A panel will open on the right.
+5. Click on **Add source...**. The `Add .NET source connection` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. Click **Add**.
 
