@@ -114,6 +114,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	// Get the writer.
 	switch connector.Type {
 	case state.App:
+		// The value of the out matching property is written to the app only when
+		// creating a new user or updating an existing user if the property is update-required.
+		// When updating a user and the property is not update-required, it should not be written again
+		// with the same value. In this case, alignment with the app schema does not need to be validated.
+		// Therefore, the property must be removed from the schema passed to App.Writer
+		// so that the alignment check is skipped.
 		outSchema := action.OutSchema
 		if action.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
 			outSchema = types.SubsetPropertyFunc(outSchema, func(p types.Property) bool {
