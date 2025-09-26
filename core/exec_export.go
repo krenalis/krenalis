@@ -38,25 +38,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	connector := action.Connection().Connector()
 	meergoMetrics.Increment("Action.exportUsers.calls", 1)
 
-	// alreadyExportedKeys keeps track of the keys of users exported to the
-	// database during this export, indexed by their table key value (which can
-	// have Go type int, uint o string).
-	var alreadyExportedKeys map[any]struct{}
-
-	var matching *datastore.Matching
-	var matchingIn types.Property
-	var matchingOut types.Property
+	// Synchronize destinations users with the app users.
 	if connector.Type == state.App {
-		// Get the matching properties.
-		matchingIn, _ = action.InSchema.Properties().ByName(action.Matching.In)
-		matchingOut, _ = action.OutSchema.Properties().ByName(action.Matching.Out)
-		matching = &datastore.Matching{
-			Action:             action.ID,
-			InProperty:         matchingIn.Name,
-			ExportMode:         this.action.ExportMode,
-			UpdateOnDuplicates: action.UpdateOnDuplicates,
-		}
-		// Synchronize destinations users with the app users.
 		err := this.syncDestinationUsers(ctx)
 		if err != nil {
 			if err, ok := err.(*schemas.Error); ok {
@@ -66,7 +49,14 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		}
 	}
 
-	// Get the transformer.
+	// Get the matching properties.
+	var matchingIn, matchingOut types.Property
+	if connector.Type == state.App {
+		matchingIn, _ = action.InSchema.Properties().ByName(action.Matching.In)
+		matchingOut, _ = action.OutSchema.Properties().ByName(action.Matching.Out)
+	}
+
+	// Build the transformer.
 	var transformer *transformers.Transformer
 	if t := this.action.Transformation; t.Mapping != nil || t.Function != nil {
 		var err error
@@ -80,6 +70,15 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	query := datastore.Query{Where: action.Filter}
 	if connector.Type == state.FileStorage {
 		query.OrderBy = action.OrderBy
+	}
+	var matching *datastore.Matching
+	if connector.Type == state.App {
+		matching = &datastore.Matching{
+			Action:             action.ID,
+			InProperty:         matchingIn.Name,
+			ExportMode:         this.action.ExportMode,
+			UpdateOnDuplicates: action.UpdateOnDuplicates,
+		}
 	}
 	records, err := store.UserRecords(ctx, query, action.InSchema, matching)
 	if err != nil {
@@ -110,6 +109,11 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			this.core.metrics.FinalizePassed(action.ID, len(ids))
 		}
 	}
+
+	// alreadyExportedKeys keeps track of the keys of users exported to the
+	// database during this export, indexed by their table key value (which can
+	// have Go type int, uint o string).
+	var alreadyExportedKeys map[any]struct{}
 
 	// Get the writer.
 	switch connector.Type {

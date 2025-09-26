@@ -288,14 +288,14 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			return errors.BadRequest("export mode cannot be empty if there are matching properties")
 		}
 		// Validate the input matching property.
+		if !inSchema.Valid() {
+			return errors.BadRequest("input schema must be valid")
+		}
 		if !types.IsValidPropertyName(action.Matching.In) {
 			if types.IsValidPropertyPath(action.Matching.In) {
 				return errors.BadRequest("matching properties cannot be property paths, can only be property names")
 			}
 			return errors.BadRequest("input matching property %q is not a valid property name", action.Matching.In)
-		}
-		if !inSchema.Valid() {
-			return errors.BadRequest("input schema must be valid")
 		}
 		in, ok := inProperties.ByName(action.Matching.In)
 		if !ok {
@@ -304,7 +304,6 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !canBeUsedAsMatchingProp(in.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", in.Type)
 		}
-		usedInPaths = append(usedInPaths, action.Matching.In)
 		// Validate the output matching property.
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema must be valid")
@@ -322,7 +321,6 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !canBeUsedAsMatchingProp(out.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", out.Type)
 		}
-		usedOutPaths = append(usedOutPaths, action.Matching.Out)
 		// Check that the input property can be converted to the output property.
 		switch in.Type.Kind() {
 		case types.IntKind, types.UintKind:
@@ -346,6 +344,8 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 				}
 			}
 		}
+		usedInPaths = append(usedInPaths, action.Matching.In)
+		usedOutPaths = append(usedOutPaths, action.Matching.Out)
 	}
 	// Validate the compression.
 	switch action.Compression {
