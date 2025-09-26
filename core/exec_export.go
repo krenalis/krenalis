@@ -184,13 +184,17 @@ Records:
 		readCount++
 		this.core.metrics.ReceivePassed(action.ID, 1)
 
-		if connector.Type == state.App {
+		switch connector.Type {
+		default:
+			users = append(users, User{Record: record})
+		case state.App:
 			user := User{Record: record}
-			isCreate := record.ExternalID == ""
-			if !isCreate {
+			// Update: use ExternalID as the user ID.
+			if isUpdate := record.ExternalID != ""; isUpdate {
 				user.ID = record.ExternalID
 			}
-			if isCreate || matchingOut.UpdateRequired {
+			// Create or when the outgoing matching property must be updated: compute and preserve the matching value.
+			if isCreate := record.ExternalID == ""; isCreate || matchingOut.UpdateRequired {
 				value := record.Properties[matchingIn.Name]
 				user.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, matchingIn.Name, matchingOut.Name)
 				if err != nil {
@@ -199,8 +203,6 @@ Records:
 				}
 			}
 			users = append(users, user)
-		} else {
-			users = append(users, User{Record: record})
 		}
 
 		this.core.metrics.InputValidationPassed(action.ID, 1)
