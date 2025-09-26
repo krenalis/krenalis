@@ -408,7 +408,7 @@ func Test_SubsetByPathFunc(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			got := SubsetByPathFunc(testObject, test.f)
+			got := SubsetPathFunc(testObject, test.f)
 			if err := sameType(got, test.expected); err != nil {
 				t.Fatalf("\nexpected: %#v\ngot:      %#v", test.expected, got)
 			}
@@ -439,7 +439,7 @@ func Test_SubsetFunc(t *testing.T) {
 			{Name: "a", Type: Text()},
 			{Name: "c", Type: Array(Text())},
 		})
-		got := SubsetFunc(o, func(p Property) bool {
+		got := SubsetPropertyFunc(o, func(p Property) bool {
 			return p.Name == "a" || p.Name == "c"
 		})
 		if err := sameType(expected, got); err != nil {
@@ -455,7 +455,7 @@ func Test_SubsetFunc(t *testing.T) {
 			})},
 			{Name: "c", Type: Array(Text())},
 		})
-		got := SubsetFunc(o, func(p Property) bool {
+		got := SubsetPropertyFunc(o, func(p Property) bool {
 			return p.Name != "d"
 		})
 		if err := sameType(expected, got); err != nil {
@@ -464,7 +464,7 @@ func Test_SubsetFunc(t *testing.T) {
 	})
 
 	t.Run("Invalid type expected", func(t *testing.T) {
-		got := SubsetFunc(o, func(p Property) bool {
+		got := SubsetPropertyFunc(o, func(p Property) bool {
 			return false
 		})
 		if got.Valid() {
@@ -473,7 +473,7 @@ func Test_SubsetFunc(t *testing.T) {
 	})
 
 	t.Run("Original object expected", func(t *testing.T) {
-		got := SubsetFunc(o, func(p Property) bool {
+		got := SubsetPropertyFunc(o, func(p Property) bool {
 			return true
 		})
 		if err := sameType(o, got); err != nil {

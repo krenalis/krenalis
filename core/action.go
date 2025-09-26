@@ -1366,7 +1366,7 @@ func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role
 // Returns an invalid schema in case none of the properties of schema can be
 // used.
 func onlyForMatching(schema types.Type) types.Type {
-	return types.SubsetFunc(schema, func(p types.Property) bool {
+	return types.SubsetPropertyFunc(schema, func(p types.Property) bool {
 		return canBeUsedAsMatchingProp(p.Type.Kind())
 	})
 }

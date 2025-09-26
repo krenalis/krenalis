@@ -300,7 +300,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, where *state.Where
 		return nil, err
 	}
 	properties := schema.Properties()
-	appSchema = types.SubsetByPathFunc(appSchema, func(path string) bool {
+	appSchema = types.SubsetPathFunc(appSchema, func(path string) bool {
 		return properties.ContainsPath(path)
 	})
 	if !lastChangeTime.IsZero() {

@@ -170,7 +170,7 @@ func schemaSubset(schema types.Type, paths []string) types.Type {
 	for _, path := range paths {
 		has[path] = struct{}{}
 	}
-	return types.SubsetByPathFunc(schema, func(path string) bool {
+	return types.SubsetPathFunc(schema, func(path string) bool {
 		_, ok := has[path]
 		return ok
 	})

@@ -133,14 +133,14 @@ func ParseUUID(s string) (string, bool) {
 	return id.String(), true
 }
 
-// SubsetByPathFunc returns a subset of the object t, including the properties
+// SubsetPathFunc returns a subset of the object t, including the properties
 // for which f returns true and their upper hierarchy, maintaining their
 // original order in type t. The properties of t are navigated recursively by
 // traversing inside the object properties.
 // If the function f does not return true for any property, an invalid Type is
 // returned.
 // It panics if t is not an object, or f is nil.
-func SubsetByPathFunc(t Type, f func(path string) bool) Type {
+func SubsetPathFunc(t Type, f func(path string) bool) Type {
 	if t.kind != ObjectKind {
 		panic("cannot get a subset of a non-object type")
 	}
@@ -235,11 +235,11 @@ func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 	return Object(topLevelProps)
 }
 
-// SubsetFunc returns a subset of the object t, including only the properties
-// for which f returns true, maintaining their original order in type t.
-// If f returns false for all properties, it returns an invalid schema.
+// SubsetPropertyFunc returns a subset of the object t, including only the
+// properties for which f returns true, maintaining their original order in type
+// t. If f returns false for all properties, it returns an invalid schema.
 // It panics if t is not an object, or f is nil.
-func SubsetFunc(t Type, f func(p Property) bool) Type {
+func SubsetPropertyFunc(t Type, f func(p Property) bool) Type {
 	if t.kind != ObjectKind {
 		panic("cannot get a subset of a non-object type")
 	}

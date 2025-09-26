@@ -116,7 +116,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	case state.App:
 		outSchema := action.OutSchema
 		if action.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
-			outSchema = types.SubsetFunc(outSchema, func(p types.Property) bool {
+			outSchema = types.SubsetPropertyFunc(outSchema, func(p types.Property) bool {
 				return p.Name != action.Matching.Out
 			})
 		}
