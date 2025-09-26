@@ -1,24 +1,24 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Snowflake data destination{% end %}
+{% macro Title string %}Snowflake (Destination){% end %}
 {% Article %}
 
-# Snowflake data destination
+# Snowflake (Destination)
 
-The **Snowflake** data destination allows you to write the unified users into a Snowflake table and keep it synchronized.
+The destination connector for Snowflake allows you to write the unified users into a Snowflake table and keep it synchronized.
 
 Snowflake is a cloud-based data warehousing platform for storing and analyzing large volumes of data. It provides a scalable architecture for real-time analytics, making it ideal for business intelligence applications.
 
 ### On this page
 
-* [Add a Snowflake data destination](#add-a-snowflake-data-destination)
+* [Add destination connection for Snowflake](#add-destination-connection-for-snowflake)
 * [Export users to Snowflake](#export-users-to-snowflake)
 
-### Add a Snowflake data destination
+### Add destination connection for Snowflake
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
-3. Search for the **Snowflake** destination; you can use the search bar at the top or filter by category.
-4. Click on the **Snowflake** connector. A panel will open on the right with information about **Snowflake**.
+3. Search **Snowflake**; you can use the search bar at the top or filter by category.
+4. Click on the connection for **Snowflake**. A panel will open on the right with information about **Snowflake**.
 5. Click on **Add destination**. The `Add Snowflake destination connection` page will appear.
 6. In the **Name** field, enter a name for the destination to easily recognize it later.
 7. In the remaining fields, provide the necessary information to access your Snowflake data warehouse:
@@ -32,12 +32,12 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
 8. (Optional) Click **Test connection** to check if the inserted data is correct.
 9. Click **Add**.
 
-Once the Snowflake data destination is added, the **Actions** page will be displayed.
+Once the destination connection for Snowflake is added, the **Actions** page will be displayed.
 
 ### Export users to Snowflake
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. Click on the Snowflake data destination where you want to export the users.
+2. Click on the connection for Snowflake where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. Enter the name of the Snowflake table where users should be added or updated.
 5. Click **Confirm** to proceed.

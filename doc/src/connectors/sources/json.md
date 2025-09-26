@@ -1,12 +1,12 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}JSON data source{% end %}
+{% macro Title string %}JSON (Source){% end %}
 {% Article %}
 
-# JSON data source
+# JSON (Source)
 
-The JSON data source allows you to import user data from a JSON file, which you can then unify into users within Meergo.
+The source connector for JSON allows you to import user data from a JSON file, which you can then unify into users within Meergo.
 
-> Before adding a JSON data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP GET. If you haven’t set up a storage source yet, please do so before proceeding with the JSON file import.
+> Before adding a source connection for JSON, ensure that you have configured a source connection for a storage such as S3, SFTP, or HTTP GET. If you haven't set up a storage source yet, please do so before proceeding with the JSON file import.
 
 ### On this page
 

@@ -1,19 +1,19 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}JSON data destination{% end %}
+{% macro Title string %}JSON (Destination){% end %}
 {% Article %}
 
-# JSON data destination
+# JSON (Destination)
 
-The JSON data destination allows you to export unified users (i.e., users consolidated through identity resolution) into a JSON file and save it to a storage location, such as S3 or SFTP.
+The destination connector for JSON allows you to export unified users (i.e., users consolidated through identity resolution) into a JSON file and save it to a storage location, such as S3 or SFTP.
 
-> Before adding a JSON data destination, ensure that you have configured a storage data destination such as S3, SFTP, or HTTP POST. If you haven’t set up a storage destination yet, please do so before proceeding with the JSON file export.
+> Before adding a destination connection for JSON, ensure that you have configured a destination connection for a storage such as S3, SFTP, or HTTP POST. If you haven't set up a storage destination yet, please do so before proceeding with the JSON file export.
 
 ### On this page
 
-- [Add a JSON data destination](#add-a-json-data-destination)
+- [Add destination connection for JSON](#add-destination-connection-for-json)
 - [Exported JSON format](#exported-json-format)
 
-### Add a JSON data destination
+### Add destination connection for JSON
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the storage data destination where you want to export the JSON file.

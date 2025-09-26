@@ -1,12 +1,12 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Parquet data source{% end %}
+{% macro Title string %}Parquet (Source){% end %}
 {% Article %}
 
-# Parquet data source
+# Parquet (Source)
 
-The Parquet data source allows you to import user data from Parquet files, which can then be unified as users within Meergo.
+The source connector Parquet allows you to import user data from Parquet files, which can then be unified as users within Meergo.
 
-> Before adding a Parquet data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP GET. If you haven’t set up a storage source yet, please do so before proceeding with the Parquet file import.
+> Before adding a source connection for Parquet, ensure that you have configured a source connection for a storage such as S3, SFTP, or HTTP GET. If you haven't set up a storage source yet, please do so before proceeding with the Parquet file import.
 
 ### On this page
 
@@ -101,7 +101,7 @@ This table describes how Parquet logical and converted types are imported into M
 | `MAP`                       | -                        | Not supported [^map_support]           |
 | `UNKNOWN`                   | -                        | Not supported                          |
 
-#### Column groups
+### Column groups
 
 Import of columns groups is currently not supported.
 

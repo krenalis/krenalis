@@ -1,10 +1,10 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}RudderStack data source{% end %}
+{% macro Title string %}RudderStack (Source){% end %}
 {% Article %}
 
-# RudderStack data source
+# RudderStack (Source)
 
-The **RudderStack** data source allows you to receive events from RudderStack, including user information. Once events are received, you can:
+The source connector for RudderStack allows you to receive events from RudderStack, including user information. Once events are received, you can:
 
 - **Send events to destinations**: These are applications or services capable of processing the events.
 - **Store events in the workspace's data warehouse**: Ideal for data analysis and reporting purposes.
@@ -14,20 +14,20 @@ RudderStack is an open-source customer data platform that helps businesses colle
 
 ### On this page
 
-* [Add a RudderStack data source](#add-a-rudderstack-data-source)
+* [Add source connection for RudderStack](#add-source-connection-for-rudderstack)
 * [Add a Webhook destination on RudderStack dashboard](#add-a-webhook-destination-on-rudderstack-dashboard)
 
-### Add a RudderStack data source
+### Add source connection for RudderStack
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
-3. Search for the **RudderStack** source; you can use the search bar at the top or filter by category.
-4. Click on the **RudderStack** connector. A panel will open on the right with information about **RudderStack**.
+3. Search **RudderStack**; you can use the search bar at the top or filter by category.
+4. Click on the connector for **RudderStack**. A panel will open on the right with information about **RudderStack**.
 5. Click on **Add source**. The `Add RudderStack source connection` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. Click **Add**.
 
-Once the RudderStack data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
+Once the source connection for RudderStack is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
 
 ### Add a Webhook destination on RudderStack web app
 

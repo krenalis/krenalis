@@ -1,21 +1,21 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Mailchimp data destination{% end %}
+{% macro Title string %}Mailchimp (Destination){% end %}
 {% Article %}
 
-# Mailchimp data destination
+# Mailchimp (Destination)
 
-The **Mailchimp** data destination allows you to add and update unified Meergo users in Mailchimp as contacts.
+The destination connector for Mailchimp allows you to add and update unified Meergo users in Mailchimp as contacts.
 
 Mailchimp is an email marketing platform that helps businesses design and send marketing emails, manage mailing lists, and automate campaigns. It also offers tools for audience segmentation, performance tracking, and basic CRM functionalities to improve customer engagement.
 
 ### On this page
 
-* [Add a Mailchimp data destination](#add-a-mailchimp-data-destination)
+* [Add destination connection for Mailchimp](#add-destination-connection-for-mailchimp)
 * [Export users as Mailchimp contacts](#export-users-as-mailchimp-contacts)
 
-### Add a Mailchimp data destination
+### Add destination connection for Mailchimp
 
-Before you can add a Mailchimp data destination, you need to create a private key in your Mailchimp account:
+Before you can add destination connection for a, you need to create a private key in your Mailchimp account:
 
 1. Log in to your <a href="https://mailchimp.com/" target="_blank">Mailchimp</a> account.
 2. Click the account box at the top right and then click **Profile**.
@@ -31,24 +31,24 @@ Before you can add a Mailchimp data destination, you need to create a private ke
 10. Set the `MEERGO_OAUTH_MAILCHIMP_CLIENT_ID` and `MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET` environment variables  with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the `.env` file in the same directory of the Meergo executable.
 11. Restart the Meergo server.
 
-Now proceed to add a Mailchimp data destination:
+Now proceed to add destination connection for a:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Sources** page, click **Add a new destination ⊕** .
-3. Search for the **Mailchimp** destination; you can use the search bar at the top or filter by category.
-4. Click on the **Mailchimp** connector. A panel will open on the right with information about **Mailchimp**.
+3. Search **Mailchimp**; you can use the search bar at the top or filter by category.
+4. Click on the connection for **Mailchimp**. A panel will open on the right with information about **Mailchimp**.
 5. Click on **Add destination**.
 6. Follow the instructions provided by Mailchimp to authorize access to your account to write contacts. Once finished, the `Add Mailchimp destination connection` page will appear.
 7. In the **Name** field, enter a name for the destination to easily recognize it later.
 8. In the **List** field, select the Mailchimp list to which write the contacts. You can change it later.
 9. Click **Add**.
 
-Once the Mailchimp data destination is added, the Actions page will be displayed, indicating the actions required to add and update contacts in Mailchimp.
+Once the destination connection for Mailchimp is added, the Actions page will be displayed, indicating the actions required to add and update contacts in Mailchimp.
 
 ### Export users as Mailchimp contacts
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. Click on the Mailchimp data destination where you want to export the users.
+2. Click on the destination connection for Mailchimp where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To export only specific users, apply a [filter](/filters) to refine your selection.
 5. Select the matching properties that define how users in your workspace correspond to Mailchimp contacts.

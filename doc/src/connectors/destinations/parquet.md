@@ -1,19 +1,19 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Parquet data destination{% end %}
+{% macro Title string %}Parquet (Destination){% end %}
 {% Article %}
 
-# Parquet data destination
+# Parquet (Destination)
 
-The Parquet data destination allows you to export unified users (i.e., users consolidated through identity resolution) into a Parquet file and save it to a storage location, such as S3 or SFTP.
+The destination connector for Parquet allows you to export unified users (i.e., users consolidated through identity resolution) into a Parquet file and save it to a storage location, such as S3 or SFTP.
 
-> Before adding a Parquet data destination, ensure that you have configured a storage data destination such as S3, SFTP, or HTTP POST. If you haven’t set up a storage destination yet, please do so before proceeding with the Parquet file export.
+> Before adding a destination connection for Parquet, ensure that you have configured a destination connection for a storage such as S3, SFTP, or HTTP POST. If you haven’t set up a storage destination yet, please do so before proceeding with the Parquet file export.
 
 ### On this page
 
-- [Add a Parquet data destination](#add-a-parquet-data-destination)
+- [Add destination connection for Parquet](#add-destination-connection-for-parquet)
 - [How Meergo types are exported to Parquet](#how-meergo-types-are-exported-to-parquet)
 
-### Add a Parquet data destination
+### Add destination connection for Parquet
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the storage data destination where you want to export the Parquet file.

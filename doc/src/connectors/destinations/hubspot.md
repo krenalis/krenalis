@@ -1,21 +1,21 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}HubSpot data destination{% end %}
+{% macro Title string %}HubSpot (Destination){% end %}
 {% Article %}
 
-# HubSpot data destination
+# HubSpot (Destination)
 
-The **HubSpot** data destination allows you to add and update unified Meergo users in HubSpot as contacts.
+The destination connector for HubSpot allows you to add and update unified Meergo users in HubSpot as contacts.
 
 HubSpot is a cloud application that offers tools for customer relationship management (CRM), marketing, and sales. It helps businesses organize contacts, automate marketing campaigns, and improve customer support.
 
 ### On this page
 
-- [Add a HubSpot data destination](#add-a-hubspot-data-destination)
+- [Add destination connection for HubSpot](#add-destination-connection-for-hubspot)
 - [Export users as HubSpot contacts](#export-users-as-hubspot-contacts)
 
-### Add a HubSpot data destination
+### Add destination connection for HubSpot
 
-Before you can add a HubSpot data destination, you need to create an app in HubSpot and configure the Meergo settings file with OAuth credentials. You only need to create the HubSpot app once, even if you add, remove, or re-add data destinations.
+Before you can add destination connection for HubSpot, you need to create an app in HubSpot and configure the Meergo settings file with OAuth credentials. You only need to create the HubSpot app once, even if you add, remove, or re-add data destinations.
 
 1. Log in to your <a href="https://www.hubspot.com/" target="_blank">HubSpot</a> account.
 2. In the left sidebar, click the last item **Development** (the name may vary depending on the language of your account).
@@ -39,23 +39,23 @@ Before you can add a HubSpot data destination, you need to create an app in HubS
 15. Set the `MEERGO_OAUTH_HUBSPOT_CLIENT_ID` and `MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET` environment variables with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the `.env` file in the same directory of the Meergo executable.
 16. Restart the Meergo server to load the new environment variables.
 
-Now proceed to add a HubSpot data destination:
+Now proceed to add destination connection for a:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
-3. Search for the **HubSpot** destination; you can use the search bar at the top or filter by category.
-4. Click on the **HubSpot** connector. A panel will open on the right with information about **HubSpot**.
+3. Search **HubSpot**; you can use the search bar at the top or filter by category.
+4. Click on the connector for **HubSpot**. A panel will open on the right with information about **HubSpot**.
 5. Click on **Add destination**.
 6. Follow the instructions provided by HubSpot to authorize access to your account for writing contacts. Once finished, the `Add HubSpot destination connection` page will appear.
 7. In the **Name** field, enter a name for the destination to easily recognize it later.
 8. Click **Add**.
 
-Once the HubSpot data destination is added, the **Actions** page will be displayed, indicating the actions required to add and update contacts in HubSpot.
+Once the destination connection for HubSpot is added, the **Actions** page will be displayed, indicating the actions required to add and update contacts in HubSpot.
 
 ### Export users as HubSpot contacts
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. Click on the HubSpot data destination where you want to export the users.
+2. Click on the destination connection for HubSpot where you want to export the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To export only specific users, apply a [filter](/filters) to refine your selection.
 5. Select the matching properties that define how users in your workspace correspond to HubSpot contacts.

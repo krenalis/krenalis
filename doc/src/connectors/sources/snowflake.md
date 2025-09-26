@@ -1,25 +1,25 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Snowflake data source{% end %}
+{% macro Title string %}Snowflake (Source){% end %}
 {% Article %}
 
-# Snowflake data source
+# Snowflake (Source)
 
-The **Snowflake** data source allows you to read users from a Snowflake database and unify them as users within Meergo.
+The source connector for Snowflake allows you to read users from a Snowflake database and unify them as users within Meergo.
 
 Snowflake is a cloud-based data warehousing platform for storing and analyzing large volumes of data. It provides a scalable architecture for real-time analytics, making it ideal for business intelligence applications.
 
 ### On this page
 
-* [Add a Snowflake data source](#add-a-snowflake-data-source)
+* [Add source connection for Snowflake](#add-source-connection-for-snowflake)
 * [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 * [Do incremental imports in query](#do-incremental-imports-in-query)
 
-### Add a Snowflake data source
+### Add source connection for Snowflake
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
-3. Search for the **Snowflake** source; you can use the search bar at the top or filter by category.
-4. Click on the **Snowflake** connector. A panel will open on the right with information about **Snowflake**.
+3. Search **Snowflake**; you can use the search bar at the top or filter by category.
+4. Click on the connector for **Snowflake**. A panel will open on the right with information about **Snowflake**.
 5. Click on **Add source**. The `Add Snowflake source connection` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. In the remaining fields, provide the necessary information to access your Snowflake data warehouse:
@@ -33,12 +33,12 @@ Snowflake is a cloud-based data warehousing platform for storing and analyzing l
 8. (Optional) Click **Test connection** to check if the inserted data is correct.
 9. Click **Add**.
 
-Once the Snowflake data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the users read from Snowflake.
+Once the source connection for Snowflake is added, the **Actions** page will be displayed. This page indicates what actions to perform with the users read from Snowflake.
 
 ### Import users into the workspace's data warehouse
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
-2. Click on the Snowflake data source from which you want to import the users.
+2. Click on the source connection for Snowflake from which you want to import the users.
 3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
 4. Enter the SQL query to select the Snowflake rows to be imported as users.
 5. (Optional) Click **Preview** to see a preview of the query results.

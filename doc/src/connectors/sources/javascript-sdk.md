@@ -1,12 +1,12 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}JavaScript data source{% end %}
+{% macro Title string %}JavaScript SDK (Source){% end %}
 {% Article %}
 
-# JavaScript SDK data source
+# JavaScript SDK (Source)
 
 [![GitHub Repo](https://img.shields.io/badge/Github-Meergo_JavaScript_SDK-blue?logo=github)](https://github.com/open2b/analytics-javascript)
 
-The **JavaScript** SDK empowers developers to effortlessly integrate robust event tracking and advanced data analytics directly into their web applications. Developers can seamlessly transmit tracking data to both the data warehouse and a multiple analytics tools, all without the hassle of individual integrations.
+The JavaScript SDK empowers developers to effortlessly integrate robust event tracking and advanced data analytics directly into their web applications. Developers can seamlessly transmit tracking data to both the data warehouse and a multiple analytics tools, all without the hassle of individual integrations.
 
 This streamlined approach simplifies the development process, enabling teams to gain comprehensive insights into user behavior and optimize their applications with ease.
 

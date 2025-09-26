@@ -1,10 +1,10 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Segment data source{% end %}
+{% macro Title string %}Segment (Source){% end %}
 {% Article %}
 
-# Segment data source
+# Segment (Source)
 
-The **Segment** data source allows you to receive events from Segment, including user information. Once events are received, you can:
+The source connector for Segment allows you to receive events from Segment, including user information. Once events are received, you can:
 
 - **Send events to destinations**: These are applications or services capable of processing the events.
 - **Store events in the workspace's data warehouse**: Ideal for data analysis and reporting purposes.
@@ -14,20 +14,20 @@ Segment is a customer data platform that collects, unifies, and integrates custo
 
 ### On this page
 
-* [Add a Segment data source](#add-a-segment-data-source)
+* [Add source connection for Segment](#add-source-connection-for-segment)
 * [Add a Webhook destination on Segment dashboard](#add-a-webhook-destination-on-segment-dashboard)
 
-### Add a Segment data source
+### Add source connection for Segment
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
-3. Search for the **Segment** source; you can use the search bar at the top or filter by category.
-4. Click on the **Segment** connector. A panel will open on the right with information about **Segment**.
+3. Search **Segment**; you can use the search bar at the top or filter by category.
+4. Click on the connector for **Segment**. A panel will open on the right with information about **Segment**.
 5. Click on **Add source**. The `Add Segment source connection` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. Click **Add**.
 
-Once the Segment data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
+Once the source connection for Segment is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
 
 ### Add a Webhook destination on Segment dashboard
 

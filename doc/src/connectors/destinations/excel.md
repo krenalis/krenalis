@@ -1,23 +1,23 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Excel data destination{% end %}
+{% macro Title string %}Excel (Destination){% end %}
 {% Article %}
 
-# Excel data destination
+# Excel (Destination)
 
-The Excel data destination allows you to export unified users (i.e., users consolidated through identity resolution) into an Excel file and save it to a storage location, such as S3 or SFTP.
+The destination connector for Excel allows you to export unified users (i.e., users consolidated through identity resolution) into an Excel file and save it to a storage location, such as S3 or SFTP.
 
-> Before adding an Excel data destination, ensure that you have configured a storage data destination such as S3, SFTP, or HTTP POST. If you haven’t set up a storage destination yet, please do so before proceeding with the Excel file export.
+> Before adding a destination connection for Excel, ensure that you have configured a destination connection for a storage such as S3, SFTP, or HTTP POST. If you haven't set up a storage destination yet, please do so before proceeding with the Excel file export.
 
 ### On this page
 
 - [Supported file formats](#supported-file-formats)
-- [Add an Excel data destination](#add-an-excel-data-destination)
+- [Add destination connection for Excel](#add-destination-connection-for-excel)
 
 ### Supported file formats
 
-The Excel data destination only supports exporting XLSX files (Microsoft Excel Spreadsheets). Other formats (e.g., ODS) are not supported at this time.
+The destination connection for Excel only supports exporting XLSX files (Microsoft Excel Spreadsheets). Other formats (e.g., ODS) are not supported at this time.
 
-### Add an Excel data destination
+### Add destination connection for Excel
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the storage data destination where you want to export the Excel file.

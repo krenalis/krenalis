@@ -1,14 +1,14 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Meergo API data source{% end %}
+{% macro Title string %}Meergo API (Source){% end %}
 {% Article %}
 
-# Meergo API data source
+# Meergo API (Source)
 
-**Meergo API** is a connector to interact directly with Meergo APIs from your application.
+The source connector Meergo API is a connector to interact directly with Meergo APIs from your application.
 
 - [Description](#description)
 - [How to send events](#how-to-send-events)
-  - [1. Create a source Meergo API connection](#1-create-a-source-meergo-api-connection)
+  - [1. Add source connection for Meergo API](#1-add-source-connection-for-meergo-api)
   - [2. Add an action](#2-add-an-action)
   - [3. Open the Live events page](#3-open-the-live-events-page)
   - [4. Send some events](#4-send-some-events)
@@ -31,14 +31,14 @@ To use the Meergo API data source, you will need any language or application tha
 
 ## How to send events
 
-### 1. Create a source Meergo API connection
+### 1. Add source connection for Meergo API
 
 First of all, you need a connection in Meergo that can receive events from your application that sends HTTP requests. To do so:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
-3. Search for the **Meergo API** source; you can use the search bar at the top or filter by category.
-4. Click on the **Meergo API** connector. A panel will open on the right with information about **Meergo API**.
+3. Search **Meergo API**; you can use the search bar at the top or filter by category.
+4. Click on the connection for **Meergo API**. A panel will open on the right with information about **Meergo API**.
 5. Click on **Add source**. The `Add Meergo API source connection` page will appear.
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. Click **Add**.
@@ -55,7 +55,7 @@ Now you can choose to collect only the events, or import the users, or both:
 
 ### 3. Open the Live events page
 
-1. Go to the Meergo API connection created at step 1 and click on **Event debugger**.
+1. Go to the source connection for  Meergo API created at step 1 and click on **Event debugger**.
 2. Go on with the next step for sending events; you will see the incoming events in the **Live events** view.
 
 ### 4. Send some events

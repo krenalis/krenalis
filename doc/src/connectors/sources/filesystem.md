@@ -1,10 +1,10 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Filesystem data source{% end %}
+{% macro Title string %}Filesystem (Source){% end %}
 {% Article %}
 
-# Filesystem data source
+# Filesystem (Source)
 
-Filesystem is a connector for testing the import of files on the local filesystem.
+The source connector Filesystem is a connector for testing the import of files on the local filesystem.
 
 Using this connector you can import files that are in the filesystem of the installation that Meergo is running on.
 
@@ -12,24 +12,24 @@ Its sole purpose is to test file imports and explore the various file formats su
 
 ### On this page
 
-- [Add a Filesystem data source](#add-a-filesystem-data-source)
+- [Add source connection Filesystem](#add-source-connection-filesystem)
 - [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
-### Add a Filesystem data source
+### Add source connection Filesystem
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
-3. Search for the **Filesystem** source; you can use the search bar at the top or filter by category.
-4. Click on the **Filesystem** connector. A panel will open on the right with information about **Filesystem**.
+3. Search **Filesystem**; you can use the search bar at the top or filter by category.
+4. Click on the connector **Filesystem**. A panel will open on the right with information about **Filesystem**.
 5. Click on **Add source**. The `Add Filesystem source connection` page will appear.
 6. Click **Add**.
 
-Once the Filesystem data source is added, the **Actions** page will be displayed. Here, you can add an action for each file to be read using the newly added Filesystem data source. Configure each action with the desired settings for file format, filters for user data, and any additional processing requirements.
+Once the source connection Filesystem is added, the **Actions** page will be displayed. Here, you can add an action for each file to be read using the newly added Filesystem data source. Configure each action with the desired settings for file format, filters for user data, and any additional processing requirements.
 
 ### Import users into the workspace's data warehouse
 
 1. In the Meergo Admin console panel, navigate to **Connections > Sources**.
-2. Click on the Filesystem source from which you wish to import users.
+2. Click on the source connection Filesystem from which you wish to import users.
 3. Click **Add New Action**, then select **Import Users**.
 4. From the **Format** menu, choose the file format from which you want to import users.
 

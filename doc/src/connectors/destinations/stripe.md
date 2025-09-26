@@ -1,21 +1,21 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Stripe data destination{% end %}
+{% macro Title string %}Stripe (Destination){% end %}
 {% Article %}
 
-# Stripe data destination
+# Stripe (Destination)
 
-The **Stripe** data destination allows you to add and update unified Meergo users in Stripe as customers.
+The destination connector for Stripe allows you to add and update unified Meergo users in Stripe as customers.
 
 Stripe is a payment processing platform that enables businesses to accept online payments and manage transactions. It offers tools for handling credit card payments, subscriptions, and billing, as well as APIs for integrating payment solutions into websites and apps.
 
 ### On this page
 
-* [Add a Stripe data destination](#add-a-stripe-data-destination)
+* [Add destination connection for Stripe](#add-destination-connection-for-stripe)
 * [Export users as Stripe customers](#export-users-as-stripe-customers)
 
-### Add a Stripe data destination
+### Add destination connection for Stripe
 
-Before you can add a Stripe data destination, you need to create an API key in your Stripe account:
+Before you can add destination connection for Stripe, you need to create an API key in your Stripe account:
 
 1. Log in to your <a href="https://stripe.com/" target="_blank">Stripe</a> account.
 2. Click **Developers**.
@@ -27,24 +27,24 @@ Before you can add a Stripe data destination, you need to create an API key in y
 8. Click **Create key**.
 9. In the screen showing the keys, copy the token of the key you just created.
 
-Now proceed to add a Stripe data destination:
+Now proceed to add destination connection for a:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
-3. Search for the **Stripe** destination; you can use the search bar at the top or filter by category.
-4. Click on the **Stripe** connector. A panel will open on the right with information about **Stripe**.
+3. Search **Stripe**; you can use the search bar at the top or filter by category.
+4. Click on the connector for **Stripe**. A panel will open on the right with information about **Stripe**.
 5. Click on **Add destination**. The `Add Stripe destination connection` page will appear.
 6. In the **Name** field, enter a name for the destination to easily recognize it later.
 7. In the **API Key** field, enter the previously copied key.
 8. Click **Add**.
 
-Once the Stripe data destination is added, the **Actions** page will be displayed, indicating the actions required to add and update customers in Stripe.
+Once the destination connection for Stripe is added, the **Actions** page will be displayed, indicating the actions required to add and update customers in Stripe.
 
 ### Export users as Stripe customers
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
-2. Click on the Stripe data destination where you want to export the users.
-3. If there are no actions, click  **Add**, otherwise click **Add new action ⊕**.
+2. Click on the destination connection for Stripe where you want to export the users.
+3. If there are no actions, click **Add**, otherwise click **Add new action ⊕**.
 4. (Optional) To export only specific users, apply a [filter](/filters) to refine your selection.
 5. Select the matching properties that define how users in your workspace correspond to Stripe customers.
 6. Choose what can be done with the users: **Create and update**, **Create only**, or **Update only**.

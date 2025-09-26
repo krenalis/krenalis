@@ -1,10 +1,10 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Filesystem data destination{% end %}
+{% macro Title string %}Filesystem (Destination){% end %}
 {% Article %}
 
-# Filesystem data destination
+# Filesystem (Destination)
 
-Filesystem is a connector for testing the export of files to the local filesystem.
+The destination connection Filesystem is a connector for testing the export of files to the local filesystem.
 
 Using this connector you can export files to the filesystem of the installation that Meergo is running on.
 
@@ -12,15 +12,15 @@ Its sole purpose is to test file exports and explore the various file formats su
 
 ### On this page
 
-- [Add an Filesystem data destination](#add-an-filesystem-data-destination)
+- [Add destionation connection Filesystem](#add-destination-connection-filesystem)
 
-### Add an Filesystem data destination
+### Add destination connection Filesystem
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.
-3. Search for the **Filesystem** destination; you can use the search bar at the top or filter by category.
-4. Click on the **Filesystem** connector. A panel will open on the right with information about **Filesystem**.
+3. Search **Filesystem** ; you can use the search bar at the top or filter by category.
+4. Click on the connector **Filesystem**. A panel will open on the right with information about **Filesystem**.
 5. Click on **Add destination**. The `Add Filesystem destination connection` page will appear.
 6. Click **Add**.
 
-Once the Filesystem data destination is added, the **Actions** page will be displayed. Here, you can configure multiple files for export by selecting the file format, applying filters to determine which users to include, and setting a schedule for how frequently each export should occur.
+Once the destination connection Filesystem is added, the **Actions** page will be displayed. Here, you can configure multiple files for export by selecting the file format, applying filters to determine which users to include, and setting a schedule for how frequently each export should occur.

@@ -1,12 +1,12 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}CSV data source{% end %}
+{% macro Title string %}CSV (Source){% end %}
 {% Article %}
 
-# CSV data source
+# CSV (Source)
 
-The CSV data source allows you to import user data from a CSV (Comma-Separated Values) file, which you can then unify as users within Meergo.
+The source connector for CSV allows you to import user data from a CSV (Comma-Separated Values) file, which you can then unify as users within Meergo.
 
-> Before adding a CSV data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP GET. If you haven’t set up a storage source yet, please do so before proceeding with the CSV file import.
+> Before adding a source connection for CSV, ensure that you have configured a source connection for a storage such as S3, SFTP, or HTTP GET. If you haven't set up a storage source yet, please do so before proceeding with the CSV file import.
 
 ### On this page
 

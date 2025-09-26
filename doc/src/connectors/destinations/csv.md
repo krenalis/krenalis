@@ -1,18 +1,18 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}CSV data destination{% end %}
+{% macro Title string %}CSV (Destination){% end %}
 {% Article %}
 
-# CSV data destination
+# CSV (Destination)
 
-The CSV data destination allows you to export unified users (i.e., users consolidated through identity resolution) into a CSV (Comma-Separated Values) file and save it into a storage, such as S3 and SFTP.
+The destination connector for CSV allows you to export unified users (i.e., users consolidated through identity resolution) into a CSV (Comma-Separated Values) file and save it into a storage, such as S3 and SFTP.
 
-> Before adding a CSV data destination, ensure that you have configured a storage data destination such as S3, SFTP, or HTTP POST. If you haven’t set up a storage destination yet, please do so before proceeding with the CSV file export.
+> Before adding a destination connection for CSV, ensure that you have configured a destination connection for a storage such as S3, SFTP, or HTTP POST. If you haven't set up a storage destination yet, please do so before proceeding with the CSV file export.
 
 ### On this page
 
-* [Add a CSV data destination](#add-a-csv-data-destination)
+* [Add destination connection for CSV](#add-destination-connection-for-csv)
 
-### Add a CSV data destination
+### Add destination connection for CSV
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. Click on the storage data source from which you want to export the CSV file.

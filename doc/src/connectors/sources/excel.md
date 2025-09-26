@@ -1,12 +1,12 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Excel data source{% end %}
+{% macro Title string %}Excel (Source){% end %}
 {% Article %}
 
-# Excel data source
+# Excel (Source)
 
-The Excel data source allows you to import user data from an Excel file, which you can then unify into users within Meergo.
+The source connector for Excel allows you to import user data from an Excel file, which you can then unify into users within Meergo.
 
-> Before adding an Excel data source, ensure that you have configured a storage data source such as S3, SFTP, or HTTP GET. If you haven’t set up a storage source yet, please do so before proceeding with the Excel file import.
+> Before adding a source connection for Excel, ensure that you have configured a source connection for a storage such as S3, SFTP, or HTTP GET. If you haven't set up a storage source yet, please do so before proceeding with the Excel file import.
 
 ### On this page
 
