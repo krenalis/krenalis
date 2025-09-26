@@ -133,6 +133,21 @@ func ParseUUID(s string) (string, bool) {
 	return id.String(), true
 }
 
+// SubsetAtPath returns the subset of t that contains only the properties
+// along the specified path and their parent hierarchy.
+// If the path does not exist, it returns a PathNotExistError and the invalid
+// Type.
+// It panics if t is not an object or if path is not a valid property path.
+func SubsetAtPath(t Type, path string) (Type, error) {
+	if t.kind != ObjectKind {
+		panic("cannot get a subset of a non-object type")
+	}
+	if _, err := t.Properties().ByPath(path); err != nil {
+		return Type{}, err
+	}
+	return subsetAtPath(t, path), nil
+}
+
 // SubsetPathFunc returns a subset of the object t, including the properties
 // for which f returns true and their upper hierarchy, maintaining their
 // original order in type t. The properties of t are navigated recursively by
@@ -313,4 +328,16 @@ func asRole(t Type, role Role) (Type, bool) {
 		names[p.Name] = i
 	}
 	return Type{kind: ObjectKind, vl: Properties{properties: ppc, names: names}}, true
+}
+
+// subsetAtPath is a recursive function called by the SubsetAtPath function. t
+// must be an object type and path must exist in t.
+func subsetAtPath(t Type, path string) Type {
+	name, rest, found := strings.Cut(path, ".")
+	property, _ := t.Properties().ByName(name)
+	if !found {
+		return Object([]Property{property})
+	}
+	property.Type = subsetAtPath(property.Type, rest)
+	return Object([]Property{property})
 }
