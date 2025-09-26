@@ -20,7 +20,9 @@ import {
 	getTransformationFunctionParameterName,
 	isRecursiveType,
 	propertyTypesAreEqual,
+	splitPropertyAndPath,
 	transformInActionToSet,
+	validateAndNormalizeFilterCondition,
 } from '../../../lib/core/action';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
@@ -65,7 +67,13 @@ import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
-import { ActionToSet, ExportMode, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/action';
+import {
+	ActionToSet,
+	ExportMode,
+	Filter,
+	TransformationFunction,
+	TransformationPurpose,
+} from '../../../lib/api/types/action';
 import TransformedConnector from '../../../lib/core/connector';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
@@ -688,6 +696,7 @@ const TransformationBox = ({
 	const firstValue = useRef<TransformedMapping | TransformationFunction>();
 	const hasNeverChangedTransformationType = useRef<boolean>(true);
 
+	const { handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
 	const { setSelectedInPaths, setSelectedOutPaths, isEditing, isImport } = useContext(actionContext);
 
@@ -779,6 +788,19 @@ const TransformationBox = ({
 	};
 
 	const onOpenTransformation = () => {
+		// Validate the filter to prevent Bad Request when loading the samples.
+		let conditions = action.filter?.conditions.filter((condition) => condition.property !== '') || [];
+		for (const condition of conditions) {
+			const propertyName = condition.property;
+			const [base, path] = splitPropertyAndPath(propertyName, flatInputSchema);
+			const property = flatInputSchema[base];
+			try {
+				validateAndNormalizeFilterCondition(condition, property, path, propertyName);
+			} catch (err) {
+				handleError(err);
+				return;
+			}
+		}
 		onOpenFullscreenTransformation();
 	};
 
@@ -1366,9 +1388,17 @@ const FullscreenTransformation = ({
 				setIsFetchingSamples(false);
 				return;
 			} else if (connection.isApp && connection.isSource) {
+				// Exclude empty conditions from the filter.
+				let f: Filter | null = null;
+				if (action.filter != null) {
+					let conditions = action.filter.conditions.filter((condition) => condition.property !== '');
+					if (conditions.length > 0) {
+						f = { logical: action.filter.logical, conditions: conditions };
+					}
+				}
 				let res: AppUsersResponse;
 				try {
-					res = await api.workspaces.connections.appUsers(connection.id, inputSchema, action.filter);
+					res = await api.workspaces.connections.appUsers(connection.id, inputSchema, f);
 				} catch (err) {
 					setIsFetchingSamples(false);
 					handleError(err);

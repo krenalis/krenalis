@@ -980,61 +980,13 @@ const transformInActionToSet = async (
 			const propertyName = condition.property;
 			const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
 			const property = flattenedInputSchema[base];
-
-			if (property == null) {
-				throw new Error(`Property "${propertyName}" of filter condition does not exist`);
-			}
-
-			if (property.type === 'json' && path.trim() !== '') {
-				const isValid = isValidPropertyPath(path);
-				if (!isValid) {
-					throw new Error(`Property path "${path}" of filter condition is not valid`);
-				}
-			}
-
-			if (condition.operator == '') {
-				throw new Error(`Operator of filter condition is required`);
-			}
-
-			let isJsonOrText = property.type === 'json' || property.type === 'text';
-			if (property.type === 'array') {
-				const typ = property.full.type as ArrayType;
-				if (typ.elementType.kind === 'json' || typ.elementType.kind === 'text') {
-					isJsonOrText = true;
-				}
-			}
-
-			let values: string[] | null = [];
-			if (isJsonOrText && condition.values != null) {
-				for (const [i, v] of condition.values.entries()) {
-					if ((i === 0 && v === '') || (i === 1 && v === '' && isBetweenOperator(condition.operator))) {
-						throw new Error(`The filter value on the property "${propertyName}" cannot be empty`);
-					}
-					if (v === '') {
-						// discard empty values.
-						continue;
-					}
-					let parsed: string;
-					try {
-						parsed = parseText(v);
-					} catch (err) {
-						throw new Error(`Value "${v}" of filter condition is not valid: ${err.message}`);
-					}
-					values.push(parsed);
-				}
-			} else {
-				values = condition.values;
-			}
-
+			let c: FilterCondition;
 			try {
-				validateFilterConditionValues(property.full.type, condition.values, propertyName);
+				c = validateAndNormalizeFilterCondition(condition, property, path, propertyName);
 			} catch (err) {
 				throw err;
 			}
-
 			addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
-
-			const c: FilterCondition = { property: condition.property, operator: condition.operator, values: values };
 			f.conditions.push(c);
 		}
 
@@ -1536,6 +1488,70 @@ const getTransformationFunctionParameterName = (
 	}
 };
 
+// validateAndNormalizeFilterCondition validates and normalizes a filter
+// condition. It throws an error if the condition is invalid, otherwise it
+// returns the condition with its values parsed.
+const validateAndNormalizeFilterCondition = (
+	condition: FilterCondition,
+	property: TransformedProperty,
+	propertyPath: string,
+	propertyName: string,
+): FilterCondition => {
+	if (property == null) {
+		throw new Error(`Property "${propertyName}" of filter condition does not exist`);
+	}
+
+	if (property.type === 'json' && propertyPath.trim() !== '') {
+		const isValid = isValidPropertyPath(propertyPath);
+		if (!isValid) {
+			throw new Error(`Property path "${propertyPath}" of filter condition is not valid`);
+		}
+	}
+
+	if (condition.operator == '') {
+		throw new Error(`Operator of filter condition is required`);
+	}
+
+	let isJsonOrText = property.type === 'json' || property.type === 'text';
+	if (property.type === 'array') {
+		const typ = property.full.type as ArrayType;
+		if (typ.elementType.kind === 'json' || typ.elementType.kind === 'text') {
+			isJsonOrText = true;
+		}
+	}
+
+	let values: string[] | null = [];
+	if (isJsonOrText && condition.values != null) {
+		for (const [i, v] of condition.values.entries()) {
+			if ((i === 0 && v === '') || (i === 1 && v === '' && isBetweenOperator(condition.operator))) {
+				throw new Error(`The filter value on the property "${propertyName}" cannot be empty`);
+			}
+			if (v === '') {
+				// discard empty values.
+				continue;
+			}
+			let parsed: string;
+			try {
+				parsed = parseText(v);
+			} catch (err) {
+				throw new Error(`Value "${v}" of filter condition is not valid: ${err.message}`);
+			}
+			values.push(parsed);
+		}
+	} else {
+		values = condition.values;
+	}
+
+	try {
+		validateFilterConditionValues(property.full.type, condition.values, propertyName);
+	} catch (err) {
+		throw err;
+	}
+
+	const c: FilterCondition = { property: condition.property, operator: condition.operator, values: values };
+	return c;
+};
+
 const validateFilterConditionValues = (type: Type, values: string[] | null, propertyName: string) => {
 	const throwIfInvalid = (isValid: boolean, typeKind: string) => {
 		if (!isValid) {
@@ -1646,6 +1662,7 @@ export {
 	getSiblingPaths,
 	doesLastChangeTimeColumnNeedFormat,
 	getTransformationFunctionParameterName,
+	validateAndNormalizeFilterCondition,
 	validateMatching,
 	propertyTypesAreEqual,
 };
