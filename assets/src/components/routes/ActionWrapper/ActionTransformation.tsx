@@ -1356,13 +1356,26 @@ const FullscreenTransformation = ({
 			if (!isFullscreenTransformationOpen) {
 				return;
 			}
-			if (!(connection.isApp && connection.isSource) && hasAlreadyFetchedSamples.current) {
-				// App import is the only case where samples must be refetched
-				// every time the full mode is opened, to apply any updated
-				// filter.
+			if (
+				!(connection.isApp || (connection.isDatabase && connection.isDestination)) &&
+				hasAlreadyFetchedSamples.current
+			) {
+				// App import and app/database export are the only cases where
+				// samples must be refetched every time the full mode is opened,
+				// to apply any updated filter.
 				return;
 			}
 			setIsFetchingSamples(true);
+
+			// Exclude empty conditions from the filter.
+			let filter: Filter | null = null;
+			if (action.filter != null) {
+				let conditions = action.filter.conditions.filter((condition) => condition.property !== '');
+				if (conditions.length > 0) {
+					filter = { logical: action.filter.logical, conditions: conditions };
+				}
+			}
+
 			let samples: Sample[];
 			if (connection.isFileStorage && connection.isSource) {
 				let res: RecordsResponse;
@@ -1388,17 +1401,9 @@ const FullscreenTransformation = ({
 				setIsFetchingSamples(false);
 				return;
 			} else if (connection.isApp && connection.isSource) {
-				// Exclude empty conditions from the filter.
-				let f: Filter | null = null;
-				if (action.filter != null) {
-					let conditions = action.filter.conditions.filter((condition) => condition.property !== '');
-					if (conditions.length > 0) {
-						f = { logical: action.filter.logical, conditions: conditions };
-					}
-				}
 				let res: AppUsersResponse;
 				try {
-					res = await api.workspaces.connections.appUsers(connection.id, inputSchema, f);
+					res = await api.workspaces.connections.appUsers(connection.id, inputSchema, filter);
 				} catch (err) {
 					setIsFetchingSamples(false);
 					handleError(err);
@@ -1412,13 +1417,15 @@ const FullscreenTransformation = ({
 				}
 				let res: FindUsersResponse;
 				try {
-					res = await api.workspaces.users.find(properties, null, '', true, 0, 20);
+					res = await api.workspaces.users.find(properties, filter, '', true, 0, 20);
 				} catch (err) {
 					setIsFetchingSamples(false);
 					handleError(err);
 					return;
 				}
-				if (res.users.length === 0) {
+				if (res.users.length === 0 && filter == null) {
+					// No users have been imported in the warehouse yet.
+					setSamples(null);
 					setIsFetchingSamples(false);
 					return;
 				}
@@ -1955,7 +1962,9 @@ const FullscreenTransformation = ({
 						<div className='fullscreen-transformation__no-sample-text'>
 							<h3>No samples found</h3>
 							<div>
-								No {connection.connector.terms.users} in {connection.name} match your filter.
+								{connection.isSource
+									? `No ${connection.connector.terms.users} in ${connection.name} match your filter.`
+									: 'No users in the warehouse match your filter.'}
 							</div>
 						</div>
 					</div>
