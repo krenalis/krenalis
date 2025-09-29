@@ -162,7 +162,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			startTime, endTime, err := ws.LatestIdentityResolution(ctx)
+			startTime, endTime, err := ws.LatestIdentityResolution()
 			if err != nil {
 				return nil, err
 			}
@@ -244,7 +244,7 @@ func workspaceFromCtx(ctx context.Context) (*_core.Workspace, error) {
 	if !found {
 		return nil, errors.New("invalid MCP (Model Context Protocol) key")
 	}
-	org, err := core.Organization(ctx, organizationID)
+	org, err := core.Organization(organizationID)
 	if err != nil {
 		return nil, err
 	}

@@ -528,7 +528,7 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 	if err != nil {
 		return nil, err
 	}
-	startTime, endTime, err := ws.LatestIdentityResolution(r.Context())
+	startTime, endTime, err := ws.LatestIdentityResolution()
 	if err != nil {
 		return nil, err
 	}
@@ -545,7 +545,7 @@ func (workspace workspace) LatestAlterUserSchema(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, err
 	}
-	startTime, endTime, alterError, err := ws.LatestAlterUserSchema(r.Context())
+	startTime, endTime, alterError, err := ws.LatestAlterUserSchema()
 	if err != nil {
 		return nil, err
 	}

@@ -683,7 +683,7 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 // Organization returns the organization with identifier id.
 //
 // It returns an errors.NotFound error if the organization does not exist.
-func (core *Core) Organization(ctx context.Context, id int) (*Organization, error) {
+func (core *Core) Organization(id int) (*Organization, error) {
 	core.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid organization identifier", id)
@@ -704,7 +704,7 @@ func (core *Core) Organization(ctx context.Context, id int) (*Organization, erro
 // Organizations returns the organizations, in the given order, describing all
 // organizations but starting from first and up to limit. first must be >= 0 and
 // limit must be > 0.
-func (core *Core) Organizations(ctx context.Context, order OrganizationSort, first, limit int) ([]*Organization, error) {
+func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Organization, error) {
 	core.mustBeOpen()
 	if order != SortByName {
 		return nil, errors.BadRequest("order %d is not valid", int(order))

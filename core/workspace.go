@@ -1137,7 +1137,7 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 //
 // It returns an errors.NotFoundError error if the workspace does not exist
 // anymore.
-func (this *Workspace) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+func (this *Workspace) LatestIdentityResolution() (startTime, endTime *time.Time, err error) {
 	this.core.mustBeOpen()
 	ws, ok := this.core.state.Workspace(this.workspace.ID)
 	if !ok {
@@ -1165,7 +1165,7 @@ func (this *Workspace) LatestIdentityResolution(ctx context.Context) (startTime,
 //
 // It returns an errors.NotFoundError error if the workspace does not exist
 // anymore.
-func (this *Workspace) LatestAlterUserSchema(ctx context.Context) (startTime, endTime *time.Time, alterError string, err error) {
+func (this *Workspace) LatestAlterUserSchema() (startTime, endTime *time.Time, alterError string, err error) {
 	this.core.mustBeOpen()
 	ws, ok := this.core.state.Workspace(this.workspace.ID)
 	if !ok {

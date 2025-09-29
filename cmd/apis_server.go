@@ -192,7 +192,7 @@ func (s *apisServer) credentials(r *http.Request) (*core.Organization, *core.Wor
 		if !found {
 			return nil, nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
 		}
-		org, err := s.core.Organization(r.Context(), organizationID)
+		org, err := s.core.Organization(organizationID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -284,7 +284,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	// Retrieve the organization and the member.
-	organization, err := s.core.Organization(r.Context(), 1)
+	organization, err := s.core.Organization(1)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read organization: %s", err)
 	}
@@ -395,7 +395,7 @@ func (s *apisServer) memberCredentials(r *http.Request) (*core.Organization, int
 	}
 
 	// Get the organization.
-	organization, err := s.core.Organization(r.Context(), session.Organization)
+	organization, err := s.core.Organization(session.Organization)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); ok {
 			return nil, 0, errInvalidSessionCookie

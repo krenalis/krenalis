@@ -186,7 +186,7 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	organization, err := api.core.Organization(r.Context(), 1)
+	organization, err := api.core.Organization(1)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read organization: %s", err)
 	}
