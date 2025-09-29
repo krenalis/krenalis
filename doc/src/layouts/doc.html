@@ -2,7 +2,7 @@
 {% import highlight "/imports/highlight.html" %}
 {% import copyAPIRequest "/api/imports/copy-api-request.html" %}
 <!doctype html>
-<html lang="en" class="article">
+<html lang="en">
 <head>
     {% title := Title() default "" %}
     <title>{{ title }}</title>
@@ -14,6 +14,14 @@
 {% macro item(path, name string) %}
 <a href="/{{ path }}"{% if path == filepath %} class="selected"{% else if hasPrefix(filepath, path+"/") %} class="expanded"{% end %}>{{ name }}</a>
 {% end %}
+<header>
+    <div class="logo"><span>Meergo</span> docs</div>
+    <nav>
+        <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
+        <a href="/connectors/"{% if hasPrefix(filepath, "connectors/") %} class="selected"{% end %}>Connectors</a>
+        <a href="/api/"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
+    </nav>
+</header>
 <article>
     <div class="wrap">
         <aside>
@@ -21,9 +29,6 @@
             <nav>
                 <ul>
                     {% if hasPrefix(filepath, "connectors/") %}
-                    <li>
-                        <div>Connectors</div>
-                    </li>
                     <div>Sources</div>
                     <li>{{ item(`connectors/sources/dotnet`, `.NET`) }}</li>
                     <li>
@@ -98,50 +103,44 @@
                     <li>{{ item(`connectors/destinations/snowflake`, `Snowflake`) }}</li>
                     <li>{{ item(`connectors/destinations/stripe`, `Stripe`) }}</li>
                     {% else if hasPrefix(filepath, "api/") %}
+                    <li>{{ item(`api/index`, `Introduction`) }}</li>
+                    <li>{{ item(`api/authentication`, `Authentication`) }}</li>
+                    <li>{{ item(`api/schemas`, `Schemas`) }}</li>
+                    <li>{{ item(`api/workspaces`, `Workspaces`) }}</li>
+                    <li>{{ item(`api/users`, `Users`) }}</li>
+                    <li>{{ item(`api/events`, `Events`) }}</li>
                     <li>
-                        <div>API reference</div>
+                        <li class="sidebar-expandable">{{ item(`api/connections`, `Connections`) }}</li>
+                        <ul>
+                            <li>{{ item(`api/app-connections`, `App connections`) }}</li>
+                            <li>{{ item(`api/file-storage-connections`, `File storage connections`) }}</li>
+                            <li>{{ item(`api/database-connections`, `Database connections`) }}</li>
+                            <li>{{ item(`api/linked-connections`, `Linked connections`) }}</li>
+                            <li>{{ item(`api/event-write-keys`, `Event write keys`) }}</li>
+                        </ul>
                     </li>
-                            <li>{{ item(`api/index`, `Introduction`) }}</li>
-                            <li>{{ item(`api/authentication`, `Authentication`) }}</li>
-                            <li>{{ item(`api/schemas`, `Schemas`) }}</li>
-                            <li>{{ item(`api/workspaces`, `Workspaces`) }}</li>
-                            <li>{{ item(`api/users`, `Users`) }}</li>
-                            <li>{{ item(`api/events`, `Events`) }}</li>
-                            <li>
-                                <li class="sidebar-expandable">{{ item(`api/connections`, `Connections`) }}</li>
-                                <ul>
-                                    <li>{{ item(`api/app-connections`, `App connections`) }}</li>
-                                    <li>{{ item(`api/file-storage-connections`, `File storage connections`) }}</li>
-                                    <li>{{ item(`api/database-connections`, `Database connections`) }}</li>
-                                    <li>{{ item(`api/linked-connections`, `Linked connections`) }}</li>
-                                    <li>{{ item(`api/event-write-keys`, `Event write keys`) }}</li>
-                                </ul>
-                            </li>
-                            <li>
-                                <li class="sidebar-expandable">{{ item(`api/actions`, `Actions`) }}</li>
-                                <ul>
-                                    <li>{{ item(`api/actions-import-users-from-apps`, `Import users from apps`) }}</li>
-                                    <li>{{ item(`api/actions-import-users-from-databases`, `Import users from databases`) }}</li>
-                                    <li>{{ item(`api/actions-import-users-from-files`, `Import users from files`) }}</li>
-                                    <li>{{ item(`api/actions-import-users-from-events`, `Import users from events`) }}</li>
-                                    <li>{{ item(`api/actions-import-events`, `Import events`) }}</li>
-                                    <li>{{ item(`api/actions-send-events-to-apps`, `Send events to apps`) }}</li>
-                                    <li>{{ item(`api/actions-export-users-to-apps`, `Export users to apps`) }}</li>
-                                    <li>{{ item(`api/actions-export-users-to-databases`, `Export users to databases`) }}</li>
-                                    <li>{{ item(`api/actions-export-users-to-files`, `Export users to files`) }}</li>
-                                    <li>{{ item(`api/action-metrics-and-errors`, `Action metrics and errors`) }}</li>
-                                </ul>
-                            </li>
-                            <li>{{ item(`api/customer-model`, `Customer model`) }}</li>
-                            <li>{{ item(`api/identity-resolution`, `Identity resolution`) }}</li>
-                            <li>{{ item(`api/warehouse`, `Warehouse`) }}</li>
-                            <li>{{ item(`api/connectors`, `Connectors`) }}</li>
-                            <li>{{ item(`api/others`, `Others`) }}</li>
+                    <li>
+                        <li class="sidebar-expandable">{{ item(`api/actions`, `Actions`) }}</li>
+                        <ul>
+                            <li>{{ item(`api/actions-import-users-from-apps`, `Import users from apps`) }}</li>
+                            <li>{{ item(`api/actions-import-users-from-databases`, `Import users from databases`) }}</li>
+                            <li>{{ item(`api/actions-import-users-from-files`, `Import users from files`) }}</li>
+                            <li>{{ item(`api/actions-import-users-from-events`, `Import users from events`) }}</li>
+                            <li>{{ item(`api/actions-import-events`, `Import events`) }}</li>
+                            <li>{{ item(`api/actions-send-events-to-apps`, `Send events to apps`) }}</li>
+                            <li>{{ item(`api/actions-export-users-to-apps`, `Export users to apps`) }}</li>
+                            <li>{{ item(`api/actions-export-users-to-databases`, `Export users to databases`) }}</li>
+                            <li>{{ item(`api/actions-export-users-to-files`, `Export users to files`) }}</li>
+                            <li>{{ item(`api/action-metrics-and-errors`, `Action metrics and errors`) }}</li>
+                        </ul>
+                    </li>
+                    <li>{{ item(`api/customer-model`, `Customer model`) }}</li>
+                    <li>{{ item(`api/identity-resolution`, `Identity resolution`) }}</li>
+                    <li>{{ item(`api/warehouse`, `Warehouse`) }}</li>
+                    <li>{{ item(`api/connectors`, `Connectors`) }}</li>
+                    <li>{{ item(`api/others`, `Others`) }}</li>
                     {% else %}
-                    <li>
-                        <div>Documentation</div>
-                    </li>
-                    <li>{{ item(``, `Overview`) }}</li>
+                    <li>{{ item(`index`, `Overview`) }}</li>
                     <li>{{ item(`what-is-meergo`, `What is Meergo`) }}</li>
                     <li>
                         {{ item(`installation`, `Installation`) }}
@@ -227,13 +226,6 @@
             </nav>
         </aside>
         <div class="main">
-            <div class="header">
-                <nav class="sections">
-                    <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
-                    <a href="/connectors/"{% if hasPrefix(filepath, "connectors/") %} class="selected"{% end %}>Connectors</a>
-                    <a href="/api/"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
-                </nav>
-            </div>
             <div class="content">
                 {{ Article() }}
             </div>

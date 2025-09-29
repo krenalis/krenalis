@@ -5,7 +5,6 @@ const buildTableOfContent = () => {
     }
 
     let html = '<div class="table-of-content">';
-    html += '<div class="table-of-content__title">On this page</div>'
     for (const title of headings) {
         html += `<a>${title.textContent}</a>`;
     }
