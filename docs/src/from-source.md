@@ -21,7 +21,7 @@ This installation method uses Go's command-line tools to compile Meergo and does
 
 To build Meergo using the Go tools and use it, you need:
 
-* [Go](https://go.dev/doc/install) 1.23
+* [Go](https://go.dev/docs/install) 1.23
 * [PostgreSQL](https://www.postgresql.org/download/) version 13 or later.
 * `curl`, or any other tool to download a file via HTTP from the web.
 
@@ -96,7 +96,7 @@ You can now proceed with the [database setup](./database-setup).
 To build Meergo from the repository the Go tools and use it, you need:
 
 * [Git](https://git-scm.com/downloads)
-* [Go](https://go.dev/doc/install) 1.23
+* [Go](https://go.dev/docs/install) 1.23
 * [PostgreSQL](https://www.postgresql.org/download/) version 13 or later.
 
 ### Steps

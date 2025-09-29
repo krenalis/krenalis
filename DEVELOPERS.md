@@ -187,7 +187,7 @@ These steps document how to expose a locally running Meergo instance to the inte
 
 > ❗ **Why this section?**
 >
-> The documentation on how to start Meergo inside Docker is available inside the [Using Docker](doc/src/using-docker.md) documentation page, so it will not be repeated here.
+> The documentation on how to start Meergo inside Docker is available inside the [Using Docker](docs/src/using-docker.md) documentation page, so it will not be repeated here.
 > 
 > Only more technical information is kept here.
 
@@ -202,7 +202,7 @@ These steps document how to expose a locally running Meergo instance to the inte
 
 ### Running Meergo within a Container
 
-> ✋ You'll probably prefer [using Meergo with Docker Compose](doc/src/using-docker.md). Otherwsie, if you know you're in the right place, then continue reading this section.
+> ✋ You'll probably prefer [using Meergo with Docker Compose](docs/src/using-docker.md). Otherwsie, if you know you're in the right place, then continue reading this section.
 
 **🌐 Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the Admin console.
 

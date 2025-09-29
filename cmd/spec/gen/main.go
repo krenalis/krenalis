@@ -22,7 +22,7 @@ func main() {
 	if !ok {
 		log.Fatal("unable to determine caller")
 	}
-	destPath := filepath.Join(filepath.Dir(filename), "..", "..", "..", "doc", "src", "api", "spec.json")
+	destPath := filepath.Join(filepath.Dir(filename), "..", "..", "..", "docs", "src", "api", "spec.json")
 	destPath = filepath.Clean(destPath)
 
 	var b json.Buffer

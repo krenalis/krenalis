@@ -7,6 +7,6 @@ https://github.com/open2b/scriggo/releases
 and start the Scriggo command in the `src` directory:
 
 ```console
-$ cd doc/src 
+$ cd docs/src 
 $ scriggo serve
 ```
