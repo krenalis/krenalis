@@ -82,6 +82,7 @@ import actionContext from '../../../context/ActionContext';
 import TransformedConnection from '../../../lib/core/connection';
 import appContext from '../../../context/AppContext';
 import { mapExpressionArguments, buildMapExpression } from '../../../utils/mapExpression';
+import { isPlainObject } from '../../../utils/isPlainObject';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -1986,7 +1987,7 @@ const FullscreenTransformation = ({
 							// Highlight the selected properties.
 							for (const k in s) {
 								const v = s[k];
-								if (typeof v === 'object') {
+								if (isPlainObject(v)) {
 									const children = getSelectedChildrenProperties(k, selectedInPaths, v);
 									const keys = Object.keys(children);
 
@@ -3373,7 +3374,7 @@ function getSelectedChildrenProperties(
 		props[k] = false;
 		const v = value[k];
 		const path = `${parentPath}.${k}`;
-		if (typeof v === 'object') {
+		if (isPlainObject(v)) {
 			if (selectedPaths.includes(path)) {
 				props[k] = true;
 			} else {
