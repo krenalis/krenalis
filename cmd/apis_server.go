@@ -322,19 +322,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
-	header := w.Header()
-	if v := c.String(); v != "" {
-		if cookies, ok := header["Set-Cookie"]; ok {
-			prefix := sessionCookieName + "="
-			for i, cookie := range cookies {
-				if strings.HasPrefix(cookie, prefix) {
-					cookies[i] = v + "; Priority=High"
-					return nil, nil
-				}
-			}
-		}
-		header.Add("Set-Cookie", v+"; Priority=High")
-	}
+	writeSessionCookie(w, c)
 
 	return []any{memberID, nil}, nil
 }
@@ -355,19 +343,7 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	}
-	header := w.Header()
-	if v := c.String(); v != "" {
-		if cookies, ok := header["Set-Cookie"]; ok {
-			prefix := sessionCookieName + "="
-			for i, cookie := range cookies {
-				if strings.HasPrefix(cookie, prefix) {
-					cookies[i] = v + "; Priority=High"
-					return nil, nil
-				}
-			}
-		}
-		header.Add("Set-Cookie", v+"; Priority=High")
-	}
+	writeSessionCookie(w, c)
 	return nil, nil
 }
 
@@ -407,6 +383,26 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (*core.Organizati
 	}
 
 	return organization, session.Member, nil
+}
+
+// writeSessionCookie writes a session cookie on w. If one already exists,
+// it replaces its value with c's value.
+func writeSessionCookie(w http.ResponseWriter, c *http.Cookie) {
+	v := c.String()
+	if v == "" {
+		return
+	}
+	header := w.Header()
+	if cookies, ok := header["Set-Cookie"]; ok {
+		const prefix = sessionCookieName + "="
+		for i, cookie := range cookies {
+			if strings.HasPrefix(cookie, prefix) {
+				cookies[i] = v + "; Priority=High"
+				return
+			}
+		}
+	}
+	header.Add("Set-Cookie", v+"; Priority=High")
 }
 
 type bodyWriter struct {
