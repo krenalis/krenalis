@@ -512,6 +512,7 @@ func Test_PruneAtPath(t *testing.T) {
 			})},
 			{Name: "plain", Type: Text(), Prefilled: "plain-pref"},
 			{Name: "other", Type: Text()},
+			{Name: "values", Type: Array(Object([]Property{{Name: "value", Type: Text()}}))},
 		})},
 	})
 
@@ -600,6 +601,23 @@ func Test_PruneAtPath(t *testing.T) {
 			t.Fatalf("expected PathNotExistError, got %T", err)
 		}
 		if pathErr.Path != "branch.plain.deeper" {
+			t.Fatalf("unexpected error path: %q", pathErr.Path)
+		}
+	})
+
+	t.Run("array(object) intermediate returns invalid type", func(t *testing.T) {
+		got, err := PruneAtPath(testObject, "branch.values.value")
+		if err == nil {
+			t.Fatalf("expected error for array(object) intermediate, got nil")
+		}
+		if got.Valid() {
+			t.Fatalf("expected invalid type when traversing through array(object) intermediate, got valid")
+		}
+		pathErr, ok := err.(PathNotExistError)
+		if !ok {
+			t.Fatalf("expected PathNotExistError, got %T", err)
+		}
+		if pathErr.Path != "branch.values.value" {
 			t.Fatalf("unexpected error path: %q", pathErr.Path)
 		}
 	})

@@ -200,6 +200,10 @@ func Prune(t Type, f func(path string) bool) Type {
 // PruneAtPath returns the subset of t that contains only the properties along
 // the specified path and their parent hierarchy. If the path does not exist, it
 // returns a PathNotExistError and the invalid Type.
+//
+// It does not traverse through arrays and maps. If path is "x.y" and the type
+// of "x" is not an object, it returns a PathNotExistError error.
+//
 // It panics if t is not an object or if path is not a valid property path.
 func PruneAtPath(t Type, path string) (Type, error) {
 	if t.kind != ObjectKind {
