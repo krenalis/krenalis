@@ -17,6 +17,7 @@ import {
 	isOneOfOperator,
 	isUnaryOperator,
 	splitPropertyAndPath,
+	TransformedAction,
 } from '../../../lib/core/action';
 import { FilterLogical, FilterOperator } from '../../../lib/api/types/action';
 import { checkIfPropertyExists } from './Action.helpers';
@@ -29,7 +30,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	}, [actionType.inputSchema]);
 
 	const onAddCondition = () => {
-		const a = { ...action };
+		const a = structuredClone(action);
 		if (a.filter == null) {
 			a.filter = { logical: 'and', conditions: [] };
 		}
@@ -38,7 +39,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	};
 
 	const onRemoveCondition = (id: number) => {
-		const a = { ...action };
+		const a = structuredClone(action);
 		a.filter!.conditions.splice(id, 1);
 		if (a.filter!.conditions.length === 0) {
 			a.filter = null;
@@ -51,12 +52,11 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	};
 
 	const onSelectPropertyFragment = (name: string, value: string) => {
-		updatePropertyFragment(name, value);
+		const updated = updatePropertyFragment(name, value);
 
-		const a = { ...action };
 		const id = Number(name.split('-')[1]);
-		const hasPath = 'path' in a.filter!.conditions[id];
-		const currentOperator = a.filter!.conditions[id]['operator'];
+		const hasPath = 'path' in updated.filter!.conditions[id];
+		const currentOperator = updated.filter!.conditions[id]['operator'];
 		const currentOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === currentOperator);
 		const compatibleOperators = getCompatibleFilterOperators(
 			flatInputSchema[value],
@@ -70,7 +70,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		if (!isCompatible) {
 			// Select the first compatible operator.
 			const operator = FILTER_OPERATORS[compatibleOperators[0]];
-			changeOperator(id, operator);
+			changeOperator(id, operator, updated);
 			if (!isJson) {
 				setTimeout(() => {
 					const operatorSelect: any = document
@@ -93,8 +93,8 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		}
 	};
 
-	const updatePropertyFragment = (name: string, value: string) => {
-		const a = { ...action };
+	const updatePropertyFragment = (name: string, value: string): TransformedAction => {
+		const a = structuredClone(action);
 		const id = Number(name.split('-')[1]);
 		const propertyName = a.filter!.conditions[id]['property'];
 		const [_, path] = splitPropertyAndPath(propertyName, flatInputSchema);
@@ -123,10 +123,11 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		}
 		a.filter!.conditions[id]['property'] = newPropertyName;
 		setAction(a);
+		return a;
 	};
 
 	const onInputPathFragment = (e) => {
-		const a = { ...action };
+		const a = structuredClone(action);
 		const id = Number(e.target.name.split('-')[1]);
 		const propertyName = a.filter!.conditions[id]['property'];
 		const [base, _] = splitPropertyAndPath(propertyName, flatInputSchema);
@@ -156,9 +157,14 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		}
 	};
 
-	const changeOperator = (conditionID: number, operator: FilterOperator) => {
+	const changeOperator = (conditionID: number, operator: FilterOperator, updatedAction?: TransformedAction) => {
 		const id = conditionID;
-		const a = { ...action };
+		let a: TransformedAction;
+		if (updatedAction != null) {
+			a = updatedAction;
+		} else {
+			a = structuredClone(action);
+		}
 		a.filter!.conditions[id]['operator'] = operator;
 		if (isUnaryOperator(operator)) {
 			a.filter!.conditions[id]['values'] = null;
@@ -196,7 +202,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	};
 
 	const onInputValueFragment = (e: any) => {
-		const a = { ...action };
+		const a = structuredClone(action);
 		const split = e.target.name.split('-');
 		const id = Number(split[1]);
 		const position = Number(split[2]);
@@ -205,13 +211,13 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	};
 
 	const onLogicalClick = (logical: FilterLogical) => {
-		const a = { ...action };
+		const a = structuredClone(action);
 		a.filter!.logical = logical;
 		setAction(a);
 	};
 
 	const onAddValue = (index: number) => {
-		const a = { ...action };
+		const a = structuredClone(action);
 		const currentLength = a.filter!.conditions[index]['values'].length;
 		a.filter!.conditions[index]['values'] = [...a.filter!.conditions[index]['values'], ''];
 		setAction(a);
@@ -227,7 +233,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	};
 
 	const onRemoveValue = (conditionIndex: number, valueIndex: number) => {
-		const a = { ...action };
+		const a = structuredClone(action);
 		const values = a.filter!.conditions[conditionIndex]['values'];
 		const filtered = [];
 		for (const [i, v] of values.entries()) {

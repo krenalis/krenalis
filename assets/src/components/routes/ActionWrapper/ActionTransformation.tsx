@@ -1312,6 +1312,10 @@ const FullscreenTransformation = ({
 	}, [transformationType, selectedLanguage]);
 
 	useEffect(() => {
+		setEvents([]);
+	}, [action.filter]);
+
+	useEffect(() => {
 		setShowOnlyInSelected(false);
 		setShowOnlyOutSelected(false);
 		selectedInProperties.current = null;
