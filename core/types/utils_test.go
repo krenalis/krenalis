@@ -259,6 +259,73 @@ func Test_DecodeUUID(t *testing.T) {
 	}
 }
 
+func Test_Filter(t *testing.T) {
+
+	o := Object([]Property{
+		{Name: "a", Type: Text()},
+		{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})},
+		{Name: "c", Type: Array(Text())},
+		{Name: "d", Type: Array(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+			{Name: "z", Type: Text()},
+		}))},
+	})
+
+	t.Run("Valid object expected (1)", func(t *testing.T) {
+		expected := Object([]Property{
+			{Name: "a", Type: Text()},
+			{Name: "c", Type: Array(Text())},
+		})
+		got := Filter(o, func(p Property) bool {
+			return p.Name == "a" || p.Name == "c"
+		})
+		if err := sameType(expected, got); err != nil {
+			t.Fatalf("expected %v, got %v", expected, got)
+		}
+	})
+
+	t.Run("Valid object expected (2)", func(t *testing.T) {
+		expected := Object([]Property{
+			{Name: "a", Type: Text()},
+			{Name: "b", Type: Object([]Property{
+				{Name: "x", Type: Text()},
+			})},
+			{Name: "c", Type: Array(Text())},
+		})
+		got := Filter(o, func(p Property) bool {
+			return p.Name != "d"
+		})
+		if err := sameType(expected, got); err != nil {
+			t.Fatalf("expected %v, got %v", expected, got)
+		}
+	})
+
+	t.Run("Invalid type expected", func(t *testing.T) {
+		got := Filter(o, func(p Property) bool {
+			return false
+		})
+		if got.Valid() {
+			t.Fatalf("expected invalid type, got %v", got)
+		}
+	})
+
+	t.Run("Original object expected", func(t *testing.T) {
+		got := Filter(o, func(p Property) bool {
+			return true
+		})
+		if err := sameType(o, got); err != nil {
+			t.Fatalf("expected %v, got %v", o, got)
+		}
+	})
+
+}
+
 func Test_IsValidPropertyPath(t *testing.T) {
 	tests := []struct {
 		path     string
@@ -292,120 +359,6 @@ func Test_ParseUUID(t *testing.T) {
 			t.Fatalf("expected failure, got %q %t", id, ok)
 		}
 	})
-}
-
-func Test_PruneAtPath(t *testing.T) {
-
-	testObject := Object([]Property{
-		{Name: "a", Type: Text(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
-		{Name: "branch", Description: "branch description", Type: Object([]Property{
-			{Name: "leaf", Prefilled: "leaf-pref", Description: "leaf description", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true, Type: Object([]Property{
-				{Name: "target", Prefilled: "target-pref", Description: "target description", Nullable: true, Type: Text()},
-				{Name: "other_target", Type: Text()},
-			})},
-			{Name: "plain", Type: Text(), Prefilled: "plain-pref"},
-			{Name: "other", Type: Text()},
-		})},
-	})
-
-	t.Run("top level property", func(t *testing.T) {
-		got, err := PruneAtPath(testObject, "a")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		expected := Object([]Property{
-			{Name: "a", Type: Text(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
-		})
-		if !Equal(got, expected) {
-			t.Fatalf("unexpected subset for top level property: %v", got)
-		}
-	})
-
-	t.Run("nested path preserves hierarchy", func(t *testing.T) {
-		got, err := PruneAtPath(testObject, "branch.leaf.target")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !got.Valid() {
-			t.Fatalf("expected valid subset, got invalid")
-		}
-		branch, ok := got.Properties().ByName("branch")
-		if !ok {
-			t.Fatalf("missing branch property in subset")
-		}
-		if branch.Description != "branch description" {
-			t.Fatalf("branch description mismatch: expected %q, got %q", "branch description", branch.Description)
-		}
-		branchProps := branch.Type.Properties()
-		if branchProps.Len() != 1 {
-			t.Fatalf("expected branch type to contain 1 property, got %d", branchProps.Len())
-		}
-		leaf, ok := branchProps.ByName("leaf")
-		if !ok {
-			t.Fatalf("missing leaf property in branch subset")
-		}
-		if leaf.Prefilled != "leaf-pref" || leaf.Description != "leaf description" || !leaf.CreateRequired || !leaf.UpdateRequired || !leaf.ReadOptional || !leaf.Nullable {
-			t.Fatalf("leaf property metadata not preserved: %+v", leaf)
-		}
-		leafProps := leaf.Type.Properties()
-		if leafProps.Len() != 1 {
-			t.Fatalf("expected leaf type to contain 1 property, got %d", leafProps.Len())
-		}
-		target, ok := leafProps.ByName("target")
-		if !ok {
-			t.Fatalf("missing target property in leaf subset")
-		}
-		if target.Prefilled != "target-pref" || target.Description != "target description" || !target.Nullable {
-			t.Fatalf("target property metadata not preserved: %+v", target)
-		}
-		if target.Type.kind != TextKind {
-			t.Fatalf("expected target type to be text, got %v", target.Type.kind)
-		}
-	})
-
-	t.Run("missing path returns invalid type", func(t *testing.T) {
-		got, err := PruneAtPath(testObject, "branch.missing")
-		if err == nil {
-			t.Fatalf("expected error for missing path, got nil")
-		}
-		if got.Valid() {
-			t.Fatalf("expected invalid type for missing path, got valid")
-		}
-		pathErr, ok := err.(PathNotExistError)
-		if !ok {
-			t.Fatalf("expected PathNotExistError, got %T", err)
-		}
-		if pathErr.Path != "branch.missing" {
-			t.Fatalf("unexpected error path: %q", pathErr.Path)
-		}
-	})
-
-	t.Run("non object intermediate returns invalid type", func(t *testing.T) {
-		got, err := PruneAtPath(testObject, "branch.plain.deeper")
-		if err == nil {
-			t.Fatalf("expected error for non-object intermediate, got nil")
-		}
-		if got.Valid() {
-			t.Fatalf("expected invalid type when traversing through non-object intermediate, got valid")
-		}
-		pathErr, ok := err.(PathNotExistError)
-		if !ok {
-			t.Fatalf("expected PathNotExistError, got %T", err)
-		}
-		if pathErr.Path != "branch.plain.deeper" {
-			t.Fatalf("unexpected error path: %q", pathErr.Path)
-		}
-	})
-
-	t.Run("invalid path panics", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Fatalf("expected panic for invalid path")
-			}
-		}()
-		_, _ = PruneAtPath(testObject, "")
-	})
-
 }
 
 func Test_Prune(t *testing.T) {
@@ -548,69 +501,116 @@ func Test_Prune(t *testing.T) {
 	}
 }
 
-func Test_Filter(t *testing.T) {
+func Test_PruneAtPath(t *testing.T) {
 
-	o := Object([]Property{
-		{Name: "a", Type: Text()},
-		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
-		})},
-		{Name: "c", Type: Array(Text())},
-		{Name: "d", Type: Array(Object([]Property{
-			{Name: "x", Type: Map(Boolean())},
-			{Name: "y", Type: Map(Object([]Property{
-				{Name: "a", Type: Text()},
-				{Name: "b", Type: Int(32)},
-			}))},
-			{Name: "z", Type: Text()},
-		}))},
-	})
-
-	t.Run("Valid object expected (1)", func(t *testing.T) {
-		expected := Object([]Property{
-			{Name: "a", Type: Text()},
-			{Name: "c", Type: Array(Text())},
-		})
-		got := Filter(o, func(p Property) bool {
-			return p.Name == "a" || p.Name == "c"
-		})
-		if err := sameType(expected, got); err != nil {
-			t.Fatalf("expected %v, got %v", expected, got)
-		}
-	})
-
-	t.Run("Valid object expected (2)", func(t *testing.T) {
-		expected := Object([]Property{
-			{Name: "a", Type: Text()},
-			{Name: "b", Type: Object([]Property{
-				{Name: "x", Type: Text()},
+	testObject := Object([]Property{
+		{Name: "a", Type: Text(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
+		{Name: "branch", Description: "branch description", Type: Object([]Property{
+			{Name: "leaf", Prefilled: "leaf-pref", Description: "leaf description", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true, Type: Object([]Property{
+				{Name: "target", Prefilled: "target-pref", Description: "target description", Nullable: true, Type: Text()},
+				{Name: "other_target", Type: Text()},
 			})},
-			{Name: "c", Type: Array(Text())},
+			{Name: "plain", Type: Text(), Prefilled: "plain-pref"},
+			{Name: "other", Type: Text()},
+		})},
+	})
+
+	t.Run("top level property", func(t *testing.T) {
+		got, err := PruneAtPath(testObject, "a")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		expected := Object([]Property{
+			{Name: "a", Type: Text(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
 		})
-		got := Filter(o, func(p Property) bool {
-			return p.Name != "d"
-		})
-		if err := sameType(expected, got); err != nil {
-			t.Fatalf("expected %v, got %v", expected, got)
+		if !Equal(got, expected) {
+			t.Fatalf("unexpected subset for top level property: %v", got)
 		}
 	})
 
-	t.Run("Invalid type expected", func(t *testing.T) {
-		got := Filter(o, func(p Property) bool {
-			return false
-		})
+	t.Run("nested path preserves hierarchy", func(t *testing.T) {
+		got, err := PruneAtPath(testObject, "branch.leaf.target")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !got.Valid() {
+			t.Fatalf("expected valid subset, got invalid")
+		}
+		branch, ok := got.Properties().ByName("branch")
+		if !ok {
+			t.Fatalf("missing branch property in subset")
+		}
+		if branch.Description != "branch description" {
+			t.Fatalf("branch description mismatch: expected %q, got %q", "branch description", branch.Description)
+		}
+		branchProps := branch.Type.Properties()
+		if branchProps.Len() != 1 {
+			t.Fatalf("expected branch type to contain 1 property, got %d", branchProps.Len())
+		}
+		leaf, ok := branchProps.ByName("leaf")
+		if !ok {
+			t.Fatalf("missing leaf property in branch subset")
+		}
+		if leaf.Prefilled != "leaf-pref" || leaf.Description != "leaf description" || !leaf.CreateRequired || !leaf.UpdateRequired || !leaf.ReadOptional || !leaf.Nullable {
+			t.Fatalf("leaf property metadata not preserved: %+v", leaf)
+		}
+		leafProps := leaf.Type.Properties()
+		if leafProps.Len() != 1 {
+			t.Fatalf("expected leaf type to contain 1 property, got %d", leafProps.Len())
+		}
+		target, ok := leafProps.ByName("target")
+		if !ok {
+			t.Fatalf("missing target property in leaf subset")
+		}
+		if target.Prefilled != "target-pref" || target.Description != "target description" || !target.Nullable {
+			t.Fatalf("target property metadata not preserved: %+v", target)
+		}
+		if target.Type.kind != TextKind {
+			t.Fatalf("expected target type to be text, got %v", target.Type.kind)
+		}
+	})
+
+	t.Run("missing path returns invalid type", func(t *testing.T) {
+		got, err := PruneAtPath(testObject, "branch.missing")
+		if err == nil {
+			t.Fatalf("expected error for missing path, got nil")
+		}
 		if got.Valid() {
-			t.Fatalf("expected invalid type, got %v", got)
+			t.Fatalf("expected invalid type for missing path, got valid")
+		}
+		pathErr, ok := err.(PathNotExistError)
+		if !ok {
+			t.Fatalf("expected PathNotExistError, got %T", err)
+		}
+		if pathErr.Path != "branch.missing" {
+			t.Fatalf("unexpected error path: %q", pathErr.Path)
 		}
 	})
 
-	t.Run("Original object expected", func(t *testing.T) {
-		got := Filter(o, func(p Property) bool {
-			return true
-		})
-		if err := sameType(o, got); err != nil {
-			t.Fatalf("expected %v, got %v", o, got)
+	t.Run("non object intermediate returns invalid type", func(t *testing.T) {
+		got, err := PruneAtPath(testObject, "branch.plain.deeper")
+		if err == nil {
+			t.Fatalf("expected error for non-object intermediate, got nil")
 		}
+		if got.Valid() {
+			t.Fatalf("expected invalid type when traversing through non-object intermediate, got valid")
+		}
+		pathErr, ok := err.(PathNotExistError)
+		if !ok {
+			t.Fatalf("expected PathNotExistError, got %T", err)
+		}
+		if pathErr.Path != "branch.plain.deeper" {
+			t.Fatalf("unexpected error path: %q", pathErr.Path)
+		}
+	})
+
+	t.Run("invalid path panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("expected panic for invalid path")
+			}
+		}()
+		_, _ = PruneAtPath(testObject, "")
 	})
 
 }

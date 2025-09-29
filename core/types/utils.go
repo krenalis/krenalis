@@ -119,59 +119,6 @@ func Equal(t1, t2 Type) bool {
 	panic("unreachable code")
 }
 
-// ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
-// and returns it in the canonical form without uppercase letters. The boolean
-// return value reports whether s is a UUID in the standard form.
-func ParseUUID(s string) (string, bool) {
-	if len(s) != 36 {
-		return "", false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
-}
-
-// PruneAtPath returns the subset of t that contains only the properties along
-// the specified path and their parent hierarchy. If the path does not exist, it
-// returns a PathNotExistError and the invalid Type.
-// It panics if t is not an object or if path is not a valid property path.
-func PruneAtPath(t Type, path string) (Type, error) {
-	if t.kind != ObjectKind {
-		panic("cannot get a subset of a non-object type")
-	}
-	if _, err := t.Properties().ByPath(path); err != nil {
-		return Type{}, err
-	}
-	return pruneAtPath(t, path), nil
-}
-
-// Prune removes from t all properties for which f returns false, keeping only
-// those for which f returns true. f is evaluated only on non-object properties.
-// An object property is removed if all of its subproperties are removed.
-//
-// See also Filter, which restricts only top-level properties.
-//
-// It panics if t is not an object or if f is nil.
-func Prune(t Type, f func(path string) bool) Type {
-	if t.kind != ObjectKind {
-		panic("cannot prune a non-object type")
-	}
-	pp, ok := prune(t.vl.(Properties).properties, "", f)
-	if !ok {
-		return t
-	}
-	if pp == nil {
-		return Type{}
-	}
-	names := make(map[string]int, len(pp))
-	for i, p := range pp {
-		names[p.Name] = i
-	}
-	return Type{kind: ObjectKind, vl: Properties{properties: pp, names: names}}
-}
-
 // Filter returns a subset of object t containing only the properties for which
 // f returns true, preserving their original order in t.
 // If f returns false for all properties, the result is an invalid schema.
@@ -209,6 +156,59 @@ func Filter(t Type, f func(p Property) bool) Type {
 		names[p.Name] = i
 	}
 	return Type{kind: ObjectKind, vl: Properties{properties: ps, names: names}}
+}
+
+// ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
+// and returns it in the canonical form without uppercase letters. The boolean
+// return value reports whether s is a UUID in the standard form.
+func ParseUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
+}
+
+// Prune removes from t all properties for which f returns false, keeping only
+// those for which f returns true. f is evaluated only on non-object properties.
+// An object property is removed if all of its subproperties are removed.
+//
+// See also Filter, which restricts only top-level properties.
+//
+// It panics if t is not an object or if f is nil.
+func Prune(t Type, f func(path string) bool) Type {
+	if t.kind != ObjectKind {
+		panic("cannot prune a non-object type")
+	}
+	pp, ok := prune(t.vl.(Properties).properties, "", f)
+	if !ok {
+		return t
+	}
+	if pp == nil {
+		return Type{}
+	}
+	names := make(map[string]int, len(pp))
+	for i, p := range pp {
+		names[p.Name] = i
+	}
+	return Type{kind: ObjectKind, vl: Properties{properties: pp, names: names}}
+}
+
+// PruneAtPath returns the subset of t that contains only the properties along
+// the specified path and their parent hierarchy. If the path does not exist, it
+// returns a PathNotExistError and the invalid Type.
+// It panics if t is not an object or if path is not a valid property path.
+func PruneAtPath(t Type, path string) (Type, error) {
+	if t.kind != ObjectKind {
+		panic("cannot get a subset of a non-object type")
+	}
+	if _, err := t.Properties().ByPath(path); err != nil {
+		return Type{}, err
+	}
+	return pruneAtPath(t, path), nil
 }
 
 // asRole is a recursive function called by the AsRole method. t must be an
