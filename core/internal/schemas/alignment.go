@@ -123,7 +123,7 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 			if !checkCreate && !checkUpdate {
 				continue
 			}
-			if properties1.ContainsPath(p.Name) {
+			if properties1.ContainsName(p.Name) {
 				continue
 			}
 			if checkCreate {
