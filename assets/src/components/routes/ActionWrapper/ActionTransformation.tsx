@@ -919,7 +919,7 @@ const TransformationBox = ({
 				enumValues = ['true', 'false'];
 			}
 
-			const typeName = toMeergoStringType(property.full.type);
+			const typeName = toMeergoStringType(property.full.type, property.full.nullable);
 
 			if (property.type === 'map') {
 				mappings.push(
@@ -2725,7 +2725,7 @@ const MapMapping = ({
 		setIsResetting(true);
 	};
 
-	const typeName = toMeergoStringType(property.full.type);
+	const typeName = toMeergoStringType(property.full.type, property.full.nullable);
 
 	return (
 		<>
@@ -3211,7 +3211,7 @@ const TransformationProperty = ({
 
 	let typeName = '';
 	if (language === '') {
-		typeName = toMeergoStringType(property.type);
+		typeName = toMeergoStringType(property.type, property.nullable);
 	} else if (language === 'Python') {
 		typeName = toPythonType(property.type, action.transformation.function.preserveJSON, property.nullable);
 	} else {
@@ -3447,15 +3447,24 @@ function typeDescription(type: Type): ReactNode[] {
 	return elements;
 }
 
-function toMeergoStringType(type: Type) {
+function toMeergoStringType(type: Type, nullable?: boolean) {
+	let t: string;
+
 	if (type.kind === 'int' || type.kind === 'uint' || type.kind === 'float') {
-		return `${type.kind}(${type.bitSize})`;
+		t = `${type.kind}(${type.bitSize})`;
 	} else if (type.kind === 'decimal') {
-		return `decimal(${type.precision}, ${type.scale})`;
+		t = `decimal(${type.precision}, ${type.scale})`;
 	} else if (type.kind === 'array' || type.kind === 'map') {
-		return `${type.kind} of ${toMeergoStringType(type.elementType)}`;
+		t = `${type.kind} of ${toMeergoStringType(type.elementType)}`;
+	} else {
+		t = type.kind;
 	}
-	return type.kind;
+
+	if (nullable) {
+		t += ' | null';
+	}
+
+	return t;
 }
 
 function toJavascriptType(type: Type, preserveJSON: boolean, nullable?: boolean) {
