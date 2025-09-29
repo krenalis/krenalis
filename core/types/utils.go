@@ -148,106 +148,30 @@ func SubsetAtPath(t Type, path string) (Type, error) {
 	return subsetAtPath(t, path), nil
 }
 
-// SubsetPathFunc returns a subset of the object t, including the properties
-// for which f returns true and their upper hierarchy, maintaining their
-// original order in type t. The properties of t are navigated recursively by
-// traversing inside the object properties.
-// If the function f does not return true for any property, an invalid Type is
-// returned.
-// It panics if t is not an object, or f is nil.
+// SubsetPathFunc removes from t all properties for which f returns false,
+// keeping only those for which f returns true. f is evaluated only on
+// non-object properties. An object property is removed if all of its
+// subproperties are removed.
+//
+// See also SubsetPropertyFunc, which restricts only top-level properties.
+//
+// It panics if t is not an object or if f is nil.
 func SubsetPathFunc(t Type, f func(path string) bool) Type {
 	if t.kind != ObjectKind {
-		panic("cannot get a subset of a non-object type")
+		panic("cannot prune a non-object type")
 	}
-
-	// depthOf returns the depth of path, starting at 1 (for top-level property
-	// paths, such as "a"). So, for example, the path "x.y.z" has a depth of 3.
-	depthOf := func(path string) int {
-		return strings.Count(path, ".") + 1
+	pp, ok := prune(t.vl.(Properties).properties, "", f)
+	if !ok {
+		return t
 	}
-
-	// Creates a list of all property paths that must actually result in the
-	// returned object, which are ordered by position (for properties with the
-	// same depth). The list also includes properties from the upper hierarchy,
-	// for which the f function did not return true, since they must also be
-	// returned, having to maintain the structure.
-	toAdd := []string{}
-	propByPath := map[string]Property{} // every property in t.
-	var maxDepth int                    // 1 means: top level property, such as "a".
-	fReturnedTrue := map[string]struct{}{}
-	for path, property := range t.Properties().WalkObjects() {
-		propByPath[path] = property
-		if !f(path) {
-			continue
-		}
-		fReturnedTrue[path] = struct{}{}
-		maxDepth = max(maxDepth, depthOf(path))
-		components := strings.Split(path, ".")
-		// In addition to adding the property for which f returned true, also
-		// add its upper hierarchy.
-		for i := range components {
-			hierarchy := strings.Join(components[:i+1], ".")
-			if !slices.Contains(toAdd, hierarchy) {
-				toAdd = append(toAdd, hierarchy)
-			}
-		}
-	}
-
-	// Populate the hierarchy of properties that will be returned, starting with
-	// the deepest level properties and gradually moving up the surface, up to
-	// the top-level ones.
-	for depth := maxDepth; depth >= 1; depth-- {
-		for _, path := range toAdd {
-			// Only take the properties of this level, ignoring the others.
-			if depthOf(path) != depth {
-				continue
-			}
-			property := propByPath[path]
-			// Properties that are not objects do not need to be managed, as
-			// they have no descendants to populate.
-			if property.Type.kind != ObjectKind {
-				continue
-			}
-			// If the function f returned true for this path, then such property
-			// is taken as is from the initial schema, and its descendants are
-			// preserved, so there is no need to do anything.
-			if _, ok := fReturnedTrue[path]; ok {
-				continue
-			}
-			// This is the case to handle, that is a property of type object,
-			// with no children, that must be populated with descendants
-			// according to the order indicated in orderedToAdd.
-			var vl []Property
-			for _, p := range toAdd {
-				isDescendant := strings.HasPrefix(p, path+".")
-				if isSon := isDescendant && depthOf(p) == depth+1; isSon {
-					vl = append(vl, propByPath[p])
-				}
-			}
-			names := make(map[string]int, len(vl))
-			for i, p := range vl {
-				names[p.Name] = i
-			}
-			property.Type.vl = Properties{properties: vl, names: names}
-			propByPath[path] = property
-		}
-	}
-
-	// Of all the properties to be returned, set aside the top-level ones, which
-	// will then be returned in an object.
-	var topLevelProps []Property
-	for _, path := range toAdd {
-		if depthOf(path) == 1 {
-			topLevelProps = append(topLevelProps, propByPath[path])
-		}
-	}
-
-	// No properties to return, so return the invalid Type.
-	if len(topLevelProps) == 0 {
+	if pp == nil {
 		return Type{}
 	}
-
-	return Object(topLevelProps)
+	names := make(map[string]int, len(pp))
+	for i, p := range pp {
+		names[p.Name] = i
+	}
+	return Type{kind: ObjectKind, vl: Properties{properties: pp, names: names}}
 }
 
 // SubsetPropertyFunc returns a subset of the object t, including only the
@@ -286,7 +210,7 @@ func SubsetPropertyFunc(t Type, f func(p Property) bool) Type {
 	return Type{kind: ObjectKind, vl: Properties{properties: ps, names: names}}
 }
 
-// asRole is a recursive function called by the Type.AsRole method. t must be an
+// asRole is a recursive function called by the AsRole method. t must be an
 // object type, and role must be either Source or Destination. It returns the
 // resulting type and a boolean indicating whether the returned type is
 // different from t.
@@ -328,6 +252,67 @@ func asRole(t Type, role Role) (Type, bool) {
 		names[p.Name] = i
 	}
 	return Type{kind: ObjectKind, vl: Properties{properties: ppc, names: names}}, true
+}
+
+// prune is a recursive helper called by SubsetPathFunc. It returns the pruned
+// properties and a boolean indicating whether all properties were pruned.
+// If no property is pruned, it returns nil and false. If all properties are
+// pruned, it returns nil and true.
+func prune(pp []Property, path string, f func(string) bool) ([]Property, bool) {
+	var ps []Property
+	unchanged := true
+	for i := 0; i < len(pp); i++ {
+		if t := &pp[i].Type; t.kind == ObjectKind {
+			if properties, ok := prune(t.vl.(Properties).properties, path+pp[i].Name+".", f); ok {
+				// Almost one property of the object has been pruned.
+				if properties == nil {
+					// Prune the entire property.
+					if unchanged {
+						if i > 0 {
+							ps = append([]Property(nil), pp[:i]...)
+						}
+						unchanged = false
+					}
+					continue
+				}
+				// Prune some property of the object.
+				if unchanged {
+					if i > 0 {
+						ps = append([]Property(nil), pp[:i]...)
+					}
+					unchanged = false
+				}
+				names := make(map[string]int, len(properties))
+				for i, p := range properties {
+					names[p.Name] = i
+				}
+				p := pp[i]
+				p.Type.vl = Properties{properties: properties, names: names}
+				ps = append(ps, p)
+				continue
+			}
+		} else if !f(path + pp[i].Name) {
+			// Prune the property.
+			if unchanged {
+				if i > 0 {
+					ps = append([]Property(nil), pp[:i]...)
+				}
+				unchanged = false
+			}
+			continue
+		}
+		// Don't prune.
+		if !unchanged {
+			ps = append(ps, pp[i])
+		}
+	}
+	if unchanged {
+		return nil, false
+	}
+	if ps == nil {
+		return nil, true
+	}
+	return ps, true
 }
 
 // subsetAtPath is a recursive function called by the SubsetAtPath function. t

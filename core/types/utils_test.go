@@ -422,10 +422,10 @@ func Test_SubsetPathFunc(t *testing.T) {
 				{Name: "with_description", Type: Text()},
 			}), Description: "Description of 'b'"},
 		}), Description: "Description of 'd'"},
-		{Name: "e", Type: Array(Object([]Property{
+		{Name: "e", Type: Array(Map(Object([]Property{
 			{Name: "a", Type: Text()},
 			{Name: "b", Type: Text()},
-		}))},
+		})))},
 		{Name: "f", Type: Object([]Property{
 			{Name: "f1", Type: Text(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
 		})},
@@ -442,7 +442,9 @@ func Test_SubsetPathFunc(t *testing.T) {
 		},
 		{
 			name: "Two top level properties, one have descendants",
-			f:    func(path string) bool { return path == "a" || path == "b" },
+			f: func(path string) bool {
+				return path == "a" || strings.HasPrefix(path, "b.")
+			},
 			expected: Object([]Property{
 				{Name: "a", Type: Text()},
 				{Name: "b", Type: Object([]Property{
@@ -475,7 +477,7 @@ func Test_SubsetPathFunc(t *testing.T) {
 		},
 		{
 			name: "Second level property, for which the description must be kept",
-			f:    func(path string) bool { return path == "b" },
+			f:    func(path string) bool { return strings.HasPrefix(path, "b.") },
 			expected: Object([]Property{
 				{Name: "b", Type: Object([]Property{
 					{Name: "x", Type: Text()},
@@ -499,21 +501,37 @@ func Test_SubsetPathFunc(t *testing.T) {
 			name: "Top level property of type array(object)",
 			f:    func(path string) bool { return path == "e" },
 			expected: Object([]Property{
-				{Name: "e", Type: Array(Object([]Property{
+				{Name: "e", Type: Array(Map(Object([]Property{
 					{Name: "a", Type: Text()},
 					{Name: "b", Type: Text()},
-				}))},
+				})))},
 			}),
 		},
 		{
-			name:     "Referencing an internal array(object) property is considered a not found",
-			f:        func(path string) bool { return path == "e.a" },
-			expected: Type{},
+			name: "Referencing a top-level object and its children, which has Prefilled, CreateRequired, etc...",
+			f:    func(path string) bool { return strings.HasPrefix(path, "f.") },
+			expected: Object([]Property{
+				{Name: "f", Type: Object([]Property{
+					{Name: "f1", Type: Text(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
+				})},
+			}),
 		},
 		{
-			name: "Referencing a top-level object and its children, which has Prefilled, CreateRequired, etc...",
-			f:    func(path string) bool { return strings.HasPrefix(path, "f") },
+			name: "Removing all the properties of an object",
+			f:    func(path string) bool { return path != "b.x" && path != "b.with_description" },
 			expected: Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "c", Type: Array(Text())},
+				{Name: "d", Type: Object([]Property{
+					{Name: "b", Type: Object([]Property{
+						{Name: "x", Type: Text(), Description: "Description of 'x'"},
+						{Name: "with_description", Type: Text()},
+					}), Description: "Description of 'b'"},
+				}), Description: "Description of 'd'"},
+				{Name: "e", Type: Array(Map(Object([]Property{
+					{Name: "a", Type: Text()},
+					{Name: "b", Type: Text()},
+				})))},
 				{Name: "f", Type: Object([]Property{
 					{Name: "f1", Type: Text(), Prefilled: "Prefilled of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
 				})},

@@ -11,6 +11,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
@@ -166,13 +168,17 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 // specified in properties, preserving their original order and upper hierarchy
 // in schema. This function panics if schema is not an object type.
 func schemaSubset(schema types.Type, paths []string) types.Type {
-	has := make(map[string]struct{}, len(paths))
-	for _, path := range paths {
-		has[path] = struct{}{}
-	}
 	return types.SubsetPathFunc(schema, func(path string) bool {
-		_, ok := has[path]
-		return ok
+		for {
+			if _, ok := slices.BinarySearch(paths, path); ok {
+				return true
+			}
+			i := strings.LastIndexByte(path, '.')
+			if i == -1 {
+				return false
+			}
+			path = path[:i]
+		}
 	})
 }
 
