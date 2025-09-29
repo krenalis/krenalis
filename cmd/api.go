@@ -57,7 +57,7 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 
 // Connector returns a connector.
 func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	return api.core.Connector(api.name(r))
@@ -65,7 +65,7 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 // ConnectorDocumentation returns the documentation of a connector.
 func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	return api.core.ConnectorDocumentation(api.name(r))
@@ -73,7 +73,7 @@ func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (a
 
 // Connectors returns the connectors.
 func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	return map[string]any{"connectors": api.core.Connectors()}, nil
@@ -81,7 +81,7 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 // EventSchema returns the event schema.
 func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	return core.EventSchema(), nil
@@ -100,7 +100,7 @@ func (api api) EventsSettings(w http.ResponseWriter, r *http.Request) (any, erro
 // ExpressionsProperties returns all the unique properties contained inside a
 // list of expressions.
 func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -116,7 +116,7 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 
 // Member returns the current member.
 func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, memberID, err := api.memberCredentials(r)
+	org, memberID, err := api.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.R
 // TransformData transforms data using a mapping or a function transformation
 // and returns the transformed data.
 func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -232,7 +232,7 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 
 // TransformationLanguages returns the supported transformation languages.
 func (api api) TransformationLanguages(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	languages := api.core.TransformationLanguages()
@@ -241,7 +241,7 @@ func (api api) TransformationLanguages(_ http.ResponseWriter, r *http.Request) (
 
 // ValidateExpression validates an expression.
 func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -258,7 +258,7 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 
 // WarehouseTypes returns the supported data warehouse types.
 func (api api) WarehouseTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.credentials(r); err != nil {
+	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
 	return map[string]any{"types": api.core.WarehouseTypes()}, nil

@@ -168,16 +168,17 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-// credentials validates the authorization of the request r, authenticates it,
-// and returns the associated organization and workspace.
-// The workspace will be nil unless one of the following conditions is met:
+// authenticateRequest authenticates the request r and returns the associated
+// organization and optional workspace.
 //
-// - The API key in the request is restricted to a specific workspace.
-// - The API key is present and the Meergo-Workspace header is provided.
-// - A session cookie is included in the request.
+// Authorization can be provided via an API key in the 'Authorization'
+// header or via a session cookie from the Admin console.
 //
-// If the request is not authorized, an errors.UnauthorizedError is returned.
-func (s *apisServer) credentials(r *http.Request) (*core.Organization, *core.Workspace, error) {
+// If authentication uses an API key not bound to a workspace and the
+// 'Meergo-Workspace' header is missing, the returned workspace is nil.
+//
+// If authorization fails, an errors.UnauthorizedError is returned.
+func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *core.Workspace, error) {
 
 	if auth, ok := r.Header["Authorization"]; ok {
 		// Attempt to read and process the Authorization header.
@@ -226,7 +227,7 @@ func (s *apisServer) credentials(r *http.Request) (*core.Organization, *core.Wor
 		return org, ws, nil
 	}
 
-	org, _, err := s.memberCredentials(r)
+	org, _, err := s.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -259,7 +260,7 @@ var errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or
 func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) (any, error) {
 	// Check if the user is logged. If not, discard the reported errors.
 	organization := organization{s}
-	_, _, err := organization.memberCredentials(r)
+	_, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		if _, ok := err.(*errors.UnauthorizedError); ok {
 			return nil, nil
@@ -370,12 +371,14 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 	return nil, nil
 }
 
-// memberCredentials is like credentials but only accepts a session cookie.
-// It returns the associated organization and the member identifier.
+// authenticateAdminRequest authenticates an Admin console request r and
+// returns the associated organization and member ID.
 //
-// If the request is not authorized, it returns an errors.UnauthorizedError.
-// If the session cookie is not valid, it returns an errInvalidSessionCookie.
-func (s *apisServer) memberCredentials(r *http.Request) (*core.Organization, int, error) {
+// Authorization is provided via a session cookie.
+//
+// It returns errors.UnauthorizedError if authorization fails, or
+// errInvalidSessionCookie if the session cookie is invalid.
+func (s *apisServer) authenticateAdminRequest(r *http.Request) (*core.Organization, int, error) {
 
 	// Get the session.
 	cookie, _ := r.Cookie(sessionCookieName)

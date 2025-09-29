@@ -982,7 +982,7 @@ func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (an
 
 // workspace returns the workspace.
 func (workspace workspace) workspace(r *http.Request) (*core.Workspace, error) {
-	_, ws, err := workspace.credentials(r)
+	_, ws, err := workspace.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
