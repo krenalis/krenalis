@@ -407,7 +407,7 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role
 	})
 	if role == meergo.Destination {
 		sourceOnlyProperties := []string{"id", "anonymous_id", "created", "updated", "last_event_date"}
-		schema = types.SubsetPropertyFunc(schema, func(p types.Property) bool {
+		schema = types.Filter(schema, func(p types.Property) bool {
 			return !slices.Contains(sourceOnlyProperties, p.Name)
 		})
 	}

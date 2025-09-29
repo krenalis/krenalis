@@ -294,7 +294,7 @@ func Test_ParseUUID(t *testing.T) {
 	})
 }
 
-func Test_SubsetAtPath(t *testing.T) {
+func Test_PruneAtPath(t *testing.T) {
 
 	testObject := Object([]Property{
 		{Name: "a", Type: Text(), Prefilled: "pref-a", Description: "description-a", CreateRequired: true, UpdateRequired: true, ReadOptional: true, Nullable: true},
@@ -309,7 +309,7 @@ func Test_SubsetAtPath(t *testing.T) {
 	})
 
 	t.Run("top level property", func(t *testing.T) {
-		got, err := SubsetAtPath(testObject, "a")
+		got, err := PruneAtPath(testObject, "a")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -322,7 +322,7 @@ func Test_SubsetAtPath(t *testing.T) {
 	})
 
 	t.Run("nested path preserves hierarchy", func(t *testing.T) {
-		got, err := SubsetAtPath(testObject, "branch.leaf.target")
+		got, err := PruneAtPath(testObject, "branch.leaf.target")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -364,7 +364,7 @@ func Test_SubsetAtPath(t *testing.T) {
 	})
 
 	t.Run("missing path returns invalid type", func(t *testing.T) {
-		got, err := SubsetAtPath(testObject, "branch.missing")
+		got, err := PruneAtPath(testObject, "branch.missing")
 		if err == nil {
 			t.Fatalf("expected error for missing path, got nil")
 		}
@@ -381,7 +381,7 @@ func Test_SubsetAtPath(t *testing.T) {
 	})
 
 	t.Run("non object intermediate returns invalid type", func(t *testing.T) {
-		got, err := SubsetAtPath(testObject, "branch.plain.deeper")
+		got, err := PruneAtPath(testObject, "branch.plain.deeper")
 		if err == nil {
 			t.Fatalf("expected error for non-object intermediate, got nil")
 		}
@@ -403,12 +403,12 @@ func Test_SubsetAtPath(t *testing.T) {
 				t.Fatalf("expected panic for invalid path")
 			}
 		}()
-		_, _ = SubsetAtPath(testObject, "")
+		_, _ = PruneAtPath(testObject, "")
 	})
 
 }
 
-func Test_SubsetPathFunc(t *testing.T) {
+func Test_Prune(t *testing.T) {
 	testObject := Object([]Property{
 		{Name: "a", Type: Text()},
 		{Name: "b", Type: Object([]Property{
@@ -540,7 +540,7 @@ func Test_SubsetPathFunc(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			got := SubsetPathFunc(testObject, test.f)
+			got := Prune(testObject, test.f)
 			if err := sameType(got, test.expected); err != nil {
 				t.Fatalf("\nexpected: %#v\ngot:      %#v", test.expected, got)
 			}
@@ -548,7 +548,7 @@ func Test_SubsetPathFunc(t *testing.T) {
 	}
 }
 
-func Test_SubsetPropertyFunc(t *testing.T) {
+func Test_Filter(t *testing.T) {
 
 	o := Object([]Property{
 		{Name: "a", Type: Text()},
@@ -571,7 +571,7 @@ func Test_SubsetPropertyFunc(t *testing.T) {
 			{Name: "a", Type: Text()},
 			{Name: "c", Type: Array(Text())},
 		})
-		got := SubsetPropertyFunc(o, func(p Property) bool {
+		got := Filter(o, func(p Property) bool {
 			return p.Name == "a" || p.Name == "c"
 		})
 		if err := sameType(expected, got); err != nil {
@@ -587,7 +587,7 @@ func Test_SubsetPropertyFunc(t *testing.T) {
 			})},
 			{Name: "c", Type: Array(Text())},
 		})
-		got := SubsetPropertyFunc(o, func(p Property) bool {
+		got := Filter(o, func(p Property) bool {
 			return p.Name != "d"
 		})
 		if err := sameType(expected, got); err != nil {
@@ -596,7 +596,7 @@ func Test_SubsetPropertyFunc(t *testing.T) {
 	})
 
 	t.Run("Invalid type expected", func(t *testing.T) {
-		got := SubsetPropertyFunc(o, func(p Property) bool {
+		got := Filter(o, func(p Property) bool {
 			return false
 		})
 		if got.Valid() {
@@ -605,7 +605,7 @@ func Test_SubsetPropertyFunc(t *testing.T) {
 	})
 
 	t.Run("Original object expected", func(t *testing.T) {
-		got := SubsetPropertyFunc(o, func(p Property) bool {
+		got := Filter(o, func(p Property) bool {
 			return true
 		})
 		if err := sameType(o, got); err != nil {

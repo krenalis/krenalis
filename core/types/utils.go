@@ -133,30 +133,28 @@ func ParseUUID(s string) (string, bool) {
 	return id.String(), true
 }
 
-// SubsetAtPath returns the subset of t that contains only the properties
-// along the specified path and their parent hierarchy.
-// If the path does not exist, it returns a PathNotExistError and the invalid
-// Type.
+// PruneAtPath returns the subset of t that contains only the properties along
+// the specified path and their parent hierarchy. If the path does not exist, it
+// returns a PathNotExistError and the invalid Type.
 // It panics if t is not an object or if path is not a valid property path.
-func SubsetAtPath(t Type, path string) (Type, error) {
+func PruneAtPath(t Type, path string) (Type, error) {
 	if t.kind != ObjectKind {
 		panic("cannot get a subset of a non-object type")
 	}
 	if _, err := t.Properties().ByPath(path); err != nil {
 		return Type{}, err
 	}
-	return subsetAtPath(t, path), nil
+	return pruneAtPath(t, path), nil
 }
 
-// SubsetPathFunc removes from t all properties for which f returns false,
-// keeping only those for which f returns true. f is evaluated only on
-// non-object properties. An object property is removed if all of its
-// subproperties are removed.
+// Prune removes from t all properties for which f returns false, keeping only
+// those for which f returns true. f is evaluated only on non-object properties.
+// An object property is removed if all of its subproperties are removed.
 //
-// See also SubsetPropertyFunc, which restricts only top-level properties.
+// See also Filter, which restricts only top-level properties.
 //
 // It panics if t is not an object or if f is nil.
-func SubsetPathFunc(t Type, f func(path string) bool) Type {
+func Prune(t Type, f func(path string) bool) Type {
 	if t.kind != ObjectKind {
 		panic("cannot prune a non-object type")
 	}
@@ -174,11 +172,14 @@ func SubsetPathFunc(t Type, f func(path string) bool) Type {
 	return Type{kind: ObjectKind, vl: Properties{properties: pp, names: names}}
 }
 
-// SubsetPropertyFunc returns a subset of the object t, including only the
-// properties for which f returns true, maintaining their original order in type
-// t. If f returns false for all properties, it returns an invalid schema.
-// It panics if t is not an object, or f is nil.
-func SubsetPropertyFunc(t Type, f func(p Property) bool) Type {
+// Filter returns a subset of object t containing only the properties for which
+// f returns true, preserving their original order in t.
+// If f returns false for all properties, the result is an invalid schema.
+//
+// See also Prune if you need to filter beyond the top-level properties.
+//
+// It panics if t is not an object or if f is nil.
+func Filter(t Type, f func(p Property) bool) Type {
 	if t.kind != ObjectKind {
 		panic("cannot get a subset of a non-object type")
 	}
@@ -254,7 +255,7 @@ func asRole(t Type, role Role) (Type, bool) {
 	return Type{kind: ObjectKind, vl: Properties{properties: ppc, names: names}}, true
 }
 
-// prune is a recursive helper called by SubsetPathFunc. It returns the pruned
+// prune is a recursive helper called by Prune. It returns the pruned
 // properties and a boolean indicating whether all properties were pruned.
 // If no property is pruned, it returns nil and false. If all properties are
 // pruned, it returns nil and true.
@@ -315,14 +316,14 @@ func prune(pp []Property, path string, f func(string) bool) ([]Property, bool) {
 	return ps, true
 }
 
-// subsetAtPath is a recursive function called by the SubsetAtPath function. t
+// pruneAtPath is a recursive function called by the PruneAtPath function. t
 // must be an object type and path must exist in t.
-func subsetAtPath(t Type, path string) Type {
+func pruneAtPath(t Type, path string) Type {
 	name, rest, found := strings.Cut(path, ".")
 	property, _ := t.Properties().ByName(name)
 	if !found {
 		return Object([]Property{property})
 	}
-	property.Type = subsetAtPath(property.Type, rest)
+	property.Type = pruneAtPath(property.Type, rest)
 	return Object([]Property{property})
 }

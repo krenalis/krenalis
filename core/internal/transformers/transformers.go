@@ -168,7 +168,7 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 // specified in properties, preserving their original order and upper hierarchy
 // in schema. This function panics if schema is not an object type.
 func schemaSubset(schema types.Type, paths []string) types.Type {
-	return types.SubsetPathFunc(schema, func(path string) bool {
+	return types.Prune(schema, func(path string) bool {
 		for {
 			if _, ok := slices.BinarySearch(paths, path); ok {
 				return true

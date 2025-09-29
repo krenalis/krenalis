@@ -1076,7 +1076,7 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 // invalid schema.
 func (this *Workspace) UserPropertiesSuitableAsIdentifiers() types.Type {
 	this.core.mustBeOpen()
-	return types.SubsetPropertyFunc(this.workspace.UserSchema, func(p types.Property) bool {
+	return types.Filter(this.workspace.UserSchema, func(p types.Property) bool {
 		return suitableAsIdentifier(p.Type)
 	})
 }

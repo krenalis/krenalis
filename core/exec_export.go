@@ -126,7 +126,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		// so that the alignment check is skipped.
 		outSchema := action.OutSchema
 		if action.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
-			outSchema = types.SubsetPropertyFunc(outSchema, func(p types.Property) bool {
+			outSchema = types.Filter(outSchema, func(p types.Property) bool {
 				return p.Name != action.Matching.Out
 			})
 		}
