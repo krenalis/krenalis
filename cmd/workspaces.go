@@ -31,12 +31,8 @@ func (workspace workspace) Action(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("id")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
 		return nil, errors.NotFound("")
 	}
 	return ws.Action(id)
@@ -71,8 +67,8 @@ func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) 
 	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
-			actions[i], err = strconv.Atoi(id)
-			if err != nil {
+			actions[i], ok = parseID(id)
+			if !ok {
 				return nil, errors.BadRequest("an action is not valid")
 			}
 		}
@@ -152,8 +148,8 @@ func (workspace workspace) ActionMetricsPerDate(_ http.ResponseWriter, r *http.R
 	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
-			actions[i], err = strconv.Atoi(id)
-			if err != nil {
+			actions[i], ok = parseID(id)
+			if !ok {
 				return nil, errors.BadRequest("an action is not valid")
 			}
 		}
@@ -196,8 +192,8 @@ func (workspace workspace) ActionMetricsPerDay(_ http.ResponseWriter, r *http.Re
 	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
-			actions[i], err = strconv.Atoi(id)
-			if err != nil {
+			actions[i], ok = parseID(id)
+			if !ok {
 				return nil, errors.BadRequest("an 'action' parameter is not valid")
 			}
 		}
@@ -240,8 +236,8 @@ func (workspace workspace) ActionMetricsPerHour(_ http.ResponseWriter, r *http.R
 	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
-			actions[i], err = strconv.Atoi(id)
-			if err != nil {
+			actions[i], ok = parseID(id)
+			if !ok {
 				return nil, errors.BadRequest("an action is not valid")
 			}
 		}
@@ -284,8 +280,8 @@ func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http
 	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
-			actions[i], err = strconv.Atoi(id)
-			if err != nil {
+			actions[i], ok = parseID(id)
+			if !ok {
 				return nil, errors.BadRequest("an action is not valid")
 			}
 		}
@@ -330,12 +326,8 @@ func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("id")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
 		return nil, errors.NotFound("")
 	}
 	return ws.Connection(r.Context(), id)
@@ -603,13 +595,9 @@ func (workspace workspace) Execution(_ http.ResponseWriter, r *http.Request) (an
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("id")
-	if v[0] == '+' {
-		return nil, errors.BadRequest("identifier %q is not a valid execution identifier", v)
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return nil, errors.BadRequest("identifier %q is not a valid execution identifier", v)
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		return nil, errors.BadRequest("identifier %q is not a valid execution identifier", r.PathValue("id"))
 	}
 	return ws.Execution(r.Context(), id)
 }

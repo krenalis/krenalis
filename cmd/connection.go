@@ -263,12 +263,8 @@ func (connection connection) LinkConnection(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("dst")
-	if v[0] == '+' {
-		return nil, errors.BadRequest("dst is not a valid connection identifier")
-	}
-	dst, _ := strconv.Atoi(v)
-	if dst <= 0 {
+	dst, ok := parseID(r.PathValue("dst"))
+	if !ok {
 		return nil, errors.BadRequest("dst is not a valid connection identifier")
 	}
 	err = src.LinkConnection(r.Context(), dst)
@@ -380,12 +376,8 @@ func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("dst")
-	if v[0] == '+' {
-		return nil, errors.BadRequest("dst is not a valid connection identifier")
-	}
-	dst, _ := strconv.Atoi(v)
-	if dst <= 0 {
+	dst, ok := parseID(r.PathValue("dst"))
+	if !ok {
 		return nil, errors.BadRequest("dst is not a valid connection identifier")
 	}
 	err = src.UnlinkConnection(r.Context(), dst)
@@ -450,12 +442,8 @@ func (connection connection) id(r *http.Request) (*core.Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("id")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
 		return nil, errors.NotFound("")
 	}
 	return ws.Connection(r.Context(), id)
@@ -466,12 +454,8 @@ func (connection connection) src(r *http.Request) (*core.Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("src")
-	if v[0] == '+' {
-		return nil, errors.BadRequest("src is not a valid connection identifier")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
+	id, ok := parseID(r.PathValue("src"))
+	if !ok {
 		return nil, errors.BadRequest("src is not a valid connection identifier")
 	}
 	return ws.Connection(r.Context(), id)

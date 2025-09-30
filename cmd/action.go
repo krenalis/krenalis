@@ -9,7 +9,6 @@ package cmd
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
@@ -116,17 +115,14 @@ func (action action) Update(_ http.ResponseWriter, r *http.Request) (any, error)
 	return nil, err
 }
 
+// id reads the "id" path parameter and returns the corresponding action.
 func (action action) id(r *http.Request) (*core.Action, error) {
 	ws, err := workspace{action.apisServer}.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("id")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
 		return nil, errors.NotFound("")
 	}
 	return ws.Action(id)

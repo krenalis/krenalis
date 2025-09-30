@@ -10,7 +10,6 @@ package cmd
 import (
 	"html"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/meergo/meergo/core"
@@ -322,24 +321,16 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 }
 
 func (organization organization) id(r *http.Request) (int, error) {
-	v := r.PathValue("id")
-	if v[0] == '+' {
-		return 0, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
 		return 0, errors.NotFound("")
 	}
 	return id, nil
 }
 
 func (organization organization) key(r *http.Request) (int, error) {
-	v := r.PathValue("key")
-	if v[0] == '+' {
-		return 0, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
+	id, ok := parseID(r.PathValue("key"))
+	if !ok {
 		return 0, errors.NotFound("")
 	}
 	return id, nil

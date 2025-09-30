@@ -385,6 +385,29 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (*core.Organizati
 	return organization, session.Member, nil
 }
 
+// parseID parses a decimal identifier in the form /^[1-9][0-9]*$/.
+// The value must be in the range [1, math.MaxInt32].
+// It returns (value, true) if valid, or (0, false) otherwise.
+func parseID(s string) (int, bool) {
+	if len(s) == 0 || s[0] == '0' {
+		return 0, false
+	}
+	var n int64
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+		n = n*10 + int64(c-'0')
+		if n > math.MaxInt32 {
+			return 0, false
+		}
+	}
+	if n < 1 {
+		return 0, false
+	}
+	return int(n), true
+}
+
 // writeSessionCookie writes a session cookie on w. If one already exists,
 // it replaces its value with c's value.
 func writeSessionCookie(w http.ResponseWriter, c *http.Cookie) {
