@@ -59,7 +59,7 @@ func init() {
 	testsSettings = &TestsSettings{
 		HTTP: &HTTPSettings{
 			Host: "127.0.0.1",
-			Port: 9091,
+			Port: 2023,
 		},
 		Database: &DBSettings{
 			// Host and Port will be set when PostgreSQL container starts.

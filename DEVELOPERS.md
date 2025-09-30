@@ -129,7 +129,7 @@ The tests inside `/test/` are already configured by default when the repository 
 
 | Variable                   | Description                                                                | Default                  |
 |----------------------------|----------------------------------------------------------------------------|--------------------------|
-| `MEERGO_TESTS_ADDR`        | The host and port on which Meergo is started                               | `127.0.0.1:9091`         |
+| `MEERGO_TESTS_ADDR`        | The host and port on which Meergo is started                               | `127.0.0.1:2023`         |
 | `MEERGO_TESTS_PYTHON_PATH` | The path to the Python executable for running the transformation functions | It depends on the system |
 
 ## How to execute Meergo for development
