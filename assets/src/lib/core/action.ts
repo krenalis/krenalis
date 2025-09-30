@@ -915,7 +915,7 @@ const transformInActionToSet = async (
 			} else {
 				if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {
 					throw new Error(
-						`${actionType.target} cannot be created but can be updated, as the "${action.matching.out}" property of ${connection.name} is read-only`,
+						`Since "${action.matching.out}" is set as the ${connection.name}'s matching property and it is read-only, users can only be updated, not created. Change the matching property accordingly or select 'Update only'.`,
 					);
 				} else {
 					p = a;
