@@ -51,7 +51,18 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 
 // ServeUI serves the UI of an action.
 func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := action.id(r)
+	_, ws, _, err := action.authenticateAdminRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
+	}
+	id, ok := parseID(r.PathValue("id")) // ID of the action
+	if !ok {
+		return nil, errors.BadRequest("identifier %q is not a valid action identifier", r.PathValue("id"))
+	}
+	a, err := ws.Action(id)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +126,8 @@ func (action action) Update(_ http.ResponseWriter, r *http.Request) (any, error)
 	return nil, err
 }
 
-// id reads the "id" path parameter and returns the corresponding action.
+// id authenticates the request and returns the action identified by the 'id'
+// path parameter.
 func (action action) id(r *http.Request) (*core.Action, error) {
 	ws, err := workspace{action.apisServer}.workspace(r)
 	if err != nil {
@@ -123,7 +135,7 @@ func (action action) id(r *http.Request) (*core.Action, error) {
 	}
 	id, ok := parseID(r.PathValue("id"))
 	if !ok {
-		return nil, errors.NotFound("")
+		return nil, errors.BadRequest("identifier %q is not a valid action identifier", r.PathValue("id"))
 	}
 	return ws.Action(id)
 }

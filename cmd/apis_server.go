@@ -30,6 +30,14 @@ import (
 // maxRequestSize is the maximum size bytes for an API request.
 const maxRequestSize = 500 * 1024
 
+var (
+	// errMissingWorkspace is returned when the "Meergo-Workspace" header is required but not provided.
+	errMissingWorkspace = errors.Forbidden("Meergo-Workspace header is missing; provide it in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+
+	// errInvalidSessionCookie is returned when a session cookie has expired or is no lo longer valid.
+	errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or is no longer valid")
+)
+
 //go:embed invite-member-email.html
 var inviteMemberEmail string
 
@@ -171,11 +179,13 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // authenticateRequest authenticates the request r and returns the associated
 // organization and optional workspace.
 //
-// Authorization can be provided via an API key in the 'Authorization'
-// header or via a session cookie from the Admin console.
+// Authorization sources:
+//   - API key in the "Authorization" header
+//   - Session cookie from the Admin console
 //
-// If authentication uses an API key not bound to a workspace and the
-// 'Meergo-Workspace' header is missing, the returned workspace is nil.
+// The workspace is nil when the "Meergo-Workspace" header is absent and either:
+//   - the API key is not bound to a workspace, or
+//   - the session cookie is from the Admin console.
 //
 // If authorization fails, an errors.UnauthorizedError is returned.
 func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *core.Workspace, error) {
@@ -187,7 +197,7 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		}
 		token, found := strings.CutPrefix(auth[0], "Bearer ")
 		if !found || token == "" {
-			return nil, nil, errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_API_KEY>'.")
+			return nil, nil, errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
 		}
 		organizationID, workspaceID, found := s.core.AccessKey(token, core.AccessKeyTypeAPI)
 		if !found {
@@ -211,14 +221,14 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 			return org, nil, nil
 		}
 		if len(header) > 1 {
-			return nil, nil, errors.BadRequest("request contains multiple Meergo-Warehouse headers")
+			return nil, nil, errors.BadRequest("request contains multiple Meergo-Workspace headers")
 		}
 		var id int64
 		if header[0] != "" && header[0][0] != '+' {
 			id, _ = strconv.ParseInt(header[0], 10, 32)
 		}
 		if id <= 0 {
-			return nil, nil, errors.BadRequest("Meergo-Workspace header is invalid. It should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+			return nil, nil, errors.BadRequest("Meergo-Workspace header is invalid; it should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
 		}
 		ws, err := org.Workspace(int(id))
 		if err != nil {
@@ -227,25 +237,7 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 		return org, ws, nil
 	}
 
-	org, _, err := s.authenticateAdminRequest(r)
-	if err != nil {
-		return nil, nil, err
-	}
-	header, ok := r.Header["Meergo-Workspace"]
-	if !ok {
-		return org, nil, nil
-	}
-	if len(header) > 1 {
-		return nil, nil, errors.BadRequest("request contains multiple Meergo-Warehouse headers")
-	}
-	var workspaceID int64
-	if header[0] != "" && header[0][0] != '+' {
-		workspaceID, _ = strconv.ParseInt(header[0], 10, 32)
-	}
-	if workspaceID <= 0 {
-		return nil, nil, errors.BadRequest("Meergo-Workspace header is invalid. It should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
-	}
-	ws, err := org.Workspace(int(workspaceID))
+	org, ws, _, err := s.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -253,18 +245,10 @@ func (s *apisServer) authenticateRequest(r *http.Request) (*core.Organization, *
 	return org, ws, nil
 }
 
-var errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or is no longer valid")
-
 // forwardSentryError forwards a telemetry error from a client to Sentry.
-// If the user is not logged in, this method does nothing.
+// If not authorized, this method does nothing.
 func (s *apisServer) forwardSentryError(w http.ResponseWriter, r *http.Request) (any, error) {
-	// Check if the user is logged. If not, discard the reported errors.
-	organization := organization{s}
-	_, _, err := organization.authenticateAdminRequest(r)
-	if err != nil {
-		if _, ok := err.(*errors.UnauthorizedError); ok {
-			return nil, nil
-		}
+	if _, _, _, err := s.authenticateAdminRequest(r); err != nil {
 		return nil, err
 	}
 	s.sentryTelemetry.errorTunnel.ServeHTTP(w, r)
@@ -285,11 +269,11 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	// Retrieve the organization and the member.
-	organization, err := s.core.Organization(1)
+	org, err := s.core.Organization(1)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read organization: %s", err)
 	}
-	memberID, err := organization.AuthenticateMember(r.Context(), body.Email, body.Password)
+	memberID, err := org.AuthenticateMember(r.Context(), body.Email, body.Password)
 	if err != nil {
 		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == core.AuthenticationFailed {
 			return []any{0, "AuthenticationFailed"}, nil
@@ -298,7 +282,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	if body.IsUnique {
-		members, err := organization.Members(r.Context())
+		members, err := org.Members(r.Context())
 		if err != nil {
 			return nil, err
 		}
@@ -308,7 +292,7 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	// Store the session.
-	sc := &sessionCookie{Organization: organization.ID, Member: memberID}
+	sc := &sessionCookie{Organization: org.ID, Member: memberID}
 	value, err := s.secureCookie.Encode(sessionCookieName, sc)
 	if err != nil {
 		return nil, err
@@ -348,41 +332,62 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 }
 
 // authenticateAdminRequest authenticates an Admin console request r and
-// returns the associated organization and member ID.
+// returns the associated organization, workspace, and member ID.
 //
 // Authorization is provided via a session cookie.
 //
+// The workspace is nil when the "Meergo-Workspace" header is absent.
+//
 // It returns errors.UnauthorizedError if authorization fails, or
 // errInvalidSessionCookie if the session cookie is invalid.
-func (s *apisServer) authenticateAdminRequest(r *http.Request) (*core.Organization, int, error) {
+func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organization, ws *core.Workspace, userID int, err error) {
 
 	// Get the session.
 	cookie, _ := r.Cookie(sessionCookieName)
 	if cookie == nil {
-		return nil, 0, errors.Unauthorized("the Authorization header with the API key is not present in the request")
+		return nil, nil, 0, errors.Unauthorized("Authorization header with the API key is not present in the request")
 	}
 	session := &sessionCookie{}
-	err := s.secureCookie.Decode(sessionCookieName, cookie.Value, session)
+	err = s.secureCookie.Decode(sessionCookieName, cookie.Value, session)
 	if err != nil {
-		return nil, 0, errInvalidSessionCookie
+		return nil, nil, 0, errInvalidSessionCookie
 	}
 	if id := session.Member; id < 1 || id > math.MaxInt32 {
-		return nil, 0, errInvalidSessionCookie
+		return nil, nil, 0, errInvalidSessionCookie
 	}
 	if id := session.Organization; id < 1 || id > math.MaxInt32 {
-		return nil, 0, errInvalidSessionCookie
+		return nil, nil, 0, errInvalidSessionCookie
 	}
 
 	// Get the organization.
-	organization, err := s.core.Organization(session.Organization)
+	org, err = s.core.Organization(session.Organization)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); ok {
-			return nil, 0, errInvalidSessionCookie
+			return nil, nil, 0, errInvalidSessionCookie
 		}
-		return nil, 0, err
+		return nil, nil, 0, err
+	}
+	header, ok := r.Header["Meergo-Workspace"]
+	if !ok {
+		// Returns the organization and member while the workspace is nil.
+		return org, nil, session.Member, nil
+	}
+	if len(header) > 1 {
+		return nil, nil, 0, errors.BadRequest("request contains multiple Meergo-Workspace headers")
+	}
+	var workspaceID int64
+	if header[0] != "" && header[0][0] != '+' {
+		workspaceID, _ = strconv.ParseInt(header[0], 10, 32)
+	}
+	if workspaceID <= 0 {
+		return nil, nil, 0, errors.BadRequest("Meergo-Workspace header is invalid; it should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+	}
+	ws, err = org.Workspace(int(workspaceID))
+	if err != nil {
+		return nil, nil, 0, err
 	}
 
-	return organization, session.Member, nil
+	return org, ws, session.Member, nil
 }
 
 // parseID parses a decimal identifier in the form /^[1-9][0-9]*$/.

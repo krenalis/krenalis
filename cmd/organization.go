@@ -28,12 +28,12 @@ type organization struct {
 // verification has not been enabled, it returns an
 // errors.UnprocessableError error with code EmailVerificationRequired.
 func (organization organization) AddMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if !organization.skipMemberEmailVerification {
-		return nil, errors.Unprocessable(core.EmailVerificationRequired, "Email verification is required")
-	}
-	org, _, err := organization.authenticateAdminRequest(r)
+	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
+	}
+	if !organization.skipMemberEmailVerification {
+		return nil, errors.Unprocessable(core.EmailVerificationRequired, "email verification is required")
 	}
 	var body struct {
 		MemberToSet struct {
@@ -66,7 +66,7 @@ func (organization organization) AddMember(_ http.ResponseWriter, r *http.Reques
 
 // AccessKeys returns the access keys of an organization.
 func (organization organization) AccessKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, _, err := organization.authenticateAdminRequest(r)
+	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (organization organization) AccessKeys(_ http.ResponseWriter, r *http.Reque
 
 // CreateAccessKey creates a new access key for an organization.
 func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, _, err := organization.authenticateAdminRequest(r)
+	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (organization organization) CreateAccessKey(_ http.ResponseWriter, r *http.
 
 // CreateWorkspace creates a workspace for the organization.
 func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, err := organization.organization(r)
+	org, _, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +147,11 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 
 // DeleteAccessKey deletes an access key of an organization.
 func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, _, err := organization.authenticateAdminRequest(r)
+	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
-	key, err := organization.key(r)
+	key, err := organization.key(r) // ID of the access key
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func (organization organization) DeleteAccessKey(_ http.ResponseWriter, r *http.
 
 // DeleteMember deletes a member of an organization.
 func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, _, err := organization.authenticateAdminRequest(r)
+	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 
 // InviteMember sends an invitation email.
 func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, memberID, err := organization.authenticateAdminRequest(r)
+	org, _, memberID, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Req
 
 // Members returns the members of an organization.
 func (organization organization) Members(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, _, err := organization.authenticateAdminRequest(r)
+	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 
 // TestWorkspaceCreation tests a workspace creation.
 func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, err := organization.organization(r)
+	org, _, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -242,11 +242,11 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 
 // UpdateAccessKey updates the name of an access key for an organization.
 func (organization organization) UpdateAccessKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, _, err := organization.authenticateAdminRequest(r)
+	org, _, _, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
-	key, err := organization.key(r)
+	key, err := organization.key(r) // ID of the access key
 	if err != nil {
 		return nil, err
 	}
@@ -261,9 +261,9 @@ func (organization organization) UpdateAccessKey(_ http.ResponseWriter, r *http.
 	return nil, err
 }
 
-// UpdateMember updates a member of an organization.
+// UpdateMember updates the currently logged-in member of the organization.
 func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, memberID, err := organization.authenticateAdminRequest(r)
+	org, _, memberID, err := organization.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -306,41 +306,34 @@ func (organization organization) Workspace(_ http.ResponseWriter, r *http.Reques
 		return nil, err
 	}
 	if ws == nil {
-		return nil, errors.Forbidden("provided key ")
+		return nil, errMissingWorkspace
 	}
 	return ws, nil
 }
 
 // Workspaces returns the workspaces of an organization.
 func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, err := organization.organization(r)
+	org, _, err := organization.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{"workspaces": org.Workspaces()}, nil
 }
 
+// id returns the value of the 'id' path parameter parsed as a member ID.
 func (organization organization) id(r *http.Request) (int, error) {
 	id, ok := parseID(r.PathValue("id"))
 	if !ok {
-		return 0, errors.NotFound("")
+		return 0, errors.BadRequest("identifier %q is not a valid member identifier", r.PathValue("id"))
 	}
 	return id, nil
 }
 
+// key returns the value of the 'key' path parameter parsed as an access key ID.
 func (organization organization) key(r *http.Request) (int, error) {
-	id, ok := parseID(r.PathValue("key"))
+	key, ok := parseID(r.PathValue("key"))
 	if !ok {
-		return 0, errors.NotFound("")
+		return 0, errors.BadRequest("identifier %q is not a valid access key identifier", r.PathValue("key"))
 	}
-	return id, nil
-}
-
-// organization returns the organization.
-func (organization organization) organization(r *http.Request) (*core.Organization, error) {
-	org, _, err := organization.authenticateRequest(r)
-	if err != nil {
-		return nil, err
-	}
-	return org, nil
+	return key, nil
 }

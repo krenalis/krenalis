@@ -25,7 +25,7 @@ type api struct {
 
 // AcceptInvitation accepts the invitation with a given invitation token.
 //
-// Login is not required to call AcceptInvitation.
+// Authentication is not required to call AcceptInvitation.
 func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
 	var body struct {
 		Name     string `json:"name"`
@@ -42,7 +42,7 @@ func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 // ChangeMemberPasswordByToken changes the password of a member with the given
 // reset password token.
 //
-// Login is not required to call ChangeMemberPasswordByToken.
+// Authentication is not required to call ChangeMemberPasswordByToken.
 func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Request) (any, error) {
 	var body struct {
 		Password string `json:"password"`
@@ -100,7 +100,7 @@ func (api api) EventsSettings(w http.ResponseWriter, r *http.Request) (any, erro
 // ExpressionsProperties returns all the unique properties contained inside a
 // list of expressions.
 func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -116,7 +116,7 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 
 // Member returns the current member.
 func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
-	org, memberID, err := api.authenticateAdminRequest(r)
+	org, _, memberID, err := api.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
 // MemberInvitation returns the organization's name and email of the member
 // invited with a given invitation token.
 //
-// Login is not required to call MemberInvitation.
+// Authentication is not required to call MemberInvitation.
 func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
 	organization, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
 	if err != nil {
@@ -161,7 +161,7 @@ type publicMetadata struct {
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //
-// Login is not required to call PublicMetadata.
+// Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
 	metadata := publicMetadata{
 		InstallationID:              api.core.InstallationID(),
@@ -177,7 +177,7 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 
 // SendMemberPasswordReset sends a reset password email.
 //
-// Login is not required to call SendMemberPasswordReset.
+// Authentication is not required to call SendMemberPasswordReset.
 func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (any, error) {
 	var body struct {
 		Email string `json:"email"`
@@ -186,30 +186,27 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	organization, err := api.core.Organization(1)
+	org, err := api.core.Organization(1)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read organization: %s", err)
 	}
 	emailTemplate := strings.ReplaceAll(resetPasswordEmail, "${externalURL}", html.EscapeString(api.externalURL))
-	err = organization.SendMemberPasswordReset(r.Context(), body.Email, emailTemplate)
+	err = org.SendMemberPasswordReset(r.Context(), body.Email, emailTemplate)
 	return nil, err
 }
 
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
-// Login is not required to call ValidateMemberPasswordResetToken.
+// Authentication is not required to call ValidateMemberPasswordResetToken.
 func (api api) ValidateMemberPasswordResetToken(_ http.ResponseWriter, r *http.Request) (any, error) {
 	err := api.core.ValidateMemberPasswordResetToken(r.Context(), r.PathValue("token"))
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return nil, err
 }
 
 // TransformData transforms data using a mapping or a function transformation
 // and returns the transformed data.
 func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -241,7 +238,7 @@ func (api api) TransformationLanguages(_ http.ResponseWriter, r *http.Request) (
 
 // ValidateExpression validates an expression.
 func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
 		return nil, err
 	}
 	var body struct {

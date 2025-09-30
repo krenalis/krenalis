@@ -26,7 +26,18 @@ type connection struct {
 // TODO(Gianluca): this method is deprecated. See the issue
 // https://github.com/meergo/meergo/issues/1266.
 func (connection connection) ActionSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.id(r)
+	_, ws, _, err := connection.authenticateAdminRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
+	}
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
+	}
+	c, err := ws.Connection(r.Context(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +53,18 @@ func (connection connection) ActionSchemas(_ http.ResponseWriter, r *http.Reques
 // TODO(Gianluca): this method is deprecated. See the issue
 // https://github.com/meergo/meergo/issues/1265.
 func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.id(r)
+	_, ws, _, err := connection.authenticateAdminRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
+	}
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
+	}
+	c, err := ws.Connection(r.Context(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -178,6 +200,7 @@ func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (
 // File returns the records and schema of the file located at the specified path
 // within a connection.
 func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, error) {
+
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -223,6 +246,7 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
+
 	return map[string]any{"records": records, "schema": schema, "issues": issues}, nil
 }
 
@@ -296,7 +320,18 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 
 // ServeUI serves the user interface for a connection.
 func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.id(r)
+	_, ws, _, err := connection.authenticateAdminRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
+	}
+	id, ok := parseID(r.PathValue("id")) // ID of the connection
+	if !ok {
+		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
+	}
+	c, err := ws.Connection(r.Context(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -317,6 +352,7 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 
 // Sheets returns the sheets of a file at the given path.
 func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any, error) {
+
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
@@ -354,6 +390,7 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 	if err != nil {
 		return nil, err
 	}
+
 	return map[string]any{"sheets": sheets}, nil
 }
 
@@ -437,6 +474,8 @@ func (connection connection) EventWriteKeys(_ http.ResponseWriter, r *http.Reque
 	return c.EventWriteKeys()
 }
 
+// id authenticates the request and returns the connection identified by the
+// 'id' path parameter.
 func (connection connection) id(r *http.Request) (*core.Connection, error) {
 	ws, err := workspace{connection.apisServer}.workspace(r)
 	if err != nil {
@@ -444,24 +483,32 @@ func (connection connection) id(r *http.Request) (*core.Connection, error) {
 	}
 	id, ok := parseID(r.PathValue("id"))
 	if !ok {
-		return nil, errors.NotFound("")
+		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
 	}
 	return ws.Connection(r.Context(), id)
 }
 
+// src authenticates the request and returns the connection identified by the
+// 'src' path parameter.
 func (connection connection) src(r *http.Request) (*core.Connection, error) {
 	ws, err := workspace{connection.apisServer}.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	id, ok := parseID(r.PathValue("src"))
+	src, ok := parseID(r.PathValue("src"))
 	if !ok {
-		return nil, errors.BadRequest("src is not a valid connection identifier")
+		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("src"))
 	}
-	return ws.Connection(r.Context(), id)
+	return ws.Connection(r.Context(), src)
 }
 
-func (connection connection) target(r *http.Request) (core.Target, string, error) {
+// target returns a Target and, if applicable, the Event type.
+// If the 'target' path parameter is present, it returns the corresponding
+// Target and an empty type. Otherwise, it returns the Event Target and the type
+// read from the query string.
+//
+// It does not authenticate the request.
+func (connection connection) target(r *http.Request) (target core.Target, eventType string, err error) {
 	v := r.PathValue("target")
 	switch v {
 	case "User":

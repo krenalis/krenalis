@@ -31,9 +31,9 @@ func (workspace workspace) Action(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
-	id, ok := parseID(r.PathValue("id"))
+	id, ok := parseID(r.PathValue("id")) // ID of the action.
 	if !ok {
-		return nil, errors.NotFound("")
+		return nil, errors.BadRequest("identifier %q is not a valid action identifier", r.PathValue("id"))
 	}
 	return ws.Action(id)
 }
@@ -320,20 +320,20 @@ func (workspace workspace) AlterUserSchema(_ http.ResponseWriter, r *http.Reques
 	return nil, err
 }
 
-// Connection returns a connection of a workspace.
+// Connection returns a connection of the current workspace.
 func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	id, ok := parseID(r.PathValue("id"))
+	id, ok := parseID(r.PathValue("id")) // ID of the connection
 	if !ok {
-		return nil, errors.NotFound("")
+		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
 	}
 	return ws.Connection(r.Context(), id)
 }
 
-// Connections returns the connections of a workspace.
+// Connections returns the connections of the current workspace.
 func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -393,7 +393,7 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 	return map[string]string{"id": id}, nil
 }
 
-// Delete deletes a workspace with all its connections.
+// Delete deletes the current workspace with all its connections.
 func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -496,9 +496,12 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 // UserPropertiesSuitableAsIdentifiers returns the properties of the "users"
 // schema that can be used as identifiers in the Identity Resolution.
 func (workspace workspace) UserPropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	_, ws, _, err := workspace.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
 	}
 	return ws.UserPropertiesSuitableAsIdentifiers(), nil
 }
@@ -589,20 +592,20 @@ func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (an
 	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
 }
 
-// Execution returns the execution of an action in a workspace.
+// Execution returns the execution of an action in the current workspace.
 func (workspace workspace) Execution(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	id, ok := parseID(r.PathValue("id"))
+	id, ok := parseID(r.PathValue("id")) // ID of the execution.
 	if !ok {
 		return nil, errors.BadRequest("identifier %q is not a valid execution identifier", r.PathValue("id"))
 	}
 	return ws.Execution(r.Context(), id)
 }
 
-// Executions returns the executions of the actions of a workspace.
+// Executions returns the executions of the actions of the current workspace.
 func (workspace workspace) Executions(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -665,9 +668,12 @@ func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Reques
 
 // ServeUI serves the user interface for a connector.
 func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	_, ws, _, err := workspace.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
 	}
 	var body struct {
 		Connector string     `json:"connector"`
@@ -884,6 +890,7 @@ func (workspace workspace) UserSchema(_ http.ResponseWriter, r *http.Request) (a
 // Users returns the users, the user schema of a workspace, and an estimate of
 // their total number without applying first and limit.
 func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, error) {
+
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -950,6 +957,7 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 	b.write(strconv.AppendInt(buf, int64(total), 10))
 	b.writeByte('}')
 	b.flush()
+
 	return nil, nil
 }
 
@@ -968,14 +976,14 @@ func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (an
 	}, nil
 }
 
-// workspace returns the workspace.
+// workspace returns the current workspace.
 func (workspace workspace) workspace(r *http.Request) (*core.Workspace, error) {
 	_, ws, err := workspace.authenticateRequest(r)
 	if err != nil {
 		return nil, err
 	}
 	if ws == nil {
-		return nil, errors.Forbidden("access to the workspace is not allowed")
+		return nil, errMissingWorkspace
 	}
 	return ws, nil
 }
