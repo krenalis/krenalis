@@ -37,7 +37,7 @@ To monitor these metrics with [Prometheus](https://prometheus.io/), configure it
 scrape_configs:
   - job_name: 'meergo'
     static_configs:
-      - targets: [ "localhost:9191" ]
+      - targets: [ "127.0.0.1:2022" ]
 ```
 
 ## Grafana

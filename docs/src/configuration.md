@@ -13,6 +13,6 @@ Meergo is configured at two distinct levels simultaneously:
 
 ## Where to go from here?
 
-* *If you're **[running Meergo via Docker](./using-docker)**, you can probably skip directly to the [documentation for the environment variables](./configuration-reference), as these are declared in the `compose.yml` file.
+* If you're **[running Meergo via Docker](./using-docker)**, you can probably skip directly to the [documentation for the environment variables](./configuration-reference), as these are declared in the `compose.yml` file.
 
 * If you're **running Meergo from [pre-compiled binaries](./pre-compiled-binaries) or [from source](./from-source)**, you may find it helpful to see the [documentation for the `.env` file](env-file).
