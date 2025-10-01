@@ -36,26 +36,26 @@ You should see something like this:
 
 ```plain
                      List of relations
- Schema |            Name             |   Type   |  Owner   
---------+-----------------------------+----------+----------
- public | access_keys                 | table    | user
- public | accounts                    | table    | user
- public | accounts_id_seq             | sequence | user
- public | actions                     | table    | user
- public | actions_errors              | table    | user
- public | actions_executions          | table    | user
- public | actions_executions_id_seq   | sequence | user
- public | actions_id_seq              | sequence | user
+ Schema |            Name           |   Type   |  Owner   
+--------+---------------------------+----------+----------
+ public | access_keys               | table    | user
+ public | accounts                  | table    | user
+ public | accounts_id_seq           | sequence | user
+ public | actions                   | table    | user
+ public | actions_errors            | table    | user
+ public | actions_executions        | table    | user
+ public | actions_executions_id_seq | sequence | user
+ public | actions_id_seq            | sequence | user
 ...
- public | event_write_keys            | table    | user
- public | members                     | table    | user
- public | members_id_seq              | sequence | user
- public | metadata                    | table    | user
- public | notifications               | table    | user
- public | organizations               | table    | user
- public | organizations_id_seq        | sequence | user
- public | user_schema_primary_sources | table    | user
- public | workspaces                  | table    | user
+ public | event_write_keys          | table    | user
+ public | members                   | table    | user
+ public | members_id_seq            | sequence | user
+ public | metadata                  | table    | user
+ public | notifications             | table    | user
+ public | organizations             | table    | user
+ public | organizations_id_seq      | sequence | user
+ public | primary_sources           | table    | user
+ public | workspaces                | table    | user
 ```
 
 Now you are ready to proceed with the [configuration](./configuration).

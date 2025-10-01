@@ -507,7 +507,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	}
 
 	// Read all primary sources.
-	err = tx.QueryScan(ctx, "SELECT source, path FROM user_schema_primary_sources",
+	err = tx.QueryScan(ctx, "SELECT source, path FROM primary_sources",
 		func(rows *db.Rows) error {
 			var source int
 			var path string

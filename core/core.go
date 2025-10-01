@@ -1209,7 +1209,7 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 			paths = append(paths, path)
 			i++
 		}
-		insertPrimarySources = "INSERT INTO user_schema_primary_sources (source, path) VALUES " + b.String()
+		insertPrimarySources = "INSERT INTO primary_sources (source, path) VALUES " + b.String()
 	}
 	// Update the identifiers.
 	nEnd.Identifiers = make([]string, 0, len(ws.Identifiers))
@@ -1243,7 +1243,7 @@ Identifiers:
 					return nil, err
 				}
 				// Update the primary sources.
-				_, err = tx.Exec(ctx, "DELETE FROM user_schema_primary_sources s USING connections c\n"+
+				_, err = tx.Exec(ctx, "DELETE FROM primary_sources s USING connections c\n"+
 					"WHERE c.workspace = $1 AND s.source = c.id", workspace)
 				if err != nil {
 					return nil, err

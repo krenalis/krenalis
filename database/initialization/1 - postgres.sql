@@ -240,7 +240,7 @@ CREATE UNIQUE INDEX reset_password_token_index ON members (reset_password_token)
 
 INSERT INTO members (organization, name, avatar, email, password, created_at) VALUES (1, 'ACME inc', NULL, 'acme@open2b.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC', '2024-01-01 00:00:00.000000'); -- Password: foopass2
 
-CREATE TABLE user_schema_primary_sources (
+CREATE TABLE primary_sources (
     source integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     path varchar NOT NULL,
     PRIMARY KEY (source, path)
