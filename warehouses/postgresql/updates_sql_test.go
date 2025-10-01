@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -102,7 +103,10 @@ func TestUpdatesSQL(t *testing.T) {
 
 	for i := range 3 {
 		for query := range bytes.SplitSeq(queries, []byte(";\n")) {
-			query := string(query)
+			query := strings.TrimSpace(string(query))
+			if query == "" {
+				continue
+			}
 			_, err := pool.Exec(ctx, query)
 			if err != nil {
 				t.Fatal(err)
