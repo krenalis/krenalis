@@ -74,10 +74,10 @@ func (state *State) keep() {
 			state.deleteAction(n)
 		case "DeleteConnection":
 			state.deleteConnection(n)
-		case "DeleteWorkspace":
-			state.deleteWorkspace(n)
 		case "DeleteEventWriteKey":
 			state.deleteEventWriteKey(n)
+		case "DeleteWorkspace":
+			state.deleteWorkspace(n)
 		case "ElectLeader":
 			state.electLeader(n)
 		case "EndActionExecution":
@@ -706,6 +706,34 @@ func (state *State) deleteConnection(n notification) {
 	dispatchNotification(state, e)
 }
 
+// DeleteEventWriteKey is the event sent when an event write key is deleted.
+type DeleteEventWriteKey struct {
+	Connection int
+	Key        string
+}
+
+// deleteEventWriteKey deletes an event write key.
+func (state *State) deleteEventWriteKey(n notification) {
+	e := DeleteEventWriteKey{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceConnection(e.Connection, func(c *Connection) {
+		keys := make([]string, len(c.Keys)-1)
+		i := 0
+		for _, key := range c.Keys {
+			if key != e.Key {
+				keys[i] = key
+				i++
+			}
+		}
+		c.Keys = keys
+	})
+	state.mu.Lock()
+	delete(state.connectionsByKey, e.Key)
+	state.mu.Unlock()
+}
+
 // DeleteWorkspace is the event sent when a workspace is deleted.
 type DeleteWorkspace struct {
 	ID        int
@@ -737,34 +765,6 @@ func (state *State) deleteWorkspace(n notification) {
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
-}
-
-// DeleteEventWriteKey is the event sent when an event write key is deleted.
-type DeleteEventWriteKey struct {
-	Connection int
-	Key        string
-}
-
-// deleteEventWriteKey deletes an event write key.
-func (state *State) deleteEventWriteKey(n notification) {
-	e := DeleteEventWriteKey{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceConnection(e.Connection, func(c *Connection) {
-		keys := make([]string, len(c.Keys)-1)
-		i := 0
-		for _, key := range c.Keys {
-			if key != e.Key {
-				keys[i] = key
-				i++
-			}
-		}
-		c.Keys = keys
-	})
-	state.mu.Lock()
-	delete(state.connectionsByKey, e.Key)
-	state.mu.Unlock()
 }
 
 // ElectLeader is the event sent when a leader is elected.
