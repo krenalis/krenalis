@@ -340,9 +340,12 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 			return user.Err
 		}
 
-		// Store the user only if it has a value for the out matching property, and it is not nil.
+		// Store the user only if the output matching property is not nil.
 		v, ok := user.Properties[matchingOut.Name]
-		if ok && v != nil {
+		if !ok {
+			panic(fmt.Sprintf("out matching property value of action %d is missing", this.action.ID))
+		}
+		if v != nil {
 			users = append(users, datastore.DestinationUser{
 				ExternalID:       user.ID,
 				OutMatchingValue: stringifyMatchingValue(v),
