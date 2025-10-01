@@ -5,6 +5,7 @@
     --font-size: 1rem;
     --line-height: 1.5;
     --link-color: #506ca7f5;
+    --bullet-color: #54478cf5;
 }
 
 *, *:before, *:after { box-sizing: border-box; outline-color: #0000; }
@@ -34,12 +35,13 @@ blockquote p { color: #424063; }
 blockquote > p + div pre { background: transparent; margin: 0; padding-left: 0; padding-top: 0; }
 blockquote div + p { margin-top: 0; }
 img { max-width: 100%; }
-ul { list-style-type: none; padding-left: 12px; }
-ul > li { color: #444; line-height: 2.3; padding-left: 12px; }
-ul > li::before { color:#00071b7f;  content: '-'; margin-left: -22px; margin-top: -1px; position: absolute; }
+ul { list-style-type: none; padding-left: 22px; }
+ul > li { line-height: 1.6; margin: .3em 0; padding-left: 12px; }
+ul > li::before { color: var(--bullet-color);  content: '•'; margin-left: -17px; margin-top: -1px; position: absolute; }
 ol { padding-inline-start: 1.625em; }
-ol > li { line-height: 2.5; padding-inline-start: .375em; }
-ol > li::marker { color: #00071b7f ; font-weight: 400; }
+ol > li { line-height: 1.6; margin: .3em 0; padding-inline-start: .375em; }
+ol > li::marker { color: var(--bullet-color) ; font-weight: 400; }
+li > p { margin: 1em 0; }
 dl { line-height: 1.60; margin: 1.25rem; }
 dd { margin-left: 1.5rem; }
 table { background: #fff; border-left: 1px solid #e6e6e6; border-spacing: 0; border-top: 1px solid #E6E6E6; margin: 20px 0; width: 100%; }

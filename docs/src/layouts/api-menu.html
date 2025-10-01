@@ -1,0 +1,40 @@
+
+{% macro item(path, name string) %}
+<a href="/{{ path }}"{% if path == filepath %} class="selected"{% else if hasPrefix(filepath, path+"/") %} class="expanded"{% end %}>{{ name }}</a>
+{% end %}
+
+<ul>
+  <li>{{ item(`api/index`, `Introduction`) }}</li>
+  <li>{{ item(`api/authentication`, `Authentication`) }}</li>
+  <li>{{ item(`api/schemas`, `Schemas`) }}</li>
+  <li>{{ item(`api/workspaces`, `Workspaces`) }}</li>
+  <li>{{ item(`api/users`, `Users`) }}</li>
+  <li>{{ item(`api/events`, `Events`) }}</li>
+  <li>
+  <li class="sidebar-expandable">{{ item(`api/connections`, `Connections`) }}</li>
+  <ul>
+    <li>{{ item(`api/app-connections`, `App connections`) }}</li>
+    <li>{{ item(`api/file-storage-connections`, `File storage connections`) }}</li>
+    <li>{{ item(`api/database-connections`, `Database connections`) }}</li>
+    <li>{{ item(`api/linked-connections`, `Linked connections`) }}</li>
+    <li>{{ item(`api/event-write-keys`, `Event write keys`) }}</li>
+  </ul>
+  <li class="sidebar-expandable">{{ item(`api/actions`, `Actions`) }}</li>
+  <ul>
+    <li>{{ item(`api/actions-import-users-from-apps`, `Import users from apps`) }}</li>
+    <li>{{ item(`api/actions-import-users-from-databases`, `Import users from databases`) }}</li>
+    <li>{{ item(`api/actions-import-users-from-files`, `Import users from files`) }}</li>
+    <li>{{ item(`api/actions-import-users-from-events`, `Import users from events`) }}</li>
+    <li>{{ item(`api/actions-import-events`, `Import events`) }}</li>
+    <li>{{ item(`api/actions-send-events-to-apps`, `Send events to apps`) }}</li>
+    <li>{{ item(`api/actions-export-users-to-apps`, `Export users to apps`) }}</li>
+    <li>{{ item(`api/actions-export-users-to-databases`, `Export users to databases`) }}</li>
+    <li>{{ item(`api/actions-export-users-to-files`, `Export users to files`) }}</li>
+    <li>{{ item(`api/action-metrics-and-errors`, `Action metrics and errors`) }}</li>
+  </ul>
+  <li>{{ item(`api/customer-model`, `Customer model`) }}</li>
+  <li>{{ item(`api/identity-resolution`, `Identity resolution`) }}</li>
+  <li>{{ item(`api/warehouse`, `Warehouse`) }}</li>
+  <li>{{ item(`api/connectors`, `Connectors`) }}</li>
+  <li>{{ item(`api/others`, `Others`) }}</li>
+</ul>
