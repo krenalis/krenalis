@@ -6,68 +6,84 @@
 <ul>
   <li>{{ item(`index`, `Overview`) }}</li>
   <li>{{ item(`what-is-meergo`, `What is Meergo`) }}</li>
-  <li class="sidebar-expandable">{{ item(`installation`, `Installation`) }}</li>
-  <ul>
-    <li>{{ item(`using-docker`, `Using Docker`) }}</li>
-    <li>{{ item(`pre-compiled-binaries`, `Pre-compiled binaries`) }}</li>
-    <li>{{ item(`from-source`, `From source`) }}</li>
-    <li>{{ item(`database-setup`, `Database setup`) }}</li>
-  </ul>
-  <li class="sidebar-expandable">{{ item(`configuration`, `Configuration`) }}</li>
-  <ul>
-    <li>{{ item(`env-file`, `.env file`) }}</li>
-    <li>{{ item(`configuration-reference`, `Configuration reference`) }}</li>
-  </ul>
+  <li class="sidebar-expandable">
+    {{ item(`installation`, `Installation`) }}
+    <ul>
+      <li>{{ item(`using-docker`, `Using Docker`) }}</li>
+      <li>{{ item(`pre-compiled-binaries`, `Pre-compiled binaries`) }}</li>
+      <li>{{ item(`from-source`, `From source`) }}</li>
+      <li>{{ item(`database-setup`, `Database setup`) }}</li>
+    </ul>
+  </li>
+  <li class="sidebar-expandable">
+    {{ item(`configuration`, `Configuration`) }}
+    <ul>
+      <li>{{ item(`env-file`, `.env file`) }}</li>
+      <li>{{ item(`configuration-reference`, `Configuration reference`) }}</li>
+    </ul>
+  </li>
   <li>{{ item(`create-workspace`, `Create a workspace`) }}</li>
   <li>{{ item(`collect-users`, `Collect users`) }}</li>
   <li>{{ item(`unify-users`, `Unify users`) }}</li>
   <li>{{ item(`activate-users`, `Activate users`) }}</li>
-  <li class="sidebar-expandable">{{ item(`connections`, `Connections`) }}</li>
-  <ul>
-    <li>{{ item(`importing`, `Import`) }}</li>
-    <li>{{ item(`exporting`, `Export`) }}</li>
-  </ul>
-  <li class="sidebar-expandable">{{ item(`events`, `Events`) }}</li>
-  <ul>
-    <li>{{ item(`events/page`, `page call`) }}</li>
-    <li>{{ item(`events/screen`, `screen call`) }}</li>
-    <li>{{ item(`events/track`, `track call`) }}</li>
-    <li>{{ item(`events/identify`, `identify call`) }}</li>
-    <li>{{ item(`events/group`, `group call`) }}</li>
-    <li>{{ item(`events/session-tracking`, `Session Tracking`) }}</li>
-  </ul>
+  <li class="sidebar-expandable">
+    {{ item(`connections`, `Connections`) }}
+    <ul>
+      <li>{{ item(`importing`, `Import`) }}</li>
+      <li>{{ item(`exporting`, `Export`) }}</li>
+    </ul>
+  </li>
+  <li class="sidebar-expandable">
+    {{ item(`events`, `Events`) }}
+    <ul>
+      <li>{{ item(`events/page`, `page call`) }}</li>
+      <li>{{ item(`events/screen`, `screen call`) }}</li>
+      <li>{{ item(`events/track`, `track call`) }}</li>
+      <li>{{ item(`events/identify`, `identify call`) }}</li>
+      <li>{{ item(`events/group`, `group call`) }}</li>
+      <li>{{ item(`events/session-tracking`, `Session Tracking`) }}</li>
+    </ul>
+  </li>
   <li>{{ item(`data-validation`, `Data validation`) }}</li>
   <li>{{ item(`filters`, `Filters`) }}</li>
   <li>{{ item(`altering-user-schema`, `Altering User Schema`) }}</li>
-  <li class="sidebar-expandable">{{ item(`transformations`, `Transformations`) }}</li>
-  <ul>
-    <li>{{ item(`mapping`, `Mapping`) }}</li>
-    <li>{{ item(`javascript`, `JavaScript`) }}</li>
-    <li>{{ item(`python`, `Python`) }}</li>
-  </ul>
-  <li class="sidebar-expandable">{{ item(`identity-resolution`, `Identity Resolution`) }}</li>
-  <ul>
-    <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>
-    <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous users strategies`) }}</li>
-  </ul>
+  <li class="sidebar-expandable">
+    {{ item(`transformations`, `Transformations`) }}
+    <ul>
+      <li>{{ item(`mapping`, `Mapping`) }}</li>
+      <li>{{ item(`javascript`, `JavaScript`) }}</li>
+      <li>{{ item(`python`, `Python`) }}</li>
+    </ul>
+  </li>
+  <li class="sidebar-expandable">
+    {{ item(`identity-resolution`, `Identity Resolution`) }}
+    <ul>
+      <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>
+      <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous users strategies`) }}</li>
+    </ul>
+  </li>
   <li>{{ item(`data-warehouse`, `Data Warehouse`) }}</li>
   <li>{{ item(`ai-features`, `AI features`) }}</li>
   <li>{{ item(`monitoring`, `Monitoring`) }}</li>
   <li>{{ item(`telemetry`, `Telemetry`) }}</li>
-  <li class="sidebar-expandable">{{ item(`developers/index`, `Developers`) }}</li>
-  <ul>
-    <li>{{ item(`developers/connectors/data-types`, `Data types`) }}</li>
-    <li>{{ item(`developers/connectors/data-values`, `Data values`) }}</li>
-    <li>{{ item(`developers/connectors/settings-and-ui`, `Settings and UI`) }}</li>
-    <li class="sidebar-expandable">{{ item(`developers/connectors/app`, `App connectors`) }}</li>
+  <li class="sidebar-expandable">
+    {{ item(`developers/index`, `Developers`) }}
     <ul>
-      <li>{{ item(`developers/connectors/app/oauth`, `OAuth`) }}</li>
-      <li>{{ item(`developers/connectors/app/endpoint-groups`, `Endpoint groups`) }}</li>
-      <li>{{ item(`developers/connectors/app/users`, `Users`) }}</li>
-      <li>{{ item(`developers/connectors/app/send-events`, `Send events`) }}</li>
+      <li>{{ item(`developers/connectors/data-types`, `Data types`) }}</li>
+      <li>{{ item(`developers/connectors/data-values`, `Data values`) }}</li>
+      <li>{{ item(`developers/connectors/settings-and-ui`, `Settings and UI`) }}</li>
+      <li class="sidebar-expandable">
+        {{ item(`developers/connectors/app`, `App connectors`) }}
+        <ul>
+          <li>{{ item(`developers/connectors/app/oauth`, `OAuth`) }}</li>
+          <li>{{ item(`developers/connectors/app/endpoint-groups`, `Endpoint groups`) }}</li>
+          <li>{{ item(`developers/connectors/app/users`, `Users`) }}</li>
+          <li>{{ item(`developers/connectors/app/send-events`, `Send events`) }}</li>
+        </ul>
+      </li>
+      <li>{{ item(`developers/connectors/database`, `Database connectors`) }}</li>
+      <li>{{ item(`developers/connectors/file`, `File connectors`) }}</li>
+      <li>{{ item(`developers/connectors/file-storage`, `File storage connectors`) }}</li>
     </ul>
-    <li>{{ item(`developers/connectors/database`, `Database connectors`) }}</li>
-    <li>{{ item(`developers/connectors/file`, `File connectors`) }}</li>
-    <li>{{ item(`developers/connectors/file-storage`, `File storage connectors`) }}</li>
-  </ul>
+  </li>
 </ul>

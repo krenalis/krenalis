@@ -129,7 +129,7 @@ article aside ul li.sidebar-expandable a {
     position: relative;
 }
 
-article aside ul li.sidebar-expandable a::after {
+article aside ul li.sidebar-expandable > a::after {
     -webkit-mask: url('../images/chevron-right.svg') no-repeat center;
     align-items: center;
     background-color: #00051d74;
@@ -152,7 +152,7 @@ article aside ul li.sidebar-expandable a.selected::after {
     transform: rotate(90deg) translateX(-7px);
 }
 
-article aside ul li.sidebar-expandable.selected a::after {
+article aside ul li.sidebar-expandable.selected > a::after {
     transform: rotate(90deg) translateX(-7px);
 }
 
@@ -166,9 +166,9 @@ article aside div { font-size: 14px; font-weight: bold; margin-bottom: 8px; }
 article aside > ul { margin-top: 3rem; }
 article aside li > ul { padding-left: 1rem; }
 article aside li, article aside li::before { all: unset; }
-article aside li { line-height: 1.70; white-space: nowrap; }
-article aside nav ul li.sidebar-expandable + ul { display: none; padding-left: 1rem; }
-article aside nav ul li.sidebar-expandable.selected + ul { display: block; }
+article aside li { display: block; line-height: 1.70; white-space: nowrap; }
+article aside nav ul li.sidebar-expandable > ul { display: none; padding-left: 1rem; }
+article aside nav ul li.sidebar-expandable.selected > ul { display: block; }
 article aside li h4 { color: #333; font-weight: bold }
 
 .content { flex-grow: 1; margin: 0 0 4em 0; min-width: 0; overflow-x: auto; width: 100%; }

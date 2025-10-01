@@ -27,17 +27,18 @@ const syncSelection = (li) => {
         return;
     }
 
-    const siblingUL = li.nextElementSibling;
-    if (!siblingUL || siblingUL.tagName !== "UL") {
-        console.error(`Error: <li.sidebar-expandable> must have a sibling <ul> element.`, li);
+    const childList = Array.from(li.children).find((child) => child.tagName === "UL");
+    if (!childList) {
+        console.error(`Error: <li.sidebar-expandable> must contain a <ul> child element.`, li);
         return;
     }
 
     const syncSelectedClass = () => {
-        const isSelected = anchor.classList.contains("selected");
-        const selectedSiblingAnchor = siblingUL.querySelector("a.selected");
-        const isSiblingSelected = selectedSiblingAnchor != null;
-        if (isSelected || isSiblingSelected) {
+        const anchorClasses = anchor.classList;
+        const isActive = anchorClasses.contains("selected") || anchorClasses.contains("expanded");
+        const selectedDescendant = childList.querySelector("a.selected");
+        const isDescendantSelected = selectedDescendant != null;
+        if (isActive || isDescendantSelected) {
             li.classList.add("selected");
         } else {
             li.classList.remove("selected");
@@ -50,8 +51,8 @@ const syncSelection = (li) => {
         attributeFilter: ["class"],
     });
 
-    const siblingObserver = new MutationObserver(syncSelectedClass);
-    siblingObserver.observe(siblingUL, {
+    const childObserver = new MutationObserver(syncSelectedClass);
+    childObserver.observe(childList, {
         subtree: true,
         attributes: true,
         attributeFilter: ["class"],
