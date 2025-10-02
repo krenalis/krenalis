@@ -2,7 +2,7 @@
 {% macro Title string %}.env file{% end %}
 {% Article %}
 
-# .env file
+# The *.env* file
 
 > 💡 This section applies if you're running Meergo after [downloading the binary from GitHub](pre-compiled-binaries), or if you [compiled Meergo from source](from-source).
 > 
@@ -13,15 +13,15 @@ Meergo installation configuration is done via environment variables. You can the
 * Pass environment variables directly to the `meergo` command when it is run.
 * For convenience, use an `env` file, documented on this page.
 
-## The .env file
+## The *.env* file
 
 Create a file called `.env` in the same directory where you run the Meergo executable. Meergo will read the `.env` file for configuration when it starts.
 
 For an example `.env` file, see: https://github.com/meergo/meergo/blob/main/cmd/meergo/meergo.example.env
 
-Once you understand the syntax of the `.env` file (shown [below](#env-file-syntax)), you can look at the [documentation for each configuration key](./configuration-reference) in detail and customize your `.env` file.
+Once you understand the syntax of the `.env` file (shown [below](#syntax)), you can look at the [documentation for each configuration key](./configuration-reference) in detail and customize your `.env` file.
 
-## .env file syntax
+## Syntax
 
 The `.env` file is a simple list of key-value pairs used to configure environment variables. Here's how it works:
 

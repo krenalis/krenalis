@@ -1,5 +1,5 @@
 
-{% macro item(path, name string) %}
+{% macro item(path string, name html) %}
 <a href="/{{ path }}"{% if path == filepath %} class="selected"{% else if hasPrefix(filepath, path+"/") %} class="expanded"{% end %}>{{ name }}</a>
 {% end %}
 
@@ -18,8 +18,8 @@
   <li class="sidebar-expandable">
     {{ item(`configuration`, `Configuration`) }}
     <ul>
-      <li>{{ item(`env-file`, `.env file`) }}</li>
-      <li>{{ item(`configuration-reference`, `Configuration reference`) }}</li>
+      <li>{{ item(`env-file`, `The <i>.env</i> file`) }}</li>
+      <li>{{ item(`configuration-reference`, `Reference`) }}</li>
     </ul>
   </li>
   <li>{{ item(`create-workspace`, `Create a workspace`) }}</li>
