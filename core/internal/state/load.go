@@ -215,7 +215,27 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				Name: name,
 			}
 			organization.workspaces = map[int]*Workspace{}
+			organization.members = map[int]struct{}{}
 			state.organizations[id] = organization
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Read all members.
+	err = tx.QueryScan(ctx, "SELECT id, organization FROM members ORDER BY organization", func(rows *db.Rows) error {
+		var id, organization int
+		var org *Organization
+		for rows.Next() {
+			if err := rows.Scan(&id, &organization); err != nil {
+				return err
+			}
+			if org == nil || org.ID != organization {
+				org = state.organizations[organization]
+			}
+			org.members[id] = struct{}{}
 		}
 		return nil
 	})

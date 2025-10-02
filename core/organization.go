@@ -182,6 +182,9 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 	if err != nil {
 		return err
 	}
+	n := state.AddMember{
+		Organization: this.organization.ID,
+	}
 	now := time.Now().UTC()
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		exists, err := tx.QueryExists(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2", this.organization.ID, member.Email)
@@ -192,30 +195,18 @@ func (this *Organization) AddMember(ctx context.Context, member MemberToSet) err
 			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		if member.Avatar != nil {
-			_, err = tx.Exec(
-				ctx,
-				"INSERT INTO members (name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-				member.Name,
-				member.Email,
-				password,
-				member.Avatar.Image,
-				member.Avatar.MimeType,
-				this.organization.ID,
-				now,
-			)
+			err = tx.QueryRow(ctx,
+				"INSERT INTO members (name, email, password, avatar.image, avatar.mime_type, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+				member.Name, member.Email, password, member.Avatar.Image, member.Avatar.MimeType, this.organization.ID, now).Scan(&n.ID)
 		} else {
-			_, err = tx.Exec(
-				ctx,
-				"INSERT INTO members (name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
-				member.Name,
-				member.Email,
-				password,
-				nil,
-				this.organization.ID,
-				now,
-			)
+			err = tx.QueryRow(ctx,
+				"INSERT INTO members (name, email, password, avatar, organization, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+				member.Name, member.Email, password, nil, this.organization.ID, now).Scan(&n.ID)
 		}
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
 	})
 	return err
 }
@@ -485,14 +476,29 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("identifier %d is not a valid member identifier", id)
 	}
-	result, err := this.core.db.Exec(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
-	if err != nil {
-		return err
-	}
-	if result.RowsAffected() == 0 {
+	if !this.organization.HasMember(id) {
 		return errors.NotFound("member %d does not exist", id)
 	}
-	return nil
+	n := state.DeleteMember{
+		ID:           id,
+		Organization: this.organization.ID,
+	}
+	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		result, err := this.core.db.Exec(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
+		if err != nil {
+			return nil, err
+		}
+		if result.RowsAffected() == 0 {
+			return nil, errors.NotFound("member %d does not exist", id)
+		}
+		return n, nil
+	})
+	return err
+}
+
+// HasMember reports whether the organization has a member with the given ID.
+func (this *Organization) HasMember(id int) bool {
+	return this.organization.HasMember(id)
 }
 
 // InviteMember sends an invitation email to the given email address using the

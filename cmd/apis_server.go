@@ -367,9 +367,13 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 		}
 		return nil, nil, 0, err
 	}
+	// Verify that the member still exists.
+	if !org.HasMember(session.Member) {
+		return nil, nil, 0, errInvalidSessionCookie
+	}
+	// If the 'Meergo-Workspace' header is missing, return with a nil workspace.
 	header, ok := r.Header["Meergo-Workspace"]
 	if !ok {
-		// Returns the organization and member while the workspace is nil.
 		return org, nil, session.Member, nil
 	}
 	if len(header) > 1 {

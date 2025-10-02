@@ -260,6 +260,7 @@ CREATE TABLE accounts (
 CREATE INDEX ON accounts (connector);
 
 CREATE TYPE notification_name AS ENUM (
+    'AddMember',
     'CreateAccessKey',
     'CreateAction',
     'CreateConnection',
@@ -269,6 +270,7 @@ CREATE TYPE notification_name AS ENUM (
     'DeleteAction',
     'DeleteConnection',
     'DeleteEventWriteKey',
+    'DeleteMember',
     'DeleteWorkspace',
     'EndActionExecution',
     'EndAlterUserSchema',

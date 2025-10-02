@@ -58,6 +58,8 @@ func (state *State) keep() {
 		}
 		state.changing.Lock()
 		switch n.Name {
+		case "AddMember":
+			state.addMember(n)
 		case "CreateAccessKey":
 			state.createAccessKey(n)
 		case "CreateAction":
@@ -76,6 +78,8 @@ func (state *State) keep() {
 			state.deleteConnection(n)
 		case "DeleteEventWriteKey":
 			state.deleteEventWriteKey(n)
+		case "DeleteMember":
+			state.deleteMember(n)
 		case "DeleteWorkspace":
 			state.deleteWorkspace(n)
 		case "ElectLeader":
@@ -257,6 +261,26 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 		}
 	}
 	return ww
+}
+
+// AddMember is the event sent when a member is added.
+type AddMember struct {
+	ID           int
+	Organization int
+}
+
+// addMember adds a member.
+func (state *State) addMember(n notification) {
+	e := AddMember{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.mu.Lock()
+	org := state.organizations[e.Organization]
+	state.mu.Unlock()
+	org.mu.Lock()
+	org.members[e.ID] = struct{}{}
+	org.mu.Unlock()
 }
 
 // CreateAccessKey is the event sent when an access key is created.
@@ -732,6 +756,26 @@ func (state *State) deleteEventWriteKey(n notification) {
 	state.mu.Lock()
 	delete(state.connectionsByKey, e.Key)
 	state.mu.Unlock()
+}
+
+// DeleteMember is the event sent when a member is deleted.
+type DeleteMember struct {
+	ID           int
+	Organization int
+}
+
+// deleteMember deletes a member.
+func (state *State) deleteMember(n notification) {
+	e := DeleteMember{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.mu.Lock()
+	org := state.organizations[e.Organization]
+	state.mu.Unlock()
+	org.mu.Lock()
+	delete(org.members, e.ID)
+	org.mu.Unlock()
 }
 
 // DeleteWorkspace is the event sent when a workspace is deleted.

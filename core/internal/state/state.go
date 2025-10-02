@@ -461,8 +461,17 @@ type AccessKey struct {
 type Organization struct {
 	mu         *sync.Mutex
 	workspaces map[int]*Workspace
+	members    map[int]struct{}
 	ID         int
 	Name       string
+}
+
+// HasMember reports whether the organization has a member with the given ID.
+func (organization *Organization) HasMember(id int) bool {
+	organization.mu.Lock()
+	_, ok := organization.members[id]
+	organization.mu.Unlock()
+	return ok
 }
 
 // Workspace returns the workspace of the organization with identifier id.
