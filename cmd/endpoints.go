@@ -15,6 +15,9 @@ import (
 type endpointHandler func(w http.ResponseWriter, r *http.Request) (any, error)
 
 // endpoints returns the endpoints for the provided API server.
+//
+// Keep patterns in sync with the client scrub patterns in
+// `assets/src/lib/telemetry/scrubURL.ts`.
 func endpoints(s *apisServer) map[string]endpointHandler {
 	api := api{s}
 	connector := connector{s}
