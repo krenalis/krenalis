@@ -170,8 +170,8 @@ func TestParseSettings(t *testing.T) {
 		}
 
 		// Member emails.
-		if s.SkipMemberEmailVerification {
-			t.Error("expected SkipMemberEmailVerification false, got true")
+		if !s.MemberEmailVerificationRequired {
+			t.Error("expected MemberEmailVerificationRequired true, got false")
 		}
 		if s.MemberEmailFrom != "" {
 			t.Errorf("expected MemberEmailFrom empty, got %q", s.MemberEmailFrom)
@@ -714,32 +714,32 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("boolean flags parsing", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION", "true")
+		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "false")
 		s, err := parseSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if !s.SkipMemberEmailVerification {
-			t.Errorf("expected true, got false")
-		}
-
-		setBaseline(t)
-		t.Setenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION", "false")
-		s, err = parseSettings()
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
-		if s.SkipMemberEmailVerification {
+		if s.MemberEmailVerificationRequired {
 			t.Errorf("expected false, got true")
 		}
 
 		setBaseline(t)
-		t.Setenv("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION", "not-bool")
+		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "true")
+		s, err = parseSettings()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !s.MemberEmailVerificationRequired {
+			t.Errorf("expected true, got false")
+		}
+
+		setBaseline(t)
+		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "not-bool")
 		_, err = parseSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid boolean, got nil")
 		}
-		want := "MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
+		want := "MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED must be a boolean: value \"not-bool\" is not a valid boolean value (expected true, false or empty string)"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}

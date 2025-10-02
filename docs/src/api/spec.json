@@ -15109,8 +15109,8 @@
                                 "description": "Location where the JavaScript SDK is served."
                             },
                             {
-                                "name": "skipMemberEmailVerification",
-                                "prefilled": "false",
+                                "name": "memberEmailVerificationRequired",
+                                "prefilled": "true",
                                 "type": {
                                     "kind": "boolean"
                                 },

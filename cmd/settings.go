@@ -79,7 +79,7 @@ func parseSettings() (*Settings, error) {
 		settings.HTTP.Port = port
 	}
 
-	if tls, err := boolEnvVar(envVars.Get("MEERGO_HTTP_TLS_ENABLED")); err != nil {
+	if tls, err := boolEnvVar(envVars.Get("MEERGO_HTTP_TLS_ENABLED"), false); err != nil {
 		return nil, fmt.Errorf("MEERGO_HTTP_TLS_ENABLED must be a boolean: %s", err)
 	} else if tls {
 		certFile, err := resolveFilePath("MEERGO_HTTP_TLS_CERT_FILE")
@@ -203,9 +203,9 @@ func parseSettings() (*Settings, error) {
 		settings.DB.MaxConnections = int32(maxConn)
 	}
 
-	settings.SkipMemberEmailVerification, err = boolEnvVar(envVars.Get("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION"))
+	settings.MemberEmailVerificationRequired, err = boolEnvVar(envVars.Get("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED"), true)
 	if err != nil {
-		return nil, fmt.Errorf("MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION must be a boolean: %s", err)
+		return nil, fmt.Errorf("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED must be a boolean: %s", err)
 	}
 	settings.MemberEmailFrom = envVars.Get("MEERGO_MEMBER_EMAIL_FROM")
 
@@ -285,12 +285,14 @@ func parseSettings() (*Settings, error) {
 
 // boolEnvVar parses the value read from an environment variable as a boolean,
 // returning either the value read (if valid) or an error.
-func boolEnvVar(v string) (bool, error) {
+func boolEnvVar(v string, defaultValue bool) (bool, error) {
 	switch v {
 	case "true":
 		return true, nil
-	case "false", "":
+	case "false":
 		return false, nil
+	case "":
+		return defaultValue, nil
 	default:
 		return false, fmt.Errorf("value %q is not a valid boolean value (expected true, false or empty string)", v)
 	}

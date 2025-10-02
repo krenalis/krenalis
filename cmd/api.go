@@ -144,13 +144,13 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 }
 
 type publicMetadata struct {
-	InstallationID              string `json:"installationID"`
-	ExternalURL                 string `json:"externalURL"`
-	ExternalEventURL            string `json:"externalEventURL"`
-	JavaScriptSDKURL            string `json:"javascriptSDKURL"`
-	SkipMemberEmailVerification bool   `json:"skipMemberEmailVerification"`
-	CanSendMemberPasswordReset  bool   `json:"canSendMemberPasswordReset"`
-	TelemetryLevel              string `json:"telemetryLevel"`
+	InstallationID                  string `json:"installationID"`
+	ExternalURL                     string `json:"externalURL"`
+	ExternalEventURL                string `json:"externalEventURL"`
+	JavaScriptSDKURL                string `json:"javascriptSDKURL"`
+	MemberEmailVerificationRequired bool   `json:"memberEmailVerificationRequired"`
+	CanSendMemberPasswordReset      bool   `json:"canSendMemberPasswordReset"`
+	TelemetryLevel                  string `json:"telemetryLevel"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -164,13 +164,13 @@ type publicMetadata struct {
 // Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
 	metadata := publicMetadata{
-		InstallationID:              api.core.InstallationID(),
-		ExternalURL:                 api.externalURL,
-		ExternalEventURL:            api.externalEventURL,
-		JavaScriptSDKURL:            api.javaScriptSDKURL,
-		SkipMemberEmailVerification: api.skipMemberEmailVerification,
-		CanSendMemberPasswordReset:  api.core.CanSendMemberPasswordReset(),
-		TelemetryLevel:              string(api.sentryTelemetry.level),
+		InstallationID:                  api.core.InstallationID(),
+		ExternalURL:                     api.externalURL,
+		ExternalEventURL:                api.externalEventURL,
+		JavaScriptSDKURL:                api.javaScriptSDKURL,
+		MemberEmailVerificationRequired: api.memberEmailVerificationRequired,
+		CanSendMemberPasswordReset:      api.core.CanSendMemberPasswordReset(),
+		TelemetryLevel:                  string(api.sentryTelemetry.level),
 	}
 	return metadata, nil
 }

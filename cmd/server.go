@@ -37,11 +37,11 @@ const telemetryLevelErrors = core.TelemetryLevelErrors
 const telemetryLevelAll = core.TelemetryLevelAll
 
 type Settings struct {
-	TerminationDelay            time.Duration
-	JavaScriptSDKURL            string
-	SentryTelemetryLevel        core.TelemetryLevel
-	SkipMemberEmailVerification bool
-	HTTP                        struct {
+	TerminationDelay                time.Duration
+	JavaScriptSDKURL                string
+	SentryTelemetryLevel            core.TelemetryLevel
+	MemberEmailVerificationRequired bool
+	HTTP                            struct {
 		Host string
 		Port int
 		TLS  struct {
@@ -126,7 +126,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 	runsOnHTTPS := settings.HTTP.TLS.Enabled || strings.HasPrefix(settings.HTTP.ExternalURL, "https://")
 	apisServer := newAPIsServer(core, runsOnHTTPS, settings.JavaScriptSDKURL, settings.HTTP.ExternalURL, settings.HTTP.ExternalEventURL,
-		settings.SkipMemberEmailVerification, settings.SentryTelemetryLevel, sentryErrorTunnel)
+		settings.MemberEmailVerificationRequired, settings.SentryTelemetryLevel, sentryErrorTunnel)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {

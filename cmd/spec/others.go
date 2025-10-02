@@ -51,9 +51,9 @@ func init() {
 							Description: "Location where the JavaScript SDK is served.",
 						},
 						{
-							Name:        "skipMemberEmailVerification",
+							Name:        "memberEmailVerificationRequired",
 							Type:        types.Boolean(),
-							Prefilled:   `false`,
+							Prefilled:   `true`,
 							Description: "Indicates whether email verification is required when a member registers.",
 						},
 						{

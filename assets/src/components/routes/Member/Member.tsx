@@ -55,7 +55,7 @@ const Member = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			if (!publicMetadata.skipMemberEmailVerification) {
+			if (publicMetadata.memberEmailVerificationRequired) {
 				handleError('Email verification is required');
 				redirect('organization/members');
 				return;

@@ -70,10 +70,10 @@ Configuration used to access the PostgreSQL server used by Meergo.
 
 Configuration for emails that are sent to members.
 
-| Variable                                | Default                         | Description                                                                                                                                    |
-|-----------------------------------------|---------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MEERGO_SKIP_MEMBER_EMAIL_VERIFICATION` | `false` (verification required) | Enable or disable the ability to add new members without requiring email verification.                                                         |
-| `MEERGO_MEMBER_EMAIL_FROM`              |                                 | "From" address from which member emails are sent (mandatory to send emails to members). Example: `Org <org@example.com>` or `org@example.com`. |
+| Variable                                    | Default | Description                                                                                                                                    |
+|---------------------------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED` | `true`  | Require verification of a member's email address when creating a new member. Use `false` to allow adding members without verification.         |
+| `MEERGO_MEMBER_EMAIL_FROM`                  |         | "From" address from which member emails are sent (mandatory to send emails to members). Example: `Org <org@example.com>` or `org@example.com`. |
 
 ## SMTP
 

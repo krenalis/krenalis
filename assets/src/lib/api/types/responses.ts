@@ -178,7 +178,7 @@ interface PublicMetadata {
 	externalURL: string;
 	externalEventURL: string;
 	javascriptSDKURL: string;
-	skipMemberEmailVerification: boolean;
+    memberEmailVerificationRequired: boolean;
 	canSendMemberPasswordReset: boolean;
 	telemetryLevel: TelemetryLevel;
 }

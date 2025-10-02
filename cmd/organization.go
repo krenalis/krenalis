@@ -32,7 +32,7 @@ func (organization organization) AddMember(_ http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, err
 	}
-	if !organization.skipMemberEmailVerification {
+	if organization.memberEmailVerificationRequired {
 		return nil, errors.Unprocessable(core.EmailVerificationRequired, "email verification is required")
 	}
 	var body struct {
