@@ -102,16 +102,16 @@ const Members = () => {
 					<div className='members__title'>
 						<p className='members__title-text'>Members</p>
 						{publicMetadata.memberEmailVerificationRequired ? (
-                            <SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
-                                Invite a new member
-                            </SlButton>
-                        ) : (
-                            <Link path={'organization/members/add'}>
-                                <SlButton size='small' variant='primary' onClick={() => null}>
-                                    Add a new member
-                                </SlButton>
-                            </Link>
-                        )}
+							<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
+								Invite a new member
+							</SlButton>
+						) : (
+							<Link path={'organization/members/add'}>
+								<SlButton size='small' variant='primary' onClick={() => null}>
+									Add a new member
+								</SlButton>
+							</Link>
+						)}
 					</div>
 					<div className='members__list'>
 						{members.map((member) => {
