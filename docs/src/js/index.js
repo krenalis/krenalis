@@ -27,10 +27,19 @@ setup();
 		steps.className = 'steps';
 		parent.insertBefore(steps, first);
 
-		// Move sibling nodes until the next H2 or the end of the parent.
+		// Move sibling nodes until the next H2/non-consecutive H3 or the end of the parent.
 		let n = first;
+		const firstMatch = first.textContent.match(RX);
+		let expected = firstMatch ? parseInt(firstMatch[1], 10) + 1 : null;
 		while (n && n.parentNode === parent) {
 			if (n.tagName === 'H2') break;
+			if (n !== first && n.tagName === 'H3') {
+				const match = n.textContent.match(RX);
+				const hasNumber = match && match[1];
+				const current = hasNumber ? parseInt(match[1], 10) : null;
+				if (!hasNumber || (expected !== null && current !== expected)) break;
+				expected = current !== null ? current + 1 : null;
+			}
 			const next = n.nextSibling;
 			steps.appendChild(n);
 			n = next;
