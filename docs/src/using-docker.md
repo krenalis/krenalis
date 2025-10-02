@@ -42,7 +42,7 @@ Launch Meergo with Docker Compose:
 docker compose up
 ```
 
-> 🧹 If you have previously started Meergo using Docker Compose and want to reset it, perhaps for a clean installation or because you are running a new version of Meergo, you just need to clear the Meergo Docker data by running `docker compose down -v` before starting Meergo with `docker compose up`.
+If you have previously started Meergo using Docker Compose and want to reset it, perhaps for a clean installation or because you are running a new version of Meergo, you must clear the Meergo Docker data with `docker compose down -v`. This command removes containers **and volumes**, permanently deleting all stored data.
 
 ### 3. Open the Admin console
 
