@@ -101,7 +101,7 @@ const Members = () => {
 					</Link>
 					<div className='members__title'>
 						<p className='members__title-text'>Members</p>
-						{publicMetadata.skipMemberEmailVerifiation ? (
+						{publicMetadata.skipMemberEmailVerification ? (
 							<Link path={'organization/members/add'}>
 								<SlButton size='small' variant='primary' onClick={() => null}>
 									Add a new member
