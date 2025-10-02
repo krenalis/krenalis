@@ -278,6 +278,30 @@ details.typescript summary span::before { content: ""; display: inline-block; wi
 .page-support .support .channel a { color: #222; }
 .page-support .support .channel.github-discussions svg { height: 5rem; width: 5rem; }
 
+.steps {
+    border-left: 1px solid #d0d0d0;
+    margin: 1rem 0 3rem .75rem;
+    padding-left: 1.75rem;
+    position: relative;
+}
+
+.step {
+    align-items: center;
+    background-color: #fff;
+    border-radius: .375rem;
+    border: 1px solid #d0d0d0;
+    color: #0007149f;
+    display: flex;
+    font-size: var(--font-size);
+    font-weight: 600;
+    height: 1.7rem;
+    justify-content: center;
+    margin-left: -2.6rem;
+    margin-top: .2rem;
+    position: absolute;
+    width: 1.7rem;
+}
+
 code.language-jinja {
     color: rgb(136, 136, 136);
 }

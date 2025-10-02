@@ -25,7 +25,7 @@ Or, alternatively, follow the detailed steps below.
 
 ## Detailed steps
 
-### 1. Cloning the repository
+### 1. Clone the repository
 
 Clone the Meergo's repository and enter into the repository's directory: 
 
@@ -34,7 +34,7 @@ git clone https://github.com/meergo/meergo
 cd meergo
 ```
 
-### 2. Starting Meergo
+### 2. Start Meergo
 
 Launch Meergo with Docker Compose:
 
@@ -44,7 +44,7 @@ docker compose up
 
 > 🧹 If you have previously started Meergo using Docker Compose and want to reset it, perhaps for a clean installation or because you are running a new version of Meergo, you just need to clear the Meergo Docker data by running `docker compose down -v` before starting Meergo with `docker compose up`.
 
-### 3. Opening the Meergo Admin console
+### 3. Open the Admin console
 
 ⏳ Wait until the initialization of Meergo's databases is complete. This may take a few seconds.
 
