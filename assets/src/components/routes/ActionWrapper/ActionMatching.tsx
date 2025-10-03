@@ -1,5 +1,5 @@
 import React, { forwardRef, useContext, useMemo } from 'react';
-import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
+import { getMatchingComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import ActionContext from '../../../context/ActionContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { flattenSchema, propertyTypesAreEqual, TransformedMapping, validateMatching } from '../../../lib/core/action';
@@ -29,7 +29,7 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 		}
 
 		return {
-			outMatchingItems: getSchemaComboboxItems(filteredSchema),
+			outMatchingItems: getMatchingComboboxItems(filteredSchema),
 			flatOutMatchingSchema: filteredSchema,
 		};
 	}, [action]);
@@ -128,7 +128,7 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 						label={`User's schema property`}
 						name='in'
 						className='action__transformation-input-property'
-						items={getSchemaComboboxItems(flatInMatchingSchema)}
+						items={getMatchingComboboxItems(flatInMatchingSchema)}
 						onSelect={onSelectMatching}
 						isExpression={false}
 						caret={true}

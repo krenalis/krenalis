@@ -168,6 +168,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			usedInPaths = properties
 		}
 	}
+	// Validate the transformation.
 	var usedOutPaths []string
 	var mappingInPaths int
 	if tr := action.Transformation; tr != nil {
@@ -291,14 +292,11 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
-		if !types.IsValidPropertyName(action.Matching.In) {
-			if types.IsValidPropertyPath(action.Matching.In) {
-				return errors.BadRequest("matching properties cannot be property paths, can only be property names")
-			}
-			return errors.BadRequest("input matching property %q is not a valid property name", action.Matching.In)
+		if !types.IsValidPropertyPath(action.Matching.In) {
+			return errors.BadRequest("input matching property %q is not a valid property path", action.Matching.In)
 		}
-		in, ok := inProperties.ByName(action.Matching.In)
-		if !ok {
+		in, err := inProperties.ByPath(action.Matching.In)
+		if err != nil {
 			return errors.BadRequest("input matching property %q not found within the input schema", action.Matching.In)
 		}
 		if !canBeUsedAsMatchingProp(in.Type.Kind()) {
@@ -308,14 +306,11 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema must be valid")
 		}
-		if !types.IsValidPropertyName(action.Matching.Out) {
-			if types.IsValidPropertyPath(action.Matching.Out) {
-				return errors.BadRequest("matching properties cannot be property paths, can only be property names")
-			}
+		if !types.IsValidPropertyPath(action.Matching.Out) {
 			return errors.BadRequest("output matching property %q is not a valid property name", action.Matching.Out)
 		}
-		out, ok := outProperties.ByName(action.Matching.Out)
-		if !ok {
+		out, err := outProperties.ByPath(action.Matching.Out)
+		if err != nil {
 			return errors.BadRequest("output matching property %q not found within the output schema", action.Matching.Out)
 		}
 		if !canBeUsedAsMatchingProp(out.Type.Kind()) {
@@ -333,15 +328,24 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			}
 		}
 		// Check that the output property has not been transformed.
+		// This includes checks on the property itself and all its parent paths.
 		if tr := action.Transformation; tr != nil {
-			if tr.Mapping != nil {
-				if _, ok := tr.Mapping[action.Matching.Out]; ok {
-					return errors.BadRequest("mapping cannot map over the output matching property")
+			path := action.Matching.Out
+			for {
+				if tr.Mapping != nil {
+					if _, ok := tr.Mapping[path]; ok {
+						return errors.BadRequest("mapping cannot map over the output matching property")
+					}
+				} else {
+					if slices.Contains(tr.Function.OutPaths, path) {
+						return errors.BadRequest("transformation function cannot transform over the output matching property")
+					}
 				}
-			} else {
-				if slices.Contains(tr.Function.OutPaths, action.Matching.Out) {
-					return errors.BadRequest("transformation function cannot transform over the output matching property")
+				i := strings.LastIndexByte(path, '.')
+				if i == -1 {
+					break
 				}
+				path = path[:i]
 			}
 		}
 		usedInPaths = append(usedInPaths, action.Matching.In)

@@ -97,8 +97,8 @@ type Action struct {
 //   - text to int uint, uuid, text
 //   - uuid to uuid, text
 type Matching struct {
-	In  string `json:"in"`  // name of the property in the input schema
-	Out string `json:"out"` // name of the property in the output schema
+	In  string `json:"in"`  // path of the property in the input schema
+	Out string `json:"out"` // path of the property in the output schema
 }
 
 // Language represents a transformation language. Valid values are "JavaScript"
@@ -1366,7 +1366,9 @@ func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role
 // Returns an invalid schema in case none of the properties of schema can be
 // used.
 func onlyForMatching(schema types.Type) types.Type {
-	return types.Filter(schema, func(p types.Property) bool {
+	properties := schema.Properties()
+	return types.Prune(schema, func(path string) bool {
+		p, _ := properties.ByPath(path)
 		return canBeUsedAsMatchingProp(p.Type.Kind())
 	})
 }

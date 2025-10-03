@@ -16,6 +16,20 @@ const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): Combob
 	return computeItems(schema as TransformedMapping);
 };
 
+const getMatchingComboboxItems = (schema: TransformedMapping): ComboboxItem[] => {
+	if (schema == null) {
+		return [];
+	}
+	const filteredSchema: TransformedMapping = {};
+	for (const [k, v] of Object.entries(schema)) {
+		const typ = schema[k].type;
+		if (typ !== 'array' && typ !== 'object' && typ !== 'map') {
+			filteredSchema[k] = v;
+		}
+	}
+	return computeItems(filteredSchema);
+};
+
 const getUIPreferencesComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
@@ -153,6 +167,7 @@ const computeItems = (flatSchema: TransformedMapping) => {
 
 export {
 	getSchemaComboboxItems,
+	getMatchingComboboxItems,
 	getUIPreferencesComboboxItems,
 	getIdentityColumnComboboxItems,
 	getLastChangeTimeComboboxItems,

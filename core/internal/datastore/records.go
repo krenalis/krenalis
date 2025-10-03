@@ -68,6 +68,7 @@ func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idPro
 	var joins []meergo.Join
 	var orderBy []meergo.Column
 	var orderDesc bool
+	var matchingIndex int // index of matching column in columns slice; 0 if matching is nil
 
 	if matching == nil {
 
@@ -89,6 +90,12 @@ func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idPro
 		inPropertyColumn, ok := columnByProperty[matching.InProperty]
 		if !ok {
 			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.InProperty)
+		}
+		matchingIndex = slices.IndexFunc(columns, func(c meergo.Column) bool {
+			return c.Name == inPropertyColumn.Name
+		})
+		if matchingIndex == -1 {
+			return nil, fmt.Errorf("matching property %s does not exist in the query properties", matching.InProperty)
 		}
 		joins = []meergo.Join{
 			{
@@ -141,10 +148,11 @@ func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idPro
 	}
 
 	records := &Records{
-		columns:  columns,
-		unflat:   unflat,
-		rows:     rows,
-		matching: matching,
+		columns:       columns,
+		unflat:        unflat,
+		rows:          rows,
+		matching:      matching,
+		matchingIndex: matchingIndex,
 	}
 
 	return records, err
@@ -165,13 +173,14 @@ func andExpressions(expr meergo.Expr, base *meergo.BaseExpr) meergo.Expr {
 
 // Records represents records read from the data warehouse.
 type Records struct {
-	columns  []meergo.Column
-	unflat   unflatRowFunc
-	rows     meergo.Rows
-	matching *Matching
-	last     bool
-	err      error
-	closed   bool
+	columns       []meergo.Column
+	unflat        unflatRowFunc
+	rows          meergo.Rows
+	matching      *Matching
+	matchingIndex int
+	last          bool
+	err           error
+	closed        bool
 }
 
 // All returns an iterator to iterate over the records. After All completes, it
@@ -226,24 +235,27 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 		}
 		defer r.Close()
 
-		// previous contains all previously read records with the same matching property's value.
-		var previous []Record
+		// previous contains all records previously read that share the same matching property value.
+		var previous struct {
+			records []Record
+			value   any // matching property value
+		}
 
 		// yieldPrevious processes previously read records with the same value for the matching property,
 		// and calls the yield function. last reports whether this is the last call to yieldPrevious.
 		// If it returns false, the iteration should be stopped.
 		yieldPrevious := func(last bool) bool {
-			if len(previous) == 0 {
+			if len(previous.records) == 0 {
 				return true
 			}
-			if len(previous) == 1 {
+			if len(previous.records) == 1 {
 				r.last = last
-				return yield(previous[0])
+				return yield(previous.records[0])
 			}
 			// Verify if the previous records have the same User ID.
 			sameUserID := true
-			id := previous[0].ID
-			for _, record := range previous[1:] {
+			id := previous.records[0].ID
+			for _, record := range previous.records[1:] {
 				if record.ID != id {
 					sameUserID = false
 					break
@@ -253,11 +265,11 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				// If updating duplicates is not allowed, return a single record with an error;
 				// otherwise, return all the previous records.
 				if !r.matching.UpdateOnDuplicates {
-					previous = previous[:1]
-					previous[0].Err = fmt.Errorf("duplicates found for the matching property %q in the app users", r.matching.InProperty)
+					previous.records = previous.records[:1]
+					previous.records[0].Err = fmt.Errorf("duplicates found for the matching property %s in the app users", r.matching.InProperty)
 				}
-				for i, record := range previous {
-					r.last = last && i == len(previous)-1
+				for i, record := range previous.records {
+					r.last = last && i == len(previous.records)-1
 					if !yield(record) {
 						return false
 					}
@@ -266,11 +278,11 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			}
 			// The previous records do not have the same User ID.
 			// Remove duplicates and return the records with an error.
-			previous = slices.CompactFunc(previous, func(a, b Record) bool {
+			previous.records = slices.CompactFunc(previous.records, func(a, b Record) bool {
 				return a.ID == b.ID
 			})
-			for i, record := range previous {
-				r.last = last && i == len(previous)-1
+			for i, record := range previous.records {
+				r.last = last && i == len(previous.records)-1
 				record.Err = fmt.Errorf("user has the same «%s» (the matching property) as other users selected for export", r.matching.InProperty)
 				if !yield(record) {
 					return false
@@ -291,6 +303,10 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				r.err = err
 				return
 			}
+			var value any // value of the matching property
+			if r.matching != nil {
+				value = row[r.matchingIndex]
+			}
 			record := Record{
 				ID:         row[last],              // the User ID is the last column.
 				Properties: r.unflat(row[:last-1]), // skip the last 2 columns: the External ID and the User ID.
@@ -298,11 +314,13 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			// If there is no matching app user and the external ID is nil, assign an empty string.
 			record.ExternalID, _ = row[last-1].(string)
 			// Process the previous records if the value of the matching property differs from the previous records.
-			if len(previous) > 0 && record.Properties[r.matching.InProperty] != previous[0].Properties[r.matching.InProperty] {
+			if len(previous.records) > 0 && value != previous.value {
 				yieldPrevious(false)
-				previous = previous[0:0]
+				previous.records = previous.records[0:0]
+				previous.value = nil
 			}
-			previous = append(previous, record)
+			previous.records = append(previous.records, record)
+			previous.value = value
 		}
 		// If there was an error, don't process the previous records as they could be incomplete.
 		if err := r.rows.Err(); err != nil {

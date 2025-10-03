@@ -816,18 +816,39 @@ const TransformationBox = ({
 			const isOutMatchingProperty = !!action.matching?.out && action.matching.out === path;
 			const showMatchingIn = isOutMatchingProperty && property.value === '';
 			const isTableKey = !!action.tableKey && action.tableKey === path;
-			const isDisabled =
+			let isDisabled =
 				isTransformationDisabled ||
 				property.disabled === true ||
 				(isOutMatchingProperty && property.value === '');
 
 			const keys = Object.keys(action.transformation.mapping);
 
+			const children: string[] = [];
+			for (const key of keys) {
+				if (key.startsWith(`${path}.`)) {
+					children.push(key);
+				}
+			}
+
 			const parents: string[] = [];
 			for (const key of keys) {
 				if (path.startsWith(`${key}.`)) {
 					parents.push(key);
 				}
+			}
+
+			let isOutMatchingInHierarchy = false;
+			if (!!action.matching?.out) {
+				for (const k of [...children, parents]) {
+					if (action.matching.out === k) {
+						isOutMatchingInHierarchy = true;
+						break;
+					}
+				}
+			}
+
+			if (isOutMatchingInHierarchy && property.value === '') {
+				isDisabled = true;
 			}
 
 			let closestMappedParent: string;
@@ -957,7 +978,9 @@ const TransformationBox = ({
 							error={
 								isOutMatchingProperty && property.value !== ''
 									? 'Please leave this input empty, as the mapping is automatic in this case'
-									: property.error
+									: isOutMatchingInHierarchy && property.value !== ''
+										? 'Please leave this input empty, as a sub-property is already mapped'
+										: property.error
 							}
 							autocompleteExpressions={true}
 							updateError={updateMappingError}

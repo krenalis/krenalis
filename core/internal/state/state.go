@@ -1252,8 +1252,8 @@ type Action struct {
 }
 
 type Matching struct {
-	In  string
-	Out string
+	In  string // property path.
+	Out string // property path.
 }
 
 // Language represents a transformation language.

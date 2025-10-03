@@ -33,8 +33,8 @@ interface ExpressionToBeExtracted {
 }
 
 interface Matching {
-	in: string;
-	out: string;
+	in: string; // property path.
+	out: string; // property path.
 }
 
 type FilterLogical = 'and' | 'or';

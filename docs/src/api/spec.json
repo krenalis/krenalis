@@ -674,16 +674,16 @@
                                             "kind": "text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the user schema. Its definition must also be included in the action's input schema."
+                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the path of the property in the user schema. Its definition must also be included in the action's input schema."
                                     },
                                     {
                                         "name": "out",
-                                        "prefilled": "\"email\"",
+                                        "prefilled": "\"customer.email\"",
                                         "type": {
                                             "kind": "text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the name of the property in the app's user schema. Its definition must also be included in the action's output schema."
+                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the app's user schema. Its definition must also be included in the action's output schema."
                                     }
                                 ]
                             },
@@ -999,16 +999,16 @@
                                             "kind": "text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the user schema. Its definition must also be included in the action's input schema."
+                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the path of the property in the user schema. Its definition must also be included in the action's input schema."
                                     },
                                     {
                                         "name": "out",
-                                        "prefilled": "\"email\"",
+                                        "prefilled": "\"customer.email\"",
                                         "type": {
                                             "kind": "text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the name of the property in the app's user schema. Its definition must also be included in the action's output schema."
+                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the app's user schema. Its definition must also be included in the action's output schema."
                                     }
                                 ]
                             },

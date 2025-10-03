@@ -52,8 +52,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	// Get the matching properties.
 	var matchingIn, matchingOut types.Property
 	if connector.Type == state.App {
-		matchingIn, _ = action.InSchema.Properties().ByName(action.Matching.In)
-		matchingOut, _ = action.OutSchema.Properties().ByName(action.Matching.Out)
+		matchingIn, _ = action.InSchema.Properties().ByPath(action.Matching.In)
+		matchingOut, _ = action.OutSchema.Properties().ByPath(action.Matching.Out)
 	}
 
 	// Build the transformer.
@@ -75,7 +75,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	if connector.Type == state.App {
 		matching = &datastore.Matching{
 			Action:             action.ID,
-			InProperty:         matchingIn.Name,
+			InProperty:         action.Matching.In,
 			ExportMode:         this.action.ExportMode,
 			UpdateOnDuplicates: action.UpdateOnDuplicates,
 		}
@@ -126,8 +126,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		// so that the alignment check is skipped.
 		outSchema := action.OutSchema
 		if action.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
-			outSchema = types.Filter(outSchema, func(p types.Property) bool {
-				return p.Name != action.Matching.Out
+			outSchema = types.Prune(outSchema, func(path string) bool {
+				return path != action.Matching.Out
 			})
 		}
 		writer, err = this.app().Writer(ctx, outSchema, action.ExportMode, action.Target, ack)
@@ -199,8 +199,8 @@ Records:
 			}
 			// Create or when the outgoing matching property must be updated: compute and preserve the matching value.
 			if isCreate := record.ExternalID == ""; isCreate || matchingOut.UpdateRequired {
-				value := record.Properties[matchingIn.Name]
-				user.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, matchingIn.Name, matchingOut.Name)
+				value, _ := getPropertyValue(record.Properties, action.Matching.In)
+				user.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, action.Matching.In, action.Matching.Out)
 				if err != nil {
 					this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
 					goto Next
@@ -260,7 +260,7 @@ Records:
 				this.core.metrics.TransformationPassed(action.ID, 1)
 				this.core.metrics.OutputValidationPassed(action.ID, 1)
 				if user.MatchingValue != nil {
-					record.Properties[matchingOut.Name] = user.MatchingValue
+					setPropertyValue(record.Properties, action.Matching.Out, user.MatchingValue)
 				}
 				if connector.Type == state.App && len(record.Properties) == 0 {
 					this.core.metrics.FinalizePassed(action.ID, 1)
@@ -321,9 +321,8 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 		return err
 	}
 
-	// Create a schema with only the out matching property.
-	matchingOut, _ := this.action.OutSchema.Properties().ByName(this.action.Matching.Out)
-	schema := types.Object([]types.Property{matchingOut})
+	// Build a schema containing only the hierarchy that leads to the matching output property.
+	schema, _ := types.PruneAtPath(this.action.OutSchema, this.action.Matching.Out)
 
 	records, err := this.app().Users(ctx, schema, nil, time.Time{})
 	if err != nil {
@@ -341,7 +340,7 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 		}
 
 		// Store the user only if the output matching property is not nil.
-		v, ok := user.Properties[matchingOut.Name]
+		v, ok := getPropertyValue(user.Properties, this.action.Matching.Out)
 		if !ok {
 			panic(fmt.Sprintf("out matching property value of action %d is missing", this.action.ID))
 		}
@@ -409,9 +408,9 @@ func errMatchingPropertyConversion(in, ex string) error {
 // It panics if v is nil or the types in and ex are not conforming to these
 // supported conversions. It returns an error if the converted value does not
 // satisfy the constraints of the ex type.
-func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, error) {
+func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, error) {
 	if v == nil {
-		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s ", in.Kind()))
+		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
 	}
 	switch ex.Kind() {
 	case types.TextKind:
@@ -427,16 +426,16 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 		if byteLen, ok := ex.ByteLen(); ok && len(s) > byteLen {
-			return nil, errMatchingPropertyConversion(inName, exName)
+			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		if charLen, ok := ex.CharLen(); ok && utf8.RuneCountInString(s) > charLen {
-			return nil, errMatchingPropertyConversion(inName, exName)
+			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
-			return nil, errMatchingPropertyConversion(inName, exName)
+			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		if re := ex.Regexp(); re != nil && !re.MatchString(s) {
-			return nil, errMatchingPropertyConversion(inName, exName)
+			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		return s, nil
 	case types.IntKind:
@@ -447,20 +446,20 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		case uint:
 			i = int64(v)
 			if i < 0 {
-				return nil, errMatchingPropertyConversion(inName, exName)
+				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}
 		case string:
 			var err error
 			i, err = strconv.ParseInt(v, 10, 64)
 			if err != nil {
-				return nil, errMatchingPropertyConversion(inName, exName)
+				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 		min, max := ex.IntRange()
 		if i < min || i > max {
-			return nil, errMatchingPropertyConversion(inName, exName)
+			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		return int(i), nil
 	case types.UintKind:
@@ -468,7 +467,7 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		switch v := v.(type) {
 		case int:
 			if v < 0 {
-				return nil, errMatchingPropertyConversion(inName, exName)
+				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}
 			i = uint64(v)
 		case uint:
@@ -477,14 +476,14 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 			var err error
 			i, err = strconv.ParseUint(v, 10, 64)
 			if err != nil {
-				return nil, errMatchingPropertyConversion(inName, exName)
+				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 		min, max := ex.UintRange()
 		if i < min || i > max {
-			return nil, errMatchingPropertyConversion(inName, exName)
+			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		return uint(i), nil
 	case types.UUIDKind:
@@ -492,7 +491,7 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		case types.TextKind:
 			u, ok := types.ParseUUID(v.(string))
 			if !ok {
-				return nil, errMatchingPropertyConversion(inName, exName)
+				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}
 			return u, nil
 		case types.UUIDKind:
@@ -502,6 +501,44 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		}
 	}
 	panic(fmt.Sprintf("core: unexpected external kind %s", ex.Kind()))
+}
+
+// getPropertyValue gets a nested property by path in properties. It returns the
+// property's value and true if found, or nil and false if missing.
+func getPropertyValue(properties map[string]any, path string) (any, bool) {
+	for {
+		name, rest, found := strings.Cut(path, ".")
+		if !found {
+			break
+		}
+		pp, ok := properties[name].(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		properties = pp
+		path = rest
+	}
+	value, ok := properties[path]
+	return value, ok
+}
+
+// setPropertyValue sets the value for the given out property path in
+// properties. If the property or a parent exist, setPropertyValue overwrite it.
+func setPropertyValue(properties map[string]any, path string, value any) {
+	for {
+		name, rest, found := strings.Cut(path, ".")
+		if !found {
+			break
+		}
+		pp, ok := properties[name].(map[string]any)
+		if !ok {
+			pp = map[string]any{}
+			properties[name] = pp
+		}
+		properties = pp
+		path = rest
+	}
+	properties[path] = value
 }
 
 // stringifyMatchingValue returns the string representation of a value for a

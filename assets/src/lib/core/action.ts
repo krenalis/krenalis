@@ -889,11 +889,17 @@ const transformInActionToSet = async (
 			throw err;
 		}
 
-		// Add the in matching property to the input schema of the
-		// action, if it does not already exist.
-		const exists = inSchema.properties!.findIndex((p) => p.name === inMatching) !== -1;
-		if (!exists) {
-			inSchema.properties.push(flattenedInputMatchingSchema[inMatching].full);
+		// Add the in matching property to the input schema of the action, if it
+		// isn't already inserted.
+		const isAlreadyInSchema = flattenSchema(inSchema)[inMatching] != null;
+		if (!isAlreadyInSchema) {
+			addPropertyToSchema(
+				inMatching,
+				inMatchingProperty.full,
+				inSchema,
+				flattenedInputSchema,
+				inMatchingProperty.indentation === 0,
+			);
 		}
 
 		// Add the out matching property to the output schema of the action.
@@ -921,11 +927,17 @@ const transformInActionToSet = async (
 					p = a;
 				}
 			}
-			const isAlreadyInSchema = outSchema.properties!.findIndex((p) => p.name === outMatching) !== -1;
+			const isAlreadyInSchema = flattenSchema(outSchema)[outMatching] != null;
 			if (isAlreadyInSchema) {
 				throw new Error(`External matching property cannot be used in the transformation`);
 			}
-			outSchema.properties.push(p);
+			addPropertyToSchema(
+				outMatching,
+				p,
+				outSchema,
+				flattenedOutputSchema,
+				outMatchingProperty.indentation === 0,
+			);
 		}
 	}
 
@@ -1332,7 +1344,7 @@ const addPropertyToSchema = (
 			}
 
 			if (closestInsertedAncestor != null) {
-				const missingHierarchy = buildHierarchy([...missingAncestors, path], fullSchema);
+				const missingHierarchy = buildHierarchy([...missingAncestors, path], fullSchema, property);
 
 				let hierarchy: Property = missingHierarchy;
 				for (const a of [...insertedAncestors, closestInsertedAncestor].reverse()) {
@@ -1356,7 +1368,7 @@ const addPropertyToSchema = (
 				schema.properties.splice(i, 1, hierarchy);
 			} else {
 				// Push the entire hierarchy.
-				const hierarchy = buildHierarchy([...ancestors, path], fullSchema);
+				const hierarchy = buildHierarchy([...ancestors, path], fullSchema, property);
 				schema.properties.push(hierarchy);
 			}
 		}
@@ -1428,11 +1440,14 @@ const getSiblingPaths = (path: string, mapping: TransformedMapping): string[] =>
 	return siblings;
 };
 
-const buildHierarchy = (paths: string[], flatSchema: TransformedMapping): Property => {
+const buildHierarchy = (paths: string[], flatSchema: TransformedMapping, property: Property): Property => {
 	let hierarchy: Property;
 	let i = 0;
 	for (const p of [...paths].reverse()) {
-		const full = flatSchema[p].full;
+		let full = flatSchema[p].full;
+		if (i === 0) {
+			full = property;
+		}
 		if (full.type.kind === 'object') {
 			if (i !== 0) {
 				// empty the properties.
