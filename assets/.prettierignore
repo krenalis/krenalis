@@ -3,4 +3,5 @@
 /package-lock.json
 /package.json
 /readme.md
+/src/constants/snippets/javascript.ts
 /src/shoelace-icons.txt
