@@ -17,7 +17,9 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -110,14 +112,36 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 	return strconv.Itoa(res.PortalId), nil
 }
 
+var propertyGroups = []struct {
+	Name        string
+	HSName      string
+	Description string
+}{
+	{"contact", "contactinformation", "Contact Information"},
+	{"emails", "emailinformation", "Email Information"},
+	{"analytics", "analyticsinformation", "Web Analytics History"},
+	{"activity", "contact_activity", "Contact activity"},
+	{"contact_lifecycle", "contactlcs", "Contact Lifecycle Stage Properties"},
+	{"facebook", "facebook_ads_properties", "Facebook Ads Properties"},
+	{"conversion", "conversioninformation", "Conversion Onformation"},
+	{"deals", "deal_information", "Deal Information"},
+	{"sales", "sales_properties", "Sales Properties"},
+	{"orders", "order_information", "Order Information"},
+	{"cripted", "contactscripted", "Calculated Contact Information"},
+	{"social", "socialmediainformation", "Social Media Information"},
+	{"sms", "smsinformation", "SMS Information"},
+	{"multi_account", "multiaccountmanagement", "Multi Account Management"},
+}
+
 // RecordSchema returns the schema of the specified target and role.
 func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
 
 	var response struct {
 		Results []struct {
-			Hidden  bool   `json:"hidden"`
-			Name    string `json:"name"`
-			Options []struct {
+			Hidden      bool   `json:"hidden"`
+			Name        string `json:"name"`
+			GroupHSName string `json:"groupName"`
+			Options     []struct {
 				Label  string `json:"label"`
 				Value  string `json:"value"`
 				Hidden bool   `json:"hidden"`
@@ -135,7 +159,8 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role
 		return types.Type{}, err
 	}
 
-	properties := make([]types.Property, 0, len(response.Results))
+	groups := map[string][]types.Property{}
+
 	for _, r := range response.Results {
 		typ := propertyType(r.Type)
 		if !typ.Valid() {
@@ -173,7 +198,52 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role
 				property.Type = typ.WithValues(values...)
 			}
 		}
-		properties = append(properties, property)
+		if properties, ok := groups[r.GroupHSName]; ok {
+			groups[r.GroupHSName] = append(properties, property)
+		} else {
+			groups[r.GroupHSName] = []types.Property{property}
+		}
+	}
+
+	// Group properties.
+	properties := make([]types.Property, 0, len(groups))
+	for _, group := range propertyGroups {
+		pp, ok := groups[group.HSName]
+		if !ok {
+			continue
+		}
+		slices.SortStableFunc(pp, func(a, b types.Property) int {
+			hsa := strings.HasPrefix(a.Name, "hs_")
+			hsb := strings.HasPrefix(b.Name, "hs_")
+			switch {
+			case hsa == hsb:
+				return 0
+			case hsa:
+				return 1
+			default:
+				return -1
+			}
+		})
+		properties = append(properties, types.Property{
+			Name:        group.Name,
+			Type:        types.Object(pp),
+			Description: group.Description,
+		})
+		delete(groups, group.HSName)
+	}
+	if len(groups) > 0 {
+		names := make([]string, 0, len(groups))
+		for name := range groups {
+			names = append(names, name)
+		}
+		slices.Sort(names)
+		for _, name := range names {
+			properties = append(properties, types.Property{
+				Name:         name,
+				Type:         types.Object(groups[name]),
+				ReadOptional: true,
+			})
+		}
 	}
 
 	schema, err := types.ObjectOf(properties)
@@ -235,13 +305,17 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 	bb.WriteString(`"after":"`)
 	bb.WriteString(cursor)
 	bb.WriteString(`","limit":100,"properties":[`)
-	for i, p := range schema.Properties().All() {
-		if i > 0 {
-			bb.WriteByte(',')
+	i := 0
+	for _, group := range schema.Properties().All() {
+		for _, p := range group.Type.Properties().All() {
+			if i > 0 {
+				bb.WriteByte(',')
+			}
+			bb.WriteByte('"')
+			bb.WriteString(p.Name)
+			bb.WriteByte('"')
+			i++
 		}
-		bb.WriteByte('"')
-		bb.WriteString(p.Name)
-		bb.WriteByte('"')
 	}
 	bb.WriteString(`]}`)
 
@@ -256,14 +330,25 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 	records := make([]meergo.Record, len(response.Results))
 	for i, result := range response.Results {
 		records[i] = meergo.Record{
-			ID: result.ID,
+			ID:         result.ID,
+			Properties: map[string]any{},
 		}
 		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
 		if err != nil {
 			records[i].Err = fmt.Errorf("HubSpot has returned an invalid value for updatedAt: %q", updatedAt)
 			continue
 		}
-		records[i].Properties = result.Properties
+		// Group properties.
+		for _, group := range schema.Properties().All() {
+			properties := group.Type.Properties()
+			pp := make(map[string]any, properties.Len())
+			for _, p := range properties.All() {
+				if v, ok := result.Properties[p.Name]; ok {
+					pp[p.Name] = v
+				}
+			}
+			records[i].Properties[group.Name] = pp
+		}
 		records[i].LastChangeTime = updatedAt.UTC()
 	}
 
@@ -299,9 +384,15 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		bb.WriteByte('{')
 		if method == "update" {
 			_ = bb.EncodeKeyValue("id", record.ID)
+			_ = bb.WriteByte(',')
 		}
-		_ = bb.EncodeKeyValue("properties", record.Properties)
-		bb.WriteByte('}')
+		bb.WriteString(`"properties":{`)
+		for _, properties := range record.Properties {
+			for name, value := range properties.(map[string]any) {
+				_ = bb.EncodeKeyValue(name, value)
+			}
+		}
+		bb.WriteString("}}")
 		if err := bb.Flush(); err != nil {
 			return err
 		}
