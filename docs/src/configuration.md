@@ -4,15 +4,10 @@
 
 # Configuration
 
-Meergo is configured at two distinct levels simultaneously:
+Most Meergo settings can be managed at runtime through the Admin Console or the API. However, some settings are only read at startup from environment variables, such as those that configure the Meergo server, HTTPS certificates, the internal database, and other core infrastructure.
 
-* an **installation-wide configuration**, which is read when Meergo starts via environment variables. This is a more static form of configuration that is shared across all members and workspaces in the installation. This concerns the Meergo server, HTTP certificates, Meergo's internal database, etc...
-* a **workspace-specific configuration**, which can be easily modified at any time via the GUI by the Meergo Admin console or via [API](/api/). This is the most dynamic form of configuration, which sets things like the *data warehouse*, *connections*, *actions*, *transformations*, *identity resolution*, etc.
+This section describes the [startup settings](configuration/startup-settings) and how to configure them:
 
-**This section documents the first point, the installation-wide configuration**. The workspace configuration is documented in detail on other pages of this manual, because it is the most important configuration for making the best use of the software.
+* If you installed Meergo [using Docker](installation/using-docker), you can configure these variables in the _compose.yml_ file in your _meergo_ directory.
 
-## Where to go from here?
-
-* If you're **[running Meergo via Docker](./using-docker)**, you can probably skip directly to the [documentation for the environment variables](./configuration-reference), as these are declared in the `compose.yml` file.
-
-* If you're **running Meergo from [pre-compiled binaries](./pre-compiled-binaries) or [from source](./from-source)**, you may find it helpful to see the [documentation for the `.env` file](env-file).
+* If you installed Meergo [from pre-compiled binaries](installation/pre-compiled-binaries) or built it [from source](installation/from-source), you can configure them in [the _.env_ file](configuration/the-env-file).

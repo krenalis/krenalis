@@ -25,7 +25,7 @@ Below the Android SDK methods:
 
 ## screen
 
-The screen method implements the [screen call](../../events/screen).
+The screen method implements the [screen call](/events/screen).
 
 The screen call enables you to capture instances when a user views a screen and record associated properties or details about that particular screen.
 
@@ -63,7 +63,7 @@ analytics.screen("Order completed", Builders.buildJsonObject(o -> {
 
 ## track
 
-The track method implements the [track call](../../events/track).
+The track method implements the [track call](/events/track).
 
 The track call is used to send specific events or actions, and associated properties, that occur when users interact with your application or website.
 
@@ -98,7 +98,7 @@ analytics.track("Product added to cart", Builders.buildJsonObject(o -> {
 
 ## identify
 
-The identify method implements the [identify call](../../events/identify).
+The identify method implements the [identify call](/events/identify).
 
 Through an identify call, you can connect previous and upcoming events to a recognized user and save details about them along with their events, such as name and email. The user information can also be utilized to update and enhance unified data from other sources.
 
@@ -136,7 +136,7 @@ analytics.identify("59a20n37ec82", Builders.buildJsonObject(o -> {
 
 ## group
 
-The `group` method implements the [group call](../../events/group). 
+The `group` method implements the [group call](/events/group). 
 
 The group call provides a way to associate individual users with groups, such as a company, organization, team, association, or initiative. A user who has been identified can be associated with several groups.
 
@@ -205,7 +205,7 @@ String userId = analytics.userId();
 
 The `traits` method is used to retrieve a user's traits. These traits are for the anonymous user if the user is anonymous, and for the non-anonymous user if non-anonymous.
 
-To modify the user's traits, use the [`identify`](methods#identify) method or the [`reset`](methods#reset) method.
+To modify the user's traits, use the [`identify`](#identify) method or the [`reset`](#reset) method.
 
 #### Syntax
 
@@ -263,7 +263,7 @@ analytics.alias("12r60m18ff04");
 
 The `anonymousId` method is used to retrieve the Anonymous ID.
 
-To modify the Anonymous ID, use the [`identify`](methods#identify) method or the [`reset`](methods#reset) method.
+To modify the Anonymous ID, use the [`identify`](#identify) method or the [`reset`](#reset) method.
 
 #### Syntax
 

@@ -10,9 +10,9 @@
 
 There are several ways to get started with Meergo:
 
-* [Docker](install-meergo#docker). This method is ideal for local development, testing, and prototyping.
-* [Pre-packaged binaries](install-meergo#pre-packaged-binaries). A convenient method for quickly setting up Meergo without the need to compile from source.
-* [Source code](install-meergo#source-code). Recommended if you wish to customize the executable or contribute to the project by building Meergo directly from the source.
+* [Using Docker](installation/using-docker). The recommended way to quickly try Meergo with a pre-configured local instance and data warehouse, customizable later.
+* [From pre-compiled binaries](installation/pre-compiled-binaries). For more control, run the downloadable binary. Requires manual setup of PostgreSQL and a data warehouse.
+* [From source](installation/from-source). The most advanced method, offering full control and flexibility. Recommended for customizing the executable or contributing by building Meergo from source.
 
 ## Connect a warehouse
 

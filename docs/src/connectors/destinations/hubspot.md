@@ -36,7 +36,7 @@ Before you can add destination connection for HubSpot, you need to create an app
 12. At the bottom left, click **Create app**. The app will be created and its configuration page will open.
 13. Click on the **Auth** tab again.
 14. Copy the Client ID and the Client secret.
-15. Set the `MEERGO_OAUTH_HUBSPOT_CLIENT_ID` and `MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET` environment variables with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the `.env` file in the same directory of the Meergo executable.
+15. Set the `MEERGO_OAUTH_HUBSPOT_CLIENT_ID` and `MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET` environment variables with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the _.env_ file in the same directory of the Meergo executable.
 16. Restart the Meergo server to load the new environment variables.
 
 Now proceed to add destination connection for a:
