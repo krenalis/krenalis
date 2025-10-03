@@ -38,7 +38,7 @@ Before you can add source connection for HubSpot, you need to create an app in H
 15. Set the `MEERGO_OAUTH_HUBSPOT_CLIENT_ID` and `MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET` environment variables with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the _.env_ file in the same directory of the Meergo executable.
 16. Restart the Meergo server to load the new environment variables.
 
-Now proceed to add source connection for a:
+Now proceed to add a source connection for HubSpot:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .

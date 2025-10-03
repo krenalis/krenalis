@@ -26,7 +26,7 @@ Before you can add source connection for Klaviyo, you need to create a private k
 7. Click **Create**.
 8. Copy your **Private Key**.
 
-Now proceed to add source connection for a:
+Now proceed to add a source connection for Klaviyo:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .

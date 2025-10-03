@@ -31,7 +31,7 @@ Before you can add destination connection for a, you need to create a private ke
 10. Set the `MEERGO_OAUTH_MAILCHIMP_CLIENT_ID` and `MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET` environment variables  with the values that you copied earlier, so that these are passed to the Meergo server. Alternatively, you can declare these environment variables in the _.env_ file in the same directory of the Meergo executable.
 11. Restart the Meergo server.
 
-Now proceed to add destination connection for a:
+Now proceed to add a destination connection for Mailchimp:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Sources** page, click **Add a new destination ⊕** .

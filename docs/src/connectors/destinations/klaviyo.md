@@ -29,7 +29,7 @@ Before you can add destination connection for Klaviyo, you need to create a priv
 7. Click **Create**.
 8. Copy your **Private Key**.
 
-Now proceed to add destination connection for a:
+Now proceed to add a destination connection for Klaviyo:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.

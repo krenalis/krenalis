@@ -27,7 +27,7 @@ Before you can add source connection for Stripe, you need to create an API key i
 8. Click **Create key**.
 9. In the screen showing the keys, copy the token of the key you just created.
 
-Now proceed to add source connection for a:
+Now proceed to add a source connection for Stripe:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .

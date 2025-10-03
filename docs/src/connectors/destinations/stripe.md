@@ -27,7 +27,7 @@ Before you can add destination connection for Stripe, you need to create an API 
 8. Click **Create key**.
 9. In the screen showing the keys, copy the token of the key you just created.
 
-Now proceed to add destination connection for a:
+Now proceed to add a destination connection for Stripe:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.

@@ -31,7 +31,7 @@ Before you can add destination connection for Google Analytics, you need to crea
 9. Click **Create**.
 10. On the **Measurement Protocol API secrets** page, copy the secret value corresponding to the previously created key.
 
-Now proceed to add destination connection for a:
+Now proceed to add a destination connection for Google Analytics:
 
 1. From the Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Destinations** page, click **Add a new destination ⊕**.

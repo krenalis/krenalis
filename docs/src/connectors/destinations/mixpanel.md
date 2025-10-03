@@ -47,7 +47,7 @@ Before you can add destination connection for Mixpanel, you need to retrieve the
 
 #### Add (Destination)
 
-Now proceed to add destination connection for a:
+Now proceed to add a destination connection for Mixpanel:
 
 1. In Meergo Admin console, go to **Connections > Destinations**.
 2. On the **Sources** page, click **Add a new destination ⊕** .
