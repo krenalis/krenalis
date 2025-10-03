@@ -55,3 +55,15 @@ func init() {
 		eventContextOs = "Other"
 	}
 }
+
+// discardLogger is an 'analytics-go/Logger' that discard everything without
+// logging anything.
+type discardLogger struct{}
+
+func (dl discardLogger) Logf(format string, args ...any) {
+	// Do nothing.
+}
+
+func (dl discardLogger) Errorf(format string, args ...any) {
+	// Do nothing.
+}
