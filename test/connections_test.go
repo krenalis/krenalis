@@ -70,15 +70,16 @@ func TestConnections(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected Bad Request error, got no error")
 	}
-	if err, ok := err.(*meergotester.StatusCodeError); !ok {
+	errStatusCode, ok := err.(*meergotester.StatusCodeError)
+	if !ok {
 		t.Fatalf("expected *StatusCodeError error, got %T error", err)
-	} else {
-		if err.Code != 400 {
-			t.Fatalf("expected error status 400, got %d", err.Code)
-		}
-		if text := `{"error":{"code":"BadRequest","message":"stream connectors are not currently supported"}}`; err.ResponseText != text {
-			t.Fatalf("expected error text %q, got %q", text, err.ResponseText)
-		}
+	}
+	if errStatusCode.Code != 400 {
+		t.Fatalf("expected error status 400, got error: %v", errStatusCode)
+	}
+	const expectedText = `{"error":{"code":"BadRequest","message":"stream connectors are not currently supported"}}`
+	if expectedText != errStatusCode.ResponseText {
+		t.Fatalf("expected error text %q, got %q", expectedText, errStatusCode.ResponseText)
 	}
 
 }
