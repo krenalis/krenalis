@@ -9119,7 +9119,7 @@
                         "parameters": [
                             {
                                 "name": "url",
-                                "prefilled": "\"https://app.hubspot.com/oauth/authorize\"",
+                                "prefilled": "\"https://app-eu1.hubspot.com/oauth/authorize\"",
                                 "type": {
                                     "kind": "text"
                                 },

@@ -243,7 +243,7 @@ func init() {
 						{
 							Name:        "url",
 							Type:        types.Text(),
-							Prefilled:   `"https://app.hubspot.com/oauth/authorize"`,
+							Prefilled:   `"https://app-eu1.hubspot.com/oauth/authorize"`,
 							Description: "The authorization URL that directs to the consent page of the app. This page requests explicit permissions for the role.",
 						},
 					},
