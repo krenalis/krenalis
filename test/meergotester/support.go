@@ -78,22 +78,6 @@ func (c *Meergo) AbsolutePath(storage int, path string) string {
 	return response.Path
 }
 
-func (c *Meergo) Action(action int) Action {
-	path := fmt.Sprintf("/api/v1/actions/%d", action)
-	var response map[string]any
-	c.MustCall("GET", path, nil, &response)
-	data, err := json.Marshal(response)
-	if err != nil {
-		c.t.Fatal(err)
-	}
-	var a Action
-	err = json.Unmarshal(data, &a)
-	if err != nil {
-		c.t.Fatal(err)
-	}
-	return a
-}
-
 func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) map[string]any {
 	path := fmt.Sprintf("/api/v1/connections/%d/actions/schemas/%s", conn, target)
 	if eventType != "" {
@@ -539,16 +523,16 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 }
 
 func (c *Meergo) TestWorkspaceCreation(name string, userSchema types.Type,
-	displayedProperties DisplayedProperties, whType string, whSettings []byte, mode WarehouseMode) error {
+	uiPreferences UIPreferences, whType string, whSettings []byte, mode WarehouseMode) error {
 	body := map[string]any{
-		"name":                name,
-		"userSchema":          userSchema,
-		"displayedProperties": displayedProperties,
+		"name":       name,
+		"userSchema": userSchema,
 		"warehouse": map[string]any{
 			"type":     whType,
 			"mode":     mode,
 			"settings": json.RawMessage(whSettings),
 		},
+		"uiPreferences": uiPreferences,
 	}
 	return c.Call("POST", "/api/v1/workspaces/test", body, nil)
 }
@@ -638,7 +622,7 @@ func (c *Meergo) Users(properties []string, order string, orderDesc bool, first,
 		Schema types.Type `json:"schema"`
 		Total  int        `json:"total"`
 	}
-	c.MustCall("GET", "/api/v1/users"+"?"+queryString.Encode(), nil, &response)
+	c.MustCall("GET", "/api/v1/users?"+queryString.Encode(), nil, &response)
 	return response.Users, response.Schema, response.Total
 }
 

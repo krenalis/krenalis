@@ -9,47 +9,16 @@ package meergotester
 
 import (
 	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
+	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
 	"github.com/google/uuid"
 )
 
 // These data types are copy-paste of the types defined within the APIs.
-
-type Action struct {
-	ID                   int             `json:"id"`
-	Connection           int             `json:"connection"`
-	Target               *Target         `json:"target"`
-	Name                 string          `json:"name"`
-	Enabled              bool            `json:"enabled"`
-	EventType            *string         `json:"eventType"`
-	Running              bool            `json:"running"`
-	ScheduleStart        *int            `json:"scheduleStart"`
-	SchedulePeriod       *SchedulePeriod `json:"schedulePeriod"`
-	InSchema             types.Type      `json:"inSchema"`
-	OutSchema            types.Type      `json:"outSchema"`
-	Filter               *Filter         `json:"filter"`
-	Transformation       Transformation  `json:"transformation"`
-	Query                *string         `json:"query"`
-	Connector            int             `json:"connector"`
-	Path                 *string         `json:"path"`
-	Sheet                *string         `json:"sheet"`
-	Compression          Compression     `json:"compression"`
-	OrderBy              string          `json:"orderBy"`
-	ExportMode           *ExportMode     `json:"exportMode"`
-	Matching             *Matching       `json:"matching"`
-	UpdateOnDuplicates   *bool           `json:"updateOnDuplicates"`
-	TableName            *string         `json:"tableName"`
-	TableKey             *string         `json:"tableKey"`
-	IdentityColumn       *string         `json:"identityColumn"`
-	LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
-	LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
-}
 
 type ActionToSet struct {
 	Name                 string          `json:"name"`
@@ -58,12 +27,13 @@ type ActionToSet struct {
 	InSchema             types.Type      `json:"inSchema"`
 	OutSchema            types.Type      `json:"outSchema"`
 	Transformation       *Transformation `json:"transformation"`
-	Format               string          `json:"format"`
 	Query                string          `json:"query"`
+	Format               string          `json:"format"`
 	Path                 string          `json:"path"`
 	Sheet                string          `json:"sheet"`
 	Compression          Compression     `json:"compression"`
-	FormatSettings       json.RawMessage `json:"formatSettings,omitempty"`
+	OrderBy              string          `json:"orderBy"`
+	FormatSettings       json.Value      `json:"formatSettings,omitempty"`
 	ExportMode           ExportMode      `json:"exportMode,omitempty"`
 	Matching             Matching        `json:"matching"`
 	UpdateOnDuplicates   bool            `json:"updateOnDuplicates"`
@@ -72,7 +42,7 @@ type ActionToSet struct {
 	IdentityColumn       string          `json:"identityColumn"`
 	LastChangeTimeColumn string          `json:"lastChangeTimeColumn"`
 	LastChangeTimeFormat string          `json:"lastChangeTimeFormat"`
-	OrderBy              string          `json:"orderBy"`
+	Incremental          bool            `json:"incremental"`
 }
 
 type Compression string
@@ -87,20 +57,13 @@ const (
 type Strategy string
 
 type ConnectionToCreate struct {
-	Name              string          `json:"name"`
-	Role              Role            `json:"role"`
-	Connector         string          `json:"connector"`
-	Strategy          *Strategy       `json:"strategy"`
-	LinkedConnections []int           `json:"linkedConnections"`
-	SendingMode       *SendingMode    `json:"sendingMode"`
-	Settings          json.RawMessage `json:"settings"`
-}
-
-type DisplayedProperties struct {
-	Image       string `json:"image"`
-	FirstName   string `json:"firstName"`
-	LastName    string `json:"lastName"`
-	Information string `json:"information"`
+	Name              string       `json:"name"`
+	Role              Role         `json:"role"`
+	Connector         string       `json:"connector"`
+	Strategy          *Strategy    `json:"strategy"`
+	LinkedConnections []int        `json:"linkedConnections"`
+	SendingMode       *SendingMode `json:"sendingMode"`
+	Settings          json.Value   `json:"settings"`
 }
 
 type DummySettings struct {
@@ -166,6 +129,8 @@ const (
 	OpIsOnOrAfter            FilterOperator = "is on or after"
 	OpIsTrue                 FilterOperator = "is true"
 	OpIsFalse                FilterOperator = "is false"
+	OpIsEmpty                FilterOperator = "is empty"
+	OpIsNotEmpty             FilterOperator = "is not empty"
 	OpIsNull                 FilterOperator = "is null"
 	OpIsNotNull              FilterOperator = "is not null"
 	OpExists                 FilterOperator = "exists"
@@ -370,33 +335,30 @@ type TransformationFunction struct {
 	OutPaths     []string `json:"outPaths"`
 }
 
-type WarehouseMode int
+type WarehouseMode string
 
 const (
-	Normal WarehouseMode = iota
-	Inspection
-	Maintenance
+	Normal      WarehouseMode = "Normal"
+	Inspection  WarehouseMode = "Inspection"
+	Maintenance WarehouseMode = "Maintenance"
 )
 
-// MarshalJSON returns mode as the JSON encoding of mode.
-func (mode WarehouseMode) MarshalJSON() ([]byte, error) {
-	switch mode {
-	case Normal:
-		return []byte(`"Normal"`), nil
-	case Inspection:
-		return []byte(`"Inspection"`), nil
-	case Maintenance:
-		return []byte(`"Maintenance"`), nil
-	}
-	return nil, errors.New("invalid warehouse mode")
+type Workspace struct {
+	ID                             int            `json:"id"`
+	Name                           string         `json:"name"`
+	UserSchema                     types.Type     `json:"userSchema"`
+	UserPrimarySources             map[string]int `json:"userPrimarySources"`
+	ResolveIdentitiesOnBatchImport bool           `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string       `json:"identifiers"`
+	WarehouseMode                  WarehouseMode  `json:"warehouseMode"`
+	UIPreferences                  UIPreferences  `json:"uiPreferences"`
 }
 
-type Workspace struct {
-	ID                             int                 `json:"id"`
-	Name                           string              `json:"name"`
-	UserSchema                     types.Type          `json:"userSchema"`
-	UserPrimarySources             map[string]int      `json:"userPrimarySources"`
-	ResolveIdentitiesOnBatchImport bool                `json:"ResolveIdentitiesOnBatchImport"`
-	Identifiers                    []string            `json:"identifiers"`
-	DisplayedProperties            DisplayedProperties `json:"displayedProperties"`
+type UIPreferences struct {
+	UserProfile struct {
+		Image     string `json:"image"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Extra     string `json:"extra"`
+	} `json:"userProfile"`
 }

@@ -32,7 +32,7 @@ func TestWarehouse(t *testing.T) {
 	userSchema := types.Object([]types.Property{
 		{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 	})
-	err := c.TestWorkspaceCreation("PostgreSQL", userSchema, meergotester.DisplayedProperties{},
+	err := c.TestWorkspaceCreation("PostgreSQL", userSchema, meergotester.UIPreferences{},
 		"PostgreSQL", settings, meergotester.Normal)
 	var gotErr string
 	if err != nil {

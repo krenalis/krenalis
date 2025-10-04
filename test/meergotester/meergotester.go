@@ -424,18 +424,16 @@ func (c *Meergo) Start() {
 
 	// Create the workspace and connect the warehouse.
 	var userSchema types.Type
-	var displayedProperties DisplayedProperties
+	var uiPreferences UIPreferences
 	if c.populateUserSchema {
 		userSchema = testsUserSchema
-		displayedProperties = DisplayedProperties{
-			FirstName:   "first_name",
-			LastName:    "last_name",
-			Information: "email",
-		}
+		uiPreferences.UserProfile.FirstName = "first_name"
+		uiPreferences.UserProfile.LastName = "last_name"
+		uiPreferences.UserProfile.Extra = "email"
 	} else {
 		userSchema = minimalUserSchema
 	}
-	id, err := c.createWorkspace("Test workspace", userSchema, displayedProperties)
+	id, err := c.createWorkspace("Test workspace", userSchema, uiPreferences)
 	if err != nil {
 		c.t.Fatalf("cannot create workspace: %s", err)
 	}
@@ -509,15 +507,15 @@ func init() {
 	}
 }
 
-func (c *Meergo) createWorkspace(name string, userSchema types.Type, displayedProperties DisplayedProperties) (int, error) {
+func (c *Meergo) createWorkspace(name string, userSchema types.Type, uiPreferences UIPreferences) (int, error) {
 	req := map[string]any{
-		"name":                name,
-		"userSchema":          userSchema,
-		"displayedProperties": displayedProperties,
+		"name":       name,
+		"userSchema": userSchema,
 		"warehouse": map[string]any{
 			"type":     testsSettings.WarehouseType,
 			"settings": testsSettings.Warehouse,
 		},
+		"uiPreferences": uiPreferences,
 	}
 	var response struct {
 		ID int `json:"id"`
