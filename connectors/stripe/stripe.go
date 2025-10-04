@@ -43,7 +43,8 @@ var baseURL = "https://api.stripe.com"
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:       "Stripe",
+		Code:       "stripe",
+		Label:      "Stripe",
 		Categories: meergo.CategoryEcommerce,
 		AsSource: &meergo.AsAppSource{
 			Targets:     meergo.TargetUser,

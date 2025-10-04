@@ -215,11 +215,11 @@ func (state *State) Connections() []*Connection {
 	return connections
 }
 
-// Connector returns the connector with the provided name.
+// Connector returns the connector with the provided code.
 // The boolean return value reports whether the connector exists.
-func (state *State) Connector(name string) (*Connector, bool) {
+func (state *State) Connector(code string) (*Connector, bool) {
 	state.mu.Lock()
-	c, ok := state.connectors[name]
+	c, ok := state.connectors[code]
 	state.mu.Unlock()
 	return c, ok
 }
@@ -235,7 +235,7 @@ func (state *State) Connectors() []*Connector {
 	}
 	state.mu.Unlock()
 	sort.Slice(connectors, func(i, j int) bool {
-		return connectors[i].Name < connectors[j].Name
+		return connectors[i].Code < connectors[j].Code
 	})
 	return connectors
 }
@@ -608,7 +608,7 @@ func (workspace *Workspace) AccountByCode(connector, code string) (*Account, boo
 	var a *Account
 	workspace.mu.Lock()
 	for _, account := range workspace.accounts {
-		if account.connector.Name == connector && account.Code == code {
+		if account.connector.Code == connector && account.Code == code {
 			a = account
 			break
 		}
@@ -695,7 +695,8 @@ type TimeLayouts struct {
 
 // Connector represents a connector.
 type Connector struct {
-	Name                   string
+	Code                   string
+	Label                  string
 	Icon                   string
 	Type                   ConnectorType
 	Categories             meergo.Categories

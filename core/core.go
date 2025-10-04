@@ -442,19 +442,20 @@ func (core *Core) Close() {
 	core.db.Close()
 }
 
-// Connector returns the connector with the provided name.
+// Connector returns the connector with the provided code.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
-func (core *Core) Connector(name string) (*Connector, error) {
+func (core *Core) Connector(code string) (*Connector, error) {
 	core.mustBeOpen()
-	c, ok := core.state.Connector(name)
+	c, ok := core.state.Connector(code)
 	if !ok {
-		return nil, errors.NotFound("connector %q does not exist", name)
+		return nil, errors.NotFound("connector %q does not exist", code)
 	}
 	connector := Connector{
 		core:            core,
 		connector:       c,
-		Name:            c.Name,
+		Code:            c.Code,
+		Label:           c.Label,
 		Type:            ConnectorType(c.Type),
 		Categories:      categoryBitmaskToCategoryNames(c.Categories),
 		IdentityIDLabel: c.IdentityIDLabel,
@@ -517,14 +518,14 @@ type ConnectorRoleDocumentation struct {
 }
 
 // ConnectorDocumentation returns the documentation of the connector with the
-// provided name.
+// provided code.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
-func (core *Core) ConnectorDocumentation(name string) (*ConnectorDocumentation, error) {
+func (core *Core) ConnectorDocumentation(code string) (*ConnectorDocumentation, error) {
 	core.mustBeOpen()
-	c, ok := core.state.Connector(name)
+	c, ok := core.state.Connector(code)
 	if !ok {
-		return nil, errors.NotFound("connector %q does not exist", name)
+		return nil, errors.NotFound("connector %q does not exist", code)
 	}
 	doc := ConnectorDocumentation{
 		Source:      ConnectorRoleDocumentation(c.Documentation.Source),
@@ -542,7 +543,8 @@ func (core *Core) Connectors() []*Connector {
 		connector := Connector{
 			core:            core,
 			connector:       c,
-			Name:            c.Name,
+			Code:            c.Code,
+			Label:           c.Label,
 			Type:            ConnectorType(c.Type),
 			Categories:      categoryBitmaskToCategoryNames(c.Categories),
 			IdentityIDLabel: c.IdentityIDLabel,
@@ -593,7 +595,7 @@ func (core *Core) Connectors() []*Connector {
 		connectors[i] = &connector
 	}
 	slices.SortFunc(connectors, func(a, b *Connector) int {
-		if a.Name < b.Name {
+		if a.Code < b.Code {
 			return -1
 		}
 		return 1

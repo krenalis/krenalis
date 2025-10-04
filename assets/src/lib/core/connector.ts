@@ -10,7 +10,8 @@ import { Role } from '../api/types/types';
 import { ConnectorOAuth } from '../api/types/connector';
 
 class TransformedConnector {
-	name: string;
+	code: string;
+	label: string;
 	type: ConnectorType;
 	categories: Array<string>;
 	asSource: SourceConnector | null;
@@ -24,7 +25,8 @@ class TransformedConnector {
 	strategies: boolean;
 
 	constructor(
-		name: string,
+		code: string,
+		label: string,
 		type: ConnectorType,
 		categories: Array<string>,
 		asSource: SourceConnector | null,
@@ -37,7 +39,8 @@ class TransformedConnector {
 		icon: string,
 		strategies: boolean,
 	) {
-		this.name = name;
+		this.code = code;
+		this.label = label;
 		this.type = type;
 		this.categories = categories;
 		this.asSource = asSource;
@@ -53,7 +56,7 @@ class TransformedConnector {
 
 	get hasSnippet() {
 		return (
-			this.type === 'SDK' && this.name !== 'Meergo API' && this.name !== 'Segment' && this.name !== 'RudderStack'
+			this.type === 'SDK' && this.code !== 'meergo-api' && this.code !== 'segment' && this.code !== 'rudderstack'
 		);
 	}
 

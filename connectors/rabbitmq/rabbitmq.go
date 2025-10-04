@@ -34,7 +34,8 @@ var overview string
 
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
-		Name:       "RabbitMQ",
+		Code:       "rabbitmq",
+		Label:      "RabbitMQ",
 		Categories: meergo.CategoryEventStreaming,
 		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{

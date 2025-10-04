@@ -228,8 +228,8 @@ func init() {
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Prefilled:   `"HubSpot"`,
-							Description: "The name of the connection's connector.",
+							Prefilled:   `"hubspot"`,
+							Description: "The code of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",

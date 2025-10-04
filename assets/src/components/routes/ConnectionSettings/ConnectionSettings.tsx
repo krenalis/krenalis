@@ -85,7 +85,7 @@ const ConnectionSettings = () => {
 	const tabs = useMemo(() => {
 		const tabs: TabName[] = ['general'];
 
-		if (c.connector.name === 'JavaScript') {
+		if (c.connector.code === 'javascript') {
 			tabs.push('snippet');
 		}
 
@@ -136,7 +136,7 @@ const ConnectionSettings = () => {
 							<div className='connection-settings__panel-title'>Snippet</div>
 							<div className='connection-settings__snippet-copy'>
 								<div>Embed the snippet in your website to start sending events:</div>
-								<Snippet connectorName={c.connector.name} connectionID={c.id} />
+								<Snippet connectorCode={c.connector.code} connectionID={c.id} />
 							</div>
 						</SlTabPanel>
 					</>

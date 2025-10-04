@@ -5,7 +5,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Link } from '../../base/Link/Link';
-import { ADD_CONNECTION_ID_KEY, ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_NAME_KEY } from '../../../constants/storage';
+import { ADD_CONNECTION_ID_KEY, ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_CODE_KEY } from '../../../constants/storage';
 import { UI_BASE_PATH } from '../../../constants/paths';
 
 const errorMessageByOauthErrorCode = {
@@ -30,10 +30,10 @@ const OAuth = () => {
 
 	useEffect(() => {
 		const fetchOAuthToken = async () => {
-			const connectorName = localStorage.getItem(ADD_CONNECTOR_NAME_KEY);
-			const connector = connectors.find((c) => c.name === connectorName);
+			const connectorCode = localStorage.getItem(ADD_CONNECTOR_CODE_KEY);
+			const connector = connectors.find((c) => c.code === connectorCode);
 			if (connector == null) {
-				console.error(`connector with name ${connectorName} does not exist`);
+				console.error(`connector with code ${connectorCode} does not exist`);
 				setErrorMessage(
 					'Something went wrong, please try again and contact the administrator if the error persist',
 				);
@@ -48,7 +48,7 @@ const OAuth = () => {
 					errorDescription != null && errorDescription !== '' ? `\nDescription: ${errorDescription}\n` : ''
 				}${errorURI != null && errorURI !== '' ? `\nURI: ${errorURI}\n` : ''}`;
 				console.error(error);
-				const message = errorMessageByOauthErrorCode[oauthError].replace('[app-placeholder]', connector.name);
+				const message = errorMessageByOauthErrorCode[oauthError].replace('[app-placeholder]', connector.label);
 				setTimeout(() => {
 					setErrorMessage(message);
 				}, 1000);
@@ -56,7 +56,7 @@ const OAuth = () => {
 			}
 			const authCode = url.searchParams.get('code');
 			if (authCode == null || authCode === '') {
-				setErrorMessage(`${connector.name} didn't respond with a valid authentication code.`);
+				setErrorMessage(`${connector.label} didn't respond with a valid authentication code.`);
 				return;
 			}
 			const connectionRole = localStorage.getItem(ADD_CONNECTION_ROLE_KEY);
@@ -70,7 +70,7 @@ const OAuth = () => {
 			}
 			let authToken: string;
 			try {
-				authToken = await api.workspaces.authToken(connectorName, authCode, redirectURI.toString());
+				authToken = await api.workspaces.authToken(connectorCode, authCode, redirectURI.toString());
 			} catch (err) {
 				console.error(err);
 				setErrorMessage(
@@ -79,9 +79,7 @@ const OAuth = () => {
 				return;
 			}
 			setTimeout(() => {
-				setRedirectURL(
-					`connectors/${encodeURIComponent(connectorName)}?role=${connectionRole}&authToken=${authToken}`,
-				);
+				setRedirectURL(`connectors/${connectorCode}?role=${connectionRole}&authToken=${authToken}`);
 			}, 1000);
 		};
 		fetchOAuthToken();

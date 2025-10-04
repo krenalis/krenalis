@@ -264,8 +264,8 @@ func init() {
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Prefilled:   `"Mailchimp"`,
-							Description: "The name of the connection's connector.",
+							Prefilled:   `"mailchimp"`,
+							Description: "The code of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",

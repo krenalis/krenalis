@@ -42,7 +42,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name:       "SFTP",
+		Code:       "sftp",
+		Label:      "SFTP",
 		Categories: meergo.CategoryFileStorage,
 		AsSource: &meergo.AsFileStorageSource{
 			Documentation: meergo.ConnectorRoleDocumentation{

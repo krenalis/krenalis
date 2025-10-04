@@ -40,7 +40,7 @@ var (
 	}
 )
 
-// Connectors returns the registered connectors as a map from the name to its
+// Connectors returns the registered connectors as a map from the code to its
 // ConnectorInfo.
 func Connectors() map[string]ConnectorInfo {
 	registryMu.Lock()
@@ -49,130 +49,130 @@ func Connectors() map[string]ConnectorInfo {
 		len(registry.sdks) + len(registry.streams)
 	connectors := make(map[string]ConnectorInfo, n)
 	for _, c := range registry.apps {
-		connectors[c.Name] = c
+		connectors[c.Code] = c
 	}
 	for _, c := range registry.databases {
-		connectors[c.Name] = c
+		connectors[c.Code] = c
 	}
 	for _, c := range registry.files {
-		connectors[c.Name] = c
+		connectors[c.Code] = c
 	}
 	for _, c := range registry.storages {
-		connectors[c.Name] = c
+		connectors[c.Code] = c
 	}
 	for _, c := range registry.sdks {
-		connectors[c.Name] = c
+		connectors[c.Code] = c
 	}
 	for _, c := range registry.streams {
-		connectors[c.Name] = c
+		connectors[c.Code] = c
 	}
 	return connectors
 }
 
-// RegisterApp makes an app connector available by the provided name. If
-// RegisterApp is called twice with the same name or if new is nil, it panics.
+// RegisterApp makes an app connector available by the provided code. If
+// RegisterApp is called twice with the same code or if new is nil, it panics.
 func RegisterApp[T any](app AppInfo, new AppNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + app.Name)
+		panic("meergo: new function is nil for connector " + app.Code)
 	}
 	app.newFunc = reflect.ValueOf(new)
 	app.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateAppConnector(app)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.apps[app.Name]; dup {
-		panic("meergo: RegisterApp called twice for connector " + app.Name)
+	if _, dup := registry.apps[app.Code]; dup {
+		panic("meergo: RegisterApp called twice for connector " + app.Code)
 	}
-	registry.apps[app.Name] = app
+	registry.apps[app.Code] = app
 }
 
-// RegisterDatabase makes a database connector available by the provided name.
-// If RegisterDatabase is called twice with the same name or if new is nil, it
+// RegisterDatabase makes a database connector available by the provided code.
+// If RegisterDatabase is called twice with the same code or if new is nil, it
 // panics.
 func RegisterDatabase[T any](database DatabaseInfo, new DatabaseNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + database.Name)
+		panic("meergo: new function is nil for connector " + database.Code)
 	}
 	database.newFunc = reflect.ValueOf(new)
 	database.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateDatabaseConnector(database)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.databases[database.Name]; dup {
-		panic("meergo: RegisterDatabase called twice for connector " + database.Name)
+	if _, dup := registry.databases[database.Code]; dup {
+		panic("meergo: RegisterDatabase called twice for connector " + database.Code)
 	}
-	registry.databases[database.Name] = database
+	registry.databases[database.Code] = database
 }
 
-// RegisterFile makes a file connector available by the provided name. If
-// RegisterFile is called twice with the same name or if new is nil, it panics.
+// RegisterFile makes a file connector available by the provided code. If
+// RegisterFile is called twice with the same code or if new is nil, it panics.
 func RegisterFile[T any](file FileInfo, new FileNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + file.Name)
+		panic("meergo: new function is nil for connector " + file.Code)
 	}
 	file.newFunc = reflect.ValueOf(new)
 	file.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateFileConnector(file)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.files[file.Name]; dup {
-		panic("meergo: RegisterFile called twice for connector " + file.Name)
+	if _, dup := registry.files[file.Code]; dup {
+		panic("meergo: RegisterFile called twice for connector " + file.Code)
 	}
-	registry.files[file.Name] = file
+	registry.files[file.Code] = file
 }
 
 // RegisterFileStorage makes a file storage connector available by the provided
-// name. If RegisterFileStorage is called twice with the same name or if new is
+// code. If RegisterFileStorage is called twice with the same code or if new is
 // nil, it panics.
 func RegisterFileStorage[T any](storage FileStorageInfo, new FileStorageNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + storage.Name)
+		panic("meergo: new function is nil for connector " + storage.Code)
 	}
 	storage.newFunc = reflect.ValueOf(new)
 	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateFileStorageConnector(storage)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.storages[storage.Name]; dup {
-		panic("meergo: RegisterFileStorage called twice for connector " + storage.Name)
+	if _, dup := registry.storages[storage.Code]; dup {
+		panic("meergo: RegisterFileStorage called twice for connector " + storage.Code)
 	}
-	registry.storages[storage.Name] = storage
+	registry.storages[storage.Code] = storage
 }
 
-// RegisterSDK makes an SDK connector available by the provided name. If
-// RegisterSDK is called twice with the same name or if new is nil, it
+// RegisterSDK makes an SDK connector available by the provided code. If
+// RegisterSDK is called twice with the same code or if new is nil, it
 // panics.
 func RegisterSDK[T any](sdk SDKInfo, new SDKNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + sdk.Name)
+		panic("meergo: new function is nil for connector " + sdk.Code)
 	}
 	sdk.newFunc = reflect.ValueOf(new)
 	sdk.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateSDKConnector(sdk)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.sdks[sdk.Name]; dup {
-		panic("meergo: RegisterSDK called twice for connector " + sdk.Name)
+	if _, dup := registry.sdks[sdk.Code]; dup {
+		panic("meergo: RegisterSDK called twice for connector " + sdk.Code)
 	}
-	registry.sdks[sdk.Name] = sdk
+	registry.sdks[sdk.Code] = sdk
 }
 
-// RegisterStream makes a stream connector available by the provided name.
-// If RegisterStream is called twice with the same name or if new is nil, it
+// RegisterStream makes a stream connector available by the provided code.
+// If RegisterStream is called twice with the same code or if new is nil, it
 // panics.
 func RegisterStream[T any](stream StreamInfo, new StreamNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + stream.Name)
+		panic("meergo: new function is nil for connector " + stream.Code)
 	}
 	stream.newFunc = reflect.ValueOf(new)
 	stream.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateStreamConnector(stream)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.streams[stream.Name]; dup {
-		panic("meergo: RegisterStream called twice for connector " + stream.Name)
+	if _, dup := registry.streams[stream.Code]; dup {
+		panic("meergo: RegisterStream called twice for connector " + stream.Code)
 	}
-	registry.streams[stream.Name] = stream
+	registry.streams[stream.Code] = stream
 }
 
 // RegisterWarehouseDriver makes a warehouse driver available by the provided
@@ -192,74 +192,74 @@ func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriv
 	registry.warehouses[typ.Name] = typ
 }
 
-// RegisteredApp returns the app registered with the given name.
-// If an app with this name is not registered, it panics.
-func RegisteredApp(name string) AppInfo {
+// RegisteredApp returns the app registered with the given code.
+// If an app with this code is not registered, it panics.
+func RegisteredApp(code string) AppInfo {
 	registryMu.Lock()
-	app, ok := registry.apps[name]
+	app, ok := registry.apps[code]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown app connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown app connector %q (forgotten import?)", code))
 	}
 	return app
 }
 
-// RegisteredDatabase returns the database registered with the given name.
-// If a database with this name is not registered, it panics.
-func RegisteredDatabase(name string) DatabaseInfo {
+// RegisteredDatabase returns the database registered with the given code.
+// If a database with this code is not registered, it panics.
+func RegisteredDatabase(code string) DatabaseInfo {
 	registryMu.Lock()
-	database, ok := registry.databases[name]
+	database, ok := registry.databases[code]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown database connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown database connector %q (forgotten import?)", code))
 	}
 	return database
 }
 
-// RegisteredStream returns the stream registered with the given name.
-// If a stream with this name is not registered, it panics.
-func RegisteredStream(name string) StreamInfo {
+// RegisteredStream returns the stream registered with the given code.
+// If a stream with this code is not registered, it panics.
+func RegisteredStream(code string) StreamInfo {
 	registryMu.Lock()
-	stream, ok := registry.streams[name]
+	stream, ok := registry.streams[code]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown stream connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown stream connector %q (forgotten import?)", code))
 	}
 	return stream
 }
 
-// RegisteredFile returns the file registered with the given name.
-// If a file with this name is not registered, it panics.
-func RegisteredFile(name string) FileInfo {
+// RegisteredFile returns the file registered with the given code.
+// If a file with this code is not registered, it panics.
+func RegisteredFile(code string) FileInfo {
 	registryMu.Lock()
-	file, ok := registry.files[name]
+	file, ok := registry.files[code]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown file connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown file connector %q (forgotten import?)", code))
 	}
 	return file
 }
 
 // RegisteredFileStorage returns the file storage registered with the given
-// name. If a file storage with this name is not registered, it panics.
-func RegisteredFileStorage(name string) FileStorageInfo {
+// code. If a file storage with this code is not registered, it panics.
+func RegisteredFileStorage(code string) FileStorageInfo {
 	registryMu.Lock()
-	storage, ok := registry.storages[name]
+	storage, ok := registry.storages[code]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown file storage connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown file storage connector %q (forgotten import?)", code))
 	}
 	return storage
 }
 
-// RegisteredSDK returns the SDK registered with the given name.
-// If an SDK with this name is not registered, it panics.
-func RegisteredSDK(name string) SDKInfo {
+// RegisteredSDK returns the SDK registered with the given code.
+// If an SDK with this code is not registered, it panics.
+func RegisteredSDK(code string) SDKInfo {
 	registryMu.Lock()
-	sdk, ok := registry.sdks[name]
+	sdk, ok := registry.sdks[code]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown SDK connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown SDK connector %q (forgotten import?)", code))
 	}
 	return sdk
 }
@@ -302,21 +302,22 @@ func validateCategories(connectorName string, categories Categories) {
 // In case of a validation error, this function panics.
 func validateAppConnector(app AppInfo) {
 
-	validateCategories(app.Name, app.Categories)
+	validateConnectorCode("App", app.Code)
+	validateCategories(app.Code, app.Categories)
 
 	if app.AsSource == nil && app.AsDestination == nil {
-		panic(fmt.Sprintf("connector %s: AppInfo must include at least the AsSource and AsDestination fields", app.Name))
+		panic(fmt.Sprintf("connector %s: AppInfo must include at least the AsSource and AsDestination fields", app.Code))
 	}
 
 	if app.AsSource != nil {
 		targets := app.AsSource.Targets
 		//if targets == 0 || (targets&^(TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^TargetUser) != 0 {
-			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible value is meergo.TargetUser", app.Name))
+			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible value is meergo.TargetUser", app.Code))
 		}
 		if targets&TargetUser != 0 {
 			if !app.ct.Implements(reflect.TypeFor[RecordFetcher]()) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 			}
 		}
 	}
@@ -325,18 +326,18 @@ func validateAppConnector(app AppInfo) {
 		targets := app.AsDestination.Targets
 		//if targets == 0 || (targets&^(TargetEvent|TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^(TargetEvent|TargetUser)) != 0 {
-			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.TargetEvent, meergo.TargetUser, or a combination of them using the bitwise OR operator", app.Name))
+			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.TargetEvent, meergo.TargetUser, or a combination of them using the bitwise OR operator", app.Code))
 		}
 		if targets&TargetEvent != 0 {
 			if !app.ct.Implements(reflect.TypeFor[EventSender]()) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 			}
 			if app.AsDestination.SendingMode == None {
-				panic(fmt.Sprintf("connector %s is declared to support Event as destination, but it does not specify a sending mode", app.Name))
+				panic(fmt.Sprintf("connector %s is declared to support Event as destination, but it does not specify a sending mode", app.Code))
 			}
 			if targets&TargetUser != 0 {
 				if !app.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
-					panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
+					panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 				}
 			}
 		}
@@ -346,7 +347,7 @@ func validateAppConnector(app AppInfo) {
 		if (app.AsSource == nil || app.AsSource.Targets&TargetUser == 0) &&
 			(app.AsDestination == nil || app.AsDestination.Targets&TargetUser == 0) {
 			panic(fmt.Sprintf("connector %s: cannot specify a term for user and/or users"+
-				" if it does not support the User target neither as source nor as destination", app.Name))
+				" if it does not support the User target neither as source nor as destination", app.Code))
 		}
 	}
 
@@ -366,14 +367,14 @@ func validateAppConnector(app AppInfo) {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if !app.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 		}
 	} else if !hasSourceSettings && !hasDestinationSettings {
 		iface := reflect.TypeFor[interface {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if app.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: ServeUI is implemented, but neither app.AsSource.HasSettings nor app.AsDestination.HasSettings is set to true", app.Name))
+			panic(fmt.Sprintf("connector %s: ServeUI is implemented, but neither app.AsSource.HasSettings nor app.AsDestination.HasSettings is set to true", app.Code))
 		}
 	}
 
@@ -382,7 +383,7 @@ func validateAppConnector(app AppInfo) {
 			OAuthAccount(ctx context.Context) (string, error)
 		}]()
 		if !app.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 		}
 	}
 
@@ -391,23 +392,23 @@ func validateAppConnector(app AppInfo) {
 	for _, group := range app.EndpointGroups {
 		requireOAuth = requireOAuth || group.RequireOAuth
 		if group.Patterns != nil && len(group.Patterns) == 0 {
-			panic(fmt.Sprintf("connector %s: Patterns must be nil or contain at least one pattern", app.Name))
+			panic(fmt.Sprintf("connector %s: Patterns must be nil or contain at least one pattern", app.Code))
 		}
 		if group.RateLimit.RequestsPerSecond <= 0 {
-			panic(fmt.Sprintf("connector %s: RequestsPerSecond must be > 0", app.Name))
+			panic(fmt.Sprintf("connector %s: RequestsPerSecond must be > 0", app.Code))
 		}
 		if group.RateLimit.Burst <= 0 {
-			panic(fmt.Sprintf("connector %s: Burst must be > 0", app.Name))
+			panic(fmt.Sprintf("connector %s: Burst must be > 0", app.Code))
 		}
 		if group.RateLimit.MaxConcurrentRequests < 0 {
-			panic(fmt.Sprintf("connector %s: MaxConcurrentRequests must be >= 0", app.Name))
+			panic(fmt.Sprintf("connector %s: MaxConcurrentRequests must be >= 0", app.Code))
 		}
 	}
 	if app.OAuth.AuthURL == "" && requireOAuth {
-		panic(fmt.Sprintf("connector %s: RequireOAuth cannot be true when OAuth is not supported", app.Name))
+		panic(fmt.Sprintf("connector %s: RequireOAuth cannot be true when OAuth is not supported", app.Code))
 	}
 	if app.OAuth.AuthURL != "" && !requireOAuth {
-		panic(fmt.Sprintf("connector %s: OAuth is supported, but there are no endpoint groups that require it", app.Name))
+		panic(fmt.Sprintf("connector %s: OAuth is supported, but there are no endpoint groups that require it", app.Code))
 	}
 
 }
@@ -418,7 +419,8 @@ func validateAppConnector(app AppInfo) {
 //
 // In case of a validation error, this function panics.
 func validateDatabaseConnector(database DatabaseInfo) {
-	validateCategories(database.Name, database.Categories)
+	validateConnectorCode("Database", database.Code)
+	validateCategories(database.Code, database.Categories)
 	iface := reflect.TypeFor[interface {
 		Close() error
 		Columns(ctx context.Context, table string) ([]Column, error)
@@ -428,7 +430,7 @@ func validateDatabaseConnector(database DatabaseInfo) {
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 	}]()
 	if !database.ct.Implements(iface) {
-		panic(fmt.Sprintf("connector %s: it does not implement the required methods", database.Name))
+		panic(fmt.Sprintf("connector %s: it does not implement the required methods", database.Code))
 	}
 }
 
@@ -439,14 +441,15 @@ func validateDatabaseConnector(database DatabaseInfo) {
 // In case of a validation error, this function panics.
 func validateFileConnector(file FileInfo) {
 
-	validateCategories(file.Name, file.Categories)
+	validateConnectorCode("File", file.Code)
+	validateCategories(file.Code, file.Categories)
 
 	if file.AsSource != nil {
 		iface := reflect.TypeFor[interface {
 			Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: inconsistency between the declared functionalities and the methods it actually implements", file.Name))
+			panic(fmt.Sprintf("connector %s: inconsistency between the declared functionalities and the methods it actually implements", file.Code))
 		}
 	}
 
@@ -456,7 +459,7 @@ func validateFileConnector(file FileInfo) {
 			ContentType(ctx context.Context) string
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
 		}
 	}
 
@@ -465,7 +468,7 @@ func validateFileConnector(file FileInfo) {
 			Sheets(ctx context.Context, r io.Reader) ([]string, error)
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
 		}
 	}
 
@@ -475,7 +478,7 @@ func validateFileConnector(file FileInfo) {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
 		}
 	}
 
@@ -488,14 +491,15 @@ func validateFileConnector(file FileInfo) {
 // In case of a validation error, this function panics.
 func validateFileStorageConnector(fileStorage FileStorageInfo) {
 
-	validateCategories(fileStorage.Name, fileStorage.Categories)
+	validateConnectorCode("File Storage", fileStorage.Code)
+	validateCategories(fileStorage.Code, fileStorage.Categories)
 
 	iface := reflect.TypeFor[interface {
 		AbsolutePath(ctx context.Context, name string) (string, error)
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 	}]()
 	if !fileStorage.ct.Implements(iface) {
-		panic(fmt.Sprintf("connector %s: it does not implement the minimum required methods", fileStorage.Name))
+		panic(fmt.Sprintf("connector %s: it does not implement the minimum required methods", fileStorage.Code))
 	}
 
 	if fileStorage.AsSource != nil {
@@ -503,7 +507,7 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 			Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 		}]()
 		if !fileStorage.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Code))
 		}
 	}
 
@@ -512,7 +516,7 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 			Write(ctx context.Context, r io.Reader, name, contentType string) error
 		}]()
 		if !fileStorage.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Name))
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Code))
 		}
 	}
 
@@ -524,7 +528,8 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 //
 // In case of a validation error, this function panics.
 func validateSDKConnector(sdk SDKInfo) {
-	validateCategories(sdk.Name, sdk.Categories)
+	validateConnectorCode("SDK", sdk.Code)
+	validateCategories(sdk.Code, sdk.Categories)
 }
 
 // validateStreamConnector validates the passed stream connector, performing
@@ -533,13 +538,29 @@ func validateSDKConnector(sdk SDKInfo) {
 //
 // In case of a validation error, this function panics.
 func validateStreamConnector(stream StreamInfo) {
-	validateCategories(stream.Name, stream.Categories)
+	validateConnectorCode("Stream", stream.Code)
+	validateCategories(stream.Code, stream.Categories)
 	iface := reflect.TypeFor[interface {
 		Close() error
 		Receive(ctx context.Context) (event []byte, ack func(), err error)
 		Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error
 	}]()
 	if !stream.ct.Implements(iface) {
-		panic(fmt.Sprintf("connector %s: it does not implement the required methods", stream.Name))
+		panic(fmt.Sprintf("connector %s: it does not implement the required methods", stream.Code))
+	}
+}
+
+// validateConnectorCode validates a connector code. Valid codes contain only
+// [a-z0-9-].
+func validateConnectorCode(typ string, code string) {
+	if code == "" {
+		panic(fmt.Sprintf("code is missing for a connector of type %s", typ))
+	}
+	for i := 0; i < len(code); i++ {
+		c := code[i]
+		if 'a' <= c && c <= 'z' || '0' <= c && c <= '9' || c == '-' {
+			continue
+		}
+		panic(fmt.Sprintf("connector code %s is not valid; valid codes contain only [a-z0-9-]", code))
 	}
 }

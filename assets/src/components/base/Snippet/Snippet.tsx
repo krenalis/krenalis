@@ -8,7 +8,7 @@ import SyntaxHighlight from '../SyntaxHighlight/SyntaxHighlight';
 import Section from '../../base/Section/Section';
 
 interface SnippetProps {
-	connectorName: string;
+	connectorCode: string;
 	connectionID: number;
 }
 
@@ -18,7 +18,7 @@ interface SnippetFile {
 	DOCUMENTATION_LINK: string;
 }
 
-const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
+const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 	const [keys, setKeys] = useState<string[]>([]);
 	const [snippet, setSnippet] = useState<string>();
 	const [installCommand, setInstallCommand] = useState<string>();
@@ -27,14 +27,14 @@ const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 	const { api, handleError, redirect, publicMetadata } = useContext(AppContext);
 
 	useEffect(() => {
-		import(`../../../constants/snippets/${connectorName.toLowerCase().replace(/\./g, '')}.ts`).then(
+		import(`../../../constants/snippets/${connectorCode.toLowerCase().replace(/\./g, '')}.ts`).then(
 			(file: SnippetFile) => {
 				setSnippet(file.SNIPPET);
 				setInstallCommand(file.INSTALL_COMMAND);
 				setDocumentationLink(file.DOCUMENTATION_LINK);
 			},
 		);
-	}, [connectorName]);
+	}, [connectorCode]);
 
 	useEffect(() => {
 		const fetchKeys = async () => {
@@ -63,31 +63,31 @@ const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 		const s1 = snippet.replace('"writekey"', JSON.stringify(keys[0]));
 		const s2 = s1.replace('"endpoint"', JSON.stringify(publicMetadata.externalEventURL));
 		let s3 = s2;
-		if (connectorName === 'JavaScript') {
+		if (connectorCode === 'javascript') {
 			s3 = s2.replace('"javaScriptSDKURL"', JSON.stringify(publicMetadata.javascriptSDKURL));
 		}
 		return s3;
-	}, [connectorName, snippet, keys, publicMetadata.externalEventURL]);
+	}, [connectorCode, snippet, keys, publicMetadata.externalEventURL]);
 
 	let applicationType = 'server';
-	if (connectorName === 'Android' || connectorName === 'Apple') {
+	if (connectorCode === 'android' || connectorCode === 'apple') {
 		applicationType = 'app';
-	} else if (connectorName === 'JavaScript') {
+	} else if (connectorCode === 'javascript') {
 		applicationType = 'website';
 	}
 
 	let language = 'html';
-	if (connectorName === 'Python') {
+	if (connectorCode === 'python') {
 		language = 'python';
-	} else if (connectorName === 'Go') {
+	} else if (connectorCode === 'go') {
 		language = 'go';
-	} else if (connectorName === '.NET') {
+	} else if (connectorCode === 'dotnet') {
 		language = 'csharp';
-	} else if (connectorName === 'Android') {
+	} else if (connectorCode === 'android') {
 		language = 'kotlin';
-	} else if (connectorName === 'Java') {
+	} else if (connectorCode === 'java') {
 		language = 'java';
-	} else if (connectorName === 'Node.js') {
+	} else if (connectorCode === 'nodejs') {
 		language = 'javascript';
 	}
 
@@ -110,12 +110,12 @@ const Snippet = ({ connectorName, connectionID }: SnippetProps) => {
 					<>
 						<SyntaxHighlight
 							className='syntax-highlight--install-command'
-							language={connectorName === 'Java' || connectorName === 'Android' ? 'markdown' : 'bash'}
-							icon={connectorName === 'Java' || connectorName === 'Android' ? 'info-circle' : 'terminal'}
+							language={connectorCode === 'java' || connectorCode === 'android' ? 'markdown' : 'bash'}
+							icon={connectorCode === 'java' || connectorCode === 'android' ? 'info-circle' : 'terminal'}
 						>
 							{installCommand}
 						</SyntaxHighlight>
-						{connectorName !== 'Java' && connectorName !== 'Android' && (
+						{connectorCode !== 'java' && connectorCode !== 'android' && (
 							<SlCopyButton value={installCommand} />
 						)}
 					</>

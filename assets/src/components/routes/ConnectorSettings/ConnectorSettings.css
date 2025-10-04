@@ -30,7 +30,7 @@
 	align-items: center;
 }
 
-.connector-settings__name-field {
+.connector-settings__label-field {
 	max-width: 280px;
 	padding-top: 2em;
 }

@@ -21,15 +21,15 @@ const FileConnector = () => {
 	const location = useLocation();
 
 	const file = useMemo(() => {
-		const name = decodeURIComponent(params.name);
-		const f = connectors.find((c) => c.name === name);
+		const code = params.code;
+		const f = connectors.find((c) => c.code === code);
 		if (f == null) {
-			handleError(`Connector with name ${name} doesn't exist`);
+			handleError(`Connector with code ${code} doesn't exist`);
 			redirect('connectors');
 			return;
 		}
 		return f;
-	}, [params.name]);
+	}, [params.code]);
 
 	const role = useMemo(() => {
 		const r = new URL(document.location.href).searchParams.get('role');
@@ -51,7 +51,7 @@ const FileConnector = () => {
 	}, [connectors]);
 
 	useLayoutEffect(() => {
-		setTitle(`Add ${file.name} file`);
+		setTitle(`Add ${file.label} file`);
 	}, [file]);
 
 	const onStorageChange = (e) => {
@@ -60,7 +60,7 @@ const FileConnector = () => {
 
 	const onAddActionType = (target: String) => {
 		const id = storages.find((s) => s.id === selectedStorage).id;
-		redirect(`connections/${id}/actions/add/${target}?format=${encodeURIComponent(file.name)}`);
+		redirect(`connections/${id}/actions/add/${target}?format=${file.code}`);
 	};
 
 	return (
@@ -112,8 +112,8 @@ const FileConnector = () => {
 								name={`${role === 'Source' ? 'Import' : 'Export'} users`}
 								description={
 									role === 'Source'
-										? `Import users from a${startsWithVowelSound(file.name) ? 'n' : ''} ${file.name} file`
-										: `Export users to a${startsWithVowelSound(file.name) ? 'n' : ''} ${file.name} file`
+										? `Import users from a${startsWithVowelSound(file.label) ? 'n' : ''} ${file.label} file`
+										: `Export users to a${startsWithVowelSound(file.label) ? 'n' : ''} ${file.label} file`
 								}
 								className='file-connector__action-type'
 								action={
@@ -133,7 +133,7 @@ const FileConnector = () => {
 								key={'groups-action-type'}
 								icon={getConnectorLogo(file.icon)}
 								name='Import groups'
-								description={`Import groups from ${file.name} into the data warehouse`}
+								description={`Import groups from ${file.label} into the data warehouse`}
 								className='file-connector__action-type'
 								action={
 									<SlButton

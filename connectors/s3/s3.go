@@ -42,7 +42,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name:       "S3",
+		Code:       "s3",
+		Label:      "S3",
 		Categories: meergo.CategoryFileStorage,
 		AsSource: &meergo.AsFileStorageSource{
 			Documentation: meergo.ConnectorRoleDocumentation{

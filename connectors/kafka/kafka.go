@@ -38,7 +38,8 @@ var overview string
 
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
-		Name:       "Kafka",
+		Code:       "kafka",
+		Label:      "Kafka",
 		Categories: meergo.CategoryEventStreaming,
 		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{

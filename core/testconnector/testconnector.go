@@ -62,15 +62,15 @@ func DecodeNDJSON(r io.Reader, enc meergo.ContentEncoding) ([]json.Value, error)
 	return values, nil
 }
 
-// NewApp returns an instance of the connector with the specified name for
+// NewApp returns an instance of the connector with the specified code for
 // testing purposes. Settings are the connector settings, encoded in JSON and
 // passed to the connector instance.
 //
-// It panics if no connector with the specified name has been registered.
-func NewApp(name string, settings any) (any, error) {
-	registeredApp := meergo.RegisteredApp(name)
+// It panics if no connector with the specified code has been registered.
+func NewApp(code string, settings any) (any, error) {
+	registeredApp := meergo.RegisteredApp(code)
 	connector := &state.Connector{
-		Name:           name,
+		Code:           code,
 		EndpointGroups: registeredApp.EndpointGroups,
 	}
 	s, err := json.Marshal(settings)

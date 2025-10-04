@@ -22,7 +22,8 @@ var overview string
 
 func init() {
 	meergo.RegisterSDK(meergo.SDKInfo{
-		Name:       "Meergo API",
+		Code:       "meergo-api",
+		Label:      "Meergo API",
 		Categories: meergo.CategorySDKAndAPI,
 		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{

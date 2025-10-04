@@ -133,8 +133,8 @@ func init() {
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Prefilled:   `"Android"`,
-							Description: "The name of the connection's connector.",
+							Prefilled:   `"android"`,
+							Description: "The code of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",

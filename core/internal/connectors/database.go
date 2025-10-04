@@ -75,10 +75,10 @@ type Database struct {
 func (connectors *Connectors) Database(connection *state.Connection) *Database {
 	connector := connection.Connector()
 	database := &Database{
-		connector:   connector.Name,
+		connector:   connector.Code,
 		timeLayouts: &connector.TimeLayouts,
 	}
-	inner, err := meergo.RegisteredDatabase(connector.Name).New(&meergo.DatabaseEnv{
+	inner, err := meergo.RegisteredDatabase(connector.Code).New(&meergo.DatabaseEnv{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})

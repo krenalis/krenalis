@@ -81,7 +81,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityColumn:       "identity",
 				LastChangeTimeColumn: "timestamp",
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
-				Format:               "CSV",
+				Format:               "csv",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
 					"HasColumnNames": true,
@@ -111,7 +111,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityColumn:       "identity",
 				LastChangeTimeColumn: "timestamp",
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
-				Format:               "CSV",
+				Format:               "csv",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
 					"HasColumnNames": true,
@@ -128,7 +128,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
-				Format:  "CSV",
+				Format:  "csv",
 				OrderBy: "email",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
@@ -158,7 +158,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityColumn:       "identity",
 				LastChangeTimeColumn: "timestamp",
-				Format:               "CSV",
+				Format:               "csv",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
 					"HasColumnNames": true,
@@ -187,7 +187,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				LastChangeTimeColumn: "timestamp",
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
-				Format:               "CSV",
+				Format:               "csv",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
 					"HasColumnNames": true,
@@ -215,7 +215,7 @@ func TestActionsCreation(t *testing.T) {
 					},
 				},
 				IdentityColumn: "- - invalid - -",
-				Format:         "CSV",
+				Format:         "csv",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
 					"HasColumnNames": true,
@@ -242,7 +242,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityColumn:       "email",
 				LastChangeTimeColumn: "timestamp",
-				Format:               "CSV",
+				Format:               "csv",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
 					"HasColumnNames": true,
@@ -257,7 +257,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityColumn:       "email",
 				LastChangeTimeColumn: "timestamp",
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
-				Format:               "CSV",
+				Format:               "csv",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
 					"HasColumnNames": true,
@@ -285,7 +285,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityColumn:       "email",
 				LastChangeTimeColumn: "timestamp",
 				LastChangeTimeFormat: "%Y-%m-%d %H:%M:%S",
-				Format:               "CSV",
+				Format:               "csv",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Separator":      ",",
 					"HasColumnNames": true,

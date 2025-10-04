@@ -1,5 +1,5 @@
 const WORKSPACE_ID_KEY = 'meergo_ui_workspace_id';
-const ADD_CONNECTOR_NAME_KEY = 'meergo_ui_add_connector_name';
+const ADD_CONNECTOR_CODE_KEY = 'meergo_ui_add_connector_code';
 const ADD_CONNECTION_ROLE_KEY = 'meergo_ui_add_connection_role';
 const ADD_CONNECTION_ID_KEY = 'meergo_ui_add_connection_id';
 const IS_PASSWORDLESS_KEY = 'meergo_ui_is_passwordless';
@@ -12,7 +12,7 @@ const USERS_PROPERTIES_KEY = 'meergo_ui_users_properties';
 // can be cleared when resetting the client state, for example to attempt fixing
 // an unhandled error in the UI.
 const storageKeysToBeRemoved = [
-	ADD_CONNECTOR_NAME_KEY,
+	ADD_CONNECTOR_CODE_KEY,
 	ADD_CONNECTION_ROLE_KEY,
 	ADD_CONNECTION_ID_KEY,
 	IS_PASSWORDLESS_KEY,
@@ -24,7 +24,7 @@ const storageKeysToBeRemoved = [
 
 export {
 	WORKSPACE_ID_KEY,
-	ADD_CONNECTOR_NAME_KEY,
+	ADD_CONNECTOR_CODE_KEY,
 	ADD_CONNECTION_ROLE_KEY,
 	ADD_CONNECTION_ID_KEY,
 	IS_PASSWORDLESS_KEY,

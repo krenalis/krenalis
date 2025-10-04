@@ -58,7 +58,7 @@ const addDummySource = async (page: Page): Promise<number> => {
 				{
 					name: 'Dummy',
 					role: 'Source',
-					connector: 'Dummy',
+					connector: 'dummy',
 					strategy: null,
 					sendingMode: null,
 					settings: {},
@@ -80,7 +80,7 @@ const addDummyDestination = async (page: Page): Promise<number> => {
 				{
 					name: 'Dummy',
 					role: 'Destination',
-					connector: 'Dummy',
+					connector: 'dummy',
 					strategy: null,
 					sendingMode: 'Server',
 					settings: { URLForDispatchingEvents: '' },
@@ -102,7 +102,7 @@ const addPostgreSQLSource = async (page: Page): Promise<number> => {
 				{
 					name: 'PostgreSQL',
 					role: 'Source',
-					connector: 'PostgreSQL',
+					connector: 'postgresql',
 					strategy: null,
 					sendingMode: null,
 					settings: {
@@ -131,7 +131,7 @@ const addPostgreSQLDestination = async (page: Page): Promise<number> => {
 				{
 					name: 'PostgreSQL',
 					role: 'Destination',
-					connector: 'PostgreSQL',
+					connector: 'postgresql',
 					strategy: null,
 					sendingMode: null,
 					settings: {
@@ -160,7 +160,7 @@ const addFileSystemSource = async (page: Page): Promise<number> => {
 				{
 					name: 'Filesystem',
 					role: 'Source',
-					connector: 'Filesystem',
+					connector: 'filesystem',
 					strategy: null,
 					sendingMode: null,
 					settings: {},
@@ -182,7 +182,7 @@ const addFileSystemDestination = async (page: Page): Promise<number> => {
 				{
 					name: 'Filesystem',
 					role: 'Destination',
-					connector: 'Filesystem',
+					connector: 'filesystem',
 					strategy: null,
 					sendingMode: null,
 					settings: {},
@@ -204,7 +204,7 @@ const addJavascriptSource = async (page: Page): Promise<number> => {
 				{
 					name: 'JavaScript',
 					role: 'Source',
-					connector: 'JavaScript',
+					connector: 'javascript',
 					strategy: 'Conversion',
 					sendingMode: null,
 					settings: null,

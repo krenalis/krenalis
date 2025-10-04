@@ -268,10 +268,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const format: TransformedConnector | null = useMemo(() => {
 		if (action.format) {
-			return connectors.find((c) => c.name === action.format);
+			return connectors.find((c) => c.code === action.format);
 		}
 		return null;
-	}, [action]);
+	}, [action.format, connectors]);
 
 	const identityColumnError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
@@ -436,6 +436,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			actionType={actionType}
 			hasSchema={actionType.outputSchema != null}
 			flatInputSchema={flatInputSchema}
+			formatLabel={format?.label}
 		/>
 	);
 
@@ -449,9 +450,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					together with the base event data.
 				</p>
 				<p>
-					The action already builds and sends the event to {connection.connector.name} with default fields. By
-					adding extra data, you make the event more complete and useful for segmentation, personalization, or
-					reporting.
+					The action already builds and sends the event to {connection.connector.label} with default fields.
+					By adding extra data, you make the event more complete and useful for segmentation, personalization,
+					or reporting.
 				</p>
 			</>
 		);
@@ -537,7 +538,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 											ref={lastChangeTimeFormatRef}
 										>
 											<SlOption value='iso8601'>ISO 8601</SlOption>
-											{format?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
+											{format?.code === 'excel' && <SlOption value='excel'>Excel</SlOption>}
 											<SlOption value='custom'>Custom...</SlOption>
 										</SlSelect>
 									</div>
@@ -627,6 +628,7 @@ interface TransformationBoxProps {
 	actionType: TransformedActionType;
 	hasSchema: boolean;
 	flatInputSchema: TransformedMapping;
+	formatLabel?: string;
 }
 
 const isMappingChanged = (oldMapping: TransformedMapping, newMapping: TransformedMapping): boolean => {
@@ -687,6 +689,7 @@ const TransformationBox = ({
 	actionType,
 	hasSchema,
 	flatInputSchema,
+	formatLabel,
 }: TransformationBoxProps) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [isCompletelyOpen, setIsCompletelyOpen] = useState<boolean>(false);
@@ -1040,7 +1043,7 @@ const TransformationBox = ({
 				);
 			}
 		}
-		let [leftHeader, rightHeader] = transformationHeaders(connection, action);
+		let [leftHeader, rightHeader] = transformationHeaders(connection, action, formatLabel);
 		body = (
 			<div className='action__transformation-mappings'>
 				{!isCompletelyOpen && (
@@ -1271,7 +1274,7 @@ const FullscreenTransformation = ({
 	const [isBodyRendered, setIsBodyRendered] = useState<boolean>(false);
 	const [isBodyShown, setIsBodyShown] = useState<boolean>(false);
 
-	const { handleError, api } = useContext(AppContext);
+	const { handleError, api, connectors } = useContext(AppContext);
 	const {
 		action,
 		settings,
@@ -1307,6 +1310,13 @@ const FullscreenTransformation = ({
 			flatOutputSchema: flattenSchema(outputSchema),
 		};
 	}, [outputSchema]);
+
+	const format = useMemo(() => {
+		if (action.format) {
+			return connectors.find((c) => c.code === action.format) ?? null;
+		}
+		return null;
+	}, [action.format, connectors]);
 
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
@@ -2233,7 +2243,7 @@ const FullscreenTransformation = ({
 		);
 	}
 
-	let [leftHeader, rightHeader] = transformationHeaders(connection, action);
+	let [leftHeader, rightHeader] = transformationHeaders(connection, action, format?.label);
 	return (
 		<div
 			className={`fullscreen-transformation${isFullscreenTransformationOpen ? ' fullscreen-transformation--open' : ''}`}
@@ -3641,29 +3651,32 @@ function removeQuotes(v: any | null) {
 //
 // The two values in each pair form a meaningful header and can, for example,
 // be displayed on two separate lines or concatenated with a space.
+
 function transformationHeaders(
 	connection: TransformedConnection,
 	action: TransformedAction,
+	formatLabel?: string,
 ): [Array<string>, Array<string>] {
 	let leftHeader: Array<string>;
 	let rightHeader: Array<string>;
 	let terms = connection.connector.terms;
 	if (connection.isSource) {
 		if (connection.isEventBased) {
-			leftHeader = ['Input event', `from ${connection.connector.name}`];
+			leftHeader = ['Input event', `from ${connection.connector.label}`];
 		} else if (connection.isFileStorage) {
-			leftHeader = [`Input ${terms.user}`, `from ${action.format}`];
+			const label = formatLabel ?? action.format;
+			leftHeader = [`Input ${terms.user}`, `from ${label}`];
 		} else {
-			leftHeader = [`Input ${terms.user}`, `from ${connection.connector.name}`];
+			leftHeader = [`Input ${terms.user}`, `from ${connection.connector.label}`];
 		}
 		rightHeader = ['Output user', 'to warehouse'];
 	} else {
 		if (action.target == 'Event') {
 			leftHeader = ['Input event', 'from source connections'];
-			rightHeader = ['Output event', `to ${connection.connector.name}`];
+			rightHeader = ['Output event', `to ${connection.connector.label}`];
 		} else {
 			leftHeader = ['Input user', 'from warehouse'];
-			rightHeader = [`Output ${terms.user}`, `to ${connection.connector.name}`];
+			rightHeader = [`Output ${terms.user}`, `to ${connection.connector.label}`];
 		}
 	}
 	return [leftHeader, rightHeader];

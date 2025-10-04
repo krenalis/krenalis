@@ -183,7 +183,7 @@ func New(state *state.State) *Connectors {
 func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
 	if oauth.ClientID == "" || oauth.ClientSecret == "" {
-		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Meergo", connector.Name)}
+		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Meergo", connector.Code)}
 	}
 	var b strings.Builder
 	b.WriteString(oauth.AuthURL)
@@ -218,7 +218,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	if err != nil {
 		return nil, err
 	}
-	app, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppEnv{
+	app, err := meergo.RegisteredApp(connector.Code).New(&meergo.AppEnv{
 		HTTPClient: connectors.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {

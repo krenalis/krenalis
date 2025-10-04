@@ -206,8 +206,8 @@ func init() {
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Prefilled:   `"Java"`,
-							Description: "The name of the connection's connector.",
+							Prefilled:   `"java"`,
+							Description: "The code of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",

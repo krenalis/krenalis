@@ -13,7 +13,8 @@ import (
 
 // StreamInfo represents a stream connector info.
 type StreamInfo struct {
-	Name          string
+	Code          string
+	Label         string
 	Categories    Categories // categories
 	Icon          string     // icon in SVG format
 	Documentation ConnectorDocumentation

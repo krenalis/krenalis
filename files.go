@@ -20,7 +20,8 @@ var ErrSheetNotExist = errors.New("sheet does not exist")
 
 // FileInfo represents a file connector info.
 type FileInfo struct {
-	Name          string
+	Code          string
+	Label         string
 	Categories    Categories // categories
 	AsSource      *AsSourceFile
 	AsDestination *AsDestinationFile

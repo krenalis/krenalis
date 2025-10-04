@@ -30,10 +30,10 @@ func init() {
 	}
 	formatParameter := types.Property{
 		Name:           "format",
-		Type:           types.Text().WithValues("CSV", "Excel", "Parquet", "JSON"),
+		Type:           types.Text().WithValues("csv", "excel", "parquet", "json"),
 		CreateRequired: true,
-		Prefilled:      `"Excel"`,
-		Description:    "The file format. It corresponds to the name of a file connector.",
+		Prefilled:      `"excel"`,
+		Description:    "The file format. It corresponds to the code of a file connector.",
 	}
 	pathParameter := types.Property{
 		Name:           "path",
@@ -200,8 +200,8 @@ func init() {
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Prefilled:   `"S3"`,
-							Description: "The name of the connection's connector.",
+							Prefilled:   `"s3"`,
+							Description: "The code of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",
@@ -240,7 +240,7 @@ func init() {
 							Type:        types.Text(),
 							Nullable:    true,
 							Prefilled:   `"Sheet1"`,
-							Description: "The name of the sheet. It is empty if the format is not Excel.",
+							Description: "The name of the sheet. It is empty if the format is not \"excel\".",
 						},
 						{
 							Name:        "compression",

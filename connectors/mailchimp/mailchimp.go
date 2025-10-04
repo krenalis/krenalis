@@ -48,7 +48,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:       "Mailchimp",
+		Code:       "mailchimp",
+		Label:      "Mailchimp",
 		Categories: meergo.CategoryMarketing,
 		AsSource: &meergo.AsAppSource{
 			Targets:     meergo.TargetUser,

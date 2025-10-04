@@ -25,7 +25,8 @@ import (
 
 func init() {
     meergo.RegisterDatabase(meergo.DatabaseInfo{
-        Name:        "PostgreSQL",
+        Code:        "postgresql",
+        Label:       "PostgreSQL",
         Categories:  meergo.CategoryDatabase,
         SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
     }, New)
@@ -88,7 +89,8 @@ Later on, you can [build an executable with your connector](/installation/from-s
 
 The `DatabaseInfo` type describes information about the database connector:
 
-- `Name`: short name, typically the name of the DBMS. For example, "PostgreSQL", "MySQL", "Snowflake", etc.
+- `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "postgresql", "mysql", "snowflake".
+- `Label`: display label in the Admin console, typically the database's name (e.g. "PostgreSQL", "MySQL", "Snowflake").
 - `Categories`: the categories that the connector falls into. There must be at least one category.
 - `SampleQuery`: sample query displayed in the query editor when creating a new database source action.
 - `TimeLayouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
@@ -99,8 +101,9 @@ This information is passed to the `RegisterDatabase` function that, executed dur
 ```go
 func init() {
     meergo.RegisterDatabase(meergo.DatabaseInfo{
-        Name:        "PostgreSQL",
-        SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
+        Code:        "postgresql",
+        Label:       "PostgreSQL",
+        SampleQuery: "SELECT *\nFROM users\n",
         Icon:        icon,
     }, New)
 }

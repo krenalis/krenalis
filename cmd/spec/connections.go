@@ -77,8 +77,8 @@ func init() {
 		{
 			Name:        "connector",
 			Type:        types.Text(),
-			Prefilled:   `"JavaScript"`,
-			Description: "The name of the connection's [connector](/connectors/).",
+			Prefilled:   `"javascript"`,
+			Description: "The code of the connection's [connector](/connectors/).",
 		},
 		{
 			Name:        "connectorType",
@@ -176,8 +176,8 @@ func init() {
 						Name:           "connector",
 						Type:           types.Text(),
 						CreateRequired: true,
-						Prefilled:      `"JavaScript"`,
-						Description: "The name of the [connector](/connectors/) for which to create the connection. " +
+						Prefilled:      `"javascript"`,
+						Description: "The code of the [connector](/connectors/) for which to create the connection. " +
 							"It can be an app, database, file storage or SDK connector, " +
 							"but cannot be a file connector or a stream connector.\n\nStream connections will be available soon.",
 					},
@@ -220,8 +220,8 @@ func init() {
 						Name:           "connector",
 						Type:           types.Text(),
 						CreateRequired: true,
-						Prefilled:      `HubSpot`,
-						Description:    "The connector's name. It must be an app connector that requires authorization.",
+						Prefilled:      `hubspot`,
+						Description:    "The connector's code. It must be an app connector that requires authorization.",
 					},
 					{
 						Name:           "role",

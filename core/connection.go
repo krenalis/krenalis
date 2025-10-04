@@ -356,7 +356,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			var name, description string
 			if c.Role == state.Source {
 				// Source/App/User.
-				name = "Import " + connector.Name + " " + connector.Terms.Users
+				name = "Import " + connector.Label + " " + connector.Terms.Users
 				description = "Import " + connector.Terms.Users
 				if connector.Terms.Users != "users" {
 					description += " as users"
@@ -369,7 +369,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				if connector.Terms.Users != "users" {
 					description += " as " + connector.Terms.Users
 				}
-				description += " to " + connector.Name
+				description += " to " + connector.Label
 			}
 			at := ActionType{
 				Name:        name,
@@ -385,12 +385,12 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				// Source/FileStorage/Users.
 				// Source/Database/Users.
 				name = "Import users"
-				description = "Import users from " + connector.Name + " into the data warehouse"
+				description = "Import users from " + connector.Label + " into the data warehouse"
 			} else {
 				// Destination/FileStorage/Users.
 				// Destination/Database/Users.
 				name = "Export users"
-				description = "Export users to " + connector.Name
+				description = "Export users to " + connector.Label
 			}
 			at := ActionType{
 				Name:        name,
@@ -403,7 +403,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				// Source/SDK/Users.
 				at := ActionType{
 					Name:        "Import users into warehouse",
-					Description: "Import users from " + connector.Name + " into the data warehouse",
+					Description: "Import users from " + connector.Label + " into the data warehouse",
 					Target:      TargetUser,
 				}
 				actionTypes = append(actionTypes, at)
@@ -479,7 +479,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				// Source/SDK/Event.
 				at := ActionType{
 					Name:        "Import events into warehouse",
-					Description: "Import events from " + connector.Name + " into the data warehouse",
+					Description: "Import events from " + connector.Label + " into the data warehouse",
 					Target:      TargetEvent,
 				}
 				actionTypes = slices.Insert(actionTypes, 0, at)
@@ -788,11 +788,11 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		n.Filter, _ = convertFilterToWhere(action.Filter, inSchema).MarshalJSON()
 	}
 
-	// Determine the connector name, for file actions.
-	var formatName *string
+	// Determine the connector code, for file actions.
+	var formatCode *string
 	if format != nil {
-		name := format.Name
-		formatName = &name
+		code := format.Code
+		formatCode = &code
 	}
 
 	// Generate a random identifier.
@@ -882,7 +882,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
-			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet,
+			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
 			n.Compression, n.OrderBy, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
 			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental)
 		if err != nil {
@@ -1293,13 +1293,13 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	// Validate the settings.
 	if formatConnector.HasSourceSettings {
 		if settings == nil {
-			return nil, types.Type{}, nil, errors.BadRequest("format settings must be provided because connector %s has source settings", formatConnector.Name)
+			return nil, types.Type{}, nil, errors.BadRequest("format settings must be provided because connector %s has source settings", formatConnector.Code)
 		}
 		if !json.Valid(settings) || !settings.IsObject() {
 			return nil, types.Type{}, nil, errors.BadRequest("format settings are not a valid JSON Object")
 		}
 	} else if settings != nil {
-		return nil, types.Type{}, nil, errors.BadRequest("format settings cannot be provided because connector %s has no source settings", formatConnector.Name)
+		return nil, types.Type{}, nil, errors.BadRequest("format settings cannot be provided because connector %s has no source settings", formatConnector.Code)
 	}
 
 	// Validate the limit.
@@ -1716,15 +1716,15 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 	c := this.connection
 	connector := c.Connector()
 	if c.Role == state.Source && !connector.HasSourceSettings {
-		return nil, errors.BadRequest("connector %s does not have source settings", connector.Name)
+		return nil, errors.BadRequest("connector %s does not have source settings", connector.Code)
 	}
 	if c.Role == state.Destination && !connector.HasDestinationSettings {
-		return nil, errors.BadRequest("connector %s does not have destination settings", connector.Name)
+		return nil, errors.BadRequest("connector %s does not have destination settings", connector.Code)
 	}
 	ui, err := this.core.connectors.ServeConnectionUI(ctx, c, event, settings)
 	if err != nil {
 		if err == meergo.ErrUIEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Name)
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Code)
 		} else {
 			switch err.(type) {
 			case *meergo.InvalidSettingsError:
@@ -1777,17 +1777,17 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	// Validate the settings.
 	if formatConnector.HasSourceSettings {
 		if settings == nil {
-			return nil, errors.BadRequest("format settings must be provided because format %s has settings", formatConnector.Name)
+			return nil, errors.BadRequest("format settings must be provided because format %s has settings", formatConnector.Code)
 		}
 		if !json.Valid(settings) || !settings.IsObject() {
 			return nil, errors.BadRequest("format settings are not a valid JSON Object")
 		}
 	} else if settings != nil {
-		return nil, errors.BadRequest("format settings cannot be provided because format %s has no settings", formatConnector.Name)
+		return nil, errors.BadRequest("format settings cannot be provided because format %s has no settings", formatConnector.Code)
 	}
 
 	if !formatConnector.HasSheets {
-		return nil, errors.BadRequest("format %s does not have sheets", formatConnector.Name)
+		return nil, errors.BadRequest("format %s does not have sheets", formatConnector.Code)
 	}
 
 	sheets, err := this.storage().Sheets(ctx, formatConnector, path, settings, state.Compression(compression))
@@ -1942,13 +1942,13 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 	if this.connection.Role == state.Destination {
 		if c.SendingMode != nil {
 			if connection.SendingMode == nil {
-				return errors.BadRequest("connector %s requires a sending mode", c.Name)
+				return errors.BadRequest("connector %s requires a sending mode", c.Code)
 			}
 			if !c.SendingMode.Contains(state.SendingMode(*connection.SendingMode)) {
-				return errors.BadRequest("connector %s does not support sending mode %s", c.Name, *c.SendingMode)
+				return errors.BadRequest("connector %s does not support sending mode %s", c.Code, *c.SendingMode)
 			}
 		} else if connection.SendingMode != nil {
-			return errors.BadRequest("connector %s does not support sending modes", c.Name)
+			return errors.BadRequest("connector %s does not support sending modes", c.Code)
 		}
 	} else if connection.SendingMode != nil {
 		return errors.BadRequest("source connections cannot have a sending mode")
@@ -2182,7 +2182,7 @@ func validateLinkedConnections(connections []int, c *state.Connector, ws *state.
 	}
 	if !targets.Contains(state.TargetEvent) {
 		if connections != nil {
-			return nil, errors.BadRequest("connector %q, used as %s, does not support events", c.Name, strings.ToLower(role.String()))
+			return nil, errors.BadRequest("connector %q, used as %s, does not support events", c.Code, strings.ToLower(role.String()))
 		}
 		return nil, nil
 	}

@@ -79,7 +79,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		targets = connector.DestinationTargets
 	}
 	app := &App{
-		connector:   connector.Name,
+		connector:   connector.Code,
 		connection:  connection.ID,
 		role:        connection.Role,
 		timeLayouts: &connector.TimeLayouts,

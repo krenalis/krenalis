@@ -159,7 +159,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 		let logo: ReactNode;
 		if (connection.isFileStorage) {
-			const formatConnector = connectors.find((c) => c.name === action.format);
+			const formatConnector = connectors.find((c) => c.code === action.format);
 			logo = (
 				<div className='connection-actions__action-logo'>
 					<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(formatConnector.icon)}</span>

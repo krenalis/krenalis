@@ -74,12 +74,12 @@ func (connectors *Connectors) File(action *state.Action) *File {
 	format := action.Format()
 	connection := action.Connection()
 	file := &File{
-		connector:   connection.Connector().Name,
+		connector:   connection.Connector().Code,
 		state:       connectors.state,
 		action:      action,
 		timeLayouts: &format.TimeLayouts,
 	}
-	file.inner, file.err = meergo.RegisteredFile(format.Name).New(&meergo.FileEnv{
+	file.inner, file.err = meergo.RegisteredFile(format.Code).New(&meergo.FileEnv{
 		Settings:    action.FormatSettings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
@@ -134,7 +134,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 	if err = validateLastChangeTime(storageLastChangeTime); err != nil {
 		return nil, fmt.Errorf("invalid last change time returned by the storage: %s", err)
 	}
-	rw := newRecordWriter(file.action.Format().Name, file.action,
+	rw := newRecordWriter(file.action.Format().Code, file.action,
 		storageLastChangeTime, file.timeLayouts, startTime, math.MaxInt)
 	records := &fileRecords{
 		rw:    rw,
@@ -203,7 +203,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 func (file *File) storage() (any, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
-	return meergo.RegisteredFileStorage(connector.Name).New(&meergo.FileStorageEnv{
+	return meergo.RegisteredFileStorage(connector.Code).New(&meergo.FileStorageEnv{
 		Settings:    conn.Settings,
 		SetSettings: setConnectionSettingsFunc(file.state, conn),
 	})

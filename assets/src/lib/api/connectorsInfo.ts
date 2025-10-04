@@ -1,7 +1,7 @@
 import JSONbig from 'json-bigint';
 import { ConnectorsInfoResponse } from './types/responses';
 
-const connectorsInfoURL = 'https://open2b.github.io/meergo-connectors-info/connectors-info.json';
+const connectorsInfoURL = 'https://open2b.github.io/meergo-connectors-info/connectors-info.v2.json';
 
 const connectorsInfo = async (): Promise<ConnectorsInfoResponse> => {
 	let res: Response;

@@ -717,7 +717,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 	});
 
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click(`[data-name="CSV"]`);
+	await page.click(`[data-code="csv"]`);
 	await page.click('.connectors-list__documentation-add');
 
 	await page.click('.file-connector__storage sl-select');
@@ -840,7 +840,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			"lastChangeTimeColumn": "",
 			"lastChangeTimeFormat": "",
 			"compression": "",
-			"format": "CSV",
+			"format": "csv",
 			"formatSettings": {
 				"Separator": ",",
 				"NumberOfColumns": 0,
@@ -893,7 +893,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 	});
 
 	await page.goto(`${adminURL}/connectors?role=Destination`);
-	await page.click(`[data-name="CSV"]`);
+	await page.click(`[data-code="csv"]`);
 	await page.click('.connectors-list__documentation-add');
 
 	await page.click('.file-connector__storage sl-select');
@@ -914,7 +914,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 
 	// File
 	await page.locator('.action__file-format').click();
-	await page.locator('.action__file-format sl-option[value="CSV"]').click();
+	await page.locator('.action__file-format sl-option[value="csv"]').click();
 
 	await page.locator('.action__file-path >> input').fill(fileName);
 
@@ -1178,7 +1178,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			"lastChangeTimeFormat": "",
 			"compression": "",
 			"orderBy": "email",
-			"format": "CSV",
+			"format": "csv",
 			"formatSettings": {
 				"Separator": ",",
 				"NumberOfColumns": 0,

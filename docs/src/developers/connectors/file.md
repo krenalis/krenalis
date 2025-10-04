@@ -26,17 +26,18 @@ import (
 )
 
 func init() {
-    meergo.RegisterFile(meergo.FileInfo{
-        Name:      "CSV",
-        Categories: meergo.CategoryFile,
-        Extension: "csv",
-        AsSource: &meergo.AsSourceFile{
-            HasSettings: true,
-        },
-        AsDestination: &meergo.AsDestinationFile{
-            HasSettings: true,
-        },
-    }, New)
+	meergo.RegisterFile(meergo.FileInfo{
+		Code:       "csv",
+		Label:      "CSV",
+		Categories: meergo.CategoryFile,
+		Extension:  "csv",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			HasSettings: true,
+		},
+	}, New)
 }
 
 type CSV struct {
@@ -84,7 +85,8 @@ Later on, you can [build an executable with your connector](/installation/from-s
 
 The `FileInfo` type describes information about the file connector:
 
-- `Name`: short name, typically the name of the file type. For example, "Excel", "CSV", "Parquet", etc.
+- `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "excel", "csv", "parquet".
+- `Label`: display label in the Admin console, typically the format's name (e.g. "Excel", "CSV", "Parquet").
 - `Categories`: the categories that the connector falls into. There must be at least one category.
 - `AsSource`: information about the file connector when it used as source. This should be set only when the file connector can be used as a source, otherwise should be nil.
   - `HasSettings`: indicates whether the connection has format settings when used as source.
@@ -99,17 +101,18 @@ This information is passed to the `RegisterFile` function that, executed during 
 
 ```go
 func init() {
-    meergo.RegisterFile(meergo.FileInfo{
-        Name:      "CSV",
-        Icon:      icon,
-        Extension: "csv",
-        AsSource: &meergo.AsSourceFile{
-            HasSettings: true,
-        },
-        AsDestination: &meergo.AsDestinationFile{
-            HasSettings: true,
-        },
-    }, New)
+	meergo.RegisterFile(meergo.FileInfo{
+		Code:      "csv",
+		Label:     "CSV",
+		Icon:      icon,
+		Extension: "csv",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			HasSettings: true,
+		},
+	}, New)
 }
 ```
 

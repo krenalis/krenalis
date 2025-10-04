@@ -172,7 +172,8 @@ const useApp = (
 			for (const c of connectors) {
 				transformedConnectors.push(
 					new TransformedConnector(
-						c.name,
+						c.code,
+						c.label,
 						c.type,
 						c.categories,
 						c.asSource,

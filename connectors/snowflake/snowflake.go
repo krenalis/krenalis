@@ -41,7 +41,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
-		Name:        "Snowflake",
+		Code:        "snowflake",
+		Label:       "Snowflake",
 		Categories:  meergo.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM \"USERS\"\n",
 		Icon:        icon,

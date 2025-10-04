@@ -26,7 +26,8 @@ var overview string
 
 func init() {
 	meergo.RegisterSDK(meergo.SDKInfo{
-		Name:       "Segment",
+		Code:       "segment",
+		Label:      "Segment",
 		Categories: meergo.CategoryEventStreaming,
 		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{

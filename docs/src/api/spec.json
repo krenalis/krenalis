@@ -1209,11 +1209,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"Mailchimp\"",
+                                "prefilled": "\"mailchimp\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -2011,11 +2011,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"PostgreSQL\"",
+                                "prefilled": "\"postgresql\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -2393,18 +2393,18 @@
                         },
                         {
                             "name": "format",
-                            "prefilled": "\"Excel\"",
+                            "prefilled": "\"excel\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "CSV",
-                                    "Excel",
-                                    "Parquet",
-                                    "JSON"
+                                    "csv",
+                                    "excel",
+                                    "parquet",
+                                    "json"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The file format. It corresponds to the name of a file connector."
+                            "description": "The file format. It corresponds to the code of a file connector."
                         },
                         {
                             "name": "path",
@@ -2856,11 +2856,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"S3\"",
+                                "prefilled": "\"s3\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -2919,18 +2919,18 @@
                             },
                             {
                                 "name": "format",
-                                "prefilled": "\"Excel\"",
+                                "prefilled": "\"excel\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "CSV",
-                                        "Excel",
-                                        "Parquet",
-                                        "JSON"
+                                        "csv",
+                                        "excel",
+                                        "parquet",
+                                        "json"
                                     ]
                                 },
                                 "createRequired": true,
-                                "description": "The file format. It corresponds to the name of a file connector."
+                                "description": "The file format. It corresponds to the code of a file connector."
                             },
                             {
                                 "name": "path",
@@ -2949,7 +2949,7 @@
                                     "kind": "text"
                                 },
                                 "nullable": true,
-                                "description": "The name of the sheet. It is empty if the format is not Excel."
+                                "description": "The name of the sheet. It is empty if the format is not \"excel\"."
                             },
                             {
                                 "name": "compression",
@@ -3494,11 +3494,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"Android\"",
+                                "prefilled": "\"android\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -4280,11 +4280,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"HubSpot\"",
+                                "prefilled": "\"hubspot\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -5096,11 +5096,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"MySQL\"",
+                                "prefilled": "\"mysql\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -5918,11 +5918,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"Java\"",
+                                "prefilled": "\"java\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -6243,18 +6243,18 @@
                         },
                         {
                             "name": "format",
-                            "prefilled": "\"Excel\"",
+                            "prefilled": "\"excel\"",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "CSV",
-                                    "Excel",
-                                    "Parquet",
-                                    "JSON"
+                                    "csv",
+                                    "excel",
+                                    "parquet",
+                                    "json"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The file format. It corresponds to the name of a file connector."
+                            "description": "The file format. It corresponds to the code of a file connector."
                         },
                         {
                             "name": "path",
@@ -6273,7 +6273,7 @@
                                 "kind": "text"
                             },
                             "updateRequired": true,
-                            "description": "The sheet name. It can only be used with the Excel format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
+                            "description": "The sheet name. It can only be used with the \"excel\" format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
                         },
                         {
                             "name": "compression",
@@ -6418,7 +6418,7 @@
                                 "charLen": 64
                             },
                             "updateRequired": true,
-                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. If `format` is `\"Excel\"`, it can also be set to `\"Excel\"`. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `json` or `text`."
+                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. If `format` is `\"excel\"`, it can also be set to `\"Excel\"`. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `json` or `text`."
                         },
                         {
                             "name": "incremental",
@@ -6632,7 +6632,7 @@
                                 "kind": "text"
                             },
                             "updateRequired": true,
-                            "description": "The sheet name. It can only be used with the Excel format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
+                            "description": "The sheet name. It can only be used with the \"excel\" format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
                         },
                         {
                             "name": "compression",
@@ -6768,7 +6768,7 @@
                                 "charLen": 64
                             },
                             "updateRequired": true,
-                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. If `format` is `\"Excel\"`, it can also be set to `\"Excel\"`. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `json` or `text`."
+                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. If `format` is `\"excel\"`, it can also be set to `\"Excel\"`. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `json` or `text`."
                         },
                         {
                             "name": "incremental",
@@ -6960,11 +6960,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"SFTP\"",
+                                "prefilled": "\"sftp\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -7023,18 +7023,18 @@
                             },
                             {
                                 "name": "format",
-                                "prefilled": "\"Excel\"",
+                                "prefilled": "\"excel\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "CSV",
-                                        "Excel",
-                                        "Parquet",
-                                        "JSON"
+                                        "csv",
+                                        "excel",
+                                        "parquet",
+                                        "json"
                                     ]
                                 },
                                 "createRequired": true,
-                                "description": "The file format. It corresponds to the name of a file connector."
+                                "description": "The file format. It corresponds to the code of a file connector."
                             },
                             {
                                 "name": "path",
@@ -7053,7 +7053,7 @@
                                     "kind": "text"
                                 },
                                 "nullable": true,
-                                "description": "The name of the sheet. It is empty if the format is not Excel."
+                                "description": "The name of the sheet. It is empty if the format is not \"excel\"."
                             },
                             {
                                 "name": "compression",
@@ -7093,7 +7093,7 @@
                                     "kind": "text"
                                 },
                                 "nullable": true,
-                                "description": "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `datetime` or `date`.\n\nIt is `\"ISO8601\"` if the column value follows the ISO 8601 format. It is `\"Excel\"` if the format is `\"Excel\"` and the column value follows the Excel format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior)."
+                                "description": "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `datetime` or `date`.\n\nIt is `\"ISO8601\"` if the column value follows the ISO 8601 format. It is `\"Excel\"` if the format is `\"excel\"` and the column value follows the Excel format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior)."
                             },
                             {
                                 "name": "incremental",
@@ -7850,11 +7850,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"Klaviyo\"",
+                                "prefilled": "\"klaviyo\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's connector."
+                                "description": "The code of the connection's connector."
                             },
                             {
                                 "name": "connectorType",
@@ -8967,12 +8967,12 @@
                         },
                         {
                             "name": "connector",
-                            "prefilled": "\"JavaScript\"",
+                            "prefilled": "\"javascript\"",
                             "type": {
                                 "kind": "text"
                             },
                             "createRequired": true,
-                            "description": "The name of the [connector](/connectors/) for which to create the connection. It can be an app, database, file storage or SDK connector, but cannot be a file connector or a stream connector.\n\nStream connections will be available soon."
+                            "description": "The code of the [connector](/connectors/) for which to create the connection. It can be an app, database, file storage or SDK connector, but cannot be a file connector or a stream connector.\n\nStream connections will be available soon."
                         },
                         {
                             "name": "strategy",
@@ -9083,12 +9083,12 @@
                     "parameters": [
                         {
                             "name": "connector",
-                            "prefilled": "HubSpot",
+                            "prefilled": "hubspot",
                             "type": {
                                 "kind": "text"
                             },
                             "createRequired": true,
-                            "description": "The connector's name. It must be an app connector that requires authorization."
+                            "description": "The connector's code. It must be an app connector that requires authorization."
                         },
                         {
                             "name": "role",
@@ -9309,11 +9309,11 @@
                                             },
                                             {
                                                 "name": "connector",
-                                                "prefilled": "\"JavaScript\"",
+                                                "prefilled": "\"javascript\"",
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "description": "The name of the connection's [connector](/connectors/)."
+                                                "description": "The code of the connection's [connector](/connectors/)."
                                             },
                                             {
                                                 "name": "connectorType",
@@ -9452,11 +9452,11 @@
                             },
                             {
                                 "name": "connector",
-                                "prefilled": "\"JavaScript\"",
+                                "prefilled": "\"javascript\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The name of the connection's [connector](/connectors/)."
+                                "description": "The code of the connection's [connector](/connectors/)."
                             },
                             {
                                 "name": "connectorType",
@@ -9730,7 +9730,7 @@
             "endpoints": [
                 {
                     "name": "List all connectors",
-                    "description": "Returns the connectors, sorted by name.",
+                    "description": "Returns the connectors, sorted by code.",
                     "method": "GET",
                     "url": "/v1/connectors",
                     "parameters": null,
@@ -9747,12 +9747,20 @@
                                         "kind": "object",
                                         "properties": [
                                             {
-                                                "name": "name",
+                                                "name": "code",
+                                                "prefilled": "\"hubspot\"",
+                                                "type": {
+                                                    "kind": "text"
+                                                },
+                                                "description": "The connector's code. It contains only `[a-z0-9-]`."
+                                            },
+                                            {
+                                                "name": "label",
                                                 "prefilled": "\"HubSpot\"",
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "description": "The connector's name."
+                                                "description": "The connector's label."
                                             },
                                             {
                                                 "name": "type",
@@ -9995,18 +10003,18 @@
                 },
                 {
                     "name": "Get connector",
-                    "description": "Get a connector by name.",
+                    "description": "Get a connector.",
                     "method": "GET",
-                    "url": "/v1/connectors/:name",
+                    "url": "/v1/connectors/:code",
                     "parameters": [
                         {
-                            "name": "name",
-                            "prefilled": "HubSpot",
+                            "name": "code",
+                            "prefilled": "hubspot",
                             "type": {
                                 "kind": "text"
                             },
                             "createRequired": true,
-                            "description": "The connector's name."
+                            "description": "The connector's code."
                         }
                     ],
                     "moreParameters": null,
@@ -10014,12 +10022,20 @@
                         "description": "",
                         "parameters": [
                             {
-                                "name": "name",
+                                "name": "code",
+                                "prefilled": "\"hubspot\"",
+                                "type": {
+                                    "kind": "text"
+                                },
+                                "description": "The connector's code. It contains only `[a-z0-9-]`."
+                            },
+                            {
+                                "name": "label",
                                 "prefilled": "\"HubSpot\"",
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The connector's name."
+                                "description": "The connector's label."
                             },
                             {
                                 "name": "type",
@@ -10263,18 +10279,18 @@
                 },
                 {
                     "name": "Get connector documentation",
-                    "description": "Get the documentation of a connector by name.",
+                    "description": "Get the documentation of a connector.",
                     "method": "GET",
-                    "url": "/v1/connectors/:name/documentation",
+                    "url": "/v1/connectors/:code/documentation",
                     "parameters": [
                         {
-                            "name": "name",
-                            "prefilled": "HubSpot",
+                            "name": "code",
+                            "prefilled": "hubspot",
                             "type": {
                                 "kind": "text"
                             },
                             "createRequired": true,
-                            "description": "The connector's name."
+                            "description": "The connector's code."
                         }
                     ],
                     "moreParameters": null,
@@ -14508,18 +14524,18 @@
                         },
                         {
                             "name": "format",
-                            "prefilled": "Excel",
+                            "prefilled": "excel",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "CSV",
-                                    "Excel",
-                                    "Parquet",
-                                    "JSON"
+                                    "csv",
+                                    "excel",
+                                    "parquet",
+                                    "json"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The file format. Note that it corresponds to the name of the file connector used to read the file."
+                            "description": "The file format. Note that it corresponds to the code of the file connector used to read the file."
                         },
                         {
                             "name": "sheet",
@@ -14528,7 +14544,7 @@
                                 "kind": "text"
                             },
                             "updateRequired": true,
-                            "description": "The sheet name. It can only be used with the Excel format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
+                            "description": "The sheet name. It can only be used with the \"excel\" format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
                         },
                         {
                             "name": "compression",
@@ -14651,18 +14667,18 @@
                         },
                         {
                             "name": "format",
-                            "prefilled": "Excel",
+                            "prefilled": "excel",
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "CSV",
-                                    "Excel",
-                                    "Parquet",
-                                    "JSON"
+                                    "csv",
+                                    "excel",
+                                    "parquet",
+                                    "json"
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The file format. Note that it corresponds to the name of the file connector used to read the file."
+                            "description": "The file format. Note that it corresponds to the code of the file connector used to read the file."
                         },
                         {
                             "name": "compression",

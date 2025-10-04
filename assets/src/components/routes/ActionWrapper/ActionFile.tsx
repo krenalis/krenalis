@@ -72,13 +72,12 @@ const ActionFile = () => {
 
 	useEffect(() => {
 		// check if the format has been passed in the query parameters.
-		const f = new URL(document.location.href).searchParams.get('format');
-		if (f != null) {
-			const name = decodeURIComponent(f);
-			formatRef.current = name;
-			const format = connectors.find((c) => c.name === name);
+		const code = new URL(document.location.href).searchParams.get('format');
+		if (code != null) {
+			formatRef.current = code;
+			const format = connectors.find((c) => c.code === code);
 			const a = { ...action };
-			a.format = name;
+			a.format = code;
 			a.sheet = format.hasSheets ? '' : null;
 			setIsFormatLoading(true);
 			setAction(a);
@@ -87,7 +86,7 @@ const ActionFile = () => {
 
 	useEffect(() => {
 		const fetchFields = async () => {
-			const format = connectors.find((c) => c.name === action.format);
+			const format = connectors.find((c) => c.code === action.format);
 			if (!format.hasSettings(connection.role)) {
 				setFileFields([]);
 				setTimeout(() => setIsFormatLoading(false), 300);
@@ -118,7 +117,7 @@ const ActionFile = () => {
 				}
 			} else {
 				try {
-					ui = await api.connectors.ui(selectedWorkspace, format.name, connection.role, null);
+					ui = await api.connectors.ui(selectedWorkspace, format.code, connection.role, null);
 				} catch (err) {
 					setTimeout(() => setIsFormatLoading(false), 300);
 					if (err instanceof NotFoundError) {
@@ -153,17 +152,17 @@ const ActionFile = () => {
 	}, [formatRef.current]);
 
 	const { hasSheets, icon, fileExtension } = useMemo(() => {
-		const format = connectors.find((c) => c.name === action.format);
+		const format = connectors.find((c) => c.code === action.format);
 		return { hasSheets: format?.hasSheets, icon: format?.icon, fileExtension: format?.fileExtension };
 	}, [action]);
 
 	const onFormatChange = (e) => {
-		const name = e.target.value;
-		formatRef.current = name;
-		const format = connectors.find((c) => c.name === name);
+		const code = e.target.value;
+		formatRef.current = code;
+		const format = connectors.find((c) => c.code === code);
 		const a = { ...action };
 		// reset the action.
-		a.format = name;
+		a.format = code;
 		a.compression = '';
 		a.sheet = format.hasSheets ? '' : null;
 		a.path = '';
@@ -215,11 +214,11 @@ const ActionFile = () => {
 						return null;
 					}
 					return (
-						<SlOption key={f.name} value={f.name}>
+						<SlOption key={f.code} value={f.code}>
 							<div slot='prefix'>
 								<LittleLogo icon={f.icon} />
 							</div>
-							{f.name}
+							{f.label}
 						</SlOption>
 					);
 				})}

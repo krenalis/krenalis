@@ -27,13 +27,14 @@ import (
 )
 
 func init() {
-    meergo.RegisterFileStorage(meergo.FileStorageInfo{
-        Name:          "S3",
-        Categories:    meergo.CategoryFileStorage,
-        AsSource:      &meergo.AsFileStorageSource{},
-        AsDestination: &meergo.AsFileStorageDestination{},
-        Icon: icon,
-    }, New)
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
+		Code:          "s3",
+		Label:         "S3",
+		Categories:    meergo.CategoryFileStorage,
+		AsSource:      &meergo.AsFileStorageSource{},
+		AsDestination: &meergo.AsFileStorageDestination{},
+		Icon:          icon,
+	}, New)
 }
 
 type S3 struct {
@@ -82,7 +83,8 @@ Later on, you can [build an executable with your connector](/installation/from-s
 
 The `FileStorageInfo` type describes information about the file storage connector:
 
-- `Name`: short name, typically the name of the storage. For example, "S3", "HTTP", "SFTP", etc.
+- `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "s3", "http", "sftp".
+- `Label`: display label in the Admin console, typically the storage's name (e.g. "S3", "HTTP", "SFTP").
 - `Categories`: the categories that the connector falls into. There must be at least one category.
 - `Icon`: icon in SVG format representing the file storage. Since it's embedded in HTML pages, it's best to be minimized.
 
@@ -90,12 +92,13 @@ This information is passed to the `RegisterFileStorage` function that, executed 
 
 ```go
 func init() {
-    meergo.RegisterFileStorage(meergo.FileStorageInfo{
-        Name: "S3",
-        AsSource:      true,
-        AsDestination: true,
-        Icon: icon,
-    }, New)
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
+		Code:          "s3",
+		Label:         "S3",
+		AsSource:      true,
+		AsDestination: true,
+		Icon:          icon,
+	}, New)
 }
 ```
 

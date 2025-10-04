@@ -63,7 +63,7 @@ func TestConnections(t *testing.T) {
 	stream := &meergotester.ConnectionToCreate{
 		Name:      "Kafka",
 		Role:      meergotester.Source,
-		Connector: "Kafka",
+		Connector: "kafka",
 	}
 	var id int
 	err := c.Call("POST", "/api/v1/connections", stream, &id)

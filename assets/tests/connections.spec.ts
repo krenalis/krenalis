@@ -11,7 +11,7 @@ test.afterEach(async ({ page }) => {
 
 test(`Add Dummy source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click(`[data-name="Dummy"]`);
+	await page.click(`[data-code="dummy"]`);
 	await page.click('.connectors-list__documentation-add');
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Dummy');
@@ -30,7 +30,7 @@ test(`Add Dummy source`, async ({ page }) => {
 
 test(`Add Dummy destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
-	await page.click(`[data-name="Dummy"]`);
+	await page.click(`[data-code="dummy"]`);
 	await page.click('.connectors-list__documentation-add');
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Dummy');
@@ -49,7 +49,7 @@ test(`Add Dummy destination`, async ({ page }) => {
 
 test(`Add PostgreSQL source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click(`[data-name="PostgreSQL"]`);
+	await page.click(`[data-code="postgresql"]`);
 	await page.click('.connectors-list__documentation-add');
 
 	await page.locator('sl-input >> input[name="Host"]').fill(config.dbHost);
@@ -82,7 +82,7 @@ test(`Add PostgreSQL source`, async ({ page }) => {
 
 test(`Add PostgreSQL destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
-	await page.click(`[data-name="PostgreSQL"]`);
+	await page.click(`[data-code="postgresql"]`);
 	await page.click('.connectors-list__documentation-add');
 
 	await page.locator('sl-input >> input[name="Host"]').fill(config.dbHost);
@@ -115,7 +115,7 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 
 test(`Add Filesystem source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click(`[data-name="Filesystem"]`);
+	await page.click(`[data-code="filesystem"]`);
 	await page.click('.connectors-list__documentation-add');
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Filesystem');
@@ -134,7 +134,7 @@ test(`Add Filesystem source`, async ({ page }) => {
 
 test(`Add Filesystem destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
-	await page.click(`[data-name="Filesystem"]`);
+	await page.click(`[data-code="filesystem"]`);
 	await page.click('.connectors-list__documentation-add');
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('Filesystem');
@@ -153,7 +153,7 @@ test(`Add Filesystem destination`, async ({ page }) => {
 
 test(`Add JavaScript source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
-	await page.click(`[data-name="JavaScript"]`);
+	await page.click(`[data-code="javascript"]`);
 	await page.click('.connectors-list__documentation-add');
 	await page.click('.connector-settings__save-button');
 	await expect(page.locator('.connection-wrapper__name')).toContainText('JavaScript');

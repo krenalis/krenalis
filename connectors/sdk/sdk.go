@@ -75,7 +75,8 @@ var pythonOverview string
 func init() {
 	sdks := []meergo.SDKInfo{
 		{
-			Name:       ".NET",
+			Code:       "dotnet",
+			Label:      ".NET",
 			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconDotNet,
 			Documentation: meergo.ConnectorDocumentation{
@@ -86,7 +87,8 @@ func init() {
 			},
 		},
 		{
-			Name:       "Android",
+			Code:       "android",
+			Label:      "Android",
 			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconAndroid,
 			Strategies: true,
@@ -98,7 +100,8 @@ func init() {
 			},
 		},
 		{
-			Name:       "Go",
+			Code:       "go",
+			Label:      "Go",
 			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconGo,
 			Documentation: meergo.ConnectorDocumentation{
@@ -109,7 +112,8 @@ func init() {
 			},
 		},
 		{
-			Name:       "Java",
+			Code:       "java",
+			Label:      "Java",
 			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconJava,
 			Documentation: meergo.ConnectorDocumentation{
@@ -120,7 +124,8 @@ func init() {
 			},
 		},
 		{
-			Name:       "JavaScript",
+			Code:       "javascript",
+			Label:      "JavaScript",
 			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconJavaScript,
 			Strategies: true,
@@ -132,7 +137,8 @@ func init() {
 			},
 		},
 		{
-			Name:       "Node.js",
+			Code:       "nodejs",
+			Label:      "Node.js",
 			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconNode,
 			Documentation: meergo.ConnectorDocumentation{
@@ -143,7 +149,8 @@ func init() {
 			},
 		},
 		{
-			Name:       "Python",
+			Code:       "python",
+			Label:      "Python",
 			Categories: meergo.CategorySDKAndAPI,
 			Icon:       iconPython,
 			Documentation: meergo.ConnectorDocumentation{

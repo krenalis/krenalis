@@ -140,7 +140,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		t.Run(test.path, func(t *testing.T) {
 
 			// Read the file.
-			_, gotSchema := c.File(fs, test.path, "Parquet", "", meergotester.NoCompression, nil, 0)
+			_, gotSchema := c.File(fs, test.path, "parquet", "", meergotester.NoCompression, nil, 0)
 			gotProperties := gotSchema.Properties().Slice()
 
 			// Validate the properties.

@@ -76,7 +76,7 @@ type endpointGroup struct {
 // Client implements the connector.HTTPClient interface.
 type Client struct {
 	http           *HTTP
-	connector      string // connector name
+	connector      string // connector code
 	connection     int    // connection identifier; it is 0 if the client is not relative to a connection
 	clientSecret   string // client secret; only if connection == 0
 	accessToken    string // access token; only if connection == 0

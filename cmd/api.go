@@ -60,7 +60,7 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
-	return api.core.Connector(api.name(r))
+	return api.core.Connector(api.code(r))
 }
 
 // ConnectorDocumentation returns the documentation of a connector.
@@ -68,7 +68,7 @@ func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (a
 	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
-	return api.core.ConnectorDocumentation(api.name(r))
+	return api.core.ConnectorDocumentation(api.code(r))
 }
 
 // Connectors returns the connectors.
@@ -261,6 +261,6 @@ func (api api) WarehouseTypes(_ http.ResponseWriter, r *http.Request) (any, erro
 	return map[string]any{"types": api.core.WarehouseTypes()}, nil
 }
 
-func (api api) name(r *http.Request) string {
-	return r.PathValue("name")
+func (api api) code(r *http.Request) string {
+	return r.PathValue("code")
 }

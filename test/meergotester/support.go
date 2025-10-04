@@ -182,7 +182,7 @@ func (c *Meergo) CreateDestinationFilesystem() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      Destination,
-		Connector: "Filesystem",
+		Connector: "filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
 			"SimulateHighIOLatency": false,
 		}),
@@ -193,7 +193,7 @@ func (c *Meergo) CreateDestinationPostgreSQL() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Destination,
-		Connector: "PostgreSQL",
+		Connector: "postgresql",
 		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
@@ -209,7 +209,7 @@ func (c *Meergo) CreateDummy(name string, role Role) int {
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
-		Connector: "Dummy",
+		Connector: "dummy",
 		Settings:  []byte("{}"),
 	}
 	if role == Destination {
@@ -223,7 +223,7 @@ func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummyS
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
-		Connector: "Dummy",
+		Connector: "dummy",
 		Settings:  JSONEncodeSettings(settings),
 	}
 	if role == Destination {
@@ -255,7 +255,7 @@ func (c *Meergo) CreateMeergoAPISource(name string, linkedConnections []int) int
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
-		Connector:         "Meergo API",
+		Connector:         "meergo-api",
 		LinkedConnections: linkedConnections,
 	})
 }
@@ -264,7 +264,7 @@ func (c *Meergo) CreateJavaScriptSource(name string, linkedConnections []int) in
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
-		Connector:         "JavaScript",
+		Connector:         "javascript",
 		Strategy:          &defaultStrategy,
 		LinkedConnections: linkedConnections,
 	})
@@ -274,7 +274,7 @@ func (c *Meergo) CreateSourceFilesystem() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      Source,
-		Connector: "Filesystem",
+		Connector: "filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
 			"SimulateHighIOLatency": false,
 		}),
@@ -285,7 +285,7 @@ func (c *Meergo) CreateSourcePostgreSQL() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Source,
-		Connector: "PostgreSQL",
+		Connector: "postgresql",
 		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,

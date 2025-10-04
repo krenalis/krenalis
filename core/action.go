@@ -534,15 +534,15 @@ func (this *Action) ServeUI(ctx context.Context, event string, settings json.Val
 	}
 	formatConnector := this.action.Format()
 	if connection.Role == state.Source && !formatConnector.HasSourceSettings {
-		return nil, errors.BadRequest("connector %s does not have source settings", formatConnector.Name)
+		return nil, errors.BadRequest("connector %s does not have source settings", formatConnector.Code)
 	}
 	if connection.Role == state.Destination && !formatConnector.HasDestinationSettings {
-		return nil, errors.BadRequest("connector %s does not have destination settings", formatConnector.Name)
+		return nil, errors.BadRequest("connector %s does not have destination settings", formatConnector.Code)
 	}
 	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, settings)
 	if err != nil {
 		if err == meergo.ErrUIEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Code)
 		} else {
 			switch err.(type) {
 			case *meergo.InvalidSettingsError:
@@ -693,11 +693,11 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		n.Filter, _ = convertFilterToWhere(action.Filter, inSchema).MarshalJSON()
 	}
 
-	// Determine the format name, for file actions.
-	var formatName *string
+	// Determine the format code, for file actions.
+	var formatCode *string
 	if format != nil {
-		name := format.Name
-		formatName = &name
+		code := format.Code
+		formatCode = &code
 	}
 
 	// Marshal the input and the output schemas.
@@ -822,7 +822,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		result, err := tx.Exec(ctx, update,
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, n.Filter, mapping,
 			function.ID, function.Version, function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths,
-			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
+			n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
 			n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental, n.PropertiesToUnset,
 			n.ID,
@@ -1022,7 +1022,7 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	this.action = action
 	this.connection = &Connection{core: core, store: store, connection: c}
 	this.ID = action.ID
-	this.Connector = connector.Name
+	this.Connector = connector.Code
 	this.ConnectorType = ConnectorType(connector.Type)
 	this.Connection = c.ID
 	this.ConnectionRole = Role(c.Role)
@@ -1068,7 +1068,7 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		this.Query = &query
 	}
 	if f := action.Format(); f != nil {
-		this.Format = f.Name
+		this.Format = f.Code
 	}
 	if action.Path != "" {
 		path := action.Path
@@ -1391,7 +1391,7 @@ func shouldReload(a *state.Action, n *state.UpdateAction) bool {
 	if a.Query != n.Query {
 		return true
 	}
-	if f := a.Format(); f != nil && f.Name != n.Format {
+	if f := a.Format(); f != nil && f.Code != n.Format {
 		return true
 	}
 	if a.Path != n.Path || a.Sheet != n.Sheet {

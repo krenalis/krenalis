@@ -191,10 +191,10 @@ const getConnectionDescription = (connection: Connection, connector: Transformed
 };
 
 const getConnectionFullConnector = (
-	connectorName: string,
+	connectorCode: string,
 	connectors: TransformedConnector[],
 ): TransformedConnector => {
-	return connectors.find((c) => c.name === connectorName)!;
+	return connectors.find((c) => c.code === connectorCode)!;
 };
 
 const getConnectionStatus = (connection: Connection): ConnectionStatus => {

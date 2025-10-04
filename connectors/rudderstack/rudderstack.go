@@ -26,7 +26,8 @@ var overview string
 
 func init() {
 	meergo.RegisterSDK(meergo.SDKInfo{
-		Name:       "RudderStack",
+		Code:       "rudderstack",
+		Label:      "RudderStack",
 		Categories: meergo.CategoryEventStreaming,
 		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{

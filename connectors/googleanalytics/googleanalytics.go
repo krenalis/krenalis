@@ -36,7 +36,8 @@ var overview string
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:       "Google Analytics",
+		Code:       "google-analytics",
+		Label:      "Google Analytics",
 		Categories: meergo.CategoryAnalytics,
 		AsDestination: &meergo.AsAppDestination{
 			Targets:     meergo.TargetEvent,

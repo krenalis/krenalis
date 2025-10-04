@@ -42,7 +42,8 @@ var destinationOverview string
 
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
-		Name:        "PostgreSQL",
+		Code:        "postgresql",
+		Label:       "PostgreSQL",
 		Categories:  meergo.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM users\n",
 		Icon:        icon,

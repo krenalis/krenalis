@@ -61,7 +61,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 			},
 		},
 		IdentityColumn: "CSV_id",
-		Format:         "CSV",
+		Format:         "csv",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 			"Separator":      ",",
 			"HasColumnNames": true,

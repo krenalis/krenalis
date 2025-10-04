@@ -65,7 +65,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
-		Format:         "CSV",
+		Format:         "csv",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]interface{}{
 			"Separator":      ",",
 			"HasColumnNames": true,
@@ -93,7 +93,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 			},
 		},
 		IdentityColumn: "identity",
-		Format:         "CSV",
+		Format:         "csv",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]interface{}{
 			"Separator":      ",",
 			"HasColumnNames": true,

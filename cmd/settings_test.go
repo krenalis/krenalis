@@ -917,7 +917,7 @@ func TestParseSettings(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if s.OAuthCredentials == nil || s.OAuthCredentials["HubSpot"] == nil || s.OAuthCredentials["Mailchimp"] == nil {
+		if s.OAuthCredentials == nil || s.OAuthCredentials["hubspot"] == nil || s.OAuthCredentials["mailchimp"] == nil {
 			t.Fatalf("expected both OAuth connectors present, got %#v", s.OAuthCredentials)
 		}
 	})

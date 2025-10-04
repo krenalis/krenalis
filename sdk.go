@@ -13,7 +13,8 @@ import (
 
 // SDKInfo represents an SDK connector info.
 type SDKInfo struct {
-	Name          string
+	Code          string
+	Label         string
 	Categories    Categories // categories
 	Icon          string     // icon in SVG format
 	Strategies    bool       // whether this connector supports users strategies

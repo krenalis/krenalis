@@ -15,10 +15,16 @@ func init() {
 
 	getReturnsParameters := []types.Property{
 		{
-			Name:        "name",
+			Name:        "code",
+			Type:        types.Text(),
+			Prefilled:   `"hubspot"`,
+			Description: "The connector's code. It contains only `[a-z0-9-]`.",
+		},
+		{
+			Name:        "label",
 			Type:        types.Text(),
 			Prefilled:   `"HubSpot"`,
-			Description: "The connector's name.",
+			Description: "The connector's label.",
 		},
 		{
 			Name:        "type",
@@ -191,7 +197,7 @@ func init() {
 		Endpoints: []*Endpoint{
 			{
 				Name:        "List all connectors",
-				Description: "Returns the connectors, sorted by name.",
+				Description: "Returns the connectors, sorted by code.",
 				Method:      GET,
 				URL:         "/v1/connectors",
 				Response: &Response{
@@ -206,16 +212,16 @@ func init() {
 			},
 			{
 				Name:        "Get connector",
-				Description: "Get a connector by name.",
+				Description: "Get a connector.",
 				Method:      GET,
-				URL:         "/v1/connectors/:name",
+				URL:         "/v1/connectors/:code",
 				Parameters: []types.Property{
 					{
-						Name:           "name",
+						Name:           "code",
 						Type:           types.Text(),
-						Prefilled:      `HubSpot`,
+						Prefilled:      `hubspot`,
 						CreateRequired: true,
-						Description:    "The connector's name.",
+						Description:    "The connector's code.",
 					},
 				},
 				Response: &Response{
@@ -227,16 +233,16 @@ func init() {
 			},
 			{
 				Name:        "Get connector documentation",
-				Description: "Get the documentation of a connector by name.",
+				Description: "Get the documentation of a connector.",
 				Method:      GET,
-				URL:         "/v1/connectors/:name/documentation",
+				URL:         "/v1/connectors/:code/documentation",
 				Parameters: []types.Property{
 					{
-						Name:           "name",
+						Name:           "code",
 						Type:           types.Text(),
-						Prefilled:      `HubSpot`,
+						Prefilled:      `hubspot`,
 						CreateRequired: true,
-						Description:    "The connector's name.",
+						Description:    "The connector's code.",
 					},
 				},
 				Response: &Response{

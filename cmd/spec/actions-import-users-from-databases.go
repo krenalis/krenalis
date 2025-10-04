@@ -265,8 +265,8 @@ func init() {
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Prefilled:   `"MySQL"`,
-							Description: "The name of the connection's connector.",
+							Prefilled:   `"mysql"`,
+							Description: "The code of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",

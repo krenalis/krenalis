@@ -30,10 +30,10 @@ func init() {
 	}
 	formatParameter := types.Property{
 		Name:           "format",
-		Type:           types.Text().WithValues("CSV", "Excel", "Parquet", "JSON"),
+		Type:           types.Text().WithValues("csv", "excel", "parquet", "json"),
 		CreateRequired: true,
-		Prefilled:      `"Excel"`,
-		Description:    "The file format. It corresponds to the name of a file connector.",
+		Prefilled:      `"excel"`,
+		Description:    "The file format. It corresponds to the code of a file connector.",
 	}
 	pathParameter := types.Property{
 		Name:           "path",
@@ -47,7 +47,7 @@ func init() {
 		Type:           types.Text(),
 		Prefilled:      `"Sheet1"`,
 		UpdateRequired: true,
-		Description: "The sheet name. It can only be used with the Excel format, where it is required.\n\n" +
+		Description: "The sheet name. It can only be used with the \"excel\" format, where it is required.\n\n" +
 			"When provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",
 	}
 	compressionParameter := types.Property{
@@ -86,7 +86,7 @@ func init() {
 		Type:           types.Text().WithCharLen(64),
 		UpdateRequired: true,
 		Prefilled:      `"ISO8601"`,
-		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. If `format` is `\"Excel\"`, it can also be set to `\"Excel\"`. " +
+		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. If `format` is `\"excel\"`, it can also be set to `\"Excel\"`. " +
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
 			"This field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `json` or `text`.",
 	}
@@ -308,8 +308,8 @@ func init() {
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Prefilled:   `"SFTP"`,
-							Description: "The name of the connection's connector.",
+							Prefilled:   `"sftp"`,
+							Description: "The code of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",
@@ -348,7 +348,7 @@ func init() {
 							Type:        types.Text(),
 							Nullable:    true,
 							Prefilled:   `"Sheet1"`,
-							Description: "The name of the sheet. It is empty if the format is not Excel.",
+							Description: "The name of the sheet. It is empty if the format is not \"excel\".",
 						},
 						compressionParameter,
 						{
@@ -371,7 +371,7 @@ func init() {
 							Prefilled: `"ISO8601"`,
 							Description: "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `datetime` or `date`.\n\n" +
 								"It is `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
-								"It is `\"Excel\"` if the format is `\"Excel\"` and the column value follows the Excel format. " +
+								"It is `\"Excel\"` if the format is `\"excel\"` and the column value follows the Excel format. " +
 								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).",
 						},
 						{

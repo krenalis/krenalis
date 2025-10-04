@@ -40,7 +40,7 @@ type HTTP struct {
 	transport http.RoundTripper
 	trace     io.Writer
 
-	// muxes maps each connector name to the corresponding ServeMux handling its rate limits.
+	// muxes maps each connector code to the corresponding ServeMux handling its rate limits.
 	mu    sync.Mutex                // protect muxes
 	muxes map[string]*http.ServeMux // nil if state is nil; protected by mu
 }
@@ -73,10 +73,10 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 	connector := connection.Connector()
 	c := &Client{
 		http:       h,
-		connector:  connector.Name,
+		connector:  connector.Code,
 		connection: connection.ID,
 	}
-	c.endpointGroups.mux = h.connectorMux(connector.Name, connector.EndpointGroups)
+	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
 	return c
 }
@@ -95,11 +95,11 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessT
 	}
 	c := &Client{
 		http:         h,
-		connector:    connector.Name,
+		connector:    connector.Code,
 		clientSecret: clientSecret,
 		accessToken:  accessToken,
 	}
-	c.endpointGroups.mux = h.connectorMux(connector.Name, connector.EndpointGroups)
+	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
 	return c
 }

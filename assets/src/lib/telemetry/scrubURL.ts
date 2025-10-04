@@ -9,8 +9,8 @@ const ROUTE_PATTERNS = [
 	'/workspaces',
 	'/workspaces/create',
 	'/connectors',
-	'/connectors/:name',
-	'/connectors/file/:name',
+	'/connectors/:code',
+	'/connectors/file/:code',
 	'/connections/sources',
 	'/connections/destinations',
 	'/connections',
@@ -99,7 +99,7 @@ const REQUEST_PATTERNS = [
 	'/connections/auth-token',
 	'/connections/auth-url',
 	'/connectors',
-	'/connectors/:name',
+	'/connectors/:code',
 	'/events',
 	'/events/:type',
 	'/events/listeners',
@@ -144,7 +144,7 @@ const REQUEST_PATTERNS = [
 	'/workspaces/test',
 	`/connections/:id/identities`,
 	`/connections/:id`,
-	`/connectors/:name/documentation`,
+	`/connectors/:code/documentation`,
 	`/public/metadata`,
 ];
 

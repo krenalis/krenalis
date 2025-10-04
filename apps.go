@@ -45,7 +45,8 @@ const (
 
 // AppInfo represents an app connector info.
 type AppInfo struct {
-	Name            string
+	Code            string
+	Label           string
 	Categories      Categories // bitmask of connector's categories.
 	AsSource        *AsAppSource
 	AsDestination   *AsAppDestination

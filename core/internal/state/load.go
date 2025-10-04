@@ -25,11 +25,12 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	// Read all connectors.
 	connectors := meergo.Connectors()
 	state.connectors = make(map[string]*Connector, len(connectors))
-	for name, connector := range connectors {
+	for code, connector := range connectors {
 		c := Connector{}
 		switch connector := connector.(type) {
 		case meergo.AppInfo:
-			c.Name = connector.Name
+			c.Code = connector.Code
+			c.Label = connector.Label
 			c.Type = App
 			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
@@ -67,13 +68,14 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 			c.Icon = connector.Icon
 			if oauthCredentials != nil {
-				if oAuth, ok := oauthCredentials[c.Name]; ok {
+				if oAuth, ok := oauthCredentials[c.Code]; ok {
 					c.OAuth.ClientID = oAuth.ClientID
 					c.OAuth.ClientSecret = oAuth.ClientSecret
 				}
 			}
 		case meergo.DatabaseInfo:
-			c.Name = connector.Name
+			c.Code = connector.Code
+			c.Label = connector.Label
 			c.Type = Database
 			c.Categories = connector.Categories
 			// It is assumed that each Database connector supports both read
@@ -89,13 +91,14 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Icon = connector.Icon
 			c.Documentation = connector.Documentation
 			if summary := c.Documentation.Source.Summary; summary == "" {
-				c.Documentation.Source.Summary = "Import users from " + article(c.Name) + " " + c.Name + " database"
+				c.Documentation.Source.Summary = "Import users from " + article(c.Label) + " " + c.Label + " database"
 			}
 			if summary := c.Documentation.Destination.Summary; summary == "" {
-				c.Documentation.Destination.Summary = "Exports users to " + article(c.Name) + " " + c.Name + " database"
+				c.Documentation.Destination.Summary = "Exports users to " + article(c.Label) + " " + c.Label + " database"
 			}
 		case meergo.FileInfo:
-			c.Name = connector.Name
+			c.Code = connector.Code
+			c.Label = connector.Label
 			c.Type = File
 			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
@@ -103,7 +106,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				c.HasSourceSettings = asSource.HasSettings
 				c.Documentation.Source = asSource.Documentation
 				if c.Documentation.Source.Summary == "" {
-					c.Documentation.Source.Summary = "Import users from " + article(c.Name) + " " + c.Name + " file"
+					c.Documentation.Source.Summary = "Import users from " + article(c.Label) + " " + c.Label + " file"
 				}
 			}
 			if asDest := connector.AsDestination; asDest != nil {
@@ -111,7 +114,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				c.HasDestinationSettings = connector.AsDestination.HasSettings
 				c.Documentation.Destination = asDest.Documentation
 				if c.Documentation.Destination.Summary == "" {
-					c.Documentation.Destination.Summary = "Export users to " + article(c.Name) + " " + c.Name + " file"
+					c.Documentation.Destination.Summary = "Export users to " + article(c.Label) + " " + c.Label + " file"
 				}
 			}
 			c.FileExtension = connector.Extension
@@ -119,7 +122,8 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Icon = connector.Icon
 			c.HasSheets = connector.HasSheets
 		case meergo.FileStorageInfo:
-			c.Name = connector.Name
+			c.Code = connector.Code
+			c.Label = connector.Label
 			c.Type = FileStorage
 			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
@@ -129,7 +133,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				c.HasSourceSettings = true
 				c.Documentation.Source = asSource.Documentation
 				if c.Documentation.Source.Summary == "" {
-					c.Documentation.Source.Summary = "Import users from a file on " + c.Name
+					c.Documentation.Source.Summary = "Import users from a file on " + c.Label
 				}
 			}
 			if asDest := connector.AsDestination; asDest != nil {
@@ -140,12 +144,13 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				c.HasDestinationSettings = true
 				c.Documentation.Destination = asDest.Documentation
 				if c.Documentation.Source.Summary == "" {
-					c.Documentation.Source.Summary = "Exports users to a file on " + c.Name
+					c.Documentation.Source.Summary = "Exports users to a file on " + c.Label
 				}
 			}
 			c.Icon = connector.Icon
 		case meergo.SDKInfo:
-			c.Name = connector.Name
+			c.Code = connector.Code
+			c.Label = connector.Label
 			c.Type = SDK
 			c.Categories = connector.Categories
 			c.Terms = ConnectorTerms{
@@ -159,7 +164,8 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Strategies = connector.Strategies
 			c.Documentation = connector.Documentation
 		case meergo.StreamInfo:
-			c.Name = connector.Name
+			c.Code = connector.Code
+			c.Label = connector.Label
 			c.Type = Stream
 			c.Categories = connector.Categories
 			c.SourceTargets = EventsFlag
@@ -169,7 +175,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Icon = connector.Icon
 			c.Documentation = connector.Documentation
 		}
-		state.connectors[name] = &c
+		state.connectors[code] = &c
 	}
 
 	// Read all warehouse types.

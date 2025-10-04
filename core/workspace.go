@@ -382,7 +382,7 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 	this.core.mustBeOpen()
 
 	if connector == "" {
-		return "", errors.BadRequest("connector name is empty")
+		return "", errors.BadRequest("connector code is empty")
 	}
 	if code == "" {
 		return "", errors.BadRequest("authorization code is empty")
@@ -438,7 +438,7 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		connection:        c,
 		ID:                c.ID,
 		Name:              c.Name,
-		Connector:         conn.Name,
+		Connector:         conn.Code,
 		ConnectorType:     ConnectorType(conn.Type),
 		Role:              Role(c.Role),
 		Strategy:          (*Strategy)(c.Strategy),
@@ -491,7 +491,7 @@ func (this *Workspace) Connections() []*Connection {
 			connection:        c,
 			ID:                c.ID,
 			Name:              c.Name,
-			Connector:         conn.Name,
+			Connector:         conn.Code,
 			ConnectorType:     ConnectorType(conn.Type),
 			Role:              Role(c.Role),
 			Strategy:          (*Strategy)(c.Strategy),
@@ -550,7 +550,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		return 0, errors.BadRequest("role %d is not valid", int(connection.Role))
 	}
 	if connection.Connector == "" {
-		return 0, errors.BadRequest("connector name is empty")
+		return 0, errors.BadRequest("connector code is empty")
 	}
 	if err := util.ValidateStringField("name", connection.Name, 100); err != nil {
 		return 0, errors.BadRequest("%s", err)
@@ -599,7 +599,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		LinkedConnections: connection.LinkedConnections,
 	}
 	if n.Name == "" {
-		n.Name = c.Name
+		n.Name = c.Label
 	}
 
 	// Validate the strategy.
@@ -619,13 +619,13 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if connection.Role == Destination {
 		if c.SendingMode != nil {
 			if connection.SendingMode == nil {
-				return 0, errors.BadRequest("connector %s requires a sending mode", c.Name)
+				return 0, errors.BadRequest("connector %s requires a sending mode", c.Code)
 			}
 			if !c.SendingMode.Contains(state.SendingMode(*connection.SendingMode)) {
-				return 0, errors.BadRequest("connector %s does not support sending mode %s", c.Name, *c.SendingMode)
+				return 0, errors.BadRequest("connector %s does not support sending mode %s", c.Code, *c.SendingMode)
 			}
 		} else if connection.SendingMode != nil {
-			return 0, errors.BadRequest("connector %s does not support sending modes", c.Name)
+			return 0, errors.BadRequest("connector %s does not support sending modes", c.Code)
 		}
 	} else if connection.SendingMode != nil {
 		return 0, errors.BadRequest("source connections cannot have a sending mode")
@@ -650,7 +650,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		if err != nil {
 			return 0, errors.BadRequest("authorization token is not valid")
 		}
-		if account.Workspace != this.workspace.ID || account.Connector != c.Name {
+		if account.Workspace != this.workspace.ID || account.Connector != c.Code {
 			return 0, errors.BadRequest("authorization token is not valid")
 		}
 		n.Account.Code = account.Code
@@ -669,11 +669,11 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	// Validate the settings.
 	if settings := connection.Settings; settings == nil {
 		if connection.Role == Source && c.HasSourceSettings || connection.Role == Destination && c.HasDestinationSettings {
-			return 0, errors.BadRequest("settings must be provided because connector %s has %s settings", c.Name, strings.ToLower(connection.Role.String()))
+			return 0, errors.BadRequest("settings must be provided because connector %s has %s settings", c.Code, strings.ToLower(connection.Role.String()))
 		}
 	} else {
 		if connection.Role == Source && !c.HasSourceSettings || connection.Role == Destination && !c.HasDestinationSettings {
-			return 0, errors.BadRequest("settings cannot be provided because connector %s has no %s settings", c.Name, strings.ToLower(connection.Role.String()))
+			return 0, errors.BadRequest("settings cannot be provided because connector %s has no %s settings", c.Code, strings.ToLower(connection.Role.String()))
 		}
 		var clientSecret string
 		if c.OAuth != nil {
@@ -1258,7 +1258,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	this.core.mustBeOpen()
 
 	if connector == "" {
-		return nil, errors.BadRequest("connector name is empty")
+		return nil, errors.BadRequest("connector code is empty")
 	}
 	if role != Source && role != Destination {
 		return nil, errors.BadRequest("role %d is not valid", role)
@@ -1274,9 +1274,9 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 
 	if (authToken == "") != (c.OAuth == nil) {
 		if authToken == "" {
-			return nil, errors.BadRequest("authorization token is required by connector %s", c.Name)
+			return nil, errors.BadRequest("authorization token is required by connector %s", c.Code)
 		}
-		return nil, errors.BadRequest("connector %s does not support authorization", c.Name)
+		return nil, errors.BadRequest("connector %s does not support authorization", c.Code)
 	}
 
 	// Decode oAuth.
@@ -1308,7 +1308,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	ui, err := this.core.connectors.ServeConnectorUI(ctx, c, conf, event, settings)
 	if err != nil {
 		if err == meergo.ErrUIEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Name)
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Code)
 		} else {
 			switch err.(type) {
 			case *meergo.InvalidSettingsError:

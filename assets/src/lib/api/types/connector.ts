@@ -7,7 +7,8 @@ type SendingMode = 'Client' | 'Server' | 'ClientAndServer';
 type ConnectorTarget = 'Event' | 'User' | 'Group';
 
 interface Connector {
-	name: string;
+	code: string;
+	label: string;
 	type: ConnectorType;
 	categories: Array<string>;
 	asSource: SourceConnector | null;
@@ -34,7 +35,8 @@ interface ConnectorImplementation {
 }
 
 interface ConnectorInfo {
-	name: string;
+	code: string;
+	label: string;
 	categories: Array<string>;
 	icon: string;
 	iconLicense: string;

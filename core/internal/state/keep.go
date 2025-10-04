@@ -410,7 +410,7 @@ type CreateConnection struct {
 	Workspace int      // workspace identifier
 	ID        int      // identifier
 	Name      string   // name
-	Connector string   // connector name
+	Connector string   // connector
 	Role      Role     // role
 	Account   struct { // account.
 		ID           int       // identifier, can be zero

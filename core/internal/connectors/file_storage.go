@@ -60,11 +60,11 @@ type fileStorageWriteConnector interface {
 // Errors are deferred until a file storage's method is called.
 func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorage {
 	s := &FileStorage{
-		connector: storage.Connector().Name,
+		connector: storage.Connector().Code,
 		state:     connectors.state,
 		storage:   storage,
 	}
-	s.inner, s.err = meergo.RegisteredFileStorage(storage.Connector().Name).New(&meergo.FileStorageEnv{
+	s.inner, s.err = meergo.RegisteredFileStorage(storage.Connector().Code).New(&meergo.FileStorageEnv{
 		Settings:    storage.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, storage),
 	})
@@ -146,7 +146,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 
-	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileEnv{
+	_file, err := meergo.RegisteredFile(file.Code).New(&meergo.FileEnv{
 		SetSettings: func(ctx context.Context, innerSettings []byte) error { return nil },
 	})
 	if err != nil {
@@ -159,7 +159,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		}
 	}
 
-	rw := newRecordWriter(file.Name, nil, storageTimestamp, &file.TimeLayouts, time.Time{}, limit)
+	rw := newRecordWriter(file.Code, nil, storageTimestamp, &file.TimeLayouts, time.Time{}, limit)
 	var records []map[string]any
 	var recordErr error
 	rw.setYieldFunc(func(record Record) bool {
@@ -206,7 +206,7 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 		return nil, storage.err
 	}
 
-	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileEnv{
+	_file, err := meergo.RegisteredFile(file.Code).New(&meergo.FileEnv{
 		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {

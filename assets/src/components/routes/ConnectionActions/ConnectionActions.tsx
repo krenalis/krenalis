@@ -113,7 +113,7 @@ const ConnectionActions = () => {
 			className={`connection-actions${connection.actions!.length === 0 ? ' connection-actions--no-action' : ''}`}
 		>
 			{connection.connector.hasSnippet && (
-				<Snippet connectorName={connection.connector.name} connectionID={connection.id} />
+				<Snippet connectorCode={connection.connector.code} connectionID={connection.id} />
 			)}
 			{/* Linked connections are shown: before the actions, in the case of destination actions; after the actions,
 			in the case of source actions. This is to better suggest the usability flow. */}

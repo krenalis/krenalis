@@ -14,7 +14,7 @@ import TransformedConnector from '../../../lib/core/connector';
 import * as marked from 'marked';
 import { connectorsInfo } from '../../../lib/api/connectorsInfo';
 import { ConnectorInfo } from '../../../lib/api/types/connector';
-import { ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_NAME_KEY } from '../../../constants/storage';
+import { ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_CODE_KEY } from '../../../constants/storage';
 import { UI_BASE_PATH } from '../../../constants/paths';
 
 const ConnectorsList = () => {
@@ -41,9 +41,9 @@ const ConnectorsList = () => {
 	}, [location]);
 
 	const searchedConnectors: any[] = useMemo(() => {
-		const sortedConnectors = structuredClone(connectors).sort((a, b) => (a.name <= b.name ? -1 : 1));
+		const sortedConnectors = structuredClone(connectors).sort((a, b) => (a.label <= b.label ? -1 : 1));
 		const sortedAdditionalConnectorsInfo = structuredClone(additionalConnectorsInfo).sort((a, b) =>
-			a.name <= b.name ? -1 : 1,
+			a.label <= b.label ? -1 : 1,
 		);
 		let searchedConnectors = [];
 
@@ -60,7 +60,7 @@ const ConnectorsList = () => {
 				const isAlreadyInstalled =
 					sortedConnectors.findIndex(
 						(conn) =>
-							conn.name === c.name &&
+							conn.code === c.code &&
 							((connectionRole === 'Source' && c.asSource != null) ||
 								(connectionRole === 'Destination' && c.asDestination != null)),
 					) !== -1;
@@ -69,12 +69,12 @@ const ConnectorsList = () => {
 				}
 			}
 
-			const name = c.name;
-			let nameMatches = name.toLowerCase().includes(searchTerm.toLowerCase());
+			const label = c.label;
+			let labelMatches = label.toLowerCase().includes(searchTerm.toLowerCase());
 			let categoriesMatch = c.categories.some((category) =>
 				category.toLowerCase().includes(searchTerm.toLowerCase()),
 			);
-			if (nameMatches || categoriesMatch) {
+			if (labelMatches || categoriesMatch) {
 				searchedConnectors.push(c);
 			}
 		}
@@ -127,7 +127,7 @@ const ConnectorsList = () => {
 			if (!c.oauth.configured) {
 				return;
 			}
-			localStorage.setItem(ADD_CONNECTOR_NAME_KEY, c.name);
+			localStorage.setItem(ADD_CONNECTOR_CODE_KEY, c.code);
 			localStorage.setItem(ADD_CONNECTION_ROLE_KEY, connectionRole);
 			let res: authCodeURLResponse;
 			const redirectURI = new URL(`${api.connectors.origin}${UI_BASE_PATH}oauth/authorize`);
@@ -137,7 +137,7 @@ const ConnectorsList = () => {
 				redirectURI.hostname = '127.0.0.1';
 			}
 			try {
-				res = await api.connectors.authCodeURL(c.name, connectionRole as Role, redirectURI.toString());
+				res = await api.connectors.authCodeURL(c.code, connectionRole as Role, redirectURI.toString());
 			} catch (err) {
 				handleError(err);
 				return;
@@ -146,9 +146,9 @@ const ConnectorsList = () => {
 			return;
 		}
 		if (c.isFile) {
-			redirect(`connectors/file/${c.name}?role=${connectionRole}`);
+			redirect(`connectors/file/${c.code}?role=${connectionRole}`);
 		} else {
-			redirect(`connectors/${c.name}?role=${connectionRole}`);
+			redirect(`connectors/${c.code}?role=${connectionRole}`);
 		}
 	};
 
@@ -157,7 +157,7 @@ const ConnectorsList = () => {
 		setIsLoadingDocumentation(true);
 		let doc: string;
 		try {
-			const res = await api.connectors.connectorDocumentation(connector.name);
+			const res = await api.connectors.connectorDocumentation(connector.code);
 			doc = await marked.parse(res[connectionRole].Overview);
 		} catch (err) {
 			setSelectedConnector(null);
@@ -250,7 +250,7 @@ const ConnectorsList = () => {
 				}}
 			>
 				<div className='connectors-list__documentation-drawer-label' slot='label'>
-					<span>{selectedConnector?.name}</span>
+					<span>{selectedConnector?.label}</span>
 					<SlButton
 						className='connectors-list__documentation-add'
 						variant='primary'
@@ -282,7 +282,7 @@ const ConnectorsList = () => {
 								<a href='#' target='_blank'>
 									Our documentation
 								</a>{' '}
-								provides instructions on how to configure {selectedConnector.name} OAuth.
+								provides instructions on how to configure {selectedConnector.label} OAuth.
 							</div>
 						)}
 					</>
@@ -308,14 +308,14 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 		return (
 			<div
 				className='connectors-list__card'
-				key={connector.name}
-				data-name={connector.name}
+				key={connector.code}
+				data-code={connector.code}
 				onClick={() => onClick(connector)}
 			>
 				<div className='connectors-list__card-beta-label'>Beta</div>
 				<div className='connectors-list__card-top'>
 					<div className='connectors-list__card-logo' dangerouslySetInnerHTML={{ __html: connector.icon }} />
-					<div className='connectors-list__card-name'>{connector.name}</div>
+					<div className='connectors-list__card-label'>{connector.label}</div>
 					{connector.categories.map((category, index) => (
 						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
 							{category}
@@ -343,8 +343,8 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 		return (
 			<div
 				className={`connectors-list__card connectors-list__card--info`}
-				key={connectorInfo.name}
-				data-name={connectorInfo.name}
+				key={connectorInfo.code}
+				data-code={connectorInfo.code}
 			>
 				{isComingSoon ? (
 					<div className='connectors-list__card-coming-label'>Coming soon</div>
@@ -356,7 +356,7 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 						className='connectors-list__card-logo'
 						dangerouslySetInnerHTML={{ __html: connectorInfo.icon }}
 					/>
-					<div className='connectors-list__card-name'>{connectorInfo.name}</div>
+					<div className='connectors-list__card-label'>{connectorInfo.label}</div>
 					{connectorInfo.categories.map((category, index) => (
 						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
 							{category}

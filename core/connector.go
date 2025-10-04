@@ -21,7 +21,8 @@ import (
 type Connector struct {
 	core            *Core
 	connector       *state.Connector
-	Name            string                `json:"name"`
+	Code            string                `json:"code"`
+	Label           string                `json:"label"`
 	Type            ConnectorType         `json:"type"`
 	Categories      []string              `json:"categories"`
 	AsSource        *SourceConnector      `json:"asSource"`
@@ -166,7 +167,7 @@ func isValidSendingMode(sm SendingMode) bool {
 func (this *Connector) AuthCodeURL(role Role, redirectURI string) (string, error) {
 	this.core.mustBeOpen()
 	if this.connector.OAuth == nil {
-		return "", errors.BadRequest("connector %s does not support OAuth", this.connector.Name)
+		return "", errors.BadRequest("connector %s does not support OAuth", this.connector.Code)
 	}
 	if role != Source && role != Destination {
 		return "", errors.BadRequest("role %q is not valid", role)

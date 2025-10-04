@@ -75,7 +75,7 @@ func TestExportUsersToFile(t *testing.T) {
 	fsID := c.CreateConnection(meergotester.ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      meergotester.Destination,
-		Connector: "Filesystem",
+		Connector: "filesystem",
 		Settings: meergotester.JSONEncodeSettings(map[string]any{
 			"SimulateHighIOLatency": false,
 		}),
@@ -95,7 +95,7 @@ func TestExportUsersToFile(t *testing.T) {
 			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "gender", Type: types.Text(), ReadOptional: true},
 		}),
-		Format: "CSV",
+		Format: "csv",
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 			"Separator": ",",
 		}),
@@ -133,7 +133,7 @@ func TestExportUsersToFile(t *testing.T) {
 				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
-			Format: "CSV",
+			Format: "csv",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 				"Separator": ",",
 			}),

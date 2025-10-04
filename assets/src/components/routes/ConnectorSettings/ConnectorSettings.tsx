@@ -47,9 +47,9 @@ const ConnectorSettings = () => {
 
 	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
-	let connectorName: string, connectionRole: ConnectionRole, authToken: string;
+	let connectorCode: string, connectionRole: ConnectionRole, authToken: string;
 	const url = new URL(document.location.href);
-	connectorName = decodeURIComponent(url.pathname.split('/').pop());
+	connectorCode = url.pathname.split('/').pop();
 	const roleParam = url.searchParams.get('role') as ConnectionRole | null | '';
 	if (roleParam == null || roleParam === '') {
 		connectionRole = 'Source';
@@ -64,9 +64,9 @@ const ConnectorSettings = () => {
 	}
 
 	useEffect(() => {
-		const connector = connectors.find((c) => c.name === connectorName);
+		const connector = connectors.find((c) => c.code === connectorCode);
 		if (connector.isFile) {
-			redirect(`connectors/file/${encodeURIComponent(connector.name)}?role=${connectionRole}`);
+			redirect(`connectors/file/${connector.code}?role=${connectionRole}`);
 		}
 	}, []);
 
@@ -78,7 +78,7 @@ const ConnectorSettings = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			const connector = connectors.find((c) => c.name === connectorName);
+			const connector = connectors.find((c) => c.code === connectorCode);
 			if (connector == null) {
 				setNotFound(true);
 				return;
@@ -88,11 +88,11 @@ const ConnectorSettings = () => {
 				<Flex alignItems='baseline' gap={10}>
 					<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(connector.icon)}</span>
 					<span>
-						Add {connectionRole.toLowerCase()} connection for {connector.name}
+						Add {connectionRole.toLowerCase()} connection for {connector.label}
 					</span>
 				</Flex>,
 			);
-			setName(connector.name);
+			setName(connector.label);
 			if (hasStrategy(connectionRole, connector)) {
 				setStrategy(strategyOptions[0]);
 			}
@@ -103,7 +103,7 @@ const ConnectorSettings = () => {
 			if (!connector.hasSettings(connectionRole)) return;
 			let ui: ConnectorUIResponse;
 			try {
-				ui = await api.connectors.ui(selectedWorkspace, connectorName, connectionRole, authToken);
+				ui = await api.connectors.ui(selectedWorkspace, connectorCode, connectionRole, authToken);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connectors');
@@ -167,7 +167,7 @@ const ConnectorSettings = () => {
 				const connection: ConnectionToAdd = {
 					name: name,
 					role: connectionRole,
-					connector: connectorName,
+					connector: connectorCode,
 					strategy: strategy,
 					sendingMode: sendingMode,
 					settings: settings,
@@ -197,7 +197,7 @@ const ConnectorSettings = () => {
 		try {
 			ui = await api.connectors.uiEvent(
 				selectedWorkspace,
-				connectorName,
+				connectorCode,
 				eventName,
 				settings,
 				connectionRole,
@@ -298,7 +298,7 @@ const ConnectorSettings = () => {
 					<div className='connector-settings__basic'>
 						<div className='connector-settings__input'>
 							<SlInput
-								className='connector-settings__name-field'
+								className='connector-settings__label-field'
 								name='name'
 								value={name}
 								label='Name'

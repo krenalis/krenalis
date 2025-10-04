@@ -15,7 +15,8 @@ import (
 
 // DatabaseInfo represents a database connector info.
 type DatabaseInfo struct {
-	Name          string
+	Code          string
+	Label         string
 	Categories    Categories  // categories
 	SampleQuery   string      // sample query
 	TimeLayouts   TimeLayouts // layouts for time values. If left empty, it is ISO 8601.

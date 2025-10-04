@@ -30,7 +30,8 @@ func (err *InvalidPathError) Error() string {
 
 // FileStorageInfo represents a file storage connector info.
 type FileStorageInfo struct {
-	Name          string
+	Code          string
+	Label         string
 	Categories    Categories // categories
 	AsSource      *AsFileStorageSource
 	AsDestination *AsFileStorageDestination

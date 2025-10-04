@@ -797,7 +797,7 @@ class Workspaces {
 
 	authToken = async (connector: string, authCode: string, redirectURI: string): Promise<string> => {
 		return await call(
-			`${this.apiURL}/connections/auth-token?connector=${encodeURIComponent(connector)}&redirectURI=${encodeURIComponent(redirectURI)}&authCode=${encodeURIComponent(authCode)}`,
+			`${this.apiURL}/connections/auth-token?connector=${connector}&redirectURI=${encodeURIComponent(redirectURI)}&authCode=${encodeURIComponent(authCode)}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -983,7 +983,7 @@ class Connectors {
 
 	authCodeURL = async (connector: string, role: Role, redirectURI: string): Promise<authCodeURLResponse> => {
 		return await call(
-			`${this.apiURL}/connections/auth-url?connector=${encodeURIComponent(connector)}&role=${role}&redirectURI=${encodeURIComponent(redirectURI)}`,
+			`${this.apiURL}/connections/auth-url?connector=${connector}&role=${role}&redirectURI=${encodeURIComponent(redirectURI)}`,
 			http.GET,
 		);
 	};

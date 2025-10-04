@@ -56,9 +56,9 @@ type Stream struct {
 // longer needed.
 func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, error) {
 	stream := &Stream{
-		connector: connection.Connector().Name,
+		connector: connection.Connector().Code,
 	}
-	inner, err := meergo.RegisteredStream(connection.Connector().Name).New(&meergo.StreamEnv{
+	inner, err := meergo.RegisteredStream(connection.Connector().Code).New(&meergo.StreamEnv{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})

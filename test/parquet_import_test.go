@@ -91,7 +91,7 @@ func TestParquetImport(t *testing.T) {
 			},
 		},
 		IdentityColumn: "parquet_id",
-		Format:         "Parquet",
+		Format:         "parquet",
 	})
 
 	// Import and wait.
