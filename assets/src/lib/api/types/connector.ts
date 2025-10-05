@@ -85,6 +85,7 @@ export type {
 	DestinationConnector,
 	ConnectorType,
 	ConnectorInfo,
+	ConnectorImplementation,
 	ConnectorRoleDocumentation,
 	ConnectorDocumentation,
 	// WebhooksPer, // TODO(marco): implement webhooks

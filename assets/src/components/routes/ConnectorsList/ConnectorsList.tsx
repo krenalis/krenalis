@@ -8,7 +8,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import { authCodeURLResponse, ConnectorsInfoResponse } from '../../../lib/api/types/responses';
+import { authCodeURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import TransformedConnector from '../../../lib/core/connector';
 import * as marked from 'marked';
@@ -39,6 +39,10 @@ const ConnectorsList = () => {
 			return roleParam;
 		}
 	}, [location]);
+
+	const existingConnectorCodes = useMemo(() => {
+		return new Set(connectors.map((connector) => connector.code));
+	}, [connectors]);
 
 	const searchedConnectors: any[] = useMemo(() => {
 		const sortedConnectors = structuredClone(connectors).sort((a, b) => (a.label <= b.label ? -1 : 1));
@@ -108,17 +112,17 @@ const ConnectorsList = () => {
 
 	useEffect(() => {
 		const fetchConnectorsInfo = async () => {
-			let res: ConnectorsInfoResponse;
+			let connectors: ConnectorInfo[];
 			try {
-				res = await connectorsInfo();
+				connectors = await connectorsInfo(existingConnectorCodes);
 			} catch (err) {
 				console.error(err);
 				return;
 			}
-			setAdditionalConnectorsInfo(res.connectors);
+			setAdditionalConnectorsInfo(connectors);
 		};
 		fetchConnectorsInfo();
-	}, []);
+	}, [existingConnectorCodes]);
 
 	const onConnectorAdd = async () => {
 		let c = selectedConnector;
