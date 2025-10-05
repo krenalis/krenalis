@@ -22,20 +22,24 @@ import (
 var (
 	registryMu sync.RWMutex
 	registry   = struct {
-		apps       map[string]AppInfo
-		databases  map[string]DatabaseInfo
-		files      map[string]FileInfo
-		storages   map[string]FileStorageInfo
-		sdks       map[string]SDKInfo
-		streams    map[string]StreamInfo
+		apps      map[string]AppInfo
+		databases map[string]DatabaseInfo
+		files     map[string]FileInfo
+		storages  map[string]FileStorageInfo
+		sdks      map[string]SDKInfo
+		streams   map[string]StreamInfo
+		usedCodes map[string]struct{} // used connector codes
+
 		warehouses map[string]WarehouseDriver
 	}{
-		apps:       make(map[string]AppInfo),
-		databases:  make(map[string]DatabaseInfo),
-		files:      make(map[string]FileInfo),
-		storages:   make(map[string]FileStorageInfo),
-		sdks:       make(map[string]SDKInfo),
-		streams:    make(map[string]StreamInfo),
+		apps:      make(map[string]AppInfo),
+		databases: make(map[string]DatabaseInfo),
+		files:     make(map[string]FileInfo),
+		storages:  make(map[string]FileStorageInfo),
+		sdks:      make(map[string]SDKInfo),
+		streams:   make(map[string]StreamInfo),
+		usedCodes: make(map[string]struct{}),
+
 		warehouses: make(map[string]WarehouseDriver),
 	}
 )
@@ -80,10 +84,11 @@ func RegisterApp[T any](app AppInfo, new AppNewFunc[T]) {
 	validateAppConnector(app)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.apps[app.Code]; dup {
-		panic("meergo: RegisterApp called twice for connector " + app.Code)
+	if _, ok := registry.usedCodes[app.Code]; ok {
+		panic("meergo: RegisterApp called with a connector code already registered: " + app.Code)
 	}
 	registry.apps[app.Code] = app
+	registry.usedCodes[app.Code] = struct{}{}
 }
 
 // RegisterDatabase makes a database connector available by the provided code.
@@ -98,10 +103,11 @@ func RegisterDatabase[T any](database DatabaseInfo, new DatabaseNewFunc[T]) {
 	validateDatabaseConnector(database)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.databases[database.Code]; dup {
-		panic("meergo: RegisterDatabase called twice for connector " + database.Code)
+	if _, ok := registry.usedCodes[database.Code]; ok {
+		panic("meergo: RegisterDatabase called with a connector code already registered: " + database.Code)
 	}
 	registry.databases[database.Code] = database
+	registry.usedCodes[database.Code] = struct{}{}
 }
 
 // RegisterFile makes a file connector available by the provided code. If
@@ -115,10 +121,11 @@ func RegisterFile[T any](file FileInfo, new FileNewFunc[T]) {
 	validateFileConnector(file)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.files[file.Code]; dup {
-		panic("meergo: RegisterFile called twice for connector " + file.Code)
+	if _, ok := registry.usedCodes[file.Code]; ok {
+		panic("meergo: RegisterFile called with a connector code already registered: " + file.Code)
 	}
 	registry.files[file.Code] = file
+	registry.usedCodes[file.Code] = struct{}{}
 }
 
 // RegisterFileStorage makes a file storage connector available by the provided
@@ -133,10 +140,11 @@ func RegisterFileStorage[T any](storage FileStorageInfo, new FileStorageNewFunc[
 	validateFileStorageConnector(storage)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.storages[storage.Code]; dup {
-		panic("meergo: RegisterFileStorage called twice for connector " + storage.Code)
+	if _, ok := registry.usedCodes[storage.Code]; ok {
+		panic("meergo: RegisterFileStorage called with a connector code already registered: " + storage.Code)
 	}
 	registry.storages[storage.Code] = storage
+	registry.usedCodes[storage.Code] = struct{}{}
 }
 
 // RegisterSDK makes an SDK connector available by the provided code. If
@@ -151,10 +159,11 @@ func RegisterSDK[T any](sdk SDKInfo, new SDKNewFunc[T]) {
 	validateSDKConnector(sdk)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.sdks[sdk.Code]; dup {
-		panic("meergo: RegisterSDK called twice for connector " + sdk.Code)
+	if _, ok := registry.usedCodes[sdk.Code]; ok {
+		panic("meergo: RegisterSDK called with a connector code already registered: " + sdk.Code)
 	}
 	registry.sdks[sdk.Code] = sdk
+	registry.usedCodes[sdk.Code] = struct{}{}
 }
 
 // RegisterStream makes a stream connector available by the provided code.
@@ -169,10 +178,11 @@ func RegisterStream[T any](stream StreamInfo, new StreamNewFunc[T]) {
 	validateStreamConnector(stream)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.streams[stream.Code]; dup {
-		panic("meergo: RegisterStream called twice for connector " + stream.Code)
+	if _, ok := registry.usedCodes[stream.Code]; ok {
+		panic("meergo: RegisterSDK called with a connector code already registered: " + stream.Code)
 	}
 	registry.streams[stream.Code] = stream
+	registry.usedCodes[stream.Code] = struct{}{}
 }
 
 // RegisterWarehouseDriver makes a warehouse driver available by the provided
