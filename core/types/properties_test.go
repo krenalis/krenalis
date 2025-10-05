@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -328,6 +329,38 @@ func Test_Properties_Len(t *testing.T) {
 	}
 	if got := Object(properties).Properties().Len(); len(properties) != got {
 		t.Errorf("expected %d, got %d", len(properties), got)
+	}
+}
+
+// Test_Properties_Names tests Properties.Names and Properties.SortedNames.
+func Test_Properties_Names(t *testing.T) {
+	properties := []Property{
+		{Name: "profile", Type: Object([]Property{{Name: "first_name", Type: Text()}})},
+		{Name: "tags", Type: Array(Text())},
+		{Name: "attributes", Type: Map(Object([]Property{{Name: "value", Type: Text()}}))},
+		{Name: "id", Type: Int(64)},
+	}
+	pp := Object(properties).Properties()
+	expected := []string{"profile", "tags", "attributes", "id"}
+	got := pp.Names()
+	if len(got) != len(expected) {
+		t.Fatalf("expected %d names, got %d", len(expected), len(got))
+	}
+	for i := 0; i < len(expected); i++ {
+		if got[i] != expected[i] {
+			t.Fatalf("expected %q at index %d, got %q", expected[i], i, got[i])
+		}
+	}
+	sortedExpected := append([]string(nil), expected...)
+	slices.Sort(sortedExpected)
+	gotSorted := pp.SortedNames()
+	if len(gotSorted) != len(sortedExpected) {
+		t.Fatalf("expected %d sorted names, got %d", len(sortedExpected), len(gotSorted))
+	}
+	for i := 0; i < len(sortedExpected); i++ {
+		if gotSorted[i] != sortedExpected[i] {
+			t.Fatalf("expected sorted name %q at index %d, got %q", sortedExpected[i], i, gotSorted[i])
+		}
 	}
 }
 

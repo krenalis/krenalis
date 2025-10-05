@@ -9,6 +9,7 @@ package types
 
 import (
 	"iter"
+	"slices"
 	"strings"
 )
 
@@ -30,10 +31,7 @@ func (pp Properties) All() iter.Seq2[int, Property] {
 	}
 }
 
-const (
-	invalidNameMsg = "invalid property name"
-	invalidPathMsg = "invalid property path"
-)
+const invalidPathMsg = "invalid property path"
 
 // ByName returns the property with the given name and a boolean indicating
 // whether it exists. If the name is invalid or not found, it returns the zero
@@ -174,7 +172,8 @@ func (pp Properties) Len() int {
 	return len(pp.properties)
 }
 
-// Names returns a copy of the property names.
+// Names returns a copy of the property names in property order.
+// See also SortedNames if you need the names sorted alphabetically.
 func (pp Properties) Names() []string {
 	properties := pp.properties
 	names := make([]string, len(properties))
@@ -189,6 +188,18 @@ func (pp Properties) Slice() []Property {
 	properties := make([]Property, len(pp.properties))
 	copy(properties, pp.properties)
 	return properties
+}
+
+// SortedNames returns a copy of the property names sorted alphabetically. Use
+// Names if you need the names in property order or if order does not matter.
+func (pp Properties) SortedNames() []string {
+	properties := pp.properties
+	names := make([]string, len(properties))
+	for i := 0; i < len(properties); i++ {
+		names[i] = properties[i].Name
+	}
+	slices.Sort(names)
+	return names
 }
 
 // WalkAll returns an iterator over all properties in depth-first order.
