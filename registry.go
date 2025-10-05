@@ -379,7 +379,7 @@ func validateAppConnector(app AppInfo) {
 		if !app.ct.Implements(iface) {
 			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 		}
-	} else if !hasSourceSettings && !hasDestinationSettings {
+	} else {
 		iface := reflect.TypeFor[interface {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
@@ -571,6 +571,6 @@ func validateConnectorCode(typ string, code string) {
 		if 'a' <= c && c <= 'z' || '0' <= c && c <= '9' || c == '-' {
 			continue
 		}
-		panic(fmt.Sprintf("connector code %s is not valid; valid codes contain only [a-z0-9-]", code))
+		panic(fmt.Sprintf("connector code %q is not valid; valid codes contain only [a-z0-9-]", code))
 	}
 }

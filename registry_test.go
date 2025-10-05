@@ -72,14 +72,14 @@ func TestValidateConnectorCode(t *testing.T) {
 	valid := []string{"a", "abc", "abc-123", "0", "-", "-a", "a-", "a-b-c", "z9-", "12345", "alpha-0-omega", "postgresql", "http-get"}
 	invalid := map[string]string{
 		"":     "code is missing for a connector of type App",
-		"ABC":  "connector code ABC is not valid; valid codes contain only [a-z0-9-]",
-		"a_b":  "connector code a_b is not valid; valid codes contain only [a-z0-9-]",
-		"a b":  "connector code a b is not valid; valid codes contain only [a-z0-9-]",
-		"a.b":  "connector code a.b is not valid; valid codes contain only [a-z0-9-]",
-		"a/b":  "connector code a/b is not valid; valid codes contain only [a-z0-9-]",
-		"café": "connector code café is not valid; valid codes contain only [a-z0-9-]",
-		"ç":    "connector code ç is not valid; valid codes contain only [a-z0-9-]",
-		"🙂":    "connector code 🙂 is not valid; valid codes contain only [a-z0-9-]",
+		"ABC":  `connector code "ABC" is not valid; valid codes contain only [a-z0-9-]`,
+		"a_b":  `connector code "a_b" is not valid; valid codes contain only [a-z0-9-]`,
+		"a b":  `connector code "a b" is not valid; valid codes contain only [a-z0-9-]`,
+		"a.b":  `connector code "a.b" is not valid; valid codes contain only [a-z0-9-]`,
+		"a/b":  `connector code "a/b" is not valid; valid codes contain only [a-z0-9-]`,
+		"café": `connector code "café" is not valid; valid codes contain only [a-z0-9-]`,
+		"ç":    `connector code "ç" is not valid; valid codes contain only [a-z0-9-]`,
+		"🙂":    `connector code "🙂" is not valid; valid codes contain only [a-z0-9-]`,
 	}
 
 	// Valid.
