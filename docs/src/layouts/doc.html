@@ -12,7 +12,7 @@
 </head>
 <body>
 {% macro item(path, name string) %}
-<a href="/{{ path }}"{% if path == filepath %} class="selected"{% else if hasPrefix(filepath, path+"/") %} class="expanded"{% end %}>{{ name }}</a>
+<a href="/{{ path }}"{% if path == filepath %} class="selected"{% end %}>{{ name }}</a>
 {% end %}
 <header>
     <div class="logo"><span>Meergo</span> docs</div>

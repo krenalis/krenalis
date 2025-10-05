@@ -101,7 +101,7 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions-send-events-to-apps",
+		ID:   "actions/send-events-to-apps",
 		Name: "Send events to apps",
 		Description: "This type of action sends the received events to applications. " +
 			"It operates on a destination app connection that supports events.",

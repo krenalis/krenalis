@@ -115,7 +115,7 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions-import-users-from-apps",
+		ID:   "actions/import-users-from-apps",
 		Name: "Import users from apps",
 		Description: "This type of action imports user data from an application into the workspace's data warehouse. " +
 			"It operates on a source app connection that supports users.",

@@ -1,3 +1,16 @@
+const COLLAPSED_CLASS = "sidebar-collapsed";
+const EXPANDED_CLASS = "expanded";
+
+const normalizePath = (path) => {
+    if (!path) {
+        return "/";
+    }
+    if (path.endsWith("/") && path !== "/") {
+        return path.slice(0, -1);
+    }
+    return path;
+};
+
 const handleSidebar = () => {
     setTimeout(() => {
         scrollSidebar();
@@ -15,9 +28,23 @@ const handleSidebar = () => {
 
 const scrollSidebar = () => {
     const sidebar = document.querySelector("body > article > .wrap > aside > nav");
-    const selectedItem = sidebar.querySelector("a.selected");
-    if (selectedItem != null) {
-        selectedItem.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (!sidebar) {
+        return;
+    }
+
+    const selectedItems = sidebar.querySelectorAll("a.selected");
+    let target = null;
+    if (selectedItems.length === 1) {
+        target = selectedItems[0];
+    } else if (selectedItems.length > 1) {
+        target = Array.from(selectedItems).find((item) => normalizePath(item.pathname) === normalizePath(window.location.pathname));
+        if (!target) {
+            target = selectedItems[selectedItems.length - 1];
+        }
+    }
+
+    if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 };
 
@@ -35,15 +62,35 @@ const syncSelection = (li) => {
 
     const syncSelectedClass = () => {
         const anchorClasses = anchor.classList;
-        const isActive = anchorClasses.contains("selected") || anchorClasses.contains("expanded");
+        const isActive = anchorClasses.contains("selected");
         const selectedDescendant = childList.querySelector("a.selected");
         const isDescendantSelected = selectedDescendant != null;
-        if (isActive || isDescendantSelected) {
-            li.classList.add("selected");
+        if (!anchorClasses.contains("selected")) {
+            li.classList.remove(COLLAPSED_CLASS);
+        }
+
+        const shouldExpand = (isActive || isDescendantSelected) && !li.classList.contains(COLLAPSED_CLASS);
+        if (shouldExpand) {
+            li.classList.add(EXPANDED_CLASS);
         } else {
-            li.classList.remove("selected");
+            li.classList.remove(EXPANDED_CLASS);
         }
     };
+
+    anchor.addEventListener("click", (event) => {
+        const isCurrentPage = normalizePath(anchor.pathname) === normalizePath(window.location.pathname);
+        if (!anchor.classList.contains("selected") || !isCurrentPage) {
+            li.classList.remove(COLLAPSED_CLASS);
+            return;
+        }
+
+        event.preventDefault();
+        const isCollapsed = li.classList.toggle(COLLAPSED_CLASS);
+        if (isCollapsed) {
+            li.classList.remove(EXPANDED_CLASS);
+        }
+        syncSelectedClass();
+    });
 
     const anchorObserver = new MutationObserver(syncSelectedClass);
     anchorObserver.observe(anchor, {

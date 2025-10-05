@@ -124,7 +124,7 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions-export-users-to-databases",
+		ID:   "actions/export-users-to-databases",
 		Name: "Export users to databases",
 		Description: "This type of action exports user data from the workspace's data warehouse to a database table. " +
 			"It operates on a destination database connection.",

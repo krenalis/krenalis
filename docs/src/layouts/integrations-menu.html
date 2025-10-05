@@ -1,10 +1,15 @@
 
 {% macro item(path, name string) %}
-<a href="/{{ path }}"{% if path == filepath %} class="selected"{% else if hasPrefix(filepath, path+"/") %} class="expanded"{% end %}>{{ name }}</a>
+<a href="/{{ path }}"{% if path == filepath %} class="selected"{% end %}>{{ name }}</a>
+{% end %}
+
+{% macro expandable(path string) %}
+{% base := path[:len(path)-1] %}
+sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expanded{% end %}
 {% end %}
 
 <ul>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`integrations/events/`) }}">
     {{ item(`integrations/events`, `Events`) }}
     <ul>
       <li>{{ item(`integrations/events/page`, `Page`) }}</li>
@@ -15,11 +20,11 @@
       <li>{{ item(`integrations/events/session-tracking`, `Session tracking`) }}</li>
     </ul>
   </li>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`integrations/sources/`) }}">
     {{ item(`integrations/sources`, `Sources`) }}
     <ul>
       {{ item(`integrations/sources/dotnet`, `.NET`) }}
-      <li class="sidebar-expandable">
+      <li class="{{ expandable(`integrations/sources/android-sdk/`) }}">
         {{ item(`integrations/sources/android-sdk`, `Android`) }}
         <ul>
           <li>{{ item(`integrations/sources/android-sdk/getting-started`, `Getting started`) }}</li>
@@ -34,12 +39,12 @@
       <li>{{ item(`integrations/sources/http-get`, `HTTP GET`) }}</li>
       <li>{{ item(`integrations/sources/hubspot`, `HubSpot`) }}</li>
       <li>{{ item(`integrations/sources/json`, `JSON`) }}</li>
-      <li class="sidebar-expandable">
+      <li class="{{ expandable(`integrations/sources/javascript-sdk/`) }}">
         {{ item(`integrations/sources/javascript-sdk`, `JavaScript`) }}
         <ul>
           <li>{{ item(`integrations/sources/javascript-sdk/getting-started`, `Getting started`) }}</li>
           <li>{{ item(`integrations/sources/javascript-sdk/options`, `Options`) }}</li>
-          <li class="sidebar-expandable">
+          <li class="{{ expandable(`integrations/sources/javascript-sdk/methods/`) }}">
             {{ item(`integrations/sources/javascript-sdk/methods`, `Methods`) }}
             <ul>
               <li>{{ item(`integrations/sources/javascript-sdk/user-class`, `User class`) }}</li>
@@ -69,7 +74,7 @@
       <li>{{ item(`integrations/sources/stripe`, `Stripe`) }}</li>
     </ul>
   </li>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`integrations/destinations/`) }}">
     {{ item(`integrations/destinations`, `Destinations`) }}
     <ul>
       <li>{{ item(`integrations/destinations/csv`, `CSV`) }}</li>
@@ -92,10 +97,10 @@
       <li>{{ item(`integrations/destinations/stripe`, `Stripe`) }}</li>
     </ul>
   </li>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`integrations/transformers/`) }}">
     {{ item(`integrations/transformers`, `Transformers`) }}
     <ul>
-      <li class="sidebar-expandable">
+      <li class="{{ expandable(`integrations/mapping/`) }}">
         {{ item(`integrations/mapping`, `Mapping`) }}
         <ul>
           <li>{{ item(`integrations/mapping/builtin-functions`, `Builtin functions`) }}</li>
@@ -105,13 +110,13 @@
       <li>{{ item(`integrations/python`, `Python functions`) }}</li>
     </ul>
   </li>
-  <li class="sidebar-expandable">{{ item(`integrations/data-warehouses`, `Data warehouses`) }}</li>
+  <li>{{ item(`integrations/data-warehouses`, `Data warehouses`) }}</li>
   <li>{{ item(`integrations/ai-and-mcp-server`, `AI and MCP server`) }}</li>
   <li>{{ item(`integrations/monitoring`, `Monitoring`) }}</li>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`integrations/create-new-connector/`) }}">
     {{ item(`integrations/create-new-connector`, `Create new connector`) }}
     <ul>
-      <li class="sidebar-expandable">
+      <li class="{{ expandable(`integrations/create-new-connector/apps/`) }}">
         {{ item(`integrations/create-new-connector/apps`, `Apps`) }}
         <ul>
           <li>{{ item(`integrations/create-new-connector/apps/users`, `Users`) }}</li>

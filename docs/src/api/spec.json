@@ -1,7 +1,7 @@
 {
     "resources": [
         {
-            "id": "action-metrics-and-errors",
+            "id": "actions/metrics-and-errors",
             "name": "Action metrics and errors",
             "description": "Metrics and errors related to the actions, including both import/export processes and the sending or receiving of events within the pipelines.",
             "endpoints": [
@@ -519,7 +519,7 @@
             ]
         },
         {
-            "id": "actions-export-users-to-apps",
+            "id": "actions/export-users-to-apps",
             "name": "Export users to apps",
             "description": "This type of action exports user data from the workspace's data warehouse to an application. It operates on a destination app connection that supports users.",
             "endpoints": [
@@ -1569,7 +1569,7 @@
             ]
         },
         {
-            "id": "actions-export-users-to-databases",
+            "id": "actions/export-users-to-databases",
             "name": "Export users to databases",
             "description": "This type of action exports user data from the workspace's data warehouse to a database table. It operates on a destination database connection.",
             "endpoints": [
@@ -2341,7 +2341,7 @@
             ]
         },
         {
-            "id": "actions-export-users-to-files",
+            "id": "actions/export-users-to-files",
             "name": "Export users to files",
             "description": "This type of action exports user data from the workspace's data warehouse to a newly created file. It operates on a destination file storage connection.",
             "endpoints": [
@@ -3132,7 +3132,7 @@
             ]
         },
         {
-            "id": "actions-import-events",
+            "id": "actions/import-events",
             "name": "Import events",
             "description": "This type of action imports events into the workspace's data warehouse. It operates on an SDK connection.",
             "endpoints": [
@@ -3674,7 +3674,7 @@
             ]
         },
         {
-            "id": "actions-import-users-from-apps",
+            "id": "actions/import-users-from-apps",
             "name": "Import users from apps",
             "description": "This type of action imports user data from an application into the workspace's data warehouse. It operates on a source app connection that supports users.",
             "endpoints": [
@@ -4598,7 +4598,7 @@
             ]
         },
         {
-            "id": "actions-import-users-from-databases",
+            "id": "actions/import-users-from-databases",
             "name": "Import users from databases",
             "description": "This type of action imports user data from a database into the workspace's data warehouse. It operates on a source database connection.",
             "endpoints": [
@@ -5356,7 +5356,7 @@
             ]
         },
         {
-            "id": "actions-import-users-from-events",
+            "id": "actions/import-users-from-events",
             "name": "Import users from events",
             "description": "This type of action imports user data into the workspace's data warehouse from events received from websites, mobile apps, and servers.",
             "endpoints": [
@@ -6191,7 +6191,7 @@
             ]
         },
         {
-            "id": "actions-import-users-from-files",
+            "id": "actions/import-users-from-files",
             "name": "Import users from files",
             "description": "This type of action imports user data from a file into the workspace's data warehouse. It operates on a source file storage connection.",
             "endpoints": [
@@ -7259,7 +7259,7 @@
             ]
         },
         {
-            "id": "actions-send-events-to-apps",
+            "id": "actions/send-events-to-apps",
             "name": "Send events to apps",
             "description": "This type of action sends the received events to applications. It operates on a destination app connection that supports events.",
             "endpoints": [
@@ -8543,7 +8543,7 @@
             ]
         },
         {
-            "id": "app-connections",
+            "id": "connections/apps",
             "name": "App connections",
             "description": "These endpoints are specific to app connections.",
             "endpoints": [
@@ -9587,7 +9587,7 @@
                                     }
                                 },
                                 "nullable": true,
-                                "description": "The type of events that can be sent to a destination app connection.\n\nIt has a null value if the connection is not a destination connection of type app or if it does not support events.\n\nOnce you have retrieved an event type and its ID, you can obtain its schema through the method [`/connections/:id/schemas/event/:type`](app-connections#get-event-schema)."
+                                "description": "The type of events that can be sent to a destination app connection.\n\nIt has a null value if the connection is not a destination connection of type app or if it does not support events.\n\nOnce you have retrieved an event type and its ID, you can obtain its schema through the method [`/connections/:id/schemas/event/:type`](api/connections/apps#get-event-schema)."
                             }
                         ]
                     },
@@ -10568,7 +10568,7 @@
             ]
         },
         {
-            "id": "database-connections",
+            "id": "connections/databases",
             "name": "Database connections",
             "description": "These endpoints are specific to database connections.",
             "endpoints": [
@@ -14493,7 +14493,7 @@
             ]
         },
         {
-            "id": "file-storage-connections",
+            "id": "connections/file-storages",
             "name": "File storage connections",
             "description": "These endpoints are specific to file storage connections.",
             "endpoints": [
@@ -14817,7 +14817,7 @@
         {
             "id": "identity-resolution",
             "name": "Identity resolution",
-            "description": "Identities are the users obtained from sources like [apps](app-connections), [databases](database-connections), [files](file-storage-connections), or events. These identities are filtered and transformed according to a defined action. Once identity resolution is complete, the collected identities from all [connections](connections) are unified to form the workspace [users](users).",
+            "description": "Identities are the users obtained from sources like [apps](api/connections/apps), [databases](api/connections/databases), [files](api/connections/file-storages), or events. These identities are filtered and transformed according to a defined action. Once identity resolution is complete, the collected identities from all [connections](connections) are unified to form the workspace [users](users).",
             "endpoints": [
                 {
                     "name": "Start identity resolution",

@@ -50,7 +50,7 @@ func init() {
 	stepType := types.Text().WithValues("Receive", "InputValidation", "Filter", "Transformation", "OutputValidation", "Finalize")
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "action-metrics-and-errors",
+		ID:          "actions/metrics-and-errors",
 		Name:        "Action metrics and errors",
 		Description: "Metrics and errors related to the actions, including both import/export processes and the sending or receiving of events within the pipelines.",
 		Endpoints: []*Endpoint{

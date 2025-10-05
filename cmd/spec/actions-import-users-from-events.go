@@ -100,7 +100,7 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "actions-import-users-from-events",
+		ID:          "actions/import-users-from-events",
 		Name:        "Import users from events",
 		Description: "This type of action imports user data into the workspace's data warehouse from events received from websites, mobile apps, and servers.",
 		Endpoints: []*Endpoint{

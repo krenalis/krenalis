@@ -30,7 +30,7 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions-import-events",
+		ID:   "actions/import-events",
 		Name: "Import events",
 		Description: "This type of action imports events into the workspace's data warehouse. " +
 			"It operates on an SDK connection.",

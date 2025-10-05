@@ -14,7 +14,7 @@ import (
 func init() {
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "app-connections",
+		ID:          "connections/apps",
 		Name:        "App connections",
 		Description: "These endpoints are specific to app connections.",
 		Endpoints: []*Endpoint{

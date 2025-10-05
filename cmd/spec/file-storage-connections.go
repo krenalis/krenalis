@@ -54,7 +54,7 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "file-storage-connections",
+		ID:          "connections/file-storages",
 		Name:        "File storage connections",
 		Description: "These endpoints are specific to file storage connections.",
 		Endpoints: []*Endpoint{

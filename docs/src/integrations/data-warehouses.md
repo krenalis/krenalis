@@ -1,8 +1,8 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Data Warehouse{% end %}
+{% macro Title string %}Data warehouses{% end %}
 {% Article %}
 
-# Data warehouse
+# Data warehouses
 
 ## Supported types
 

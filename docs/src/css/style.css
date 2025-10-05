@@ -152,15 +152,19 @@ article aside ul li.sidebar-expandable a.selected::after {
     transform: rotate(90deg) translateX(-7px);
 }
 
-article aside ul li.sidebar-expandable.selected > a::after {
+article aside ul li.sidebar-expandable.expanded > a::after {
     transform: rotate(90deg) translateX(-7px);
+}
+
+article aside ul li.sidebar-expandable.sidebar-collapsed > a::after {
+    transform: translateY(-50%);
 }
 
 article aside button { display: none; }
 article aside ul { list-style-type: none; margin: 0; padding: 0; }
 article aside ul a { border-radius: 10px; display: block; font-size: 15px; margin-bottom: 3px; padding: 0.18rem 1.5rem 0.18rem .5rem; }
 article aside ul a, aside ul a:visited { color: #0007149f; }
-article aside ul a:hover, aside ul a.expanded { background: #eef2ff; border-radius: 3px; text-decoration: none; }
+article aside ul a:hover, article aside ul li.expanded > a { background: #eef2ff; border-radius: 3px; text-decoration: none; }
 article aside ul a.selected { background: #eef2ff; border-radius: 3px; color: #006ca7f5; font-weight: 500; }
 article aside div { font-size: 14px; font-weight: bold; margin-bottom: 8px; }
 article aside > ul { margin-top: 3rem; }
@@ -168,7 +172,7 @@ article aside li > ul { padding-left: 1rem; }
 article aside li, article aside li::before { all: unset; }
 article aside li { display: block; line-height: 1.70; white-space: nowrap; }
 article aside nav ul li.sidebar-expandable > ul { display: none; padding-left: 1rem; }
-article aside nav ul li.sidebar-expandable.selected > ul { display: block; }
+article aside nav ul li.sidebar-expandable.expanded > ul { display: block; }
 article aside li h4 { color: #333; font-weight: bold }
 
 .content { flex-grow: 1; margin: 0 0 4em 0; min-width: 0; overflow-x: auto; width: 100%; }

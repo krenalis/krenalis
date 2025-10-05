@@ -1,12 +1,17 @@
 
 {% macro item(path string, name html) %}
-<a href="/{{ path }}"{% if path == filepath %} class="selected"{% else if hasPrefix(filepath, path+"/") %} class="expanded"{% end %}>{{ name }}</a>
+<a href="/{{ path }}"{% if path == filepath %} class="selected"{% end %}>{{ name }}</a>
+{% end %}
+
+{% macro expandable(path string) %}
+{% base := path[:len(path)-1] %}
+sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expanded{% end %}
 {% end %}
 
 <ul>
   <li>{{ item(`index`, `Overview`) }}</li>
   <li>{{ item(`what-is-meergo`, `What is Meergo`) }}</li>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`installation/`) }}">
     {{ item(`installation`, `Installation`) }}
     <ul>
       <li>{{ item(`installation/using-docker`, `Using Docker`) }}</li>
@@ -15,7 +20,7 @@
       <li>{{ item(`installation/database-setup`, `Database setup`) }}</li>
     </ul>
   </li>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`configuration/`) }}">
     {{ item(`configuration`, `Configuration`) }}
     <ul>
       <li>{{ item(`configuration/environment-variables`, `Environment variables`) }}</li>
@@ -26,17 +31,17 @@
   <li>{{ item(`collect-users`, `Collect users`) }}</li>
   <li>{{ item(`unify-users`, `Unify users`) }}</li>
   <li>{{ item(`activate-users`, `Activate users`) }}</li>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`connections/`) }}">
     {{ item(`connections`, `Connections`) }}
     <ul>
-      <li>{{ item(`importing`, `Import`) }}</li>
-      <li>{{ item(`exporting`, `Export`) }}</li>
+      <li>{{ item(`connections/importing`, `Import`) }}</li>
+      <li>{{ item(`connections/exporting`, `Export`) }}</li>
     </ul>
   </li>
   <li>{{ item(`data-validation`, `Data validation`) }}</li>
   <li>{{ item(`filters`, `Filters`) }}</li>
   <li>{{ item(`altering-user-schema`, `Altering User Schema`) }}</li>
-  <li class="sidebar-expandable">
+  <li class="{{ expandable(`identity-resolution/`) }}">
     {{ item(`identity-resolution`, `Identity Resolution`) }}
     <ul>
       <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>

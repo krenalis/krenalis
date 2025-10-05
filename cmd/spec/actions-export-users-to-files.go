@@ -80,7 +80,7 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions-export-users-to-files",
+		ID:   "actions/export-users-to-files",
 		Name: "Export users to files",
 		Description: "This type of action exports user data from the workspace's data warehouse to a newly created file. " +
 			"It operates on a destination file storage connection.",
