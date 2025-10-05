@@ -17,8 +17,8 @@
 <header>
     <div class="logo"><span>Meergo</span> docs</div>
     <nav>
-        <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
-        <a href="/connectors/"{% if hasPrefix(filepath, "connectors/") %} class="selected"{% end %}>Connectors</a>
+        <a href="/"{% if not hasPrefix(filepath, "integrations/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
+        <a href="/integrations/"{% if hasPrefix(filepath, "integrations/") %} class="selected"{% end %}>Integrations</a>
         <a href="/api/"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
     </nav>
 </header>
@@ -30,8 +30,8 @@
             {% switch %}
             {% default %}
                 {{ render "documentation-menu.html" }}
-            {% case hasPrefix(filepath, "connectors/") %}
-                {{ render "connectors-menu.html" }}
+            {% case hasPrefix(filepath, "integrations/") %}
+                {{ render "integrations-menu.html" }}
             {% case hasPrefix(filepath, "api/") %}
                 {{ render "api-menu.html" }}
             {% end %}

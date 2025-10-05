@@ -25,7 +25,7 @@ Meergo stores user data and events, seamlessly unifying them directly within you
 
 ## Collect, unify, and activate users
 
-Meergo [connectors](connectors/) allows to import and export users from and to apps, databases, storages, and files:
+Meergo [connectors](integrations/) allows to import and export users from and to apps, databases, storages, and files:
 
 * [Collect users](collect-users)
 * Unify users

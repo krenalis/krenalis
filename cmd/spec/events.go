@@ -481,7 +481,7 @@ func init() {
 		Description: "Events are customer behavioral events (such as page views, clicks, or purchases) received from websites, mobile apps, and servers. " +
 			"They can be stored in the workspace's data warehouse and forwarded to apps. You can also import customer data for identity resolution and unification.\n\n" +
 			"These endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.\n\n" +
-			"You can also use one of the available [SDKs to send events](/developers/), instead of interacting with these API endpoints directly.",
+			"You can also use one of the available [SDKs to send events](/integrations/sources), instead of interacting with these API endpoints directly.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Ingest events",

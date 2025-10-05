@@ -1,0 +1,262 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}File Connectors{% end %}
+{% Article %}
+
+# Files
+
+File connectors allow to read and write specific types of files such as Excel, CSV, or Parquet files.
+
+File connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
+
+Note that it is possible to implement a file connector that supports only reading or only writing of records, as it is not necessary that a file connector supports both. It is sufficient to specify the functionalities that the connector implements through the `FileInfo`, described below, then implement the required methods for those functionalities.
+
+## Quick start
+
+In the creation of a new Go module, for your file connector, you can utilize the following template by pasting it into a Go file. Customize the template with your desired package name, type name, and pertinent connector information:
+
+```go
+// Package csv provides a connector for CSV.
+package csv
+
+import (
+    "context"
+    "io"
+
+    "github.com/meergo/meergo"
+)
+
+func init() {
+	meergo.RegisterFile(meergo.FileInfo{
+		Code:       "csv",
+		Label:      "CSV",
+		Categories: meergo.CategoryFile,
+		Extension:  "csv",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			HasSettings: true,
+		},
+	}, New)
+}
+
+type CSV struct {
+    // Your connector fields.
+}
+
+// New returns a new connector instance for CSV.
+func New(env *meergo.FileEnv) (*CSV, error) {
+    // ...
+}
+
+// ContentType returns the content type of the file.
+func (csv *CSV) ContentType(ctx context.Context) string {
+    return "text/csv"
+}
+
+// Read reads the records from r and writes them to records.
+func (csv *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
+    // ...
+}
+
+// Write writes to w the records read from records.
+func (csv *CSV) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
+    // ...
+}
+```
+
+## Implementation
+
+Let's explore how to implement a file connector, for example for the CSV file format.
+
+First create a Go module:
+
+```sh
+$ mkdir csv
+$ cd csv
+$ go mod init csv
+```
+
+Then add a Go file to the new directory. For example copy the previous template file.
+
+Later on, you can [build an executable with your connector](/installation/from-source#building-using-the-go-tools).
+
+### About the connector
+
+The `FileInfo` type describes information about the file connector:
+
+- `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "excel", "csv", "parquet".
+- `Label`: display label in the Admin console, typically the format's name (e.g. "Excel", "CSV", "Parquet").
+- `Categories`: the categories that the connector falls into. There must be at least one category.
+- `AsSource`: information about the file connector when it used as source. This should be set only when the file connector can be used as a source, otherwise should be nil.
+  - `HasSettings`: indicates whether the connection has format settings when used as source.
+- `AsDestination`: information about the file connector when it used as destination. This should be set only when the file connector can be used as a destination, otherwise should be nil.
+  - `HasSettings`: indicates whether the connection has format settings when used as destination.
+- `HasSheets`
+- `TimeLayouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time layouts](data-values#time-layouts) in [Data values](data-values) for more details.
+- `Extension`: main extension of the file type that the connector reads and/or writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
+- `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
+
+This information is passed to the `RegisterFile` function that, executed during package initialization, registers the file connector:
+
+```go
+func init() {
+	meergo.RegisterFile(meergo.FileInfo{
+		Code:      "csv",
+		Label:     "CSV",
+		Icon:      icon,
+		Extension: "csv",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			HasSettings: true,
+		},
+	}, New)
+}
+```
+
+### Constructor
+
+The second argument supplied to the `RegisterFile` function is the function utilized for creating a connector instance:
+
+```go
+func New(env *meergo.FileEnv) (*CSV, error)
+```
+
+This function accepts a file environment and yields a value representing your custom type.
+
+The structure of `FileEnv` is outlined as follows:
+
+```go
+// FileEnv is the environment for a file connector.
+type FileEnv struct {
+
+    // Settings is the raw settings data.
+    Settings []byte
+
+    // SetSettings is the function used to update the settings.
+    SetSettings SetSettingsFunc
+}
+```
+
+- `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
+- `SetSetting`: A function that enables the connector to update its settings as necessary.
+
+### ContentType method
+
+```go
+ContentType(ctx context.Context) string
+```
+
+The `ContentType` method is used by Meergo to find out what type of content should be used when saving a file to a storage location. For example, the CSV connector always says it's "text/csv; charset=UTF-8". This method might always give the same answer or change depending on the settings.
+
+### Read method
+
+```go
+Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error
+```
+
+The `Read` method is called by Meergo to read records from a file. This happens both when previewing the file and when performing an import.
+
+The `Read` method takes an `io.Reader` as an argument from which to read the file's contents, and a `RecordWriter` onto which to write the read records. `RecordWriter` is defined as:
+
+```go
+// A RecordWriter interface is used by file connectors to write read records.
+type RecordWriter interface {
+
+    // Columns sets the columns of the records as properties.
+    // Columns must be called before Record, RecordSlice, and RecordStrings.
+    Columns(columns []types.Property) error
+
+    // Issue reports an issue encountered during file reading that did not
+    // prevent the file from being processed. For instance, an issue might occur
+    // if a column is excluded due to an unsupported data type.
+    //
+    // The format and its arguments are formatted using the syntax and rules of
+    // fmt.Sprintf.
+    //
+    // Subsequent calls will append new issues to the ones previously reported.
+    Issue(format string, a ...any)
+
+    // Record writes a record represented as a string to any map.
+    // The record's length must equal to the number of columns.
+    Record(record map[string]any) error
+
+    // RecordSlice writes a record represented as a slice of any.
+    // The record's length must equal to the number of columns.
+    RecordSlice(record []any) error
+
+    // RecordStrings writes a record represented as a string slice.
+    // The record's length must be less than or equal to the number of columns, and
+    // record cannot be nil.
+    //
+    // RecordStrings may modify the elements of the record.
+    RecordStrings(record []string) error
+}
+```
+
+The `Read` method must first call the `Columns` method of `RecordWriter`, passing the columns present in the file as arguments. Then, it calls one of the methods `Record`, `RecordSlice`, or `RecordStrings`, based on which one is most convenient, for each record in the file.
+
+For `Record` and `RecordString`, values must align with the columns' positions returned by `Columns`. Alternatively, using `RecordMap`, if a user may lack a value for a property, ensure the property is marked as `Required: false` in the schema; it may then be omitted from the map passed to `RecordMap`. This behavior is distinct from a property having a value of `nil`.
+
+If a call to any of the `RecordWriter` methods returns an error, it must halt and return the received error exactly.
+
+Once it has finished writing all the read records, it simply returns without errors.
+
+The `sheet` parameter is only used if the connector supports multiple sheets, meaning if the files it reads can contain multiple sheets. In this case, Meergo passes the name of the sheet to read as an argument. See the [Sheets method](#sheets-method) for more details.
+
+> The columns passed to the `Columns` method must have valid property names. To assist with this, you can use the `meergo.SuggestPropertyName` function, which suggests column names that are valid.
+> For example, if a column in the file is named `"Prénom"`, calling `SuggestPropertyName("Prénom")` will suggest `"Prenom"`, which is a valid property name that can be used with the `Columns` method.
+
+#### Handling column issues
+
+If a column's type is not supported, its name is not a valid property name, or any other issue occurs with the column, leave `Column.Type` unset. Likewise, leave the other fields unset, as they are not relevant in this case, and describe the issue in `Column.Issue`.
+
+Such a column will not appear among the available file columns. However, the issue will be brought to the user's attention without preventing the use of the other columns.
+
+The following are examples of common issue messages used by file connectors:
+
+* _Column "perf" has an unsupported type "INT96"._
+* _Column "score:value " does not have a valid property name._
+* _Column "amount" has a precision of 100, which exceeds the maximum supported precision of 76._
+* _Column "value" has a scale of 50, which exceeds the maximum supported precision of 37._
+
+### Write method
+
+```go
+Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error
+```
+
+The `Write` method is invoked by Meergo to write records to a new file. This occurs during an export process.
+
+The `Write` method takes an `io.Writer` as an argument to write the contents of the entire file and a `RecordReader` from which to read the records to be written. `RecordReader` is an interface defined as follows:
+
+```go
+// A RecordReader interface is used by file connectors to read records
+// before they are written.
+type RecordReader interface {
+
+	// Columns returns the columns of the records as properties.
+	Columns() []types.Property
+
+	// Record returns the next record. The keys of the record are column names.
+	// A record may be empty or contain only a subset of columns.
+	// It returns nil and io.EOF if there are no more records.
+	Record(ctx context.Context) (map[string]any, error)
+}
+```
+
+The `Write` method first needs to call the `Columns` method to determine the columns of the records to be written. Then it calls the `Record` method to read each individual record. It can then either immediately write the record to the `io.Writer` or continue reading to do so later.
+
+### Sheets method
+
+If your file format supports multiple sheets, as the Excel file format, to determine which sheets are present in a file, the connector should indicate that in the `FileInfo` with `HasSheets: true` and implement the `Sheets` method:
+
+```go
+Sheets(ctx context.Context, r io.Reader) ([]string, error)
+```
+
+The `Read` and `Write` methods receive the sheet from which to read or write records as an argument. If the connector has sheets, the argument passed will always be a valid sheet name, otherwise it will always be an empty string.
+
+> A valid sheet name is UTF-8 encoded, has a length in the range [1,31], does not start or end with “ ' ”, and does not contain any of *, /, :, ?,[, \\, and ]. Sheet names are case-insensitive.
