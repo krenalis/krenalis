@@ -63,7 +63,7 @@ body > header {
     gap: 24px;
     height: var(--header-height);
     left: 0;
-    padding: 0 30px;
+    padding: 0 22px;
     position: fixed;
     right: 0;
     top: 0;
@@ -74,10 +74,24 @@ body > header {
 body > header .logo {
     align-items: center;
     color: #fff;
+    cursor: default;
     display: flex;
     font-size: 1.40rem;
     height: var(--header-height);
     letter-spacing: 0.02em;
+}
+
+body > header .logo a,
+body > header .logo a:visited {
+    align-items: center;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    text-decoration: none;
+}
+
+body > header .logo a:hover {
+    text-decoration: none;
 }
 
 body > header .logo span {

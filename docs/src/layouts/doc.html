@@ -15,7 +15,13 @@
 <a href="/{{ path }}"{% if path == filepath %} class="selected"{% end %}>{{ name }}</a>
 {% end %}
 <header>
-    <div class="logo"><span>Meergo</span> docs</div>
+    <div class="logo">
+        {% if filepath == "" or filepath == "index" or filepath == "index/" %}
+            <span>Meergo</span> docs
+        {% else %}
+            <a href="/"><span>Meergo</span> docs</a>
+        {% end %}
+    </div>
     <nav>
         <a href="/"{% if not hasPrefix(filepath, "integrations/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
         <a href="/integrations/"{% if hasPrefix(filepath, "integrations/") %} class="selected"{% end %}>Integrations</a>
