@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -2023,7 +2022,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "input schema contains unused properties: a",
+			err:                     "input schema contains an unused property: a",
 		},
 		{
 			name: "BAD: Destination/Database/User - unused property in output schema",
@@ -2050,7 +2049,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "output schema contains unused properties: x",
+			err:                     "output schema contains an unused property: x",
 		},
 		{
 			name: "BAD: Destination/Database/User - table key is not a valid property name",
@@ -2182,7 +2181,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
-			err:                     "input schema contains unused properties: tax_code",
+			err:                     "input schema contains an unused property: tax_code",
 		},
 		{
 			name: "BAD: Source/App/User - transformation function with unused property in output schema",
@@ -2212,7 +2211,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
-			err:                     "output schema contains unused properties: last_name",
+			err:                     "output schema contains an unused property: last_name",
 		},
 		{
 			name: "GOOD: Source/App/Group - target Group is not supported, but this should be checked before validating the action, not by the action validation itself",
@@ -3015,7 +3014,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "output schema contains unused properties: x.z",
+			err:                     "output schema contains an unused property: x.z",
 		},
 		{
 			name: "BAD: Source/App/User - with filter but no input schema",
@@ -3324,10 +3323,10 @@ func (testProvider) Update(ctx context.Context, id, source string) (string, erro
 }
 
 func Test_unusedProperties(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		schema   types.Type
 		paths    []string
-		expected []string
+		expected string
 	}{
 		{
 			schema: types.Object([]types.Property{
@@ -3346,25 +3345,15 @@ func Test_unusedProperties(t *testing.T) {
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.Text()},
 			}),
-			expected: []string{"first_name"},
+			expected: "first_name",
 		},
 		{
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.Text()},
 				{Name: "email", Type: types.Text()},
 			}),
-			expected: []string{"email", "first_name"},
-		},
-		{
-			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
-				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street", Type: types.Text()},
-					{Name: "zip_code", Type: types.Text()},
-				})},
-			}),
-			expected: []string{"address.street", "address.zip_code", "email", "first_name"},
+			paths:    []string{"first_name"},
+			expected: "email",
 		},
 		{
 			schema: types.Object([]types.Property{
@@ -3375,8 +3364,8 @@ func Test_unusedProperties(t *testing.T) {
 					{Name: "zip_code", Type: types.Text()},
 				})},
 			}),
-			paths:    []string{"email"},
-			expected: []string{"address.street", "address.zip_code", "first_name"},
+			paths:    []string{"first_name", "email"},
+			expected: "address.street",
 		},
 		{
 			schema: types.Object([]types.Property{
@@ -3387,8 +3376,8 @@ func Test_unusedProperties(t *testing.T) {
 					{Name: "zip_code", Type: types.Text()},
 				})},
 			}),
-			paths:    []string{"address.street"},
-			expected: []string{"address.zip_code", "email", "first_name"},
+			paths:    []string{"first_name", "email", "address.street"},
+			expected: "address.zip_code",
 		},
 		{
 			schema: types.Object([]types.Property{
@@ -3399,20 +3388,8 @@ func Test_unusedProperties(t *testing.T) {
 					{Name: "zip_code", Type: types.Text()},
 				})},
 			}),
-			paths:    []string{"address", "first_name", "email"},
-			expected: nil,
-		},
-		{
-			schema: types.Object([]types.Property{
-				{Name: "first_name", Type: types.Text()},
-				{Name: "email", Type: types.Text()},
-				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street", Type: types.Text()},
-					{Name: "zip_code", Type: types.Text()},
-				})},
-			}),
-			paths:    []string{"address.zip_code", "email", "first_name"},
-			expected: []string{"address.street"},
+			paths:    []string{"first_name", "email", "address.street", "address.zip_code"},
+			expected: "",
 		},
 		{
 			schema: types.Object([]types.Property{
@@ -3433,7 +3410,7 @@ func Test_unusedProperties(t *testing.T) {
 					})},
 				})},
 			}),
-			expected: []string{"x1.a.b", "x1.a.c", "x1.y", "x1.z", "x2.a.b", "x2.a.c", "x2.y", "x2.z"},
+			expected: "x1.y",
 		},
 		{
 			schema: types.Object([]types.Property{
@@ -3455,7 +3432,7 @@ func Test_unusedProperties(t *testing.T) {
 				})},
 			}),
 			paths:    []string{"x1", "x2"},
-			expected: nil,
+			expected: "",
 		},
 		{
 			schema: types.Object([]types.Property{
@@ -3477,7 +3454,7 @@ func Test_unusedProperties(t *testing.T) {
 				})},
 			}),
 			paths:    []string{"x1"},
-			expected: []string{"x2.a.b", "x2.a.c", "x2.y", "x2.z"},
+			expected: "x2.y",
 		},
 		{
 			schema: types.Object([]types.Property{
@@ -3499,13 +3476,16 @@ func Test_unusedProperties(t *testing.T) {
 				})},
 			}),
 			paths:    []string{"x2.a", "x1"},
-			expected: []string{"x2.y", "x2.z"},
+			expected: "x2.y",
 		},
 	}
-	for _, cas := range cases {
-		got := unusedPropertyPaths(cas.schema, cas.paths)
-		if !reflect.DeepEqual(cas.expected, got) {
-			t.Fatalf("expected %#v, got %#v", cas.expected, got)
+	for _, test := range tests {
+		got, ok := unusedPropertyPath(test.schema, test.paths)
+		if (test.expected != "") != ok {
+			t.Fatalf("expected %t, got %t", test.expected != "", ok)
+		}
+		if test.expected != got {
+			t.Fatalf("expected %q, got %q", test.expected, got)
 		}
 	}
 }

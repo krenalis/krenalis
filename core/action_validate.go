@@ -705,26 +705,19 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 
 	// Ensure that every property in the input and output schemas have been used
 	// (by the mappings, by the filters, etc...).
-	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
-		// In these cases the input schema is the full schema of the events,
-		// both in case of mappings and transformation, so we cannot return the
-		// error about unused properties in input schema because just a minor
-		// part of them is generally used.
-		if usedOutPaths != nil {
-			if props := unusedPropertyPaths(outSchema, usedOutPaths); props != nil {
-				return errors.BadRequest("output schema contains unused properties: %s", strings.Join(props, ", "))
-			}
+	if usedInPaths != nil {
+		if inSchemaIsEventSchema {
+			// In these cases, the input schema is the full schema of the events,
+			// both for mappings and transformations, so we cannot return an
+			// error about unused properties in the input schema, because only a
+			// small part of them is usually used.
+		} else if path, ok := unusedPropertyPath(inSchema, usedInPaths); ok {
+			return errors.BadRequest("input schema contains an unused property: %s", path)
 		}
-	} else {
-		if usedInPaths != nil {
-			if props := unusedPropertyPaths(inSchema, usedInPaths); props != nil {
-				return errors.BadRequest("input schema contains unused properties: %s", strings.Join(props, ", "))
-			}
-		}
-		if usedOutPaths != nil {
-			if props := unusedPropertyPaths(outSchema, usedOutPaths); props != nil {
-				return errors.BadRequest("output schema contains unused properties: %s", strings.Join(props, ", "))
-			}
+	}
+	if usedOutPaths != nil {
+		if path, ok := unusedPropertyPath(outSchema, usedOutPaths); ok {
+			return errors.BadRequest("output schema contains an unused property: %s", path)
 		}
 	}
 
@@ -745,10 +738,10 @@ func canBeUsedAsTableKey(k types.Kind) bool {
 	return k == types.TextKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
 }
 
-// unusedPropertyPaths returns the paths of the unused properties in schema, if
-// there is at least one, otherwise returns nil. schema must be valid.
-func unusedPropertyPaths(schema types.Type, usedPaths []string) []string {
-	var unusedPaths []string
+// unusedPropertyPath returns the path of an unused property in the schema and
+// true if at least one exists; otherwise, it returns "" and false.
+// The schema must be valid.
+func unusedPropertyPath(schema types.Type, usedPaths []string) (string, bool) {
 walk:
 	for schemaPath, property := range schema.Properties().WalkObjects() {
 		if property.Type.Kind() == types.ObjectKind {
@@ -768,14 +761,9 @@ walk:
 				continue walk
 			}
 		}
-		if unusedPaths == nil {
-			unusedPaths = []string{schemaPath}
-		} else {
-			unusedPaths = append(unusedPaths, schemaPath)
-		}
+		return schemaPath, true
 	}
-	slices.Sort(unusedPaths)
-	return unusedPaths
+	return "", false
 }
 
 // validateActionSchema validates an action schema, returning an error if it is
