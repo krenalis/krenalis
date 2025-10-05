@@ -65,7 +65,7 @@ type Settings struct {
 		Username string
 		Password string
 	}
-	Transformations struct {
+	Transformers struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
@@ -108,11 +108,11 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 
 	// Choose the transformation function provider setting.
-	if settings.Transformations.Lambda.Node.Runtime != "" || settings.Transformations.Lambda.Python.Runtime != "" {
-		config.FunctionProvider = core.LambdaConfig(settings.Transformations.Lambda)
+	if settings.Transformers.Lambda.Node.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "" {
+		config.FunctionProvider = core.LambdaConfig(settings.Transformers.Lambda)
 	}
-	if settings.Transformations.Local.NodeExecutable != "" || settings.Transformations.Local.PythonExecutable != "" {
-		config.FunctionProvider = core.LocalConfig(settings.Transformations.Local)
+	if settings.Transformers.Local.NodeExecutable != "" || settings.Transformers.Local.PythonExecutable != "" {
+		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
 	}
 
 	core, err := core.New(&config)

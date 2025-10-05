@@ -233,21 +233,21 @@ func parseSettings() (*Settings, error) {
 		settings.MaxMindDBPath = path
 	}
 
-	settings.Transformations.Lambda.AccessKeyID = envVars.Get("MEERGO_TRANSFORMATIONS_LAMBDA_ACCESS_KEY_ID")
-	settings.Transformations.Lambda.SecretAccessKey = envVars.Get("MEERGO_TRANSFORMATIONS_LAMBDA_SECRET_ACCESS_KEY")
-	settings.Transformations.Lambda.Region = envVars.Get("MEERGO_TRANSFORMATIONS_LAMBDA_REGION")
-	settings.Transformations.Lambda.Role = envVars.Get("MEERGO_TRANSFORMATIONS_LAMBDA_ROLE")
-	settings.Transformations.Lambda.Node.Runtime = envVars.Get("MEERGO_TRANSFORMATIONS_LAMBDA_NODE_RUNTIME")
-	settings.Transformations.Lambda.Node.Layer = envVars.Get("MEERGO_TRANSFORMATIONS_LAMBDA_NODE_LAYER")
-	settings.Transformations.Lambda.Python.Runtime = envVars.Get("MEERGO_TRANSFORMATIONS_LAMBDA_PYTHON_RUNTIME")
-	settings.Transformations.Lambda.Python.Layer = envVars.Get("MEERGO_TRANSFORMATIONS_LAMBDA_PYTHON_LAYER")
+	settings.Transformers.Lambda.AccessKeyID = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_ACCESS_KEY_ID")
+	settings.Transformers.Lambda.SecretAccessKey = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_SECRET_ACCESS_KEY")
+	settings.Transformers.Lambda.Region = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_REGION")
+	settings.Transformers.Lambda.Role = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_ROLE")
+	settings.Transformers.Lambda.Node.Runtime = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME")
+	settings.Transformers.Lambda.Node.Layer = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_NODE_LAYER")
+	settings.Transformers.Lambda.Python.Runtime = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_PYTHON_RUNTIME")
+	settings.Transformers.Lambda.Python.Layer = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_PYTHON_LAYER")
 
-	settings.Transformations.Local.NodeExecutable = envVars.Get("MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE")
-	settings.Transformations.Local.PythonExecutable = envVars.Get("MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE")
-	settings.Transformations.Local.FunctionsDir = envVars.Get("MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR")
-	if (settings.Transformations.Local.NodeExecutable != "" || settings.Transformations.Local.PythonExecutable != "") &&
-		(settings.Transformations.Lambda.Node.Runtime != "" || settings.Transformations.Lambda.Python.Runtime != "") {
-		return nil, fmt.Errorf("invalid configuration: cannot set both Lambda and local transformations")
+	settings.Transformers.Local.NodeExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE")
+	settings.Transformers.Local.PythonExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE")
+	settings.Transformers.Local.FunctionsDir = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR")
+	if (settings.Transformers.Local.NodeExecutable != "" || settings.Transformers.Local.PythonExecutable != "") &&
+		(settings.Transformers.Lambda.Node.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "") {
+		return nil, fmt.Errorf("invalid configuration: cannot set both Lambda and local transformers")
 	}
 
 	if id := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_ID"); id != "" {

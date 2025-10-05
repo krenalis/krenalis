@@ -67,11 +67,11 @@ Settings for emails that are sent to members.
 | `MEERGO_JAVASCRIPT_SDK_URL` | `https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js` | URL that serves the JavaScript SDK.                                                                                                                                                                                                                                                                     |
 | `MEERGO_TELEMETRY_LEVEL`    | `all`                                                                    | Level for telemetry data sent by Meergo: `none` (no telemetry data will be sent), `errors` (only telemetry data related to errors will be sent), `stats` (only telemetry data related to software usage statistics will be sent), `all` (both types of telemetry data (errors and stats) will be sent). |
 
-## Transformations
+## Transformers
 
 Settings for executing transformation functions via AWS Lambda or locally. Local execution should only be used for testing and not in production.
 
-> 💡 Note that this settings does not concern the data transformations themselves, which are set up via the graphical interface for each workspace, but the general settings provided by the Meergo installation to enable writing transformation functions.
+> 💡 Note that these settings do not concern the data transformations themselves, which are set up via the Admin console or the APIs for each workspace, but the general settings provided by the Meergo installation to enable writing transformation functions.
 
 You can configure Meergo to run transformation functions on one of the following:
 
@@ -80,26 +80,26 @@ You can configure Meergo to run transformation functions on one of the following
 
 ### AWS Lambda
 
-| Variable                                          | Default | Description                                                    |
-|---------------------------------------------------|---------|----------------------------------------------------------------|
-| `MEERGO_TRANSFORMATIONS_LAMBDA_ACCESS_KEY_ID`     |         | AWS access key ID for Lambda.                                  |
-| `MEERGO_TRANSFORMATIONS_LAMBDA_SECRET_ACCESS_KEY` |         | AWS secret access key for Lambda.                              |
-| `MEERGO_TRANSFORMATIONS_LAMBDA_REGION`            |         | AWS region where Lambda functions are deployed.                |
-| `MEERGO_TRANSFORMATIONS_LAMBDA_ROLE`              |         | AWS IAM Role ARN to be assumed for executing Lambda functions. |
-| `MEERGO_TRANSFORMATIONS_LAMBDA_NODE_RUNTIME`      |         | Node.js runtime version for AWS Lambda. Example: `nodejs22.x`. |
-| `MEERGO_TRANSFORMATIONS_LAMBDA_NODE_LAYER`        |         | (Optional) ARN of a Lambda layer for Node.js functions.        |
-| `MEERGO_TRANSFORMATIONS_LAMBDA_PYTHON_RUNTIME`    |         | Python runtime version for AWS Lambda. Example: `python3.13`.  |
-| `MEERGO_TRANSFORMATIONS_LAMBDA_PYTHON_LAYER`      |         | (Optional) ARN of a Lambda layer for Python functions.         |
+| Variable                                       | Default | Description                                                    |
+|------------------------------------------------|---------|----------------------------------------------------------------|
+| `MEERGO_TRANSFORMERS_LAMBDA_ACCESS_KEY_ID`     |         | AWS access key ID for Lambda.                                  |
+| `MEERGO_TRANSFORMERS_LAMBDA_SECRET_ACCESS_KEY` |         | AWS secret access key for Lambda.                              |
+| `MEERGO_TRANSFORMERS_LAMBDA_REGION`            |         | AWS region where Lambda functions are deployed.                |
+| `MEERGO_TRANSFORMERS_LAMBDA_ROLE`              |         | AWS IAM Role ARN to be assumed for executing Lambda functions. |
+| `MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME`      |         | Node.js runtime version for AWS Lambda. Example: `nodejs22.x`. |
+| `MEERGO_TRANSFORMERS_LAMBDA_NODE_LAYER`        |         | (Optional) ARN of a Lambda layer for Node.js functions.        |
+| `MEERGO_TRANSFORMERS_LAMBDA_PYTHON_RUNTIME`    |         | Python runtime version for AWS Lambda. Example: `python3.13`.  |
+| `MEERGO_TRANSFORMERS_LAMBDA_PYTHON_LAYER`      |         | (Optional) ARN of a Lambda layer for Python functions.         |
 
 ### Local execution
 
-> ⚠️ Configuring transformations for local execution allows the code in transformation functions defined in Meergo to execute arbitrary code on the local machine. Therefore, use with caution and only in trusted contexts.
+> ⚠️ Configuring transformers for local execution allows the code in transformation functions defined in Meergo to execute arbitrary code on the local machine. Therefore, use with caution and only in trusted contexts.
 
-| Variable                                         | Default | Description                                                                                                                                                                 |
-|--------------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE`   |         | Path to the Node.js executable. Example: `/usr/bin/node`.                                                                                                                   |
-| `MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE` |         | Path to the Python executable. Example: `/usr/bin/python`.                                                                                                                  |
-| `MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR`     |         | Directory where local transformation functions are stored. This directory should be writable by the user executing the Meergo executable. Example: `/var/meergo/functions`. |
+| Variable                                      | Default | Description                                                                                                                                                                 |
+|-----------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE`   |         | Path to the Node.js executable. Example: `/usr/bin/node`.                                                                                                                   |
+| `MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE` |         | Path to the Python executable. Example: `/usr/bin/python`.                                                                                                                  |
+| `MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR`     |         | Directory where local transformation functions are stored. This directory should be writable by the user executing the Meergo executable. Example: `/var/meergo/functions`. |
 
 ## OAuth providers
 

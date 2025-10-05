@@ -837,33 +837,33 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
-	t.Run("transformations conflict between local and Lambda", func(t *testing.T) {
+	t.Run("transformers conflict between local and Lambda", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE", "/usr/bin/node")
-		t.Setenv("MEERGO_TRANSFORMATIONS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
+		t.Setenv("MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE", "/usr/bin/node")
+		t.Setenv("MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
 		_, err := parseSettings()
 		if err == nil {
-			t.Fatalf("expected error for conflicting transformations, got nil")
+			t.Fatalf("expected error for conflicting transformers, got nil")
 		}
-		want := "invalid configuration: cannot set both Lambda and local transformations"
+		want := "invalid configuration: cannot set both Lambda and local transformers"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 	})
 
-	t.Run("transformations local-only accepted", func(t *testing.T) {
+	t.Run("transformers local-only accepted", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE", "/usr/bin/node")
+		t.Setenv("MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE", "/usr/bin/node")
 		if _, err := parseSettings(); err != nil {
-			t.Fatalf("expected no error for local-only, got %v", err)
+			t.Fatalf("expected no error for local-only transformers, got %v", err)
 		}
 	})
 
-	t.Run("transformations Lambda-only accepted", func(t *testing.T) {
+	t.Run("transformers Lambda-only accepted", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TRANSFORMATIONS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
+		t.Setenv("MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
 		if _, err := parseSettings(); err != nil {
-			t.Fatalf("expected no error for lambda-only, got %v", err)
+			t.Fatalf("expected no error for Lambda-only transformers, got %v", err)
 		}
 	})
 

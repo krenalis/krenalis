@@ -44,9 +44,9 @@ services:
       MEERGO_HTTP_PORT: 2022
       MEERGO_HTTP_EXTERNAL_URL: http://127.0.0.1:2022/
       MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED: false
-      MEERGO_TRANSFORMATIONS_LOCAL_NODE_EXECUTABLE: /usr/bin/node
-      MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
-      MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR: /bin/meergo-files/transformation-functions
+      MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE: /usr/bin/node
+      MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
+      MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /bin/meergo-files/transformation-functions
 
       # This configures the Filesystem connector to access the mounted directory
       # via Docker. If you change these settings, also change the volumes

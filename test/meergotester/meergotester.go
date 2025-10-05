@@ -320,8 +320,8 @@ func (c *Meergo) Start() {
 			"MEERGO_DB_PASSWORD=" + testsSettings.Database.Password,
 			"MEERGO_DB_DATABASE=" + testsSettings.Database.Database,
 			"MEERGO_DB_SCHEMA=" + testsSettings.Database.Schema,
-			"MEERGO_TRANSFORMATIONS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
-			"MEERGO_TRANSFORMATIONS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
+			"MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
+			"MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + c.transformationsTempDir,
 			"MEERGO_CONNECTOR_FILESYSTEM_ROOT=" + c.filesystemRoot,
 		}...)
 		if !meergoAlreadyBuilt {
@@ -354,8 +354,8 @@ func (c *Meergo) Start() {
 		setts.DB.Password = testsSettings.Database.Password
 		setts.DB.Database = testsSettings.Database.Database
 		setts.DB.Schema = testsSettings.Database.Schema
-		setts.Transformations.Local.PythonExecutable = testsSettings.PythonExecutable
-		setts.Transformations.Local.FunctionsDir = c.transformationsTempDir
+		setts.Transformers.Local.PythonExecutable = testsSettings.PythonExecutable
+		setts.Transformers.Local.FunctionsDir = c.transformationsTempDir
 		err := os.Setenv("MEERGO_CONNECTOR_FILESYSTEM_ROOT", c.filesystemRoot)
 		if err != nil {
 			c.t.Fatal(err)
