@@ -880,8 +880,8 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 			action.Transformation.Function.Language = state.Python
 		}
 		action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
-		action.Transformation.InPaths = action.InSchema.Properties().Names()
-		action.Transformation.OutPaths = action.OutSchema.Properties().Names()
+		action.Transformation.InPaths = action.InSchema.Properties().SortedNames()
+		action.Transformation.OutPaths = action.OutSchema.Properties().SortedNames()
 		provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, core.functionProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or function) is required")
