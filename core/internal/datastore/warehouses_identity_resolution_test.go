@@ -19,13 +19,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/testimages"
 	_ "github.com/meergo/meergo/warehouses" // for registering warehouses.
 
+	"github.com/google/uuid"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -469,15 +469,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		},
 	}
 
-	// Run the tests on every warehouse type.
-	warehouseTypes := meergo.WarehouseDrivers()
-	if len(warehouseTypes) == 0 {
+	// Run the tests on every warehouse driver.
+	warehouseDrivers := meergo.WarehouseDrivers()
+	if len(warehouseDrivers) == 0 {
 		t.Fatal("there are no warehouse drivers. Missing warehouse drivers import in test file?")
 	}
-	for _, warehouseType := range warehouseTypes {
-		t.Run(warehouseType.Name, func(t *testing.T) {
+	for _, warehouseDriver := range warehouseDrivers {
+		t.Run(warehouseDriver.Name, func(t *testing.T) {
 			var settings []byte
-			switch warehouseType.Name {
+			switch warehouseDriver.Name {
 			case "PostgreSQL":
 				const (
 					database = "test_meergo"
@@ -526,7 +526,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			case "Snowflake":
 				// Read the warehouse settings, if the env variable is set,
 				// otherwise skip this warehouse.
-				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseType.Name))
+				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseDriver.Name))
 				settingsFile, ok := os.LookupEnv(settingsEnvKey)
 				if !ok {
 					t.Skipf("the %s environment variable is not present", settingsEnvKey)
@@ -538,11 +538,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 				}
 			default:
-				panic(fmt.Sprintf("unsupported data warehouse %q", warehouseType.Name))
+				panic(fmt.Sprintf("unsupported data warehouse %q", warehouseDriver.Name))
 			}
 
 			// Open the warehouse.
-			wh, err := warehouseType.New(&meergo.WarehouseConfig{
+			wh, err := warehouseDriver.New(&meergo.WarehouseConfig{
 				Settings: settings,
 			})
 			if err != nil {
