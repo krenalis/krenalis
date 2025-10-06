@@ -1,0 +1,100 @@
+{% macro Breadcrumbs(path string) %}
+    {%%
+        original := path
+        if path == "index" || path == "index/" {
+            path = ""
+        } else {
+            if hasSuffix(path, "/") {
+                path = path[:len(path)-1]
+            }
+            if hasSuffix(path, "/index") {
+                path = path[:len(path)-len("/index")]
+            }
+        }
+
+        segments := []string{}
+        if path != "" {
+            segments = split(path, "/")
+        }
+
+        rootName := "Documentation"
+        rootHref := "/"
+        rootSlug := ""
+
+        if len(segments) > 0 {
+            switch segments[0] {
+            case "integrations":
+                rootName = "Integrations"
+                rootHref = "/integrations/"
+                rootSlug = "integrations"
+            case "api":
+                rootName = "API reference"
+                rootHref = "/api/"
+                rootSlug = "api"
+            }
+        } else {
+            if hasPrefix(original, "integrations/") {
+                rootName = "Integrations"
+                rootHref = "/integrations/"
+                rootSlug = "integrations"
+            } else if hasPrefix(original, "api/") {
+                rootName = "API reference"
+                rootHref = "/api/"
+                rootSlug = "api"
+            }
+        }
+
+        show html(`<nav class="breadcrumbs" aria-label="Breadcrumb"><ol>`)
+        show html(`<li><a href="`)
+        show rootHref
+        show html(`">`)
+        show rootName
+        show html(`</a></li>`)
+
+        current := ""
+        for i, segment := range segments {
+            if current == "" {
+                current = "/" + segment + "/"
+            } else {
+                current += segment + "/"
+            }
+            if i == len(segments)-1 {
+                break
+            }
+            if rootSlug != "" && i == 0 {
+                continue
+            }
+            show html(`<li><a href="`)
+            show current
+            show html(`">`)
+            show segment
+            show html(`</a></li>`)
+        }
+
+        show html(`</ol></nav>`)
+    %%}
+    {# Sync breadcrumb labels with the expanded sidebar entries #}
+    <script>
+        (function () {
+            const crumbs = document.querySelectorAll('.breadcrumbs ol li a');
+            if (crumbs.length < 2) {
+                return;
+            }
+            const sidebarLinks = document.querySelectorAll('aside nav li.expanded > a');
+            if (!sidebarLinks.length) {
+                return;
+            }
+            sidebarLinks.forEach((link, index) => {
+                const crumb = crumbs[index + 1];
+                if (!crumb) {
+                    return;
+                }
+                crumb.textContent = link.textContent.trim();
+                const href = link.getAttribute('href');
+                if (href) {
+                    crumb.setAttribute('href', href);
+                }
+            });
+        })();
+    </script>
+{% end %}
