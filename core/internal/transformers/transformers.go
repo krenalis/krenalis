@@ -166,7 +166,8 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 
 // schemaSubset returns a subset of schema containing only the property paths
 // specified in properties, preserving their original order and upper hierarchy
-// in schema. This function panics if schema is not an object type.
+// in schema. paths must be alphabetically ordered. This function panics if
+// schema is not an object type.
 func schemaSubset(schema types.Type, paths []string) types.Type {
 	return types.Prune(schema, func(path string) bool {
 		for {
