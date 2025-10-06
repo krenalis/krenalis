@@ -1548,6 +1548,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 				action.Transformation.Function.Language = state.Python
 			}
 			action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
+			// In InPaths and OutPaths, list only top-level property names;
+			// there is no need to list sub-property paths (as the behavior is
+			// the same).
 			action.Transformation.InPaths = action.InSchema.Properties().SortedNames()
 			action.Transformation.OutPaths = action.OutSchema.Properties().SortedNames()
 			provider = newTempTransformerProvider(name, action.Transformation.Function.Language, action.Transformation.Function.Source, this.core.functionProvider)
