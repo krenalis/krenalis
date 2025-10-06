@@ -99,7 +99,7 @@ Here are some guides to run various local tests and handle various situations th
 
 ### Testing Snowflake
 
-1. Set this environment variable, which must point to a JSON file with the credentials of an **empty, i.e. initializable**, Snowflake data warehouse:
+1. Set this environment variable, which must contain the absolute path to a JSON file with the credentials of an **empty (i.e., initializable)** Snowflake data warehouse:
 
     ```
     MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE
@@ -124,7 +124,7 @@ Here are some guides to run various local tests and handle various situations th
 2. From the root of this repository, run:
 
     ```
-    go test -run ^TestWarehousesIdentityResolution$ github.com/meergo/meergo/core/datastore -count 1 -v
+    go test -run ^TestWarehousesIdentityResolution$ github.com/meergo/meergo/core/internal/datastore -count 1 -v
     ```
 
 3. Set this environment variable, which must point to a JSON file with the credentials of a Snowflake data warehouse:
