@@ -182,14 +182,15 @@ func (s *innerSettings) connector() driver.Connector {
 		account = account[:i] + "-" + account[i+1:]
 	}
 	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
-		Account:   account,
-		User:      s.Username,
-		Password:  s.Password,
-		Role:      s.Role,
-		Database:  s.Database,
-		Schema:    s.Schema,
-		Warehouse: s.Warehouse,
-		Params:    make(map[string]*string),
+		Account:          account,
+		User:             s.Username,
+		Password:         s.Password,
+		Role:             s.Role,
+		Database:         s.Database,
+		Schema:           s.Schema,
+		Warehouse:        s.Warehouse,
+		Params:           make(map[string]*string),
+		DisableTelemetry: true,
 	})
 }
 
