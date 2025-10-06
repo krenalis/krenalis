@@ -31,6 +31,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/core/validation"
 )
 
 // Connector icon.
@@ -625,7 +626,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 			events.Discard(errors.New("email is not valid"))
 			continue
 		}
-		if currency, ok := event.Type.Values["value_currency"].(string); ok && !isValidCurrency(currency) {
+		if currency, ok := event.Type.Values["value_currency"].(string); ok && !validation.IsValidCurrencyCode(currency) {
 			events.Discard(errors.New("value_currency is not a valid currency code"))
 			continue
 		}

@@ -5,14 +5,14 @@
 // Copyright (c) 2025 Open2b
 //
 
-package klaviyo
+package validation
 
 import (
 	"strings"
 )
 
-// isValidCurrency reports whether code is an ISO 4217 currency code.
-func isValidCurrency(code string) bool {
+// IsValidCurrencyCode returns true when code is a valid ISO 4217 currency identifier.
+func IsValidCurrencyCode(code string) bool {
 	// Fast path.
 	switch code {
 	case "USD", "EUR", "JPY", "GBP", "AUD", "CNY":
