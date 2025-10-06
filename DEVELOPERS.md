@@ -105,6 +105,22 @@ Here are some guides to run various local tests and handle various situations th
     MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE
     ```
 
+    <details style="margin: 1em 0;">
+      <summary>Sample <code>MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE</code> file</summary>
+
+      ```json
+      {
+        "Account": "",
+        "Username": "",
+        "Password": "",
+        "Role": "",
+        "Database": "",
+        "Schema": "PUBLIC",
+        "Warehouse": ""
+      }
+      ```
+    </details>
+
 2. From the root of this repository, run:
 
     ```
@@ -116,6 +132,22 @@ Here are some guides to run various local tests and handle various situations th
     ```
     MEERGO_TEST_PATH_SNOWFLAKE
     ```
+
+    <details style="margin: 1em 0;">
+      <summary>Sample <code>MEERGO_TEST_PATH_SNOWFLAKE</code> file</summary>
+
+      ```json
+      {
+        "Account": "",
+        "Username": "",
+        "Password": "",
+        "Role": "",
+        "Database": "",
+        "Schema": "PUBLIC",
+        "Warehouse": ""
+      }
+      ```
+    </details>
 
 4. From the root of this repository, run:
 
