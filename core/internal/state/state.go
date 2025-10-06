@@ -1296,8 +1296,8 @@ func (lang Language) String() string {
 type Transformation struct {
 	Mapping  map[string]string
 	Function *TransformationFunction
-	InPaths  []string
-	OutPaths []string
+	InPaths  []string // sorted alphabetically.
+	OutPaths []string // sorted alphabetically.
 }
 
 // Equal reports whether t and t2 represent the same transformation.
