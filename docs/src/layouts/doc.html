@@ -1,6 +1,7 @@
 {% import "/imports/meta.html" for Meta %}
 {% import highlight "/imports/highlight.html" %}
 {% import copyAPIRequest "/api/imports/copy-api-request.html" %}
+{% import "/imports/breadcrumbs.html" for Breadcrumbs %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -45,6 +46,7 @@
         </aside>
         <div class="main">
             <div class="content">
+                {{ Breadcrumbs(filepath) }}
                 {{ Article() }}
             </div>
         </div>

@@ -51,7 +51,7 @@ func init() {
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "actions/metrics-and-errors",
-		Name:        "Action metrics and errors",
+		Name:        "Metrics and errors",
 		Description: "Metrics and errors related to the actions, including both import/export processes and the sending or receiving of events within the pipelines.",
 		Endpoints: []*Endpoint{
 			{

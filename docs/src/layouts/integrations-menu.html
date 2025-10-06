@@ -23,9 +23,9 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
   <li class="{{ expandable(`integrations/sources/`) }}">
     {{ item(`integrations/sources`, `Sources`) }}
     <ul>
-      {{ item(`integrations/sources/dotnet`, `.NET`) }}
+      {{ item(`integrations/sources/dotnet`, `.NET SDK`) }}
       <li class="{{ expandable(`integrations/sources/android-sdk/`) }}">
-        {{ item(`integrations/sources/android-sdk`, `Android`) }}
+        {{ item(`integrations/sources/android-sdk`, `Android SDK`) }}
         <ul>
           <li>{{ item(`integrations/sources/android-sdk/getting-started`, `Getting started`) }}</li>
           <li>{{ item(`integrations/sources/android-sdk/options`, `Options`) }}</li>
@@ -35,12 +35,12 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
       <li>{{ item(`integrations/sources/csv`, `CSV`) }}</li>
       <li>{{ item(`integrations/sources/clickhouse`, `ClickHouse`) }}</li>
       <li>{{ item(`integrations/sources/excel`, `Excel`) }}</li>
-      <li>{{ item(`integrations/sources/go`, `Go`) }}</li>
+      <li>{{ item(`integrations/sources/go`, `Go SDK`) }}</li>
       <li>{{ item(`integrations/sources/http-get`, `HTTP GET`) }}</li>
       <li>{{ item(`integrations/sources/hubspot`, `HubSpot`) }}</li>
       <li>{{ item(`integrations/sources/json`, `JSON`) }}</li>
       <li class="{{ expandable(`integrations/sources/javascript-sdk/`) }}">
-        {{ item(`integrations/sources/javascript-sdk`, `JavaScript`) }}
+        {{ item(`integrations/sources/javascript-sdk`, `JavaScript SDK`) }}
         <ul>
           <li>{{ item(`integrations/sources/javascript-sdk/getting-started`, `Getting started`) }}</li>
           <li>{{ item(`integrations/sources/javascript-sdk/options`, `Options`) }}</li>
@@ -56,15 +56,15 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
           <li>{{ item(`integrations/sources/javascript-sdk/faq`, `FAQ`) }}</li>
         </ul>
       </li>
-      <li>{{ item(`integrations/sources/java`, `Java`) }}</li>
+      <li>{{ item(`integrations/sources/java`, `Java SDK`) }}</li>
       <li>{{ item(`integrations/sources/klaviyo`, `Klaviyo`) }}</li>
       <li>{{ item(`integrations/sources/mailchimp`, `Mailchimp`) }}</li>
       <li>{{ item(`integrations/sources/meergoapi`, `Meergo API`) }}</li>
       <li>{{ item(`integrations/sources/mysql`, `MySQL`) }}</li>
-      <li>{{ item(`integrations/sources/nodejs`, `Node.js`) }}</li>
+      <li>{{ item(`integrations/sources/nodejs`, `Node.js SDK`) }}</li>
       <li>{{ item(`integrations/sources/parquet`, `Parquet`) }}</li>
       <li>{{ item(`integrations/sources/postgresql`, `PostgreSQL`) }}</li>
-      <li>{{ item(`integrations/sources/python`, `Python`) }}</li>
+      <li>{{ item(`integrations/sources/python`, `Python SDK`) }}</li>
       <li>{{ item(`integrations/sources/rudderstack`, `RudderStack`) }}</li>
       <li>{{ item(`integrations/sources/s3`, `S3`) }}</li>
       <li>{{ item(`integrations/sources/sftp`, `SFTP`) }}</li>

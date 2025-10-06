@@ -2,7 +2,7 @@
     "resources": [
         {
             "id": "actions/metrics-and-errors",
-            "name": "Action metrics and errors",
+            "name": "Metrics and errors",
             "description": "Metrics and errors related to the actions, including both import/export processes and the sending or receiving of events within the pipelines.",
             "endpoints": [
                 {
