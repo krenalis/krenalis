@@ -94,7 +94,6 @@ type decoderOptions struct {
 type terms struct {
 	Null     string
 	Elements string
-	Property string
 	Type     func(t types.Type) string
 }
 
@@ -103,7 +102,6 @@ var javaScriptDecoderOptions = decoderOptions{
 	terms: terms{
 		Null:     "null",
 		Elements: "elements",
-		Property: "property",
 		Type:     toJavascriptType,
 	},
 	int64AsString:  true,
@@ -117,7 +115,6 @@ var pythonDecoderOptions = decoderOptions{
 	terms: terms{
 		Null:     "None",
 		Elements: "items",
-		Property: "key",
 		Type:     toPythonType,
 	},
 	int64AsString:  false,
@@ -268,7 +265,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 					return err
 				}
 				if e, ok := err.(RecordValidationError); ok {
-					e.msg = d.opts.terms.Property + ` «` + e.path + `» ` + e.msg
+					e.msg = `property «` + e.path + `» ` + e.msg
 					err = e
 				}
 				records[i].Properties = nil
@@ -430,19 +427,20 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				if err != nil {
 					return nil, err
 				}
+				const errNotInSchema = "is not part of output schema; rename or remove it in the transformation function"
 				name := tok.String()
 				if !t.Valid() {
 					if !types.IsValidPropertyName(name) {
-						return nil, newRecordValidationError(name, "does not exist")
+						return nil, newRecordValidationError(name, errNotInSchema)
 					}
-					return nil, newRecordValidationError(name, "does not exist")
+					return nil, newRecordValidationError(name, errNotInSchema)
 				}
 				p, ok := tProperties.ByName(name)
 				if !ok {
 					if !types.IsValidPropertyName(name) {
-						return nil, newRecordValidationError(name, "does not exist")
+						return nil, newRecordValidationError(name, errNotInSchema)
 					}
-					return nil, newRecordValidationError(name, "does not exist")
+					return nil, newRecordValidationError(name, errNotInSchema)
 				}
 				// Read the property's value.
 				var value any
