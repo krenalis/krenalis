@@ -10,13 +10,13 @@ const AppLayout = () => {
 
 	return (
 		<div className='app'>
+			<Header title={title} member={member} />
 			<Sidebar
 				workspaces={workspaces}
 				warehouse={warehouse}
 				selectedWorkspace={selectedWorkspace}
 				setSelectedWorkspace={setSelectedWorkspace}
 			/>
-			<Header title={title} member={member} />
 			<Outlet />
 		</div>
 	);

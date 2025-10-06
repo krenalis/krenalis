@@ -2,17 +2,15 @@
 	--sidebar-width: 250px;
 }
 
-.sidebar {
+.app > aside {
 	width: var(--sidebar-width);
-	height: 100%;
 	position: fixed;
-	top: 0;
+	top: var(--header-height);
+	bottom: 0;
 	left: 0;
 	z-index: 20;
-	padding: 10px 0;
 	display: flex;
 	flex-flow: column;
-	justify-content: flex-start;
 	align-items: center;
 	background-color: var(--bg-primary);
 }
@@ -32,12 +30,6 @@
 	width: 100%;
 }
 
-.sidebar__logo {
-	font-weight: 600;
-	font-size: 22px;
-	color: var(--color-primary-500);
-}
-
 .workspace-selector {
 	user-select: none;
 	position: relative;
@@ -46,7 +38,6 @@
 	display: flex;
 	align-items: center;
 	cursor: pointer;
-	margin-top: 15px;
 	padding: 15px;
 	margin-bottom: 5px;
 	border-top: 1px solid var(--border-primary);

@@ -121,12 +121,9 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 	}
 
 	return (
-		<div className='sidebar'>
+		<aside>
 			<div className='sidebar__items'>
 				<div className='sidebar__top'>
-					<div className='sidebar__logo-wrapper'>
-						<div className='sidebar__logo'>Meergo</div>
-					</div>
 					<WorkspaceSelector
 						setSelectedWorkspace={setSelectedWorkspace}
 						workspaces={workspaces}
@@ -137,7 +134,7 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 					{items}
 				</div>
 			</div>
-		</div>
+		</aside>
 	);
 };
 

@@ -1,16 +1,26 @@
-.header {
-	padding: 5px 0;
+.app > header {
+	padding: 5px 20px;
 	display: grid;
-	grid-template-areas: 'title account';
-	justify-content: space-between;
+	grid-template-columns: var(--sidebar-width) 1fr auto;
+	grid-template-areas: 'logo title account';
 	align-items: center;
+	column-gap: 15px;
 	height: var(--header-height);
 	background: var(--bg-primary);
 	position: fixed;
 	top: 0;
-	left: var(--sidebar-width);
+	left: 0;
 	right: 0;
-	z-index: 20;
+	z-index: 30;
+}
+
+.header__logo {
+	grid-area: logo;
+	display: flex;
+	align-items: center;
+	font-weight: 600;
+	font-size: 22px;
+	color: var(--color-primary-500);
 }
 
 .header__title {
@@ -24,12 +34,11 @@
 }
 
 .header__account {
+	grid-area: account;
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	grid-area: account;
-	position: relative;
-	left: -20px;
+	justify-self: end;
 }
 
 .header__account-avatar {

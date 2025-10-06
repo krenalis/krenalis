@@ -50,7 +50,8 @@ const Header = ({ title, member }: HeaderProps) => {
 	};
 
 	return (
-		<div className='header'>
+		<header>
+			<div className='header__logo'>Meergo</div>
 			<div className='header__title'>
 				<span>{title}</span>
 			</div>
@@ -155,7 +156,7 @@ const Header = ({ title, member }: HeaderProps) => {
 					</SlMenu>
 				</SlDropdown>
 			</div>
-		</div>
+		</header>
 	);
 };
 
