@@ -122,17 +122,15 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 
 	return (
 		<aside>
+			<WorkspaceSelector
+				setSelectedWorkspace={setSelectedWorkspace}
+				workspaces={workspaces}
+				selectedWorkspace={selectedWorkspace}
+				setIsLoadingState={setIsLoadingState}
+				redirect={redirect}
+			/>
 			<div className='sidebar__items'>
-				<div className='sidebar__top'>
-					<WorkspaceSelector
-						setSelectedWorkspace={setSelectedWorkspace}
-						workspaces={workspaces}
-						selectedWorkspace={selectedWorkspace}
-						setIsLoadingState={setIsLoadingState}
-						redirect={redirect}
-					/>
-					{items}
-				</div>
+				<div className='sidebar__top'>{items}</div>
 			</div>
 		</aside>
 	);

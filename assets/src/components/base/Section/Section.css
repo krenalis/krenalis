@@ -15,7 +15,7 @@
 }
 
 .section--padded .section__content {
-	background-color: var(--bg-primary);
+	background-color: #fefefe;
 	padding: 36px;
 	box-shadow: var(--sl-shadow-small);
 	border-radius: 10px;

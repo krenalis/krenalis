@@ -51,7 +51,7 @@ const Header = ({ title, member }: HeaderProps) => {
 
 	return (
 		<header>
-			<div className='header__logo'>Meergo</div>
+			<div className='header__logo'>meergo</div>
 			<div className='header__title'>
 				<span>{title}</span>
 			</div>

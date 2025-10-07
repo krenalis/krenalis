@@ -26,13 +26,13 @@
 }
 
 .connectors-list__category {
-	border: 1px solid var(--sl-color-neutral-500);
-	padding: 5px 12px;
+    border: transparent;
+	padding: 5px 16px;
 	font-size: 14px;
 	border-radius: 4px;
 	color: var(--sl-color-neutral-500);
 	font-weight: 500;
-	background-color: transparent;
+	background-color: #ebeff6;
 	cursor: pointer;
 	min-width: 70px;
 	transition:
@@ -41,15 +41,14 @@
 }
 
 .connectors-list__category:hover {
-	color: var(--sl-color-indigo-600);
-	border: 1px solid var(--sl-color-indigo-600);
+	color: #5b62d0;
 }
 
 .connectors-list__category--selected,
 .connectors-list__category--selected:hover {
-	background-color: var(--sl-color-indigo-600);
-	border: 1px solid var(--sl-color-indigo-600);
-	color: var(--text-onaccent);
+    background-color: #d4e2ff;
+    border: transparent;
+    color: #5b62d0;
 }
 
 .connectors-list__connectors {

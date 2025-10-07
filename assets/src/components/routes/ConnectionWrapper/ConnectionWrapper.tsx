@@ -6,7 +6,6 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
 import ConnectionTabs from './ConnectionTabs';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { useConnection } from './useConnection';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 
@@ -21,8 +20,7 @@ const ConnectionWrapper = () => {
 			return;
 		}
 		setTitle(
-			<Flex alignItems='baseline' gap={10}>
-				<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(connection.connector.icon)}</span>
+			<Flex alignItems='center' gap={10}>
 				<div className='connection-wrapper__name'>{connection.name}</div>
 				<StatusDot status={connection.status} />
 			</Flex>,

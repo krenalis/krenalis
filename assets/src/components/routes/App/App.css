@@ -1,6 +1,6 @@
 :root {
 	--bg-primary: var(--sl-color-neutral-0);
-	--bg-gray: var(--sl-color-neutral-50);
+	--bg-gray: #fcfbfe;
 	--bg-dark: var(--sl-color-neutral-950);
 	--bg-crystal: hsl(0deg 0% 98% / 50%);
 	--bg-transparent: #ffffff10;
@@ -19,17 +19,17 @@
 	--monospace-fonts: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 
 	/* set shoelace primary colors */
-	--sl-color-primary-50: var(--sl-color-indigo-50) !important;
-	--sl-color-primary-100: var(--sl-color-indigo-100) !important;
-	--sl-color-primary-200: var(--sl-color-indigo-200) !important;
-	--sl-color-primary-300: var(--sl-color-indigo-300) !important;
-	--sl-color-primary-400: var(--sl-color-indigo-400) !important;
-	--sl-color-primary-500: var(--sl-color-indigo-500) !important;
-	--sl-color-primary-600: var(--sl-color-indigo-600) !important;
-	--sl-color-primary-700: var(--sl-color-indigo-700) !important;
-	--sl-color-primary-800: var(--sl-color-indigo-800) !important;
-	--sl-color-primary-900: var(--sl-color-indigo-900) !important;
-	--sl-color-primary-950: var(--sl-color-indigo-950) !important;
+	--sl-color-primary-50: #e3e4f7 !important;
+	--sl-color-primary-100: #d0d0f1 !important;
+	--sl-color-primary-200: #b8b9ea !important;
+	--sl-color-primary-300: #999ae1 !important;
+	--sl-color-primary-400: #8183da !important;
+	--sl-color-primary-500: #696bd3 !important;
+	--sl-color-primary-600: #6062d0 !important;
+	--sl-color-primary-700: #4244c7 !important;
+	--sl-color-primary-800: #3437b1 !important;
+	--sl-color-primary-900: #2a2c8e !important;
+	--sl-color-primary-950: #21226e !important;
 
 	/* assign shoelace primary colors */
 	--color-primary-50: var(--sl-color-primary-50);
@@ -166,6 +166,11 @@ sl-button > a {
 	top: 0;
 	width: 100%;
 	height: 100%;
+}
+
+.button--standard.button--primary:hover:not(.button--disabled) {
+	background-color: #4049c6 !important;
+	border-color: #4049c6 !important;
 }
 
 sl-alert[variant='primary'] > *,
@@ -308,6 +313,8 @@ sl-dialog::part(body) {
 
 .app .route-content--connection {
 	min-height: calc(100vh - 140px);
+	border-radius: 0;
+	border-color: #f9e3fe;
 }
 
 /* || Tab panels */

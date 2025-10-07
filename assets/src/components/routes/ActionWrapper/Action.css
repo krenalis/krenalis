@@ -675,7 +675,6 @@ inherit the disabled style */
 	border-bottom-right-radius: 0;
 	color: var(--sl-color-neutral-500);
 	font-size: 13px;
-	border-bottom: 1px solid var(--sl-color-neutral-200);
 	display: flex;
 	justify-content: space-between;
 	align-items: center;

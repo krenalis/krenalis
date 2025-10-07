@@ -1,10 +1,25 @@
+.connection-wrapper__tabs {
+	display: flex;
+	align-items: stretch;
+	background: var(--bg-primary);
+	padding: 16px 20px;
+}
+
 .connection-wrapper__links {
 	display: flex;
 	gap: 20px;
-	padding-left: 20px;
 	align-items: center;
-	margin-bottom: -1px;
-	background: var(--bg-primary);
+}
+
+.connection-wrapper__connector-logo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 28px;
+	padding: 0 18px;
+	margin-right: 10px;
+	min-width: 48px;
+	align-self: stretch;
 }
 
 .connection-wrapper__links > a:hover {
@@ -22,7 +37,7 @@
 	transition:
 		opacity 0.3s,
 		color 0.3s;
-	border-bottom: 2px solid transparent;
+	font-weight: 500;
 }
 
 .connection-wrapper__link:hover {
@@ -34,6 +49,6 @@
 }
 
 .connection-wrapper__link--selected {
+	color: var(--color-primary-500);
 	opacity: 1;
-	border-color: var(--color-primary-500);
 }

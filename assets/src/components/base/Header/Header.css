@@ -1,12 +1,12 @@
 .app > header {
-	padding: 5px 20px;
 	display: grid;
 	grid-template-columns: var(--sidebar-width) 1fr auto;
 	grid-template-areas: 'logo title account';
 	align-items: center;
 	column-gap: 15px;
 	height: var(--header-height);
-	background: var(--bg-primary);
+	background: #6062d0;
+	color: #fff;
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -18,9 +18,12 @@
 	grid-area: logo;
 	display: flex;
 	align-items: center;
-	font-weight: 600;
-	font-size: 22px;
-	color: var(--color-primary-500);
+	font-weight: 900;
+	font-size: 24px;
+	color: #fff;
+	border-right: 1px dotted #b0abc5;
+	padding-left: 15px;
+	margin-top: -2px;
 }
 
 .header__title {
@@ -31,6 +34,11 @@
 	gap: 15px;
 	position: relative;
 	top: 2px;
+	left: -18px;
+	color: inherit;
+	padding-left: 20px;
+	margin-top: -5px;
+	letter-spacing: 0.02em;
 }
 
 .header__account {
@@ -39,6 +47,8 @@
 	align-items: center;
 	gap: 10px;
 	justify-self: end;
+	color: inherit;
+    padding-right: 15px;
 }
 
 .header__account-avatar {

@@ -160,7 +160,7 @@ const ConnectionsMap = () => {
 							</div>
 							<div className='connections-map__main'>
 								<div className='connections-map__central-logo' id='central-logo'>
-									Meergo
+									meergo
 								</div>
 								<div className='connections-map__databases'>
 									<Link path='users'>

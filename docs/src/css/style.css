@@ -61,10 +61,10 @@ body > header nav { display: inline-flex; margin-left: 120px; width: auto; }
 body > header nav a,
 body > header nav a:visited { color: #fff; margin-bottom: 2px; padding: 16px 26px 14px 26px; text-decoration: none; }
 body > header nav a:hover { border-bottom: 2px solid #eee; text-decoration: none; }
-body > header nav a.selected { background: #7566b3; border-bottom: 2px solid #eee; border-radius: 2px; color: #fff; }
+body > header nav a.selected { background: #6062d0; border-bottom: 2px solid #eee; border-radius: 2px; color: #fff; }
 
 body > header {
-    background-color: #54478c;
+    background-color: #343592;
     border-bottom: 1px solid var(--border-primary);
     box-sizing: border-box;
     display: flex;
