@@ -137,7 +137,7 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 					<div className='action__matching-properties-equal'>=</div>
 					<Combobox
 						onInput={onUpdateMatching}
-						label={`${connection.name}'s property`}
+						label={`${connection.connector.label}'s property`}
 						value={action.matching!.out}
 						name='out'
 						isExpression={false}
