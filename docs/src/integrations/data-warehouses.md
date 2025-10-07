@@ -47,4 +47,3 @@ address_country
 ### How Meergo integrates with existing warehouse governance (schemas, access control, compliance).
 
 ### Performance considerations (incremental loads, large-scale data).
-
