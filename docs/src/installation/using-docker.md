@@ -17,8 +17,8 @@ To use Meergo using Docker, you will need:
 
 Try Meergo locally by simply running:
 
-```bash
-git clone https://github.com/meergo/meergo.git && cd meergo && docker compose up
+```sh
+$ git clone https://github.com/meergo/meergo.git && cd meergo && docker compose up
 ```
 
 Or, alternatively, follow the detailed steps below.
@@ -29,17 +29,17 @@ Or, alternatively, follow the detailed steps below.
 
 Clone the Meergo's repository and enter into the repository's directory: 
 
-```bash
-git clone https://github.com/meergo/meergo
-cd meergo
+```sh
+$ git clone https://github.com/meergo/meergo
+$ cd meergo</span>
 ```
 
 ### 2. Start Meergo
 
 Launch Meergo with Docker Compose:
 
-```
-docker compose up
+```sh
+$ docker compose up
 ```
 
 If you have previously started Meergo using Docker Compose and want to reset it, perhaps for a clean installation or because you are running a new version of Meergo, you must clear the Meergo Docker data with `docker compose down -v`. This command removes containers **and volumes**, permanently deleting all stored data.

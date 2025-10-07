@@ -24,7 +24,6 @@ p { line-height: 1.75; margin-bottom: 1.25em; }
 p + h1 { font-size: 2.2rem; margin-top: -.5em; }
 pre { background: #f4f4fb; border: 1px solid #eee; border-radius: 6px; box-shadow: rgba(0, 0, 51, 0.06) 0 1px 2px; padding: 1rem; overflow-x: unset; }
 code { background: #f4f4fb; border-radius: 4px; color: #443973; font-family: var(--font-family-code); font-size: .875em; padding: .3rem .6rem; position: relative; white-space: pre-wrap; }
-code::before { background-color: transparent; bottom: 0; content: ""; left: 0; position: absolute; top: 0; width: .5rem; }
 a, a:visited { color: var(--link-color); text-decoration: none; }
 a:hover { text-decoration: underline; }
 a[href^="http"]:not(:has(*))::after { content: " ↗"; font-size: 0.8em; margin-right: 2px; padding-right: 3px; }
@@ -283,7 +282,7 @@ details.typescript summary span::before { content: ""; display: inline-block; wi
 .grid-list li:hover { border-color: var(--link-color); }
 
 #what-is-meergo + p { color: #777; font-size: 1.2em; }
-.get-meergo{ background: #f9f6f1; font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; font-weight: bold; padding: 1rem; }
+.get-meergo { background: #f9f6f1; font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; font-weight: bold; padding: 1rem; }
 .get-meergo .meergo-path { color: #d18c00; }
 .get-meergo:before { content: '$'; padding-right: .5rem; }
 
@@ -326,6 +325,8 @@ code.language-jinja {
     color: rgb(136, 136, 136);
 }
 
+.hljs { background: inherit; }
+pre code.hljs  { padding: 0; }
 .hljs-attribute, .hljs-doctag, .hljs-keyword, .hljs-meta .hljs-keyword, .hljs-name, .hljs-selector-tag, hljs-section, .hljs-title { font-weight: normal; }
 pre code { font-size: .9rem; }
 

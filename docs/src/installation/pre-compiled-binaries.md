@@ -20,13 +20,13 @@ You can find Meergo binaries on the [GitHub Releases page](https://github.com/me
 
 Once downloaded and extracted, verify the `meergo` binary works by running:
 
-```bash
-./meergo --help
+```sh
+$ ./meergo --help
 ```
 
 You should see an output like:
 
-```bash
+```sh
 Usage of ./meergo:
   -help
     	print the help for meergo and exit

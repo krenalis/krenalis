@@ -64,8 +64,8 @@ You can use any tool or language you like for sending HTTP requests containing t
 
 For example, if you're using `curl`:
 
-```bash
-curl <MEERGO ENDPOINT> \
+```sh
+$ curl <MEERGO ENDPOINT> \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer <YOUR_WRITE_KEY>" \
     -d '[
@@ -85,8 +85,8 @@ You can get the values for `<MEERGO ENDPOINT>` and `<YOUR_WRITE_KEY>` by clickin
 
 So, for example, you can send an event with `curl` like this:
 
-```bash
-curl http://localhost:2022/api/v1/events \
+```sh
+$ curl http://localhost:2022/api/v1/events \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer 4qwwvXGRa0R2PeJsUwSv1juy2MRrY8bA" \
     -d '[

@@ -26,32 +26,32 @@ Make sure you have installed:
 
 ### 1. Create the *meergo* directory
 
-```bash
-mkdir meergo
-cd meergo
+```sh
+$ mkdir meergo
+$ cd meergo
 ```
 
 ### 2. Create *main.go*
 
 Download the default `main.go` file from the Meergo repository:
 
-```bash
-curl -o main.go 'https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/cmd/meergo/main.go?token=GHSAT0AAAAAACG2OK4HH2M7QWHVRAVO322W2F6X3YA'
+```sh
+$ curl -o main.go 'https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/cmd/meergo/main.go?token=GHSAT0AAAAAACG2OK4HH2M7QWHVRAVO322W2F6X3YA'
 ```
 
 ### 3. Initialize the module
 
-```bash
-go mod init meergo
-go mod tidy
+```sh
+$ go mod init meergo
+$ go mod tidy
 ```
 
 ### 4. Generate assets
 
 Generate the Admin console assets:
 
-```bash
-go generate
+```sh
+$ go generate
 ```
 
 After this step, your directory should look like:
@@ -79,20 +79,20 @@ To define which Meergo connectors and data warehouse drivers are included in the
 
 Build the executable:
 
-```bash
-go build
+```sh
+$ go build
 ```
 
 Or to remove absolute paths from stack traces, use:
 
-```bash
-go build -trimpath
+```sh
+$ go build -trimpath
 ```
 
 Verify the build (replace `meergo` with `meergo.exe` on Windows):
 
-```bash
-./meergo --help
+```sh
+$ ./meergo --help
 ```
 
 ### Next step
@@ -111,15 +111,15 @@ Install the following:
 
 ### 1. Clone the repository
 
-```bash
-git clone https://github.com/meergo/meergo
-cd meergo/cmd/meergo
+```sh
+$ git clone https://github.com/meergo/meergo
+$ cd meergo/cmd/meergo
 ```
 
 ### 2. Generate assets
 
-```bash
-go generate
+```sh
+$ go generate
 ```
 
 After this step, the `meergo/cmd/meergo` directory should look like:
@@ -140,20 +140,20 @@ meergo
 
 ### 3. Build
 
-```bash
-go build
+```sh
+$ go build
 ```
 
 Or to remove absolute paths from stack traces, use:
 
-```bash
-go build -trimpath
+```sh
+$ go build -trimpath
 ```
 
 Verify the build (replace `meergo` with `meergo.exe` on Windows):
 
-```bash
-./meergo --help
+```sh
+$ ./meergo --help
 ```
 
 ### Next step

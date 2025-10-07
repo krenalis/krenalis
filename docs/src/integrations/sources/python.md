@@ -37,7 +37,7 @@ First of all, you need a connection in Meergo that can receive events from the P
 3. Copy the Write Key and the Endpoint.
 4. Install `meergo-analytics-python` using pip:
     ```sh
-    pip3 install meergo-analytics-python
+    $ pip3 install meergo-analytics-python
     ```
 5. Import and use the package in your application, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```python

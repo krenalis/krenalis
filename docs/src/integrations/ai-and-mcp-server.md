@@ -58,8 +58,8 @@ So, for example, to create an user called `foo_ro` to for the MCP server to acce
 
 1. Open a PostgreSQL shell into `warehouse`, for example:
   
-  ```bash
-  psql warehouse
+  ```sh
+  $ psql warehouse
   ```
 
 2. Create the `foo_ro` user:
@@ -108,8 +108,8 @@ Once you understand this example, you can adapt it to your needs (eg. another LL
 
 ### Starting the chat
 
-```bash
-fast-agent go --model openai --url=http://localhost:2022/mcp --auth=$MEERGO_MCP_KEY
+```sh
+$ fast-agent go --model openai --url=http://localhost:2022/mcp --auth=$MEERGO_MCP_KEY
 ```
 
 By changing the command-line parameters and environment variables, you can configure **fast-agent** to connect to a different model or a different Meergo instance. See the [documentation for the `fast-agent go` command](https://fast-agent.ai/ref/go_command/) for more details.

@@ -10,8 +10,8 @@ Meergo uses PostgreSQL as its internal database. This is separate from the data 
 
 Create a PostgreSQL database that will be used by Meergo. In this example, we'll name the database _meergo_:
 
-```bash
-psql postgres -c "CREATE DATABASE meergo"
+```sh
+$ psql postgres -c "CREATE DATABASE meergo"
 ```
 
 You can choose any name you like for the database; _meergo_ is just an example. You'll need to specify the name you choose later in the Meergo [configuration](../configuration).
@@ -20,14 +20,14 @@ You can choose any name you like for the database; _meergo_ is just an example. 
 
 Initialize the database with the tables needed for Meergo to run:
 
-```bash
-curl -sf https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/database/initialization/1%20-%20postgres.sql\?token\=GHSAT0AAAAAACG2OK4HUAQL2QOFNT7Y4ZWG2EUV2QA | psql meergo
+```sh
+$ curl -sf https://raw.githubusercontent.com/meergo/meergo/refs/heads/main/database/initialization/1%20-%20postgres.sql\?token\=GHSAT0AAAAAACG2OK4HUAQL2QOFNT7Y4ZWG2EUV2QA | psql meergo
 ```
 
 To verify that the database was initialized successfully, run:
 
-```bash
-psql meergo -c "\d"
+```sh
+$ psql meergo -c "\d"
 ```
 
 You should see something like this:

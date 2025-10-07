@@ -37,7 +37,7 @@ First of all, you need a connection in Meergo that can receive events from the C
 3. Copy the Write Key and the Endpoint.
 4. Install `Meergo.Analytics.CSharp` using NuGet:
     ```sh
-    Install-Package Meergo.Analytics.CSharp -Version <version>
+    $ Install-Package Meergo.Analytics.CSharp -Version <version>
     ```
 5. Import and use the package, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```csharp
