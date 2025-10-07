@@ -107,7 +107,7 @@ const ConnectorsList = () => {
 	}, [connectors, additionalConnectorsInfo]);
 
 	useLayoutEffect(() => {
-		setTitle(`Add a ${connectionRole.toLocaleLowerCase()}`);
+		setTitle(`Add a new ${connectionRole.toLocaleLowerCase()}`);
 	}, [connectionRole]);
 
 	useEffect(() => {

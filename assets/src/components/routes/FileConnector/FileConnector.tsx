@@ -95,7 +95,7 @@ const FileConnector = () => {
 					) : (
 						<div className='file-connector__no-storage'>
 							<div>
-								To add a file connection, you need to select a file storage connection to use for{' '}
+								To add a new file connection, you need to select a file storage connection to use for{' '}
 								{role === 'Source' ? 'reading' : 'writing'} the file, but none are currently available.
 								Please add one before proceeding.
 							</div>

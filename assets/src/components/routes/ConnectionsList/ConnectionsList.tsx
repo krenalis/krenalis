@@ -157,7 +157,7 @@ const ConnectionsList = () => {
 							You don't have any {role?.toLowerCase()} installed
 						</div>
 						<Link path={`connectors?role=${role}`}>
-							<SlButton variant='primary'>Add a {role?.toLowerCase()}...</SlButton>
+							<SlButton variant='primary'>Add a new {role?.toLowerCase()}...</SlButton>
 						</Link>
 					</div>
 				) : (
