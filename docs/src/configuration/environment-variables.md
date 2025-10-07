@@ -6,7 +6,6 @@
 
 This section lists all environment variables that Meergo reads at startup. Meergo will also attempt to load variables from [the _.env_ file](the-env-file), if present.
 
-
 ## Database
 
 Settings used to access the PostgreSQL server used by Meergo.

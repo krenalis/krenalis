@@ -14,7 +14,7 @@ Create a PostgreSQL database that will be used by Meergo. In this example, we'll
 psql postgres -c "CREATE DATABASE meergo"
 ```
 
-You can choose any name you like for the database; _meergo_ is just an example. You'll need to specify the name you choose later in the Meergo [configuration](/configuration).
+You can choose any name you like for the database; _meergo_ is just an example. You'll need to specify the name you choose later in the Meergo [configuration](../configuration).
 
 ### 2. Initialize the database
 
@@ -58,4 +58,4 @@ You should see something like this:
 
 ### Next step
 
-Now you are ready to proceed with the [configuration](/configuration).
+Now you are ready to proceed with the [configuration](../configuration).

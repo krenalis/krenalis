@@ -137,12 +137,6 @@ article aside nav {
     position: sticky;
 }
 
-article aside nav > ul div {
-    margin-bottom: 0;
-    margin-top: 5px;
-    padding: 0.3rem 1.5rem;
-}
-
 article aside nav > ul > li:first-child > div {
     margin-top: 0;
     padding: 0;
@@ -189,9 +183,8 @@ article aside ul a { border-radius: 10px; display: block; font-size: 15px; margi
 article aside ul a, aside ul a:visited { color: #0007149f; }
 article aside ul a:hover, article aside ul li.expanded > a { background: #eef2ff; border-radius: 3px; text-decoration: none; }
 article aside ul a.selected { background: #eef2ff; border-radius: 3px; color: #006ca7f5; font-weight: 500; }
-article aside div { font-size: 14px; font-weight: bold; margin-bottom: 8px; }
 article aside > ul { margin-top: 3rem; }
-article aside li > ul { padding-left: 1rem; }
+article aside li > div { font-size: .875rem; font-weight: 600; margin: 1.5rem 0 .5rem .5rem; }
 article aside li, article aside li::before { all: unset; }
 article aside li { display: block; line-height: 1.70; white-space: nowrap; }
 article aside nav ul li.sidebar-expandable > ul { display: none; padding-left: 1rem; }

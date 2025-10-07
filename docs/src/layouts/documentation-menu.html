@@ -10,42 +10,57 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
 
 <ul>
   <li>{{ item(`index`, `Overview`) }}</li>
-  <li>{{ item(`what-is-meergo`, `What is Meergo`) }}</li>
-  <li class="{{ expandable(`installation/`) }}">
-    {{ item(`installation`, `Installation`) }}
+  <li>
+    <div>Getting Started</div>
     <ul>
-      <li>{{ item(`installation/using-docker`, `Using Docker`) }}</li>
-      <li>{{ item(`installation/pre-compiled-binaries`, `Pre-compiled binaries`) }}</li>
-      <li>{{ item(`installation/from-source`, `From source`) }}</li>
-      <li>{{ item(`installation/database-setup`, `Database setup`) }}</li>
+      <li class="{{ expandable(`installation/`) }}">
+        {{ item(`installation`, `Installation`) }}
+        <ul>
+          <li>{{ item(`installation/using-docker`, `Using Docker`) }}</li>
+          <li>{{ item(`installation/pre-compiled-binaries`, `Pre-compiled binaries`) }}</li>
+          <li>{{ item(`installation/from-source`, `From source`) }}</li>
+          <li>{{ item(`installation/database-setup`, `Database setup`) }}</li>
+        </ul>
+      </li>
+      <li class="{{ expandable(`configuration/`) }}">
+        {{ item(`configuration`, `Configuration`) }}
+        <ul>
+          <li>{{ item(`configuration/environment-variables`, `Environment variables`) }}</li>
+          <li>{{ item(`configuration/the-env-file`, `The <i>.env</i> file`) }}</li>
+        </ul>
+      </li>
+      <li>{{ item(`create-workspace`, `Create a workspace`) }}</li>
+      <li>{{ item(`connect-warehouse`, `Connect a warehouse`) }}</li>
     </ul>
   </li>
-  <li class="{{ expandable(`configuration/`) }}">
-    {{ item(`configuration`, `Configuration`) }}
+  <li>
+    <div>Core Concepts</div>
     <ul>
-      <li>{{ item(`configuration/environment-variables`, `Environment variables`) }}</li>
-      <li>{{ item(`configuration/the-env-file`, `The <i>.env</i> file`) }}</li>
+      <li>{{ item(`collect-users`, `Collect users`) }}</li>
+      <li>{{ item(`unify-users`, `Unify users`) }}</li>
+      <li>{{ item(`activate-users`, `Activate users`) }}</li>
+      <li class="{{ expandable(`identity-resolution/`) }}">
+        {{ item(`identity-resolution`, `Identity Resolution`) }}
+        <ul>
+          <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>
+          <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous users strategies`) }}</li>
+        </ul>
+      </li>
+      <li>{{ item(`data-validation`, `Data validation`) }}</li>
     </ul>
   </li>
-  <li>{{ item(`create-workspace`, `Create a workspace`) }}</li>
-  <li>{{ item(`collect-users`, `Collect users`) }}</li>
-  <li>{{ item(`unify-users`, `Unify users`) }}</li>
-  <li>{{ item(`activate-users`, `Activate users`) }}</li>
-  <li class="{{ expandable(`connections/`) }}">
-    {{ item(`connections`, `Connections`) }}
+  <li>
+    <div>Connections</div>
     <ul>
       <li>{{ item(`connections/importing`, `Import`) }}</li>
       <li>{{ item(`connections/exporting`, `Export`) }}</li>
     </ul>
   </li>
-  <li>{{ item(`data-validation`, `Data validation`) }}</li>
-  <li>{{ item(`filters`, `Filters`) }}</li>
-  <li>{{ item(`altering-user-schema`, `Altering User Schema`) }}</li>
-  <li class="{{ expandable(`identity-resolution/`) }}">
-    {{ item(`identity-resolution`, `Identity Resolution`) }}
+  <li>
+    <div>Data Modeling & Transformations</div>
     <ul>
-      <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>
-      <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous users strategies`) }}</li>
+      <li>{{ item(`filters`, `Filters`) }}</li>
+      <li>{{ item(`altering-user-schema`, `Altering User Schema`) }}</li>
     </ul>
   </li>
 </ul>

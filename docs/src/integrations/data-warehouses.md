@@ -35,3 +35,16 @@ address_street_number
 address_city
 address_country
 ```
+
+### How Meergo stores data in the warehouse (schemas, tables, naming conventions, partitioning, indexes).
+
+### The difference between batch vs. real-time ingestion into the warehouse.
+
+### How event and user data are structured once inside the warehouse.
+
+### Best practices for querying the warehouse directly (e.g., SQL examples, joining events with user profiles).
+
+### How Meergo integrates with existing warehouse governance (schemas, access control, compliance).
+
+### Performance considerations (incremental loads, large-scale data).
+

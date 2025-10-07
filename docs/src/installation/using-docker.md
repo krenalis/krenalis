@@ -50,4 +50,4 @@ If you have previously started Meergo using Docker Compose and want to reset it,
 
 Once the initialization is finished, as indicated by the console message stating that the Meergo Admin Console is available, you can access it by opening the address [http://127.0.0.1:2022/admin/](http://127.0.0.1:2022/admin/) in a browser.
 
-Keep reading the documentation to see how to [create your first workspace](/create-workspace).
+Keep reading the documentation to see how to [create your first workspace](../create-workspace).
