@@ -15170,32 +15170,14 @@
                         "parameters": [
                             {
                                 "name": "languages",
-                                "prefilled": "...",
+                                "prefilled": "[\"JavaScript\",\"Python\"]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {
-                                        "kind": "object",
-                                        "properties": [
-                                            {
-                                                "name": "name",
-                                                "prefilled": "\"JavaScript\"",
-                                                "type": {
-                                                    "kind": "text"
-                                                },
-                                                "description": "The name of the supported language."
-                                            },
-                                            {
-                                                "name": "icon",
-                                                "prefilled": "\"<svg icon>\"",
-                                                "type": {
-                                                    "kind": "text"
-                                                },
-                                                "description": "The icon of the supported language."
-                                            }
-                                        ]
+                                        "kind": "text"
                                     }
                                 },
-                                "description": ""
+                                "description": "The names of the supported languages."
                             }
                         ]
                     },

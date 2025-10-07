@@ -83,22 +83,10 @@ func init() {
 				Response: &Response{
 					Parameters: []types.Property{
 						{
-							Name: "languages",
-							Type: types.Array(types.Object([]types.Property{
-								{
-									Name:        "name",
-									Type:        types.Text(),
-									Prefilled:   `"JavaScript"`,
-									Description: "The name of the supported language.",
-								},
-								{
-									Name:        "icon",
-									Type:        types.Text(),
-									Prefilled:   `"<svg icon>"`,
-									Description: "The icon of the supported language.",
-								},
-							})),
-							Prefilled: "...",
+							Name:        "languages",
+							Type:        types.Array(types.Text()),
+							Prefilled:   `["JavaScript","Python"]`,
+							Description: "The names of the supported languages.",
 						},
 					},
 				},
