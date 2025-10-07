@@ -70,7 +70,7 @@ func Main(assets fs.FS) {
 	//
 	// It is crucial NOT to delete the "MEERGO_" environment variables, because
 	// a connector may access them even after initialization.
-	settings, err := parseSettings()
+	settings, err := parseEnvSettings()
 	if err != nil {
 		fatal(1, err.Error())
 	}

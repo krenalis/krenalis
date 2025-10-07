@@ -107,7 +107,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("minimal baseline with defaults", func(t *testing.T) {
 		setBaseline(t)
 
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -201,7 +201,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("termination delay valid and invalid", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_TERMINATION_DELAY", "150ms")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -212,7 +212,7 @@ func TestParseSettings(t *testing.T) {
 		// invalid.
 		setBaseline(t)
 		t.Setenv("MEERGO_TERMINATION_DELAY", "not-a-duration")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid duration, got nil")
 		}
@@ -225,7 +225,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("JavaScript SDK URL invalid", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_JAVASCRIPT_SDK_URL", "://bad")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid MEERGO_JAVASCRIPT_SDK_URL, got nil")
 		}
@@ -249,7 +249,7 @@ func TestParseSettings(t *testing.T) {
 				if in != "" {
 					t.Setenv("MEERGO_TELEMETRY_LEVEL", in)
 				}
-				s, err := parseSettings()
+				s, err := parseEnvSettings()
 				if err != nil {
 					t.Fatalf("expected no error, got %v", err)
 				}
@@ -261,7 +261,7 @@ func TestParseSettings(t *testing.T) {
 
 		setBaseline(t)
 		t.Setenv("MEERGO_TELEMETRY_LEVEL", "verbose")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid telemetry level, got nil")
 		}
@@ -275,7 +275,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_HOST", "exämple.com")
 		t.Setenv("MEERGO_HTTP_PORT", "8080")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -288,7 +288,7 @@ func TestParseSettings(t *testing.T) {
 
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_HOST", "bad host")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid host, got nil")
 		}
@@ -300,7 +300,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_HOST", "127.0.0.1")
 		t.Setenv("MEERGO_HTTP_PORT", "0")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid port, got nil")
 		}
@@ -313,7 +313,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("HTTP port non numeric and overflow", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_PORT", "abc")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for non-numeric port, got nil")
 		}
@@ -323,7 +323,7 @@ func TestParseSettings(t *testing.T) {
 		}
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_PORT", "70000")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for port >65535, got nil")
 		}
@@ -339,7 +339,7 @@ func TestParseSettings(t *testing.T) {
 		// Missing cert triggers error.
 		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", "")
 		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when TLS is true and cert is missing, got nil")
 		}
@@ -353,7 +353,7 @@ func TestParseSettings(t *testing.T) {
 		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
 		// Missing key triggers error.
 		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", "")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when TLS is true and key is missing, got nil")
 		}
@@ -367,7 +367,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "false")
 		// No cert/key envs set.
-		if _, err := parseSettings(); err != nil {
+		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
 	})
@@ -376,7 +376,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "false")
 		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", "/some/path.pem")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when TLS is false and cert file is set, got nil")
 		}
@@ -390,7 +390,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "false")
 		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", "/some/key.pem")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when TLS is false and key file is set, got nil")
 		}
@@ -409,7 +409,7 @@ func TestParseSettings(t *testing.T) {
 		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
 		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", nonexistentFile)
 		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing cert file, got nil")
 		}
@@ -426,7 +426,7 @@ func TestParseSettings(t *testing.T) {
 		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "true")
 		t.Setenv("MEERGO_HTTP_TLS_CERT_FILE", createTempFile(t, "cert-*.pem"))
 		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", nonexistentFile)
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing key file, got nil")
 		}
@@ -439,7 +439,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("TLS enabled invalid", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_TLS_ENABLED", "maybe")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid TLS boolean, got nil")
 		}
@@ -452,7 +452,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("external URL path or query rejected", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_EXTERNAL_URL", "https://example.com/path")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for external URL with path, got nil")
 		}
@@ -462,7 +462,7 @@ func TestParseSettings(t *testing.T) {
 		}
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_EXTERNAL_URL", "https://example.com/?q=1")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for external URL with query, got nil")
 		}
@@ -476,7 +476,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_EXTERNAL_URL", "https://example.com/")
 		t.Setenv("MEERGO_HTTP_EXTERNAL_EVENT_URL", "https://example.com/events")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -495,7 +495,7 @@ func TestParseSettings(t *testing.T) {
 		t.Setenv("MEERGO_HTTP_TLS_KEY_FILE", createTempFile(t, "key-*.pem"))
 		t.Setenv("MEERGO_HTTP_PORT", "443")
 
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -507,7 +507,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("external event URL query rejected", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_EXTERNAL_EVENT_URL", "https://example.com/events?q=1")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for event URL with query, got nil")
 		}
@@ -520,7 +520,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("HTTP timeouts parsing invalid", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_READ_TIMEOUT", "bad")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid read timeout, got nil")
 		}
@@ -533,7 +533,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("HTTP write timeout invalid", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_WRITE_TIMEOUT", "bad")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid write timeout, got nil")
 		}
@@ -546,7 +546,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("HTTP idle timeout invalid", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_HTTP_IDLE_TIMEOUT", "bad")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid idle timeout, got nil")
 		}
@@ -560,7 +560,7 @@ func TestParseSettings(t *testing.T) {
 		// Missing host.
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_HOST", "")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -571,7 +571,7 @@ func TestParseSettings(t *testing.T) {
 		// Username length.
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_USERNAME", "")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for username length, got nil")
 		}
@@ -583,7 +583,7 @@ func TestParseSettings(t *testing.T) {
 		// Password length.
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_PASSWORD", "")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for password length, got nil")
 		}
@@ -595,7 +595,7 @@ func TestParseSettings(t *testing.T) {
 		// Database length.
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_DATABASE", "")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for database length, got nil")
 		}
@@ -607,7 +607,7 @@ func TestParseSettings(t *testing.T) {
 		// Schema default and override.
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_SCHEMA", "custom")
-		s, err = parseSettings()
+		s, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -619,7 +619,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("db host invalid and boundary values", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_HOST", "bad host")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid DB host, got nil")
 		}
@@ -630,7 +630,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_HOST", "127.0.0.1")
 		t.Setenv("MEERGO_DB_PORT", "65535")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -640,25 +640,25 @@ func TestParseSettings(t *testing.T) {
 		tooLong := strings.Repeat("a", 64)
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_USERNAME", tooLong)
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for username length >63, got nil")
 		}
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_DATABASE", tooLong)
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for database length >63, got nil")
 		}
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_PASSWORD", strings.Repeat("x", 101))
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for password length >100, got nil")
 		}
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "2")
-		s, err = parseSettings()
+		s, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -670,7 +670,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("db max connections parsing and bounds", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "notint")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for non-integer max connections, got nil")
 		}
@@ -681,7 +681,7 @@ func TestParseSettings(t *testing.T) {
 
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "1")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for max connections < 2, got nil")
 		}
@@ -692,7 +692,7 @@ func TestParseSettings(t *testing.T) {
 
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "-7")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for max connections < 2, got nil")
 		}
@@ -703,7 +703,7 @@ func TestParseSettings(t *testing.T) {
 
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_MAX_CONNECTIONS", "64")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -715,7 +715,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("boolean flags parsing", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "false")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -725,7 +725,7 @@ func TestParseSettings(t *testing.T) {
 
 		setBaseline(t)
 		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "true")
-		s, err = parseSettings()
+		s, err = parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -735,7 +735,7 @@ func TestParseSettings(t *testing.T) {
 
 		setBaseline(t)
 		t.Setenv("MEERGO_MEMBER_EMAIL_VERIFICATION_REQUIRED", "not-bool")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid boolean, got nil")
 		}
@@ -749,7 +749,7 @@ func TestParseSettings(t *testing.T) {
 		// Host set but missing port.
 		setBaseline(t)
 		t.Setenv("MEERGO_SMTP_HOST", "smtp.example.com")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error when SMTP host set without port, got nil")
 		}
@@ -762,7 +762,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_SMTP_HOST", "smtp.example.com")
 		t.Setenv("MEERGO_SMTP_PORT", "0")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid SMTP port, got nil")
 		}
@@ -777,7 +777,7 @@ func TestParseSettings(t *testing.T) {
 		t.Setenv("MEERGO_SMTP_PORT", "587")
 		t.Setenv("MEERGO_SMTP_USERNAME", "user")
 		t.Setenv("MEERGO_SMTP_PASSWORD", "pass")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -794,7 +794,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_SMTP_HOST", "bad host")
 		t.Setenv("MEERGO_SMTP_PORT", "25")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for invalid SMTP host, got nil")
 		}
@@ -808,7 +808,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		path := createTempFile(t, "GeoIP2-*.mmdb")
 		t.Setenv("MEERGO_MAXMIND_DB_PATH", path)
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -827,7 +827,7 @@ func TestParseSettings(t *testing.T) {
 		}
 		setBaseline(t)
 		t.Setenv("MEERGO_MAXMIND_DB_PATH", nonexistentFile)
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for missing MaxMind db file, got nil")
 		}
@@ -841,7 +841,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE", "/usr/bin/node")
 		t.Setenv("MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for conflicting transformers, got nil")
 		}
@@ -854,7 +854,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("transformers local-only accepted", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE", "/usr/bin/node")
-		if _, err := parseSettings(); err != nil {
+		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error for local-only transformers, got %v", err)
 		}
 	})
@@ -862,7 +862,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("transformers Lambda-only accepted", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
-		if _, err := parseSettings(); err != nil {
+		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error for Lambda-only transformers, got %v", err)
 		}
 	})
@@ -871,7 +871,7 @@ func TestParseSettings(t *testing.T) {
 		// HubSpot ID without secret -> error.
 		setBaseline(t)
 		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_ID", "id")
-		_, err := parseSettings()
+		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for HubSpot ID without secret, got nil")
 		}
@@ -885,7 +885,7 @@ func TestParseSettings(t *testing.T) {
 		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_ID", "id")
 		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET", "sec")
 		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for Mailchimp ID without secret, got nil")
 		}
@@ -898,7 +898,7 @@ func TestParseSettings(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID", "")
 		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET", "sec")
-		_, err = parseSettings()
+		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for Mailchimp secret without id, got nil")
 		}
@@ -913,7 +913,7 @@ func TestParseSettings(t *testing.T) {
 		t.Setenv("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET", "sec")
 		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_ID", "mcid")
 		t.Setenv("MEERGO_OAUTH_MAILCHIMP_CLIENT_SECRET", "msec")
-		s, err := parseSettings()
+		s, err := parseEnvSettings()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -923,12 +923,12 @@ func TestParseSettings(t *testing.T) {
 	})
 }
 
-// TestParseURLSuccess verifies valid inputs and normalization behaviors.
-func TestParseURLSuccess(t *testing.T) {
+// TestParseEnvURLSuccess verifies valid inputs and normalization behaviors.
+func TestParseEnvURLSuccess(t *testing.T) {
 
 	t.Run("empty env returns empty and nil", func(t *testing.T) {
-		t.Setenv("MEERGO_PARSE_URL_EMPTY", "")
-		got, err := parseURL("MEERGO_PARSE_URL_EMPTY", 0)
+		t.Setenv("MEERGO_PARSE_ENV_URL_EMPTY", "")
+		got, err := parseEnvURL("MEERGO_PARSE_ENV_URL_EMPTY", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -939,7 +939,7 @@ func TestParseURLSuccess(t *testing.T) {
 
 	t.Run("http without path gets normalized to slash", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_HTTP_NOPATH", "http://example.com")
-		got, err := parseURL("MEERGO_URL_HTTP_NOPATH", 0)
+		got, err := parseEnvURL("MEERGO_URL_HTTP_NOPATH", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -951,7 +951,7 @@ func TestParseURLSuccess(t *testing.T) {
 
 	t.Run("https with slash path stays as is", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_HTTPS_SLASH", "https://example.com/")
-		got, err := parseURL("MEERGO_URL_HTTPS_SLASH", 0)
+		got, err := parseEnvURL("MEERGO_URL_HTTPS_SLASH", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -963,7 +963,7 @@ func TestParseURLSuccess(t *testing.T) {
 
 	t.Run("strip leading zeros in port then default port removal", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_HTTP_LEADING_ZERO_PORT", "http://example.com:00080")
-		got, err := parseURL("MEERGO_URL_HTTP_LEADING_ZERO_PORT", 0)
+		got, err := parseEnvURL("MEERGO_URL_HTTP_LEADING_ZERO_PORT", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -976,7 +976,7 @@ func TestParseURLSuccess(t *testing.T) {
 
 	t.Run("keep non-default valid port", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NONDEFAULT_PORT", "https://example.com:8443/")
-		got, err := parseURL("MEERGO_URL_NONDEFAULT_PORT", 0)
+		got, err := parseEnvURL("MEERGO_URL_NONDEFAULT_PORT", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -988,7 +988,7 @@ func TestParseURLSuccess(t *testing.T) {
 
 	t.Run("remove default port 443 for https", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_HTTPS_DEFAULT_PORT", "https://example.com:443")
-		got, err := parseURL("MEERGO_URL_HTTPS_DEFAULT_PORT", 0)
+		got, err := parseEnvURL("MEERGO_URL_HTTPS_DEFAULT_PORT", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1000,7 +1000,7 @@ func TestParseURLSuccess(t *testing.T) {
 
 	t.Run("ipv6 literal with port is accepted", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_IPV6_PORT", "http://[::1]:8080")
-		got, err := parseURL("MEERGO_URL_IPV6_PORT", 0)
+		got, err := parseEnvURL("MEERGO_URL_IPV6_PORT", 0)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1011,12 +1011,12 @@ func TestParseURLSuccess(t *testing.T) {
 	})
 }
 
-// TestParseURLFlags verifies behavior controlled by validation flags.
-func TestParseURLFlags(t *testing.T) {
+// TestParseEnvURLFlags verifies behavior controlled by validation flags.
+func TestParseEnvURLFlags(t *testing.T) {
 
 	t.Run("noPath rejects non-root path", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NOPATH_FLAG_BAD", "https://example.com/foo")
-		_, err := parseURL("MEERGO_URL_NOPATH_FLAG_BAD", noPath)
+		_, err := parseEnvURL("MEERGO_URL_NOPATH_FLAG_BAD", noPath)
 		wantErr := `invalid URL specified for MEERGO_URL_NOPATH_FLAG_BAD: path must be "/"`
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1025,7 +1025,7 @@ func TestParseURLFlags(t *testing.T) {
 
 	t.Run("noPath allows empty path which normalizes to slash", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NOPATH_FLAG_OK", "https://example.com")
-		got, err := parseURL("MEERGO_URL_NOPATH_FLAG_OK", noPath)
+		got, err := parseEnvURL("MEERGO_URL_NOPATH_FLAG_OK", noPath)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -1037,7 +1037,7 @@ func TestParseURLFlags(t *testing.T) {
 
 	t.Run("noQuery rejects non-empty query", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NOQUERY_BAD", "https://example.com/?a=b")
-		_, err := parseURL("MEERGO_URL_NOQUERY_BAD", noQuery)
+		_, err := parseEnvURL("MEERGO_URL_NOQUERY_BAD", noQuery)
 		wantErr := "invalid URL specified for MEERGO_URL_NOQUERY_BAD: query cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1046,7 +1046,7 @@ func TestParseURLFlags(t *testing.T) {
 
 	t.Run("noQuery rejects trailing question mark (ForceQuery)", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NOQUERY_FORCE", "https://example.com/?")
-		_, err := parseURL("MEERGO_URL_NOQUERY_FORCE", noQuery)
+		_, err := parseEnvURL("MEERGO_URL_NOQUERY_FORCE", noQuery)
 		wantErr := "invalid URL specified for MEERGO_URL_NOQUERY_FORCE: query cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1059,7 +1059,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("leading space", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_SPACE_START", " https://example.com/")
-		_, err := parseURL("MEERGO_URL_SPACE_START", 0)
+		_, err := parseEnvURL("MEERGO_URL_SPACE_START", 0)
 		wantErr := "invalid URL specified for MEERGO_URL_SPACE_START: it starts with a space"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1068,7 +1068,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("trailing space", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_SPACE_END", "https://example.com/ ")
-		_, err := parseURL("MEERGO_URL_SPACE_END", 0)
+		_, err := parseEnvURL("MEERGO_URL_SPACE_END", 0)
 		wantErr := "invalid URL specified for MEERGO_URL_SPACE_END: it ends with a space"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1077,7 +1077,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("url.Parse failure", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_PARSE_FAIL", "http://[::1")
-		_, err := parseURL("MEERGO_URL_PARSE_FAIL", 0)
+		_, err := parseEnvURL("MEERGO_URL_PARSE_FAIL", 0)
 		// We match the exact message format propagated by url.Parse into errInvalidURL.
 		wantErr := "invalid URL specified for MEERGO_URL_PARSE_FAIL: parse \"http://[::1\": missing ']' in host"
 		if err == nil || err.Error() != wantErr {
@@ -1087,7 +1087,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("unsupported scheme", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_BAD_SCHEME", "ftp://example.com/")
-		_, err := parseURL("MEERGO_URL_BAD_SCHEME", 0)
+		_, err := parseEnvURL("MEERGO_URL_BAD_SCHEME", 0)
 		wantErr := `invalid URL specified for MEERGO_URL_BAD_SCHEME: scheme must be "http" or "https"`
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1096,7 +1096,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("user info present", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_USERINFO", "http://user:pass@example.com/")
-		_, err := parseURL("MEERGO_URL_USERINFO", 0)
+		_, err := parseEnvURL("MEERGO_URL_USERINFO", 0)
 		wantErr := "invalid URL specified for MEERGO_URL_USERINFO: user and password cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1105,7 +1105,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("missing host", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_NO_HOST", "http://")
-		_, err := parseURL("MEERGO_URL_NO_HOST", 0)
+		_, err := parseEnvURL("MEERGO_URL_NO_HOST", 0)
 		wantErr := "invalid URL specified for MEERGO_URL_NO_HOST: host must be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1114,7 +1114,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("invalid port: zero", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_PORT_ZERO", "https://example.com:0")
-		_, err := parseURL("MEERGO_URL_PORT_ZERO", 0)
+		_, err := parseEnvURL("MEERGO_URL_PORT_ZERO", 0)
 		wantErr := "invalid URL specified for MEERGO_URL_PORT_ZERO: port cannot be 0"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1123,7 +1123,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("invalid port: above max", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_PORT_BIG", "https://example.com:65536")
-		_, err := parseURL("MEERGO_URL_PORT_BIG", 0)
+		_, err := parseEnvURL("MEERGO_URL_PORT_BIG", 0)
 		wantErr := "invalid URL specified for MEERGO_URL_PORT_BIG: port must not exceed 65535"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1132,7 +1132,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("invalid port: non numeric", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_PORT_NAN", "https://example.com:abc")
-		_, err := parseURL("MEERGO_URL_PORT_NAN", 0)
+		_, err := parseEnvURL("MEERGO_URL_PORT_NAN", 0)
 		wantErr := `invalid URL specified for MEERGO_URL_PORT_NAN: parse "https://example.com:abc": invalid port ":abc" after host`
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)
@@ -1141,7 +1141,7 @@ func TestParseURLErrors(t *testing.T) {
 
 	t.Run("fragment present", func(t *testing.T) {
 		t.Setenv("MEERGO_URL_FRAGMENT", "https://example.com/#frag")
-		_, err := parseURL("MEERGO_URL_FRAGMENT", 0)
+		_, err := parseEnvURL("MEERGO_URL_FRAGMENT", 0)
 		wantErr := "invalid URL specified for MEERGO_URL_FRAGMENT: fragment cannot be specified"
 		if err == nil || err.Error() != wantErr {
 			t.Fatalf("expected %q, got %v", wantErr, err)

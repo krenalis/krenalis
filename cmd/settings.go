@@ -7,6 +7,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -22,10 +23,10 @@ import (
 	"github.com/meergo/meergo/core/validation"
 )
 
-// parseSettings parses the settings from the process environment variables.
+// parseEnvSettings parses the settings from the process environment variables.
 //
 // It does not alter the environment variables.
-func parseSettings() (*Settings, error) {
+func parseEnvSettings() (*Settings, error) {
 
 	envVars, err := meergo.GetEnvVars()
 	if err != nil {
@@ -42,7 +43,7 @@ func parseSettings() (*Settings, error) {
 		settings.TerminationDelay = delay
 	}
 
-	if url, err := parseURL("MEERGO_JAVASCRIPT_SDK_URL", 0); err != nil {
+	if url, err := parseEnvURL("MEERGO_JAVASCRIPT_SDK_URL", 0); err != nil {
 		return nil, fmt.Errorf("MEERGO_JAVASCRIPT_SDK_URL must be a valid URL: %s", err)
 	} else if url == "" {
 		settings.JavaScriptSDKURL = "https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js"
@@ -108,7 +109,7 @@ func parseSettings() (*Settings, error) {
 		}
 	}
 
-	if externalURL, err := parseURL("MEERGO_HTTP_EXTERNAL_URL", noPath|noQuery); err != nil {
+	if externalURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_URL", noPath|noQuery); err != nil {
 		return nil, err
 	} else if externalURL == "" {
 		protocol := "http"
@@ -126,7 +127,7 @@ func parseSettings() (*Settings, error) {
 		settings.HTTP.ExternalURL = externalURL
 	}
 
-	if eventURL, err := parseURL("MEERGO_HTTP_EXTERNAL_EVENT_URL", noQuery); err != nil {
+	if eventURL, err := parseEnvURL("MEERGO_HTTP_EXTERNAL_EVENT_URL", noQuery); err != nil {
 		return nil, err
 	} else if eventURL == "" {
 		settings.HTTP.ExternalEventURL = settings.HTTP.ExternalURL + "api/v1/events"
@@ -134,19 +135,19 @@ func parseSettings() (*Settings, error) {
 		settings.HTTP.ExternalEventURL = eventURL
 	}
 
-	if settings.HTTP.ReadHeaderTimeout, err = parseHTTPDuration("MEERGO_HTTP_READ_HEADER_TIMEOUT", 2*time.Second); err != nil {
+	if settings.HTTP.ReadHeaderTimeout, err = parseEnvHTTPDuration("MEERGO_HTTP_READ_HEADER_TIMEOUT", 2*time.Second); err != nil {
 		return nil, err
 	}
 
-	if settings.HTTP.ReadTimeout, err = parseHTTPDuration("MEERGO_HTTP_READ_TIMEOUT", 5*time.Second); err != nil {
+	if settings.HTTP.ReadTimeout, err = parseEnvHTTPDuration("MEERGO_HTTP_READ_TIMEOUT", 5*time.Second); err != nil {
 		return nil, err
 	}
 
-	if settings.HTTP.WriteTimeout, err = parseHTTPDuration("MEERGO_HTTP_WRITE_TIMEOUT", 30*time.Second); err != nil {
+	if settings.HTTP.WriteTimeout, err = parseEnvHTTPDuration("MEERGO_HTTP_WRITE_TIMEOUT", 30*time.Second); err != nil {
 		return nil, err
 	}
 
-	if settings.HTTP.IdleTimeout, err = parseHTTPDuration("MEERGO_HTTP_IDLE_TIMEOUT", 120*time.Second); err != nil {
+	if settings.HTTP.IdleTimeout, err = parseEnvHTTPDuration("MEERGO_HTTP_IDLE_TIMEOUT", 120*time.Second); err != nil {
 		return nil, err
 	}
 
@@ -298,9 +299,9 @@ func boolEnvVar(v string, defaultValue bool) (bool, error) {
 	}
 }
 
-// parseHTTPDuration parses the value of an HTTP configuration setting into a
+// parseEnvHTTPDuration parses the value of an HTTP configuration setting into a
 // time.Duration.
-func parseHTTPDuration(key string, defaultValue time.Duration) (time.Duration, error) {
+func parseEnvHTTPDuration(key string, defaultValue time.Duration) (time.Duration, error) {
 	envVars, err := meergo.GetEnvVars()
 	if err != nil {
 		return 0, err
@@ -339,57 +340,67 @@ func hasURLValidationFlag(f, flag urlValidationFlag) bool {
 	return f&flag != 0
 }
 
-// parseURL parses the value of a configuration setting into a normalized URL.
-// If the input string is empty, it returns an empty string.
-func parseURL(key string, flags urlValidationFlag) (string, error) {
+// parseEnvURL parses the value of a configuration setting into a normalized
+// URL. If the input string is empty, it returns an empty string.
+func parseEnvURL(key string, flags urlValidationFlag) (string, error) {
 	envVars, err := meergo.GetEnvVars()
 	if err != nil {
 		return "", err
 	}
 	s := envVars.Get(key)
+	u, err := parseURL(s, flags)
+	if err != nil {
+		return "", errInvalidURL{key, err.Error()}
+	}
+	return u, nil
+}
+
+// parseURL parses the string s into a normalized URL. If the input string is
+// empty, it returns an empty string.
+func parseURL(s string, flags urlValidationFlag) (string, error) {
 	if s == "" {
 		return "", nil
 	}
 	if s[0] == ' ' {
-		return "", errInvalidURL{key, `it starts with a space`}
+		return "", errors.New(`it starts with a space`)
 	}
 	if s[len(s)-1] == ' ' {
-		return "", errInvalidURL{key, `it ends with a space`}
+		return "", errors.New(`it ends with a space`)
 	}
 	u, err := url.Parse(s)
 	if err != nil {
-		return "", errInvalidURL{key, err.Error()}
+		return "", err
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", errInvalidURL{key, `scheme must be "http" or "https"`}
+		return "", errors.New(`scheme must be "http" or "https"`)
 	}
 	if u.User != nil {
-		return "", errInvalidURL{key, "user and password cannot be specified"}
+		return "", errors.New("user and password cannot be specified")
 	}
 	if u.Host == "" {
-		return "", errInvalidURL{key, "host must be specified"}
+		return "", errors.New("host must be specified")
 	}
 	if err := validation.ValidateHost(u.Hostname()); err != nil {
-		return "", errInvalidURL{key, err.Error()}
+		return "", err
 	}
 	port := u.Port()
 	if port != "" {
 		if _, err := validation.ValidatePortString(port); err != nil {
-			return "", errInvalidURL{key, err.Error()}
+			return "", err
 		}
 	}
 	if hasURLValidationFlag(flags, noPath) {
 		if u.Path != "" && u.Path != "/" {
-			return "", errInvalidURL{key, `path must be "/"`}
+			return "", errors.New(`path must be "/"`)
 		}
 	}
 	if hasURLValidationFlag(flags, noQuery) {
 		if u.RawQuery != "" || u.ForceQuery {
-			return "", errInvalidURL{key, "query cannot be specified"}
+			return "", errors.New("query cannot be specified")
 		}
 	}
 	if strings.IndexByte(s, '#') != -1 {
-		return "", errInvalidURL{key, "fragment cannot be specified"}
+		return "", errors.New("fragment cannot be specified")
 	}
 	var normalized bool
 	if port != "" && port[0] == '0' {
