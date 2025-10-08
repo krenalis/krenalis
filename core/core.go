@@ -462,7 +462,6 @@ func (core *Core) Connector(code string) (*Connector, error) {
 		HasSheets:       c.HasSheets,
 		FileExtension:   c.FileExtension,
 		Terms:           ConnectorTerms(c.Terms),
-		Icon:            c.Icon,
 		Strategies:      c.Strategies,
 	}
 	if c.SourceTargets != 0 {
@@ -551,7 +550,6 @@ func (core *Core) Connectors() []*Connector {
 			HasSheets:       c.HasSheets,
 			FileExtension:   c.FileExtension,
 			Terms:           ConnectorTerms(c.Terms),
-			Icon:            c.Icon,
 			Strategies:      c.Strategies,
 		}
 		if c.SourceTargets != 0 {
@@ -956,7 +954,6 @@ func (core *Core) ValidateExpression(expression string, properties []types.Prope
 // WarehouseType represents a warehouse type.
 type WarehouseType struct {
 	Name string `json:"name"`
-	Icon string `json:"icon"`
 }
 
 // WarehouseTypes returns the warehouse types.
@@ -967,7 +964,6 @@ func (core *Core) WarehouseTypes() []WarehouseType {
 	for i, t := range types {
 		warehouseTypes[i] = WarehouseType{
 			Name: t.Name,
-			Icon: t.Icon,
 		}
 	}
 	return warehouseTypes

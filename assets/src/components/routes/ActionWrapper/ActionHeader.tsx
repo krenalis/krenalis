@@ -1,11 +1,11 @@
 import React, { useState, useContext, useEffect } from 'react';
 import ActionContext from '../../../context/ActionContext';
 import AppContext from '../../../context/AppContext';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import { ActionIssues } from './ActionIssues';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 const ActionHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
@@ -100,7 +100,7 @@ const ActionHeader = () => {
 	return (
 		<div className='action__header'>
 			<div className='action__header-title'>
-				{getConnectorLogo(connection.connector.icon)}
+				<LittleLogo code={connection.connector.code} />
 				<div className='action__header-name'>
 					{isNameEditable ? (
 						<span>

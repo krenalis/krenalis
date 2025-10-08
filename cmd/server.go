@@ -40,6 +40,7 @@ type Settings struct {
 	TerminationDelay                time.Duration
 	JavaScriptSDKURL                string
 	SentryTelemetryLevel            core.TelemetryLevel
+	ExternalAssetsURLs              []string // always non nil, can be empty.
 	MemberEmailVerificationRequired bool
 	HTTP                            struct {
 		Host string
@@ -125,7 +126,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	defer sentryErrorTunnel.Close()
 
 	runsOnHTTPS := settings.HTTP.TLS.Enabled || strings.HasPrefix(settings.HTTP.ExternalURL, "https://")
-	apisServer := newAPIsServer(core, runsOnHTTPS, settings.JavaScriptSDKURL, settings.HTTP.ExternalURL, settings.HTTP.ExternalEventURL,
+	apisServer := newAPIsServer(core, runsOnHTTPS, settings.JavaScriptSDKURL, settings.HTTP.ExternalURL, settings.HTTP.ExternalEventURL, settings.ExternalAssetsURLs,
 		settings.MemberEmailVerificationRequired, settings.SentryTelemetryLevel, sentryErrorTunnel)
 
 	assets, err := newAssets(assetsFS)

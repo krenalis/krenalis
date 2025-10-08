@@ -3,7 +3,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useLocation } from 'react-router-dom';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 interface ConnectionTabsProps {
 	connection: TransformedConnection;
@@ -14,7 +14,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 	const fragments = location.pathname.split('/');
 	const tab = fragments[fragments.length - 1];
 
-	const connectorLogo = getConnectorLogo(connection.connector.icon);
+	const connectorLogo = <LittleLogo code={connection.connector.code} />;
 
 	return (
 		<div className='connection-wrapper__tabs'>

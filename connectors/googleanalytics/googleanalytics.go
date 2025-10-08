@@ -28,9 +28,6 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/overview.md
 var overview string
 
@@ -52,7 +49,6 @@ func init() {
 			// https://developers.hubspot.com/docs/guides/apps/api-usage/usage-details#public-apps
 			RateLimit: meergo.RateLimit{RequestsPerSecond: 11, Burst: 110},
 		}},
-		Icon: icon,
 	}, New)
 }
 

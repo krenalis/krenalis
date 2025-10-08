@@ -30,9 +30,6 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -78,7 +75,6 @@ func init() {
 		TimeLayouts: meergo.TimeLayouts{
 			DateTime: "unix",
 		},
-		Icon: icon,
 	}, New)
 }
 

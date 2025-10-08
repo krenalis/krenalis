@@ -28,7 +28,6 @@ type FileInfo struct {
 	HasSheets     bool
 	TimeLayouts   TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
 	Extension     string      // default extension of the file
-	Icon          string      // icon in SVG format
 
 	newFunc reflect.Value
 	ct      reflect.Type

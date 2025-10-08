@@ -144,13 +144,14 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 }
 
 type publicMetadata struct {
-	InstallationID                  string `json:"installationID"`
-	ExternalURL                     string `json:"externalURL"`
-	ExternalEventURL                string `json:"externalEventURL"`
-	JavaScriptSDKURL                string `json:"javascriptSDKURL"`
-	MemberEmailVerificationRequired bool   `json:"memberEmailVerificationRequired"`
-	CanSendMemberPasswordReset      bool   `json:"canSendMemberPasswordReset"`
-	TelemetryLevel                  string `json:"telemetryLevel"`
+	InstallationID                  string   `json:"installationID"`
+	ExternalURL                     string   `json:"externalURL"`
+	ExternalEventURL                string   `json:"externalEventURL"`
+	ExternalAssetsURLs              []string `json:"externalAssetsURLs"`
+	JavaScriptSDKURL                string   `json:"javascriptSDKURL"`
+	MemberEmailVerificationRequired bool     `json:"memberEmailVerificationRequired"`
+	CanSendMemberPasswordReset      bool     `json:"canSendMemberPasswordReset"`
+	TelemetryLevel                  string   `json:"telemetryLevel"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -158,6 +159,7 @@ type publicMetadata struct {
 //   - installationID: installation ID
 //   - externalURL: canonical external URL - https://example.com/
 //   - externalEventURL: external event URL - https://example.com/api/v1/events
+//   - externalAssetsURLs: external assets URLs.
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //
@@ -167,6 +169,7 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		InstallationID:                  api.core.InstallationID(),
 		ExternalURL:                     api.externalURL,
 		ExternalEventURL:                api.externalEventURL,
+		ExternalAssetsURLs:              api.externalAssetsURLs,
 		JavaScriptSDKURL:                api.javaScriptSDKURL,
 		MemberEmailVerificationRequired: api.memberEmailVerificationRequired,
 		CanSendMemberPasswordReset:      api.core.CanSendMemberPasswordReset(),

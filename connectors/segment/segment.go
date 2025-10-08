@@ -18,9 +18,6 @@ import (
 	"github.com/meergo/meergo"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/overview.md
 var overview string
 
@@ -29,7 +26,6 @@ func init() {
 		Code:       "segment",
 		Label:      "Segment",
 		Categories: meergo.CategoryEventStreaming,
-		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from Segment",

@@ -20,7 +20,6 @@ type DatabaseInfo struct {
 	Categories    Categories  // categories
 	SampleQuery   string      // sample query
 	TimeLayouts   TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
-	Icon          string      // icon in SVG format
 	Documentation ConnectorDocumentation
 
 	newFunc reflect.Value

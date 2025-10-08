@@ -27,9 +27,6 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -54,7 +51,6 @@ func init() {
 		},
 		HasSheets: true,
 		Extension: "xlsx",
-		Icon:      icon,
 	}, New)
 }
 

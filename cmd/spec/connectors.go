@@ -177,12 +177,6 @@ func init() {
 			Description: "Indicates whether the required OAuth credentials (client ID and client secret) have been provided for this connector. It is true only if the connector requires authorization and the necessary environment variables are set.",
 		},
 		{
-			Name:        "icon",
-			Type:        types.Text(),
-			Prefilled:   `"<svg icon>"`,
-			Description: "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon.",
-		},
-		{
 			Name:        "strategies",
 			Type:        types.Boolean(),
 			Prefilled:   `true`,

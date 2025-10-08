@@ -1,15 +1,15 @@
 interface Warehouse {
-	icon: string;
+	code: string;
 	name: string;
 }
 
 const warehouses: Warehouse[] = [
 	{
-		icon: `<svg></svg>`,
+		code: 'postgresql',
 		name: 'PostgreSQL',
 	},
 	{
-		icon: `<svg></svg>`,
+		code: 'snowflake',
 		name: 'Snowflake',
 	},
 ];

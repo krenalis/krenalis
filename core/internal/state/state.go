@@ -499,7 +499,6 @@ func (organization *Organization) Workspaces() []*Workspace {
 // WarehouseType represents a warehouse type.
 type WarehouseType struct {
 	Name string
-	Icon string
 }
 
 // WarehouseMode represents a data warehouse mode.
@@ -697,7 +696,6 @@ type TimeLayouts struct {
 type Connector struct {
 	Code                   string
 	Label                  string
-	Icon                   string
 	Type                   ConnectorType
 	Categories             meergo.Categories
 	SourceTargets          ConnectorTargets

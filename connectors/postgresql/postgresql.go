@@ -31,9 +31,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -46,7 +43,6 @@ func init() {
 		Label:       "PostgreSQL",
 		Categories:  meergo.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM users\n",
-		Icon:        icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Overview: sourceOverview,

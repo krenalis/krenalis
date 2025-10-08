@@ -29,9 +29,6 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -44,7 +41,6 @@ func init() {
 		Label:       "MySQL",
 		Categories:  meergo.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM users\n",
-		Icon:        icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Overview: sourceOverview,

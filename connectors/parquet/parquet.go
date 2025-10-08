@@ -37,9 +37,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -51,7 +48,6 @@ func init() {
 		Code:       "parquet",
 		Label:      "Parquet",
 		Categories: meergo.CategoryFile,
-		Icon:       icon,
 		Extension:  "parquet",
 		AsSource: &meergo.AsSourceFile{
 			Documentation: meergo.ConnectorRoleDocumentation{

@@ -13,10 +13,10 @@ import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
 import { USERS_EXPANDED_TRAITS_KEY, USERS_TAB_KEY } from '../../../constants/storage';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 interface UserDrawerProps {
 	selectedUser: string;
@@ -203,7 +203,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 						) : events && events.length > 0 ? (
 							events.map((event) => {
 								const source = connections.find((c) => c.id === event.connection);
-								const logo = getConnectorLogo(source?.connector.icon);
+								const logo = <LittleLogo code={source?.connector.code} />;
 								return (
 									<div className='user-drawer__event' key={event.sentAt}>
 										<div className='user-drawer__event-head'>
@@ -232,7 +232,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 						) : identities && identities.length > 0 ? (
 							identities.map((identity) => {
 								const connection = connections.find((c) => c.id === identity.connection);
-								const logo = getConnectorLogo(connection?.connector.icon);
+								const logo = <LittleLogo code={connection?.connector.code} />;
 								return (
 									<div className='user-drawer__identity' key={identity.lastChangeTime}>
 										<div className='user-drawer__identity-head'>

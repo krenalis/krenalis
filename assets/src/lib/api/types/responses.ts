@@ -172,6 +172,7 @@ interface PublicMetadata {
 	installationID: string;
 	externalURL: string;
 	externalEventURL: string;
+	externalAssetsURLs: string[];
 	javascriptSDKURL: string;
 	memberEmailVerificationRequired: boolean;
 	canSendMemberPasswordReset: boolean;

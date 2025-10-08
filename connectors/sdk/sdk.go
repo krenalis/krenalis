@@ -30,27 +30,6 @@ import (
 	"github.com/meergo/meergo"
 )
 
-// Connector icon.
-var iconDotNet = "<svg></svg>"
-
-// Connector icon.
-var iconAndroid = "<svg></svg>"
-
-// Connector icon.
-var iconGo = "<svg></svg>"
-
-// Connector icon.
-var iconJava = "<svg></svg>"
-
-// Connector icon.
-var iconJavaScript = "<svg></svg>"
-
-// Connector icon.
-var iconNode = "<svg></svg>"
-
-// Connector icon.
-var iconPython = "<svg></svg>"
-
 //go:embed documentation/dotnet/overview.md
 var dotnetOverview string
 
@@ -78,7 +57,6 @@ func init() {
 			Code:       "dotnet",
 			Label:      ".NET",
 			Categories: meergo.CategorySDKAndAPI,
-			Icon:       iconDotNet,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using .NET",
@@ -90,7 +68,6 @@ func init() {
 			Code:       "android",
 			Label:      "Android",
 			Categories: meergo.CategorySDKAndAPI,
-			Icon:       iconAndroid,
 			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
@@ -103,7 +80,6 @@ func init() {
 			Code:       "go",
 			Label:      "Go",
 			Categories: meergo.CategorySDKAndAPI,
-			Icon:       iconGo,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Go",
@@ -115,7 +91,6 @@ func init() {
 			Code:       "java",
 			Label:      "Java",
 			Categories: meergo.CategorySDKAndAPI,
-			Icon:       iconJava,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Java",
@@ -127,7 +102,6 @@ func init() {
 			Code:       "javascript",
 			Label:      "JavaScript",
 			Categories: meergo.CategorySDKAndAPI,
-			Icon:       iconJavaScript,
 			Strategies: true,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
@@ -140,7 +114,6 @@ func init() {
 			Code:       "nodejs",
 			Label:      "Node.js",
 			Categories: meergo.CategorySDKAndAPI,
-			Icon:       iconNode,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Node.js",
@@ -152,7 +125,6 @@ func init() {
 			Code:       "python",
 			Label:      "Python",
 			Categories: meergo.CategorySDKAndAPI,
-			Icon:       iconPython,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Python",

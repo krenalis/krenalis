@@ -37,9 +37,6 @@ import (
 	"github.com/relvacode/iso8601"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -104,7 +101,6 @@ func init() {
 				RateLimit: meergo.RateLimit{RequestsPerSecond: 1, Burst: 1},
 			},
 		},
-		Icon: icon,
 	}, New)
 }
 

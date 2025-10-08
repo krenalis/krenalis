@@ -26,9 +26,6 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -40,7 +37,6 @@ func init() {
 		Code:       "csv",
 		Label:      "CSV",
 		Categories: meergo.CategoryFile,
-		Icon:       icon,
 		Extension:  "csv",
 		AsSource: &meergo.AsSourceFile{
 			HasSettings: true,

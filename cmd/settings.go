@@ -64,6 +64,20 @@ func parseEnvSettings() (*Settings, error) {
 		return nil, fmt.Errorf("invalid MEERGO_TELEMETRY_LEVEL: want one of none, errors, stats, or all")
 	}
 
+	settings.ExternalAssetsURLs = []string{}
+	if assetsURLs := envVars.Get("MEERGO_EXTERNAL_ASSETS_URLS"); assetsURLs != "" {
+		for url := range strings.SplitSeq(assetsURLs, ",") {
+			url = strings.TrimSpace(url) // there may be spaces around commas.
+			url, err := parseURL(url, noQuery)
+			if err != nil {
+				return nil, fmt.Errorf("invalid URL specified in environment variable MEERGO_EXTERNAL_ASSETS_URLS: %s", err)
+			}
+			if url != "" {
+				settings.ExternalAssetsURLs = append(settings.ExternalAssetsURLs, url)
+			}
+		}
+	}
+
 	if host := envVars.Get("MEERGO_HTTP_HOST"); host == "" {
 		settings.HTTP.Host = "127.0.0.1"
 	} else if err := validation.ValidateHost(host); err != nil {

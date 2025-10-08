@@ -66,7 +66,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			}
 			c.EndpointGroups = connector.EndpointGroups
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
-			c.Icon = connector.Icon
 			if oauthCredentials != nil {
 				if oAuth, ok := oauthCredentials[c.Code]; ok {
 					c.OAuth.ClientID = oAuth.ClientID
@@ -88,7 +87,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.HasDestinationSettings = true
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 			c.SampleQuery = connector.SampleQuery
-			c.Icon = connector.Icon
 			c.Documentation = connector.Documentation
 			if summary := c.Documentation.Source.Summary; summary == "" {
 				c.Documentation.Source.Summary = "Import users from " + article(c.Label) + " " + c.Label + " database"
@@ -119,7 +117,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			}
 			c.FileExtension = connector.Extension
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
-			c.Icon = connector.Icon
 			c.HasSheets = connector.HasSheets
 		case meergo.FileStorageInfo:
 			c.Code = connector.Code
@@ -147,7 +144,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					c.Documentation.Source.Summary = "Exports users to a file on " + c.Label
 				}
 			}
-			c.Icon = connector.Icon
 		case meergo.SDKInfo:
 			c.Code = connector.Code
 			c.Label = connector.Label
@@ -160,7 +156,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				// Groups: "groups",
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
-			c.Icon = connector.Icon
 			c.Strategies = connector.Strategies
 			c.Documentation = connector.Documentation
 		case meergo.StreamInfo:
@@ -172,7 +167,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			// It is assumed that a stream connector always have settings.
 			c.HasSourceSettings = true
 			c.HasDestinationSettings = true
-			c.Icon = connector.Icon
 			c.Documentation = connector.Documentation
 		}
 		state.connectors[code] = &c
@@ -184,7 +178,6 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	for _, driver := range drivers {
 		state.warehouseTypes[driver.Name] = WarehouseType{
 			Name: driver.Name,
-			Icon: driver.Icon,
 		}
 	}
 

@@ -1,6 +1,6 @@
 import { ConnectorInfo, ConnectorType, ConnectorImplementation } from './types/connector';
 
-const connectorsInfoURL = 'https://open2b.github.io/meergo-connectors-info/connectors-info.v2.json';
+const connectorsInfoURL = 'https://open2b.github.io/meergo-connectors-info/connectors-info.json';
 const CONNECTORS_INFO_TIMEOUT_MS = 2000; // in milliseconds
 const CONNECTOR_CODE_REGEX = /^[a-z0-9-]+$/;
 const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
@@ -155,16 +155,7 @@ const validateConnectorInfo = (connector: unknown): ConnectorInfo => {
 		throw new Error(`connector '${code}' cannot have 'asDestination' because is an SDK`);
 	}
 
-	const icon =
-		'icon' in connector && typeof connector.icon === 'string' && connector.icon != '' ? connector.icon : null;
-	if (icon == null) {
-		throw new Error(`connector '${code}' has an invalid icon`);
-	}
-
-	const iconLicense =
-		'iconLicense' in connector && typeof connector.iconLicense === 'string' ? connector.iconLicense : '';
-
-	return { code, label, categories, icon, iconLicense, connectorType, asSource, asDestination };
+	return { code, label, categories, connectorType, asSource, asDestination };
 };
 
 const validateConnectorImplementation = (

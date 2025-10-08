@@ -16,7 +16,6 @@ type SDKInfo struct {
 	Code          string
 	Label         string
 	Categories    Categories // categories
-	Icon          string     // icon in SVG format
 	Strategies    bool       // whether this connector supports users strategies
 	Documentation ConnectorDocumentation
 

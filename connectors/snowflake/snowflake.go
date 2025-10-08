@@ -30,9 +30,6 @@ import (
 	"github.com/snowflakedb/gosnowflake"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -45,7 +42,6 @@ func init() {
 		Label:       "Snowflake",
 		Categories:  meergo.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM \"USERS\"\n",
-		Icon:        icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Overview: sourceOverview,

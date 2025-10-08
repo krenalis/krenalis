@@ -26,9 +26,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/overview.md
 var overview string
 
@@ -37,7 +34,6 @@ func init() {
 		Code:       "rabbitmq",
 		Label:      "RabbitMQ",
 		Categories: meergo.CategoryEventStreaming,
-		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from RabbitMQ",

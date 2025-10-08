@@ -27,9 +27,6 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -83,7 +80,6 @@ func init() {
 				"500 502 503 504 521 523 524": meergo.ExponentialStrategy(meergo.NetFailure, time.Second),
 			},
 		}},
-		Icon: icon,
 	}, New)
 }
 

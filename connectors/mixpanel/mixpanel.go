@@ -32,9 +32,6 @@ import (
 // Mixpanel supports NoEncoding and Gzip for request bodies.
 const contentEncoding = meergo.Gzip
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/overview.md
 var overview string
 
@@ -61,7 +58,6 @@ func init() {
 				"502 503": meergo.ExponentialStrategy(meergo.NetFailure, 2*time.Second),
 			}},
 		},
-		Icon: icon,
 	}, New)
 }
 

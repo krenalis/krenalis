@@ -30,9 +30,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 var (
 	//go:embed tables/destinations_users.sql
 	createDestinationUsersTable string
@@ -49,7 +46,6 @@ var _ meergo.Warehouse = &PostgreSQL{}
 func init() {
 	meergo.RegisterWarehouseDriver(meergo.WarehouseDriver{
 		Name: "PostgreSQL",
-		Icon: icon,
 	}, New)
 }
 

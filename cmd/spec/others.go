@@ -45,6 +45,12 @@ func init() {
 							Description: "Public address for the event ingestion endpoint `/api/v1/events`, making it reachable externally.",
 						},
 						{
+							Name:        "externalAssetsURLs",
+							Type:        types.Array(types.Text()),
+							Prefilled:   `["https://cdn.jsdelivr.net/gh/meergo/external-assets@main/"]`,
+							Description: "List of base URLs (comma-separated) from which Meergo should retrieve external assets (as icons), related to connector and data warehouse brands.\n\nThe order determines the precedence with which assets should be retrieved (the first URL takes precedence, otherwise the second one should fall back, and so on).\n\nCan be empty.",
+						},
+						{
 							Name:        "javascriptSDKURL",
 							Type:        types.Text(),
 							Prefilled:   `"https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js"`,

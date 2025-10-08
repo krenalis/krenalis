@@ -18,7 +18,6 @@ interface Connector {
 	fileExtension: string;
 	oauth: ConnectorOAuth;
 	terms: ConnectorTerms;
-	icon: string;
 	strategies: boolean;
 }
 
@@ -38,8 +37,6 @@ interface ConnectorInfo {
 	code: string;
 	label: string;
 	categories: Array<string>;
-	icon: string;
-	iconLicense: string;
 	connectorType: ConnectorType;
 	asSource: ConnectorImplementation;
 	asDestination: ConnectorImplementation;

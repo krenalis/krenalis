@@ -76,7 +76,7 @@ const useLinkedConnectionsGrid = (
 		for (const fc of fullLinkedConnections) {
 			const nameCell = (
 				<div className='linked-connection-grid__name'>
-					<LittleLogo icon={fc.connector.icon} />
+					<LittleLogo code={fc.connector.code} />
 					{fc.name}
 				</div>
 			);

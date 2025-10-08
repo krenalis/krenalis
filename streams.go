@@ -16,7 +16,6 @@ type StreamInfo struct {
 	Code          string
 	Label         string
 	Categories    Categories // categories
-	Icon          string     // icon in SVG format
 	Documentation ConnectorDocumentation
 
 	newFunc reflect.Value

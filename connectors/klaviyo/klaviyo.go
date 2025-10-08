@@ -34,9 +34,6 @@ import (
 	"github.com/meergo/meergo/core/validation"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -81,7 +78,6 @@ func init() {
 				RetryPolicy: retryPolicy,
 			},
 		},
-		Icon: icon,
 	}, New)
 }
 

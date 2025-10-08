@@ -32,7 +32,6 @@ type Connector struct {
 	FileExtension   string                `json:"fileExtension"`
 	OAuth           *ConnectorOAuth       `json:"oauth"`
 	Terms           ConnectorTerms        `json:"terms"`
-	Icon            string                `json:"icon"`
 	Strategies      bool                  `json:"strategies"`
 }
 

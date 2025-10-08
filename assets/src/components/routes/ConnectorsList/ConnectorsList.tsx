@@ -16,6 +16,7 @@ import { connectorsInfo } from '../../../lib/api/connectorsInfo';
 import { ConnectorInfo } from '../../../lib/api/types/connector';
 import { ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_CODE_KEY } from '../../../constants/storage';
 import { UI_BASE_PATH } from '../../../constants/paths';
+import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 
 const ConnectorsList = () => {
 	const [additionalConnectorsInfo, setAdditionalConnectorsInfo] = useState<ConnectorInfo[]>([]);
@@ -45,10 +46,8 @@ const ConnectorsList = () => {
 	}, [connectors]);
 
 	const searchedConnectors: any[] = useMemo(() => {
-		const sortedConnectors = structuredClone(connectors).sort((a, b) => (a.label <= b.label ? -1 : 1));
-		const sortedAdditionalConnectorsInfo = structuredClone(additionalConnectorsInfo).sort((a, b) =>
-			a.label <= b.label ? -1 : 1,
-		);
+		const sortedConnectors = connectors.sort((a, b) => (a.label <= b.label ? -1 : 1));
+		const sortedAdditionalConnectorsInfo = additionalConnectorsInfo.sort((a, b) => (a.label <= b.label ? -1 : 1));
 		let searchedConnectors = [];
 
 		for (const c of [...sortedConnectors, ...sortedAdditionalConnectorsInfo]) {
@@ -318,7 +317,9 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 			>
 				<div className='connectors-list__card-beta-label'>Beta</div>
 				<div className='connectors-list__card-top'>
-					<div className='connectors-list__card-logo' dangerouslySetInnerHTML={{ __html: connector.icon }} />
+					<div className='connectors-list__card-logo'>
+						<ExternalLogo code={connector.code} />
+					</div>
 					<div className='connectors-list__card-label'>{connector.label}</div>
 					{connector.categories.map((category, index) => (
 						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
@@ -356,10 +357,9 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 					<div className='connectors-list__card-coming-label'>Under consideration</div>
 				) : null}
 				<div className='connectors-list__card-top'>
-					<div
-						className='connectors-list__card-logo'
-						dangerouslySetInnerHTML={{ __html: connectorInfo.icon }}
-					/>
+					<div className='connectors-list__card-logo'>
+						<ExternalLogo code={connectorInfo.code} />
+					</div>
 					<div className='connectors-list__card-label'>{connectorInfo.label}</div>
 					{connectorInfo.categories.map((category, index) => (
 						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>

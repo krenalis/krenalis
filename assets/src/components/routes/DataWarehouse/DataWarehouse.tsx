@@ -171,7 +171,7 @@ const WarehouseInfo = ({
 			<div className='warehouse-info__info'>
 				<div className='warehouse-info__title'>
 					<div className='warehouse-info__icon'>
-						<LittleLogo icon={warehouse.icon} />
+						<LittleLogo code={warehouse.code} />
 					</div>
 					<div className='warehouse-info__name'>{warehouse.name}</div>
 				</div>

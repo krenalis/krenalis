@@ -21,9 +21,9 @@ import {
 } from '../../../lib/api/types/connection';
 import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/responses';
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 import * as icons from '../../../constants/icons';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 const strategyOptions: Strategy[] = ['Conversion', 'Fusion', 'Isolation', 'Preservation'];
 
@@ -86,7 +86,9 @@ const ConnectorSettings = () => {
 			setConnector(connector);
 			setTitle(
 				<Flex alignItems='baseline' gap={10}>
-					<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(connector.icon)}</span>
+					<span style={{ position: 'relative', top: '3px' }}>
+						<LittleLogo code={connector.code} />
+					</span>
 					<span>
 						Add {connectionRole.toLowerCase()} connection for {connector.label}
 					</span>

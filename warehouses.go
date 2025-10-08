@@ -28,7 +28,6 @@ import (
 // WarehouseDriver represents a warehouse driver.
 type WarehouseDriver struct {
 	Name string
-	Icon string // icon in SVG format
 
 	newFunc reflect.Value
 	ct      reflect.Type

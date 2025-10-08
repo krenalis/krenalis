@@ -55,7 +55,6 @@ type AppInfo struct {
 	OAuth           OAuth           // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
 	EndpointGroups  []EndpointGroup // rate limiting and retry policies per endpoint group.
 	TimeLayouts     TimeLayouts     // layouts for time values. If left empty, it is ISO 8601.
-	Icon            string          // icon in SVG format.
 
 	newFunc reflect.Value
 	ct      reflect.Type

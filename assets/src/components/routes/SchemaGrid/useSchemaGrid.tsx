@@ -5,8 +5,8 @@ import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
 import { TransformedMapping, TransformedProperty, flattenSchema } from '../../../lib/core/action';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { PrimarySources } from '../../../lib/api/types/workspace';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 const SCHEMA_COLUMNS: GridColumn[] = [{ name: 'Name' }, { name: 'Type' }, { name: 'Primary source' }];
 
@@ -74,7 +74,7 @@ const buildRow = (property: TransformedProperty, primarySource?: TransformedConn
 		if (primarySource) {
 			primarySourceCell = (
 				<div className='schema-grid__primary-source'>
-					{getConnectorLogo(primarySource.connector.icon)}
+					<LittleLogo code={primarySource.connector.code} />
 					{primarySource.name}
 				</div>
 			);

@@ -62,7 +62,6 @@ func init() {
                 RetryPolicy: retryPolicy,
             },
         },
-        Icon: icon,
     }, New)
 }
 
@@ -163,7 +162,6 @@ The `AppInfo` type describes information about the app connector:
 - `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth).
 - `EndpointGroups`: rate limiting and retry policies per endpoint group. See [Endpoint groups documentation](app/endpoint-groups).
 - `Layouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
-- `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterApp` function that, executed during package initialization, registers the app connector:
 
@@ -203,7 +201,6 @@ func init() {
                 RetryPolicy: retryPolicy,
             },
         },
-        Icon: icon,
     }, New)
 }
 ```

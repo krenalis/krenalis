@@ -95,7 +95,6 @@ The `FileInfo` type describes information about the file connector:
 - `HasSheets`
 - `TimeLayouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time layouts](data-values#time-layouts) in [Data values](data-values) for more details.
 - `Extension`: main extension of the file type that the connector reads and/or writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
-- `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterFile` function that, executed during package initialization, registers the file connector:
 
@@ -104,7 +103,6 @@ func init() {
 	meergo.RegisterFile(meergo.FileInfo{
 		Code:      "csv",
 		Label:     "CSV",
-		Icon:      icon,
 		Extension: "csv",
 		AsSource: &meergo.AsSourceFile{
 			HasSettings: true,

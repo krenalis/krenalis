@@ -1,18 +1,17 @@
 import React from 'react';
 import './LittleLogo.css';
+import { ExternalLogo } from '../../routes/ExternalLogo/ExternalLogo';
 
 interface LittleLogoProps {
-	icon: string;
+	code: string;
 }
 
-const LittleLogo = ({ icon }: LittleLogoProps) => {
-	let logo: string;
-	if (icon === '') {
-		logo = `<div class='unknown-logo'>?</div>`;
-	} else {
-		logo = icon;
-	}
-	return <div className='little-logo' dangerouslySetInnerHTML={{ __html: logo }}></div>;
+const LittleLogo = ({ code }: LittleLogoProps) => {
+	return (
+		<div className='little-logo'>
+			<ExternalLogo code={code} />
+		</div>
+	);
 };
 
 export default LittleLogo;

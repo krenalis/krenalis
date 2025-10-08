@@ -151,9 +151,9 @@ const ActionFile = () => {
 		fetchFields();
 	}, [formatRef.current]);
 
-	const { hasSheets, icon, fileExtension } = useMemo(() => {
+	const { hasSheets, formatCode, fileExtension } = useMemo(() => {
 		const format = connectors.find((c) => c.code === action.format);
-		return { hasSheets: format?.hasSheets, icon: format?.icon, fileExtension: format?.fileExtension };
+		return { hasSheets: format?.hasSheets, formatCode: format?.code, fileExtension: format?.fileExtension };
 	}, [action]);
 
 	const onFormatChange = (e) => {
@@ -202,7 +202,7 @@ const ActionFile = () => {
 			>
 				{action.format !== '' && (
 					<div className='action__file-format-logo' slot='prefix'>
-						<LittleLogo icon={icon} />
+						<LittleLogo code={formatCode} />
 					</div>
 				)}
 				{formats.map((f) => {
@@ -216,7 +216,7 @@ const ActionFile = () => {
 					return (
 						<SlOption key={f.code} value={f.code}>
 							<div slot='prefix'>
-								<LittleLogo icon={f.icon} />
+								<LittleLogo code={f.code} />
 							</div>
 							{f.label}
 						</SlOption>

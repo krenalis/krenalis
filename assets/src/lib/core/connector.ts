@@ -5,7 +5,6 @@ import {
 	SendingMode,
 	ConnectorTerms,
 } from '../api/types/connector';
-import * as icons from '../../constants/icons';
 import { Role } from '../api/types/types';
 import { ConnectorOAuth } from '../api/types/connector';
 
@@ -21,7 +20,6 @@ class TransformedConnector {
 	fileExtension: string;
 	oauth: ConnectorOAuth;
 	terms: ConnectorTerms;
-	icon: string;
 	strategies: boolean;
 
 	constructor(
@@ -36,7 +34,6 @@ class TransformedConnector {
 		fileExtension: string,
 		oauth: ConnectorOAuth,
 		terms: ConnectorTerms,
-		icon: string,
 		strategies: boolean,
 	) {
 		this.code = code;
@@ -50,7 +47,6 @@ class TransformedConnector {
 		this.fileExtension = fileExtension;
 		this.oauth = oauth;
 		this.terms = terms;
-		this.icon = icon ? icon : icons.PLUG;
 		this.strategies = strategies;
 	}
 

@@ -31,9 +31,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -55,7 +52,6 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Icon: icon,
 	}, New)
 }
 

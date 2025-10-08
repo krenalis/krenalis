@@ -35,7 +35,6 @@ type FileStorageInfo struct {
 	Categories    Categories // categories
 	AsSource      *AsFileStorageSource
 	AsDestination *AsFileStorageDestination
-	Icon          string // icon in SVG format
 
 	newFunc reflect.Value
 	ct      reflect.Type

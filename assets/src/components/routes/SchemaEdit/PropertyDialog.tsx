@@ -23,10 +23,10 @@ import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 const TYPE_KINDS: TypeKind[] = [
 	'text',
@@ -767,15 +767,18 @@ const PropertyDialog = ({
 								onSlChange={onChangePrimarySource}
 							>
 								<div slot='prefix'>
-									{primarySource &&
-										getConnectorLogo(
-											sourceConnections.find((c) => c.id === primarySource).connector.icon,
-										)}
+									{primarySource && (
+										<LittleLogo
+											code={sourceConnections.find((c) => c.id === primarySource).connector.code}
+										/>
+									)}
 								</div>
 								<SlOption value='none'>None</SlOption>
 								{sourceConnections.map((c) => (
 									<SlOption key={c.id} value={String(c.id)}>
-										<div slot='prefix'>{getConnectorLogo(c.connector.icon)}</div>
+										<div slot='prefix'>
+											<LittleLogo code={c.connector.code} />
+										</div>
 										{c.name}
 									</SlOption>
 								))}

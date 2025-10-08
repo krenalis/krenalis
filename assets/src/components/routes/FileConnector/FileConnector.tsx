@@ -7,7 +7,6 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { useParams, useLocation } from 'react-router-dom';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import TransformedConnection from '../../../lib/core/connection';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import ListTile from '../../base/ListTile/ListTile';
 import { Link } from '../../base/Link/Link';
 import { startsWithVowelSound } from '../../../utils/startsWithVowelSound';
@@ -78,14 +77,14 @@ const FileConnector = () => {
 								{selectedStorage != null && (
 									<div className='file-connector__storage-logo' slot='prefix'>
 										<LittleLogo
-											icon={storages.find((s) => s.id === selectedStorage).connector.icon}
+											code={storages.find((s) => s.id === selectedStorage).connector.code}
 										/>
 									</div>
 								)}
 								{storages.map((s) => (
 									<SlOption key={s.id} value={String(s.id)}>
 										<div slot='prefix'>
-											<LittleLogo icon={s.connector.icon} />
+											<LittleLogo code={s.connector.code} />
 										</div>
 										{s.name}
 									</SlOption>
@@ -108,7 +107,7 @@ const FileConnector = () => {
 						<div className='file-connector__action-types'>
 							<ListTile
 								key={'users-action-type'}
-								icon={getConnectorLogo(file.icon)}
+								icon={<LittleLogo code={file.code} />}
 								name={`${role === 'Source' ? 'Import' : 'Export'} users`}
 								description={
 									role === 'Source'

@@ -31,9 +31,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/source/overview.md
 var sourceOverview string
 
@@ -55,7 +52,6 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Icon: icon,
 	}, New)
 }
 

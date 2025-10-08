@@ -9977,14 +9977,6 @@
                                                 "description": "Indicates whether the required OAuth credentials (client ID and client secret) have been provided for this connector. It is true only if the connector requires authorization and the necessary environment variables are set."
                                             },
                                             {
-                                                "name": "icon",
-                                                "prefilled": "\"<svg icon>\"",
-                                                "type": {
-                                                    "kind": "text"
-                                                },
-                                                "description": "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon."
-                                            },
-                                            {
                                                 "name": "strategies",
                                                 "prefilled": "true",
                                                 "type": {
@@ -10250,14 +10242,6 @@
                                     "kind": "boolean"
                                 },
                                 "description": "Indicates whether the required OAuth credentials (client ID and client secret) have been provided for this connector. It is true only if the connector requires authorization and the necessary environment variables are set."
-                            },
-                            {
-                                "name": "icon",
-                                "prefilled": "\"<svg icon>\"",
-                                "type": {
-                                    "kind": "text"
-                                },
-                                "description": "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon."
                             },
                             {
                                 "name": "strategies",
@@ -15117,6 +15101,17 @@
                                 "description": "Public address for the event ingestion endpoint `/api/v1/events`, making it reachable externally."
                             },
                             {
+                                "name": "externalAssetsURLs",
+                                "prefilled": "[\"https://cdn.jsdelivr.net/gh/meergo/external-assets@main/\"]",
+                                "type": {
+                                    "kind": "array",
+                                    "elementType": {
+                                        "kind": "text"
+                                    }
+                                },
+                                "description": "List of base URLs (comma-separated) from which Meergo should retrieve external assets (as icons), related to connector and data warehouse brands.\n\nThe order determines the precedence with which assets should be retrieved (the first URL takes precedence, otherwise the second one should fall back, and so on).\n\nCan be empty."
+                            },
+                            {
                                 "name": "javascriptSDKURL",
                                 "prefilled": "\"https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js\"",
                                 "type": {
@@ -16626,14 +16621,6 @@
                                                     "kind": "text"
                                                 },
                                                 "description": "The name of the warehouse type"
-                                            },
-                                            {
-                                                "name": "icon",
-                                                "prefilled": "\"<svg icon>\"",
-                                                "type": {
-                                                    "kind": "text"
-                                                },
-                                                "description": "The SVG icon of the warehouse type."
                                             }
                                         ]
                                     }

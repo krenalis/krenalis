@@ -94,7 +94,6 @@ The `DatabaseInfo` type describes information about the database connector:
 - `Categories`: the categories that the connector falls into. There must be at least one category.
 - `SampleQuery`: sample query displayed in the query editor when creating a new database source action.
 - `TimeLayouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
-- `Icon`: icon in SVG format representing the DBMS. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterDatabase` function that, executed during package initialization, registers the database connector:
 
@@ -104,7 +103,6 @@ func init() {
         Code:        "postgresql",
         Label:       "PostgreSQL",
         SampleQuery: "SELECT *\nFROM users\n",
-        Icon:        icon,
     }, New)
 }
 ```

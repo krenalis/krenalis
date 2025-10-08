@@ -2,7 +2,7 @@
 	pointer-events: none;
 }
 
-.little-logo svg {
+.little-logo > img {
 	height: 25px;
 	width: auto;
 	max-width: unset;

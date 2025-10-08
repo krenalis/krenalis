@@ -30,9 +30,6 @@ import (
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/overview.md
 var overview string
 
@@ -41,7 +38,6 @@ func init() {
 		Code:       "kafka",
 		Label:      "Kafka",
 		Categories: meergo.CategoryEventStreaming,
-		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from Kafka",

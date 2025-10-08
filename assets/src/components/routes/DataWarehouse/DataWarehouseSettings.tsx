@@ -130,7 +130,7 @@ const DataWarehouseSettings = ({
 		<div className='warehouse-settings'>
 			<div className='warehouse-settings__info'>
 				<div className='warehouse-settings__icon'>
-					<LittleLogo icon={selectedWarehouse.icon} />
+					<LittleLogo code={selectedWarehouse.code} />
 				</div>
 				<p className='warehouse-settings__name'>{selectedWarehouse.name}</p>
 			</div>

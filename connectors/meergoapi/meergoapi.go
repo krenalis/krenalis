@@ -14,9 +14,6 @@ import (
 	"github.com/meergo/meergo"
 )
 
-// Connector icon.
-var icon = "<svg></svg>"
-
 //go:embed documentation/overview.md
 var overview string
 
@@ -25,7 +22,6 @@ func init() {
 		Code:       "meergo-api",
 		Label:      "Meergo API",
 		Categories: meergo.CategorySDKAndAPI,
-		Icon:       icon,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users by calling the Meergo APIs from your application",

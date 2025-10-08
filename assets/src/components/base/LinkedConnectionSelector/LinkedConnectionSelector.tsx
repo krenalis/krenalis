@@ -109,7 +109,7 @@ const LinkedConnectionSelector = ({
 											if (!isAlreadySelected) {
 												return (
 													<SlMenuItem key={c.id} value={String(c.id)}>
-														<LittleLogo icon={c.connector.icon} />
+														<LittleLogo code={c.connector.code} />
 														{c.name}
 													</SlMenuItem>
 												);

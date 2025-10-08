@@ -11,11 +11,11 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { Action, ActionType } from '../../../lib/api/types/action';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { LinkedConnections } from '../ConnectionSettings/LinkedConnections';
 import { isEventConnection } from '../../../lib/core/connection';
 import Section from '../../base/Section/Section';
 import { Snippet } from '../../base/Snippet/Snippet';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 const ConnectionActions = () => {
 	const [isActionTypesDialogOpen, setIsActionTypesDialogOpen] = useState<boolean>(false);
@@ -136,7 +136,7 @@ const ConnectionActions = () => {
 							{connection.actionTypes.map((actionType) => (
 								<ListTile
 									key={actionType.name}
-									icon={getConnectorLogo(connection.connector.icon)}
+									icon={<LittleLogo code={connection.connector.code} />}
 									name={actionType.name}
 									description={actionType.description}
 									className={`connection-actions__action-type connection-actions__action-type--${actionType.target.toLowerCase()}`}
@@ -187,7 +187,7 @@ const ConnectionActions = () => {
 				setIsOpen={setIsActionTypesDialogOpen}
 				actionTypes={connection.actionTypes!}
 				connection={connection}
-				connectionLogo={getConnectorLogo(connection.connector.icon)}
+				connectionLogo={<LittleLogo code={connection.connector.code} />}
 				onSelectActionType={onSelectActionType}
 			/>
 			<Outlet context={{ setIsActionOpen }} />

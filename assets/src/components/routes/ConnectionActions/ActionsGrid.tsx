@@ -16,8 +16,8 @@ import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Variant } from '../App/App.types';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { serializeFilter } from '../../../utils/filters';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 
@@ -162,7 +162,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			const formatConnector = connectors.find((c) => c.code === action.format);
 			logo = (
 				<div className='connection-actions__action-logo'>
-					<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(formatConnector.icon)}</span>
+					<span style={{ position: 'relative', top: '3px' }}>
+						<LittleLogo code={formatConnector.code} />{' '}
+					</span>
 				</div>
 			);
 		}

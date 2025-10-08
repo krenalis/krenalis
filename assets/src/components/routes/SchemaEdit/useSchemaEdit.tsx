@@ -10,9 +10,9 @@ import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { SortableGridRef } from '../../base/Grid/SortableGrid';
 import { isMetaProperty } from '../../../lib/core/schema';
 import TransformedConnection from '../../../lib/core/connection';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { SchemaContext } from '../../../context/SchemaContext';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -536,7 +536,7 @@ const buildRow = (
 		if (primarySourceConnection) {
 			primarySourceCell = (
 				<div className='schema-edit__primary-source'>
-					{getConnectorLogo(primarySourceConnection.connector.icon)}
+					<LittleLogo code={primarySourceConnection.connector.code} />
 					{primarySourceConnection.name}
 				</div>
 			);

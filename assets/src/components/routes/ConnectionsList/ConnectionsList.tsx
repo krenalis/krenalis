@@ -7,7 +7,6 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ConnectionRole } from '../../../lib/api/types/connection';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/core/connection';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Link } from '../../base/Link/Link';
@@ -78,7 +77,7 @@ const ConnectionsList = () => {
 		for (const c of roleConnections) {
 			const cells = [
 				<div className='connections-list__name-cell'>
-					{getConnectorLogo(c.connector.icon)} {c.name}
+					<LittleLogo code={c.connector.code} /> {c.name}
 				</div>,
 				c.connector.type,
 				c.connector.label,
@@ -107,7 +106,7 @@ const ConnectionsList = () => {
 					});
 					const connectionLogos: ReactNode[] = [];
 					for (const ec of fullEventConnections) {
-						connectionLogos.push(<LittleLogo key={String(ec.id)} icon={ec.connector.icon} />);
+						connectionLogos.push(<LittleLogo key={String(ec.id)} code={ec.connector.code} />);
 					}
 					cells.push(<div className='connections-list__event-connections-cell'>{connectionLogos}</div>);
 				} else {

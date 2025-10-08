@@ -151,12 +151,6 @@ func init() {
 									Prefilled:   `"Snowflake"`,
 									Description: "The name of the warehouse type",
 								},
-								{
-									Name:        "icon",
-									Type:        types.Text(),
-									Prefilled:   `"<svg icon>"`,
-									Description: "The SVG icon of the warehouse type.",
-								},
 							})),
 							Prefilled: "...",
 						},

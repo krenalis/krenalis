@@ -183,7 +183,6 @@ const useApp = (
 						c.fileExtension,
 						c.oauth,
 						c.terms,
-						c.icon,
 						c.strategies,
 					),
 				);

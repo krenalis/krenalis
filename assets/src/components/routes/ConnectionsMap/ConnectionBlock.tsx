@@ -3,11 +3,11 @@ import Flex from '../../base/Flex/Flex';
 import Arrow from '../../base/Arrow/Arrow';
 import StatusDot from '../../base/StatusDot/StatusDot';
 import { ArrowAnchor } from '../../base/Arrow/Arrow.types';
-import getConnectorLogo from '../../helpers/getConnectorLogo';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
 import connectionMapContext from '../../../context/ConnectionMapContext';
 import appContext from '../../../context/AppContext';
+import LittleLogo from '../../base/LittleLogo/LittleLogo';
 
 interface ConnectionBlockProps {
 	connection: TransformedConnection;
@@ -102,7 +102,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 				>
 					<div className='connection-block__content'>
 						<Flex alignItems='center' gap={10}>
-							{getConnectorLogo(c.connector.icon)}
+							<LittleLogo code={c.connector.code} />
 							<div className='connection-block__name'>{c.name}</div>
 						</Flex>
 						<StatusDot status={c.status} />
