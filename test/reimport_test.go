@@ -25,6 +25,8 @@ func TestReimport(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
+	c.UpdateIdentityResolution(false, nil)
+
 	// First of all, create a Dummy connection.
 	dummy := c.CreateDummy("Dummy", meergotester.Source)
 
@@ -55,6 +57,9 @@ func TestReimport(t *testing.T) {
 	// Import the users from dummy.
 	exec := c.ExecuteAction(dummyAction)
 	c.WaitForExecutionsCompletion(dummy, exec)
+
+	// Run the Identity Resolution.
+	c.RunIdentityResolution()
 
 	// Check the users.
 	assertEq := func(msg string, expected, got any) {
@@ -99,23 +104,25 @@ func TestReimport(t *testing.T) {
 		},
 	})
 
-	// Import again the users from dummy.
+	// Import again the users from Dummy.
 	exec = c.ExecuteAction(dummyAction)
 	c.WaitForExecutionsCompletion(dummy, exec)
+
+	// Run the Identity Resolution.
+	c.RunIdentityResolution()
 
 	// Check the users again.
 	//
 	// This time the first name must be nil, while the last name should have a value.
-	// TODO: The previous statement will only be true after issue #767 is resolved.
 	users, _, total = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
 	assertEq("first  user email", "abenois2@example.com", users[0].Traits["email"])
-	//assertEq("first  user first name", nil, users[0].Properties["first_name"])    // <- now is nil (see issue https://github.com/meergo/meergo/issues/767)
+	assertEq("first  user first name", nil, users[0].Traits["first_name"])    // <- now is nil
 	assertEq("first  user last name", "Benois", users[0].Traits["last_name"]) // <- now has a value
 	assertEq("second user email", "bdroghan5@example.com", users[1].Traits["email"])
-	//assertEq("second user first name", nil, users[1].Properties["first_name"])     // <- now is nil (see issue https://github.com/meergo/meergo/issues/767)
+	assertEq("second user first name", nil, users[1].Traits["first_name"])     // <- now is nil
 	assertEq("second user last name", "Droghan", users[1].Traits["last_name"]) // <- now has a value
 
 }
