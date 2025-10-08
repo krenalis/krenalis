@@ -26,7 +26,7 @@
 }
 
 .connectors-list__category {
-    border: transparent;
+	border: transparent;
 	padding: 5px 16px;
 	font-size: 14px;
 	border-radius: 4px;
@@ -46,9 +46,9 @@
 
 .connectors-list__category--selected,
 .connectors-list__category--selected:hover {
-    background-color: #d4e2ff;
-    border: transparent;
-    color: #5b62d0;
+	background-color: #d4e2ff;
+	border: transparent;
+	color: #5b62d0;
 }
 
 .connectors-list__connectors {
