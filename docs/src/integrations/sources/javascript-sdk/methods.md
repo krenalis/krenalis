@@ -29,7 +29,7 @@ Below the JavaScript SDK methods:
 
 ## page
 
-The page method implements the [page call](/events/page).
+The page method implements the [page call](/events/specs/page).
 
 The page call allows you to capture when a user views a page on your website, including any extra details about that specific page.
 
@@ -90,7 +90,7 @@ meergo.page('Shirt', {
 
 ## screen
 
-The screen method implements the [screen call](/events/screen).
+The screen method implements the [screen call](/events/specs/screen).
 
 The screen call enables you to capture instances when a user views a screen and record associated properties or details about that particular screen.
 
@@ -154,7 +154,7 @@ meergo.screen('Order Completed', {
 
 ## track
 
-The track method implements the [track call](/events/track).
+The track method implements the [track call](/integrations/events/specs/track).
 
 The track call is used to send specific events or actions, and associated properties, that occur when users interact with your application or website.
 
@@ -202,7 +202,7 @@ meergo.screen('Order Completed', {
 
 ## identify
 
-The identify method implements the [identify call](/events/identify).
+The identify method implements the [identify call](/integrations/events/specs/identify).
 
 Through an identify call, you can connect previous and upcoming events to a recognized user and save details about them along with their events, such as name and email. The user information can also be utilized to update and enhance unified data from other sources.
 
@@ -268,13 +268,13 @@ For the previous example, we can have three scenarios:
 * If the user is currently non-anonymous but has a different User ID, their User ID is changed, and all traits are replaced with the provided ones.
 * If the user is currently non-anonymous and has the same User ID as the provided one, the provided traits are added to the current traits. If a provided trait has the value `undefined`, the corresponding trait is removed.
 
-> To completely replace the current user's traits, regardless of whether the user is anonymous or non-anonymous, and without making an [`identify`](/events/identify) call, use the [`user().traits`](user-class#traits) method.
+> To completely replace the current user's traits, regardless of whether the user is anonymous or non-anonymous, and without making an [`identify`](/integrations/events/specs/identify) call, use the [`user().traits`](user-class#traits) method.
 
 ## group
 
 The `group` method, when called without arguments, returns an instance of the [Group class](group-class) representing the group.
 
-When called with arguments, implements the [group call](/events/group). The group call provides a way to associate individual users with groups, such as a company, organization, team, association, or initiative. A user who has been identified can be associated with several groups.
+When called with arguments, implements the [group call](/integrations/events/specs/group). The group call provides a way to associate individual users with groups, such as a company, organization, team, association, or initiative. A user who has been identified can be associated with several groups.
 
 #### Syntax
 

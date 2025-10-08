@@ -130,11 +130,11 @@ If a field in the schema is mandatory, set the `Required` field in the `types.Pr
 
 > When selecting a placeholder, consider that certain property names and traits hold specific meanings and can thus serve as suitable placeholders. Refer to the prefilled properties and traits sections within the events for further details:
 >
->    - [page](/integrations/events/page#prefilled-properties)
->    - [screen](/integrations/events/screen#prefilled-properties)
->    - [track](/integrations/events/track#prefilled-properties)
->    - [identify](/integrations/events/identify#prefilled-traits)
->    - [group](/integrations/events/group#prefilled-traits)
+>    - [page](/integrations/events/specs/page#prefilled-properties)
+>    - [screen](/integrations/events/specs/screen#prefilled-properties)
+>    - [track](/integrations/events/specs/track#prefilled-properties)
+>    - [identify](/integrations/events/specs/identify#prefilled-traits)
+>    - [group](/integrations/events/specs/group#prefilled-traits)
 
 Now, let's move on to sending events to the app using the `SendEvents` method.
 

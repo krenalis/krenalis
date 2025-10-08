@@ -629,3 +629,5 @@ nav.sections a.selected {
     }
 
 }
+
+img[src="events/events-ingestion.png"] { display: block; height: auto; margin: 5rem auto; width: 50%; }

@@ -12,12 +12,18 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
   <li class="{{ expandable(`integrations/events/`) }}">
     {{ item(`integrations/events`, `Events`) }}
     <ul>
-      <li>{{ item(`integrations/events/page`, `Page`) }}</li>
-      <li>{{ item(`integrations/events/screen`, `Screen`) }}</li>
-      <li>{{ item(`integrations/events/track`, `Track`) }}</li>
-      <li>{{ item(`integrations/events/identify`, `Identify`) }}</li>
-      <li>{{ item(`integrations/events/group`, `Group`) }}</li>
+      <li class="{{ expandable(`integrations/events/specs/`) }}">
+        {{ item(`integrations/events/specs`, `Specs`) }}
+        <ul>
+          <li>{{ item(`integrations/events/specs/page`, `Page`) }}</li>
+          <li>{{ item(`integrations/events/specs/screen`, `Screen`) }}</li>
+          <li>{{ item(`integrations/events/specs/track`, `Track`) }}</li>
+          <li>{{ item(`integrations/events/specs/identify`, `Identify`) }}</li>
+          <li>{{ item(`integrations/events/specs/group`, `Group`) }}</li>
+        </ul>
+      </li>
       <li>{{ item(`integrations/events/session-tracking`, `Session tracking`) }}</li>
+      <li>{{ item(`integrations/events/warehouse-destination`, `Warehouse destination`) }}</li>
     </ul>
   </li>
   <li class="{{ expandable(`integrations/sources/`) }}">
