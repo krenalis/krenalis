@@ -81,7 +81,7 @@ const ConnectionsList = () => {
 					{getConnectorLogo(c.connector.icon)} {c.name}
 				</div>,
 				c.connector.type,
-				c.connector.code,
+				c.connector.label,
 				/* See issue https://github.com/meergo/meergo/issues/1255.
 				<div className='connections-list__status-cell'>
 					<StatusDot status={c.status} />
