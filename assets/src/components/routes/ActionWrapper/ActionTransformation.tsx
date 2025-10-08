@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
+import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode, useLayoutEffect } from 'react';
 import {
 	checkIfPropertyExists,
 	updateMappingProperty,
@@ -93,6 +93,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 	const [isCustomLastChangeTimeFormatSelected, setIsCustomLastChangeTimeFormatSelected] = useState<boolean>(false);
+	const [mapMappingsPairs, setMapMappingsPairs] = useState<Record<string, Array<[string, string]>>>({});
 
 	const { api, handleError, workspaces, selectedWorkspace, connectors } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
@@ -436,6 +437,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			actionType={actionType}
 			hasSchema={actionType.outputSchema != null}
 			flatInputSchema={flatInputSchema}
+			mapMappingPairs={mapMappingsPairs}
+			setMapMappingPairs={setMapMappingsPairs}
 			formatLabel={format?.label}
 		/>
 	);
@@ -628,6 +631,8 @@ interface TransformationBoxProps {
 	actionType: TransformedActionType;
 	hasSchema: boolean;
 	flatInputSchema: TransformedMapping;
+	mapMappingPairs: Record<string, [string, string][]>;
+	setMapMappingPairs: React.Dispatch<React.SetStateAction<Record<string, [string, string][]>>>;
 	formatLabel?: string;
 }
 
@@ -689,6 +694,8 @@ const TransformationBox = ({
 	actionType,
 	hasSchema,
 	flatInputSchema,
+	mapMappingPairs,
+	setMapMappingPairs,
 	formatLabel,
 }: TransformationBoxProps) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
@@ -948,6 +955,8 @@ const TransformationBox = ({
 			if (property.type === 'map') {
 				mappings.push(
 					<MapMapping
+						mapMappingPairs={mapMappingPairs}
+						setMapMappingPairs={setMapMappingPairs}
 						property={property}
 						propertyPath={path}
 						mappingItems={mappingItems}
@@ -973,7 +982,6 @@ const TransformationBox = ({
 										? automaticMapping
 										: property.value
 							}
-							controlled={true}
 							name={path}
 							disabled={isDisabled}
 							className='action__transformation-input-property'
@@ -992,6 +1000,13 @@ const TransformationBox = ({
 							enumValues={enumValues.length > 0 ? enumValues : undefined}
 							items={mappingItems}
 							onSelect={onSelectMappingItem}
+							syncOnChange={[
+								isFullscreenTransformationOpen,
+								showMatchingIn,
+								action.matching?.in,
+								automaticMapping != null,
+								automaticMapping,
+							]}
 						>
 							{isIdentifier && (
 								<div className='action__transformation-property-icon' slot='prefix'>
@@ -2447,6 +2462,8 @@ const FullscreenTransformation = ({
 };
 
 interface MapMappingProps {
+	mapMappingPairs: Record<string, [string, string][]>;
+	setMapMappingPairs: React.Dispatch<React.SetStateAction<Record<string, [string, string][]>>>;
 	property: TransformedProperty;
 	propertyPath: string;
 	mappingItems: ComboboxItem[];
@@ -2460,7 +2477,20 @@ interface MapMappingProps {
 	showRequired: boolean;
 }
 
+const getPairsFromExpression = (expression: string): Array<[string, string]> => {
+	const isMapExpression = /^\s*map\s*\(/.test(expression);
+	if (isMapExpression) {
+		const p = mapExpressionArguments(expression);
+		if (p.size > 0) {
+			return Array.from(p);
+		}
+	}
+	return [['', '']];
+};
+
 const MapMapping = ({
+	mapMappingPairs,
+	setMapMappingPairs,
 	property,
 	propertyPath,
 	mappingItems,
@@ -2478,36 +2508,41 @@ const MapMapping = ({
 	const [validationErrors, setValidationErrors] = useState<Record<number, string>>({});
 	const [reloadLogicalErrors, setReloadLogicalErrors] = useState<boolean>(false);
 	const [isResetting, setIsResetting] = useState<boolean>(false);
+	const [syncPairCombobox, setSyncPairCombobox] = useState<boolean>(false);
 
 	const { api, handleError } = useContext(appContext);
 	const { actionType } = useContext(actionContext);
 
 	const hasFilledPairs = pairs.findIndex((p) => p[0] !== '' || p[1] !== '') > -1;
-	const hasMultiplePairs = pairs.length > 1;
-	const isParentMappingDisabled = isDisabled || hasFilledPairs || hasMultiplePairs;
-	const areChildrenMappingDisabled =
-		isDisabled ||
-		automaticMapping != null ||
-		(property.value !== '' && !hasFilledPairs && !hasMultiplePairs && !isResetting);
+
+	useLayoutEffect(() => {
+		setPairs(getPairsFromExpression(property.value));
+		setSyncPairCombobox(!syncPairCombobox);
+	}, []);
 
 	useEffect(() => {
-		// At first render, compute the pairs based on the property
-		// value. Automatically convert filled out "map()" expressions
-		// into corresponding pairs. Also reload the pairs when the
-		// testing mode is open/closed to trigger the re-render of the
-		// component and synchronize the changes between the two modes.
-		const isMapExpression = /^\s*map\s*\(/.test(property.value);
-		if (isMapExpression) {
-			const p = mapExpressionArguments(property.value);
-			if (p.size > 0) {
-				const pairs = Array.from(p);
-				setPairs(pairs);
-				// Validate expressions when the action is opened.
-				validatePairExpressions(pairs);
-				setReloadLogicalErrors(true);
-			}
+		// On full mode toggle, resync pairs from the root source of truth
+		// (`mapMappingPairs[propertyPath]`) rather than the action's map
+		// expression, which is unreliable when the pairs are in an inconsistent
+		// state (e.g. duplicate keys). This keeps the two modes in sync and
+		// ensures validation/error state reflects the real pairs.
+		const toSync = structuredClone(mapMappingPairs[propertyPath]);
+		if (toSync != null) {
+			setPairs(toSync);
+			validatePairExpressions(toSync);
+			setSyncPairCombobox(!syncPairCombobox);
 		}
+		setReloadLogicalErrors(true);
 	}, [isFullscreenTransformationOpen]);
+
+	useEffect(() => {
+		// Sync the pairs with the root source of truth
+		// (`mapMappingPairs[propertyPath]`), which is needed to maintain a
+		// consistent representation and sync on full mode toggle.
+		const p = structuredClone(mapMappingPairs);
+		p[propertyPath] = structuredClone(pairs);
+		setMapMappingPairs(p);
+	}, [pairs]);
 
 	useEffect(() => {
 		// Revalidate expressions when the schema changes.
@@ -2627,9 +2662,7 @@ const MapMapping = ({
 				handleError(err);
 				return;
 			}
-			if (errorMessage !== '') {
-				updatePairValidationError(String(i), errorMessage);
-			}
+			updatePairValidationError(String(i), errorMessage);
 			i++;
 		}
 	};
@@ -2676,6 +2709,7 @@ const MapMapping = ({
 	const onAddPair = (index: number) => {
 		let newPairs = [...pairs.slice(0, index + 1), ['', ''] as ['', ''], ...pairs.slice(index + 1, pairs.length)];
 		setPairs(newPairs);
+		setSyncPairCombobox(!syncPairCombobox);
 		const expression = getMapExpression(newPairs);
 
 		// Shift the errors.
@@ -2726,6 +2760,8 @@ const MapMapping = ({
 		}
 		let newPairs = [...pairs.slice(0, index), ...pairs.slice(index + 1, pairs.length)];
 		setPairs(newPairs);
+		setSyncPairCombobox(!syncPairCombobox);
+
 		const expression = getMapExpression(newPairs);
 		if (expression === '') {
 			const isAlreadyEmpty = property.value === '';
@@ -2752,11 +2788,19 @@ const MapMapping = ({
 	const onClearPair = () => {
 		let newPairs = [['', '']] as Array<[string, string]>;
 		setPairs(newPairs);
+		setSyncPairCombobox(!syncPairCombobox);
 		setLogicalErrors({});
 		setValidationErrors({});
 		updateMapping(propertyPath, '');
 		setIsResetting(true);
 	};
+
+	const hasMultiplePairs = pairs.length > 1;
+	const isParentMappingDisabled = isDisabled || hasFilledPairs || hasMultiplePairs;
+	const areChildrenMappingDisabled =
+		isDisabled ||
+		automaticMapping != null ||
+		(property.value !== '' && !hasFilledPairs && !hasMultiplePairs && !isResetting);
 
 	const typeName = toMeergoStringType(property.full.type, property.full.nullable);
 
@@ -2767,7 +2811,6 @@ const MapMapping = ({
 				value={
 					automaticMapping != null ? automaticMapping : hasFilledPairs || isResetting ? '' : property.value
 				}
-				controlled={true}
 				name={propertyPath}
 				disabled={isParentMappingDisabled}
 				className='action__transformation-input-property'
@@ -2779,6 +2822,12 @@ const MapMapping = ({
 				isExpression={true}
 				items={mappingItems}
 				onSelect={onSelect}
+				syncOnChange={[
+					isFullscreenTransformationOpen,
+					automaticMapping != null,
+					automaticMapping,
+					syncPairCombobox,
+				]}
 			/>
 			<div className='action__transformation-mapping-arrow'>
 				<SlIcon name='arrow-right' />
@@ -2821,7 +2870,6 @@ const MapMapping = ({
 								onUpdatePair(i, 'value', value);
 							}}
 							value={value}
-							controlled={true}
 							name={String(i)}
 							disabled={areChildrenMappingDisabled}
 							className='action__transformation-input-property'
@@ -2841,6 +2889,7 @@ const MapMapping = ({
 							onSelect={(_: string, value: string) => {
 								onSelectPairValue(i, value);
 							}}
+							syncOnChange={[syncPairCombobox]}
 						/>
 						<div className='action__transformation-mapping-arrow'>
 							<SlIcon name='arrow-right' />

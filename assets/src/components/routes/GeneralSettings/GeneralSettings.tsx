@@ -41,10 +41,10 @@ const GeneralSettings = () => {
 	useLayoutEffect(() => {
 		const ws = workspaces.find((workspace) => workspace.id === selectedWorkspace);
 		setName(ws.name);
-		setImage(ws.uiPreferences.userProfile.image);
 		setFirstName(ws.uiPreferences.userProfile.firstName);
 		setLastName(ws.uiPreferences.userProfile.lastName);
 		setExtra(ws.uiPreferences.userProfile.extra);
+		setImage(ws.uiPreferences.userProfile.image);
 	}, [selectedWorkspace]);
 
 	useEffect(() => {
@@ -65,7 +65,6 @@ const GeneralSettings = () => {
 
 	const flatUserSchema = useMemo(() => flattenSchema(userSchema), [userSchema]);
 
-	const imageError = useMemo<string>(() => checkUIPreferences(image, flatUserSchema), [flatUserSchema, image]);
 	const firstNameError = useMemo<string>(
 		() => checkUIPreferences(firstName, flatUserSchema),
 		[flatUserSchema, firstName],
@@ -75,6 +74,7 @@ const GeneralSettings = () => {
 		[flatUserSchema, lastName],
 	);
 	const extraError = useMemo<string>(() => checkUIPreferences(extra, flatUserSchema), [flatUserSchema, extra]);
+	const imageError = useMemo<string>(() => checkUIPreferences(image, flatUserSchema), [flatUserSchema, image]);
 
 	const onNameInput = (e) => setName(e.target.value);
 
@@ -88,6 +88,7 @@ const GeneralSettings = () => {
 				break;
 			case 'extra':
 				setExtra(value);
+				break;
 			case 'image':
 				setImage(value);
 				break;
@@ -173,8 +174,9 @@ const GeneralSettings = () => {
 							value={firstName}
 							name='firstName'
 							isExpression={false}
-							error={firstNameError && firstNameError}
+							error={firstNameError !== '' ? firstNameError : ''}
 							caret={true}
+							controlled={true}
 						/>
 					)}
 					{lastName !== undefined && (
@@ -187,8 +189,9 @@ const GeneralSettings = () => {
 							value={lastName}
 							name='lastName'
 							isExpression={false}
-							error={lastNameError && lastNameError}
+							error={lastNameError !== '' ? lastNameError : ''}
 							caret={true}
+							controlled={true}
 						/>
 					)}
 					{extra !== undefined && (
@@ -201,8 +204,9 @@ const GeneralSettings = () => {
 							value={extra}
 							name='extra'
 							isExpression={false}
-							error={extraError && extraError}
+							error={extraError !== '' ? extraError : ''}
 							caret={true}
+							controlled={true}
 						/>
 					)}
 					{image !== undefined && (
@@ -215,8 +219,9 @@ const GeneralSettings = () => {
 							value={image}
 							name='image'
 							isExpression={false}
-							error={imageError && imageError}
+							error={imageError !== '' ? imageError : ''}
 							caret={true}
+							controlled={true}
 						/>
 					)}
 				</div>

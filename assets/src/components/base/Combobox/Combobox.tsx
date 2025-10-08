@@ -38,13 +38,12 @@ interface ComboboxProps {
 	disabled?: boolean;
 	indentation?: number;
 	children?: ReactNode;
+	syncOnChange?: any;
 	[key: string]: any;
 }
 
 // Combobox is a combobox component specifically designed to display and handle
-// schema properties and expressions and is an uncontrolled component. The
-// passed value is only used as the initial value, and any subsequent updates
-// must be synced by the caller.
+// schema properties and expressions.
 const Combobox = ({
 	value,
 	items,
@@ -64,6 +63,7 @@ const Combobox = ({
 	disabled,
 	indentation,
 	children,
+	syncOnChange,
 	...rest
 }: ComboboxProps) => {
 	const [val, setVal] = useState<string>(value == null ? '' : value);
@@ -75,6 +75,7 @@ const Combobox = ({
 	const [isErrorOverflowing, setIsErrorOverflowing] = useState<boolean>(false);
 
 	const inputRef = useRef<any>();
+	const isFirstControl = useRef<any>(true);
 	const errorContainerRef = useRef<any>();
 	const listRef = useRef<any>();
 	const tabGroupRef = useRef<any>();
@@ -96,10 +97,12 @@ const Combobox = ({
 	}, [error]);
 
 	const updateCursorPosition = (setStart?: boolean) => {
-		const inputElement = inputRef.current?.input;
-		if (inputElement) {
-			setCursorPosition(setStart ? 0 : inputElement.selectionStart);
-		}
+		setTimeout(() => {
+			const inputElement = inputRef.current?.input;
+			if (inputElement) {
+				setCursorPosition(setStart ? 0 : inputElement.selectionStart);
+			}
+		});
 	};
 
 	const onKeyDown = (event: KeyboardEvent) => {
@@ -164,16 +167,33 @@ const Combobox = ({
 		});
 	}, [inputRef.current, caret]);
 
+	useEffect(
+		() => {
+			setTimeout(() => {
+				updateComboboxValue(value);
+			});
+		},
+		Array.isArray(syncOnChange) ? syncOnChange : [],
+	);
+
 	useEffect(() => {
 		if (controlled) {
-			setVal(value);
+			if (isFirstControl.current) {
+				// Defer update to next event loop tick to ensure the input is
+				// mounted before updating its value.
+				setTimeout(() => {
+					updateComboboxValue(value);
+					isFirstControl.current = false;
+				});
+			} else {
+				updateComboboxValue(value);
+			}
 		}
 		if (autoResize) {
-			// Resize the combobox after a delay to allow the shadow DOM
-			// to fully load. The combobox is resized when the value
-			// changes or when the error changes (to take into
-			// consideration the error icon shown in the suffix slot of
-			// the input).
+			// Resize the combobox with a short delay. The combobox is resized
+			// when the value changes or when the error changes (to take into
+			// consideration the error icon shown in the suffix slot of the
+			// input).
 			setTimeout(() => {
 				resizeCombobox();
 			}, 50);
@@ -328,6 +348,7 @@ const Combobox = ({
 	};
 
 	const onInput = (e) => {
+		e.preventDefault();
 		if (!isOpen) {
 			// if the user has closed the list via escape button.
 			setIsOpen(true);
@@ -350,14 +371,31 @@ const Combobox = ({
 			}
 		}
 
-		setVal(newValue);
-
-		setTimeout(() => {
-			inputRef.current.setSelectionRange(position, position);
-			updateCursorPosition();
-		});
+		updateComboboxValue(newValue);
+		updateCursorPosition();
 		onInputFunc(name, newValue);
 		validate(name, newValue);
+	};
+
+	const updateComboboxValue = (value: string) => {
+		if (inputRef.current == null || inputRef.current.input == null) {
+			return;
+		}
+		// The update of the combobox is done programmatically on the input in
+		// the DOM, and outside of the React lifecycle, to prevent race
+		// conditions and cursor jumps caused by the usage of setSelectionRange
+		// (necessary to manipulate the cursor position, e.g. to move the cursor
+		// back after an autocompletion) when there are delays in the React
+		// rendering.
+		//
+		// The updated value is saved in the component state but only to
+		// implement the features of the component (e.g. filtering, dynamic
+		// resizing, async validation etc. etc.), and it is never used to
+		// directly control the value inside the input in the DOM.
+		let pos = inputRef.current.input.selectionStart;
+		inputRef.current.setRangeText(value, 0, -1, 'end');
+		inputRef.current.setSelectionRange(pos, pos);
+		setVal(value);
 	};
 
 	const resizeCombobox = () => {
@@ -454,7 +492,7 @@ const Combobox = ({
 
 		if (type === 'enum') {
 			let v = term;
-			setVal(v);
+			updateComboboxValue(v);
 			programmaticFocus.current = true;
 			inputRef.current.focus();
 			setTimeout(() => {
@@ -516,7 +554,7 @@ const Combobox = ({
 			tabGroupRef.current.show('properties');
 		}
 
-		setVal(v);
+		updateComboboxValue(v);
 
 		programmaticFocus.current = true;
 		inputRef.current.focus();
@@ -557,7 +595,6 @@ const Combobox = ({
 			<div className='combobox-input'>
 				<SlInput
 					data-is-combobox-input
-					value={val}
 					onSlInput={disabled ? undefined : onInput}
 					onSlFocus={onInputFocus}
 					onSlBlur={onInputBlur}
