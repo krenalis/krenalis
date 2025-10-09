@@ -36,7 +36,13 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
   <li>
     <div>Core Concepts</div>
     <ul>
-      <li>{{ item(`collect-users`, `Collect users`) }}</li>
+      <li class="{{ expandable(`collect-users/`) }}">
+        {{ item(`collect-users`, `Collect users`) }}
+        <ul>
+        <li>{{ item(`add-source-connection`, `Add a Source connection`) }}</li>
+        <li>{{ item(`add-connection-action`, `Add a Connection action`) }}</li>
+        <li>{{ item(`map-and-harmonize`, `Map and Harmonize`) }}</li>
+      </ul></li>
       <li>{{ item(`unify-users`, `Unify users`) }}</li>
       <li>{{ item(`activate-users`, `Activate users`) }}</li>
       
