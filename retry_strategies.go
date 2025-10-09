@@ -29,10 +29,10 @@ func ConstantStrategy(reason FailureReason, waitTime time.Duration) RetryStrateg
 // ExponentialStrategy returns a retry strategy that applies exponential backoff
 // with the specified base duration between attempts.
 func ExponentialStrategy(reason FailureReason, base time.Duration) RetryStrategy {
-	b := float64(base.Milliseconds())
+	b := float64(max(base, 0))
 	return func(res *http.Response, retries int) (FailureReason, time.Duration) {
-		d := time.Duration(b*math.Pow(2, float64(retries))) * time.Millisecond // base * 2^retries
-		d = min(d, BackoffCap)                                                 // limit to cap
+		d := time.Duration(b * math.Pow(2, float64(retries))) // base * 2^retries
+		d = min(d, BackoffCap)                                // limit to cap
 		return reason, d
 	}
 }

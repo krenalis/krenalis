@@ -40,6 +40,11 @@ func TestRetry(t *testing.T) {
 			times:    []time.Duration{750 * time.Millisecond, 1500 * time.Millisecond, 3 * time.Second, BackoffCap, BackoffCap},
 		},
 		{
+			strategy: ExponentialStrategy(Slowdown, 500*time.Microsecond),
+			reason:   Slowdown,
+			times:    []time.Duration{500 * time.Microsecond, time.Millisecond, 2 * time.Millisecond, 4 * time.Millisecond},
+		},
+		{
 			strategy: ExponentialStrategy(Slowdown, 0),
 			reason:   Slowdown,
 			times:    []time.Duration{0, 0, 0},
