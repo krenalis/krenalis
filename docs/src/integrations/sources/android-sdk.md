@@ -6,18 +6,18 @@
 
 [![GitHub Repo](https://img.shields.io/badge/Github-Meergo_Kotlin_SDK-blue?logo=github)](https://github.com/open2b/analytics-kotlin)
 
-The Android SDK empowers developers to effortlessly integrate robust event tracking and advanced data analytics directly into their Android applications. Developers can seamlessly transmit tracking data to both the data warehouse and a multiple analytics tools, all without the hassle of individual integrations.
+Use the Android SDK to add event tracking and analytics to your Android app with minimal setup. The SDK lets you send tracking data to your data warehouse and multiple analytics tools through a single interface, removing the need for separate integrations.
 
-This streamlined approach simplifies the development process, enabling teams to gain comprehensive insights into user behavior and optimize their applications with ease.
+This integration simplifies development and helps teams understand user behavior and improve their apps efficiently.
 
 ### Key features
 
-* Track User Actions: Keep tabs on user actions like taps, screen views, and more on your Android application.
-* Connect to Analytics Tools: Send tracked data to various analytics tools like Google Analytics, Mixpanel, and others.
-* Manage Data Easily: Decide which data goes to which analytics tools, making it simple to organize and change tools later.
-* Respect User Privacy: Follow privacy rules like GDPR by giving users control over tracking and anonymizing data.
-* User Data Extraction: Extract user data from events for importing and identity resolution, enabling a deeper understanding of individual users.
-* Compatible with the Segment Kotlin SDK.
+* **Track user actions:** Capture user interactions such as taps, screen views, and custom events.
+* **Connect to analytics tools:** Send data to analytics tools like Google Analytics, Mixpanel, and others.
+* **Manage data easily:** Choose which data goes to each analytics tool for simple organization and future changes.
+* **Respect user privacy:** Comply with privacy standards like GDPR by giving users control over tracking and anonymizing data.
+* **Extract user data:** Retrieve user traits from events and load them into your data warehouse for unified analysis.
+* **Compatible:** Works seamlessly with the Segment Kotlin SDK.
 
 ## Guides
 
@@ -29,4 +29,4 @@ This streamlined approach simplifies the development process, enabling teams to 
 
 ## SDK source code
 
-The source code of the Meergo Kotlin SDK is [available on GitHub](https://github.com/open2b/analytics-kotlin).
+The source code of the Meergo Kotlin SDK is [available on GitHub](https://github.com/open2b/analytics-kotlin) and distributed under the MIT license.

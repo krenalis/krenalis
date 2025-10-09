@@ -8,14 +8,6 @@
 
 The source connector for Java allows you to send customer event data using the Java SDK from your Java applications to Meergo.
 
-- [Using the SDK](#using-the-sdk)
-  - [1. Add source connection for Java](#1-add-source-connection-for-java)
-  - [2. Import the SDK in your Java application](#2-import-the-sdk-in-your-java-application)
-  - [3. Add an action](#3-add-an-action)
-  - [4. Test the integration](#4-test-the-integration)
-- [SDK source code](#sdk-source-code)
-- [License](#license)
-
 ## Using the SDK
 
 ### 1. Add source connection for Java
@@ -79,8 +71,4 @@ Refer to the [Meergo events documentation](/integrations/events) for more inform
 
 ## SDK source code
 
-The source code of the Meergo Java SDK is [available on GitHub](https://github.com/open2b/analytics-java).
-
-## License
-
-The Meergo Java SDK is released under the MIT license.
+The source code of the Meergo Java SDK is [available on GitHub](https://github.com/open2b/analytics-java) and distributed under the MIT license.

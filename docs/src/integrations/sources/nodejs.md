@@ -8,14 +8,6 @@
 
 The source connector for Node.js allows you to send customer event data using the Node.js SDK from your Node.js applications to Meergo.
 
-- [Using the SDK](#using-the-sdk)
-  - [1. Add source connection for Node.js](#1-add-source-connection-for-nodejs)
-  - [2. Import the SDK in your Node.js application](#2-import-the-sdk-in-your-nodejs-application)
-  - [3. Add an action](#3-add-an-action)
-  - [4. Test the integration](#4-test-the-integration)
-- [SDK source code](#sdk-source-code)
-- [License](#license)
-
 ## Using the SDK
 
 ### 1. Add source connection for Node.js
@@ -72,8 +64,4 @@ Refer to the [Meergo events documentation](../../events) for more information on
 
 ## SDK source code
 
-The source code of the Meergo Node SDK is [available on GitHub](https://github.com/open2b/analytics-node).
-
-## License
-
-The Meergo Node.js SDK is released under the MIT license.
+The source code of the Meergo Node SDK is [available on GitHub](https://github.com/open2b/analytics-node) and distributed under the MIT license.

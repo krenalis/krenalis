@@ -6,18 +6,18 @@
 
 [![GitHub Repo](https://img.shields.io/badge/Github-Meergo_JavaScript_SDK-blue?logo=github)](https://github.com/open2b/analytics-javascript)
 
-The JavaScript SDK empowers developers to effortlessly integrate robust event tracking and advanced data analytics directly into their web applications. Developers can seamlessly transmit tracking data to both the data warehouse and a multiple analytics tools, all without the hassle of individual integrations.
+Use the JavaScript SDK to integrate event tracking and data analytics into your web application. The SDK lets you send tracking data to your data warehouse and multiple analytics tools through a single interface, so you don't need separate integrations.
 
-This streamlined approach simplifies the development process, enabling teams to gain comprehensive insights into user behavior and optimize their applications with ease.
+This integration simplifies implementation, enabling teams to gain comprehensive insights into user behavior and optimize their applications with ease.
 
 ### Key features
 
-* Track User Actions: Keep tabs on user actions like clicks, page views, and more on your website.
-* Connect to Analytics Tools: Send tracked data to various analytics tools like Google Analytics, Mixpanel, and others.
-* Manage Data Easily: Decide which data goes to which analytics tools, making it simple to organize and change tools later.
-* Respect User Privacy: Follow privacy rules like GDPR by giving users control over tracking and anonymizing data.
-* User Data Extraction: Extract user data from events for importing and identity resolution, enabling a deeper understanding of individual users.
-* Compatible with the Segment and RudderStack SDKs.
+* **Track user actions:** Record user interactions such as clicks, page views, and custom events within your application.
+* **Connect to analytics tools:** Send tracked data to various analytics tools like Google Analytics, Mixpanel, and others.
+* **Manage data easily:** Decide which data goes to which analytics tools, making it simple to organize and change tools later.
+* **User data extraction:** Retrieve user traits from tracked events and load them into the data warehouse, where they are unified through Meergo's identity resolution.
+* **Lightweight:** No external dependencies and only **16 kB** (compressed), reducing network overhead.
+* **Compatible** with the Segment and RudderStack SDKs.
 
 ## Guides
 
@@ -43,4 +43,4 @@ Here is a list of the minimum browser versions required to run the JavaScript SD
 
 ## SDK source code
 
-The source code of the Meergo JavaScript SDK is [available on GitHub](https://github.com/open2b/analytics-javascript).
+The source code of the Meergo JavaScript SDK is [available on GitHub](https://github.com/open2b/analytics-javascript) and distributed under the MIT license.

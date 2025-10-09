@@ -6,13 +6,6 @@
 
 The source connector Meergo API is a connector to interact directly with Meergo APIs from your application.
 
-- [Description](#description)
-- [How to send events](#how-to-send-events)
-  - [1. Add source connection for Meergo API](#1-add-source-connection-for-meergo-api)
-  - [2. Add an action](#2-add-an-action)
-  - [3. Open the Live events page](#3-open-the-live-events-page)
-  - [4. Send some events](#4-send-some-events)
-
 ## Description
 
 This connector allows you to call Meergo APIs and import events and users directly from your application, regardless of the technology and programming language you use, since it allows you to interact directly via HTTP calls with Meergo APIs.

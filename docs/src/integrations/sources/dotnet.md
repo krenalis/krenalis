@@ -8,14 +8,6 @@
 
 The source connector for .NET allows you to send customer event data using the C# SDK from your .NET applications to Meergo.
 
-- [Using the SDK](#using-the-sdk)
-  - [1. Add source connection for C#](#1-add-source-connection-for-c)
-  - [2. Import the SDK in your C# application](#2-import-the-sdk-in-your-c-application)
-  - [3. Add an action](#3-add-an-action)
-  - [4. Test the integration](#4-test-the-integration)
-- [SDK source code](#sdk-source-code)
-- [License](#license)
-
 ## Using the SDK
 
 ### 1. Add source connection for C#
@@ -73,8 +65,4 @@ Refer to the [Meergo events documentation](../../events) for more information on
 
 ## SDK source code
 
-The source code of the Meergo C# SDK is [available on GitHub](https://github.com/open2b/analytics-csharp).
-
-## License
-
-The Meergo C# SDK is released under the MIT license.
+The source code of the Meergo C# SDK is [available on GitHub](https://github.com/open2b/analytics-csharp) and distributed under the MIT license.

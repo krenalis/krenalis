@@ -8,14 +8,6 @@
 
 The source connector for Go allows you to send customer event data using the Go SDK from your Go applications to Meergo.
 
-- [Using the SDK](#using-the-sdk)
-  - [1. Add source connection for Go](#1-add-source-connection-for-go)
-  - [2. Import the SDK in your Go application](#2-import-the-sdk-in-your-go-application)
-  - [3. Add an action](#3-add-an-action)
-  - [4. Test the integration](#4-test-the-integration)
-- [SDK source code](#sdk-source-code)
-- [License](#license)
-
 ## Using the SDK
 
 ### 1. Add source connection for Go
@@ -70,8 +62,4 @@ Refer to the [Meergo events documentation](../../events) for more information on
 
 ## SDK source code
 
-The source code of the Meergo Go SDK is [available on GitHub](https://github.com/open2b/analytics-go).
-
-## License
-
-The Meergo Go SDK is released under the MIT license.
+The source code of the Meergo Go SDK is [available on GitHub](https://github.com/open2b/analytics-go) and distributed under the MIT license.
