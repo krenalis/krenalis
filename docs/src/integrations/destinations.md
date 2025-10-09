@@ -26,6 +26,6 @@
   <li><a href="destinations/mysql">{{ ExternalImage("mysql.svg") }}MySQL</a></li>
 </ul>
 
-## See also
+### Need more destinations?
 
-* See also how to [create new connector](create-new-connector).
+If you need additional destinations, [contact us](mailto:hello@meergo.com). You can also [create a custom connector](create-new-connector).

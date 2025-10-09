@@ -34,6 +34,6 @@
   <li><a href="sources/meergoapi">{{ ExternalImage("meergo-api.svg") }} Meergo API</a></li>
 </ul>
 
-## See also
+### Need more sources?
 
-* See also how to [create new connector](create-new-connector).
+If you need additional destinations, [contact us](mailto:hello@meergo.com). You can also [create a custom connector](create-new-connector).

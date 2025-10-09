@@ -8,7 +8,7 @@ Mapping serves as an effortlessly simple data transformation method, designed wi
 
 It's the quickest and most efficient method because it doesn't need to call external functions. Instead, it uses a fast expression engine built into Meergo.
 
-However, for much more complex use cases, a more powerful language is recommended, such as JavaScript and Python.
+However, for much more complex use cases, a more powerful language is recommended, such as [JavaScript](javascript) and [Python](python).
 
 ## Map properties
 

@@ -103,17 +103,17 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
       <li>{{ item(`integrations/destinations/stripe`, `Stripe`) }}</li>
     </ul>
   </li>
-  <li class="{{ expandable(`integrations/transformers/`) }}">
-    {{ item(`integrations/transformers`, `Transformers`) }}
+  <li class="{{ expandable(`integrations/transformations/`) }}">
+    {{ item(`integrations/transformations`, `Transformations`) }}
     <ul>
       <li class="{{ expandable(`integrations/mapping/`) }}">
-        {{ item(`integrations/mapping`, `Mapping`) }}
+        {{ item(`integrations/transformations/mapping`, `Mapping`) }}
         <ul>
-          <li>{{ item(`integrations/mapping/builtin-functions`, `Builtin functions`) }}</li>
+          <li>{{ item(`integrations/transformations/mapping/builtin-functions`, `Builtin functions`) }}</li>
         </ul>
       </li>
-      <li>{{ item(`integrations/javascript`, `JavaScript functions`) }}</li>
-      <li>{{ item(`integrations/python`, `Python functions`) }}</li>
+      <li>{{ item(`integrations/transformations/javascript`, `JavaScript functions`) }}</li>
+      <li>{{ item(`integrations/transformations/python`, `Python functions`) }}</li>
     </ul>
   </li>
   <li>{{ item(`integrations/data-warehouses`, `Data warehouses`) }}</li>

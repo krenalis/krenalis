@@ -4,7 +4,7 @@
 
 # Events
 
-Meergo captures behavioral events from every customer touchpoint—websites, mobile apps, and more. It replaces heavy tracking setups with a simple, customizable approach and streams all data into your warehouse as the source of truth.
+Meergo captures behavioral events from every customer touchpoint—websites, mobile apps, and more. It unifies event tracking by replacing complex configurations with a single customizable integration that sends data directly to your data warehouse.
 
 #### Why it helps
 
@@ -20,7 +20,7 @@ Meergo captures behavioral events from every customer touchpoint—websites, mob
 #### How it works
 
 1. **Collect** events from SDKs and server sources with a flexible, typed schema.
-2. **Validate & transform** in-flight to enforce contracts and enrich with context.
+2. **Validate** incoming data to ensure it meets schema requirements and add relevant context.
 3. **Stream to warehouse** in real time for immediate querying and modeling.
 4. **Send to apps** simultaneously via connection destinations.
 
