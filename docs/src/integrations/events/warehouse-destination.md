@@ -6,7 +6,11 @@
 
 Meergo creates and manages a single central table called `events` in your data warehouse, which stores all event types from all sources. A separate `events` table is created for each workspace, since every workspace has its own dedicated data warehouse database.
 
-## PostgreSQL table schema
+## Table schema
+
+<!-- tabs: table schema -->
+
+### PostgreSQL
 
 | Column                               | Type                    | Description                                                      |
 | ------------------------------------ |-------------------------|------------------------------------------------------------------|
@@ -79,7 +83,7 @@ Meergo creates and manages a single central table called `events` in your data w
 | `previous_id`                        | `varchar`               | Previous user identifier for aliasing.                           |
 | `user_id`                            | `varchar`               | User ID supplied by the source along with the event              |
 
-## Snowflake table schema
+### Snowflake
 
 | Column                               | Type                     | Description                                           |
 | ------------------------------------ |--------------------------|-------------------------------------------------------|
@@ -152,3 +156,4 @@ Meergo creates and manages a single central table called `events` in your data w
 | `PREVIOUS_ID`                        | `VARCHAR`                | Previous user identifier for aliasing.                |
 | `USER_ID`                            | `VARCHAR`                | User ID supplied by the source along with the event.  |
 
+<!-- /tabs -->

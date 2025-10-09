@@ -1,9 +1,11 @@
 import { handleSidebar } from "./sidebar.js";
 import { buildTableOfContent } from "./table-of-content.js";
+import { buildTabs } from "./tabs.js";
 
 const setup = () => {
     handleSidebar();
     buildTableOfContent();
+	buildTabs();
 };
 
 setup();
