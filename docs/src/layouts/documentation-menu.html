@@ -39,14 +39,7 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
       <li>{{ item(`collect-users`, `Collect users`) }}</li>
       <li>{{ item(`unify-users`, `Unify users`) }}</li>
       <li>{{ item(`activate-users`, `Activate users`) }}</li>
-      <li class="{{ expandable(`identity-resolution/`) }}">
-        {{ item(`identity-resolution`, `Identity Resolution`) }}
-        <ul>
-          <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>
-          <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous users strategies`) }}</li>
-        </ul>
-      </li>
-      <li>{{ item(`data-validation`, `Data validation`) }}</li>
+      
     </ul>
   </li>
   <li>
@@ -60,7 +53,15 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
     <div>Data Modeling & Transformations</div>
     <ul>
       <li>{{ item(`filters`, `Filters`) }}</li>
-      <li>{{ item(`altering-user-schema`, `Altering User Schema`) }}</li>
+      <li>{{ item(`customer-model`, `Customer Model`) }}</li>
+      <li class="{{ expandable(`identity-resolution/`) }}">
+        {{ item(`identity-resolution`, `Identity Resolution`) }}
+        <ul>
+          <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>
+          <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous users strategies`) }}</li>
+        </ul>
+      </li>
+      <li>{{ item(`data-validation`, `Data validation`) }}</li>
     </ul>
   </li>
 </ul>

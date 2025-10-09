@@ -3,15 +3,12 @@
 {% macro Title string %}Create a workspace{% end %}
 {% Article %}
 
-# Create a workspace
-
-Meergo is a **warehouse-native** Customer Data Platform (CDP). This means that your customer data remains stored directly in **your own data warehouse** — not within the application itself.
-
-In Meergo each **workspace** is linked to its own data warehouse. Workspaces are fully isolated from each other and do not share any data.
+# Connect a warehouse
 
 When creating a new workspace, you will be prompted to provide the connection details for the data warehouse to be linked. This must be an **empty database**, with no existing tables.
 
-> 🔒 While you can update the connection credentials at any time, it is **not possible to switch to a different data warehouse** once it has been associated with a workspace.
+> 🔒 While you can update the connection credentials at any time, it is **not possible to switch to a different database inside your company’s data warehouse** once it has been associated with a workspace.
+
 
 Meergo currently supports PostgreSQL and Snowflake as data warehouse.
 

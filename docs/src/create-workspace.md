@@ -5,9 +5,10 @@
 
 # Create a workspace
 
-Meergo is a **warehouse-native** Customer Data Platform (CDP). This means that your customer data remains stored directly in **your own enterprise data warehouse** - not within the application itself.
+Meergo is a **warehouse-native** Customer Data Platform (CDP). This means that your customer data remains stored directly in **your own company's data warehouse** - not within the application itself.
 
 Before you can start using Meergo, the very first step is to create a **workspace**. A workspace is the foundational environment where all of your customer data operations will take place.
+You can choose a name for the workspace, so it can be easily recognized among other workspaces. It can be changed later.
 
 Each workspace acts as a dedicated container that brings together three critical elements:
 
@@ -15,48 +16,12 @@ Each workspace acts as a dedicated container that brings together three critical
 
 **Connections to Data Sources and Destinations** – Workspaces manage the flow of customer data in and out of your system, from CRMs and web apps to analytics tools and marketing platforms.
 
-**Customer Model** – Within a workspace, you will define the structure of your customer data. This schema is used to create the **Golden Record**, the unified and trusted single profile of each customer, and is the foundation for identity resolution.
+**Customer Model** – Within a workspace, you will define the structure of your customer data. This schema is used to create the **Golden Record**, the unified and trusted single profile of each customer, and is the foundation for **Identity Resolution**.
 
 By creating a workspace, you establish the core environment where data is ingested, unified, and activated. This step is essential: it lays the groundwork for building accurate customer profiles, running identity resolution processes, and ultimately delivering the insights and activations your teams need.
 
-In Meergo each **workspace** is linked to its own dedicated database within your enterprise data warehouse. Workspaces are fully isolated from each other and do not share any data.
+In Meergo, each **workspace** connects to its own dedicated database (or schema) inside your company’s data warehouse. This ensures full isolation between workspaces while allowing Meergo to operate directly within your existing data infrastructure.
 
-When creating a new workspace, you will be prompted to provide the connection details for the data warehouse to be linked. This must be an **empty database**, with no existing tables.
+You cannot create a workspace until you fill all the required fields to connect to data warehouse.
 
-> 🔒 While you can update the connection credentials at any time, it is **not possible to switch to a different data base** once it has been associated with a workspace.
-
-Meergo currently supports PostgreSQL and Snowflake as data warehouse.
-
-<ul class="grid-list">
-  <li><a href="#postgresql">{{ ExternalImage("postgresql.svg")}} PostgreSQL</a></li>
-  <li><a href="#snowflake">{{ ExternalImage("snowflake.svg")}} Snowflake</a></li>
-</ul><br> 
-
-> 💡 Note that, when running Meergo through Docker Compose, is automatically available a PostgreSQL data warehouse that runs locally, ready to use, and that requires no configuration. For a quick tryout of Meergo, this is the recommended option.
-
-## PostgreSQL
-
-The following fields are required to connect a PostgreSQL data warehouse:
-
-| Field           | Description                                                          |
-|-----------------|----------------------------------------------------------------------|
-| `Host`          | Hostname or IP address of the database.                              |
-| `Port`          | Port used to connect (default is `5432`).                            |
-| `Username`      | Username for authentication.                                         |
-| `Password`      | Password associated with the username.                               |
-| `Database name` | Name of the empty database to be used as the data warehouse.         |
-| `Schema`        | Name of the schema within the database where tables will be created. |
-
-## Snowflake
-
-The following fields are required to connect a Snowflake data warehouse:
-
-| Field                | Description                                                              |
-|----------------------|--------------------------------------------------------------------------|
-| `Account Identifier` | Account ID of the Snowflake warehouse in the form `<orgname>-<account>`. |
-| `User Name`          | Username used to authenticate with Snowflake.                            |
-| `Password`           | Password associated with the provided user name.                         |
-| `Role`               | Role that will be used for accessing the data in Snowflake.              |
-| `Database`           | Name of the database to be used as the data warehouse.                   |
-| `Schema`             | Name of the schema within the database where tables will be created.     |
-| `Warehouse`          | Name of the virtual warehouse to execute queries.                        |
+Next: [Connect a warehouse](connect-warehouse)
