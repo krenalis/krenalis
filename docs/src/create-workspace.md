@@ -1,5 +1,5 @@
 {% extends "/layouts/doc.html" %}
-{% import "external-image.md" %}
+{% import "/imports/image.html" %}
 {% macro Title string %}Create a workspace{% end %}
 {% Article %}
 

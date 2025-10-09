@@ -1,0 +1,4 @@
+{% macro Image(alt, path string) %}
+  {%% if hasPrefix(path, "/") { path = path[1:] } %%}
+  <img src="https://cdn.jsdelivr.net/gh/meergo/external-assets@main/{{path}}" alt="{{alt}}">&nbsp;&nbsp;
+{% end macro %}

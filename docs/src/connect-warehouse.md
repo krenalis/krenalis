@@ -1,5 +1,5 @@
 {% extends "/layouts/doc.html" %}
-{% import "external-image.md" %}
+{% import "/imports/image.html" %}
 {% macro Title string %}Create a workspace{% end %}
 {% Article %}
 
@@ -13,8 +13,8 @@ When creating a new workspace, you will be prompted to provide the connection de
 Meergo currently supports PostgreSQL and Snowflake as data warehouse.
 
 <ul class="grid-list">
-  <li><a href="#postgresql">{{ ExternalImage("postgresql.svg") }} PostgreSQL</a></li>
-  <li><a href="#snowflake">{{ ExternalImage("snowflake.svg") }} Snowflake</a></li>
+  <li><a href="#postgresql">{{ Image("PostgreSQL", "postgresql.svg") }} PostgreSQL</a></li>
+  <li><a href="#snowflake">{{ Image("Snowflake", "snowflake.svg") }} Snowflake</a></li>
 </ul><br> 
 
 > 💡 Note that, when running Meergo through Docker Compose, is automatically available a PostgreSQL data warehouse that runs locally, ready to use, and that requires no configuration. For a quick tryout of Meergo, this is the recommended option.

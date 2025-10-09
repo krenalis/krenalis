@@ -1,5 +1,5 @@
 {% extends "/layouts/doc.html" %}
-{% import "external-image.md" %}
+{% import "/imports/image.html" %}
 {% macro Title string %}Meergo CDP overview{% end %}
 {% Article %}
 
@@ -37,13 +37,13 @@ To ensure accuracy and consistency, Meergo applies schema-based validation at in
 Use the following SDKs to collect and send events to Meergo. Events can be stored in your data warehouse or sent to applications for activation in real-time.
 
 <ul class="grid-list">
-  <li><a href="javascript-sdk">{{ ExternalImage("javascript.svg") }} JavaScript SDK (Browser)</a></li>
-  <li><a href="csharp-sdk">{{ ExternalImage("dotnet.svg") }} C# SDK</a></li>
-  <li><a href="android-sdk">{{ ExternalImage("android.svg") }} Android SDK</a></li>
-  <li><a href="go-sdk">{{ ExternalImage("go.svg") }} Go SDK</a></li>
-  <li><a href="java-sdk">{{ ExternalImage("java.svg") }} Java SDK</a></li>
-  <li><a href="node-sdk">{{ ExternalImage("node.svg") }} Node SDK</a></li>
-  <li><a href="python-sdk">{{ ExternalImage("python.svg") }} Python SDK</a></li>
+  <li><a href="javascript-sdk">{{ Image("JavaScript", "javascript.svg") }} JavaScript SDK (Browser)</a></li>
+  <li><a href="csharp-sdk">{{ Image(".NET", "dotnet.svg") }} C# SDK</a></li>
+  <li><a href="android-sdk">{{ Image("Android", "android.svg") }} Android SDK</a></li>
+  <li><a href="go-sdk">{{ Image("Go", "go.svg") }} Go SDK</a></li>
+  <li><a href="java-sdk">{{ Image("Java", "java.svg") }} Java SDK</a></li>
+  <li><a href="node-sdk">{{ Image("Node.js", "node.svg") }} Node SDK</a></li>
+  <li><a href="python-sdk">{{ Image("Python", "python.svg") }} Python SDK</a></li>
 </ul>
 
 ## Getting Started with Meergo
@@ -63,8 +63,8 @@ Ready to dive in? Check out [Installation](installation) to start using Meergo.
 Once installed, connect Meergo to your data warehouse. Meergo stores user data and events, seamlessly unifying them directly within your data warehouse.
 
 <ul class="grid-list">
-  <li><a href="connect-a-warehouse#snowflake">{{ ExternalImage("postgresql.svg")}} PostgreSQL</a></li>
-  <li><a href="connect-a-warehouse#postgresql">{{ ExternalImage("snowflake.svg")}} Snowflake</a></li>
+  <li><a href="connect-a-warehouse#snowflake">{{ Image("PostgreSQL", "postgresql.svg")}} PostgreSQL</a></li>
+  <li><a href="connect-a-warehouse#postgresql">{{ Image("Snowflake", "snowflake.svg")}} Snowflake</a></li>
 </ul>
 
 ## Need help?

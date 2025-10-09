@@ -1,4 +1,5 @@
 {% extends "/layouts/doc.html" %}
+{% import "/imports/image.html" %}
 {% macro Title string %}Events{% end %}
 {% Article %}
 
@@ -15,7 +16,7 @@ Meergo captures behavioral events from every customer touchpoint—websites, mob
 * Dual routing: the same events can be fanned out to downstream apps (analytics, marketing, product, and ops)
 * Interoperable: fully compatible with Segment and RudderStack, so you can ingest existing events, mirror schemas, and run side-by-side without re-instrumentation
 
-![Event ingestion](events/events-ingestion.png)
+{{ Image("Event ingestion", "/docs/events-ingestion.png") }}
 
 #### How it works
 

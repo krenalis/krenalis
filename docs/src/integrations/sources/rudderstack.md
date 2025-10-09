@@ -1,4 +1,5 @@
 {% extends "/layouts/doc.html" %}
+{% import "/imports/image.html" %}
 {% macro Title string %}RudderStack (Source){% end %}
 {% Article %}
 
@@ -55,4 +56,4 @@ Then proceed to create a Webhook destination in RudderStack:
 
 The following image shows an example of how to fill in the fields:
 
-![How to fill out the form](rudderstack-webhook.png)
+{{ Image("How to fill out the form", "docs/rudderstack-webhook.png") }}
