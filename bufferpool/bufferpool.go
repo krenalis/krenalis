@@ -71,14 +71,8 @@ func (p *bufferPool) get(size int) []byte {
 	case size < 0:
 		// Let make panic as expected for negative lengths.
 		return make([]byte, size)
-	case size > maxLength:
-		buf := make([]byte, size)
-		clear(buf)
-		return buf
-	case size < minPoolSize:
-		buf := make([]byte, size)
-		clear(buf)
-		return buf[:0]
+	case size < minPoolSize || size > maxLength:
+		return make([]byte, 0, size)
 	}
 
 	idx := int(nextLog2(uint32(size)))

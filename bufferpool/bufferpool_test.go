@@ -159,12 +159,13 @@ func TestPutLarge(t *testing.T) {
 	}
 }
 
-// TestGetAboveMaxLength checks that large allocations bypass the pool.
+// TestGetAboveMaxLength checks that requests beyond the managed range still
+// return an empty slice whose capacity matches the requested size.
 func TestGetAboveMaxLength(t *testing.T) {
 	length := maxLength + 1
 	b := Get(length)
-	if len(b) != length {
-		t.Errorf("expected len %d, got %d", length, len(b))
+	if len(b) != 0 {
+		t.Errorf("expected len 0, got %d", len(b))
 	}
 	if cap(b) != length {
 		t.Errorf("expected cap %d, got %d", length, cap(b))
