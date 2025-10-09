@@ -345,10 +345,10 @@ func validateAppConnector(app AppInfo) {
 			if app.AsDestination.SendingMode == None {
 				panic(fmt.Sprintf("connector %s is declared to support Event as destination, but it does not specify a sending mode", app.Code))
 			}
-			if targets&TargetUser != 0 {
-				if !app.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
-					panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
-				}
+		}
+		if targets&TargetUser != 0 {
+			if !app.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
 			}
 		}
 	}
