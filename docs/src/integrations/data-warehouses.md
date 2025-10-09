@@ -16,7 +16,7 @@ Properties of `object` types are transformed into columns starting with the `obj
 
 So, for example, this `object` property:
 
-```plain
+```
 address {
     street {
         name
@@ -29,7 +29,7 @@ address {
 
 is represented in the data warehouse as:
 
-```plain
+```
 address_street_name
 address_street_number
 address_city

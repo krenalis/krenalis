@@ -56,7 +56,7 @@ $ go generate
 
 After this step, your directory should look like:
 
-```plain
+```
 meergo
 ├── go.mod
 ├── go.sum
@@ -124,7 +124,7 @@ $ go generate
 
 After this step, the `meergo/cmd/meergo` directory should look like:
 
-```plain
+```
 meergo
 ├── main.go
 ├── meergo-assets

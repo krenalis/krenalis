@@ -32,7 +32,7 @@ $ psql meergo -c "\d"
 
 You should see something like this:
 
-```plain
+```
                      List of relations
  Schema |            Name           |   Type   |  Owner   
 --------+---------------------------+----------+----------
