@@ -179,7 +179,7 @@ func RegisterStream[T any](stream StreamInfo, new StreamNewFunc[T]) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, ok := registry.usedCodes[stream.Code]; ok {
-		panic("meergo: RegisterSDK called with a connector code already registered: " + stream.Code)
+		panic("meergo: RegisterStream called with a connector code already registered: " + stream.Code)
 	}
 	registry.streams[stream.Code] = stream
 	registry.usedCodes[stream.Code] = struct{}{}
