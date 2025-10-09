@@ -569,7 +569,7 @@ const CreateAccessKeyDialog = ({
 						{!isMCP && <SlOption value='0'>Any workspace</SlOption>}
 						{warehouseByWorkspace != null &&
 							workspaces.map((w) => {
-								if (warehouseByWorkspace[w.id] !== 'Snowflake') {
+								if (!isMCP || (isMCP && warehouseByWorkspace[w.id] !== 'Snowflake')) {
 									return <SlOption value={String(w.id)}>{w.name}</SlOption>;
 								}
 								return null;
