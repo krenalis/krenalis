@@ -3365,6 +3365,7 @@ const TransformationProperty = ({
 									copyLabel='Click to copy'
 									successLabel='✓ Copied'
 									errorLabel='Copying to clipboard is not supported by your browser'
+									hoist={true}
 								/>
 							)}
 							{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
