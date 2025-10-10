@@ -329,7 +329,7 @@ func (c *actionCleaner) purgeWorkspace(id int) {
 				b.WriteString(strconv.Itoa(action))
 				b.WriteByte(')')
 			}
-			b.WriteString("\nWHERE id = $1 AND actions_to_purge IS NOT NULL\nRETURNING actions_to_purge")
+			b.WriteString("\nWHERE id = $1\nRETURNING actions_to_purge")
 			update := b.String()
 
 			err = c.core.state.Transaction(c.close.ctx, func(tx *db.Tx) (any, error) {

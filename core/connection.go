@@ -981,7 +981,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 		if c.Role == state.Source {
 			_, err := tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_cat(actions_to_purge, (\n"+
 				"\tSELECT array_agg(a.id) FROM actions a WHERE a.connection = $1 AND a.target = 'User'\n"+
-				"))\nWHERE id = $2 AND actions_to_purge IS NOT NULL", n.ID, workspace.ID)
+				"))\nWHERE id = $2", n.ID, workspace.ID)
 			if err != nil {
 				return nil, err
 			}
