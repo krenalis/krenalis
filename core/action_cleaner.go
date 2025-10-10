@@ -143,12 +143,12 @@ func (c *actionCleaner) complete(f func() error) error {
 func (c *actionCleaner) deleteDiscontinuedFunctions() {
 	var ids, deleted []string
 	var d = 2 * time.Second // initial waiting time.
+	timer := time.NewTimer(d)
 	for {
-		tick := time.NewTicker(d)
 		select {
 		case <-c.close.ctx.Done():
 			return
-		case <-tick.C:
+		case <-timer.C:
 		}
 		d = functionDeletionInterval
 		err := c.complete(func() error {
@@ -203,6 +203,7 @@ func (c *actionCleaner) deleteDiscontinuedFunctions() {
 		if err != nil {
 			slog.Error("core: an error occurred deleting discontinued functions", "err", err)
 		}
+		timer.Reset(d)
 	}
 }
 
