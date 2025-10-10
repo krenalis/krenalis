@@ -664,9 +664,8 @@ func (state *State) deleteConnection(n notification) {
 		delete(ws.accounts, e.connection.account.ID)
 		ws.mu.Unlock()
 	}
-	var actionsToPurge []int
+	actionsToPurge := ws.actionsToPurge
 	if e.connection.Role == Source {
-		actionsToPurge = ws.actionsToPurge
 		for _, action := range e.connection.actions {
 			if action.Target == TargetUser {
 				actionsToPurge = append(actionsToPurge, action.ID)
