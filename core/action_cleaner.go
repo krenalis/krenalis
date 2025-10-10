@@ -333,15 +333,13 @@ func (c *actionCleaner) purgeWorkspace(id int) {
 			update := b.String()
 
 			err = c.core.state.Transaction(c.close.ctx, func(tx *db.Tx) (any, error) {
-				var actions []int
-				err := tx.QueryRow(c.close.ctx, update, id).Scan(&actions)
+				err := tx.QueryRow(c.close.ctx, update, id).Scan(&n.ActionsToPurge)
 				if err != nil {
 					if err == sql.ErrNoRows {
 						return nil, nil
 					}
 					return nil, err
 				}
-				n.ActionsToPurge = actions
 				return n, nil
 			})
 
