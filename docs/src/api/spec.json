@@ -8544,7 +8544,7 @@
         },
         {
             "id": "connections/apps",
-            "name": "App connections",
+            "name": "Apps",
             "description": "These endpoints are specific to app connections.",
             "endpoints": [
                 {
@@ -10553,7 +10553,7 @@
         },
         {
             "id": "connections/databases",
-            "name": "Database connections",
+            "name": "Databases",
             "description": "These endpoints are specific to database connections.",
             "endpoints": [
                 {
@@ -14478,7 +14478,7 @@
         },
         {
             "id": "connections/file-storages",
-            "name": "File storage connections",
+            "name": "File storages",
             "description": "These endpoints are specific to file storage connections.",
             "endpoints": [
                 {

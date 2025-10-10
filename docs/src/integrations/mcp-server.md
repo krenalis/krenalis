@@ -81,7 +81,6 @@ Once validated, proceed to create your access key.
 2. Select **API and MCP Server**.
 3. Click **Add new MCP key**.
 4. In the **Create a new MCP key** window:
-
     * Enter a **name** for your key to identify it later.
     * Choose the **workspace** where you want to enable MCP access.
 5. Click **Add**.

@@ -69,14 +69,9 @@ Settings for emails that are sent to members.
 
 ## Transformers
 
-Settings for executing transformation functions via AWS Lambda or locally. Local execution should only be used for testing and not in production.
+The following settings let you choose how transformation functions are executed. Meergo can run them either using AWS Lambda or locally. In production, you must use AWS Lambda only. The local mode is meant for testing or evaluating Meergo when running with Docker.
 
-> 💡 Note that these settings do not concern the data transformations themselves, which are set up via the Admin console or the APIs for each workspace, but the general settings provided by the Meergo installation to enable writing transformation functions.
-
-You can configure Meergo to run transformation functions on one of the following:
-
-* [**AWS Lambda**](#aws-lambda). Recommended for production.
-* [**Local execution**](#local-execution). Recommended for testing Meergo locally.
+<!-- tabs: Transformer variables -->
 
 ### AWS Lambda
 
@@ -91,7 +86,7 @@ You can configure Meergo to run transformation functions on one of the following
 | `MEERGO_TRANSFORMERS_LAMBDA_PYTHON_RUNTIME`    |         | Python runtime version for AWS Lambda. Example: `python3.13`.  |
 | `MEERGO_TRANSFORMERS_LAMBDA_PYTHON_LAYER`      |         | (Optional) ARN of a Lambda layer for Python functions.         |
 
-### Local execution
+### Local
 
 > ⚠️ Configuring transformers for local execution allows the code in transformation functions defined in Meergo to execute arbitrary code on the local machine. Therefore, use with caution and only in trusted contexts.
 
@@ -100,6 +95,8 @@ You can configure Meergo to run transformation functions on one of the following
 | `MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE`   |         | Path to the Node.js executable. Example: `/usr/bin/node`.                                                                                                                   |
 | `MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE` |         | Path to the Python executable. Example: `/usr/bin/python`.                                                                                                                  |
 | `MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR`     |         | Directory where local transformation functions are stored. This directory should be writable by the user executing the Meergo executable. Example: `/var/meergo/functions`. |
+
+<!-- /tabs -->
 
 ## OAuth providers
 
