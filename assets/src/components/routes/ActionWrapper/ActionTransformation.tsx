@@ -696,7 +696,6 @@ const TransformationBox = ({
 	flatInputSchema,
 	mapMappingPairs,
 	setMapMappingPairs,
-	formatLabel,
 }: TransformationBoxProps) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [isCompletelyOpen, setIsCompletelyOpen] = useState<boolean>(false);
@@ -1058,18 +1057,14 @@ const TransformationBox = ({
 				);
 			}
 		}
-		let [leftHeader, rightHeader] = transformationHeaders(connection, action, formatLabel);
+		const [sourceHeader, destinationHeader] = transformationHeaders(connection, action);
 		body = (
 			<div className='action__transformation-mappings'>
 				{!isCompletelyOpen && (
 					<>
-						<div className='action__mapping-left-header'>
-							{leftHeader[0]} {leftHeader[1]}
-						</div>
+						<div className='action__mapping-left-header'>{sourceHeader}</div>
 						<div></div>
-						<div className='action__mapping-right-header'>
-							{rightHeader[0]} {rightHeader[1]}
-						</div>
+						<div className='action__mapping-right-header'>{destinationHeader}</div>
 					</>
 				)}
 				{mappings}
@@ -1289,7 +1284,7 @@ const FullscreenTransformation = ({
 	const [isBodyRendered, setIsBodyRendered] = useState<boolean>(false);
 	const [isBodyShown, setIsBodyShown] = useState<boolean>(false);
 
-	const { handleError, api, connectors } = useContext(AppContext);
+	const { handleError, api } = useContext(AppContext);
 	const {
 		action,
 		settings,
@@ -1325,13 +1320,6 @@ const FullscreenTransformation = ({
 			flatOutputSchema: flattenSchema(outputSchema),
 		};
 	}, [outputSchema]);
-
-	const format = useMemo(() => {
-		if (action.format) {
-			return connectors.find((c) => c.code === action.format) ?? null;
-		}
-		return null;
-	}, [action.format, connectors]);
 
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
@@ -2258,7 +2246,8 @@ const FullscreenTransformation = ({
 		);
 	}
 
-	let [leftHeader, rightHeader] = transformationHeaders(connection, action, format?.label);
+	const [sourceHeader, destinationHeader] = transformationHeaders(connection, action, 'full');
+	const outputSchemaTabLabel = isAppEventsExport ? 'Parameters' : 'Schema';
 	return (
 		<div
 			className={`fullscreen-transformation${isFullscreenTransformationOpen ? ' fullscreen-transformation--open' : ''}`}
@@ -2272,8 +2261,7 @@ const FullscreenTransformation = ({
 						>
 							<div className='fullscreen-transformation__panel-title-wrapper'>
 								<div className='fullscreen-transformation__panel-title'>
-									<div className='fullscreen-transformation__panel-title-text'>{leftHeader[0]}</div>
-									<div className='fullscreen-transformation__panel-sub-title'>{leftHeader[1]}</div>
+									<div className='fullscreen-transformation__panel-title-text'>{sourceHeader}</div>
 								</div>
 								<SlButtonGroup>
 									<SlButton
@@ -2321,8 +2309,7 @@ const FullscreenTransformation = ({
 				>
 					<div className='fullscreen-transformation__panel-title-wrapper'>
 						<div className='fullscreen-transformation__panel-title'>
-							<div className='fullscreen-transformation__panel-title-text'>{rightHeader[0]}</div>
-							<div className='fullscreen-transformation__panel-sub-title'>{rightHeader[1]}</div>
+							<div className='fullscreen-transformation__panel-title-text'>{destinationHeader}</div>
 						</div>
 						<SlButtonGroup>
 							<SlButton
@@ -2331,7 +2318,7 @@ const FullscreenTransformation = ({
 								onClick={onSelectOutputSchema}
 								disabled={isExecuting}
 							>
-								Schema
+								{outputSchemaTabLabel}
 							</SlButton>
 							<SlButton
 								size='small'
@@ -3695,41 +3682,59 @@ function removeQuotes(v: any | null) {
 	}
 	return v.replace(/^"|"$/g, '');
 }
+type TransformationHeaderMode = 'compact' | 'full';
 
-// transformationHeaders returns two pairs of values, the two values to use
-// for the left transformation header, and the two values for the right.
-//
-// The two values in each pair form a meaningful header and can, for example,
-// be displayed on two separate lines or concatenated with a space.
+const TRANSFORMATION_HEADERS: Record<TransformationHeaderMode, Record<string, [string, string]>> = {
+	compact: {
+		'source:sdk': ['Event schema', 'Customer model schema'],
+		'source:database': ['Database user schema', 'Customer model schema'],
+		'source:file': ['File user schema', 'Customer model schema'],
+		'source:app': ['App user schema', 'Customer model schema'],
+		'destination:event': ['Event schema', 'Sending event parameters'],
+		'destination:database': ['Customer model schema', 'Database table schema'],
+		'destination:app': ['Customer model schema', 'App user schema'],
+	},
+	full: {
+		'source:sdk': ['Event', 'Customer model'],
+		'source:database': ['Database user', 'Customer model'],
+		'source:file': ['File user', 'Customer model'],
+		'source:app': ['App user', 'Customer model'],
+		'destination:event': ['Event', 'Sending event'],
+		'destination:database': ['Customer model', 'Database table'],
+		'destination:app': ['Customer model', 'App user'],
+	},
+};
 
+// transformationHeaders reports the input and output headers for a transformation.
+// The returned values are fully formatted for the requested mode.
 function transformationHeaders(
 	connection: TransformedConnection,
 	action: TransformedAction,
-	formatLabel?: string,
-): [Array<string>, Array<string>] {
-	let leftHeader: Array<string>;
-	let rightHeader: Array<string>;
-	let terms = connection.connector.terms;
+	mode: TransformationHeaderMode = 'compact',
+): [string, string] {
+	let scenario = 'source:app';
+
 	if (connection.isSource) {
-		if (connection.isEventBased) {
-			leftHeader = ['Input event', `from ${connection.connector.label}`];
-		} else if (connection.isFileStorage) {
-			const label = formatLabel ?? action.format;
-			leftHeader = [`Input ${terms.user}`, `from ${label}`];
+		if (connection.isSDK) {
+			scenario = 'source:sdk';
+		} else if (connection.isDatabase) {
+			scenario = 'source:database';
+		} else if (connection.isFileStorage || connection.isFile) {
+			scenario = 'source:file';
 		} else {
-			leftHeader = [`Input ${terms.user}`, `from ${connection.connector.label}`];
+			scenario = 'source:app';
 		}
-		rightHeader = ['Output user', 'to warehouse'];
 	} else {
-		if (action.target == 'Event') {
-			leftHeader = ['Input event', 'from source connections'];
-			rightHeader = ['Output event', `to ${connection.connector.label}`];
+		if (action.target === 'Event') {
+			scenario = 'destination:event';
+		} else if (connection.isDatabase) {
+			scenario = 'destination:database';
 		} else {
-			leftHeader = ['Input user', 'from warehouse'];
-			rightHeader = [`Output ${terms.user}`, `to ${connection.connector.label}`];
+			scenario = 'destination:app';
 		}
 	}
-	return [leftHeader, rightHeader];
+
+	return TRANSFORMATION_HEADERS[mode][scenario];
 }
 
 export default ActionTransformation;
