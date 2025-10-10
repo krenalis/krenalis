@@ -211,7 +211,7 @@ func (this *Action) Delete(ctx context.Context) error {
 		// Mark the action as deleted.
 		if c.Role == state.Source && this.action.Target == state.TargetUser {
 			_, err = tx.Exec(ctx, "UPDATE workspaces SET actions_to_purge = array_append(actions_to_purge, $1)"+
-				" WHERE actions_to_purge IS NOT NULL", n.ID)
+				" WHERE id = $2 AND actions_to_purge IS NOT NULL", n.ID, c.Workspace().ID)
 			if err != nil {
 				return nil, err
 			}
