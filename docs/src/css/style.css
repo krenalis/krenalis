@@ -288,7 +288,7 @@ details.typescript summary span::before { content: ""; display: inline-block; wi
 .grid-list li a { align-items: center; color: #333; display: flex; font-weight: 600; height: 100%; justify-content: start; padding: 20px; text-decoration: none; width: 100%; }
 .grid-list li a svg { margin-right: 16px; width: 24px; height: 24px; flex-shrink: 0; }
 .grid-list li:hover { border-color: var(--link-color); }
-.grid-list.connectors li img { width: 28px; }
+.grid-list.connectors li img { max-width: 28px; max-height: 28px; }
 
 #what-is-meergo + p { color: #777; font-size: 1.2em; }
 .get-meergo { background: #f9f6f1; font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; font-weight: bold; padding: 1rem; }
