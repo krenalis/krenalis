@@ -1352,7 +1352,6 @@ func (state *State) updateWarehouse(n notification) {
 		w.Warehouse.Mode = e.Mode
 		w.Warehouse.Settings = e.Settings
 		w.Warehouse.MCPSettings = e.MCPSettings
-		w.actionsToPurge = []int{}
 	})
 	dispatchNotification(state, e)
 }
