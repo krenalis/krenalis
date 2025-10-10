@@ -205,6 +205,7 @@ const ConnectionMetrics = () => {
 					startAnchor='right'
 					endAnchor='left'
 					showHead={true}
+					strokeWidth={1.5}
 					label={
 						i === steps.length - 1 ? null : (
 							<div className='connection-metrics__funnel-label connection-metrics__funnel-label--passed'>
@@ -222,6 +223,7 @@ const ConnectionMetrics = () => {
 					startAnchor='bottom'
 					endAnchor='top'
 					showHead={true}
+					strokeWidth={1.5}
 					path='grid'
 					label={
 						<div
@@ -246,9 +248,12 @@ const ConnectionMetrics = () => {
 				startAnchor='right'
 				endAnchor='left'
 				showHead={true}
+				strokeWidth={1.5}
 			></Arrow>,
 		);
-		setFunnelArrows(arrows);
+		setTimeout(() => {
+			setFunnelArrows(arrows);
+		});
 	}, [isLoading, eventFunnelData, userFunnelData]);
 
 	useEffect(() => {
@@ -611,44 +616,46 @@ const ConnectionMetrics = () => {
 					</div>
 					<div className='connection-metrics__funnel'>
 						<div className='connection-metrics__funnel-heading'>Pipeline</div>
-						<div className='connection-metrics__funnel-passed'>
-							<div className='connection-metrics__funnel-initial' id={`funnel-circle-initial`}>
-								{isUsersSelected
-									? formatNumber(userFunnelData[0].passed + userFunnelData[0].failed)
-									: formatNumber(eventFunnelData[0].passed + eventFunnelData[0].failed)}
-							</div>
-							{Array.from(steps.entries()).map(([i, s]) => {
-								return (
-									<div className='connection-metrics__funnel-step' key={`funnel-passed-${i}`}>
-										<div className='connection-metrics__funnel-title'>
-											{stepTermByIdentifier[s]}
+						<div className='connection-metrics__funnel-content'>
+							<div className='connection-metrics__funnel-passed'>
+								<div className='connection-metrics__funnel-initial' id={`funnel-circle-initial`}>
+									{isUsersSelected
+										? formatNumber(userFunnelData[0].passed + userFunnelData[0].failed)
+										: formatNumber(eventFunnelData[0].passed + eventFunnelData[0].failed)}
+								</div>
+								{Array.from(steps.entries()).map(([i, s]) => {
+									return (
+										<div className='connection-metrics__funnel-step' key={`funnel-passed-${i}`}>
+											<div className='connection-metrics__funnel-title'>
+												{stepTermByIdentifier[s]}
+											</div>
+											<div
+												className='connection-metrics__funnel-circle'
+												id={`funnel-circle-passed-${i}`}
+											/>
 										</div>
-										<div
-											className='connection-metrics__funnel-circle'
-											id={`funnel-circle-passed-${i}`}
-										/>
-									</div>
-								);
-							})}
-							<div className='connection-metrics__funnel-final' id={`funnel-circle-final`}>
-								{isUsersSelected
-									? formatNumber(userFunnelData[5].passed)
-									: formatNumber(eventFunnelData[5].passed)}
+									);
+								})}
+								<div className='connection-metrics__funnel-final' id={`funnel-circle-final`}>
+									{isUsersSelected
+										? formatNumber(userFunnelData[5].passed)
+										: formatNumber(eventFunnelData[5].passed)}
+								</div>
 							</div>
+							<div className='connection-metrics__funnel-failed'>
+								<div key='funnel-initial-empty' />
+								{Array.from(steps.entries()).map(([i, _]) => {
+									return (
+										<div
+											key={`funnel-failed-${i}`}
+											className='connection-metrics__funnel-circle'
+											id={`funnel-circle-failed-${i}`}
+										/>
+									);
+								})}
+							</div>
+							{funnelArrows}
 						</div>
-						<div className='connection-metrics__funnel-failed'>
-							<div key='funnel-initial-empty' />
-							{Array.from(steps.entries()).map(([i, _]) => {
-								return (
-									<div
-										key={`funnel-failed-${i}`}
-										className='connection-metrics__funnel-circle'
-										id={`funnel-circle-failed-${i}`}
-									/>
-								);
-							})}
-						</div>
-						{funnelArrows}
 					</div>
 					<div className='connection-metrics__errors'>
 						<div className='connection-metrics__errors-heading'>

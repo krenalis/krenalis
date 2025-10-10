@@ -72,6 +72,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 				isHidden={isHidden}
 				showTail={showTail && (hasRelations || isHighlighted)}
 				showHead={showHead && (hasRelations || isHighlighted)}
+				useCircleShape={true}
 			/>
 		);
 

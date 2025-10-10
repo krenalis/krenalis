@@ -25,6 +25,7 @@ interface ArrowProps {
 	isHidden?: boolean;
 	showTail?: boolean;
 	showHead?: boolean;
+	useCircleShape?: boolean;
 }
 
 const Arrow = ({
@@ -43,8 +44,9 @@ const Arrow = ({
 	isHidden = false,
 	showTail = false,
 	showHead = false,
+	useCircleShape = false,
 }: ArrowProps) => {
-	const shape = {
+	const circleShape = {
 		svgElem: (
 			<path
 				d='M 1,0 V 1.0000008 A 0.81233699,0.50003097 0 0 1 0.18813242,0.50025884 0.81233699,0.50003097 0 0 1 1,0 Z'
@@ -71,8 +73,8 @@ const Arrow = ({
 				animateDrawing={animateDrawing}
 				showTail={showTail}
 				showHead={showHead}
-				tailShape={shape}
-				headShape={shape}
+				tailShape={useCircleShape ? circleShape : 'arrow1'}
+				headShape={useCircleShape ? circleShape : 'arrow1'}
 			/>
 		</div>
 	);

@@ -144,6 +144,10 @@
 	font-size: 13px;
 }
 
+.connection-metrics__chart .recharts-wrapper .recharts-surface {
+	overflow: visible;
+}
+
 .connection-metrics__errors-heading {
 	margin: 40px 0 24px 5px;
 	font-size: 16px;
@@ -171,6 +175,10 @@
 	border: 1px solid var(--sl-color-neutral-200);
 	box-shadow: var(--sl-shadow-small);
 	padding: 22px;
+}
+
+.connection-metrics__funnel-content {
+	animation: fade-in-entrance 1s;
 }
 
 .connection-metrics__funnel-passed,
