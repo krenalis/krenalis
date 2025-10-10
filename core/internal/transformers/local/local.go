@@ -86,7 +86,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	}
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, executable, filename, string(payload))
-	cmd.Env = []string{}
+	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Meergo process.
 	cmd.Dir = fn.settings.FunctionsDir
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
