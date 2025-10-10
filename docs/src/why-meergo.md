@@ -14,5 +14,3 @@
 * Fully compatible with the Segment and RudderStack API, ensuring seamless integration.
 
 This guide provides a comprehensive overview of Meergo, encompassing a detailed exploration of its functions, covering aspects ranging from installation and configuration to ongoing maintenance.
-
-![](images/meergo-model.png)
