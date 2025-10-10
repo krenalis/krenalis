@@ -36,7 +36,7 @@ To ensure accuracy and consistency, Meergo applies schema-based validation at in
  
 Use the following SDKs to collect and send events to Meergo. Events can be stored in your data warehouse or sent to applications for activation in real-time.
 
-<ul class="grid-list">
+<ul class="grid-list connectors">
   <li><a href="javascript-sdk">{{ Image("JavaScript", "javascript.svg") }} JavaScript SDK (Browser)</a></li>
   <li><a href="csharp-sdk">{{ Image(".NET", "dotnet.svg") }} C# SDK</a></li>
   <li><a href="android-sdk">{{ Image("Android", "android.svg") }} Android SDK</a></li>
