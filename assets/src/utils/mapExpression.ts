@@ -41,6 +41,49 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 		}
 	};
 
+	const parseBracketAccess = (startIndex: number): { nextIndex: number; start: number; end: number } | null => {
+		let j = startIndex + 1;
+		while (j < expr.length && isSpace(expr[j])) {
+			checkFunction(j);
+			j++;
+		}
+		if (j >= expr.length || !isQuote(expr[j])) {
+			return null;
+		}
+		const bracketQuote = expr[j];
+		const propertyStart = j + 1;
+		j++;
+		for (; j < expr.length; j++) {
+			checkFunction(j);
+			const ch = expr[j];
+			if (isBackslash(ch)) {
+				j++;
+				if (j >= expr.length) {
+					return null;
+				}
+				checkFunction(j);
+				continue;
+			}
+			if (ch === bracketQuote) {
+				const propertyEnd = j;
+				j++;
+				while (j < expr.length && isSpace(expr[j])) {
+					checkFunction(j);
+					j++;
+				}
+				if (j >= expr.length) {
+					return null;
+				}
+				checkFunction(j);
+				if (!isCloseBracket(expr[j])) {
+					return null;
+				}
+				return { nextIndex: j, start: propertyStart, end: propertyEnd };
+			}
+		}
+		return null;
+	};
+
 	let i: number;
 	for (i = 0; i < expr.length; i++) {
 		checkFunction(i);
@@ -126,6 +169,23 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 				if (isAlfaNumeric(c)) {
 					continue;
 				}
+				if (isOpenBracket(c)) {
+					if (start <= index && index <= i) {
+						cursor.type = 'Property';
+						cursor.pos = { start: start, end: i };
+					}
+					const bracket = parseBracketAccess(i);
+					if (bracket == null) {
+						return null;
+					}
+					if (bracket.start <= index && index <= bracket.end) {
+						cursor.type = 'Property';
+						cursor.pos = { start: bracket.start, end: bracket.end };
+					}
+					checkFunction(bracket.nextIndex);
+					i = bracket.nextIndex;
+					continue;
+				}
 				if (isDot(c)) {
 					i++;
 					if (i === expr.length || !isAlfa(expr[i])) {
@@ -184,8 +244,10 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 	if (state === 'path') {
 		end = i;
 		if (start <= index && index <= end) {
-			cursor.type = 'Property';
-			cursor.pos = { start: start, end: end };
+			if (cursor.pos == null || index < cursor.pos.start || index > cursor.pos.end) {
+				cursor.type = 'Property';
+				cursor.pos = { start: start, end: end };
+			}
 		}
 	}
 
@@ -204,6 +266,10 @@ function isBackslash(c: string): boolean {
 	return c === '\\';
 }
 
+function isCloseBracket(c: string): boolean {
+	return c === ']';
+}
+
 function isCloseParenthesis(c: string): boolean {
 	return c === ')';
 }
@@ -218,6 +284,10 @@ function isDot(c: string): boolean {
 
 function isNumber(c: string): boolean {
 	return '0' <= c && c <= '9';
+}
+
+function isOpenBracket(c: string): boolean {
+	return c === '[';
 }
 
 function isOpenParenthesis(c: string): boolean {
@@ -340,23 +410,37 @@ function runTests(): void {
 	};
 	console.assert(mapExpressionArguments('foo') === null);
 	console.assert(mapExpressionArguments('map() "boo"') === null);
-	console.assert(mapsAreEqual(mapExpressionArguments('map()'), new Map()));
+	const emptyArgs = mapExpressionArguments('map()');
+	console.assert(emptyArgs != null && mapsAreEqual(emptyArgs, new Map()));
+	const parsedArgs = mapExpressionArguments('map("a", 5, "b", false)');
 	console.assert(
-		mapsAreEqual(
-			mapExpressionArguments('map("a", 5, "b", false)'),
-			new Map([
-				['a', '5'],
-				['b', 'false'],
-			]),
-		),
+		parsedArgs != null &&
+			mapsAreEqual(
+				parsedArgs,
+				new Map([
+					['a', '5'],
+					['b', 'false'],
+				]),
+			),
 	);
-	console.assert(mapsAreEqual(mapExpressionArguments("map('c', \"'s'\")"), new Map([['c', '"\'s\'"']])));
+	const singleQuoteArgs = mapExpressionArguments("map('c', \"'s'\")");
+	console.assert(singleQuoteArgs != null && mapsAreEqual(singleQuoteArgs, new Map([['c', '"\'s\'"']])));
 	const m = new Map<string, string>([
 		['k1', 'foo'],
 		['k2', "if(a,b,c) 'boo'"],
 		['k3', 'map("k", "v")'],
 	]);
+	const bracketDoubleQuote = parseMapExpression('value["key"]', 8);
+	console.assert(bracketDoubleQuote != null);
+	console.assert(bracketDoubleQuote?.type === 'Property');
+	console.assert(bracketDoubleQuote?.pos?.start === 7 && bracketDoubleQuote?.pos?.end === 10);
+	const bracketSingleQuote = parseMapExpression("value['name']", 9);
+	console.assert(bracketSingleQuote != null);
+	console.assert(bracketSingleQuote?.type === 'Property');
+	console.assert(bracketSingleQuote?.pos?.start === 7 && bracketSingleQuote?.pos?.end === 11);
+	console.assert(parseMapExpression('value["key"', 8) === null);
 	console.assert(buildMapExpression(m) === 'map("k1",foo,"k2",if(a,b,c) \'boo\',"k3",map("k", "v"))');
 }
 
-export { parseMapExpression, ExpressionFragment, mapExpressionArguments, buildMapExpression };
+export { parseMapExpression, mapExpressionArguments, buildMapExpression };
+export type { ExpressionFragment };
