@@ -59,11 +59,20 @@ func convertLogicalFromWhere(op state.WhereLogical) FilterLogical {
 	return OpOr
 }
 
-// FilterCondition represents the condition of a filter.
+// FilterCondition represents a single filter condition.
 type FilterCondition struct {
-	Property string         `json:"property"`        // property's path.
-	Operator FilterOperator `json:"operator"`        // operator.
-	Values   []string       `json:"values,omitzero"` // values; a value cannot be longer than 60 runes and cannot contain the NUL byte.
+	// Property path.
+	Property string `json:"property"`
+
+	// Operator to apply.
+	Operator FilterOperator `json:"operator"`
+
+	// Values.
+	// If the property has a text type with allowed values,
+	// the unique value of values must be one of the allowed values.
+	// In all other cases, each value must be at most 60 runes and must not
+	// contain the NUL byte.
+	Values []string `json:"values,omitzero"`
 }
 
 // FilterOperator represents a filter condition operator.
@@ -603,6 +612,17 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 		}
 		if cond.Values == nil {
 			continue
+		}
+		// Handles separately the text type case with allowed values.
+		if kind == types.TextKind {
+			if values := p.Type.Values(); values != nil {
+				for _, value := range cond.Values {
+					if !slices.Contains(values, value) {
+						return nil, fmt.Errorf("value of the %q property is not among the allowed values", cond.Property)
+					}
+				}
+				continue
+			}
 		}
 		var k = kind
 		if kind == types.ArrayKind {

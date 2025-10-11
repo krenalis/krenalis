@@ -585,7 +585,7 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "l", Type: types.Array(types.Map(types.Text()))},
 		{Name: "m", Type: types.Object([]types.Property{{Name: "x", Type: types.Text()}}), Nullable: true},
 		{Name: "n", Type: types.Map(types.Text()), Nullable: true},
-		{Name: "o", Type: types.Text().WithValues("foo", "boo"), Nullable: true},
+		{Name: "o", Type: types.Text().WithValues("foo", "boo", ""), Nullable: true},
 	})
 
 	tests := []struct {
@@ -776,6 +776,15 @@ func Test_validateFilter(t *testing.T) {
 			filter: Filter{
 				Logical: OpAnd,
 				Conditions: []FilterCondition{
+					{Property: "o", Operator: OpIsOneOf, Values: []string{"foo", "moo"}},
+				},
+			},
+			err: fmt.Errorf(`value of the "o" property is not among the allowed values`),
+		},
+		{
+			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
 					{Property: "g", Operator: OpIsEmpty},
 				},
 			},
@@ -868,6 +877,8 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "n", Operator: OpIsNotNull},
 					{Property: "n", Operator: OpIsNotEmpty},
 					{Property: "o", Operator: OpIs, Values: []string{"foo"}},
+					{Property: "o", Operator: OpIs, Values: []string{""}},
+					{Property: "o", Operator: OpIsOneOf, Values: []string{"foo", "boo"}},
 					{Property: "o", Operator: OpIsNotNull},
 				},
 			},
