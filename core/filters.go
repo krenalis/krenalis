@@ -568,7 +568,13 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 			}
 		case OpIsEmpty, OpIsNotEmpty:
 			switch kind {
-			case types.TextKind, types.JSONKind, types.ArrayKind, types.MapKind:
+			case types.TextKind:
+				if values := p.Type.Values(); len(values) > 0 {
+					if !slices.Contains(values, "") {
+						return nil, fmt.Errorf("operator %q cannot be used on text properties that exclude the empty string from allowed values", op)
+					}
+				}
+			case types.JSONKind, types.ArrayKind, types.MapKind:
 			case types.ObjectKind:
 				if disallowEmptyOnObject {
 					if target == state.TargetEvent {

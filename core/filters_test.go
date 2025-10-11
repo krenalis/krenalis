@@ -586,6 +586,7 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "m", Type: types.Object([]types.Property{{Name: "x", Type: types.Text()}}), Nullable: true},
 		{Name: "n", Type: types.Map(types.Text()), Nullable: true},
 		{Name: "o", Type: types.Text().WithValues("foo", "boo", ""), Nullable: true},
+		{Name: "p", Type: types.Text().WithValues("foo"), Nullable: true},
 	})
 
 	tests := []struct {
@@ -785,6 +786,24 @@ func Test_validateFilter(t *testing.T) {
 			filter: Filter{
 				Logical: OpAnd,
 				Conditions: []FilterCondition{
+					{Property: "p", Operator: OpIsEmpty},
+				},
+			},
+			err: fmt.Errorf(`operator "is empty" cannot be used on text properties that exclude the empty string from allowed values`),
+		},
+		{
+			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
+					{Property: "p", Operator: OpIsNotEmpty},
+				},
+			},
+			err: fmt.Errorf(`operator "is not empty" cannot be used on text properties that exclude the empty string from allowed values`),
+		},
+		{
+			filter: Filter{
+				Logical: OpAnd,
+				Conditions: []FilterCondition{
 					{Property: "g", Operator: OpIsEmpty},
 				},
 			},
@@ -880,6 +899,8 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "o", Operator: OpIs, Values: []string{""}},
 					{Property: "o", Operator: OpIsOneOf, Values: []string{"foo", "boo"}},
 					{Property: "o", Operator: OpIsNotNull},
+					{Property: "o", Operator: OpIsEmpty},
+					{Property: "o", Operator: OpIsNotEmpty},
 				},
 			},
 			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n", "o"},
