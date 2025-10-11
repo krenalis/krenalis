@@ -34,6 +34,74 @@ func Test_BitSize(t *testing.T) {
 
 }
 
+func Test_NormalizedUTF8(t *testing.T) {
+	invalidUTF8 := string([]byte{0xff})
+
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr string
+	}{
+		{
+			name:  "EmptyString",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "ASCII",
+			input: "Simple ASCII text",
+			want:  "Simple ASCII text",
+		},
+		{
+			name:  "AlreadyNormalized",
+			input: "Caf\u00e9",
+			want:  "Caf\u00e9",
+		},
+		{
+			name:  "NeedsCompositionSingleRune",
+			input: "Cafe\u0301",
+			want:  "Caf\u00e9",
+		},
+		{
+			name:  "NeedsCompositionMultipleRunes",
+			input: "A\u030Angstro\u0308m",
+			want:  "\u00c5ngstr\u00f6m",
+		},
+		{
+			name:    "InvalidUTF8",
+			input:   invalidUTF8,
+			wantErr: "invalid UTF-8 encoding",
+		},
+		{
+			name:    "ContainsNUL",
+			input:   "text\x00with-nul",
+			wantErr: "contains NUL byte",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := normalizedUTF8(tt.input)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error %q, got nil", tt.wantErr)
+				}
+				if err.Error() != tt.wantErr {
+					t.Fatalf("expected error %q, got %q", tt.wantErr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
 func Test_Parameter(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		p := Parameter("custom")

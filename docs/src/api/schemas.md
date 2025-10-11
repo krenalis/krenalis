@@ -81,6 +81,12 @@ For example a text limited to specific values:
 }
 ```
 
+If `"values"` is present:
+
+- it must contain at least one value
+- the empty string is allowed
+- values must not include the NUL character
+
 For example a text matching a regular expression:
 
 ```json
@@ -456,16 +462,16 @@ Examples of values are `{"first_name": "John", "last_name": "Hollis", "age": 34,
 
 An object property has the following keys:
 
-| Key              | Type      | Required           | Default | Description                                                                                                                                                                                |
-|------------------|-----------|--------------------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name`           | `String`  | <center>✓</center> |         | The name of the property. It must start with a letter `[A-Za-z_]` and can only contain alphanumeric characters and underscores `[A-Za-z0-9_]` after that.                                  |
-| `prefilled`      | `Number`  |                    | `""`    | This is the value that appears pre-filled when a destination action is configured on events. It suggests the expression linked to the property, so it doesn't have to be entered manually. |
-| `type`           | `Object`  | <center>✓</center> |         | The type of the property, which can be any [data type](#data-types).                                                                                                                       |
-| `createRequired` | `Boolean` |                    | `false` | Indicates whether the property is required during creation, i.e., whether a value for the property is required at the time of creation.                                                    |
-| `updateRequired` | `Boolean` |                    | `false` | Indicates whether the property is required for updating, i.e., whether a value for the property is mandatory when updating an existing record.                                             |
-| `readOptional`   | `Boolean` |                    | `false` | Indicates whether the property may not be present when reading, i.e., whether the property is optional and may not be included in the data when retrieved.                                 |
-| `nullable`       | `Boolean` |                    | `false` | Indicates whether the property can be `null`.                                                                                                                                              |
-| `description`    | `String`  |                    | `""`    | A description providing additional information about the property's usage.                                                                                                                 |
+| Key              | Type      | Required           | Default | Description                                                                                                                                                                                                                       |
+|------------------|-----------|--------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`           | `String`  | <center>✓</center> |         | The name of the property. It must start with a letter `[A-Za-z_]` and can only contain alphanumeric characters and underscores `[A-Za-z0-9_]` after that.                                                                         |
+| `prefilled`      | `Number`  |                    | `""`    | This is the value that appears pre-filled when a destination action is configured on events. It suggests the expression linked to the property, so it doesn't have to be entered manually. It must not include the NUL character. |
+| `type`           | `Object`  | <center>✓</center> |         | The type of the property, which can be any [data type](#data-types).                                                                                                                                                              |
+| `createRequired` | `Boolean` |                    | `false` | Indicates whether the property is required during creation, i.e., whether a value for the property is required at the time of creation.                                                                                           |
+| `updateRequired` | `Boolean` |                    | `false` | Indicates whether the property is required for updating, i.e., whether a value for the property is mandatory when updating an existing record.                                                                                    |
+| `readOptional`   | `Boolean` |                    | `false` | Indicates whether the property may not be present when reading, i.e., whether the property is optional and may not be included in the data when retrieved.                                                                        |
+| `nullable`       | `Boolean` |                    | `false` | Indicates whether the property can be `null`.                                                                                                                                                                                     |
+| `description`    | `String`  |                    | `""`    | A description providing additional information about the property's usage. It must not include the NUL character.                                                                                                                 |
 
 ### map
 

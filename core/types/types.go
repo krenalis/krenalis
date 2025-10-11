@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/core/decimal"
@@ -942,11 +943,17 @@ func (t Type) Elem() Type {
 	return t.vl.(Type)
 }
 
-// normalizedUTF8 returns s as a normalized UTF-8 encoded string.
-// Returns an error if s is not a valid UTF-8 encoded string.
+// normalizedUTF8 returns s as a normalized UTF-8 encoded string. Returns an
+// error if s is not a valid UTF-8 encoded string or contains a NUL byte.
 func normalizedUTF8(s string) (string, error) {
+	if s == "" {
+		return s, nil
+	}
 	if !utf8.ValidString(s) {
 		return "", errors.New("invalid UTF-8 encoding")
+	}
+	if strings.Contains(s, "\x00") {
+		return "", errors.New("contains NUL byte")
 	}
 	return norm.NFC.String(s), nil
 }
