@@ -21,18 +21,17 @@ To set the group's identifier, call the `id` method with an argument:
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 id(id)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 id(id?: string | null): string | null
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -66,18 +65,17 @@ To modify the group's traits, utilize the `traits` method with an argument:
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 traits(traits)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 traits(traits?: Record<string, unknown> | null): Record<string, unknown>
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 

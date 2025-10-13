@@ -35,11 +35,11 @@ The page call allows you to capture when a user views a page on your website, in
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 page(category, name, properties, options, callback)
 ```
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 page(
@@ -64,7 +64,7 @@ page(
 ): Promise<SentEvent>
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters 
 
@@ -96,12 +96,11 @@ The screen call enables you to capture instances when a user views a screen and 
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 screen(category, name, properties, options, callback)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 screen(
@@ -126,8 +125,7 @@ screen(
 ): Promise<SentEvent>
 ```
 
-</details>
-
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -160,12 +158,11 @@ The track call is used to send specific events or actions, and associated proper
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 track(name, properties, options, callback)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 track(
@@ -176,7 +173,7 @@ track(
 ): Promise<SentEvent>
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -208,12 +205,11 @@ Through an identify call, you can connect previous and upcoming events to a reco
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 identify(userId, traits, options, callback)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 identify(
@@ -230,7 +226,7 @@ identify(
 ): Promise<SentEvent>
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -278,6 +274,8 @@ When called with arguments, implements the [group call](/integrations/events/spe
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 // returns a Group instance
 group()
@@ -285,9 +283,6 @@ group()
 // implements the group call
 group(groupId, traits, options, callback)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 // returns a Group instance
@@ -309,7 +304,7 @@ group(
 ): Promise<SentEvent>
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -344,18 +339,17 @@ The `user` method returns an instance of the [`User class`](user-class) to read 
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 user()
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 user(): User
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -383,18 +377,17 @@ If it is called after `Meergo` is ready, it also returns the Anonymous ID.
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 setAnonymousId(id)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 setAnonymousId(id?: string): string | undefined
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -416,18 +409,17 @@ The `getSessionId` method returns the current session identifier.
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 getSessionId()
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 getSessionId(): number
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -445,18 +437,17 @@ The `startSession` method starts a new session using the provided identifier. If
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 startSession(id)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 startSession(id?: number): void
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -476,18 +467,17 @@ The `endSession` method ends the session.
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 endSession()
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 endSession(): void
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -505,18 +495,17 @@ The `ready` method calls a callback after the Meergo finishes initializing. If p
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 ready(callback)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 ready(callback?: () => void): Promise<void>
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -552,18 +541,17 @@ The `reset` method resets the user and group identifiers, and updates or removes
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 reset(all)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 reset(all?: boolean): void
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -591,18 +579,17 @@ The `debug` method toggles debug mode.
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 debug(on)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 debug(on: boolean): void
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -623,18 +610,17 @@ The `close` method closes the Meergo instance. It tries to preserve the queue in
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 close()
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 close(): void
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 

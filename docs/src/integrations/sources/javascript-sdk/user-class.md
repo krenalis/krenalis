@@ -21,18 +21,17 @@ To set the user's identifier, call the `id` method with an argument:
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 id(id)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 id(id?: string | null): string | null
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -66,18 +65,17 @@ To modify the Anonymous ID, call the `anonymous` method with an argument:
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 anonymousId(id)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 anonymousId(id?: string | null): string
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
@@ -111,18 +109,17 @@ To modify the user's traits, call the `traits` method with an argument:
 
 #### Syntax
 
+<!-- codeblocks sync:js-sdk-syntax Syntax -->
+
 ```javascript
 traits(traits)
 ```
-
-<details class="typescript">
-<summary><span>TypeScript</span></summary>
 
 ```typescript
 traits(traits?: Record<string, unknown> | null): Record<string, unknown>
 ```
 
-</details>
+<!-- end codeblocks -->
 
 #### Parameters
 
