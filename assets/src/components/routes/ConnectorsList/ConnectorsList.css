@@ -124,7 +124,7 @@
 }
 
 .connectors-list__card-logo > img {
-	max-height: 70px;
+	height: 70px;
 	width: auto;
 	padding: 5px;
 	margin: 0 auto 30px auto;
