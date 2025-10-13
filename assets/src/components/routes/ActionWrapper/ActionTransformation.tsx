@@ -60,7 +60,6 @@ import {
 	TransformationLanguagesResponse,
 	TransformDataResponse,
 } from '../../../lib/api/types/responses';
-import getLanguageLogo from '../../helpers/getLanguageLogo';
 import Type, { ArrayType, MapType, ObjectType, Property, TextType } from '../../../lib/api/types/types';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Action.types';
@@ -83,6 +82,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import appContext from '../../../context/AppContext';
 import { mapExpressionArguments, buildMapExpression } from '../../../utils/mapExpression';
 import { isPlainObject } from '../../../utils/isPlainObject';
+import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -1110,7 +1110,7 @@ const TransformationBox = ({
 									{transformationType === 'mappings' ? (
 										<SlIcon name='shuffle' />
 									) : (
-										getLanguageLogo(selectedLanguage)
+										<ExternalLogo code={selectedLanguage.toLowerCase()} />
 									)}
 								</span>
 								<div className='transformation-box__header-text'>

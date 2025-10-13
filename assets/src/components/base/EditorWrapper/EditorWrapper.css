@@ -23,41 +23,6 @@
 	background-color: transparent !important;
 }
 
-.editor-wrapper__heading {
-	background-color: var(--bg-gray);
-	border-radius: 20px;
-	padding: 18px 30px 15px 30px;
-	border-bottom-left-radius: 0;
-	border-bottom-right-radius: 0;
-	color: var(--sl-color-neutral-500);
-	text-transform: capitalize;
-	font-size: 13px;
-	border-bottom: 1px solid var(--sl-color-neutral-200);
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 10px;
-}
-
-.editor-wrapper__logo-and-language {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.editor-wrapper__language-logo > img {
-	max-width: 25px;
-}
-
-.editor-wrapper__language {
-	font-weight: 600;
-}
-
-.editor-wrapper__switch-language-dropdown sl-button::part(label),
-.editor-wrapper__switch-language-dropdown sl-button::part(caret) {
-	color: var(--sl-color-neutral-600);
-}
-
 .editor-wrapper__editor {
 	padding: 20px 20px 20px 10px;
 }

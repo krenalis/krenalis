@@ -1,11 +1,6 @@
 import React, { useEffect, ReactNode, useRef } from 'react';
 import './EditorWrapper.css';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import * as monaco from 'monaco-editor';
-import getLanguageLogo from '../../helpers/getLanguageLogo';
 
 async function loadMonacoEditor() {
 	window.MonacoEnvironment = {
@@ -38,7 +33,6 @@ interface EditorWrapperProps {
 	onClick?: () => void;
 	onMount?: (editor: any) => void;
 	isReadOnly?: boolean;
-	showHeading?: boolean;
 	hideGutter?: boolean;
 	className?: string;
 }
@@ -58,7 +52,6 @@ const EditorWrapper = ({
 	isReadOnly,
 	onClick,
 	onMount,
-	showHeading,
 	hideGutter,
 	className,
 	...delegated
@@ -74,37 +67,11 @@ const EditorWrapper = ({
 		}
 	}, []);
 
-	const languageLogo = getLanguageLogo(language);
-
 	return (
 		<div
 			className={`editor-wrapper${className ? ' ' + className : ''}${hideGutter ? ' editor-wrapper--hide-gutter' : ''}`}
 			onClick={onClick}
 		>
-			{showHeading && (
-				<div className='editor-wrapper__heading'>
-					<div className='editor-wrapper__logo-and-language'>
-						<span className='editor-wrapper__language-logo'>{languageLogo}</span>
-						{languageChoices ? (
-							<SlDropdown className='editor-wrapper__switch-language-dropdown' ref={languageDropdownRef}>
-								<SlButton slot='trigger' variant='text' size='small' caret>
-									{language}
-								</SlButton>
-								<SlMenu onSlSelect={onLanguageChange}>
-									{languageChoices.map((language) => (
-										<SlMenuItem key={language} value={language}>
-											{language}
-										</SlMenuItem>
-									))}
-								</SlMenu>
-							</SlDropdown>
-						) : (
-							<span className='editor-wrapper__language'>{language}</span>
-						)}
-					</div>
-					<div className='editor-wrapper__actions'>{actions}</div>
-				</div>
-			)}
 			<div
 				className='editor-wrapper__editor'
 				style={{ width: width ? `${width}px` : '', height: height ? `${height}px` : '' }}

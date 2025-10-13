@@ -712,8 +712,7 @@ inherit the disabled style */
 }
 
 .transformation-box__header-title img {
-	width: 22px;
-	max-width: 22px;
+	height: 25px;
 	width: auto;
 }
 
