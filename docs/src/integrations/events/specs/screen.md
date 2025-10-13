@@ -14,36 +14,115 @@ Use the screen call when there is a change in the displayed content or when a us
 
 ## How to make a screen call
 
-To make a screen call, you can use a Meergo SDK. Refer to its documentation for more details.
+To make a screen call, you can use a Meergo SDK.
+
+<!-- codeblocks sync:sdk Screen -->
+
+```javascript
+meergo.screen('Workout Summary', {
+    workout_type: 'Cardio',
+    duration_minutes: 45,
+    calories_burned: 380
+});
+```
+Refer to the [JavaScript SDK](/integrations/sources/javascript-sdk) for more details.
+
+```python
+analytics.screen('user-123', 'Workout Summary', {
+    'workout_type': 'Cardio',
+    'duration_minutes': 45,
+    'calories_burned': 380
+})
+```
+Refer to the [Python SDK](/integrations/sources/python) for more details.
+
+```go
+client.Enqueue(analytics.Screen{
+    UserId: "user-123",
+    Name:   "Workout Summary",
+    Properties: map[string]any{
+        "workout_type":     "Cardio",
+        "duration_minutes": 45,
+        "calories_burned":  380,
+    },
+})
+```
+Refer to the [Go SDK](/integrations/sources/go) for more details.
+
+```nodejs
+analytics.screen({
+    userId: 'user-123',
+    name: 'Workout Summary',
+    properties: {
+        workout_type: 'Cardio',
+        duration_minutes: 45,
+        calories_burned: 380
+    }
+});
+```
+Refer to the [Node.js SDK](/integrations/sources/nodejs) for more details.
+
+```java
+analytics.enqueue(ScreenMessage.builder("Workout Summary")
+    .userId("user-123")
+    .properties(new com.meergo.analytics.messages.Properties()
+        .putValue("workout_type", "Cardio")
+        .putValue("duration_minutes", 45)
+        .putValue("calories_burned", 380))
+);
+```
+Refer to the [Java SDK](/integrations/sources/java) for more details, or use Java with the [Android SDK](/integrations/sources/android-sdk).
+
+```kotlin
+analytics.screen(
+    "Workout Summary",
+    properties = buildJsonObject {
+        put("workout_type", "Cardio")
+        put("duration_minutes", 45)
+        put("calories_burned", 380)
+    }
+)
+```
+Refer to the [Android SDK](/integrations/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
+
+```csharp
+Analytics.Client.Screen("user-123", "Workout Summary", new Properties {
+    { "workout_type", "Cardio" },
+    { "duration_minutes", 45 },
+    { "calories_burned", 380 }
+});
+```
+Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+
+<!-- end codeblocks -->
 
 The following is an example of how a screen call would appear in Meergo once received and processed:
 
 ```json
 {
-  "anonymousId": "4z7a3b8c1f5e207d6e9b0c4f58",
+  "anonymousId": "f8d886bf-e1a6-484c-9ded-ac789ec4146b",
   "channel": "mobile",
   "context": {
     "ip": "172.16.254.1"
   },
   "messageId": "1b3ff72a-ccbd-22f5-9abc-bb09c6d2a8ef",
-  "receivedAt": "2024-01-16T09:03:34.917Z",
-  "sentAt": "2024-01-16T09:03:34.781Z",
-  "timestamp": "2024-01-16T09:03:34.781Z",
-  "name": "Product",
+  "receivedAt": "2025-10-13T09:03:34.917Z",
+  "sentAt": "2025-10-13T09:03:34.781Z",
+  "timestamp": "2025-10-13T09:03:34.781Z",
+  "name": "Workout Summary",
   "properties": {
-    "name": "Product Details",
-    "category": "E-commerce",
-    "label": "Product ABC",
-    "additionalInfo": {
-      "price": 19.99,
-      "color": "green"
-    }
+    "name": "Workout Summary",
+    "workout_type": "Cardio",
+    "duration_minutes": 45,
+    "calories_burned": 380
   },
   "type": "screen",
-  "userId": "123456",
+  "userId": "user-123",
   "version": "1.0"
 }
 ```
+
+As you can see, there is much more information than what is provided in SDK examples. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
 
 ## Properties
 

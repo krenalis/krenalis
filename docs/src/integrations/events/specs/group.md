@@ -13,50 +13,126 @@ It also provides the ability to store custom traits related to that group, such 
 For best results, it is recommended to make a group call in the following scenarios:
 
 * When a new user signs up or onboards to your website or application.
-
 * Whenever there are changes in group-specific traits (e.g., industry, employee count).
- 
 * In situations where users can dynamically switch between different groups during their session.
 
 ## How to make a group call
 
-To make a group call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](/integrations/sources/javascript-sdk) in the browser, you can make a group call in the following way:
+To make a group call, you can use a Meergo SDK.
+
+<!-- codeblocks sync:sdk Group -->
 
 ```javascript
-meergo.group('84s76y49tb28v1jxq', {
-    name: "AcmeTech",
-    industry: "Technology",
+meergo.group('group-890', {
+    name: 'AcmeTech',
+    industry: 'Technology',
     employeeCount: 100
 });
 ```
+Refer to the [JavaScript SDK](/integrations/sources/javascript-sdk) for more details.
 
-The first argument, `'84s76y49tb28v1jxq'`, is the **Group ID**, which uniquely identifies the group in your website's database. The second argument consists of the **group's traits**, which are pieces of information you want to store with the event.
+```python
+analytics.group(
+    user_id="user-123",
+    group_id="group-890",
+    traits={
+        "name": "AcmeTech",
+        "industry": "Technology",
+        "employeeCount": 100,
+    },
+)
+```
+Refer to the [Python SDK](/integrations/sources/python) for more details.
+
+```go
+client.Enqueue(analytics.Group{
+    UserId: "user-123",
+    GroupId: "group-890",
+    Traits: map[string]any{
+        "name":          "AcmeTech",
+        "industry":      "Technology",
+        "employeeCount": 100,
+    },
+})
+```
+Refer to the [Go SDK](/integrations/sources/go) for more details.
+
+```nodejs
+analytics.group({
+    userId: 'user-123',
+    groupId: 'group-890',
+    traits: {
+        name: 'AcmeTech',
+        industry: 'Technology',
+        employeeCount: 100
+    }
+});
+```
+Refer to the [Node.js SDK](/integrations/sources/nodejs) for more details.
+
+```java
+analytics.enqueue(GroupMessage.builder("group-890")
+    .userId("user-123")
+    .traits(new com.meergo.analytics.messages.Properties()
+        .putValue("name", "AcmeTech")
+        .putValue("industry", "Technology")
+        .putValue("employeeCount", 100))
+);
+```
+Refer to the [Java SDK](/integrations/sources/java) for more details.
+
+```csharp
+Analytics.Client.Group("user-123", "group-890", new Properties {
+    { "name", "AcmeTech" },
+    { "industry", "Technology" },
+    { "employeeCount", 100 }
+});
+```
+Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+
+```kotlin
+analytics.group(
+    userId = "user-123",
+    groupId = "group-890",
+    traits = buildJsonObject {
+        put("name", "AcmeTech")
+        put("industry", "Technology")
+        put("employeeCount", 100)
+    }
+)
+```
+
+Refer to the [Android SDK](/integrations/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
+
+<!-- end codeblocks -->
 
 The following is an example of how the previous group call would appear in Meergo once received and processed:
+
 ```json
 {
-  "anonymousId": "3a8b2c9f6e107d5e8b1c0f47",
+  "anonymousId": "f8d886bf-e1a6-484c-9ded-ac789ec4146b",
   "channel": "browser",
   "context": {
     "ip": "172.16.254.1",
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.100 Safari/537.36"
+    "userAgent": "Mozilla/5.0 (Macintosh) Chrome/138 Safari/537.36"
   },
   "messageId": "0a2ef1d3-ebad-41b2-9c8a-7b58d8e1a8f9",
-  "receivedAt": "2024-01-16T09:42:51.477Z",
-  "sentAt": "2024-01-16T09:42:51.210Z",
-  "timestamp": "2024-01-16T09:42:51.210Z",
+  "receivedAt": "2025-10-13T09:42:51.477Z",
+  "sentAt": "2025-10-13T09:42:51.210Z",
+  "timestamp": "2025-10-13T09:42:51.210Z",
   "traits": {
     "name": "AcmeTech",
     "industry": "Technology",
     "employeeCount": 100
   },
   "type": "group",
-  "groupId": "84s76y49tb28v1jxq",
+  "userId": "user-123",
+  "groupId": "group-890",
   "version": "1.0"
 }
 ```
 
-As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
+As you can see, there is much more information than what is provided in SDK examples. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
 
 ## Traits
 

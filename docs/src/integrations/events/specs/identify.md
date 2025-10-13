@@ -11,46 +11,156 @@ Through an identify call, you can connect previous and upcoming events to a reco
 For optimal use, Meergo suggests making an identify call in the following situations:
 
 * Right after a user registers for the first time.
-
 * Once a user successfully logs in.
-
 * When there's an update to the user's information, such as a change in address or the addition of a new one.
 
 ## How to make an identify call
 
-To make an identify call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](/integrations/sources/javascript-sdk) in the browser, you can make an identify call in the following way:
+To make an identify call, you can use a Meergo SDK.
+
+<!-- codeblocks sync:sdk Identify -->
 
 ```javascript
-meergo.identify('59a20n37ec82', {
+meergo.identify('user-123', {
     firstName: 'Emily',
     lastName: 'Johnson',
     email: 'emma.johnson@example.com',
     address: {
-        street: "123 Main Street",
-        city: "San Francisco",
-        state: "CA",
-        postalCode: "94104",
-        country: "USA"
+        street: '123 Main Street',
+        city: 'San Francisco',
+        state: 'CA',
+        postalCode: '94104',
+        country: 'USA'
     }
 });
 ```
+Refer to the [JavaScript SDK](/integrations/sources/javascript-sdk) for more details.
 
-The first argument, `'59a20n37ec82'`, is the **User ID**, which uniquely identifies the user in your website's database. The second argument consists of the **user's traits**, which are pieces of information you want to store with the event and potentially unify with customer data taken from other sources.
+```python
+analytics.identify(
+    user_id="user-123",
+    traits={
+        "firstName": "Emily",
+        "lastName": "Johnson",
+        "email": "emma.johnson@example.com",
+        "address": {
+            "street": "123 Main Street",
+            "city": "San Francisco",
+            "state": "CA",
+            "postalCode": "94104",
+            "country": "USA",
+        },
+    },
+)
+```
+Refer to the [Python SDK](/integrations/sources/python) for more details.
+
+```go
+client.Enqueue(analytics.Identify{
+    UserId: "user-123",
+    Traits: map[string]any{
+        "firstName": "Emily",
+        "lastName":  "Johnson",
+        "email":     "emma.johnson@example.com",
+        "address": map[string]any{
+            "street":     "123 Main Street",
+            "city":       "San Francisco",
+            "state":      "CA",
+            "postalCode": "94104",
+            "country":    "USA",
+        },
+    },
+})
+```
+Refer to the [Go SDK](/integrations/sources/go) for more details.
+
+```nodejs
+analytics.identify({
+    userId: 'user-123',
+    traits: {
+        firstName: 'Emily',
+        lastName: 'Johnson',
+        email: 'emma.johnson@example.com',
+        address: {
+            street: '123 Main Street',
+            city: 'San Francisco',
+            state: 'CA',
+            postalCode: '94104',
+            country: 'USA'
+        }
+   }
+});
+```
+Refer to the [Node.js SDK](/integrations/sources/nodejs) for more details.
+
+```java
+analytics.enqueue(IdentifyMessage.builder()
+    .userId("user-123")
+    .traits(new com.meergo.analytics.messages.Properties()
+        .putValue("firstName", "Emily")
+        .putValue("lastName", "Johnson")
+        .putValue("email", "emma.johnson@example.com")
+        .putValue("address", new com.meergo.analytics.messages.Properties()
+            .putValue("street", "123 Main Street")
+            .putValue("city", "San Francisco")
+            .putValue("state", "CA")
+            .putValue("postalCode", "94104")
+            .putValue("country", "USA")))
+);
+```
+Refer to the [Java SDK](/integrations/sources/java) for more details.
+
+```csharp
+Analytics.Client.Identify("user-123", new Properties {
+    { "firstName", "Emily" },
+    { "lastName", "Johnson" },
+    { "email", "emma.johnson@example.com" },
+    { "address", new Properties {
+        { "street", "123 Main Street" },
+        { "city", "San Francisco" },
+        { "state", "CA" },
+        { "postalCode", "94104" },
+        { "country", "USA" }
+    }}
+});
+```
+Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+
+```kotlin
+analytics.identify(
+    userId = "user-123",
+    traits = buildJsonObject {
+        put("firstName", "Emily")
+        put("lastName", "Johnson")
+        put("email", "emma.johnson@example.com")
+        putJsonObject("address") {
+            put("street", "123 Main Street")
+            put("city", "San Francisco")
+            put("state", "CA")
+            put("postalCode", "94104")
+            put("country", "USA")
+        }
+    }
+)
+```
+Refer to the [Android SDK](/integrations/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
+
+<!-- end codeblocks -->
 
 The following is an example of how the previous identify call would appear in Meergo once received and processed:
 
 ```json
 {
-  "anonymousId": "3a8b2c9f6e107d5e8b1c0f47",
+  "anonymousId": "f8d886bf-e1a6-484c-9ded-ac789ec4146b",
   "channel": "browser",
   "context": {
     "ip": "172.16.254.1",
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.100 Safari/537.36"
+    "userAgent": "Mozilla/5.0 (Macintosh) Chrome/138 Safari/537.36"
   },
   "messageId": "022bb90c-bbac-11e4-8dfc-aa07a5b093db",
-  "receivedAt": "2024-01-15T11:54:08.391Z",
-  "sentAt": "2024-01-15T11:54:08.206Z",
-  "timestamp": "2024-01-15T11:54:08.206Z",
+  "receivedAt": "2025-10-13T11:54:08.391Z",
+  "sentAt": "2025-10-13T11:54:08.206Z",
+  "timestamp": "2025-10-13T11:54:08.206Z",
   "traits": {
     "firstName": "Emily",
     "lastName": "Johnson",
@@ -64,12 +174,12 @@ The following is an example of how the previous identify call would appear in Me
     }
   },
   "type": "identify",
-  "userId": "59a20n37ec82",
+  "userId": "user-123",
   "version": "1.0"
 }
 ```
 
-As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
+As you can see, there is much more information than what is provided in SDK examples. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
 
 ## Traits
 

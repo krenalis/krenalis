@@ -14,42 +14,116 @@ The page call is used when loading a new page. In Single Page Applications (SPAs
 
 ## How to make a page call
 
-To make a page call, you can use a Meergo SDK. Refer to its documentation for more details.
+To make a page call, you can use a Meergo SDK:
 
-For example, with the [JavaScript SDK](/integrations/javascript-sdk) in the browser, you can make a page call (apart from the automatic page call triggered by the snippet on page load) in the following way:
+<!-- codeblocks sync:sdk Page -->
 
 ```javascript
-meergo.page('Product View', {
-    productId: 308263,
+meergo.page('Product Detail', {
+    sku: 'SKU-12345',
+    name: 'White T-Shirt',
+    price: 19.99,
+    currency: 'USD'
 });
 ```
+Refer to the [JavaScript SDK](/integrations/sources/javascript-sdk) for more details.
 
-The argument, `'Sign Up'`, is the name of the page. The second argument contains the properties of the event, offering additional context to track page views. This extra information enhances the comprehension of your users' actions and is stored along with the event.
+```python
+analytics.page(
+    user_id="user-123",
+    name="Product Detail",
+    properties={
+        "sku": "SKU-12345",
+        "name": "White T-Shirt",
+        "price": 19.99,
+        "currency": "USD",
+    },
+)
+```
+Refer to the [Python SDK](/integrations/sources/python) for more details.
+
+```go
+client.Enqueue(analytics.Page{
+    UserId: "user-123",
+    Name:   "Product Detail",
+    Properties: map[string]any{
+        "sku":      "SKU-12345",
+        "name":     "White T-Shirt",
+        "price":    19.99,
+        "currency": "USD",
+    },
+})
+```
+Refer to the [Go SDK](/integrations/sources/go) for more details.
+
+```nodejs
+analytics.page({
+    userId: 'user-123',
+    name: 'Product Detail',
+    properties: {
+        sku: 'SKU-12345',
+        name: 'White T-Shirt',
+        price: 19.99,
+        currency: 'USD'
+    }
+});
+```
+Refer to the [Node.js SDK](/integrations/sources/nodejs) for more details.
+
+```java
+analytics.enqueue(PageMessage.builder("Product Detail")
+    .userId("user-123")
+    .properties(new com.meergo.analytics.messages.Properties()
+        .putValue("sku", "SKU-12345")
+        .putValue("name", "White T-Shirt")
+        .putValue("price", 19.99)
+        .putValue("currency", "USD"))
+);
+```
+Refer to the [Java SDK](/integrations/sources/java) for more details.
+
+```csharp
+Analytics.Client.Page("user-123", "Product Detail", new Properties {
+    { "sku", "SKU-12345" },
+    { "name", "White T-Shirt" },
+    { "price", 19.99 },
+    { "currency", "USD" }
+});
+```
+Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+
+<!-- end codeblocks -->
+
+The argument, `'Product Detail'`, is the name of the page. The second argument contains the properties of the event, offering additional context to track page views. This extra information enhances the comprehension of your users' actions and is stored along with the event.
 
 The following is an example of how the previous page call would appear in Meergo once received and processed:
 ```json
 {
-  "anonymousId": "3a8b2c9f6e107d5e8b1c0f47",
+  "anonymousId": "f8d886bf-e1a6-484c-9ded-ac789ec4146b",
   "channel": "browser",
   "context": {
     "ip": "172.16.254.1",
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.100 Safari/537.36"
+    "userAgent": "Mozilla/5.0 (Macintosh) Chrome/138 Safari/537.36"
   },
   "messageId": "0a2dd91e-bbac-11e4-8dfc-aa07a5b093db",
-  "receivedAt": "2024-01-14T18:07:33.288Z",
-  "sentAt": "2024-01-14T18:07:33.051Z",
-  "timestamp": "2024-01-14T18:07:33.051Z",
+  "receivedAt": "2025-10-13T18:07:33.288Z",
+  "sentAt": "2025-10-13T18:07:33.051Z",
+  "timestamp": "2025-10-13T18:07:33.051Z",
   "properties": {
-    "productId": 308263,
-    "title": "Acme Sign Up",
-    "url": "http://www.example.com"
+    "sku": "SKU-12345",
+    "name": "White T-Shirt",
+    "price": 19.99,
+    "currency": "USD",
+    "title": "White T-Shirt",
+    "url": "https://example.com"
   },
   "type": "page",
+  "userId": "user-123",
   "version": "1.0"
 }
 ```
 
-As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
+As you can see, there is much more information than what is provided in SDK examples. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
 
 ## Properties
 

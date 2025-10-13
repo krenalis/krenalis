@@ -2,6 +2,7 @@
 const hashHandlerRegistry = new WeakMap();
 
 const LANGUAGE_LABELS = new Map([
+  ['csharp', 'C#'],
   ['go', 'Go'],
   ['java', 'Java'],
   ['javascript', 'JavaScript'],
