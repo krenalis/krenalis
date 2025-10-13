@@ -582,19 +582,20 @@ nav.sections a.selected {
 }
 
 .table-of-content a {
-    position: relative;
-    display: block;
-    margin-bottom: 10px;
-    margin-left: calc(var(--toc-spacing) * -1);
-    padding-left: var(--toc-spacing);
     color: var(--toc-text-color);
+    cursor: pointer;
+    display: block;
     font-size: var(--toc-font-size);
     font-weight: 400;
-    cursor: pointer;
+    margin: 2px 0;
+    margin-left: calc(var(--toc-spacing) * -1);
+    padding: 4px 0 3px var(--toc-spacing);
+    position: relative;
     transition: color .3s;
 }
 
 .table-of-content a.is-active {
+    background: #eef2ff;
     color: var(--toc-active-color);
     font-weight: 500;
     letter-spacing: -0.01em;
