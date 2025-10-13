@@ -191,9 +191,9 @@ const Editor = ({ value, sync, language, onChange, onMount, options }: EditorPro
 	}, [language]);
 
 	useEffect(() => {
-		if (sync) {
+		setTimeout(() => {
 			editorRef.current.setValue(value);
-		}
+		}, 50);
 	}, [sync]);
 
 	return (

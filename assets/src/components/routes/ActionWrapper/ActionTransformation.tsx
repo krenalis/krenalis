@@ -1083,7 +1083,7 @@ const TransformationBox = ({
 					className={!isFullscreenTransformationOpen ? 'action__transformation-function-minimized' : ''}
 					isReadOnly={isFullscreenTransformationOpen ? false : true}
 					onMount={onEditorMount}
-					sync={!isFullscreenTransformationOpen}
+					sync={isFullscreenTransformationOpen}
 				/>
 				{isTransformationLanguageDeprecated && (
 					<SlAlert variant='danger' className='action__transformation-language-deprecated' open>
