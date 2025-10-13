@@ -8,7 +8,7 @@
 Once a source connection has been created, you need to add one or more actions to define what kind of data the connection will collect.
 Each action specifies how Meergo should import, transform, and store data from the source.
 
-You can create a connection action from the **Meergo Admin console**, directly inside the **Source Connection** page, by clicking **Add a new action ⊕** button.
+> You can create a connection action from the **Meergo Admin console**, directly inside the **Source Connection** page, by clicking **Add a new action ⊕** button.
 
 Meergo supports two main types of connection actions:
 
