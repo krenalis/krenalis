@@ -4,12 +4,23 @@
 
 # Transformations
 
-**Meergo Transformations** let you write custom mappings and functions to cover specific scenarios:
+Transformations are used in actions to process user data during import and export operations, as well as to build the events sent to destination apps based on the events received.
 
-* Transform imported user data (from apps, files, databases, or events) to fit your **customer model** schema before loading it into your data warehouse.
-* Transform unified user data during export so it matches the target app or database schema.
-* Transform real-time events from source systems into the correct format and fields required by destination apps.
+You can set up transformations in two ways:
 
-In short, Meergo Transformations give you full control over how data moves, adapts, and stays consistent across every system.
+* **Mapping:** use simple expressions to assign values to specific fields.
+* **Functions:** for more advanced scenarios, you can write custom transformation logic in **JavaScript** or **Python**.
 
-Transformations can be written either through field [mappings](transformations/mapping) between schemas or by using custom functions written in [JavaScript](transformations/javascript) or [Python](transformations/python). They can be defined directly from the Admin console or through the [API endpoints for actions](/api/actions).
+Each action that requires a transformation lets you choose the method that best fits your needs.
+
+### How transformations apply to users and events
+
+Depending on **what** is being transformed (users or events) and **when** the transformation occurs (import, export, or event sending), there are four main types:
+
+* **User import transformations:** Applied when importing users from apps, database, or files. These transformations convert user data from the source schema (app, database, or file) into your customer model schema.
+
+* **User export transformations:** Applied when exporting users to apps or databases. These transformations convert user data from your customer model schema into the destination schema expected by the app or database table.
+
+* **User traits transformations:** Applied when users are created or updated from received events. These transformations convert the user traits in the event into your customer model schema.
+
+* **Event sending transformations:** Applied when sending events to apps. These transformations convert the received events into the parameters required to build the outgoing events for destination apps.
