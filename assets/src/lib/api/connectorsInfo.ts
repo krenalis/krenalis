@@ -1,6 +1,6 @@
 import { ConnectorInfo, ConnectorType, ConnectorImplementation } from './types/connector';
 
-const connectorsInfoURL = 'https://open2b.github.io/meergo-connectors-info/connectors-info.json';
+const connectorsInfoURL = 'https://cdn.jsdelivr.net/gh/meergo/external-assets@main/potential-connectors/catalog.json';
 const CONNECTORS_INFO_TIMEOUT_MS = 2000; // in milliseconds
 const CONNECTOR_CODE_REGEX = /^[a-z0-9-]+$/;
 const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
