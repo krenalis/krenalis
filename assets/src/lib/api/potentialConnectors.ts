@@ -1,7 +1,8 @@
-import { ConnectorInfo, ConnectorType, ConnectorImplementation } from './types/connector';
+import { PotentialConnector, ConnectorType, ConnectorImplementation } from './types/connector';
 
-const connectorsInfoURL = 'https://cdn.jsdelivr.net/gh/meergo/external-assets@main/potential-connectors/catalog.json';
-const CONNECTORS_INFO_TIMEOUT_MS = 2000; // in milliseconds
+const potentialConnectorsURL =
+	'https://cdn.jsdelivr.net/gh/meergo/external-assets@main/potential-connectors/catalog.json';
+const POTENTIAL_CONNECTORS_TIMEOUT_MS = 2000; // in milliseconds
 const CONNECTOR_CODE_REGEX = /^[a-z0-9-]+$/;
 const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
 	'App',
@@ -12,21 +13,21 @@ const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
 	'Stream',
 ];
 
-const connectorsInfo = async (
+const potentialConnectors = async (
 	existingConnectorCodes: ReadonlySet<string> = new Set<string>(),
-): Promise<ConnectorInfo[]> => {
+): Promise<PotentialConnector[]> => {
 	const abortController = new AbortController();
-	const timeoutId = setTimeout(() => abortController.abort(), CONNECTORS_INFO_TIMEOUT_MS);
+	const timeoutId = setTimeout(() => abortController.abort(), POTENTIAL_CONNECTORS_TIMEOUT_MS);
 
 	try {
-		const res = await fetch(connectorsInfoURL, { signal: abortController.signal }).catch((err: unknown) => {
+		const res = await fetch(potentialConnectorsURL, { signal: abortController.signal }).catch((err: unknown) => {
 			const message = err instanceof Error ? err.message : 'unknown error';
 			if (err instanceof DOMException && err.name === 'AbortError') {
 				console.warn(
-					`aborted the request to ${connectorsInfoURL} because it exceeded ${CONNECTORS_INFO_TIMEOUT_MS} ms`,
+					`aborted the request to ${potentialConnectorsURL} because it exceeded ${POTENTIAL_CONNECTORS_TIMEOUT_MS} ms`,
 				);
 			} else {
-				console.warn(`failed to fetch ${connectorsInfoURL}: ${message}`);
+				console.warn(`failed to fetch ${potentialConnectorsURL}: ${message}`);
 			}
 			return null;
 		});
@@ -36,7 +37,7 @@ const connectorsInfo = async (
 		}
 
 		if (!res.ok) {
-			console.error(`received status ${res.status} while fetching ${connectorsInfoURL}`);
+			console.error(`received status ${res.status} while fetching ${potentialConnectorsURL}`);
 			return [];
 		}
 
@@ -47,7 +48,7 @@ const connectorsInfo = async (
 			rawText = decoder.decode(buffer);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'unknown error';
-			console.error(`unable to read the response body from ${connectorsInfoURL}: ${message}`);
+			console.error(`unable to read the response body from ${potentialConnectorsURL}: ${message}`);
 			return [];
 		}
 
@@ -56,38 +57,38 @@ const connectorsInfo = async (
 			parsed = JSON.parse(rawText);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'unknown error';
-			console.error(`file ${connectorsInfoURL} does not contain valid JSON: ${message}`);
+			console.error(`file ${potentialConnectorsURL} does not contain valid JSON: ${message}`);
 			return [];
 		}
 
-		return validateConnectorsInfoResponse(parsed, existingConnectorCodes);
+		return validatePotentialConnectorsResponse(parsed, existingConnectorCodes);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'unknown error';
-		console.error(`unexpected error while loading ${connectorsInfoURL}: ${message}`);
+		console.error(`unexpected error while loading ${potentialConnectorsURL}: ${message}`);
 		return [];
 	} finally {
 		clearTimeout(timeoutId);
 	}
 };
 
-const validateConnectorsInfoResponse = (
-	info: unknown,
+const validatePotentialConnectorsResponse = (
+	catalog: unknown,
 	existingConnectorCodes: ReadonlySet<string>,
-): ConnectorInfo[] => {
-	if (!isObject(info)) {
-		console.warn(`parsing connectors info: it is not an object`);
+): PotentialConnector[] => {
+	if (!isObject(catalog)) {
+		console.warn(`parsing potential connectors: it is not an object`);
 		return [];
 	}
-	if (!('connectors' in info) || !Array.isArray(info.connectors)) {
-		console.warn(`parsing connectors info: 'connectors' is not an array`);
+	if (!('connectors' in catalog) || !Array.isArray(catalog.connectors)) {
+		console.warn(`parsing potential connectors: 'connectors' is not an array`);
 		return [];
 	}
 	const alreadySeen = new Set<string>(existingConnectorCodes);
-	const connectors: ConnectorInfo[] = [];
-	for (let i = 0; i < info.connectors.length; i++) {
-		const c = info.connectors[i];
+	const connectors: PotentialConnector[] = [];
+	for (let i = 0; i < catalog.connectors.length; i++) {
+		const c = catalog.connectors[i];
 		try {
-			const connector = validateConnectorInfo(c);
+			const connector = validatePotentialConnector(c);
 			if (alreadySeen.has(connector.code)) {
 				if (!existingConnectorCodes.has(connector.code)) {
 					console.warn(`connector ${connector.code} is already declared in the file`);
@@ -97,13 +98,13 @@ const validateConnectorsInfoResponse = (
 			connectors.push(connector);
 			alreadySeen.add(connector.code);
 		} catch (error) {
-			console.warn(`parsing connectors info: ${error}`);
+			console.warn(`parsing potential connectors: ${error}`);
 		}
 	}
 	return connectors;
 };
 
-const validateConnectorInfo = (connector: unknown): ConnectorInfo => {
+const validatePotentialConnector = (connector: unknown): PotentialConnector => {
 	if (!isObject(connector)) {
 		throw new Error(`connector is not an object`);
 	}
@@ -188,4 +189,4 @@ const isObject = (value: unknown): value is Record<string, unknown> => {
 	return value != null && typeof value === 'object' && !Array.isArray(value);
 };
 
-export { connectorsInfo };
+export { potentialConnectors };

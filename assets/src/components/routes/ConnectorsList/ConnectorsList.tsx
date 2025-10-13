@@ -12,14 +12,14 @@ import { authCodeURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import TransformedConnector from '../../../lib/core/connector';
 import * as marked from 'marked';
-import { connectorsInfo } from '../../../lib/api/connectorsInfo';
-import { ConnectorInfo } from '../../../lib/api/types/connector';
+import { potentialConnectors } from '../../../lib/api/potentialConnectors';
+import { PotentialConnector } from '../../../lib/api/types/connector';
 import { ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_CODE_KEY } from '../../../constants/storage';
 import { UI_BASE_PATH } from '../../../constants/paths';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 
 const ConnectorsList = () => {
-	const [additionalConnectorsInfo, setAdditionalConnectorsInfo] = useState<ConnectorInfo[]>([]);
+	const [additionalPotentialConnectors, setAdditionalPotentialConnectors] = useState<PotentialConnector[]>([]);
 	const [searchTerm, setSearchTerm] = useState<string>('');
 	const [selectedConnector, setSelectedConnector] = useState<TransformedConnector>();
 	const [isLoadingDocumentation, setIsLoadingDocumentation] = useState<boolean>(false);
@@ -47,10 +47,12 @@ const ConnectorsList = () => {
 
 	const searchedConnectors: any[] = useMemo(() => {
 		const sortedConnectors = connectors.sort((a, b) => (a.label <= b.label ? -1 : 1));
-		const sortedAdditionalConnectorsInfo = additionalConnectorsInfo.sort((a, b) => (a.label <= b.label ? -1 : 1));
+		const sortedAdditionalPotentialConnectors = additionalPotentialConnectors.sort((a, b) =>
+			a.label <= b.label ? -1 : 1,
+		);
 		let searchedConnectors = [];
 
-		for (const c of [...sortedConnectors, ...sortedAdditionalConnectorsInfo]) {
+		for (const c of [...sortedConnectors, ...sortedAdditionalPotentialConnectors]) {
 			if (
 				(connectionRole === 'Source' && c.asSource == null) ||
 				(connectionRole === 'Destination' && c.asDestination == null)
@@ -82,11 +84,11 @@ const ConnectorsList = () => {
 			}
 		}
 		return searchedConnectors;
-	}, [connectors, additionalConnectorsInfo, connectionRole, searchTerm]);
+	}, [connectors, additionalPotentialConnectors, connectionRole, searchTerm]);
 
 	const categories: string[] = useMemo(() => {
 		let categories = [];
-		for (const connector of [...connectors, ...additionalConnectorsInfo]) {
+		for (const connector of [...connectors, ...additionalPotentialConnectors]) {
 			if (
 				(connectionRole === 'Source' && connector.asSource == null) ||
 				(connectionRole === 'Destination' && connector.asDestination == null)
@@ -103,24 +105,24 @@ const ConnectorsList = () => {
 		categories.sort();
 		categories.unshift('All');
 		return categories;
-	}, [connectors, additionalConnectorsInfo]);
+	}, [connectors, additionalPotentialConnectors]);
 
 	useLayoutEffect(() => {
 		setTitle(`Add a new ${connectionRole.toLocaleLowerCase()}`);
 	}, [connectionRole]);
 
 	useEffect(() => {
-		const fetchConnectorsInfo = async () => {
-			let connectors: ConnectorInfo[];
+		const fetchPotentialConnectors = async () => {
+			let connectors: PotentialConnector[];
 			try {
-				connectors = await connectorsInfo(existingConnectorCodes);
+				connectors = await potentialConnectors(existingConnectorCodes);
 			} catch (err) {
 				console.error(err);
 				return;
 			}
-			setAdditionalConnectorsInfo(connectors);
+			setAdditionalPotentialConnectors(connectors);
 		};
-		fetchConnectorsInfo();
+		fetchPotentialConnectors();
 	}, [existingConnectorCodes]);
 
 	const onConnectorAdd = async () => {
@@ -183,12 +185,12 @@ const ConnectorsList = () => {
 
 	const cards = [];
 	for (const c of searchedConnectors) {
-		const isInfo = c['asSource']?.['implemented'] != null || c['asDestination']?.['implemented'] != null;
+		const isPotential = c['asSource']?.['implemented'] != null || c['asDestination']?.['implemented'] != null;
 		if (selectedCategory === 'All' || c.categories.includes(selectedCategory)) {
 			let card = (
 				<ConnectorCard
-					connector={!isInfo ? (c as TransformedConnector) : null}
-					connectorInfo={isInfo ? (c as ConnectorInfo) : null}
+					connector={!isPotential ? (c as TransformedConnector) : null}
+					potentialConnector={isPotential ? (c as PotentialConnector) : null}
 					onClick={onConnectorClick}
 					role={connectionRole}
 				/>
@@ -297,13 +299,13 @@ const ConnectorsList = () => {
 
 interface ConnectorsCardProps {
 	connector: TransformedConnector | null;
-	connectorInfo: ConnectorInfo | null;
+	potentialConnector: PotentialConnector | null;
 	onClick?: (c: TransformedConnector) => void;
 	role: string;
 }
 
-const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCardProps) => {
-	if ((connector != null && connectorInfo != null) || (connector == null && connectorInfo == null)) {
+const ConnectorCard = ({ connector, potentialConnector, onClick, role }: ConnectorsCardProps) => {
+	if ((connector != null && potentialConnector != null) || (connector == null && potentialConnector == null)) {
 		return null;
 	}
 
@@ -334,22 +336,22 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 		);
 	} else {
 		const isComingSoon =
-			(role === 'Source' && connectorInfo.asSource.comingSoon) ||
-			(role === 'Destination' && connectorInfo.asDestination.comingSoon);
+			(role === 'Source' && potentialConnector.asSource.comingSoon) ||
+			(role === 'Destination' && potentialConnector.asDestination.comingSoon);
 
 		const isUnderConsideration =
-			(role === 'Source' && !connectorInfo.asSource.implemented) ||
-			(role === 'Destination' && !connectorInfo.asDestination.implemented);
+			(role === 'Source' && !potentialConnector.asSource.implemented) ||
+			(role === 'Destination' && !potentialConnector.asDestination.implemented);
 
 		const isInLatestVersion =
-			(role === 'Source' && connectorInfo.asSource.implemented) ||
-			(role === 'Destination' && connectorInfo.asDestination.implemented);
+			(role === 'Source' && potentialConnector.asSource.implemented) ||
+			(role === 'Destination' && potentialConnector.asDestination.implemented);
 
 		return (
 			<div
-				className={`connectors-list__card connectors-list__card--info`}
-				key={connectorInfo.code}
-				data-code={connectorInfo.code}
+				className={`connectors-list__card connectors-list__card--potential`}
+				key={potentialConnector.code}
+				data-code={potentialConnector.code}
 			>
 				{isComingSoon ? (
 					<div className='connectors-list__card-coming-label'>Coming soon</div>
@@ -358,18 +360,18 @@ const ConnectorCard = ({ connector, connectorInfo, onClick, role }: ConnectorsCa
 				) : null}
 				<div className='connectors-list__card-top'>
 					<div className='connectors-list__card-logo'>
-						<ExternalLogo code={connectorInfo.code} />
+						<ExternalLogo code={potentialConnector.code} />
 					</div>
-					<div className='connectors-list__card-label'>{connectorInfo.label}</div>
-					{connectorInfo.categories.map((category, index) => (
+					<div className='connectors-list__card-label'>{potentialConnector.label}</div>
+					{potentialConnector.categories.map((category, index) => (
 						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
 							{category}
 						</SlBadge>
 					))}
 					<div className='connectors-list__card-summary'>
 						{role === 'Source'
-							? connectorInfo.asSource.description
-							: connectorInfo.asDestination.description}
+							? potentialConnector.asSource.description
+							: potentialConnector.asDestination.description}
 					</div>
 					{isUnderConsideration && (
 						<div className='connectors-list__card-contact-us'>Contact us if you are interested</div>

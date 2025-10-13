@@ -33,7 +33,7 @@ interface ConnectorImplementation {
 	comingSoon: boolean;
 }
 
-interface ConnectorInfo {
+interface PotentialConnector {
 	code: string;
 	label: string;
 	categories: Array<string>;
@@ -81,7 +81,7 @@ export type {
 	SourceConnector,
 	DestinationConnector,
 	ConnectorType,
-	ConnectorInfo,
+	PotentialConnector,
 	ConnectorImplementation,
 	ConnectorRoleDocumentation,
 	ConnectorDocumentation,

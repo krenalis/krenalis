@@ -172,12 +172,12 @@
 	color: var(--sl-color-danger-500);
 }
 
-.connectors-list__card--info {
+.connectors-list__card--potential {
 	background-color: var(--sl-color-neutral-50);
 	cursor: default;
 }
 
-.connectors-list__card--info:hover {
+.connectors-list__card--potential:hover {
 	background-color: var(--sl-color-neutral-50);
 	border: 1px solid var(--sl-color-neutral-200);
 }
