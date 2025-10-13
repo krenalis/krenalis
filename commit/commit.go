@@ -101,7 +101,7 @@ func main() {
 
 	// Run checks and do operations on the Admin assets.
 	fmt.Println("Run checks and do operations on the Admin assets")
-	NewCmd("npm", "install").InDir(repo, "assets").Run()
+	NewCmd("npm", "ci").InDir(repo, "assets").Run()
 	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run()
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run()
 	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run()
