@@ -31,9 +31,9 @@
 	align-items: center;
 }
 
-.workspace-create__warehouse-icon {
-	width: 25px;
-	height: 25px;
+.workspace-create__warehouse-list > img {
+	width: 23px;
+	height: 23px;
 }
 
 .workspace-create__warehouse-settings {

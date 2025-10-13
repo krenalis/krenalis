@@ -5,9 +5,10 @@ import UnknownLogo from '../../base/UnknownLogo/UnknownLogo';
 
 interface ExternalLogoProps {
 	code: string | null;
+	slot?: string;
 }
 
-const ExternalLogo = ({ code }: ExternalLogoProps) => {
+const ExternalLogo = ({ code, slot }: ExternalLogoProps) => {
 	const [index, setIndex] = useState(0);
 
 	const { publicMetadata } = useContext(AppContext);
@@ -24,6 +25,7 @@ const ExternalLogo = ({ code }: ExternalLogoProps) => {
 			onError={() => {
 				setIndex(index + 1);
 			}}
+			slot={slot != null ? slot : undefined}
 		/>
 	);
 };

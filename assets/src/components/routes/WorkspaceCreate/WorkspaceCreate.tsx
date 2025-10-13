@@ -13,22 +13,11 @@ import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import InitialSchema from './InitialSchema.json';
 import * as icons from '../../../constants/icons';
 import { IS_DOCKER_KEY } from '../../../constants/storage';
+import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 
-const postgresqlIcon = (
-	<img
-		slot='prefix'
-		className='workspace-create__warehouse-icon'
-		src=''
-	/>
-);
+const postgresqlIcon = <ExternalLogo slot='prefix' code='postgresql' />;
 
-const snowflakeIcon = (
-	<img
-		slot='prefix'
-		className='workspace-create__warehouse-icon'
-		src=''
-	/>
-);
+const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' />;
 
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
