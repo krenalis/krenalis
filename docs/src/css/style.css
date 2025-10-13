@@ -36,13 +36,111 @@ blockquote > p + div pre { background: transparent; margin: 0; padding-left: 0; 
 blockquote div + p { margin-top: 0; }
 img { max-width: 100%; }
 
-.tabset .tablist { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0 3px; }
-.tabset [role="tab"] { background: transparent; border: 1px solid transparent; cursor: pointer; font-size: .9em; font-weight: 500; padding: .85rem 0.7rem; }
+.tabset .tablist { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0 8px; }
+.tabset [role="tab"] { background: transparent; border: 1px solid transparent; cursor: pointer; font-size: .9em; padding: .85rem .7rem .75rem .7rem; }
 .tabset [role="tab"][aria-selected="true"] { border-bottom: 1px solid #006ca7f5; color: #006ca7f5; }
 .tabset [role="tabpanel"] { border: 1px solid #dfe1e0; border-radius: 3px; margin: 0; padding: 1.5rem; }
 .tabset [role="tabpanel"] > *:first-child { margin-top: 0; }
 .tabset [role="tabpanel"] > *:last-child { margin-bottom: 0; }
 [role="tabpanel"][hidden] { display: none; }
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-header {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dedefa;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-header .tablist {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+}
+
+.tabset[data-tabset-type="codeblocks"] .tablist {
+  border: none;
+  border-radius: 0;
+}
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-copy {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #4a5568;
+  cursor: pointer;
+  display: inline-flex;
+  margin-right: 8px;
+  margin-top: 1px;
+  padding: 6px 8px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-copy:hover {
+  background-color: rgba(0, 108, 167, 0.08);
+  color: #006ca7;
+}
+
+.tabset[data-tabset-type="codeblocks"]
+  .codeblocks-copy[role~="tooltip"][data-microtip-position="left"]:focus::before,
+.tabset[data-tabset-type="codeblocks"]
+  .codeblocks-copy[role~="tooltip"][data-microtip-position="left"]:focus::after {
+  transform: translate3d(0, -50%, 0);
+}
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-copy:focus-visible {
+  outline: 2px solid #006ca7;
+  outline-offset: 2px;
+}
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-copy svg {
+  height: 20px;
+  width: 20px;
+}
+
+.tabset[data-tabset-type="codeblocks"] [role="tabpanel"] {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.tabset[data-tabset-type="codeblocks"] [role="tabpanel"] > * {
+  margin: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.tabset[data-tabset-type="codeblocks"] [role="tabpanel"] > pre {
+  border-radius: 0 0 6px 6px;
+}
+
+.tabset[data-tabset-type="codeblocks"] [role="tabpanel"] > pre:not(:last-child) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-note {
+  margin: 0;
+  padding: 10px 16px;
+  border: 1px solid #dedefa;
+  border-top: 1px solid #dedefa;
+  border-radius: 0 0 10px 10px;
+  color: #333;
+  font-size: .9rem;
+  background: #fff;
+}
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-note > *:first-child {
+  margin-top: 0;
+}
+
+.tabset[data-tabset-type="codeblocks"] .codeblocks-note > *:last-child {
+  margin-bottom: 0;
+}
 
 .breadcrumbs { color: #5f6472; font-size: .85rem; margin: 1.5rem 0 0; }
 .breadcrumbs ol { display: flex; flex-wrap: wrap; gap: 0; list-style: none; margin: 0; padding: 0; }

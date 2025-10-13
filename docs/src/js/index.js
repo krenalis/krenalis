@@ -1,11 +1,13 @@
 import { handleSidebar } from "./sidebar.js";
 import { buildTableOfContent } from "./table-of-content.js";
 import { buildTabs } from "./tabs.js";
+import { buildCodeblocks } from "./codeblocks.js";
 
 const setup = () => {
     handleSidebar();
     buildTableOfContent();
 	buildTabs();
+	buildCodeblocks();
 };
 
 setup();
