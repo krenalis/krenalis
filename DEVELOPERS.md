@@ -170,7 +170,7 @@ The tests inside `/test/` are already configured by default when the repository 
 
 ```
 cd assets
-npm install
+npm ci
 ```
 
 ### 2. Configure and add certificates
