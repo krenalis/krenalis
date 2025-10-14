@@ -975,7 +975,7 @@ func (state *State) linkConnection(n notification) {
 // PurgeActions is the event sent when actions of a workspace are purged.
 type PurgeActions struct {
 	Workspace      int
-	ActionsToPurge []int // remaining actions to purge.
+	ActionsToPurge []int // remaining actions to purge. Never nil.
 }
 
 // purgeActions purges actions of a workspace.

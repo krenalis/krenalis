@@ -35,8 +35,8 @@ const functionDeletionInterval = 10 * time.Minute
 
 // actionCleaner represents an action cleaner. It performs the following tasks:
 //
-//   - Purges user identities in the data warehouse that are associated with
-//     deleted actions.
+//   - Purges user identities and destination users in the data warehouse that
+//     are associated with deleted actions.
 //   - Unsets identity properties in the data warehouse that are no longer
 //     transformed.
 //   - Deletes discontinued functions from its function provider.
@@ -281,8 +281,8 @@ func (c *actionCleaner) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	}
 }
 
-// purgeWorkspace purges the identities associated with actions that have been
-// deleted for the workspace with the identifier id.
+// purgeWorkspace purges identities and destination users associated to actions
+// deleted from the workspace with the identifier id.
 func (c *actionCleaner) purgeWorkspace(id int) {
 
 	if _, ok := c.workspaces.Swap(id, true); ok {

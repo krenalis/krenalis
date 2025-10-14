@@ -589,7 +589,7 @@ type Workspace struct {
 		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
 		Operations     []meergo.AlterOperation
 	}
-	actionsToPurge []int
+	actionsToPurge []int // never nil
 }
 
 // Account returns the account with identifier id. The boolean return value
@@ -617,9 +617,8 @@ func (workspace *Workspace) AccountByCode(connector, code string) (*Account, boo
 }
 
 // ActionsToPurge returns the identifiers of actions that require purging,
-// specifically those that have been deleted but still have user identifiers to
-// be purged from the data warehouse. Returns nil if the data warehouse is not
-// connected.
+// specifically those that have been deleted but still have user identifiers or
+// destination users to be purged from the data warehouse. It never returns nil.
 func (workspace *Workspace) ActionsToPurge() []int {
 	workspace.mu.Lock()
 	actions := workspace.actionsToPurge
