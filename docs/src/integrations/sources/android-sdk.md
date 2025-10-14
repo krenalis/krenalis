@@ -21,12 +21,12 @@ This integration simplifies development and helps teams understand user behavior
 
 ## Guides
 
-| Guide                                               | What will you learn?                                            |
-|-----------------------------------------------------|-----------------------------------------------------------------|
-| [Getting&nbsp;started](android-sdk/getting-started) | How to install the SDK and import it into Android applications. |
-| [Options](android-sdk/options)                      | The available options when installing the SDK.                  |
-| [Methods&nbsp;of&nbsp;SDK](android-sdk/methods)     | The methods of the SDK, including the methods to send events.   |
+| Guide                                                    | What will you learn?                                            |
+|----------------------------------------------------------|-----------------------------------------------------------------|
+| [Getting&nbsp;started](android-sdk/getting-started)      | How to install the SDK and import it into Android applications. |
+| [Options](android-sdk/options)                           | The available options when installing the SDK.                  |
+| [Methods&nbsp;of&nbsp;the&nbsp;SDK](android-sdk/methods) | The methods of the SDK, including the methods to send events.   |
 
 ## SDK source code
 
-The source code of the Meergo Kotlin SDK is [available on GitHub](https://github.com/open2b/analytics-kotlin) and distributed under the MIT license.
+The source code of the Meergo Kotlin SDK is [available on GitHub](https://github.com/open2b/analytics-kotlin) and distributed under the **MIT license**.

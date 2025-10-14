@@ -21,16 +21,16 @@ This integration simplifies implementation, enabling teams to gain comprehensive
 
 ## Guides
 
-| Guide                                                      | What will you learn?                                                      |
-|------------------------------------------------------------|---------------------------------------------------------------------------|
-| [Getting&nbsp;started](javascript-sdk/getting-started)     | How to install the SDK in browsers and import it into applications.       |
-| [Options](javascript-sdk/options)                          | The available options when installing the SDK.                            |
-| [Methods&nbsp;of&nbsp;SDK](javascript-sdk/methods)         | The methods of the SDK, including the methods to send events.             |
-| [Storage&nbsp;locations](javascript-sdk/storage-locations) | Where the users' data is stored and how to manage its storage location.   |
-| [Querystring&nbsp;API](javascript-sdk/querystring-api)     | How to activate `identify` and `track` events using the URL query string. |
-| [FAQ](javascript-sdk/faq)                                  | Frequently Asked Questions about the JavaScript SDK.                      |
+| Guide                                                       | What will you learn?                                                      |
+|-------------------------------------------------------------|---------------------------------------------------------------------------|
+| [Getting&nbsp;started](javascript-sdk/getting-started)      | How to install the SDK in browsers and import it into applications.       |
+| [Options](javascript-sdk/options)                           | The available options when installing the SDK.                            |
+| [Methods&nbsp;of&nbsp;the&nbsp;SDK](javascript-sdk/methods) | The methods of the SDK, including the methods to send events.             |
+| [Storage&nbsp;locations](javascript-sdk/storage-locations)  | Where the users' data is stored and how to manage its storage location.   |
+| [Querystring&nbsp;API](javascript-sdk/querystring-api)      | How to activate `identify` and `track` events using the URL query string. |
+| [FAQ](javascript-sdk/faq)                                   | Frequently Asked Questions about the JavaScript SDK.                      |
 
-## Minimum Supported Browsers
+## Minimum supported browsers
 
 Here is a list of the minimum browser versions required to run the JavaScript SDK:
 
@@ -43,4 +43,4 @@ Here is a list of the minimum browser versions required to run the JavaScript SD
 
 ## SDK source code
 
-The source code of the Meergo JavaScript SDK is [available on GitHub](https://github.com/open2b/analytics-javascript) and distributed under the MIT license.
+The source code of the Meergo JavaScript SDK is [available on GitHub](https://github.com/open2b/analytics-javascript) and distributed under the **MIT license**.

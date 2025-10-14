@@ -28,4 +28,4 @@ The JavaScript SDK makes every effort to ensure that events are not lost or left
 
 When the tab receives the `visibilitychange` or `pagehide` event from the browser, it immediately persists the event queue and sends the queued events using the `fetch` function with the `keepalive` option, or `sendBeacon` with Firefox, or `XHR` with IE11.
 
-If there were more events queued than could be sent, the remaining events will be sent by a new leading tab or, if no other tabs are present, subsequently by the same tab.
+If there were more events queued than could be sent, the remaining events will be sent by a new leading tab or, if no other tabs are present, subsequently by the same tab unless it is closed.

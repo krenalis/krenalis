@@ -63,4 +63,4 @@ Refer to the [Meergo events documentation](../../events) for more information on
 
 ## SDK source code
 
-The source code of the Meergo Python SDK is [available on GitHub](https://github.com/open2b/analytics-python) and distributed under the MIT license.
+The source code of the Meergo Python SDK is [available on GitHub](https://github.com/open2b/analytics-python) and distributed under the **MIT license**.

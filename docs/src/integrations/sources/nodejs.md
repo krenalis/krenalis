@@ -64,4 +64,4 @@ Refer to the [Meergo events documentation](../../events) for more information on
 
 ## SDK source code
 
-The source code of the Meergo Node SDK is [available on GitHub](https://github.com/open2b/analytics-node) and distributed under the MIT license.
+The source code of the Meergo Node SDK is [available on GitHub](https://github.com/open2b/analytics-node) and distributed under the **MIT license**.

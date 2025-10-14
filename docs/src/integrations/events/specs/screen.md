@@ -73,6 +73,15 @@ analytics.enqueue(ScreenMessage.builder("Workout Summary")
 ```
 Refer to the [Java SDK](/integrations/sources/java) for more details, or use Java with the [Android SDK](/integrations/sources/android-sdk).
 
+```csharp
+Analytics.Client.Screen("user-123", "Workout Summary", new Properties {
+    { "workout_type", "Cardio" },
+    { "duration_minutes", 45 },
+    { "calories_burned", 380 }
+});
+```
+Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+
 ```kotlin
 analytics.screen(
     "Workout Summary",
@@ -84,15 +93,6 @@ analytics.screen(
 )
 ```
 Refer to the [Android SDK](/integrations/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
-
-```csharp
-Analytics.Client.Screen("user-123", "Workout Summary", new Properties {
-    { "workout_type", "Cardio" },
-    { "duration_minutes", 45 },
-    { "calories_burned", 380 }
-});
-```
-Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
 
 <!-- end codeblocks -->
 

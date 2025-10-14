@@ -246,4 +246,4 @@ type AppEnv struct {
 - [Users](apps/users)
 - [Send events](apps/send-events)
 - [OAuth](apps/oauth)
-- [Rate limits ans policy](apps/rate-limits-and-policy)
+- [Rate limits and retry](apps/rate-limits-and-retry)

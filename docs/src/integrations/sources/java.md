@@ -71,4 +71,4 @@ Refer to the [Meergo events documentation](/integrations/events) for more inform
 
 ## SDK source code
 
-The source code of the Meergo Java SDK is [available on GitHub](https://github.com/open2b/analytics-java) and distributed under the MIT license.
+The source code of the Meergo Java SDK is [available on GitHub](https://github.com/open2b/analytics-java) and distributed under the **MIT license**.

@@ -18,7 +18,7 @@ h1, h2, h3, h4, h5, h6 { color: #0a1922; scroll-margin-top: calc(var(--header-he
 h1 { font-size: 2.25rem; font-weight: 800; line-height: 1.11111; margin-top: 1.5rem; }
 h2 { font-size: 1.5em; font-weight: 700; line-height: 1.33333; margin-bottom: 1em; margin-top: 1.8em; }
 h3 { font-size: 1.25em; font-weight: 600; line-height: 1.6; margin-bottom: .6em; margin-top: 1.6em;  }
-h4 { font-weight: 500; }
+h4 { font-weight: 600; }
 nav + p { color: #666; font-size: .9em; font-weight: bold; }
 p { line-height: 1.75; margin-bottom: 1.25em; }
 p + h1 { font-size: 2.2rem; margin-top: -.5em; }

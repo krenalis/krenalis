@@ -10,10 +10,10 @@ When representing user and event data in a connector, these are mapped to specif
 
 During an import, connectors return data to import, such as user information. This data must use specific types according to the data type. Key scenarios for handling data in an app connector include:
 
-- [`Records`](app/users#read-records) method of apps returns properties of users.
+- [`Records`](apps/users#read-records) method of apps returns properties of users.
 {#- `ReceiveWebhook` method of apps may return properties of users.#}
-- [`Query`](database#query-method) method of databases returns the resulting rows from a query.
-- [`Read`](file#read-method) method of files takes a `RecordWriter` whose methods return the read records.
+- [`Query`](databases#query-method) method of databases returns the resulting rows from a query.
+- [`Read`](files#read-method) method of files takes a `RecordWriter` whose methods return the read records.
 
 Connectors can directly return values deserialized from JSON using the [`json.Unmarshal`](https://pkg.go.dev/encoding/json#Unmarshal) function, because the types returned by this function are supported.
 
@@ -78,11 +78,11 @@ For the `TimeLayouts.DateTime` field of `meergo.AppInfo`, you can also use speci
 
 During an export, when a connector (whether app, database, or file) receives data to export, such as user information, it receives Go types specific to the data types. This involves methods such as:
 
-- [`PreviewSendEvents`](app/send-events#send-events) method of apps takes extra event information.
-- [`SendEvents`](app/send-events#send-events) method of apps takes extra event information.
-- [`Upsert`](app/users#updating-and-creating-records) method of apps takes properties of a user.
-- [`Merge`](database#merge-method) method of databases takes rows to be added or updated.
-- [`Write`](file#write-method) method of files takes a `RecordReader` whose `Record` method returns the next record to write.
+- [`PreviewSendEvents`](apps/send-events#send-events-1) method of apps takes extra event information.
+- [`SendEvents`](apps/send-events#send-events-1) method of apps takes extra event information.
+- [`Upsert`](apps/users#updating-and-creating-records) method of apps takes properties of a user.
+- [`Merge`](databases#merge-method) method of databases takes rows to be added or updated.
+- [`Write`](files#write-method) method of files takes a `RecordReader` whose `Record` method returns the next record to write.
 
 The following table shows, for each data type, what Go type a connector should expect when it receives a value. In the "Examples" column, the symbol "→" illustrates how a connector should interpret a received value.
 
