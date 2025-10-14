@@ -3,11 +3,12 @@
 {% Article %}
 
 
-# Add a Connection Action
+# Connection Actions
 
 Once a source connection has been created, you need to add one or more actions to define what kind of data the connection will collect.
 Each action specifies how Meergo should import, transform, and store data from the source.
 
+## Add a Connection Action
 > You can create a connection action from the **Meergo Admin console**, directly inside the **Source Connection** page, by clicking **Add a new action ⊕** button.
 
 Meergo supports two main types of connection actions:
@@ -22,7 +23,7 @@ For example, a database connection might allow you to define a SQL query and ide
 > Note: The event source (e.g., website SDK, mobile SDK, or server-side API) is specify at Source Connection level.
 
 
-## Add a connection action to import users
+## Connection actions to import users
 
 A user import action defines how user profile data is retrieved and stored in your data warehouse.
 
@@ -42,7 +43,7 @@ When configuring a user import action, you can specify:
 
 User import actions are typically used to collect user attributes such as email, name, customer ID, signup date and so on, which contribute to the customer schema and Golden Record.
 
-## Add a connection action to import events
+## Connection actions to import events
 
 An event import action defines how user activity and behavioral events are collected, transformed, and delivered to your data warehouse.
 

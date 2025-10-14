@@ -11,8 +11,9 @@ The unified customer profile feature within Meergo is designed to centralize and
 
 This process brings together all the customer data from different sources into a single, comprehensive profile, ensuring consistency, completeness, and reliability across your ecosystem.
 
-> **How to start the process**
-You can start the identity resolution process from the **Meergo Admin Console**, under the **User Profiles** page.
+## How to start the process
+
+> You can start the identity resolution process from the **Meergo Admin Console**, under the **User Profiles** page.
 If you have already run identity resolution before, you’ll see a list of all existing users, the **Golden Records**, that have been created and continuously kept up to date.
 To start the process for the first time, or to run it again, simply click the **Resolve Identities ⊕** button.
 A confirmation message will appear. When you’re ready, click **Run Identity Resolution ⊕** button to launch the process and wait for it to complete.
@@ -50,7 +51,7 @@ Meergo’s unification process consists of two main phases: **Data Cleaning & Su
 
 ### 1. Data Cleaning & Suppression
 
-At this stage, Meergo refines and filters data** before identity resolution** takes place:
+At this stage, Meergo refines and filters data **before identity resolution** takes place:
 
 - **Deduplication**: Detects and merges duplicate customer records across sources.
 
@@ -68,7 +69,7 @@ This is the heart of the unification process. Meergo links and merges records th
 1. **Data Storage:** Imported user data is stored in the **data warehouse** as **identities**, maintaining traceability to its original sources.
 2. **Identity Graph Construction:** Meergo builds an identity graph, a network of identifiers (emails, IDs, cookies, device tokens, etc.) that link records belonging to the same individual across different systems.
 3. **Identity Resolution**: Through advanced matching algorithms, Meergo detects which identifiers belong to the same person and unifies them into a single profile.
-4. **Deduplication and Conflict Resolution**: Overlapping or conflicting records are automatically resolved to preserve accuracy and completeness.
+4. **Conflict Resolution**: Overlapping or conflicting records are automatically resolved to preserve accuracy and completeness.
 5. **Enrichment:** The unified profile is then enriched with additional data and attributes from other sources, enhancing completeness and context.
 
 
