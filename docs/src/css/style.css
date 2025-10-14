@@ -24,6 +24,7 @@ p { line-height: 1.75; margin-bottom: 1.25em; }
 p + h1 { font-size: 2.2rem; margin-top: -.5em; }
 pre { background: #f4f4fb; border: 1px solid #eee; border-radius: 6px; box-shadow: rgba(0, 0, 51, 0.06) 0 1px 2px; padding: 1rem; overflow-x: unset; }
 code { background: #f4f4fb; border-radius: 4px; color: #443973; font-family: var(--font-family-code); font-size: .875em; padding: .3rem .6rem; position: relative; white-space: pre-wrap; }
+a > code { color: var(--link-color); text-decoration: underline; }
 a, a:visited { color: var(--link-color); text-decoration: none; }
 a:hover { text-decoration: underline; }
 a[href^="http"]:not(:has(*))::after { content: " ↗"; font-size: 0.8em; margin-right: 2px; padding-right: 3px; }

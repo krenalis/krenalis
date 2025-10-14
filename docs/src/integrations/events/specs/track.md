@@ -138,9 +138,9 @@ The following is an example of how the previous track call would appear in Meerg
     "calories_burned": 380,
     "device": "Smartwatch"
   },
+  "traits": {},
   "type": "track",
-  "userId": "user-123",
-  "version": "1.0"
+  "userId": "user-123"
 }
 ```
 

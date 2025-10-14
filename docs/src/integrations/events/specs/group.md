@@ -127,8 +127,7 @@ The following is an example of how the previous group call would appear in Meerg
   },
   "type": "group",
   "userId": "user-123",
-  "groupId": "group-890",
-  "version": "1.0"
+  "groupId": "group-890"
 }
 ```
 

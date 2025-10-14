@@ -174,8 +174,7 @@ The following is an example of how the previous identify call would appear in Me
     }
   },
   "type": "identify",
-  "userId": "user-123",
-  "version": "1.0"
+  "userId": "user-123"
 }
 ```
 

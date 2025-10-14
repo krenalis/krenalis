@@ -117,9 +117,9 @@ The following is an example of how the previous page call would appear in Meergo
     "title": "White T-Shirt",
     "url": "https://example.com"
   },
+  "traits": {},
   "type": "page",
-  "userId": "user-123",
-  "version": "1.0"
+  "userId": "user-123"
 }
 ```
 

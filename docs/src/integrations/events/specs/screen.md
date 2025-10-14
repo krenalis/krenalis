@@ -116,9 +116,9 @@ The following is an example of how a screen call would appear in Meergo once rec
     "duration_minutes": 45,
     "calories_burned": 380
   },
+  "traits": {},
   "type": "screen",
-  "userId": "user-123",
-  "version": "1.0"
+  "userId": "user-123"
 }
 ```
 

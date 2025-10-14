@@ -27,3 +27,8 @@ Calls are requests to the standard event methods:
 * [**Group**](specs/group)\
   Answers: *Which account or organization is the user part of?*\
   Use when: the user is linked to a company, workspace, or team, or their roles within the group change.
+
+## Event schema
+
+The [event schema](specs/event-schema) defines the structure of an event, similar to how the user schema (Customer Model Schema) defines the structure of a user.
+Unlike the user schema, which can be customized for each organization, the event schema is predefined. See more about the [event schema](specs/event-schema).
