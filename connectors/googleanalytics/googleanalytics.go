@@ -46,7 +46,7 @@ func init() {
 			},
 		},
 		EndpointGroups: []meergo.EndpointGroup{{
-			// https://developers.hubspot.com/docs/guides/apps/api-usage/usage-details#public-apps
+			// https://developers.google.com/analytics/devguides/limits-and-quotas
 			RateLimit: meergo.RateLimit{RequestsPerSecond: 11, Burst: 110},
 		}},
 	}, New)
