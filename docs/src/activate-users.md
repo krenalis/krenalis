@@ -87,4 +87,3 @@ During activation, Meergo enforces privacy and suppression rules defined in your
 **Operational efficiency**: automate recurring exports and integrations.
 
 **Compliance-ready sharing**: enforce privacy and consent policies across destinations.
-
