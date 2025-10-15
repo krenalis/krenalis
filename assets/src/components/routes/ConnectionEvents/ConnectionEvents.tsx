@@ -21,7 +21,7 @@ const ConnectionEvents = () => {
 			// Remove the id and connection of the event, since they
 			// should not be displayed in the UI.
 			delete e.full['id'];
-			delete e.full['connection'];
+			delete e.full['connectionId'];
 		}
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};

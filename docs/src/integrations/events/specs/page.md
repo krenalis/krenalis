@@ -99,6 +99,7 @@ The argument, `'Product Detail'`, is the name of the page. The second argument c
 The following is an example of how the previous page call would appear in Meergo once received and processed:
 ```json
 {
+  "connectionId": 129402661,
   "anonymousId": "f8d886bf-e1a6-484c-9ded-ac789ec4146b",
   "channel": "browser",
   "context": {

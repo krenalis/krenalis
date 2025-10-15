@@ -13,10 +13,10 @@ Meergo creates and manages a single central table called `events` in your data w
 ### PostgreSQL
 
 | Column                               | Type                    | Description                                                      |
-| ------------------------------------ |-------------------------|------------------------------------------------------------------|
+|--------------------------------------|-------------------------|------------------------------------------------------------------|
 | `id`                                 | `uuid NOT NULL`         | Event primary key. Globally unique.                              |
 | `user`                               | `uuid`                  | Internal user UUID if available.                                 |
-| `connection`                         | `integer NOT NULL`      | Source connection identifier.                                    |
+| `connection_id`                      | `integer NOT NULL`      | Source connection identifier.                                    |
 | `anonymous_id`                       | `varchar NOT NULL`      | Anonymous identifier.                                            |
 | `channel`                            | `varchar`               | Ingestion channel (web, mobile, server).                         |
 | `category`                           | `varchar`               | Event category or grouping.                                      |
@@ -86,10 +86,10 @@ Meergo creates and manages a single central table called `events` in your data w
 ### Snowflake
 
 | Column                               | Type                     | Description                                           |
-| ------------------------------------ |--------------------------|-------------------------------------------------------|
+|--------------------------------------|--------------------------|-------------------------------------------------------|
 | `ID`                                 | `VARCHAR(36) NOT NULL`   | Event primary key. Globally unique.                   |
 | `USER`                               | `VARCHAR(36)`            | Internal user identifier if available.                |
-| `CONNECTION`                         | `INT NOT NULL`           | Source connection identifier.                         |
+| `CONNECTION_ID`                      | `INT NOT NULL`           | Source connection identifier.                         |
 | `ANONYMOUS_ID`                       | `VARCHAR NOT NULL`       | Anonymous identifier.                                 |
 | `CHANNEL`                            | `VARCHAR`                | Ingestion channel (web, mobile, server).              |
 | `CATEGORY`                           | `VARCHAR`                | Event category or grouping.                           |

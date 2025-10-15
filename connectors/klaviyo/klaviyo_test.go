@@ -65,8 +65,8 @@ func TestSendEvents(t *testing.T) {
 				{
 					ID: "019813cc-6cbb-77a5-9e13-e57724067288",
 					Received: testconnector.ReceivedEvent(map[string]any{
-						"anonymousId": "199c664f-66ad-49d8-a088-fadd0f1a7acf",
-						"connection":  347182063,
+						"anonymousId":  "199c664f-66ad-49d8-a088-fadd0f1a7acf",
+						"connectionId": 347182063,
 						"context": map[string]any{
 							"browser": map[string]any{
 								"name":  "Other",
@@ -163,8 +163,8 @@ func TestSendEvents(t *testing.T) {
 				{
 					ID: "019813cc-6cbb-77a5-9e13-e57724067288",
 					Received: testconnector.ReceivedEvent(map[string]any{
-						"anonymousId": "199c664f-66ad-49d8-a088-fadd0f1a7acf",
-						"connection":  347182063,
+						"anonymousId":  "199c664f-66ad-49d8-a088-fadd0f1a7acf",
+						"connectionId": 347182063,
 						"context": map[string]any{
 							"browser": map[string]any{
 								"name":  "Other",

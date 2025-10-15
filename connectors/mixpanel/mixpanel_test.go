@@ -59,9 +59,9 @@ func TestSendEvents(t *testing.T) {
 	t.Run("order_completed", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":          uuid.NewString(),
-			"connection":  1323607634,
-			"anonymousId": uuid.NewString(),
+			"id":           uuid.NewString(),
+			"connectionId": 1323607634,
+			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Safari",
@@ -160,9 +160,9 @@ func TestSendEvents(t *testing.T) {
 	t.Run("product_purchased", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":          uuid.NewString(),
-			"connection":  1323607634,
-			"anonymousId": uuid.NewString(),
+			"id":           uuid.NewString(),
+			"connectionId": 1323607634,
+			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Safari",
@@ -270,9 +270,9 @@ func TestSendEvents(t *testing.T) {
 	t.Run("track", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":          uuid.NewString(),
-			"connection":  1323607634,
-			"anonymousId": uuid.NewString(),
+			"id":           uuid.NewString(),
+			"connectionId": 1323607634,
+			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Safari",
@@ -355,9 +355,9 @@ func TestSendEvents(t *testing.T) {
 	t.Run("page", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":          uuid.NewString(),
-			"connection":  1323607634,
-			"anonymousId": uuid.NewString(),
+			"id":           uuid.NewString(),
+			"connectionId": 1323607634,
+			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Safari",
@@ -453,9 +453,9 @@ func TestSendEvents(t *testing.T) {
 	t.Run("screen", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":          uuid.NewString(),
-			"connection":  1323607634,
-			"anonymousId": uuid.NewString(),
+			"id":           uuid.NewString(),
+			"connectionId": 1323607634,
+			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
 				"app": map[string]any{
 					"name":      "MyFinance",

@@ -168,9 +168,9 @@ func (observer *Observer) addEvent(event events.Event) {
 	}
 	var properties json.Value
 	var receivedAt time.Time
-	connection := event["connection"].(int)
+	connectionId := event["connectionId"].(int)
 	for _, listener := range observer.listeners {
-		if listener.connections != nil && !slices.Contains(listener.connections, connection) {
+		if listener.connections != nil && !slices.Contains(listener.connections, connectionId) {
 			continue
 		}
 		if !filters.Applies(listener.filter, event) {

@@ -72,8 +72,8 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 	// id
 	row[0] = event["id"]
 
-	// connection
-	row[1] = event["connection"]
+	// connectionId
+	row[1] = event["connectionId"]
 
 	// anonymousId
 	row[2] = event["anonymousId"]

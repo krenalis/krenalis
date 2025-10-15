@@ -10881,14 +10881,14 @@
                     "url": "/v1/events",
                     "parameters": [
                         {
-                            "name": "connection",
+                            "name": "connectionId",
                             "prefilled": "1371036433",
                             "type": {
                                 "kind": "int",
                                 "bitSize": 32
                             },
                             "updateRequired": true,
-                            "description": "The ID of the connection to which the events refer. It can only be a source SDK connection.\n\nIt is required only if the call is authenticated using an API key. If authentication is done with an event write key, it is not needed, as the connection is that of the key."
+                            "description": "The ID of the source connection to which the events refer. It can only be a source SDK connection.\n\nIt is required only if the call is authenticated using an API key. If authentication is done with an event write key, it is not needed, as the connection is that of the key."
                         },
                         {
                             "name": "batch",
@@ -12615,7 +12615,7 @@
                     "parameters": [
                         {
                             "name": "properties",
-                            "prefilled": "connection,anonymousId",
+                            "prefilled": "connectionId,anonymousId",
                             "type": {
                                 "kind": "array",
                                 "elementType": {
@@ -12623,7 +12623,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The event properties to return. The properties can be specified in the query string in this way:\n```\nproperties=user&properties=connection&properties=anonymousId\n```"
+                            "description": "The event properties to return. The properties can be specified in the query string in this way:\n```\nproperties=user&properties=connectionId&properties=anonymousId\n```"
                         },
                         {
                             "name": "filter",
@@ -12724,7 +12724,7 @@
                                 "values": [
                                     "id",
                                     "user",
-                                    "connection",
+                                    "connectionId",
                                     "anonymousId",
                                     "channel",
                                     "category",
@@ -12802,13 +12802,13 @@
                                                 "description": "The Meergo user associated with the event, if any; otherwise, this field is absent.\n\n`user` is set for each event by the Identity Resolution process, and its value may change over time depending on how users are unified and associated with events."
                                             },
                                             {
-                                                "name": "connection",
+                                                "name": "connectionId",
                                                 "prefilled": "1371036433",
                                                 "type": {
                                                     "kind": "int",
                                                     "bitSize": 32
                                                 },
-                                                "description": "The connection from which the event originates. Automatically set by Meergo when the event is received."
+                                                "description": "The ID of the source connection from which the event originates. Automatically set by Meergo when the event is received."
                                             },
                                             {
                                                 "name": "anonymousId",
@@ -13550,7 +13550,7 @@
                     "url": "/v1/events/listeners",
                     "parameters": [
                         {
-                            "name": "connection",
+                            "name": "connectionId",
                             "prefilled": "1371036433",
                             "type": {
                                 "kind": "int",
@@ -15535,7 +15535,7 @@
                                                 "description": ""
                                             },
                                             {
-                                                "name": "connection",
+                                                "name": "connectionId",
                                                 "prefilled": "1371036433",
                                                 "type": {
                                                     "kind": "int",

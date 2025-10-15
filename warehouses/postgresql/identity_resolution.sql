@@ -121,7 +121,7 @@ AS $$
     UPDATE "events" SET "user" = null;
     UPDATE "events" SET "user" = "_user_identities"."__gid__"
     FROM "_user_identities" WHERE
-        "events"."connection" = "_user_identities"."__connection__"
+        "events"."connection_id" = "_user_identities"."__connection__"
             AND
         (
             ("events"."user_id" <> '' AND "events"."user_id" = "_user_identities"."__identity_id__")

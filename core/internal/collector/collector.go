@@ -343,9 +343,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				dec.SetMaxMindDB(c.maxmindDB)
 			}
 			// Read the connection.
-			id, ok := dec.Connection()
+			id, ok := dec.ConnectionId()
 			if !ok {
-				return errors.BadRequest("parameter 'connection' is required when using API key authentication")
+				return errors.BadRequest("parameter 'connectionId' is required when using API key authentication")
 			}
 			if key.Workspace == 0 {
 				connection, _ = c.state.Connection(id)
@@ -397,8 +397,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if usingWriteKey {
-		if _, ok := dec.Connection(); ok {
-			return errors.BadRequest("property 'connection' cannot be provided when using an event write key for authentication")
+		if _, ok := dec.ConnectionId(); ok {
+			return errors.BadRequest("property 'connectionId' cannot be provided when using an event write key for authentication")
 		}
 	}
 

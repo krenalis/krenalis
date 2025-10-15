@@ -100,6 +100,7 @@ The following is an example of how a screen call would appear in Meergo once rec
 
 ```json
 {
+  "connectionId": 129402661,
   "anonymousId": "f8d886bf-e1a6-484c-9ded-ac789ec4146b",
   "channel": "mobile",
   "context": {

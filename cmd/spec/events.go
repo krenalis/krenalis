@@ -451,10 +451,10 @@ func init() {
 			Description:  "The Meergo user associated with the event, if any; otherwise, this field is absent.\n\n`user` is set for each event by the Identity Resolution process, and its value may change over time depending on how users are unified and associated with events.",
 		},
 		{
-			Name:        "connection",
+			Name:        "connectionId",
 			Type:        types.Int(32),
 			Prefilled:   "1371036433",
-			Description: "The connection from which the event originates. Automatically set by Meergo when the event is received.",
+			Description: "The ID of the source connection from which the event originates. Automatically set by Meergo when the event is received.",
 		},
 	}, eventGetProperties...)))
 	observedEventsParameter := types.Array(types.Object(
@@ -498,11 +498,11 @@ func init() {
 				URL:    "/v1/events",
 				Parameters: []types.Property{
 					{
-						Name:           "connection",
+						Name:           "connectionId",
 						Type:           types.Int(32),
 						Prefilled:      "1371036433",
 						UpdateRequired: true,
-						Description: "The ID of the connection to which the events refer. It can only be a source SDK connection.\n\n" +
+						Description: "The ID of the source connection to which the events refer. It can only be a source SDK connection.\n\n" +
 							"It is required only if the call is authenticated using an API key. " +
 							"If authentication is done with an event write key, it is not needed, as the connection is that of the key.",
 					},
@@ -750,10 +750,10 @@ func init() {
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Prefilled:      `connection,anonymousId`,
+						Prefilled:      `connectionId,anonymousId`,
 						Description: "The event properties to return. " +
 							"The properties can be specified in the query string in this way:\n" +
-							"```\nproperties=user&properties=connection&properties=anonymousId\n```",
+							"```\nproperties=user&properties=connectionId&properties=anonymousId\n```",
 					},
 					{
 						Name: "filter",
@@ -767,7 +767,7 @@ func init() {
 					},
 					{
 						Name:        "order",
-						Type:        types.Text().WithValues("id", "user", "connection", "anonymousId", "channel", "category", "event", "groupId", "messageId", "name", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type", "userId"),
+						Type:        types.Text().WithValues("id", "user", "connectionId", "anonymousId", "channel", "category", "event", "groupId", "messageId", "name", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type", "userId"),
 						Prefilled:   `id`,
 						Description: "The name of the property by which to sort the events to be returned.\n\nIf not provided, the events are sorted by `id`.",
 					},
@@ -830,7 +830,7 @@ func init() {
 				URL:         "/v1/events/listeners",
 				Parameters: []types.Property{
 					{
-						Name:        "connection",
+						Name:        "connectionId",
 						Type:        types.Int(32),
 						Prefilled:   `1371036433`,
 						Nullable:    true,

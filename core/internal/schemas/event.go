@@ -20,7 +20,7 @@ var Event = types.Object([]types.Property{
 	// For consistency, it is included in all event schemas to avoid having to
 	// differentiate between schemas.
 	{Name: "user", Type: types.UUID(), ReadOptional: true, Description: "User"},
-	{Name: "connection", Type: types.Int(32), Description: "Connection"},
+	{Name: "connectionId", Type: types.Int(32), Description: "Connection Id"},
 	{Name: "anonymousId", Type: types.Text(), Description: "Anonymous Id"},
 	{Name: "channel", Type: types.Text(), ReadOptional: true, Description: "Channel"},
 	{Name: "category", Type: types.Text(), ReadOptional: true, Description: "Category"},

@@ -28,7 +28,7 @@ func EventColumnByPath(propertyPath string) meergo.Column {
 var eventColumnNameFromPropertyPath = map[string]string{
 	"id":                               "id",
 	"user":                             "user",
-	"connection":                       "connection",
+	"connectionId":                     "connection_id",
 	"anonymousId":                      "anonymous_id",
 	"channel":                          "channel",
 	"category":                         "category",

@@ -52,12 +52,12 @@ type decoder struct {
 		ip  net.IP
 		str string
 	}
-	userAgent  string
-	sentAt     time.Time
-	writeKey   string
-	connection int
-	context    map[string]any
-	typ        string
+	userAgent    string
+	sentAt       time.Time
+	writeKey     string
+	connectionId int
+	context      map[string]any
+	typ          string
 }
 
 // newDecoder returns a new decoder.
@@ -77,28 +77,28 @@ func newDecoder(r *http.Request) (*decoder, error) {
 	return d, nil
 }
 
-// Connection returns the connection property and a boolean indicating whether
-// the property is present.
-func (d *decoder) Connection() (int, bool) {
-	if d.connection == 0 {
+// ConnectionId returns the connectionId property and a boolean indicating
+// whether the property is present.
+func (d *decoder) ConnectionId() (int, bool) {
+	if d.connectionId == 0 {
 		return 0, false
 	}
-	return d.connection, true
+	return d.connectionId, true
 }
 
-// Events returns an iterator to iterate over events. connectionID and
+// Events returns an iterator to iterate over events. connectionId and
 // connectionType represent the identifier and type, respectively, of the source
 // connection from which the events are received.
 //
 // For malformed errors, it returns nil and the corresponding error.
-func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) iter.Seq2[events.Event, error] {
+func (d *decoder) Events(connectionId int, connectionType state.ConnectorType) iter.Seq2[events.Event, error] {
 	return func(yield func(events.Event, error) bool) {
 		if d.typ != "batch" {
 			// Decode a single event.
 			var event events.Event
 			var err error
 			if k := d.dec.PeekKind(); k == json.Object {
-				event, err = d.decodeEvent(connectionID, connectionType)
+				event, err = d.decodeEvent(connectionId, connectionType)
 			} else {
 				err = errors.BadRequest("expected an object for the event, but found %s instead", k)
 			}
@@ -120,7 +120,7 @@ func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) i
 				}
 				continue
 			}
-			event, err := d.decodeEvent(connectionID, connectionType)
+			event, err := d.decodeEvent(connectionId, connectionType)
 			if !yield(event, err) {
 				return
 			}
@@ -191,7 +191,7 @@ func (d *decoder) Reset(r *http.Request) error {
 	d.userAgent = r.Header.Get("User-Agent")
 	d.sentAt = time.Time{}
 	d.writeKey = ""
-	d.connection = 0
+	d.connectionId = 0
 	d.context = nil
 
 	path, _ := strings.CutPrefix(r.URL.Path, "/events")
@@ -295,15 +295,15 @@ func (d *decoder) Reset(r *http.Request) error {
 			if d.writeKey == "" {
 				return errors.BadRequest("property 'writeKey' cannot be empty")
 			}
-		case "connection":
+		case "connectionId":
 			if tok, _ = d.dec.ReadToken(); tok.Kind() != '0' {
-				return errors.BadRequest("property 'connection' is not a number")
+				return errors.BadRequest("property 'connectionId' is not a number")
 			}
-			connection, _ := tok.Int()
-			if connection < 1 || connection > math.MaxInt32 {
-				return errors.BadRequest("property 'connection' is not a valid connection identifier")
+			connectionId, _ := tok.Int()
+			if connectionId < 1 || connectionId > math.MaxInt32 {
+				return errors.BadRequest("property 'connectionId' is not a valid connection identifier")
 			}
-			d.connection = connection
+			d.connectionId = connectionId
 		}
 	}
 	if d.batch == nil {
@@ -332,7 +332,7 @@ func (d *decoder) WriteKey() string {
 }
 
 // decodeEvent decodes and returns an event.
-func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType) (events.Event, error) {
+func (d *decoder) decodeEvent(connectionId int, connectionType state.ConnectorType) (events.Event, error) {
 
 	_ = d.dec.SkipToken() // Skip '{'.
 
@@ -345,7 +345,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 
 	var name string
 	var event = map[string]any{
-		"connection": connection,
+		"connectionId": connectionId,
 	}
 	var context map[string]any
 
@@ -389,7 +389,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 			}
 			switch name {
 			case "messageId":
-				id := makeEventID(connection, s)
+				id := makeEventID(connectionId, s)
 				event["id"] = id.String()
 				event["messageId"] = s
 			case "sentAt":
@@ -637,7 +637,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	// Id and MessageId.
 	if _, ok := event["messageId"]; !ok {
 		messageId := uuid.NewString()
-		id := makeEventID(connection, messageId)
+		id := makeEventID(connectionId, messageId)
 		event["id"] = id.String()
 		event["messageId"] = messageId
 	}
@@ -1096,10 +1096,10 @@ func errRead(err error) error {
 	return errReadBody
 }
 
-// makeEventID returns an event ID from its source and message ID.
-func makeEventID(source int, messageId string) uuid.UUID {
+// makeEventID returns an event ID from its connection Id and message Id.
+func makeEventID(connectionId int, messageId string) uuid.UUID {
 	buf := [4]byte{}
-	binary.BigEndian.PutUint32(buf[:], uint32(source))
+	binary.BigEndian.PutUint32(buf[:], uint32(connectionId))
 	// The following code has been adapted from the uuid.NewHash function.
 	h := sha1.New()
 	h.Write(uuid.NameSpaceOID[:]) //nolint:errcheck

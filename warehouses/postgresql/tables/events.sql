@@ -16,7 +16,7 @@ END$$;
 CREATE TABLE IF NOT EXISTS events (
     "id" UUID NOT NULL,
     "user" UUID,
-    "connection" integer NOT NULL,
+    "connection_id" integer NOT NULL,
     "anonymous_id" character varying NOT NULL,
     "channel" character varying,
     "category" character varying,

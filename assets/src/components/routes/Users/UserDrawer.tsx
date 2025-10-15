@@ -202,7 +202,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 							spinner
 						) : events && events.length > 0 ? (
 							events.map((event) => {
-								const source = connections.find((c) => c.id === event.connection);
+								const source = connections.find((c) => c.id === event.connectionId);
 								const logo = <LittleLogo code={source?.connector.code} />;
 								return (
 									<div className='user-drawer__event' key={event.sentAt}>

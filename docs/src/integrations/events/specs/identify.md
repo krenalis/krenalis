@@ -151,6 +151,7 @@ The following is an example of how the previous identify call would appear in Me
 
 ```json
 {
+  "connectionId": 129402661,
   "anonymousId": "f8d886bf-e1a6-484c-9ded-ac789ec4146b",
   "channel": "browser",
   "context": {

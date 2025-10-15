@@ -158,7 +158,7 @@ func TestEvents(t *testing.T) {
 
 	// Retrieve the first event for the user.
 	var event map[string]any
-	events := c.UserEvents(userGID, []string{"anonymousId", "context", "event", "properties", "connection", "traits", "type", "userId", "groupId"})
+	events := c.UserEvents(userGID, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
 	if len(events) != expectedEventsCount {
 		t.Fatalf("expected %d events for user %s, got %d", expectedEventsCount, userGID, len(events))
 	}
@@ -191,8 +191,8 @@ func TestEvents(t *testing.T) {
 		if !reflect.DeepEqual(event["properties"], expectedProperties) {
 			t.Fatalf("expected properties %#v, got %#v", expectedProperties, event["properties"])
 		}
-		if connection, err := strconv.Atoi(string(event["connection"].(json.Number))); err != nil || connection != javaScriptID {
-			t.Fatalf("expected connection %d, got %#v", javaScriptID, event["connection"])
+		if connection, err := strconv.Atoi(string(event["connectionId"].(json.Number))); err != nil || connection != javaScriptID {
+			t.Fatalf("expected connection %d, got %#v", javaScriptID, event["connectionId"])
 		}
 		if !reflect.DeepEqual(event["traits"], expectedTraits) {
 			t.Fatalf("expected traits %#v, got %#v", expectedTraits, event["traits"])

@@ -649,7 +649,7 @@ class Users {
 		let properties = [
 			'id',
 			'user',
-			'connection',
+			'connectionId',
 			'anonymousId',
 			'category',
 			'context',

@@ -102,7 +102,7 @@ interface UserEventContext {
 interface UserEvent {
 	id?: string;
 	user?: string;
-	connection?: number;
+	connectionId?: number;
 	anonymousId?: string;
 	category?: string;
 	context?: UserEventContext;
