@@ -173,7 +173,7 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 			AnonymousID:    event["anonymousId"].(string),
 			Properties:     record.Properties,
 			LastChangeTime: event["timestamp"].(time.Time),
-		}, event["id"].(string))
+		}, event["messageId"].(string))
 		_ = err // TODO(marco): handle the error
 	}
 
@@ -187,5 +187,5 @@ func (iw *identityWriter) writeDirect(event events.Event) error {
 		AnonymousID:    event["anonymousId"].(string),
 		Properties:     map[string]any{},
 		LastChangeTime: event["timestamp"].(time.Time),
-	}, event["id"].(string))
+	}, event["messageId"].(string))
 }

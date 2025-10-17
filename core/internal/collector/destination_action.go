@@ -118,7 +118,7 @@ func (da *destinationAction) QueueEvent(event events.Event) {
 		return
 	}
 	da.queue.metrics.FilterPassed(da.id, 1)
-	se := da.queue.sender.CreateEvent(da.id, da.eventType, da.schema, event, nil)
+	se := da.queue.sender.CreateEvent(da.id, da.eventType, da.schema, event)
 	if da.transformer == nil {
 		da.queue.metrics.TransformationPassed(da.id, 1)
 		da.queue.metrics.OutputValidationPassed(da.id, 1)

@@ -48,7 +48,8 @@ type EventSender interface {
 	// If any event type does not exist, it returns the ErrEventTypeNotExist error.
 	//
 	// Authentication data in the returned request is redacted (i.e., replaced with
-	// "[REDACTED]").
+	// "[REDACTED]"). If the destination action's identifier would appear in an
+	// event identifier, it is replaced with "[ACTION]".
 	//
 	// This method is safe for concurrent use, on the same instance, by multiple
 	// goroutines.

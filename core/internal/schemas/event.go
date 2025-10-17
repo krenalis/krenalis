@@ -13,7 +13,6 @@ import (
 
 // Event is the event schema.
 var Event = types.Object([]types.Property{
-	{Name: "id", Type: types.UUID(), Description: "ID"},
 	// The "user" field may be set only by the Identity Resolution for events
 	// stored in the data warehouse.
 	// For all other events, it never has a value.

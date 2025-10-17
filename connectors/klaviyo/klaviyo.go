@@ -638,6 +638,13 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 			}
 		}
 
+		// Build a unique identifier for the event.
+		uniqueId := "[ACTION]"
+		if !preview {
+			uniqueId = strconv.Itoa(event.DestinationAction)
+		}
+		uniqueId += "/" + event.Received.MessageId()
+
 		if n > 0 {
 			bb.WriteByte(',')
 		}
@@ -658,7 +665,7 @@ func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview
 		if currency, ok := event.Type.Values["value_currency"]; ok {
 			_ = bb.EncodeKeyValue("value_currency", currency) // value_currency
 		}
-		_ = bb.EncodeKeyValue("unique_id", event.ID) // unique_id
+		_ = bb.EncodeKeyValue("unique_id", uniqueId) // unique_id
 		bb.WriteString(`,"metric":{"data":{"type":"metric","attributes":{`)
 		_ = bb.EncodeKeyValue("name", event.Type.Values["metric_name"]) // metric_name
 		bb.WriteString(`}}}}}]}}}`)

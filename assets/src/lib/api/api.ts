@@ -647,7 +647,6 @@ class Users {
 	events = async (user: string): Promise<UserEventsResponse> => {
 		let params = [];
 		let properties = [
-			'id',
 			'user',
 			'connectionId',
 			'anonymousId',

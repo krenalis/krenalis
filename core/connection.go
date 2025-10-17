@@ -37,7 +37,6 @@ import (
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
-	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
 )
 
@@ -1479,9 +1478,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
-	id, _ := uuid.NewV7() // safe to ignore error in Go 1.24+
 	ev := meergo.Event{
-		ID:       id.String(),
 		Received: connectors.ReceivedEvent(properties),
 		Type: meergo.EventTypeInfo{
 			ID:     typ,

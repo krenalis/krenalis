@@ -18,9 +18,7 @@ const ConnectionEvents = () => {
 
 	const collectEvents = (newly: EventListenerEvent[]) => {
 		for (const e of newly) {
-			// Remove the id and connection of the event, since they
-			// should not be displayed in the UI.
-			delete e.full['id'];
+			// Remove the connection of the event, since it should not be displayed in the UI.
 			delete e.full['connectionId'];
 		}
 		setEvents((prevEvents) => [...prevEvents, ...newly]);

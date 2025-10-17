@@ -313,9 +313,16 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 			return nil, errors.New("event cannot be empty")
 		}
 
+		// Build a unique identifier for the event.
+		insertId := "[ACTION]"
+		if !preview {
+			insertId = strconv.Itoa(event.DestinationAction)
+		}
+		insertId += "*" + event.Received.MessageId()
+
 		properties := map[string]any{
 			"$device_id": event.Received.AnonymousId(),
-			"$insert_id": event.Received.MessageId(),
+			"$insert_id": insertId,
 			"$source":    "meergo",
 			"time":       event.Received.Timestamp().UnixMilli(),
 		}

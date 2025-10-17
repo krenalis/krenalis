@@ -54,24 +54,6 @@ func Test_newStoppedTimer(t *testing.T) {
 	}
 }
 
-func Test_CreateEvent_DeterministicID(t *testing.T) {
-	s := New(nopApp{}, func([]Ack, error) {})
-	src1 := rand.NewPCG(1, ^uint64(1))
-	src2 := rand.NewPCG(1, ^uint64(1))
-	e1 := s.CreateEvent(0, "t", types.Type{}, events.Event{"anonymousId": "u"}, src1)
-	e2 := s.CreateEvent(0, "t", types.Type{}, events.Event{"anonymousId": "u"}, src2)
-	if e1.ID != e2.ID {
-		t.Fatalf("expected deterministic IDs, got %q and %q", e1.ID, e2.ID)
-	}
-	if e1.sequence != 0 || e2.sequence != 1 {
-		t.Fatalf("unexpected sequence numbers %d and %d", e1.sequence, e2.sequence)
-	}
-	if e1.user == nil || e2.user == nil {
-		t.Fatal("user should not be nil")
-	}
-	_ = s.Close(t.Context())
-}
-
 func Test_iterator_invalidUsage(t *testing.T) {
 
 	expectPanic := func(f func()) {
@@ -213,26 +195,33 @@ func Test_Sender(t *testing.T) {
 			// Create the events.
 			var evs []*Event
 			for range test.num {
+				// Choose an Anonymous ID deterministically.
 				anonymousId := anonymousIds[rng.IntN(test.users)]
+				// Generate a deterministic UUIDv5 from src.
+				n := src.Uint64()
+				data := make([]byte, 8)
+				binary.BigEndian.PutUint64(data, n)
+				messageId := uuid.NewSHA1(uuidDeterministicNS, data).String()
+				// Deterministically decide whether the event should be valid.
 				valid := rng.Float64() >= test.discardRate
 				typ := "Valid"
 				if !valid {
 					typ = "Invalid"
 				}
-				event := s.CreateEvent(1, typ, types.Type{}, events.Event{"anonymousId": anonymousId}, src)
-				userByEvent[event.ID] = anonymousId
+				event := s.CreateEvent(1, typ, types.Type{}, events.Event{"anonymousId": anonymousId, "messageId": messageId})
+				userByEvent[messageId] = anonymousId
 				if valid {
 					if ids, ok := validEventsByUser[anonymousId]; ok {
-						validEventsByUser[anonymousId] = append(ids, event.ID)
+						validEventsByUser[anonymousId] = append(ids, messageId)
 					} else {
-						validEventsByUser[anonymousId] = []string{event.ID}
+						validEventsByUser[anonymousId] = []string{messageId}
 					}
 				}
-				if _, ok := receivedAck[event.ID]; ok {
+				if _, ok := receivedAck[messageId]; ok {
 					t.Fatal("CreateEvent has returned a duplicated ID")
 				}
-				isValid[event.ID] = valid
-				receivedAck[event.ID] = false
+				isValid[messageId] = valid
+				receivedAck[messageId] = false
 				evs = append(evs, event)
 			}
 
@@ -409,7 +398,7 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 		app.validateEvent(event)
 		if event.Type.ID == "Valid" {
 			app.mu.Lock()
-			app.consumed = append(app.consumed, event.ID)
+			app.consumed = append(app.consumed, event.Received.MessageId())
 			app.mu.Unlock()
 			time.Sleep(time.Duration(rng.Int()%10) * time.Nanosecond)
 			return nil
@@ -438,7 +427,7 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 		} else if event.Type.ID == "Invalid" {
 			events.Discard(errors.New("event is invalid"))
 		} else {
-			consumed = append(consumed, event.ID)
+			consumed = append(consumed, event.Received.MessageId())
 		}
 		if n == rng.Int()/2 {
 			break
@@ -475,7 +464,7 @@ func (app *app) ack(acks []Ack, err error) {
 
 func (app *app) validateEvent(e *meergo.Event) {
 	app.t.Helper()
-	if e.ID == "" {
+	if e.Received.MessageId() == "" {
 		app.t.Fatal("SendEvents: expected non-empty message ID, got empty")
 	}
 	if e.Type.ID != "Valid" && e.Type.ID != "Invalid" {

@@ -38,7 +38,7 @@ func Test_Decoder(t *testing.T) {
 
 	// These non-read optional properties are not tested if they are not present as expected.
 	var nonReadOptionalProperties = []string{
-		"id", "connectionId", "anonymousId", "context", "messageId", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type",
+		"connectionId", "anonymousId", "context", "messageId", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type",
 	}
 
 	type expectedEvent struct {

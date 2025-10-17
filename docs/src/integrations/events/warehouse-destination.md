@@ -14,7 +14,6 @@ Meergo creates and manages a single central table called `events` in your data w
 
 | Column                               | Type                    | Description                                                      |
 |--------------------------------------|-------------------------|------------------------------------------------------------------|
-| `id`                                 | `uuid NOT NULL`         | Event primary key. Globally unique.                              |
 | `user`                               | `uuid`                  | Internal user UUID if available.                                 |
 | `connection_id`                      | `integer NOT NULL`      | Source connection identifier.                                    |
 | `anonymous_id`                       | `varchar NOT NULL`      | Anonymous identifier.                                            |
@@ -72,7 +71,7 @@ Meergo creates and manages a single central table called `events` in your data w
 | `context_user_agent`                 | `varchar`               | Raw user agent string.                                           |
 | `event`                              | `varchar`               | Event name (often for `track`).                                  |
 | `group_id`                           | `varchar`               | Group identifier for group events.                               |
-| `message_id`                         | `varchar NOT NULL`      | Message identifier provided by the source.                       |
+| `message_id`                         | `varchar NOT NULL`      | Unique, immutable identifier for the event.                      |
 | `name`                               | `varchar`               | Screen or page name, or alias.                                   |
 | `properties`                         | `jsonb`                 | Event properties payload.                                        |
 | `received_at`                        | `timestamp(3) NOT NULL` | When the warehouse received the event.                           |
@@ -87,7 +86,6 @@ Meergo creates and manages a single central table called `events` in your data w
 
 | Column                               | Type                     | Description                                           |
 |--------------------------------------|--------------------------|-------------------------------------------------------|
-| `ID`                                 | `VARCHAR(36) NOT NULL`   | Event primary key. Globally unique.                   |
 | `USER`                               | `VARCHAR(36)`            | Internal user identifier if available.                |
 | `CONNECTION_ID`                      | `INT NOT NULL`           | Source connection identifier.                         |
 | `ANONYMOUS_ID`                       | `VARCHAR NOT NULL`       | Anonymous identifier.                                 |
@@ -145,7 +143,7 @@ Meergo creates and manages a single central table called `events` in your data w
 | `CONTEXT_USER_AGENT`                 | `VARCHAR`                | Raw user agent string.                                |
 | `EVENT`                              | `VARCHAR`                | Event name (often for `TRACK`).                       |
 | `GROUP_ID`                           | `VARCHAR`                | Group identifier for group events.                    |
-| `MESSAGE_ID`                         | `VARCHAR NOT NULL`       | Message identifier provided by the source.            |
+| `MESSAGE_ID`                         | `VARCHAR NOT NULL`       | Unique, immutable identifier for the event.           |
 | `NAME`                               | `VARCHAR`                | Screen or page name, or alias.                        |
 | `PROPERTIES`                         | `VARIANT`                | Event properties payload.                             |
 | `RECEIVED_AT`                        | `TIMESTAMP_NTZ NOT NULL` | When the warehouse received the event.                |

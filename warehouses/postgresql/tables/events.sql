@@ -14,7 +14,6 @@ BEGIN
 END$$;
 
 CREATE TABLE IF NOT EXISTS events (
-    "id" UUID NOT NULL,
     "user" UUID,
     "connection_id" integer NOT NULL,
     "anonymous_id" character varying NOT NULL,
@@ -82,5 +81,5 @@ CREATE TABLE IF NOT EXISTS events (
     "type" event_type NOT NULL,
     "previous_id" character varying,
     "user_id" character varying,
-    PRIMARY KEY ("id")
+    PRIMARY KEY ("message_id")
 )

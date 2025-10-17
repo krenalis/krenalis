@@ -29,7 +29,6 @@ func TestBadRequest(t *testing.T) {
 	now := time.Now().UTC()
 
 	event := &meergo.Event{
-		ID: "7ba8676a-3182-4d76-bf6e-21483fc63893",
 		Received: testconnector.ReceivedEvent(map[string]any{
 			"anonymousId":  "17fba6ee-8673-4ebc-afd6-69e62124e017",
 			"connectionId": 1323607634,
@@ -46,7 +45,6 @@ func TestBadRequest(t *testing.T) {
 				},
 				"userAgent": "python-requests/2.32.4",
 			},
-			"id":                "03a7b3f6-7e5a-5933-96d8-81fcc9fdf696",
 			"messageId":         "1427b912-438f-46a8-ae7f-b276ee5345ee",
 			"originalTimestamp": now,
 			"previousId":        "IAJVLPBEZJ",

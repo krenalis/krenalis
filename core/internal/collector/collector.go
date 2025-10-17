@@ -422,7 +422,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			observer.addEvent(event)
 		}
 
-		_, duplicated := c.duplicated.LoadOrStore(event["id"].(string), nil)
+		_, duplicated := c.duplicated.LoadOrStore(event["messageId"].(string), nil)
 		if duplicated {
 			continue
 		}

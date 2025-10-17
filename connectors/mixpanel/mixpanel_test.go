@@ -59,7 +59,6 @@ func TestSendEvents(t *testing.T) {
 	t.Run("order_completed", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":           uuid.NewString(),
 			"connectionId": 1323607634,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
@@ -113,8 +112,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &meergo.Event{
-			ID:       uuid.NewString(),
-			Received: testconnector.ReceivedEvent(received),
+			DestinationAction: 242809157,
+			Received:          testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "order_completed",
 				Schema: schema,
@@ -129,7 +128,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser":         "Safari",
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousId(),
-					"$insert_id":       event.Received.MessageId(),
+					"$insert_id":       "242809157*" + event.Received.MessageId(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
@@ -160,7 +159,6 @@ func TestSendEvents(t *testing.T) {
 	t.Run("product_purchased", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":           uuid.NewString(),
 			"connectionId": 1323607634,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
@@ -214,8 +212,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &meergo.Event{
-			ID:       uuid.NewString(),
-			Received: testconnector.ReceivedEvent(received),
+			DestinationAction: 148606728,
+			Received:          testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "product_purchased",
 				Schema: schema,
@@ -230,7 +228,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser":         "Safari",
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousId(),
-					"$insert_id":       "1#" + event.Received.MessageId(),
+					"$insert_id":       "1#148606728*" + event.Received.MessageId(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
@@ -248,7 +246,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser":         "Safari",
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousId(),
-					"$insert_id":       "2#" + event.Received.MessageId(),
+					"$insert_id":       "2#148606728*" + event.Received.MessageId(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
@@ -270,7 +268,6 @@ func TestSendEvents(t *testing.T) {
 	t.Run("track", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":           uuid.NewString(),
 			"connectionId": 1323607634,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
@@ -317,8 +314,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &meergo.Event{
-			ID:       uuid.NewString(),
-			Received: testconnector.ReceivedEvent(received),
+			DestinationAction: 140861001,
+			Received:          testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "track",
 				Schema: schema,
@@ -333,7 +330,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser":         "Safari",
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousId(),
-					"$insert_id":       event.Received.MessageId(),
+					"$insert_id":       "140861001*" + event.Received.MessageId(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
 					"$os":              "macOS",
 					"$os_version":      "15.5",
@@ -355,7 +352,6 @@ func TestSendEvents(t *testing.T) {
 	t.Run("page", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":           uuid.NewString(),
 			"connectionId": 1323607634,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
@@ -411,8 +407,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &meergo.Event{
-			ID:       uuid.NewString(),
-			Received: testconnector.ReceivedEvent(received),
+			DestinationAction: 2094515358,
+			Received:          testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "page",
 				Schema: schema,
@@ -428,7 +424,7 @@ func TestSendEvents(t *testing.T) {
 					"$browser_version": "18.5",
 					"$device_id":       event.Received.AnonymousId(),
 					"$ios_ifa":         "6D92078A-8246-4BA4-AE5B-76104861E7DC",
-					"$insert_id":       event.Received.MessageId(),
+					"$insert_id":       "2094515358*" + event.Received.MessageId(),
 					"$os":              "macOS",
 					"$os_version":      "15.5",
 					"$source":          "meergo",
@@ -453,7 +449,6 @@ func TestSendEvents(t *testing.T) {
 	t.Run("screen", func(t *testing.T) {
 
 		received := map[string]any{
-			"id":           uuid.NewString(),
 			"connectionId": 1323607634,
 			"anonymousId":  uuid.NewString(),
 			"context": map[string]any{
@@ -510,8 +505,8 @@ func TestSendEvents(t *testing.T) {
 		}
 
 		event := &meergo.Event{
-			ID:       uuid.NewString(),
-			Received: testconnector.ReceivedEvent(received),
+			DestinationAction: 2023196674,
+			Received:          testconnector.ReceivedEvent(received),
 			Type: meergo.EventTypeInfo{
 				ID:     "screen",
 				Schema: schema,
@@ -532,7 +527,7 @@ func TestSendEvents(t *testing.T) {
 					"$device_name":        "iPhone",
 					"$device_type":        "ios",
 					"$ios_ifa":            "6D92078A-8246-4BA4-AE5B-76104861E7DC",
-					"$insert_id":          event.Received.MessageId(),
+					"$insert_id":          "2023196674*" + event.Received.MessageId(),
 					"$manufacturer":       "Apple",
 					"$model":              "iPhone 16 Pro",
 					"$os":                 "iOS",

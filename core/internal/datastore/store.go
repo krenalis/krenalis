@@ -46,7 +46,6 @@ var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 // AckEvent represents an ack event.
 type AckEvent struct {
 	Action int
-	ID     string
 }
 
 // EventWriterAckFunc is the function called when events have been written to

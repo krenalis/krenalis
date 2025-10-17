@@ -67,169 +67,166 @@ func (ew *EventWriter) Close(ctx context.Context) {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (ew *EventWriter) Write(event events.Event, action int) error {
 
-	row := make([]any, 67)
-
-	// id
-	row[0] = event["id"]
+	row := make([]any, 66)
 
 	// connectionId
-	row[1] = event["connectionId"]
+	row[0] = event["connectionId"]
 
 	// anonymousId
-	row[2] = event["anonymousId"]
+	row[1] = event["anonymousId"]
 
 	// channel
-	row[3] = event["channel"]
+	row[2] = event["channel"]
 
 	// category
-	row[4] = event["category"]
+	row[3] = event["category"]
 
 	// context.
 	if eventContext, ok := event["context"].(map[string]any); ok {
 
 		// app
 		if app, ok := eventContext["app"].(map[string]any); ok {
-			row[5] = app["name"]
-			row[6] = app["version"]
-			row[7] = app["build"]
-			row[8] = app["namespace"]
+			row[4] = app["name"]
+			row[5] = app["version"]
+			row[6] = app["build"]
+			row[7] = app["namespace"]
 		}
 
 		// browser
 		if browser, ok := eventContext["browser"].(map[string]any); ok {
-			row[9] = browser["name"]
-			row[10] = browser["other"]
-			row[11] = browser["version"]
+			row[8] = browser["name"]
+			row[9] = browser["other"]
+			row[10] = browser["version"]
 		}
 
 		// campaign
 		if campaign, ok := eventContext["campaign"].(map[string]any); ok {
-			row[12] = campaign["name"]
-			row[13] = campaign["source"]
-			row[14] = campaign["medium"]
-			row[15] = campaign["term"]
-			row[16] = campaign["content"]
+			row[11] = campaign["name"]
+			row[12] = campaign["source"]
+			row[13] = campaign["medium"]
+			row[14] = campaign["term"]
+			row[15] = campaign["content"]
 		}
 
 		// device
 		if device, ok := eventContext["device"].(map[string]any); ok {
-			row[17] = device["id"]
-			row[18] = device["advertisingId"]
-			row[19] = device["adTrackingEnabled"]
-			row[20] = device["manufacturer"]
-			row[21] = device["model"]
-			row[22] = device["name"]
-			row[23] = device["type"]
-			row[24] = device["token"]
+			row[16] = device["id"]
+			row[17] = device["advertisingId"]
+			row[18] = device["adTrackingEnabled"]
+			row[19] = device["manufacturer"]
+			row[20] = device["model"]
+			row[21] = device["name"]
+			row[22] = device["type"]
+			row[23] = device["token"]
 		}
 
 		// ip
-		row[25] = eventContext["ip"]
+		row[24] = eventContext["ip"]
 
 		// library
 		if library, ok := eventContext["library"].(map[string]any); ok {
-			row[26] = library["name"]
-			row[27] = library["version"]
+			row[25] = library["name"]
+			row[26] = library["version"]
 		}
 		// locale
-		row[28] = eventContext["locale"]
+		row[27] = eventContext["locale"]
 
 		// location
 		if location, ok := eventContext["location"].(map[string]any); ok {
-			row[29] = location["city"]
-			row[30] = location["country"]
-			row[31] = location["latitude"]
-			row[32] = location["longitude"]
-			row[33] = location["speed"]
+			row[28] = location["city"]
+			row[29] = location["country"]
+			row[30] = location["latitude"]
+			row[31] = location["longitude"]
+			row[32] = location["speed"]
 		}
 
 		// network
 		if network, ok := eventContext["network"].(map[string]any); ok {
-			row[34] = network["bluetooth"]
-			row[35] = network["carrier"]
-			row[36] = network["cellular"]
-			row[37] = network["wifi"]
+			row[33] = network["bluetooth"]
+			row[34] = network["carrier"]
+			row[35] = network["cellular"]
+			row[36] = network["wifi"]
 		}
 
 		// os
 		if os, ok := eventContext["os"].(map[string]any); ok {
-			row[38] = os["name"]
-			row[39] = os["other"]
-			row[40] = os["version"]
+			row[37] = os["name"]
+			row[38] = os["other"]
+			row[39] = os["version"]
 		}
 
 		// page
 		if page, ok := eventContext["page"].(map[string]any); ok {
-			row[41] = page["path"]
-			row[42] = page["referrer"]
-			row[43] = page["search"]
-			row[44] = page["title"]
-			row[45] = page["url"]
+			row[40] = page["path"]
+			row[41] = page["referrer"]
+			row[42] = page["search"]
+			row[43] = page["title"]
+			row[44] = page["url"]
 		}
 
 		// referrer
 		if referrer, ok := eventContext["referrer"].(map[string]any); ok {
-			row[46] = referrer["name"]
-			row[47] = referrer["version"]
+			row[45] = referrer["name"]
+			row[46] = referrer["version"]
 		}
 
 		// screen
 		if screen, ok := eventContext["screen"].(map[string]any); ok {
-			row[48] = screen["width"]
-			row[49] = screen["height"]
-			row[50] = screen["density"]
+			row[47] = screen["width"]
+			row[48] = screen["height"]
+			row[49] = screen["density"]
 		}
 
 		// session
 		if session, ok := eventContext["session"].(map[string]any); ok {
-			row[51] = session["id"]
-			row[52] = session["start"]
+			row[50] = session["id"]
+			row[51] = session["start"]
 		}
 
 		// timezone
-		row[53] = eventContext["timezone"]
+		row[52] = eventContext["timezone"]
 
 		// userAgent
-		row[54] = eventContext["userAgent"]
+		row[53] = eventContext["userAgent"]
 	}
 
 	// event
-	row[55] = event["event"]
+	row[54] = event["event"]
 
 	// groupId
-	row[56] = event["groupId"]
+	row[55] = event["groupId"]
 
 	// messageId
-	row[57] = event["messageId"]
+	row[56] = event["messageId"]
 
 	// name
 	if eventContext, ok := event["context"].(map[string]any); ok {
-		row[58] = eventContext["name"]
+		row[57] = eventContext["name"]
 	}
 
 	// properties
-	row[59] = event["properties"]
+	row[58] = event["properties"]
 
 	// receivedAt
-	row[60] = event["receivedAt"]
+	row[59] = event["receivedAt"]
 
 	// sentAt
-	row[61] = event["sentAt"]
+	row[60] = event["sentAt"]
 
 	// timestamp
-	row[62] = event["timestamp"]
+	row[61] = event["timestamp"]
 
 	// traits
-	row[63] = event["traits"]
+	row[62] = event["traits"]
 
 	// type
-	row[64] = event["type"]
+	row[63] = event["type"]
 
 	// previousId
-	row[65] = event["previousId"]
+	row[64] = event["previousId"]
 
 	// userId
-	row[66] = event["userId"]
+	row[65] = event["userId"]
 
 	ew.mu.Lock()
 	ew.rows = append(ew.rows, row)
@@ -257,8 +254,7 @@ func (ew *EventWriter) flush() {
 		// Warehouse mode is not normal: discard events.
 		if ew.ack != nil {
 			events := make([]AckEvent, len(rows))
-			for i, event := range rows {
-				events[i].ID = event[0].(string)
+			for i := range rows {
 				events[i].Action = actions[i]
 			}
 			metrics.Increment("EventWriter.ack_sents", 1)
@@ -285,8 +281,7 @@ func (ew *EventWriter) flush() {
 		}
 		if ew.ack != nil {
 			events := make([]AckEvent, len(rows))
-			for i, event := range rows {
-				events[i].ID = event[0].(string)
+			for i := range rows {
 				events[i].Action = actions[i]
 			}
 			metrics.Increment("EventWriter.ack_sents", 1)

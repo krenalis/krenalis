@@ -899,7 +899,7 @@ func (this *Workspace) DeleteEventListener(listener string) {
 // must contain at least one property.
 //
 // order specifies the property by which to sort the events. It cannot be of
-// type json or object. If not provided, the events are sorted by their ID.
+// type json or object. If not provided, the events are sorted by messageId.
 // orderDesc controls whether the events should be sorted in descending order,
 // when true, or ascending order.
 //
@@ -955,7 +955,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 			return nil, errors.BadRequest("cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
-		order = "id"
+		order = "messageId"
 	}
 
 	// Validate first and limit.

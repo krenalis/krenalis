@@ -9,10 +9,8 @@ package sender
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"math"
-	"math/rand/v2"
 	"slices"
 	"strconv"
 	"sync"
@@ -268,23 +266,9 @@ func (s *Sender) Close(ctx context.Context) error {
 // CreateEvent creates a new event with the given action, type, schema, and
 // original event.
 //
-// If src is nil, the event ID is a random UUIDv7. Otherwise, the ID is a
-// deterministic UUIDv5 generated from src.
-//
 // The returned event must be passed to the QueueEvent method, optionally after
 // setting the Properties field.
-func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event events.Event, src rand.Source) *Event {
-	var id uuid.UUID
-	if src == nil {
-		// Create a random UUID v7.
-		id, _ = uuid.NewV7() // safe to ignore error in Go 1.24+
-	} else {
-		// Create a pseudo-random UUID v5.
-		n := src.Uint64()
-		data := make([]byte, 8)
-		binary.BigEndian.PutUint64(data, n)
-		id = uuid.NewSHA1(uuidDeterministicNS, data)
-	}
+func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event events.Event) *Event {
 	anonymousId, ok := event["anonymousId"].(string)
 	if !ok {
 		panic("core/events/connector/sender: missing anonymousId")
@@ -300,12 +284,12 @@ func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event ev
 	s.mu.Unlock()
 	ev := &Event{
 		Event: meergo.Event{
-			ID:       id.String(),
 			Received: connectors.ReceivedEvent(event),
 			Type: meergo.EventTypeInfo{
 				ID:     typ,
 				Schema: schema,
 			},
+			DestinationAction: action,
 		},
 		CreatedAt: time.Now().UTC(),
 		action:    action,
@@ -466,7 +450,7 @@ func (s *Sender) discard(err error) {
 	}
 	ack := Ack{
 		Action: e.action,
-		Event:  e.ID,
+		Event:  e.Received.MessageId(),
 	}
 	trace("Sender.discard: send ack for iterator %p with ack %#v and error %#v\n", s.iterator, ack, err)
 	s.mu.Unlock()
@@ -581,17 +565,21 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 			s._assertAvailable(s.available)
 		}
 	}
-	if event != nil {
-		if consume {
-			trace("Sender.read: iterator %p read and consumed event %q (anonymousId %q) at index %d (%d available)\n", s.iterator, event.ID, event.Received.AnonymousId(), i, s.available)
+	if traces {
+		if event != nil {
+			messageId := event.Received.MessageId()
+			anonymousId := event.Received.AnonymousId()
+			if consume {
+				trace("Sender.read: iterator %p read and consumed event %q of action %d (anonymousId %q) at index %d (%d available)\n", s.iterator, messageId, event.action, anonymousId, i, s.available)
+			} else {
+				trace("Sender.read: iterator %p read event %q of action %d (anonymousId %q), without consuming, at index %d (%d available)\n", s.iterator, messageId, event.action, anonymousId, i, s.available)
+			}
 		} else {
-			trace("Sender.read: iterator %p read event %q (anonymousId %q), without consuming, at index %d (%d available)\n", s.iterator, event.Received.AnonymousId(), event.ID, i, s.available)
-		}
-	} else {
-		if consume {
-			trace("Sender.read: iterator %p tried to read, with consuming, at index %d, but no record available\n", s.iterator, i)
-		} else {
-			trace("Sender.read: iterator %p tried to read, without consuming, at index %d, but no record available\n", s.iterator, i)
+			if consume {
+				trace("Sender.read: iterator %p tried to read, with consuming, at index %d, but no record available\n", s.iterator, i)
+			} else {
+				trace("Sender.read: iterator %p tried to read, without consuming, at index %d, but no record available\n", s.iterator, i)
+			}
 		}
 	}
 	s.mu.Unlock()
@@ -711,7 +699,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 			s.releasableUsers[user] = struct{}{}
 			ack := Ack{
 				Action: s.events[i].action,
-				Event:  s.events[i].ID,
+				Event:  s.events[i].Received.MessageId(),
 			}
 			var err error
 			if errEvents != nil {

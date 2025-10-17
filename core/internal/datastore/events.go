@@ -26,7 +26,6 @@ func EventColumnByPath(propertyPath string) meergo.Column {
 // Note: The "originalTimestamp" property exists in the schema but does not have
 // a corresponding column in the table.
 var eventColumnNameFromPropertyPath = map[string]string{
-	"id":                               "id",
 	"user":                             "user",
 	"connectionId":                     "connection_id",
 	"anonymousId":                      "anonymous_id",
@@ -139,7 +138,7 @@ func init() {
 	eventsMergeTable = meergo.Table{
 		Name:    "events",
 		Columns: eventsColumnsForMerge,
-		Keys:    []string{"id"},
+		Keys:    []string{"message_id"},
 	}
 
 }

@@ -9,8 +9,6 @@ package collector
 
 import (
 	"bytes"
-	"crypto/sha1"
-	"encoding/binary"
 	"io"
 	"iter"
 	"maps"
@@ -388,10 +386,6 @@ func (d *decoder) decodeEvent(connectionId int, connectionType state.ConnectorTy
 				continue
 			}
 			switch name {
-			case "messageId":
-				id := makeEventID(connectionId, s)
-				event["id"] = id.String()
-				event["messageId"] = s
 			case "sentAt":
 				sentAt, err := iso8601.ParseString(s)
 				if err != nil {
@@ -634,12 +628,9 @@ func (d *decoder) decodeEvent(connectionId int, connectionType state.ConnectorTy
 		}
 	}
 
-	// Id and MessageId.
+	// MessageId.
 	if _, ok := event["messageId"]; !ok {
-		messageId := uuid.NewString()
-		id := makeEventID(connectionId, messageId)
-		event["id"] = id.String()
-		event["messageId"] = messageId
+		event["messageId"] = "meergo-" + uuid.NewString()
 	}
 
 	// Name.
@@ -1094,22 +1085,6 @@ func errRead(err error) error {
 		return errors.BadRequest("error parsing the request body as JSON: it is not terminated")
 	}
 	return errReadBody
-}
-
-// makeEventID returns an event ID from its connection Id and message Id.
-func makeEventID(connectionId int, messageId string) uuid.UUID {
-	buf := [4]byte{}
-	binary.BigEndian.PutUint32(buf[:], uint32(connectionId))
-	// The following code has been adapted from the uuid.NewHash function.
-	h := sha1.New()
-	h.Write(uuid.NameSpaceOID[:]) //nolint:errcheck
-	h.Write([]byte(messageId))    //nolint:errcheck
-	s := h.Sum(nil)
-	var id uuid.UUID
-	copy(id[:], s)
-	id[6] = (id[6] & 0x0f) | uint8((5&0xf)<<4)
-	id[8] = (id[8] & 0x3f) | 0x80 // RFC 4122 variant
-	return id
 }
 
 // normalizeContextBrowser normalizes the content of 'context.browser' in an

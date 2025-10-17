@@ -63,7 +63,7 @@ func TestSendEvents(t *testing.T) {
 		{
 			events: []*meergo.Event{
 				{
-					ID: "019813cc-6cbb-77a5-9e13-e57724067288",
+					DestinationAction: 927579274,
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "199c664f-66ad-49d8-a088-fadd0f1a7acf",
 						"connectionId": 347182063,
@@ -78,7 +78,6 @@ func TestSendEvents(t *testing.T) {
 							},
 							"userAgent": "python-requests/2.32.4",
 						},
-						"id":                "34122265-1ad6-47e0-8934-ba50c5f395e5",
 						"messageId":         "8f8e652a-2518-4953-a2ed-c70e0894c791",
 						"originalTimestamp": now,
 						"previousId":        "IBEN72PV6",
@@ -136,7 +135,7 @@ func TestSendEvents(t *testing.T) {
 														"time":           now.Format(time.RFC3339Nano),
 														"value":          9.99,
 														"value_currency": "USD",
-														"unique_id":      "019813cc-6cbb-77a5-9e13-e57724067288",
+														"unique_id":      "927579274/8f8e652a-2518-4953-a2ed-c70e0894c791",
 														"metric": map[string]any{
 															"data": map[string]any{
 																"type": "metric",
@@ -161,7 +160,7 @@ func TestSendEvents(t *testing.T) {
 		{
 			events: []*meergo.Event{
 				{
-					ID: "019813cc-6cbb-77a5-9e13-e57724067288",
+					DestinationAction: 2023196674,
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "199c664f-66ad-49d8-a088-fadd0f1a7acf",
 						"connectionId": 347182063,
@@ -176,7 +175,6 @@ func TestSendEvents(t *testing.T) {
 							},
 							"userAgent": "python-requests/2.32.4",
 						},
-						"id":                "34122265-1ad6-47e0-8934-ba50c5f395e5",
 						"messageId":         "8f8e652a-2518-4953-a2ed-c70e0894c791",
 						"originalTimestamp": now,
 						"previousId":        "IBEN72PV6",
@@ -224,7 +222,7 @@ func TestSendEvents(t *testing.T) {
 														"time":           now.Format(time.RFC3339Nano),
 														"value":          9.99,
 														"value_currency": "USD",
-														"unique_id":      "019813cc-6cbb-77a5-9e13-e57724067288",
+														"unique_id":      "2023196674/8f8e652a-2518-4953-a2ed-c70e0894c791",
 														"metric": map[string]any{
 															"data": map[string]any{
 																"type": "metric",
