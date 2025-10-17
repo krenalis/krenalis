@@ -808,3 +808,12 @@ nav.sections a.selected {
 }
 
 img[src$="/docs/events-ingestion.png"] { display: block; height: auto; margin: 5rem auto; width: 50%; }
+
+#event-schema th:nth-child(3) { text-align: center; }
+#event-schema td:nth-child(3) { color: #999; font-style: italic; padding-left: 1.2rem; padding-right: 1.2rem; text-align: center; }
+
+#automatically-collected-properties th { text-align: center; white-space: nowrap; }
+#automatically-collected-properties th:first-child { text-align: left; }
+#automatically-collected-properties tbody tr:hover { background: #fafcfe; }
+#automatically-collected-properties td { color: #008000; font-size: 1.3rem; text-align: center; }
+#automatically-collected-properties td:first-child { color: indianred; font-size: inherit; text-align: left; }
