@@ -119,7 +119,7 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Va
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
-			&meergo.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
+			&meergo.Input{Name: "APISecret", Label: "API secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
 		Settings: settings,
 	}
