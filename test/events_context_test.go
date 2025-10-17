@@ -47,9 +47,6 @@ func TestEventsContext(t *testing.T) {
 	c.SendEvent(meergoEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 1",
-		Context: &analytics.Context{
-			UserAgent: "N/A",
-		},
 	})
 	c.SendEvent(meergoEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
@@ -122,16 +119,7 @@ func TestEventsContext(t *testing.T) {
 			}
 		case "Test Event 2":
 			expectedContext = map[string]any{
-				"userAgent": "analytics-go (version: 0.0.4)",
-				"browser": map[string]any{
-					"name":  "Other",
-					"other": "Unknown",
-				},
 				"ip": "127.0.0.1",
-				"os": map[string]any{
-					"name":  "Other",
-					"other": "Unknown",
-				},
 			}
 		case "Test Event 3":
 			expectedContext = map[string]any{

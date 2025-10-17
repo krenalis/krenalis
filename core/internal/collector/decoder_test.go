@@ -29,12 +29,8 @@ func Test_Decoder(t *testing.T) {
 
 	writeKey := "vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"
 
-	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
-	browser := map[string]any{"name": "Chrome", "version": "117.0.0"}
 	ip := "192.168.1.1"
-	os := map[string]any{"name": "Windows", "version": "10.0.0"}
 	library := map[string]any{"name": "meergo.js", "version": "0.0.0"}
-	context := map[string]any{"browser": browser, "ip": ip, "os": os, "userAgent": userAgent}
 
 	// These non-read optional properties are not tested if they are not present as expected.
 	var nonReadOptionalProperties = []string{
@@ -97,7 +93,7 @@ func Test_Decoder(t *testing.T) {
 			expected: []expectedEvent{{
 				event: events.Event{
 					"anonymousId": "d6e77158-a417-4571-9ec7-8ee0a7d169ad",
-					"context":     context,
+					"context":     map[string]any{"ip": ip},
 					"messageId":   "90112b1f-1d2d-4566-a86f-27efae53530c",
 					"properties":  json.Value("{}"),
 					"traits":      json.Value("{}"),
@@ -112,7 +108,7 @@ func Test_Decoder(t *testing.T) {
 			expected: []expectedEvent{{
 				event: events.Event{
 					"anonymousId": "d6e77158-a417-4571-9ec7-8ee0a7d169ad",
-					"context":     context,
+					"context":     map[string]any{"ip": ip},
 					"messageId":   "90112b1f-1d2d-4566-a86f-27efae53530c",
 					"properties":  json.Value("{}"),
 					"traits":      json.Value("{}"),
@@ -128,7 +124,7 @@ func Test_Decoder(t *testing.T) {
 			expected: []expectedEvent{{
 				event: events.Event{
 					"anonymousId": "d6e77158-a417-4571-9ec7-8ee0a7d169ad",
-					"context":     context,
+					"context":     map[string]any{"ip": ip},
 					"messageId":   "90112b1f-1d2d-4566-a86f-27efae53530c",
 					"properties":  json.Value("{}"),
 					"traits":      json.Value("{}"),
@@ -143,7 +139,7 @@ func Test_Decoder(t *testing.T) {
 			body: `{"batch":[{"type":"identify","messageId":"9677e303-6a57-45e4-9c94-e47ec550a261","userId":"bob","groupId":null,"traits":{"name":"bob","age":19}}]}`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":   context,
+					"context":   map[string]any{"ip": ip},
 					"messageId": "9677e303-6a57-45e4-9c94-e47ec550a261",
 					"traits":    json.Value(`{"name":"bob","age":19}`),
 					"type":      "identify",
@@ -155,7 +151,7 @@ func Test_Decoder(t *testing.T) {
 			body: `[{"type":"identify","messageId":"9677e303-6a57-45e4-9c94-e47ec550a261","userId":"bob","groupId":null,"traits":{"name":"bob","age":19}}]`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":   context,
+					"context":   map[string]any{"ip": ip},
 					"messageId": "9677e303-6a57-45e4-9c94-e47ec550a261",
 					"traits":    json.Value(`{"name":"bob","age":19}`),
 					"type":      "identify",
@@ -168,7 +164,7 @@ func Test_Decoder(t *testing.T) {
 			body: `{"messageId":"9677e303-6a57-45e4-9c94-e47ec550a261","userId":"bob","groupId":null,"traits":{"name":"bob","age":19}}`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":   context,
+					"context":   map[string]any{"ip": ip},
 					"messageId": "9677e303-6a57-45e4-9c94-e47ec550a261",
 					"traits":    json.Value(`{"name":"bob","age":19}`),
 					"type":      "identify",
@@ -182,7 +178,7 @@ func Test_Decoder(t *testing.T) {
 			body: `{"batch":[{"type":"page","context":{"page":{"path":"/boo","referrer":"https://example.com/","search":"id=5","title":"boo","url":"https://example.com/boo?id=5"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a"}]}`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "ip": ip},
 					"anonymousId": "82281550-c0fc-4d69-bcf9-db1e43f9a76a",
 					"properties":  json.Value(`{}`),
 					"traits":      json.Value(`{}`),
@@ -194,7 +190,7 @@ func Test_Decoder(t *testing.T) {
 			body: `[{"type":"page","context":{"page":{"path":"/boo","referrer":"https://example.com/","search":"id=5","title":"boo","url":"https://example.com/boo?id=5"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a"}]`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "ip": ip},
 					"anonymousId": "82281550-c0fc-4d69-bcf9-db1e43f9a76a",
 					"properties":  json.Value(`{}`),
 					"traits":      json.Value(`{}`),
@@ -207,7 +203,7 @@ func Test_Decoder(t *testing.T) {
 			body: `{"context":{"page":{"path":"/boo","referrer":"https://example.com/","search":"id=5","title":"boo","url":"https://example.com/boo?id=5"}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a"}`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":     map[string]any{"page": map[string]any{"path": "/boo", "referrer": "https://example.com/", "search": "id=5", "title": "boo", "url": "https://example.com/boo?id=5"}, "ip": ip},
 					"anonymousId": "82281550-c0fc-4d69-bcf9-db1e43f9a76a",
 					"properties":  json.Value(`{}`),
 					"traits":      json.Value(`{}`),
@@ -221,7 +217,7 @@ func Test_Decoder(t *testing.T) {
 			body: `{"batch":[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"traits":{"name":"Bob"}},"name":"login","userId":"bob"}]}`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "ip": ip},
 					"properties": json.Value(`{}`),
 					"name":       "login",
 					"traits":     json.Value(`{"name":"Bob"}`),
@@ -234,7 +230,7 @@ func Test_Decoder(t *testing.T) {
 			body: `[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"traits":{"name":"Bob"}},"name":"login","userId":"bob"}]`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "ip": ip},
 					"properties": json.Value(`{}`),
 					"name":       "login",
 					"traits":     json.Value(`{"name":"Bob"}`),
@@ -248,7 +244,7 @@ func Test_Decoder(t *testing.T) {
 			body: `{"context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635},"traits":{"name":"Bob"}},"name":"login","userId":"bob"}`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "ip": ip},
 					"properties": json.Value(`{}`),
 					"name":       "login",
 					"traits":     json.Value(`{"name":"Bob"}`),
@@ -264,7 +260,7 @@ func Test_Decoder(t *testing.T) {
 			expected: []expectedEvent{{
 				event: events.Event{
 					"channel":    "web",
-					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "ip": ip},
 					"properties": json.Value(`{}`),
 					"traits":     json.Value(`{}`),
 					"type":       "screen",
@@ -276,7 +272,7 @@ func Test_Decoder(t *testing.T) {
 			body: `[{"type":"screen","context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","name":"login"}]`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "ip": ip},
 					"properties": json.Value(`{}`),
 					"traits":     json.Value(`{}`),
 					"type":       "screen",
@@ -289,7 +285,7 @@ func Test_Decoder(t *testing.T) {
 			body: `{"context":{"screen":{"width":2600,"height":1550,"density":1.3636363636363635}},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","name":"login"}`,
 			expected: []expectedEvent{{
 				event: events.Event{
-					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "browser": browser, "ip": ip, "os": os, "userAgent": userAgent},
+					"context":    map[string]any{"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")}, "ip": ip},
 					"properties": json.Value(`{}`),
 					"traits":     json.Value(`{}`),
 					"type":       "screen",
@@ -382,6 +378,26 @@ func Test_Decoder(t *testing.T) {
 			}},
 		},
 
+		// Browser and OS.
+		{
+			typ:  "track",
+			body: `{"context":{"userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"},"anonymousId":"82281550-c0fc-4d69-bcf9-db1e43f9a76a","event":"Product View"}`,
+			expected: []expectedEvent{{
+				event: events.Event{
+					"context": map[string]any{
+						"browser":   map[string]any{"name": "Chrome", "version": "117.0.0"},
+						"ip":        ip,
+						"os":        map[string]any{"name": "Windows", "version": "10.0.0"},
+						"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+					},
+					"properties": json.Value(`{}`),
+					"traits":     json.Value(`{}`),
+					"type":       "track",
+					"event":      "Product View",
+				}},
+			},
+		},
+
 		// Location.
 		{
 			typ:  "screen",
@@ -389,11 +405,8 @@ func Test_Decoder(t *testing.T) {
 			expected: []expectedEvent{{
 				event: events.Event{
 					"context": map[string]any{
-						"screen":    map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")},
-						"browser":   browser,
-						"ip":        ip,
-						"os":        os,
-						"userAgent": userAgent,
+						"screen": map[string]any{"width": 2600, "height": 1550, "density": decimal.MustParse("1.36")},
+						"ip":     ip,
 						"location": map[string]any{
 							"city":      "London",
 							"country":   "GB",
@@ -424,7 +437,7 @@ func Test_Decoder(t *testing.T) {
 			}, {
 				event: events.Event{
 					"messageId":  "ce93dc4b-72f1-43ac-8b82-bfe7eaaf6fe9",
-					"context":    context,
+					"context":    map[string]any{"ip": ip},
 					"type":       "page",
 					"properties": json.Value("{}"),
 					"traits":     json.Value("{}"),

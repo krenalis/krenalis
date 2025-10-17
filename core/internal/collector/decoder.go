@@ -50,7 +50,6 @@ type decoder struct {
 		ip  net.IP
 		str string
 	}
-	userAgent    string
 	sentAt       time.Time
 	writeKey     string
 	connectionId int
@@ -186,7 +185,6 @@ func (d *decoder) Reset(r *http.Request) error {
 		d.remoteAddr.str = str
 	}
 
-	d.userAgent = r.Header.Get("User-Agent")
 	d.sentAt = time.Time{}
 	d.writeKey = ""
 	d.connectionId = 0
@@ -497,22 +495,6 @@ func (d *decoder) decodeEvent(connectionId int, connectionType state.ConnectorTy
 		if _, ok := event["category"]; ok {
 			return nil, errors.BadRequest("property 'category' is not permitted for a %s event", typ)
 		}
-	}
-
-	// UserAgent.
-	if ua, ok := context["userAgent"].(string); ok {
-		if ua == "N/A" {
-			// If the user agent is set to "N/A", this means that the user agent is
-			// not applicable to this event, so it should not be taken from the HTTP
-			// request either and the event should remain without a user agent.
-			delete(context, "userAgent")
-		} else {
-			// Simply keep the user agent passed in the context.
-		}
-	} else {
-		// User agent not provided in context, so it must be read from the
-		// request.
-		context["userAgent"] = d.userAgent
 	}
 
 	// Browser and OS.
