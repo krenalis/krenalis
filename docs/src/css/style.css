@@ -623,7 +623,22 @@ nav.sections a.selected {
     padding-left: 0;
     color: var(--toc-title-color);
     font-size: var(--toc-font-size);
-    font-weight: 500;
+    font-weight: 700;
+}
+
+.table-of-content .table-of-content__title-link {
+    display: inline;
+    margin: 0;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-decoration: none;
+    padding-left: 0;
+}
+
+.table-of-content .table-of-content__title-link:hover {
+    color: var(--link-color);
+    text-decoration: none;
 }
 
 .table-of-content__list {

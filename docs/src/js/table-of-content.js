@@ -1,6 +1,7 @@
 // buildTableOfContent renders the documentation table of contents.
 
 const SCROLL_THRESHOLD_PX = 360;
+const DEFAULT_TOC_TITLE = "On this page";
 
 // Allow the final heading to activate when we reach within this many pixels of the page bottom.
 const PAGE_END_TOLERANCE_PX = 4;
@@ -24,7 +25,21 @@ const buildTableOfContent = () => {
         return;
     }
 
-    const headings = Array.from(main.querySelectorAll("h2, h3"));
+    const pageHeading = main.querySelector("h1");
+    const pageTitleText = pageHeading?.textContent?.trim() ?? "";
+    const tocTitleText = pageTitleText === "" ? DEFAULT_TOC_TITLE : pageTitleText;
+
+    let headings = Array.from(main.querySelectorAll("h2, h3"));
+    if (pageHeading != null) {
+        const firstHeading = headings[0] ?? null;
+        if (
+            firstHeading != null &&
+            firstHeading.tagName.toLowerCase() === "h2" &&
+            pageHeading.nextElementSibling === firstHeading
+        ) {
+            headings = headings.slice(1);
+        }
+    }
     // Do not render an empty TOC when the page has no headings.
     if (headings.length === 0) {
         return;
@@ -32,11 +47,15 @@ const buildTableOfContent = () => {
 
     const container = document.createElement("nav");
     container.className = "table-of-content";
-    container.setAttribute("aria-label", "On this page");
+    container.setAttribute("aria-label", tocTitleText);
 
     const title = document.createElement("h2");
     title.className = "table-of-content__title";
-    title.textContent = "On this page";
+    const titleLink = document.createElement("a");
+    titleLink.className = "table-of-content__title-link";
+    titleLink.href = "#";
+    titleLink.textContent = tocTitleText;
+    title.appendChild(titleLink);
     container.appendChild(title);
 
     const list = document.createElement("ol");
@@ -132,6 +151,23 @@ const buildTableOfContent = () => {
             behavior: prefersReducedMotion ? "auto" : "smooth",
         });
     };
+
+    if (titleLink != null) {
+        titleLink.addEventListener("click", (event) => {
+            event.preventDefault();
+
+            if (pageHeading != null) {
+                scrollToHeading(pageHeading);
+                return;
+            }
+
+            const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+            window.scrollTo({
+                top: 0,
+                behavior: prefersReducedMotion ? "auto" : "smooth",
+            });
+        });
+    }
 
     // Click handler factory that keeps the TOC highlight in sync with user intent.
     const handleAnchorClick = (id) => (event) => {
