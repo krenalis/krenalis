@@ -6,7 +6,7 @@ module github.com/meergo/meergo
 go 1.25
 
 require (
-	github.com/ClickHouse/clickhouse-go/v2 v2.40.1
+	github.com/ClickHouse/clickhouse-go/v2 v2.40.3
 	github.com/andybalholm/brotli v1.2.0
 	github.com/avct/uasurfer v0.0.0-20250506104815-f2613aa2d406
 	github.com/aws/aws-sdk-go-v2 v1.39.0
@@ -58,7 +58,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/ClickHouse/ch-go v0.67.0 // indirect
+	github.com/ClickHouse/ch-go v0.68.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/apache/arrow-go/v18 v18.4.0 // indirect
 	github.com/apache/thrift v0.22.0 // indirect
@@ -89,7 +89,7 @@ require (
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v28.3.3+incompatible // indirect
+	github.com/docker/docker v28.4.0+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
@@ -103,7 +103,6 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
@@ -163,11 +162,12 @@ require (
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
-	go.opentelemetry.io/otel v1.37.0 // indirect
+	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.36.0 // indirect
-	go.opentelemetry.io/otel/metric v1.37.0 // indirect
-	go.opentelemetry.io/otel/trace v1.37.0 // indirect
+	go.opentelemetry.io/otel/metric v1.38.0 // indirect
+	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
