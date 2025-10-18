@@ -16,7 +16,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.88.0
 	github.com/aws/smithy-go v1.23.0
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
-	github.com/evanw/esbuild v0.25.9
+	github.com/evanw/esbuild v0.25.11
 	github.com/fraugster/parquet-go v0.12.0
 	github.com/getsentry/sentry-go v0.35.3
 	github.com/go-sql-driver/mysql v1.9.3
