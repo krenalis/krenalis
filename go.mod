@@ -43,9 +43,9 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.38.0
 	github.com/twmb/franz-go v1.19.5
 	github.com/xuri/excelize/v2 v2.9.1
-	golang.org/x/crypto v0.42.0
-	golang.org/x/net v0.44.0
-	golang.org/x/text v0.29.0
+	golang.org/x/crypto v0.43.0
+	golang.org/x/net v0.46.0
+	golang.org/x/text v0.30.0
 )
 
 require (
@@ -169,13 +169,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/mod v0.27.0 // indirect
+	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.35.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/telemetry v0.0.0-20250908211612-aef8a434d053 // indirect
+	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/tools v0.37.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/go-playground/mold.v2 v2.2.0 // indirect
