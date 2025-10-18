@@ -1,5 +1,6 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Sources{% end %}
+{% import "/imports/image.html" %}
+{% macro Title string %}Source connectors{% end %}
 {% Article %}
 
 # Sources
@@ -20,6 +21,37 @@ This means that events tracked across different platforms, like a purchase made 
 
 Customer and event data collected from various sources can be stored in real-time in the **data warehouse** of Meergo's workspace, making the information available for advanced analysis and reporting, as well as accessible on Meergo’s dashboard. Additionally, events can be sent immediately to a **destination**, like a cloud application, to be processed and used in real-time.
 
-## In this section
+## All sources
 
-* [Add and update sources](add-update-sources)
+<ul class="grid-list connectors">
+  <li><a href="sources/mailchimp">{{ Image("Mailchimp", "mailchimp.svg")}} Mailchimp</a></li>
+  <li><a href="sources/hubspot">{{ Image("HubSpot", "hubspot.svg") }} HubSpot</a></li>
+  <li><a href="sources/klaviyo">{{ Image("Klaviyo", "klaviyo.svg") }} Klaviyo</a></li>
+  <li><a href="sources/stripe">{{ Image("Stripe", "stripe.svg") }} Stripe</a></li>
+  <li><a href="sources/segment">{{ Image("Segment", "segment.svg") }} Segment</a></li>
+  <li><a href="sources/rudderstack">{{ Image("RudderStack", "rudderstack.svg") }} RudderStack</a></li>
+  <li><a href="sources/excel">{{ Image("Excel", "excel.svg") }} Excel</a></li>
+  <li><a href="sources/csv">{{ Image("CSV", "csv.svg") }} CSV</a></li>
+  <li><a href="sources/json">{{ Image("JSON", "json.svg") }} JSON</a></li>
+  <li><a href="sources/parquet">{{ Image("Parquet", "parquet.svg") }} Parquet</a></li>
+  <li><a href="sources/s3">{{ Image("S3", "s3.svg") }} S3</a></li>
+  <li><a href="sources/http-get">{{ Image("HTTP GET", "http-get.svg") }} HTTP GET</a></li>
+  <li><a href="sources/sftp">{{ Image("SFTP", "sftp.svg") }} SFTP</a></li>
+  <li><a href="sources/filesystem">{{ Image("Filesystem", "filesystem.svg") }} Filesystem</a></li>
+  <li><a href="sources/clickhouse">{{ Image("ClickHouse", "clickhouse.svg") }} ClickHouse</a></li>
+  <li><a href="sources/postgresql">{{ Image("PostgreSQL", "postgresql.svg") }} PostgreSQL</a></li>
+  <li><a href="sources/snowflake">{{ Image("Snowflake", "snowflake.svg") }} Snowflake</a></li>
+  <li><a href="sources/mysql">{{ Image("MySQL", "mysql.svg") }} MySQL</a></li>
+  <li><a href="sources/javascript-sdk">{{ Image("JavaScript", "javascript.svg") }} JavaScript</a></li>
+  <li><a href="sources/dotnet">{{ Image(".NET", "dotnet.svg") }} .NET</a></li>
+  <li><a href="sources/android-sdk">{{ Image("Android", "android.svg") }} Android</a></li>
+  <li><a href="sources/go">{{ Image("Go", "go.svg") }} Go</a></li>
+  <li><a href="sources/java">{{ Image("Java", "java.svg") }} Java</a></li>
+  <li><a href="sources/nodejs">{{ Image("Node.js", "node.svg") }} Node.js</a></li>
+  <li><a href="sources/python">{{ Image("Python", "python.svg") }} Python</a></li>
+  <li><a href="sources/meergoapi">{{ Image("Meergo API", "meergo-api.svg") }} Meergo API</a></li>
+</ul>
+
+### Need more sources?
+
+If you need additional destinations, [contact us](mailto:hello@meergo.com). You can also [create a custom connector](create-new-connector).

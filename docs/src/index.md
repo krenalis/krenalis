@@ -37,13 +37,13 @@ To ensure accuracy and consistency, Meergo applies schema-based validation at in
 Use the following SDKs to collect and send events to Meergo. Events can be stored in your data warehouse or sent to applications for activation in real-time.
 
 <ul class="grid-list connectors">
-  <li><a href="javascript-sdk">{{ Image("JavaScript", "javascript.svg") }} JavaScript SDK (Browser)</a></li>
-  <li><a href="csharp-sdk">{{ Image(".NET", "dotnet.svg") }} C# SDK</a></li>
-  <li><a href="android-sdk">{{ Image("Android", "android.svg") }} Android SDK</a></li>
-  <li><a href="go-sdk">{{ Image("Go", "go.svg") }} Go SDK</a></li>
-  <li><a href="java-sdk">{{ Image("Java", "java.svg") }} Java SDK</a></li>
-  <li><a href="node-sdk">{{ Image("Node.js", "node.svg") }} Node SDK</a></li>
-  <li><a href="python-sdk">{{ Image("Python", "python.svg") }} Python SDK</a></li>
+  <li><a href="sources/javascript-sdk">{{ Image("JavaScript", "javascript.svg") }} JavaScript SDK (Browser)</a></li>
+  <li><a href="sources/csharp-sdk">{{ Image(".NET", "dotnet.svg") }} C# SDK</a></li>
+  <li><a href="sources/android-sdk">{{ Image("Android", "android.svg") }} Android SDK</a></li>
+  <li><a href="sources/go-sdk">{{ Image("Go", "go.svg") }} Go SDK</a></li>
+  <li><a href="sources/java-sdk">{{ Image("Java", "java.svg") }} Java SDK</a></li>
+  <li><a href="sources/node-sdk">{{ Image("Node.js", "node.svg") }} Node SDK</a></li>
+  <li><a href="sources/python-sdk">{{ Image("Python", "python.svg") }} Python SDK</a></li>
 </ul>
 
 ## Getting Started with Meergo
