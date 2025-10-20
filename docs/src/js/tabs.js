@@ -135,8 +135,9 @@ export function buildTabs(doc = document, win = window) {
       if (openingMarker !== null) {
         openStack.push({
           startComment: currentComment,
-          rawTitle: openingMarker,
-          title: openingMarker ? openingMarker : 'Tabs'
+          rawTitle: openingMarker.title,
+          title: openingMarker.title ? openingMarker.title : 'Tabs',
+          options: openingMarker.options || Object.create(null)
         });
       } else if (isTabsEndMarker(currentComment)) {
         const activeBlock = openStack.pop();
@@ -144,6 +145,7 @@ export function buildTabs(doc = document, win = window) {
           // closing marker: capture the innermost block before unwinding parents
           blocks.push({
             title: activeBlock.title,
+            options: activeBlock.options || Object.create(null),
             startComment: activeBlock.startComment,
             endComment: currentComment
           });
@@ -252,6 +254,17 @@ export function buildTabs(doc = document, win = window) {
     section.className = 'tabs';
     section.setAttribute('aria-label', block.title);
 
+    const panelBackground =
+      block.options && typeof block.options.bg === 'string'
+        ? block.options.bg
+        : null;
+    if (panelBackground) {
+      section.dataset.tabsBackground = panelBackground;
+      if (section.style && typeof section.style.setProperty === 'function') {
+        section.style.setProperty('--tabs-panel-background', panelBackground);
+      }
+    }
+
     const tabsNav = doc.createElement('div');
     tabsNav.className = 'tabs-nav';
     tabsNav.setAttribute('role', 'tablist');
@@ -281,6 +294,15 @@ export function buildTabs(doc = document, win = window) {
       panel.id = panelId;
       panel.setAttribute('aria-labelledby', tabId);
       panel.hidden = true;
+      if (panelBackground) {
+        panel.dataset.tabsBackground = panelBackground;
+        panel.style.background = panelBackground;
+        if (typeof panel.style.setProperty === 'function') {
+          panel.style.setProperty('background-color', panelBackground);
+        } else {
+          panel.style.backgroundColor = panelBackground;
+        }
+      }
 
       tabInfo.content.forEach(function (node) {
         panel.appendChild(node);
@@ -505,7 +527,31 @@ function parseTabsMarker(rawValue) {
   if (!match) {
     return null;
   }
-  return (match[1] || '').trim();
+  const remainder = (match[1] || '').trim();
+  if (!remainder) {
+    return {
+      title: '',
+      options: Object.create(null)
+    };
+  }
+
+  let cursor = remainder;
+  const options = Object.create(null);
+  const optionPattern = /^([a-z0-9_-]+)\s*:\s*([^\s]+)\s*/i;
+  let optionMatch = optionPattern.exec(cursor);
+  while (optionMatch) {
+    const key = optionMatch[1].toLowerCase();
+    const value = optionMatch[2];
+    options[key] = value;
+    cursor = cursor.slice(optionMatch[0].length);
+    cursor = cursor.replace(/^\s+/, '');
+    optionMatch = optionPattern.exec(cursor);
+  }
+
+  return {
+    title: cursor.trim(),
+    options: options
+  };
 }
 
 function isTabsEndMarker(commentNode) {

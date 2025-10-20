@@ -41,6 +41,7 @@ img { max-width: 100%; }
 .tabs [role="tab"] { background: transparent; border: 1px solid transparent; cursor: pointer; font-size: 1rem; padding: .85rem .7rem .75rem .7rem; }
 .tabs [role="tab"][aria-selected="true"] { border-bottom: 1px solid #006ca7f5; color: #006ca7f5; }
 .tabs [role="tabpanel"] { border: 1px solid #dfe1e0; border-radius: 3px; margin: 0; padding: 1.5rem; }
+.tabs[data-tabs-background] [role="tabpanel"] { background: var(--tabs-panel-background); }
 .tabs [role="tabpanel"] > *:first-child { margin-top: 0; }
 .tabs [role="tabpanel"] > *:last-child { margin-bottom: 0; }
 [role="tabpanel"][hidden] { display: none; }
