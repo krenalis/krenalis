@@ -41,8 +41,10 @@
 	grid-area: logo;
 }
 
-.action__header-title .little-logo img {
+.action__header-title .little-logo img,
+.action__header-title .little-logo sl-icon {
 	height: 35px;
+	width: auto;
 }
 
 .action__header-name {

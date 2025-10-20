@@ -123,11 +123,16 @@
 	color: var(--sl-color-neutral-500);
 }
 
-.connectors-list__card-logo > img {
+.connectors-list__card-logo > img,
+.connectors-list__card-logo sl-icon {
 	height: 70px;
 	width: auto;
 	padding: 5px;
 	margin: 0 auto 30px auto;
+}
+
+.connectors-list__card-logo sl-icon {
+	height: 60px;
 }
 
 .connectors-list__card-unknown-logo {

@@ -9,7 +9,7 @@ interface UnknownLogoProps {
 const UnknownLogo = ({ size }: UnknownLogoProps) => {
 	return (
 		<div className='unknown-logo'>
-			<SlIcon name='question-lg' style={{ fontSize: `${size}px` }}></SlIcon>
+			<SlIcon name='plug' style={{ fontSize: `${size}px` }}></SlIcon>
 		</div>
 	);
 };

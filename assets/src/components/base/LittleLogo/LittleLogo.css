@@ -2,7 +2,8 @@
 	pointer-events: none;
 }
 
-.little-logo > img {
+.little-logo > img,
+.little-logo sl-icon {
 	height: 25px;
 	width: auto;
 	max-width: unset;
