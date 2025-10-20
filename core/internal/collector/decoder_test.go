@@ -8,7 +8,10 @@
 package collector
 
 import (
+	"bytes"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -496,12 +499,8 @@ func Test_Decoder(t *testing.T) {
 					t.Fatalf("expected collect key %q, got %q", test.writeKey, writeKey)
 				}
 			}
-			connectionType := test.connectionType
-			if connectionType == 0 {
-				test.connectionType = state.SDK
-			}
 			i := 0
-			for got, err := range dec.Events(test.connectionId, connectionType) {
+			for got, err := range dec.Events(test.connectionId, true) {
 				if i == len(test.expected) {
 					if err != nil {
 						t.Fatalf("when parsing an unexpected event, got error %q", err)
@@ -564,6 +563,172 @@ func Test_Decoder(t *testing.T) {
 		})
 	}
 
+}
+
+// TestDecoderContextIPHandling verifies the context.ip normalization and the
+// fallback-to-request-ip switch.
+func TestDecoderContextIPHandling(t *testing.T) {
+	t.Parallel()
+
+	const remoteIP = "198.51.100.23"
+
+	remoteParts := strings.Split(remoteIP, ".")
+	if len(remoteParts) != 4 {
+		t.Fatalf("expected 4 parts for remote IP %q, got %d parts", remoteIP, len(remoteParts))
+	}
+	remoteIP24 := remoteParts[0] + "." + remoteParts[1] + "." + remoteParts[2] + ".0"
+	remoteIP16 := remoteParts[0] + "." + remoteParts[1] + ".0.0"
+
+	requestURL, err := url.Parse("/events/track")
+	if err != nil {
+		t.Fatalf("failed to parse request URL: %v", err)
+	}
+
+	makeBody := func(contextJSON string) string {
+		const base = `{"type":"track","event":"click","anonymousId":"anon-1"`
+		if contextJSON == "" {
+			return base + `}`
+		}
+		return base + `,"context":` + contextJSON + `}`
+	}
+
+	decode := func(t *testing.T, body string, fallback bool) events.Event {
+		t.Helper()
+
+		r := &http.Request{
+			Method: "POST",
+			Header: http.Header{
+				"Content-Type": []string{"application/json; charset=utf-8"},
+				"User-Agent":   []string{"DecoderContextIPTest/1.0"},
+			},
+			RemoteAddr: remoteIP + ":9000",
+			URL:        requestURL,
+			Body:       io.NopCloser(strings.NewReader(body)),
+		}
+
+		dec, err := newDecoder(r)
+		if err != nil {
+			t.Fatalf("newDecoder returned error: %v", err)
+		}
+
+		var (
+			gotEvent events.Event
+			gotErr   error
+			count    int
+		)
+
+		for event, err := range dec.Events(42, fallback) {
+			gotEvent = event
+			gotErr = err
+			count++
+		}
+
+		if gotErr != nil {
+			t.Fatalf("unexpected event error: %v", gotErr)
+		}
+		if count != 1 {
+			t.Fatalf("expected 1 event, got %d", count)
+		}
+		if gotEvent == nil {
+			t.Fatal("expected non-nil event, got nil")
+		}
+
+		return gotEvent
+	}
+
+	type expectedIP struct {
+		present bool
+		value   string
+	}
+
+	tests := []struct {
+		name        string
+		contextJSON string
+		fallback    bool
+		wantIP      expectedIP
+	}{
+		{
+			name:        "no-context-ip-fallback-disabled",
+			contextJSON: "",
+			fallback:    false,
+			wantIP:      expectedIP{present: false},
+		},
+		{
+			name:        "no-context-ip-fallback-enabled",
+			contextJSON: "",
+			fallback:    true,
+			wantIP:      expectedIP{present: true, value: remoteIP},
+		},
+		{
+			name:        "context-without-ip-fallback-enabled",
+			contextJSON: `{"locale":"en-US"}`,
+			fallback:    true,
+			wantIP:      expectedIP{present: true, value: remoteIP},
+		},
+		{
+			name:        "context-regular-ip",
+			contextJSON: `{"ip":"198.18.0.1"}`,
+			fallback:    true,
+			wantIP:      expectedIP{present: true, value: "198.18.0.1"},
+		},
+		{
+			name:        "context-ip-zero",
+			contextJSON: `{"ip":"0.0.0.0"}`,
+			fallback:    true,
+			wantIP:      expectedIP{present: false},
+		},
+		{
+			name:        "context-ip-mask-32",
+			contextJSON: `{"ip":"255.255.255.255"}`,
+			fallback:    false,
+			wantIP:      expectedIP{present: true, value: remoteIP},
+		},
+		{
+			name:        "context-ip-mask-24",
+			contextJSON: `{"ip":"255.255.255.0"}`,
+			fallback:    false,
+			wantIP:      expectedIP{present: true, value: remoteIP24},
+		},
+		{
+			name:        "context-ip-mask-16",
+			contextJSON: `{"ip":"255.255.0.0"}`,
+			fallback:    false,
+			wantIP:      expectedIP{present: true, value: remoteIP16},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			body := makeBody(tt.contextJSON)
+			event := decode(t, body, tt.fallback)
+
+			ctx, ok := event["context"].(map[string]any)
+			if ctx == nil {
+				ctx = map[string]any{}
+			}
+
+			ipVal, ok := ctx["ip"]
+			if tt.wantIP.present {
+				if !ok {
+					t.Fatalf("expected context.ip %q, got missing value", tt.wantIP.value)
+				}
+				gotIP, ok := ipVal.(string)
+				if !ok {
+					t.Fatalf("expected context.ip to be string, got %T", ipVal)
+				}
+				if gotIP != tt.wantIP.value {
+					t.Fatalf("expected context.ip %q, got %q", tt.wantIP.value, gotIP)
+				}
+			} else {
+				if ok {
+					t.Fatalf("expected context.ip to be absent, got %v", ipVal)
+				}
+			}
+		})
+	}
 }
 
 func Test_parseUserAgent(t *testing.T) {
@@ -921,4 +1086,109 @@ func Test_normalizeContextOS(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestParseRemoteAddr covers valid, invalid, and normalization cases for
+// parseRemoteAddr.
+func TestParseRemoteAddr(t *testing.T) {
+	t.Parallel()
+
+	// --- valid cases ---
+	valid := []struct {
+		in     string
+		want32 string
+		want24 string
+		want16 string
+	}{
+		// Common cases.
+		{"192.168.1.42", "192.168.1.42", "192.168.1.0", "192.168.0.0"},
+		{"10.0.0.1", "10.0.0.1", "10.0.0.0", "10.0.0.0"},
+		{"172.16.5.123", "172.16.5.123", "172.16.5.0", "172.16.0.0"},
+		{"8.8.8.8", "8.8.8.8", "8.8.8.0", "8.8.0.0"},
+		{"::ffff:192.0.2.1", "192.0.2.1", "192.0.2.0", "192.0.0.0"},
+
+		// Edge octet values.
+		{"0.0.0.0", "0.0.0.0", "0.0.0.0", "0.0.0.0"},
+		{"255.255.255.255", "255.255.255.255", "255.255.255.0", "255.255.0.0"},
+		{"1.2.3.0", "1.2.3.0", "1.2.3.0", "1.2.0.0"},
+		{"1.2.0.0", "1.2.0.0", "1.2.0.0", "1.2.0.0"},
+	}
+
+	for _, test := range valid {
+		test := test
+		t.Run("valid/"+test.in, func(t *testing.T) {
+			t.Parallel()
+
+			var dec decoder
+			dec.remoteAddr.ip = make(net.IP, 4)
+			err := dec.parseRemoteAddr(test.in)
+			if err != nil {
+				t.Fatalf("parseRemoteAddr(%q) returned error: %v", test.in, err)
+			}
+
+			ra := dec.remoteAddr
+			if ra.ip32 != test.want32 {
+				t.Fatalf("ip32: expected %q, got %q", test.want32, ra.ip32)
+			}
+			if ra.ip24 != test.want24 {
+				t.Fatalf("ip24: expected %q, got %q", test.want24, ra.ip24)
+			}
+			if ra.ip16 != test.want16 {
+				t.Fatalf("ip16: expected %q, got %q", test.want16, ra.ip16)
+			}
+
+			wantIP := net.ParseIP(test.want32)
+			if wantIP == nil {
+				t.Fatal(fmt.Errorf("invalid IP address: %s", test.want32))
+			}
+			if !wantIP.Equal(ra.ip) {
+				t.Fatalf("ip: expected %v, got %v", wantIP, ra.ip)
+			}
+		})
+	}
+
+	// --- invalid cases ---
+	invalid := []string{
+		"", "   ", "1.2.3", "1.2.3.4.5", "256.1.1.1", "-1.2.3.4", "1.2.3.-4",
+		"abc.def.ghi.jkl", "::1", "2001:db8::1", "1.2.3.4 ", " 1.2.3.4",
+	}
+
+	zeroIP := []byte{0, 0, 0, 0}
+
+	for _, in := range invalid {
+		in := in
+		t.Run("invalid/"+in, func(t *testing.T) {
+			t.Parallel()
+
+			var dec decoder
+			dec.remoteAddr.ip = make(net.IP, 4)
+			err := dec.parseRemoteAddr(in)
+			if err == nil {
+				t.Fatalf("parseRemoteAddr(%q): expected error, got nil", in)
+			}
+			ra := dec.remoteAddr
+			if ra.ip32 != "" || ra.ip24 != "" || ra.ip16 != "" || !bytes.Equal(ra.ip, zeroIP) {
+				t.Fatalf("parseRemoteAddr(%q): expected zero-value remoteAddr on error, got %+v", in, ra)
+			}
+		})
+	}
+
+	// --- normalization case ---
+	t.Run("normalization/leadingZeros", func(t *testing.T) {
+		t.Parallel()
+
+		var dec decoder
+		dec.remoteAddr.ip = make(net.IP, 4)
+		err := dec.parseRemoteAddr("192.168.001.042")
+		if err == nil {
+			ra := dec.remoteAddr
+			if ra.ip32 != "192.168.1.42" {
+				t.Fatalf("normalization: expected %q, got %q", "192.168.1.42", ra.ip32)
+			}
+			if ra.ip24 != "192.168.1.0" || ra.ip16 != "192.168.0.0" {
+				t.Fatalf("masked normalization: expected ip24=%q ip16=%q, got ip24=%q ip16=%q",
+					"192.168.1.0", "192.168.0.0", ra.ip24, ra.ip16)
+			}
+		}
+	})
 }

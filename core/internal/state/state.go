@@ -712,6 +712,7 @@ type Connector struct {
 	OAuth                  *OAuth
 	EndpointGroups         []meergo.EndpointGroup
 	Strategies             bool
+	FallbackToRequestIP    bool
 	Documentation          meergo.ConnectorDocumentation
 }
 

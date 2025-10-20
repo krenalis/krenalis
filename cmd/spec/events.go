@@ -74,10 +74,11 @@ var eventPostContextType = types.Object([]types.Property{
 	{
 		Name: "ip",
 		Type: types.Inet(),
-		Description: "IP is the IP address associated with the event.\n\n" +
-			"If `context.ip` is explicitly set, its value will be used. Otherwise, the IP will be inferred from the HTTP request of the event.\n\n" +
-			"To deliberately avoid associating any IP with the event, set `context.ip` to `0.0.0.0`.\n" +
-			"This can be useful for server-side events where the originating IP is irrelevant or where no client IP can be meaningfully assigned (e.g. background jobs, internal system events).",
+		Description: "The IP address associated with the event. If not specified, for JavaScript and Android connections, the event's IP address is automatically derived from the HTTP request.\n\nThe following special values let you change the default behavior and control how the IP address is determined or masked:\n\n" +
+			"* `\"255.255.255.255\"`: Use the IP address of the request.\n\n" +
+			"* `\"255.255.255.0\"`: Use the IP address of the request, masking it with `255.255.255.0`, which sets the last segment to 0 (e.g., `192.168.45.32` → `192.168.45.0`). Use this for partial anonymization.\n\n" +
+			"* `\"255.255.0.0\"`: Use the IP address of the request, masking it with `255.255.0.0`, which sets the last two segments to 0 (e.g., `192.168.45.32` → `192.168.0.0`). Use this for stronger anonymization.\n\n" +
+			"* `\"0.0.0.0\"`: Don't include an IP address in the event. Use this with JavaScript and Android connections when no IP address is applicable or when it should not be associated for privacy reasons.",
 	},
 	{
 		Name: "library",

@@ -403,12 +403,13 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	ws := connection.Workspace()
+	connector := connection.Connector()
 	observer, _ := c.observers.Load(ws.ID)
 
 	var eventErr error
 
 	// Decode the events.
-	for event, err := range dec.Events(connection.ID) {
+	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
 
 		meergoMetrics.Increment("Collector.serveEvents.decoded_events", 1)
 		if err != nil {

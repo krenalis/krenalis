@@ -157,6 +157,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			}
 			c.SourceTargets = EventsFlag | UsersFlag
 			c.Strategies = connector.Strategies
+			c.FallbackToRequestIP = connector.FallbackToRequestIP
 			c.Documentation = connector.Documentation
 		case meergo.StreamInfo:
 			c.Code = connector.Code

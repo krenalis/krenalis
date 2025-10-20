@@ -53,6 +53,7 @@ func TestEventsContext(t *testing.T) {
 		Event:       "Test Event 2",
 		Context: &analytics.Context{
 			UserAgent: "",
+			IP:        net.ParseIP("255.255.255.255"),
 		},
 	})
 	c.SendEvent(meergoEventWriteKey, analytics.Track{
@@ -60,6 +61,7 @@ func TestEventsContext(t *testing.T) {
 		Event:       "Test Event 3",
 		Context: &analytics.Context{
 			UserAgent: "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0",
+			IP:        net.ParseIP("255.255.255.255"),
 		},
 	})
 	c.SendEvent(meergoEventWriteKey, analytics.Track{
@@ -71,6 +73,7 @@ func TestEventsContext(t *testing.T) {
 				Name:    "Linux",
 				Version: "1",
 			},
+			IP: net.ParseIP("255.255.255.0"),
 		},
 	})
 	c.SendEvent(meergoEventWriteKey, analytics.Track{
@@ -114,9 +117,6 @@ func TestEventsContext(t *testing.T) {
 		var expectedContext map[string]any
 		switch event["event"].(string) {
 		case "Test Event 1":
-			expectedContext = map[string]any{
-				"ip": "127.0.0.1",
-			}
 		case "Test Event 2":
 			expectedContext = map[string]any{
 				"ip": "127.0.0.1",
@@ -141,7 +141,7 @@ func TestEventsContext(t *testing.T) {
 					"name":    "Firefox",
 					"version": "47.0.0",
 				},
-				"ip": "127.0.0.1",
+				"ip": "127.0.0.0",
 				"os": map[string]any{
 					"name":    "Linux",
 					"version": "1",

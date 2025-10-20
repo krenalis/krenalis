@@ -13,11 +13,12 @@ import (
 
 // SDKInfo represents an SDK connector info.
 type SDKInfo struct {
-	Code          string
-	Label         string
-	Categories    Categories // categories
-	Strategies    bool       // whether this connector supports users strategies
-	Documentation ConnectorDocumentation
+	Code                string
+	Label               string
+	Categories          Categories // categories
+	Strategies          bool       // whether this connector supports users strategies
+	FallbackToRequestIP bool       // whether to use the request IP as the event IP if context.ip was not provided
+	Documentation       ConnectorDocumentation
 
 	newFunc reflect.Value
 	ct      reflect.Type

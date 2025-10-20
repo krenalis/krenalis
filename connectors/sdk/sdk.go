@@ -65,10 +65,11 @@ func init() {
 			},
 		},
 		{
-			Code:       "android",
-			Label:      "Android",
-			Categories: meergo.CategorySDKAndAPI,
-			Strategies: true,
+			Code:                "android",
+			Label:               "Android",
+			Categories:          meergo.CategorySDKAndAPI,
+			Strategies:          true,
+			FallbackToRequestIP: true,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users from an Android mobile device",
@@ -99,10 +100,11 @@ func init() {
 			},
 		},
 		{
-			Code:       "javascript",
-			Label:      "JavaScript",
-			Categories: meergo.CategorySDKAndAPI,
-			Strategies: true,
+			Code:                "javascript",
+			Label:               "JavaScript",
+			Categories:          meergo.CategorySDKAndAPI,
+			Strategies:          true,
+			FallbackToRequestIP: true,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users from a website using JavaScript",
