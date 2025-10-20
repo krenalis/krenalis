@@ -25,7 +25,6 @@ import (
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/events"
-	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
@@ -83,19 +82,18 @@ func (d *decoder) ConnectionId() (int, bool) {
 	return d.connectionId, true
 }
 
-// Events returns an iterator to iterate over events. connectionId and
-// connectionType represent the identifier and type, respectively, of the source
-// connection from which the events are received.
+// Events returns an iterator to iterate over events. connectionId represent the
+// identifier of the source connection from which the events are received.
 //
 // For malformed errors, it returns nil and the corresponding error.
-func (d *decoder) Events(connectionId int, connectionType state.ConnectorType) iter.Seq2[events.Event, error] {
+func (d *decoder) Events(connectionId int) iter.Seq2[events.Event, error] {
 	return func(yield func(events.Event, error) bool) {
 		if d.typ != "batch" {
 			// Decode a single event.
 			var event events.Event
 			var err error
 			if k := d.dec.PeekKind(); k == json.Object {
-				event, err = d.decodeEvent(connectionId, connectionType)
+				event, err = d.decodeEvent(connectionId)
 			} else {
 				err = errors.BadRequest("expected an object for the event, but found %s instead", k)
 			}
@@ -117,7 +115,7 @@ func (d *decoder) Events(connectionId int, connectionType state.ConnectorType) i
 				}
 				continue
 			}
-			event, err := d.decodeEvent(connectionId, connectionType)
+			event, err := d.decodeEvent(connectionId)
 			if !yield(event, err) {
 				return
 			}
@@ -328,7 +326,7 @@ func (d *decoder) WriteKey() string {
 }
 
 // decodeEvent decodes and returns an event.
-func (d *decoder) decodeEvent(connectionId int, connectionType state.ConnectorType) (events.Event, error) {
+func (d *decoder) decodeEvent(connectionId int) (events.Event, error) {
 
 	_ = d.dec.SkipToken() // Skip '{'.
 
