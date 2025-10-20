@@ -71,7 +71,7 @@ Settings for emails that are sent to members.
 
 The following settings let you choose how transformation functions are executed. Meergo can run them either using AWS Lambda or locally. In production, you must use AWS Lambda only. The local mode is meant for testing or evaluating Meergo when running with Docker.
 
-<!-- tabs: Transformer variables -->
+<!-- tabs Transformer variables -->
 
 ### AWS Lambda
 
@@ -96,7 +96,7 @@ The following settings let you choose how transformation functions are executed.
 | `MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE` |         | Path to the Python executable. Example: `/usr/bin/python`.                                                                                                                  |
 | `MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR`     |         | Directory where local transformation functions are stored. This directory should be writable by the user executing the Meergo executable. Example: `/var/meergo/functions`. |
 
-<!-- /tabs -->
+<!-- end tabs -->
 
 ## OAuth providers
 

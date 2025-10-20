@@ -37,15 +37,15 @@ blockquote > p + div pre { background: transparent; margin: 0; padding-left: 0; 
 blockquote div + p { margin-top: 0; }
 img { max-width: 100%; }
 
-.tabset .tablist { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0 8px; }
-.tabset [role="tab"] { background: transparent; border: 1px solid transparent; cursor: pointer; font-size: .9em; padding: .85rem .7rem .75rem .7rem; }
-.tabset [role="tab"][aria-selected="true"] { border-bottom: 1px solid #006ca7f5; color: #006ca7f5; }
-.tabset [role="tabpanel"] { border: 1px solid #dfe1e0; border-radius: 3px; margin: 0; padding: 1.5rem; }
-.tabset [role="tabpanel"] > *:first-child { margin-top: 0; }
-.tabset [role="tabpanel"] > *:last-child { margin-bottom: 0; }
+.tabs .tabs-nav { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0 8px; }
+.tabs [role="tab"] { background: transparent; border: 1px solid transparent; cursor: pointer; font-size: 1rem; padding: .85rem .7rem .75rem .7rem; }
+.tabs [role="tab"][aria-selected="true"] { border-bottom: 1px solid #006ca7f5; color: #006ca7f5; }
+.tabs [role="tabpanel"] { border: 1px solid #dfe1e0; border-radius: 3px; margin: 0; padding: 1.5rem; }
+.tabs [role="tabpanel"] > *:first-child { margin-top: 0; }
+.tabs [role="tabpanel"] > *:last-child { margin-bottom: 0; }
 [role="tabpanel"][hidden] { display: none; }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-header {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-header {
   align-items: center;
   background: #fff;
   border: 1px solid #dedefa;
@@ -56,18 +56,18 @@ img { max-width: 100%; }
   margin-bottom: 0;
 }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-header .tablist {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-header .tabs-nav {
   align-items: center;
   display: flex;
   flex: 1 1 auto;
 }
 
-.tabset[data-tabset-type="codeblocks"] .tablist {
+.tabs[data-tabs-type="codeblocks"] .tabs-nav {
   border: none;
   border-radius: 0;
 }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-copy {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-copy {
   align-items: center;
   background: transparent;
   border: none;
@@ -81,50 +81,50 @@ img { max-width: 100%; }
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-copy:hover {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-copy:hover {
   background-color: rgba(0, 108, 167, 0.08);
   color: #006ca7;
 }
 
-.tabset[data-tabset-type="codeblocks"]
+.tabs[data-tabs-type="codeblocks"]
   .codeblocks-copy[role~="tooltip"][data-microtip-position="left"]:focus::before,
-.tabset[data-tabset-type="codeblocks"]
+.tabs[data-tabs-type="codeblocks"]
   .codeblocks-copy[role~="tooltip"][data-microtip-position="left"]:focus::after {
   transform: translate3d(0, -50%, 0);
 }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-copy:focus-visible {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-copy:focus-visible {
   outline: 2px solid #006ca7;
   outline-offset: 2px;
 }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-copy svg {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-copy svg {
   height: 20px;
   width: 20px;
 }
 
-.tabset[data-tabset-type="codeblocks"] [role="tabpanel"] {
+.tabs[data-tabs-type="codeblocks"] [role="tabpanel"] {
   border: none;
   border-radius: 0;
   padding: 0;
 }
 
-.tabset[data-tabset-type="codeblocks"] [role="tabpanel"] > * {
+.tabs[data-tabs-type="codeblocks"] [role="tabpanel"] > * {
   margin: 0;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
 
-.tabset[data-tabset-type="codeblocks"] [role="tabpanel"] > pre {
+.tabs[data-tabs-type="codeblocks"] [role="tabpanel"] > pre {
   border-radius: 0 0 6px 6px;
 }
 
-.tabset[data-tabset-type="codeblocks"] [role="tabpanel"] > pre:not(:last-child) {
+.tabs[data-tabs-type="codeblocks"] [role="tabpanel"] > pre:not(:last-child) {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-note {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-note {
   margin: 0;
   padding: 10px 16px;
   border: 1px solid #dedefa;
@@ -135,11 +135,11 @@ img { max-width: 100%; }
   background: #fff;
 }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-note > *:first-child {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-note > *:first-child {
   margin-top: 0;
 }
 
-.tabset[data-tabset-type="codeblocks"] .codeblocks-note > *:last-child {
+.tabs[data-tabs-type="codeblocks"] .codeblocks-note > *:last-child {
   margin-bottom: 0;
 }
 

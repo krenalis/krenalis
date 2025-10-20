@@ -124,45 +124,46 @@ export function buildTabs(doc = document, win = window) {
 
   function collectTabBlocks() {
     const blocks = [];
+    const openStack = []; // track nested tab markers so innermost blocks resolve first
     const walker = doc.createTreeWalker(doc.body, environment.commentFilter);
     let currentComment = walker.nextNode();
 
     while (currentComment) {
       const raw = (currentComment.nodeValue || '').trim();
-      const marker = raw.match(/^tabs:\s*(.+)$/i);
-      if (marker) {
-        const title = marker[1].trim();
-        const nodes = [];
-        let cursor = currentComment.nextSibling;
-        let closingMarker = null;
-        while (cursor) {
-          if (
-            cursor.nodeType === environment.commentNode &&
-            (cursor.nodeValue || '').trim() === '/tabs'
-          ) {
-            closingMarker = cursor;
-            break;
-          }
-          nodes.push(cursor);
-          cursor = cursor.nextSibling;
-        }
+      const openingMarker = parseTabsMarker(raw);
 
-        if (!closingMarker) {
-          console.warn(
-            'Skipping tabs set "%s" because no closing marker was found.',
-            title || '(untitled)'
-          );
-        } else {
+      if (openingMarker !== null) {
+        openStack.push({
+          startComment: currentComment,
+          rawTitle: openingMarker,
+          title: openingMarker ? openingMarker : 'Tabs'
+        });
+      } else if (isTabsEndMarker(currentComment)) {
+        const activeBlock = openStack.pop();
+        if (activeBlock) {
+          // closing marker: capture the innermost block before unwinding parents
           blocks.push({
-            title: title || 'Tabs',
-            nodes: nodes.slice(),
-            startComment: currentComment,
-            endComment: closingMarker
+            title: activeBlock.title,
+            startComment: activeBlock.startComment,
+            endComment: currentComment
           });
-          walker.currentNode = closingMarker;
         }
       }
+
       currentComment = walker.nextNode();
+    }
+
+    if (openStack.length) {
+      openStack.forEach(function (entry) {
+        console.warn(
+          'Skipping tabs set "%s" because no closing marker was found.',
+          entry.rawTitle || '(untitled)'
+        );
+      });
+    }
+
+    if (!blocks.length) {
+      return [];
     }
 
     const tabSets = [];
@@ -180,29 +181,64 @@ export function buildTabs(doc = document, win = window) {
       }
     });
 
+    if (tabSets.length > 1) {
+      tabSets.sort(function (a, b) {
+        return compareNodeOrder(a.section, b.section);
+      });
+    }
+
     return tabSets;
   }
 
   function transformBlock(block) {
+    if (
+      !block ||
+      !block.startComment ||
+      !block.endComment ||
+      !block.startComment.parentNode ||
+      !block.endComment.parentNode
+    ) {
+      return null;
+    }
+
+    const nodes = collectNodesBetween(block.startComment, block.endComment);
     const tabs = [];
+    let headingTag = null;
     let currentTab = null;
 
-    block.nodes.forEach(function (node) {
-      if (
-        node.nodeType === environment.elementNode &&
-        node.nodeName.toLowerCase() === 'h3'
-      ) {
-        const labelText = getPlainText(node);
-        currentTab = {
-          heading: node,
-          label: labelText || 'Tab ' + (tabs.length + 1),
-          content: []
-        };
-        tabs.push(currentTab);
-      } else if (currentTab) {
+    nodes.forEach(function (node) {
+      if (node.nodeType === environment.elementNode) {
+        const tagName = node.nodeName.toLowerCase();
+        const isCandidate = tagName === 'h3' || tagName === 'h4';
+
+        if (isCandidate && !headingTag) {
+          headingTag = tagName;
+        }
+
+        if (isCandidate && headingTag && tagName === headingTag) {
+          const labelText = getPlainText(node);
+          currentTab = {
+            heading: node,
+            label: labelText || 'Tab ' + (tabs.length + 1),
+            content: []
+          };
+          tabs.push(currentTab);
+          return;
+        }
+      }
+
+      if (currentTab) {
         currentTab.content.push(node);
       }
     });
+
+    if (!tabs.length) {
+      console.warn(
+        'Skipping tabs set "%s" because no tab headings were found.',
+        block.title
+      );
+      return null;
+    }
 
     if (tabs.length < 2) {
       console.warn(
@@ -213,18 +249,18 @@ export function buildTabs(doc = document, win = window) {
     }
 
     const section = doc.createElement('section');
-    section.className = 'tabset';
+    section.className = 'tabs';
     section.setAttribute('aria-label', block.title);
 
-    const tablist = doc.createElement('div');
-    tablist.className = 'tablist';
-    tablist.setAttribute('role', 'tablist');
-    tablist.setAttribute('aria-orientation', 'horizontal');
-    section.appendChild(tablist);
+    const tabsNav = doc.createElement('div');
+    tabsNav.className = 'tabs-nav';
+    tabsNav.setAttribute('role', 'tablist');
+    tabsNav.setAttribute('aria-orientation', 'horizontal');
+    section.appendChild(tabsNav);
 
     const buttons = [];
     const panels = [];
-    const titleSlug = slugify(block.title, 'tabset');
+    const titleSlug = slugify(block.title, 'tabs');
 
     tabs.forEach(function (tabInfo, index) {
       const labelSlug = slugify(tabInfo.label, 'tab');
@@ -254,7 +290,7 @@ export function buildTabs(doc = document, win = window) {
         tabInfo.heading.parentNode.removeChild(tabInfo.heading);
       }
 
-      tablist.appendChild(button);
+      tabsNav.appendChild(button);
       section.appendChild(panel);
 
       buttons.push(button);
@@ -281,7 +317,7 @@ export function buildTabs(doc = document, win = window) {
 
     return {
       section: section,
-      tablist: tablist,
+      tablist: tabsNav,
       buttons: buttons,
       panels: panels,
       title: block.title
@@ -318,7 +354,7 @@ export function buildTabs(doc = document, win = window) {
       panels: set.panels,
       activeButton: null
     });
-    set.section.dataset.tabsetInitialized = 'true';
+    set.section.dataset.tabsInitialized = 'true';
 
     set.buttons.forEach(function (button) {
       button.addEventListener('click', function () {
@@ -446,4 +482,66 @@ function collectExistingIds(doc) {
     }
   }
   return ids;
+}
+
+function collectNodesBetween(startNode, endNode) {
+  const nodes = [];
+  if (!startNode || !endNode) {
+    return nodes;
+  }
+  let cursor = startNode.nextSibling;
+  while (cursor && cursor !== endNode) {
+    nodes.push(cursor);
+    cursor = cursor.nextSibling;
+  }
+  return nodes;
+}
+
+function parseTabsMarker(rawValue) {
+  if (!rawValue) {
+    return null;
+  }
+  const match = rawValue.match(/^tabs(?:\s+(.*))?$/i);
+  if (!match) {
+    return null;
+  }
+  return (match[1] || '').trim();
+}
+
+function isTabsEndMarker(commentNode) {
+  if (!commentNode || commentNode.nodeType !== 8) {
+    return false;
+  }
+  const value = (commentNode.nodeValue || '').trim().toLowerCase();
+  return value === 'end tabs' || value === 'end';
+}
+
+function compareNodeOrder(nodeA, nodeB) {
+  if (nodeA === nodeB) {
+    return 0;
+  }
+  if (!nodeA) {
+    return 1;
+  }
+  if (!nodeB) {
+    return -1;
+  }
+  if (typeof nodeA.compareDocumentPosition === 'function') {
+    const position = nodeA.compareDocumentPosition(nodeB);
+    if (position & 4) {
+      return -1;
+    }
+    if (position & 2) {
+      return 1;
+    }
+  } else if (typeof nodeB.compareDocumentPosition === 'function') {
+    const position = nodeB.compareDocumentPosition(nodeA);
+    if (position & 4) {
+      return 1;
+    }
+    if (position & 2) {
+      return -1;
+    }
+  }
+  return 0;
 }

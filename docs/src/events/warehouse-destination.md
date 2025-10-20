@@ -8,7 +8,7 @@ Meergo creates and manages a single central table called `events` in your data w
 
 ## Table schema
 
-<!-- tabs: table schema -->
+<!-- tabs table schema -->
 
 ### PostgreSQL
 
@@ -154,4 +154,4 @@ Meergo creates and manages a single central table called `events` in your data w
 | `PREVIOUS_ID`                        | `VARCHAR`                | Previous user identifier for aliasing.                |
 | `USER_ID`                            | `VARCHAR`                | User ID supplied by the source along with the event.  |
 
-<!-- /tabs -->
+<!-- end tabs -->

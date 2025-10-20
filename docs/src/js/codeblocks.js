@@ -341,26 +341,26 @@ export function buildCodeblocks(doc = document, win = window) {
       return null;
     }
 
-    return createTabset(block, tabItems);
+    return createTabsSection(block, tabItems);
   }
 
-  function createTabset(block, tabItems) {
+  function createTabsSection(block, tabItems) {
     const section = doc.createElement('section');
-    section.className = 'tabset';
+    section.className = 'tabs';
     section.setAttribute('aria-label', block.title);
-    section.dataset.tabsetType = 'codeblocks';
+    section.dataset.tabsType = 'codeblocks';
     if (block.syncGroup) {
-      section.dataset.tabsetSync = block.syncGroup;
+      section.dataset.tabsSync = block.syncGroup;
     }
 
-    const tablist = doc.createElement('div');
-    tablist.className = 'tablist';
-    tablist.setAttribute('role', 'tablist');
-    tablist.setAttribute('aria-orientation', 'horizontal');
+    const tabsNav = doc.createElement('div');
+    tabsNav.className = 'tabs-nav';
+    tabsNav.setAttribute('role', 'tablist');
+    tabsNav.setAttribute('aria-orientation', 'horizontal');
 
     const header = doc.createElement('div');
     header.className = 'codeblocks-header';
-    header.appendChild(tablist);
+    header.appendChild(tabsNav);
 
     const copyButton = createCopyButton(doc);
     header.appendChild(copyButton);
@@ -420,7 +420,7 @@ export function buildCodeblocks(doc = document, win = window) {
         panel.appendChild(note);
       }
 
-      tablist.appendChild(button);
+      tabsNav.appendChild(button);
       section.appendChild(panel);
 
       buttons.push(button);
@@ -451,7 +451,7 @@ export function buildCodeblocks(doc = document, win = window) {
 
     return {
       section: section,
-      tablist: tablist,
+      tablist: tabsNav,
       buttons: buttons,
       panels: panels,
       title: block.title,
@@ -646,7 +646,7 @@ export function buildCodeblocks(doc = document, win = window) {
       buttonByValue: set.buttonByValue,
       copyButton: set.copyButton
     });
-    set.section.dataset.tabsetInitialized = 'true';
+    set.section.dataset.tabsInitialized = 'true';
 
     if (set.syncGroup) {
       if (!groupRegistry.has(set.syncGroup)) {
