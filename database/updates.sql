@@ -71,3 +71,11 @@ FROM mapping m
 WHERE a.connector = m.label;
 
 COMMIT;
+
+---
+
+UPDATE connections
+SET settings = (
+     (settings::jsonb || jsonb_build_object('CollectionEndpoint', 'Global'))::text
+     )
+WHERE connector = 'google-analytics';

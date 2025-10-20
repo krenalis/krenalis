@@ -40,7 +40,8 @@ Now proceed to add a destination connection for Google Analytics:
 5. (Optional) In the **Name** field, enter a name for the destination to easily recognize it later.
 6. In the **Measurement ID** field, enter previously copied Measurement ID.
 7. In the **API Secret** field, enter the previously copied API secret.
-8. Click **Add**.
+8. In the **Collection Endpoint** field, select the collection endpoint where data will be collected.
+9. Click **Add**.
 
 Once the destination connection for Google Analytics is added, the **Actions** page will be displayed, indicating the actions required to send events to Google Analytics.
 

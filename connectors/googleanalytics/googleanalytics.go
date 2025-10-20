@@ -70,8 +70,9 @@ type Analytics struct {
 }
 
 type innerSettings struct {
-	MeasurementID string
-	APISecret     string
+	MeasurementID      string
+	APISecret          string
+	CollectionEndpoint string
 }
 
 // EventTypes returns the event types.
@@ -106,7 +107,9 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Va
 	switch event {
 	case "load":
 		var s innerSettings
-		if ga.settings != nil {
+		if ga.settings == nil {
+			s.CollectionEndpoint = "Global"
+		} else {
 			s = *ga.settings
 		}
 		settings, _ = json.Marshal(s)
@@ -120,6 +123,7 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Va
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
 			&meergo.Input{Name: "APISecret", Label: "API secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
+			&meergo.Select{Name: "CollectionEndpoint", Label: "Collection endpoint", Options: []meergo.Option{{Text: "Global", Value: "Global"}, {Text: "European Union", Value: "EU"}}},
 		},
 		Settings: settings,
 	}
@@ -135,12 +139,14 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 	if err != nil {
 		return err
 	}
+	// Validate MeasurementID.
 	if n := len(s.MeasurementID); n < 2 || n > 20 {
 		return meergo.NewInvalidSettingsError("Measurement ID length must be in [2,20]")
 	}
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
 		return meergo.NewInvalidSettingsError("Measurement ID must begin with 'G-' or 'AW-'")
 	}
+	// Validate APISecret.
 	if n := len(s.APISecret); n < 1 || n > 100 {
 		return meergo.NewInvalidSettingsError("API secret length must be in [1,100]")
 	}
@@ -153,6 +159,12 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 		if c < 33 || c > 126 {
 			return meergo.NewInvalidSettingsError("API secret must contain only valid characters")
 		}
+	}
+	// Validate CollectionEndpoint.
+	switch s.CollectionEndpoint {
+	case "Global", "EU":
+	default:
+		return meergo.NewInvalidSettingsError("collection endpoint must be set to Global or EU")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -240,7 +252,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 		// First, it performs an actual send to the Google Analytics debug
 		// server to validate the request, returning an error in case of
 		// validation issues.
-		u := requestURL(ga.settings.APISecret, true, false, ga.settings.MeasurementID)
+		u := requestURL(ga.settings.CollectionEndpoint, ga.settings.APISecret, true, false, ga.settings.MeasurementID)
 		req, err := bb.NewRequest(ctx, "POST", u)
 		if err != nil {
 			return nil, err
@@ -271,7 +283,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 
 		// Next, build a new request to be returned to Meergo, in which
 		// sensitive information (such as the API secret) is redacted.
-		u = requestURL(ga.settings.APISecret, true, true, ga.settings.MeasurementID)
+		u = requestURL(ga.settings.CollectionEndpoint, ga.settings.APISecret, true, true, ga.settings.MeasurementID)
 		req, err = http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
@@ -283,7 +295,7 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 	}
 
 	// Build the request to send to Google Analytics.
-	u := requestURL(ga.settings.APISecret, false, false, ga.settings.MeasurementID)
+	u := requestURL(ga.settings.CollectionEndpoint, ga.settings.APISecret, false, false, ga.settings.MeasurementID)
 	req, err := bb.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return nil, err
@@ -307,8 +319,15 @@ func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, previ
 
 // requestURL builds and returns the request URL to which the events request
 // should be sent, based on the given parameters.
-func requestURL(apiSecret string, toDebugServer bool, redactSensitiveInfo bool, measurementID string) string {
-	u := "https://www.google-analytics.com/"
+func requestURL(collectionEndpoint, apiSecret string, toDebugServer bool, redactSensitiveInfo bool, measurementID string) string {
+	u := "https://"
+	switch collectionEndpoint {
+	case "Global":
+		u += "www"
+	case "EU":
+		u += "region1"
+	}
+	u += ".google-analytics.com/"
 	if toDebugServer {
 		u += "debug/"
 	}
