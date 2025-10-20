@@ -43,6 +43,124 @@ export function buildTabs(doc = document, win = window) {
     return element ? element.textContent.trim() : '';
   }
 
+  const inherentlyContentfulTagNames = new Set([
+    'audio',
+    'canvas',
+    'embed',
+    'iframe',
+    'img',
+    'object',
+    'picture',
+    'svg',
+    'video'
+  ]);
+
+  function hasMeaningfulContent(container) {
+    if (!container || !container.childNodes || !container.childNodes.length) {
+      return false;
+    }
+
+    for (const node of container.childNodes) {
+      if (nodeHasMeaningfulContent(node)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function nodeHasMeaningfulContent(node) {
+    if (!node) {
+      return false;
+    }
+    if (node.nodeType === environment.elementNode) {
+      const tagName = (node.nodeName || '').toLowerCase();
+      if (inherentlyContentfulTagNames.has(tagName)) {
+        return true;
+      }
+      if (node.textContent && node.textContent.trim().length > 0) {
+        return true;
+      }
+      return hasMeaningfulContent(node);
+    }
+    if (node.nodeType === 3) {
+      return Boolean(node.textContent && node.textContent.trim().length > 0);
+    }
+    return false;
+  }
+
+  function disableTabButton(button, panel) {
+    if (!button) {
+      return;
+    }
+    button.setAttribute('aria-disabled', 'true');
+    button.setAttribute('tabindex', '-1');
+    if (button.dataset) {
+      button.dataset.tabsDisabled = 'true';
+    }
+    if (panel) {
+      if (panel.dataset) {
+        panel.dataset.tabsDisabled = 'true';
+      }
+      panel.hidden = true;
+    }
+  }
+
+  function isTabDisabled(button) {
+    if (!button) {
+      return false;
+    }
+    if (button.dataset && button.dataset.tabsDisabled === 'true') {
+      return true;
+    }
+    return button.getAttribute('aria-disabled') === 'true';
+  }
+
+  function updateTabFocusState(buttons, activeButton) {
+    const active = isTabDisabled(activeButton) ? null : activeButton;
+    buttons.forEach(function (button) {
+      const disabled = isTabDisabled(button);
+      let tabIndex = '-1';
+      if (!disabled && button === active) {
+        tabIndex = '0';
+      }
+      button.setAttribute('tabindex', tabIndex);
+    });
+  }
+
+  function findFirstEnabledIndex(buttons) {
+    for (let index = 0; index < buttons.length; index += 1) {
+      if (!isTabDisabled(buttons[index])) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  function findLastEnabledIndex(buttons) {
+    for (let index = buttons.length - 1; index >= 0; index -= 1) {
+      if (!isTabDisabled(buttons[index])) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  function findNextEnabledIndex(buttons, startIndex, direction) {
+    if (!buttons.length) {
+      return -1;
+    }
+    let steps = 0;
+    let candidate = startIndex;
+    while (steps < buttons.length) {
+      candidate = (candidate + direction + buttons.length) % buttons.length;
+      if (!isTabDisabled(buttons[candidate])) {
+        return candidate;
+      }
+      steps += 1;
+    }
+    return -1;
+  }
+
   function updateHash(panelId) {
     if (!panelId) {
       return;
@@ -63,10 +181,12 @@ export function buildTabs(doc = document, win = window) {
   }
 
   function focusTab(buttons, index) {
-    buttons.forEach(function (button, idx) {
-      button.setAttribute('tabindex', idx === index ? '0' : '-1');
-    });
-    buttons[index].focus();
+    const target = buttons[index];
+    if (!target || isTabDisabled(target)) {
+      return;
+    }
+    updateTabFocusState(buttons, target);
+    target.focus();
   }
 
   function activateTab(setEl, tabButton, options) {
@@ -78,6 +198,10 @@ export function buildTabs(doc = document, win = window) {
 
     const targetPanelId = tabButton.getAttribute('aria-controls');
     if (!targetPanelId) {
+      return;
+    }
+
+    if (isTabDisabled(tabButton)) {
       return;
     }
 
@@ -105,8 +229,9 @@ export function buildTabs(doc = document, win = window) {
     tabState.buttons.forEach(function (button) {
       const isActive = button === tabButton;
       button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      button.setAttribute('tabindex', isActive ? '0' : '-1');
     });
+
+    updateTabFocusState(tabState.buttons, tabButton);
 
     tabState.panels.forEach(function (panel) {
       panel.hidden = panel !== targetPanel;
@@ -286,7 +411,7 @@ export function buildTabs(doc = document, win = window) {
       button.id = tabId;
       button.setAttribute('aria-controls', panelId);
       button.setAttribute('aria-selected', 'false');
-      button.setAttribute('tabindex', index === 0 ? '0' : '-1');
+      button.setAttribute('tabindex', '-1');
       button.textContent = tabInfo.label;
 
       const panel = doc.createElement('div');
@@ -310,6 +435,10 @@ export function buildTabs(doc = document, win = window) {
 
       if (tabInfo.heading && tabInfo.heading.parentNode) {
         tabInfo.heading.parentNode.removeChild(tabInfo.heading);
+      }
+
+      if (!hasMeaningfulContent(panel)) {
+        disableTabButton(button, panel);
       }
 
       tabsNav.appendChild(button);
@@ -362,7 +491,11 @@ export function buildTabs(doc = document, win = window) {
     } catch (error) {
       return null;
     }
-    return idDirectory.get(decoded) || null;
+    const entry = idDirectory.get(decoded) || null;
+    if (!entry || !entry.button || isTabDisabled(entry.button)) {
+      return null;
+    }
+    return entry;
   }
 
   const tabSets = collectTabBlocks();
@@ -379,7 +512,13 @@ export function buildTabs(doc = document, win = window) {
     set.section.dataset.tabsInitialized = 'true';
 
     set.buttons.forEach(function (button) {
-      button.addEventListener('click', function () {
+      button.addEventListener('click', function (event) {
+        if (isTabDisabled(button)) {
+          if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+          }
+          return;
+        }
         activateTab(set.section, button);
       });
     });
@@ -398,24 +537,40 @@ export function buildTabs(doc = document, win = window) {
         return;
       }
 
+      if (isTabDisabled(buttons[currentIndex])) {
+        return;
+      }
+
       switch (event.key) {
         case 'ArrowLeft':
         case 'Left':
           event.preventDefault();
-          focusTab(buttons, (currentIndex - 1 + buttons.length) % buttons.length);
+          const prevIndex = findNextEnabledIndex(buttons, currentIndex, -1);
+          if (prevIndex !== -1) {
+            focusTab(buttons, prevIndex);
+          }
           break;
         case 'ArrowRight':
         case 'Right':
           event.preventDefault();
-          focusTab(buttons, (currentIndex + 1) % buttons.length);
+          const nextIndex = findNextEnabledIndex(buttons, currentIndex, 1);
+          if (nextIndex !== -1) {
+            focusTab(buttons, nextIndex);
+          }
           break;
         case 'Home':
           event.preventDefault();
-          focusTab(buttons, 0);
+          const firstIndex = findFirstEnabledIndex(buttons);
+          if (firstIndex !== -1) {
+            focusTab(buttons, firstIndex);
+          }
           break;
         case 'End':
           event.preventDefault();
-          focusTab(buttons, buttons.length - 1);
+          const lastIndex = findLastEnabledIndex(buttons);
+          if (lastIndex !== -1) {
+            focusTab(buttons, lastIndex);
+          }
           break;
         case 'Enter':
         case ' ':
@@ -434,7 +589,10 @@ export function buildTabs(doc = document, win = window) {
     if (initialTarget && initialTarget.section === set.section) {
       return;
     }
-    activateTab(set.section, set.buttons[0], { skipHash: true });
+    const firstEnabledIndex = findFirstEnabledIndex(set.buttons);
+    if (firstEnabledIndex !== -1) {
+      activateTab(set.section, set.buttons[firstEnabledIndex], { skipHash: true });
+    }
   });
 
   if (initialTarget) {
