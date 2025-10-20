@@ -46,6 +46,24 @@ export function buildCodeblocks(doc = document, win = window) {
     );
   };
 
+  const headingTagPattern = /^h[2-6]$/;
+
+  const isHeadingNode = function (node) {
+    return (
+      node &&
+      typeof node.nodeName === 'string' &&
+      node.nodeType === environment.elementNode &&
+      headingTagPattern.test(node.nodeName.toLowerCase())
+    );
+  };
+
+  function extractHeadingLabel(node) {
+    if (!node || typeof node.textContent !== 'string') {
+      return '';
+    }
+    return node.textContent.trim();
+  }
+
   function slugify(value, fallback) {
     const base = (value == null ? '' : String(value))
       .normalize('NFD')
@@ -283,9 +301,32 @@ export function buildCodeblocks(doc = document, win = window) {
   function transformBlock(block) {
     const tabItems = [];
     let index = 0;
+    let pendingHeading = null;
+    let headingTagName = null;
+
+    const captureHeading = function (node) {
+      if (!isHeadingNode(node)) {
+        return false;
+      }
+
+      const tagName = node.nodeName.toLowerCase();
+      if (headingTagName && tagName !== headingTagName) {
+        return false;
+      }
+
+      headingTagName = tagName;
+      pendingHeading = node;
+      return true;
+    };
 
     while (index < block.nodes.length) {
       const node = block.nodes[index];
+
+      if (captureHeading(node)) {
+        index += 1;
+        continue;
+      }
+
       if (!isPreNode(node)) {
         index += 1;
         continue;
@@ -293,10 +334,15 @@ export function buildCodeblocks(doc = document, win = window) {
 
       const codeNode = node;
       const footNodes = [];
+      const headingLabel = pendingHeading ? extractHeadingLabel(pendingHeading) : '';
+      pendingHeading = null;
       index += 1;
 
       while (index < block.nodes.length) {
         const candidate = block.nodes[index];
+        if (captureHeading(candidate)) {
+          break;
+        }
         if (isPreNode(candidate)) {
           break;
         }
@@ -321,8 +367,15 @@ export function buildCodeblocks(doc = document, win = window) {
 
       const language = detectCodeLanguage(codeNode);
       const canonicalLanguage = language ? String(language).toLowerCase() : null;
-      const label = resolveLanguageLabel(canonicalLanguage, tabItems.length + 1);
-      const slugSource = canonicalLanguage || 'code-' + (tabItems.length + 1);
+      const fallbackIndex = tabItems.length + 1;
+      const label =
+        headingLabel !== ''
+          ? headingLabel
+          : resolveLanguageLabel(canonicalLanguage, fallbackIndex);
+      const slugSource =
+        headingLabel !== ''
+          ? headingLabel
+          : canonicalLanguage || 'code-' + fallbackIndex;
       tabItems.push({
         label: label,
         codeNode: codeNode,
