@@ -1257,7 +1257,7 @@ func msgString(includeSource bool, pathStyle PathStyle, terminalInfo TerminalInf
 		colors = TerminalColors
 	}
 
-	var iconColor = "<svg></svg>"
+	var iconColor string
 	var kindColorBrackets string
 	var kindColorText string
 
