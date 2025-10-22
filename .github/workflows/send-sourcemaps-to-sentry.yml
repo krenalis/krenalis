@@ -1,4 +1,5 @@
 on:
+  workflow_dispatch:
   push:
     # Only run the action when a file is modified that could, at least
     # theoretically, affect the files whose Debug IDs are sent to Sentry.
