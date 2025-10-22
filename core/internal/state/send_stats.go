@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"runtime"
 
-	"github.com/meergo/meergo/core/analytics-go"
+	"github.com/meergo/analytics-go"
 )
 
 // sendNotificationStats sends information about notification n to Meergo.

@@ -544,6 +544,9 @@ github.com/mailru/easyjson/jwriter
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
 github.com/mark3labs/mcp-go/util
+# github.com/meergo/analytics-go v0.0.6
+## explicit; go 1.21
+github.com/meergo/analytics-go
 # github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8
 ## explicit
 github.com/minio/asm2plan9s
@@ -664,22 +667,6 @@ github.com/segmentio/asm/cpu/x86
 # github.com/segmentio/backo-go v1.1.0
 ## explicit; go 1.21
 github.com/segmentio/backo-go
-# github.com/segmentio/conf v1.3.1
-## explicit; go 1.18
-github.com/segmentio/conf
-# github.com/segmentio/go-snakecase v1.2.0
-## explicit
-github.com/segmentio/go-snakecase
-# github.com/segmentio/objconv v1.0.1
-## explicit
-github.com/segmentio/objconv
-github.com/segmentio/objconv/adapters
-github.com/segmentio/objconv/adapters/net
-github.com/segmentio/objconv/adapters/net/mail
-github.com/segmentio/objconv/adapters/net/url
-github.com/segmentio/objconv/json
-github.com/segmentio/objconv/objutil
-github.com/segmentio/objconv/yaml
 # github.com/shirou/gopsutil/v4 v4.25.5
 ## explicit; go 1.23
 github.com/shirou/gopsutil/v4/common
@@ -958,16 +945,6 @@ google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
 google.golang.org/protobuf/types/known/timestamppb
-# gopkg.in/go-playground/mold.v2 v2.2.0
-## explicit
-gopkg.in/go-playground/mold.v2
-gopkg.in/go-playground/mold.v2/modifiers
-# gopkg.in/validator.v2 v2.0.1
-## explicit; go 1.18
-gopkg.in/validator.v2
-# gopkg.in/yaml.v2 v2.4.0
-## explicit; go 1.15
-gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3

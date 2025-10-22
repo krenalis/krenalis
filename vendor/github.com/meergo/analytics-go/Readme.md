@@ -51,7 +51,7 @@ Alternatively, you can run the following snippet:
 package main
 
 import (
-    "github.com/open2b/analytics-go"
+    "github.com/meergo/analytics-go"
 )
 
 func main() {

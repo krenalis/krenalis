@@ -30,13 +30,12 @@ require (
 	github.com/jxskiss/base62 v1.1.0
 	github.com/klauspost/compress v1.18.0
 	github.com/mark3labs/mcp-go v0.39.0
+	github.com/meergo/analytics-go v0.0.6
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/pkg/sftp v1.13.9
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.7.0
-	github.com/segmentio/backo-go v1.1.0
-	github.com/segmentio/conf v1.3.1
 	github.com/snowflakedb/gosnowflake v1.17.0
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.38.0
@@ -143,8 +142,7 @@ require (
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/segmentio/go-snakecase v1.2.0 // indirect
-	github.com/segmentio/objconv v1.0.1 // indirect
+	github.com/segmentio/backo-go v1.1.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.5 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -179,8 +177,5 @@ require (
 	golang.org/x/tools v0.37.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
-	gopkg.in/go-playground/mold.v2 v2.2.0 // indirect
-	gopkg.in/validator.v2 v2.0.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -13,7 +13,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo/core/analytics-go"
+	"github.com/meergo/analytics-go"
 	"github.com/meergo/meergo/test/meergotester"
 )
 
