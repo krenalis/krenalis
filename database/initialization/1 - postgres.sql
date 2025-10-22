@@ -56,8 +56,6 @@ CREATE TABLE access_keys (
     PRIMARY KEY (id)
 );
 
-CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'SDK', 'Stream');
-
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
 CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError');
