@@ -26,7 +26,7 @@ This file contains information useful to Meergo developers.
 
 ## Before Pushing Commits to `main`
 
-> Before proceeding, **make sure you have all the necessary dependencies** installed locally. For the complete list of them, please refer to the file [.github/workflows/main.yml](.github/workflows/main.yml).
+> Before proceeding, **make sure you have all the necessary dependencies** installed locally. For the complete list of them, please refer to the file [.github/workflows/go-run-commit.yml](.github/workflows/go-run-commit.yml).
 
 Before pushing commits to the `main` branch of Meergo, from the root of this repository, run:
 
@@ -50,7 +50,7 @@ go run ./commit --help
 
 ## How to run tests using GitHub Action
 
-1. Go to https://github.com/meergo/meergo/actions/workflows/main.yml
+1. Go to https://github.com/meergo/meergo/actions/workflows/go-run-commit.yml
 2. Click on the button "Run workflow"
 3. Choose the branch on which you want to run the tests
 4. Click on "Run workflow"

@@ -24,7 +24,7 @@ jobs:
       - name: Setup Go (needed for building assets)
         uses: actions/setup-go@v5
         with:
-          # Keep in sync with the version within ".github/workflows/main.yml".
+          # Keep in sync with the version within ".github/workflows/go-run-commit.yml".
           # Keep in sync with the version within "Dockerfile".
           # Keep in sync with the version within "go.mod".
           go-version: "1.25"
