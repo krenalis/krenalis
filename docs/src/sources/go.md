@@ -4,7 +4,7 @@
 
 # Go SDK (Source)
 
-[![GitHub Repo](https://img.shields.io/badge/Github-Meergo_Go_SDK-blue?logo=github)](https://github.com/open2b/analytics-go)
+[![GitHub Repo](https://img.shields.io/badge/Github-Meergo_Go_SDK-blue?logo=github)](https://github.com/meergo/analytics-go)
 
 The source connector for Go allows you to send customer event data using the Go SDK from your Go applications to Meergo.
 
@@ -27,13 +27,13 @@ First of all, you need a connection in Meergo that can receive events from the G
 1. In the new created source connection for Go, navigate to **Settings**.
 2. Select **Event write keys**.
 3. Copy the Write Key and the Endpoint.
-4. In your Go module, go get the `"github.com/open2b/analytics-go"` package:
+4. In your Go module, go get the `"github.com/meergo/analytics-go"` package:
     ```sh
-    $ go get github.com/open2b/analytics-go
+    $ go get github.com/meergo/analytics-go
     ```
 5. Import and use the package, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```go
-    import "github.com/open2b/analytics-go"
+    import "github.com/meergo/analytics-go"
 
     client := analytics.New("<write key>", "<endpoint>")
     client.Enqueue(analytics.Track{
@@ -62,4 +62,4 @@ Refer to the [Meergo events documentation](../../events) for more information on
 
 ## SDK source code
 
-The source code of the Meergo Go SDK is [available on GitHub](https://github.com/open2b/analytics-go) and distributed under the **MIT license**.
+The source code of the Meergo Go SDK is [available on GitHub](https://github.com/meergo/analytics-go) and distributed under the **MIT license**.

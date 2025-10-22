@@ -15,7 +15,7 @@ You can install the Go SDK via the `go get` command.
 To install the SDK in the `GOPATH`, run the following:
 
 ```go
-go get github.com/open2b/analytics-go
+go get github.com/meergo/analytics-go
 ```
 
 ## Using the SDK
@@ -24,7 +24,7 @@ go get github.com/open2b/analytics-go
 package main
 
 import (
-    "github.com/open2b/analytics-go"
+    "github.com/meergo/analytics-go"
 )
 
 func main() {
