@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
@@ -97,6 +98,13 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	if fn.settings.SudoUser != "" {
 		args = append([]string{"sudo", "-u", fn.settings.SudoUser}, args...)
 	}
+
+	// Limit the execution time to 10 seconds. This is more than enough time to
+	// run transformations locally; if a transformation takes longer than that,
+	// there's a problem and it's better to abort it.
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Meergo process.
 	cmd.Stdout = &stdout
