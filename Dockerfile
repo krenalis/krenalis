@@ -30,8 +30,17 @@ RUN go build -tags osusergo,netgo -trimpath ./cmd/meergo
 # image that contains only the Meergo executable and the Python and JavaScript
 # (node) interpreters, for the transformation functions.
 FROM alpine:latest
+
+# Install Python and Node.js.
 RUN apk add --no-cache python3
 RUN apk add --no-cache nodejs
+
+# Create an user 'transformeruser' which will be used to run transformation
+# functions executables.
+RUN apk add sudo shadow
+RUN useradd transformeruser
+RUN echo 'transformeruser ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/transformeruser
+
 COPY --from=0 /meergo/meergo /bin/meergo
 WORKDIR /bin
 ENTRYPOINT ["/bin/meergo"]
