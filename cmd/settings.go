@@ -264,6 +264,7 @@ func parseEnvSettings() (*Settings, error) {
 		(settings.Transformers.Lambda.Node.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "") {
 		return nil, fmt.Errorf("invalid configuration: cannot set both Lambda and local transformers")
 	}
+	settings.Transformers.Local.SudoUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_SUDO_USER")
 
 	if id := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_ID"); id != "" {
 		secret := envVars.Get("MEERGO_OAUTH_HUBSPOT_CLIENT_SECRET")

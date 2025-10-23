@@ -122,6 +122,7 @@ type LocalConfig struct {
 	NodeExecutable   string
 	PythonExecutable string
 	FunctionsDir     string
+	SudoUser         string
 }
 
 type SMTPConfig struct {
