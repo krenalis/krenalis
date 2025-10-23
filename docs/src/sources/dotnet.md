@@ -33,15 +33,15 @@ First of all, you need a connection in Meergo that can receive events from the C
     ```
 5. Import and use the package, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```csharp
-    using Meergo.Analytics;
+    using Meergo;
 
     var config = new Config()
         .SetEndpoint("<endpoint>");
 
     Analytics.Initialize("<write key>", config);
 
-    Analytics.Client.Track("Efg678Mnu", "Product added to cart", new Properties() {
-        { "price", 32.17 }
+    Analytics.Client.Track("Efg678Mnu", "Product added to cart", new Dictionary<string, object> {
+        { "price", 32.17 },
     });
     ```
 
