@@ -80,8 +80,8 @@ class TransformedConnection {
 		}
 	}
 
-	get isApp() {
-		return this.connector.type === 'App';
+	get isAPI() {
+		return this.connector.type === 'API';
 	}
 
 	get isDatabase() {
@@ -96,12 +96,16 @@ class TransformedConnection {
 		return this.connector.type === 'FileStorage';
 	}
 
+	get isMessageBroker() {
+		return this.connector.type === 'MessageBroker';
+	}
+
 	get isSDK() {
 		return this.connector.type === 'SDK';
 	}
 
-	get isStream() {
-		return this.connector.type === 'Stream';
+	get isWebhook() {
+		return this.connector.type === 'Webhook';
 	}
 
 	get isSource() {
@@ -113,15 +117,15 @@ class TransformedConnection {
 	}
 
 	get isEventBased() {
-		return this.connector.type === 'SDK';
+		return this.connector.type === 'SDK' || this.connector.type === 'Webhook';
 	}
 
 	get hasIdentities() {
-		return this.role === 'Source' && this.connector.type !== 'Stream';
+		return this.role === 'Source' && this.connector.type !== 'MessageBroker';
 	}
 
 	get hasAnonymousIdentifiers() {
-		return this.connector.type === 'SDK';
+		return this.connector.type === 'SDK' || this.connector.type === 'Webhook';
 	}
 
 	get hasSettings(): boolean {
@@ -130,7 +134,7 @@ class TransformedConnection {
 
 	relations(connections: TransformedConnection[]): ('dwh-user' | 'dwh-event' | number)[] {
 		let hasUsersActions = this.actionsInfo.some((a) => {
-			if (this.isSDK) {
+			if (this.isSDK || this.isWebhook) {
 				return a.target === 'User' && a.enabled;
 			}
 			return a.target === 'User' && a.enabled && a.schedulePeriod != null;
@@ -211,12 +215,13 @@ const getConnectionStatus = (connection: Connection): ConnectionStatus => {
 };
 
 const isSourceEventConnection = (role: ConnectionRole, type: ConnectorType): boolean => {
-	return role === 'Source' && type === 'SDK';
+	return role === 'Source' && (type === 'SDK' || type == 'Webhook');
 };
 
 const isEventConnection = (role: ConnectionRole, type: ConnectorType, targets: ConnectorTarget[]): boolean => {
 	return (
-		(role === 'Source' && type === 'SDK') || (role === 'Destination' && type === 'App' && targets.includes('Event'))
+		(role === 'Source' && (type === 'SDK' || type === 'Webhook')) ||
+		(role === 'Destination' && type === 'API' && targets.includes('Event'))
 	);
 };
 

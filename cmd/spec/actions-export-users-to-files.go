@@ -205,7 +205,7 @@ func init() {
 						},
 						{
 							Name:        "connectorType",
-							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
+							Type:        types.Text().WithValues("API", "Database", "FileStorage", "MessageBroker", "SDK", "Webhook"),
 							Prefilled:   `"FileStorage"`,
 							Description: "The type of the connection's connector. It is always `\"FileStorage\"` when the action exports users to a file.",
 						},

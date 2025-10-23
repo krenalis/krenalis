@@ -14,17 +14,18 @@ import (
 	"github.com/meergo/meergo/core/internal/state"
 )
 
-// Stream is the interface implemented by stream connectors.
-// A Stream value can be used for sending or receiving but not both.
-type streamConnector interface {
+// messageBrokerConnector is the interface implemented by message broker
+// connectors. A MessageBroker value can be used for sending or receiving but
+// not both.
+type messageBrokerConnector interface {
 
-	// Close closes the stream. When Close is called, no other calls to the
+	// Close closes the message broker. When Close is called, no other calls to the
 	// connector's methods are in progress and no more will be made.
 	Close() error
 
-	// Receive receives an event from the stream. Callers call the ack function to
-	// notify that the event has been received. The connector resends the event if
-	// not acknowledged.
+	// Receive receives an event from the message broker. Callers call the ack
+	// function to notify that the event has been received. The connector resends
+	// the event if not acknowledged.
 	//
 	// Callers must not modify the event data, even temporarily, and the event is
 	// not retained after the ack function has been called.
@@ -32,8 +33,8 @@ type streamConnector interface {
 	// Receive can be used by multiple goroutines at the same time.
 	Receive(ctx context.Context) (event []byte, ack func(), err error)
 
-	// Send sends an event to the stream. If ack is not nil, connector calls ack
-	// when the event has been stored or when an error occurred.
+	// Send sends an event to the message broker. If ack is not nil, connector calls
+	// ack when the event has been stored or when an error occurred.
 	//
 	// Send may modify the event data, but the event slice is not retained after the
 	// ack function has been called.
@@ -42,54 +43,54 @@ type streamConnector interface {
 	Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error
 }
 
-// Stream represents the stream of a stream connection.
-type Stream struct {
+// MessageBroker represents the Message broker of a message broker connection.
+type MessageBroker struct {
 	connector string
 	closed    bool
-	inner     streamConnector
+	inner     messageBrokerConnector
 }
 
-// Stream returns a stream for the provided connection. It panics if connection
-// is not a stream connection.
+// MessageBroker returns a message broker for the provided connection. It panics
+// if connection is not a message broker connection.
 //
-// The caller must call the stream's Close method when the stream is no
-// longer needed.
-func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, error) {
-	stream := &Stream{
+// The caller must call the message broker's Close method when the message
+// broker is no longer needed.
+func (connectors *Connectors) MessageBroker(connection *state.Connection) (*MessageBroker, error) {
+	broker := &MessageBroker{
 		connector: connection.Connector().Code,
 	}
-	inner, err := meergo.RegisteredStream(connection.Connector().Code).New(&meergo.StreamEnv{
+	inner, err := meergo.RegisteredMessageBroker(connection.Connector().Code).New(&meergo.MessageBrokerEnv{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	stream.inner = inner.(streamConnector)
-	return stream, nil
+	broker.inner = inner.(messageBrokerConnector)
+	return broker, nil
 }
 
-// Close closes the stream. When Close is called, no other calls to the
-// stream's methods must be in progress, and no more calls must be made.
+// Close closes the message broker. When Close is called, no other calls to the
+// message broker's methods must be in progress, and no more calls must be made.
 // It returns an *UnavailableError error if the connector returns an error.
 // Close is idempotent.
-func (stream *Stream) Close() error {
-	if stream.closed {
+func (broker *MessageBroker) Close() error {
+	if broker.closed {
 		return nil
 	}
-	stream.closed = true
-	err := stream.inner.Close()
+	broker.closed = true
+	err := broker.inner.Close()
 	return connectorError(err)
 }
 
-// Connector returns the name of the stream connector.
-func (stream *Stream) Connector() string {
-	return stream.connector
+// Connector returns the name of the message broker connector.
+func (broker *MessageBroker) Connector() string {
+	return broker.connector
 }
 
-// Receive receives an event from the stream. The caller can call the ack
-// function to notify that the event has been received. The stream resends the
-// event if not acknowledged.
+// Receive receives an event from the message broker. The caller can call the
+// ack function to notify that the event has been received. The message broker
+// resends the event if not acknowledged.
 //
 // The caller must not modify the event data, even temporarily, and must not
 // retain the event slice after the ack function has been called.
@@ -97,16 +98,16 @@ func (stream *Stream) Connector() string {
 // If the connector returns an error, it returns a *UnavailableError error.
 //
 // Receive can be used by multiple goroutines at the same time.
-func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), err error) {
-	event, ack, err = stream.inner.Receive(ctx)
+func (broker *MessageBroker) Receive(ctx context.Context) (event []byte, ack func(), err error) {
+	event, ack, err = broker.inner.Receive(ctx)
 	if err != nil {
 		return nil, nil, connectorError(err)
 	}
 	return event, ack, nil
 }
 
-// Send sends an event to the stream. If ack is not nil, the stream calls ack
-// when the event has been stored or when an error occurred.
+// Send sends an event to the message broker. If ack is not nil, the message
+// broker calls ack when the event has been stored or when an error occurred.
 //
 // Send may modify the event data, but the event slice is not retained after the
 // ack function has been called.
@@ -114,7 +115,7 @@ func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), er
 // If the connector returns an error, it returns a *UnavailableError error.
 //
 // Send can be used by multiple goroutines at the same time.
-func (stream *Stream) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
-	err := stream.inner.Send(ctx, event, options, ack)
+func (broker *MessageBroker) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
+	err := broker.inner.Send(ctx, event, options, ack)
 	return connectorError(err)
 }

@@ -18,7 +18,7 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
   <li class="{{ expandable(`api/connections/`) }}">
     {{ item(`api/connections`, `Connections`) }}
     <ul>
-      <li>{{ item(`api/connections/apps`, `Apps`) }}</li>
+      <li>{{ item(`api/connections/applications`, `Applications`) }}</li>
       <li>{{ item(`api/connections/file-storages`, `File storages`) }}</li>
       <li>{{ item(`api/connections/databases`, `Databases`) }}</li>
       <li>{{ item(`api/connections/linked-connections`, `Linked connections`) }}</li>

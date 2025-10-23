@@ -511,7 +511,7 @@ func init() {
 		ID:   "events",
 		Name: "Events",
 		Description: "Events are customer behavioral events (such as page views, clicks, or purchases) received from websites, mobile apps, and servers. " +
-			"They can be stored in the workspace's data warehouse and forwarded to apps. You can also import customer data for identity resolution and unification.\n\n" +
+			"They can be stored in the workspace's data warehouse and forwarded to application APIs. You can also import customer data for identity resolution and unification.\n\n" +
 			"These endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.\n\n" +
 			"You can also use one of the available [SDKs to send events](/integrations/sources), instead of interacting with these API endpoints directly.",
 		Endpoints: []*Endpoint{
@@ -534,7 +534,7 @@ func init() {
 						Type:           types.Int(32),
 						Prefilled:      "1371036433",
 						UpdateRequired: true,
-						Description: "The ID of the source connection to which the events refer. It can only be a source SDK connection.\n\n" +
+						Description: "The ID of the source connection to which the events refer. It can only be a source SDK or webhook connection.\n\n" +
 							"It is required only if the call is authenticated using an API key. " +
 							"If authentication is done with an event write key, it is not needed, as the connection is that of the key.",
 					},

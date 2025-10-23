@@ -52,11 +52,11 @@ var nodeOverview string
 var pythonOverview string
 
 func init() {
-	sdks := []meergo.SDKInfo{
+	sdks := []meergo.SDKSpec{
 		{
 			Code:       "dotnet",
 			Label:      ".NET",
-			Categories: meergo.CategorySDKAndAPI,
+			Categories: meergo.CategorySDK,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using .NET",
@@ -67,7 +67,7 @@ func init() {
 		{
 			Code:                "android",
 			Label:               "Android",
-			Categories:          meergo.CategorySDKAndAPI,
+			Categories:          meergo.CategorySDK,
 			Strategies:          true,
 			FallbackToRequestIP: true,
 			Documentation: meergo.ConnectorDocumentation{
@@ -80,7 +80,7 @@ func init() {
 		{
 			Code:       "go",
 			Label:      "Go",
-			Categories: meergo.CategorySDKAndAPI,
+			Categories: meergo.CategorySDK,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Go",
@@ -91,7 +91,7 @@ func init() {
 		{
 			Code:       "java",
 			Label:      "Java",
-			Categories: meergo.CategorySDKAndAPI,
+			Categories: meergo.CategorySDK,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Java",
@@ -102,7 +102,7 @@ func init() {
 		{
 			Code:                "javascript",
 			Label:               "JavaScript",
-			Categories:          meergo.CategorySDKAndAPI,
+			Categories:          meergo.CategorySDK | meergo.CategoryWebsite,
 			Strategies:          true,
 			FallbackToRequestIP: true,
 			Documentation: meergo.ConnectorDocumentation{
@@ -115,7 +115,7 @@ func init() {
 		{
 			Code:       "nodejs",
 			Label:      "Node.js",
-			Categories: meergo.CategorySDKAndAPI,
+			Categories: meergo.CategorySDK,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Node.js",
@@ -126,7 +126,7 @@ func init() {
 		{
 			Code:       "python",
 			Label:      "Python",
-			Categories: meergo.CategorySDKAndAPI,
+			Categories: meergo.CategorySDK,
 			Documentation: meergo.ConnectorDocumentation{
 				Source: meergo.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Python",

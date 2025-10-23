@@ -34,10 +34,10 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterStream(meergo.StreamInfo{
+	meergo.RegisterMessageBroker(meergo.MessageBrokerSpec{
 		Code:       "kafka",
 		Label:      "Kafka",
-		Categories: meergo.CategoryEventStreaming,
+		Categories: meergo.CategoryMessageBroker,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from Kafka",
@@ -48,7 +48,7 @@ func init() {
 }
 
 // New returns a new connector instance for Kafka.
-func New(env *meergo.StreamEnv) (*Kafka, error) {
+func New(env *meergo.MessageBrokerEnv) (*Kafka, error) {
 	c := Kafka{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -60,13 +60,13 @@ func New(env *meergo.StreamEnv) (*Kafka, error) {
 }
 
 type Kafka struct {
-	env      *meergo.StreamEnv
+	env      *meergo.MessageBrokerEnv
 	settings *innerSettings
 	client   *kgo.Client
 	iter     *fetchesRecordIter
 }
 
-// Close closes the stream.
+// Close closes the message broker.
 func (kafka *Kafka) Close() error {
 	if kafka.client == nil {
 		return nil
@@ -76,7 +76,7 @@ func (kafka *Kafka) Close() error {
 	return nil
 }
 
-// Receive receives an event from the stream.
+// Receive receives an event from the message broker.
 func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
 	err := kafka.connect()
 	if err != nil {
@@ -99,7 +99,7 @@ func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
 	return record.Value, ack, nil
 }
 
-// Send sends an event to the stream.
+// Send sends an event to the message broker.
 func (kafka *Kafka) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
 	err := kafka.connect()
 	if err != nil {

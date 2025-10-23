@@ -96,7 +96,7 @@ interface FindUsersResponse {
 	total: number;
 }
 
-interface AppUsersResponse {
+interface APIUsersResponse {
 	users: Record<string, any>[];
 	cursor: string;
 }
@@ -185,7 +185,7 @@ export type {
 	ActionError,
 	ActionErrorsResponse,
 	ActionSchemasResponse,
-	AppUsersResponse,
+	APIUsersResponse,
 	AbsolutePathResponse,
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,

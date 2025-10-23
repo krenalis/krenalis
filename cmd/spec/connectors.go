@@ -28,8 +28,8 @@ func init() {
 		},
 		{
 			Name:        "type",
-			Type:        types.Text().WithValues("App", "Database", "File", "FileStorage", "SDK", "Stream"),
-			Prefilled:   `"App"`,
+			Type:        types.Text().WithValues("API", "Database", "File", "FileStorage", "MessageBroker", "SDK", "Webhook"),
+			Prefilled:   `"API"`,
 			Description: "The type of connector.",
 		},
 		{
@@ -64,8 +64,8 @@ func init() {
 				//	Name:        "webhooksPer",
 				//	Type:        types.Text().WithValues("None", "Account", "Connection", "Connector"),
 				//	Prefilled: `"None"`,
-				//	Description: "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
-				//		"It is `\"None\"` if the connector is not an app or does not support webhooks.",
+				//	Description: "Indicates, for API connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
+				//		"It is `\"None\"` if the connector is not an API or does not support webhooks.",
 				//},
 				{
 					Name:        "summary",
@@ -98,7 +98,7 @@ func init() {
 					Type:        types.Text().WithValues("Client", "Server", "ClientAndServer"),
 					Nullable:    true,
 					Prefilled:   `null`,
-					Description: "The mode used by app connectors to send the events to the app, if the app supports events. It is empty if the connector is not an app or it does not handle events.",
+					Description: "The mode used by API connectors to send the events to the API, if the API supports events. It is empty if the connector is not an API or it does not handle events.",
 				},
 				{
 					Name:        "summary",
@@ -118,29 +118,29 @@ func init() {
 					Name:      "user",
 					Type:      types.Text(),
 					Prefilled: `"contact"`,
-					Description: `The term used by an app to indicate a single user. For example "client", "customer" or "user".` +
-						"\n\nIt will be empty if the connector is not an app or if the app does not handle users.",
+					Description: `The term used by an API to indicate a single user. For example "client", "customer" or "user".` +
+						"\n\nIt will be empty if the connector is not an API or if the API does not handle users.",
 				},
 				{
 					Name:      "users",
 					Type:      types.Text(),
 					Prefilled: `"contacts"`,
-					Description: `The term used by an app to indicate the users. For example "clients", "customers" or "users".` +
-						"\n\nIt will be empty if the connector is not an app or if the app does not handle users.",
+					Description: `The term used by an API to indicate the users. For example "clients", "customers" or "users".` +
+						"\n\nIt will be empty if the connector is not an API or if the API does not handle users.",
 				},
 				{
 					Name:      "group",
 					Type:      types.Text(),
 					Prefilled: `"company"`,
-					Description: `The term used by an app to indicate a single group. For example "organization", "team", or "group".` +
-						"\n\nIt will be empty if the connector is not an app or if the app does not handle groups.",
+					Description: `The term used by an API to indicate a single group. For example "organization", "team", or "group".` +
+						"\n\nIt will be empty if the connector is not an API or if the API does not handle groups.",
 				},
 				{
 					Name:      "groups",
 					Type:      types.Text(),
 					Prefilled: `"companies"`,
-					Description: `The term used by an app to indicate the groups. For example "organizations", "teams", or "groups".` +
-						"\n\nIt will be empty if the connector is not an app or if the app does not handle groups.",
+					Description: `The term used by an API to indicate the groups. For example "organizations", "teams", or "groups".` +
+						"\n\nIt will be empty if the connector is not an API or if the API does not handle groups.",
 				},
 			}),
 			Description: "Specific terms by which the connector refers to various entities, such as users and groups.",
@@ -155,7 +155,7 @@ func init() {
 			Name:        "identityIDLabel",
 			Type:        types.Text(),
 			Prefilled:   `"HubSpot ID"`,
-			Description: "The descriptive name of the identifier used by the app to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an app.",
+			Description: "The descriptive name of the identifier used by the API to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an API.",
 		},
 		{
 			Name:      "fileExtension",
@@ -168,7 +168,7 @@ func init() {
 			Name:        "requiresAuth",
 			Type:        types.Boolean(),
 			Prefilled:   `true`,
-			Description: "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization.",
+			Description: "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an API or does not require authorization.",
 		},
 		{
 			Name:        "authConfigured",

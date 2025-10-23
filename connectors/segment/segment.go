@@ -22,10 +22,10 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterSDK(meergo.SDKInfo{
+	meergo.RegisterWebhook(meergo.WebhookSpec{
 		Code:       "segment",
 		Label:      "Segment",
-		Categories: meergo.CategoryEventStreaming,
+		Categories: meergo.CategorySaaS,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from Segment",
@@ -36,7 +36,7 @@ func init() {
 }
 
 // New returns a new connector instance for Segment.
-func New(env *meergo.SDKEnv) (*Segment, error) {
+func New(env *meergo.WebhookEnv) (*Segment, error) {
 	return &Segment{}, nil
 }
 

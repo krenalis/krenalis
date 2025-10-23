@@ -48,7 +48,7 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 	})
 
 	// Import the "last_name" property from the second action: this will create
-	// separated identities that refer to the same "identity" - from the app's
+	// separated identities that refer to the same "identity" - from the API's
 	// point of view.
 	action2 := c.CreateAction(dummy, "User", meergotester.ActionToSet{
 		Name:    "Import users (2)",

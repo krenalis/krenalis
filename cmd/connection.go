@@ -71,8 +71,8 @@ func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request)
 	return c.ActionTypes(r.Context())
 }
 
-// AppUsers returns the users of an app connection.
-func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (any, error) {
+// APIUsers returns the users of an API connection.
+func (connection connection) APIUsers(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	c, err := connection.id(r)
 	if err != nil {
@@ -100,7 +100,7 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 	}
 	cursor := q.Get("cursor")
 
-	users, cursor, err := c.AppUsers(r.Context(), schema, filter, cursor)
+	users, cursor, err := c.APIUsers(r.Context(), schema, filter, cursor)
 	if err != nil {
 		return nil, err
 	}
@@ -445,20 +445,20 @@ func (connection connection) AppEventSchema(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	schema, err := c.AppEventSchema(r.Context(), r.URL.Query().Get("type"))
+	schema, err := c.APIEventSchema(r.Context(), r.URL.Query().Get("type"))
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{"schema": schema}, nil
 }
 
-// AppUserSchemas returns the user schemas for an app connection.
-func (connection connection) AppUserSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
+// APIUserSchemas returns the user schemas for an API connection.
+func (connection connection) APIUserSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
-	src, dst, err := c.AppUserSchemas(r.Context())
+	src, dst, err := c.APIUserSchemas(r.Context())
 	if err != nil {
 		return nil, err
 	}

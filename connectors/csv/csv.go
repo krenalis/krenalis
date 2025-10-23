@@ -33,7 +33,7 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFile(meergo.FileInfo{
+	meergo.RegisterFile(meergo.FileSpec{
 		Code:       "csv",
 		Label:      "CSV",
 		Categories: meergo.CategoryFile,

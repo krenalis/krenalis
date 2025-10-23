@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/meergo/analytics-go"
+
 	"github.com/meergo/meergo/test/meergotester"
 )
 
@@ -27,28 +28,28 @@ func TestEventsContext(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	// Create a Meergo API connection, with an action to ingest the events.
-	var meergoAPIID int
-	var meergoEventWriteKey string
+	// Create a Webhook connection, with an action to ingest the events.
+	var webhookID int
+	var webhookEventWriteKey string
 	{
-		meergoAPIID = c.CreateMeergoAPISource("Meergo API", nil)
-		keys := c.EventWriteKeys(meergoAPIID)
+		webhookID = c.CreateWebhookSource("Meergo API", nil)
+		keys := c.EventWriteKeys(webhookID)
 		if len(keys) != 1 {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
-		meergoEventWriteKey = keys[0]
-		c.CreateAction(meergoAPIID, "Event", meergotester.ActionToSet{
+		webhookEventWriteKey = keys[0]
+		c.CreateAction(webhookID, "Event", meergotester.ActionToSet{
 			Name:    "Ingest events",
 			Enabled: true,
 		})
 	}
 
 	// Send various events, with various user agent and OS configurations.
-	c.SendEvent(meergoEventWriteKey, analytics.Track{
+	c.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 1",
 	})
-	c.SendEvent(meergoEventWriteKey, analytics.Track{
+	c.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 2",
 		Context: &analytics.Context{
@@ -56,7 +57,7 @@ func TestEventsContext(t *testing.T) {
 			IP:        net.ParseIP("255.255.255.255"),
 		},
 	})
-	c.SendEvent(meergoEventWriteKey, analytics.Track{
+	c.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 3",
 		Context: &analytics.Context{
@@ -64,7 +65,7 @@ func TestEventsContext(t *testing.T) {
 			IP:        net.ParseIP("255.255.255.255"),
 		},
 	})
-	c.SendEvent(meergoEventWriteKey, analytics.Track{
+	c.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 4",
 		Context: &analytics.Context{
@@ -76,7 +77,7 @@ func TestEventsContext(t *testing.T) {
 			IP: net.ParseIP("255.255.255.0"),
 		},
 	})
-	c.SendEvent(meergoEventWriteKey, analytics.Track{
+	c.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 5",
 		Context: &analytics.Context{
@@ -88,7 +89,7 @@ func TestEventsContext(t *testing.T) {
 			},
 		},
 	})
-	c.SendEvent(meergoEventWriteKey, analytics.Track{
+	c.SendEvent(webhookEventWriteKey, analytics.Track{
 		AnonymousId: "ff8dee31-fd87-45bb-978b-c7b3e2c52128",
 		Event:       "Test Event 6",
 		Context: &analytics.Context{

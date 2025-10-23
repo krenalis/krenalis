@@ -38,7 +38,7 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFileStorage(meergo.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageSpec{
 		Code:       "s3",
 		Label:      "S3",
 		Categories: meergo.CategoryFileStorage,

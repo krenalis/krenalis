@@ -5,12 +5,13 @@ const potentialConnectorsURL =
 const POTENTIAL_CONNECTORS_TIMEOUT_MS = 2000; // in milliseconds
 const CONNECTOR_CODE_REGEX = /^[a-z0-9-]+$/;
 const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
-	'App',
+	'API',
 	'Database',
 	'File',
 	'FileStorage',
+	'MessageBroker',
 	'SDK',
-	'Stream',
+	'Webhook',
 ];
 
 const potentialConnectors = async (
@@ -152,8 +153,8 @@ const validatePotentialConnector = (connector: unknown): PotentialConnector => {
 	const asSource = validateConnectorImplementation(code, 'asSource', connector.asSource);
 	const asDestination = validateConnectorImplementation(code, 'asDestination', connector.asDestination);
 
-	if (connectorType === 'SDK' && asDestination != null) {
-		throw new Error(`connector '${code}' cannot have 'asDestination' because is an SDK`);
+	if ((connectorType === 'SDK' || connectorType === 'Webhook') && asDestination != null) {
+		throw new Error(`connector '${code}' cannot have 'asDestination' because is an ${connectorType}`);
 	}
 
 	return { code, label, categories, connectorType, asSource, asDestination };

@@ -73,7 +73,7 @@ type Connection struct {
 	EventTypes *[]EventType `json:"eventTypes,omitzero"`
 }
 
-// EventType represents an event type of a destination app connection.
+// EventType represents an event type of a destination API connection.
 type EventType struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -188,13 +188,12 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 
 	switch connector := c.Connector(); connector.Type {
 
-	case state.App:
+	case state.API:
 		switch target {
 		case TargetUser:
 			var err error
-			// Retrieve the app's source or target schema, depending on the
-			// Connection's role.
-			schema, err := this.app().Schema(ctx, state.TargetUser, "")
+			// Retrieve the API's source or target schema, depending on the connection's role.
+			schema, err := this.api().Schema(ctx, state.TargetUser, "")
 			if err != nil {
 				if _, ok := err.(*connectors.UnavailableError); ok {
 					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -202,15 +201,15 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, err
 			}
 			if c.Role == state.Source {
-				// Source/App/User.
+				// Source/API/User.
 				return &ActionSchemas{In: schema, Out: users}, nil
 			} else {
-				// Destination/App/User.
+				// Destination/API/User.
 				//
-				// The app's destination schema is already available here, but
+				// The api's destination schema is already available here, but
 				// we need to get the source one too because it's needed for the
 				// matching properties.
-				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.TargetUser, "")
+				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetUser, "")
 				if err != nil {
 					if _, ok := err.(*connectors.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -226,7 +225,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		case TargetGroup:
 			var err error
-			schema, err := this.app().Schema(ctx, state.TargetGroup, "")
+			schema, err := this.api().Schema(ctx, state.TargetGroup, "")
 			if err != nil {
 				if _, ok := err.(*connectors.UnavailableError); ok {
 					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -234,11 +233,11 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, err
 			}
 			if c.Role == state.Source {
-				// Source/App/Group.
+				// Source/API/Group.
 				return &ActionSchemas{In: schema, Out: groups}, nil
 			} else {
-				// Destination/App/Group.
-				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.TargetGroup, "")
+				// Destination/API/Group.
+				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetGroup, "")
 				if err != nil {
 					if _, ok := err.(*connectors.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -307,11 +306,11 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		}
 
-	case state.SDK, state.Stream:
+	case state.MessageBroker, state.SDK, state.Webhook:
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
 		}
-		// TODO(Gianluca): regarding Stream connectors, see the issue
+		// TODO(Gianluca): regarding MessageBroker connectors, see the issue
 		// https://github.com/meergo/meergo/issues/1264.
 		switch target {
 		case TargetUser:
@@ -351,10 +350,10 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	if targets.Contains(state.TargetUser) {
 		switch typ := c.Connector().Type; typ {
 		case
-			state.App:
+			state.API:
 			var name, description string
 			if c.Role == state.Source {
-				// Source/App/User.
+				// Source/API/User.
 				name = "Import " + connector.Label + " " + connector.Terms.Users
 				description = "Import " + connector.Terms.Users
 				if connector.Terms.Users != "users" {
@@ -362,7 +361,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				}
 				description += " into the data warehouse"
 			} else {
-				// Destination/App/User.
+				// Destination/API/User.
 				name = "Export " + connector.Terms.Users
 				description = "Export users from the data warehouse"
 				if connector.Terms.Users != "users" {
@@ -397,9 +396,10 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				Target:      TargetUser,
 			}
 			actionTypes = append(actionTypes, at)
-		case state.SDK:
+		case state.SDK, state.Webhook:
 			if c.Role == state.Source {
 				// Source/SDK/Users.
+				// Source/Webhook/Users.
 				at := ActionType{
 					Name:        "Import users into warehouse",
 					Description: "Import users from " + connector.Label + " into the data warehouse",
@@ -413,10 +413,10 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	//if targets.Contains(state.Group) {
 	//	switch typ := c.Connector().Type; typ {
 	//	case
-	//		state.App:
+	//		state.API:
 	//		var name, description string
 	//		if c.Role == state.Source {
-	//			// Source/App/Group.
+	//			// Source/API/Group.
 	//		    name = "Import " + connector.Name + " " + connector.Terms.Groups
 	//			description = "Import " + connector.Terms.Groups
 	//			if connector.Terms.Groups != "groups" {
@@ -424,7 +424,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	//			}
 	//			description += " into the data warehouse"
 	//		} else {
-	//			// Destination/App/Group.
+	//			// Destination/API/Group.
 	//			name = "Export " + connector.Terms.Groups
 	//			description = "Export groups "
 	//			if connector.Terms.Groups != "groups" {
@@ -473,9 +473,10 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	//}
 	if targets.Contains(state.TargetEvent) {
 		switch typ := c.Connector().Type; typ {
-		case state.SDK:
+		case state.SDK, state.Webhook:
 			if c.Role == state.Source {
 				// Source/SDK/Event.
+				// Source/Webhook/Event.
 				at := ActionType{
 					Name:        "Import events into warehouse",
 					Description: "Import events from " + connector.Label + " into the data warehouse",
@@ -483,16 +484,16 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				}
 				actionTypes = slices.Insert(actionTypes, 0, at)
 			}
-		case state.App:
+		case state.API:
 			if c.Role == state.Destination {
-				eventTypes, err := this.app().EventTypes(ctx)
+				eventTypes, err := this.api().EventTypes(ctx)
 				if err != nil {
 					if _, ok := err.(*connectors.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 					}
 					return nil, err
 				}
-				// Destination/App/Event.
+				// Destination/API/Event.
 				for _, et := range eventTypes {
 					id := et.ID
 					actionTypes = append(actionTypes, ActionType{
@@ -511,21 +512,21 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	return actionTypes, nil
 }
 
-// AppEventSchema returns the schema of the provided event type of the
+// APIEventSchema returns the schema of the provided event type of the
 // connection. If the event type does not have a schema, it returns an invalid
-// schema. The connection must be a destination app connection that supports
+// schema. The connection must be a destination API connection that supports
 // events.
 //
 // It returns an errors.NotFoundError error if the event type does not exist.
-func (this *Connection) AppEventSchema(ctx context.Context, eventType string) (types.Type, error) {
+func (this *Connection) APIEventSchema(ctx context.Context, eventType string) (types.Type, error) {
 	this.core.mustBeOpen()
 	if eventType == "" {
 		return types.Type{}, errors.BadRequest("event type is empty")
 	}
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.App {
-		return types.Type{}, errors.BadRequest("connection %d is not an app", c.ID)
+	if connector.Type != state.API {
+		return types.Type{}, errors.BadRequest("connection %d is not an API", c.ID)
 	}
 	if c.Role != state.Destination {
 		return types.Type{}, errors.BadRequest("connection %d is not a destination", c.ID)
@@ -533,7 +534,7 @@ func (this *Connection) AppEventSchema(ctx context.Context, eventType string) (t
 	if !connector.DestinationTargets.Contains(state.TargetEvent) {
 		return types.Type{}, errors.BadRequest("connection %d does not support events", c.ID)
 	}
-	schema, err := this.app().SchemaAsRole(ctx, state.Destination, state.TargetEvent, eventType)
+	schema, err := this.api().SchemaAsRole(ctx, state.Destination, state.TargetEvent, eventType)
 	if err != nil {
 		if _, ok := err.(*connectors.UnavailableError); ok {
 			err = errors.Unavailable("an error occurred fetching the schema: %w", err)
@@ -546,40 +547,40 @@ func (this *Connection) AppEventSchema(ctx context.Context, eventType string) (t
 	return schema, nil // schema can be invalid.
 }
 
-// AppGroupSchemas returns the group schemas for the connection. The connection
-// must be an app connection that supports groups. For a source, it returns only
+// APIGroupSchemas returns the group schemas for the connection. The connection
+// must be an API connection that supports groups. For a source, it returns only
 // the source schema. For a destination, it returns both the source and
 // destination schemas.
 //
 // TODO(Gianluca): this method is currently unused, and it has been kept for the
 // future, when we will re-expose the endpoint to retrieve group schemas. See
 // the issue https://github.com/meergo/meergo/issues/895.
-func (this *Connection) AppGroupSchemas(ctx context.Context) (src, dst types.Type, err error) {
+func (this *Connection) APIGroupSchemas(ctx context.Context) (src, dst types.Type, err error) {
 	this.core.mustBeOpen()
 	return this.appSchemas(ctx, state.TargetGroup)
 }
 
-// AppUserSchemas returns the user schemas for the connection. The connection
-// must be an app connection that supports users. For a source, it returns only
+// APIUserSchemas returns the user schemas for the connection. The connection
+// must be an API connection that supports users. For a source, it returns only
 // the source schema. For a destination, it returns both the source and
 // destination schemas.
-func (this *Connection) AppUserSchemas(ctx context.Context) (src, dst types.Type, err error) {
+func (this *Connection) APIUserSchemas(ctx context.Context) (src, dst types.Type, err error) {
 	this.core.mustBeOpen()
 	return this.appSchemas(ctx, state.TargetUser)
 }
 
-// AppUsers returns the users of an app connection and the cursor to get the
+// APIUsers returns the users of an API connection and the cursor to get the
 // next users. If filter is not nil, only users matching its conditions will be
 // returned.The returned cursor is empty if there are no other users.
 //
 // It returns an errors.UnprocessableError error with code SchemaNotAligned if
-// the provided schema is not aligned with the app's source schema.
-func (this *Connection) AppUsers(ctx context.Context, schema types.Type, filter *Filter, cursor string) (json.Value, string, error) {
+// the provided schema is not aligned with the API's source schema.
+func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter *Filter, cursor string) (json.Value, string, error) {
 
 	this.core.mustBeOpen()
 
-	if this.connection.Connector().Type != state.App {
-		return nil, "", errors.BadRequest("connection %d is not an app connection", this.connection.ID)
+	if this.connection.Connector().Type != state.API {
+		return nil, "", errors.BadRequest("connection %d is not an API connection", this.connection.ID)
 	}
 	if !this.connection.Connector().SourceTargets.Contains(state.TargetUser) {
 		return nil, "", errors.BadRequest("connection %d does not support reading of users", this.connection.ID)
@@ -612,13 +613,13 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, filter 
 	}
 
 	// Get the users.
-	records, err := this.app().Users(ctx, schema, where, lastChangeTime)
+	records, err := this.api().Users(ctx, schema, where, lastChangeTime)
 	if err != nil {
 		switch err.(type) {
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("%s", err)
 		case *schemas.Error:
-			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the app's source schema: %w", err)
+			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the api's source schema: %w", err)
 		}
 		return nil, "", err
 	}
@@ -629,7 +630,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, filter 
 
 	for user := range records.All(ctx) {
 		if user.Err != nil {
-			return nil, "", errors.Unavailable("%s has returned an invalid user; %s", this.app().Connector(), user.Err)
+			return nil, "", errors.Unavailable("%s has returned an invalid user; %s", this.api().Connector(), user.Err)
 		}
 		users = append(users, user.Properties)
 		if records.Last() {
@@ -705,7 +706,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	}
 
 	// Validate the event type.
-	requiresEventType := c.Role == state.Destination && connector.Type == state.App && target == TargetEvent
+	requiresEventType := c.Role == state.Destination && connector.Type == state.API && target == TargetEvent
 	if requiresEventType && eventType == "" {
 		return 0, errors.BadRequest("eventType is required for actions that send events to apps")
 	}
@@ -744,9 +745,9 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	// Determine the input schema.
 	inSchema := action.InSchema
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(connector.Type, c.Role, state.Target(target))
-	dispatchEventsToApps := isDispatchingEventsToApps(connector.Type, c.Role, state.Target(target))
+	dispatchEventsToAPIs := isDispatchingEventsToAPIs(connector.Type, c.Role, state.Target(target))
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(connector.Type, c.Role, state.Target(target))
-	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs {
 		inSchema = schemas.Event
 	}
 
@@ -851,7 +852,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		switch n.Target {
 		case state.TargetEvent:
 			switch connector.Type {
-			case state.SDK:
+			case state.SDK, state.Webhook:
 				exists, err := tx.QueryExists(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Event'", n.Connection)
 				if err != nil {
 					return nil, err
@@ -900,7 +901,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 }
 
 // CreateEventWriteKey creates a new event write key for the connection.
-// The connection must be a source SDK connection.
+// The connection must be an SDK or Webhook source.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the connection has already too many keys, it returns an
@@ -910,9 +911,9 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.SDK:
+	case state.SDK, state.Webhook:
 	default:
-		return "", errors.NotFound("connection %d is not an SDK", c.ID)
+		return "", errors.NotFound("connection %d is neither an SDK nor a Webhook", c.ID)
 	}
 	if c.Role != state.Source {
 		return "", errors.NotFound("connection %d is not a source", c.ID)
@@ -1060,7 +1061,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 
 // DeleteEventWriteKey deletes the given event write key of the connection.
 // key cannot be empty and cannot be the only key for the connection.
-// The connection must be a source SDK connection.
+// The connection must be an SDK or Webhook source.
 //
 // If the key does not exist, it returns an errors.NotFoundError error.
 // If the key is the only key for the connection, it returns an
@@ -1076,9 +1077,9 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.SDK:
+	case state.SDK, state.Webhook:
 	default:
-		return errors.BadRequest("connection %d is not an SDK", c.ID)
+		return errors.BadRequest("connection %d is neither an SDK nor a Webhook", c.ID)
 	}
 	if c.Role != state.Source {
 		return errors.BadRequest("connection %d is not a source", c.ID)
@@ -1377,10 +1378,9 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 	return identities, total, err
 }
 
-// LinkConnection links the connection (which must be an SDK connection) to the
-// connection identified by dst, which must be a destination connection that
-// supports events. If the two connections are already linked, this method does
-// nothing.
+// LinkConnection links an SDK or Webhook connection to the destination
+// connection identified by dst, which must support events. If the connections
+// are already linked, the method does nothing.
 //
 // Returns an errors.NotFoundError if the destination connection does not exist.
 func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
@@ -1434,8 +1434,8 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	return err
 }
 
-// PreviewSendEvent returns a preview of an event as it would be sent to an app.
-// The connection must be a destination app connection, and it is expected to
+// PreviewSendEvent returns a preview of an event as it would be sent to an api.
+// The connection must be a destination api connection, and it is expected to
 // have an event type with identifier typ. If there is a transformation,
 // outSchema is the output schema of the transformation, and it must be a valid.
 //
@@ -1453,8 +1453,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 
 	c := this.connection
 
-	if c.Connector().Type != state.App {
-		return nil, errors.BadRequest("connection %d is not an app connection", c.ID)
+	if c.Connector().Type != state.API {
+		return nil, errors.BadRequest("connection %d is not an application API connection", c.ID)
 	}
 	if c.Role != state.Destination {
 		return nil, errors.BadRequest("connection %d is not a destination", c.ID)
@@ -1584,7 +1584,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	}
 
 	// Create a preview before sending the event.
-	req, err := this.app().PreviewSendEvent(ctx, ev)
+	req, err := this.api().PreviewSendEvent(ctx, ev)
 	if err != nil {
 		if err == meergo.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
@@ -1838,10 +1838,9 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	return schema, issues, err
 }
 
-// UnlinkConnection unlinks the connection (which must be an SDK connection)
-// from the connection identified by dst, which must be a destination connection
-// that supports events. If the two connections are not linked, this method does
-// nothing.
+// UnlinkConnection unlinks an SDK or Webhook connection from the destination
+// connection identified by dst, which must support events. If the connections
+// are not linked, the method does nothing.
 //
 // If the destination connection does not exist, it returns an
 // errors.NotFoundError.
@@ -1971,14 +1970,14 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 }
 
 // EventWriteKeys returns the event write keys of the connection.
-// The connection must be a source SDK connection.
+// The connection must be an SDK or Webhook source.
 func (this *Connection) EventWriteKeys() ([]string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
 	switch c.Connector().Type {
-	case state.SDK:
+	case state.SDK, state.Webhook:
 	default:
-		return nil, errors.BadRequest("connection %d is not an SDK", c.ID)
+		return nil, errors.BadRequest("connection %d is neither an SDK nor a Webhook", c.ID)
 	}
 	if c.Role != state.Source {
 		return nil, errors.BadRequest("connection %d is not a source", c.ID)
@@ -1986,12 +1985,12 @@ func (this *Connection) EventWriteKeys() ([]string, error) {
 	return slices.Clone(c.Keys), nil
 }
 
-// app returns the app of the connection.
-func (this *Connection) app() *connectors.App {
-	return this.core.connectors.App(this.connection)
+// api returns the API of the connection.
+func (this *Connection) api() *connectors.API {
+	return this.core.connectors.API(this.connection)
 }
 
-// appSchemas returns the user or group schemas, based on target, for an app
+// appSchemas returns the user or group schemas, based on target, for an api
 // connection. The connection must support the provided target.
 //
 // For a source connection, it returns only the group source schema.
@@ -2000,16 +1999,16 @@ func (this *Connection) app() *connectors.App {
 func (this *Connection) appSchemas(ctx context.Context, target state.Target) (src, dst types.Type, err error) {
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.App {
-		err = errors.BadRequest("connection %d is not an app", c.ID)
+	if connector.Type != state.API {
+		err = errors.BadRequest("connection %d is not an api", c.ID)
 		return
 	}
 	if !connector.DestinationTargets.Contains(target) {
 		err = errors.BadRequest("connection %d does not support %s", c.ID, target)
 		return
 	}
-	app := this.app()
-	src, err = app.SchemaAsRole(ctx, state.Source, target, "")
+	api := this.api()
+	src, err = api.SchemaAsRole(ctx, state.Source, target, "")
 	if err != nil {
 		if _, ok := err.(*connectors.UnavailableError); ok {
 			err = errors.Unavailable("an error occurred fetching the source schema: %w", err)
@@ -2017,7 +2016,7 @@ func (this *Connection) appSchemas(ctx context.Context, target state.Target) (sr
 		return
 	}
 	if c.Role == state.Destination {
-		dst, err = app.SchemaAsRole(ctx, state.Destination, target, "")
+		dst, err = api.SchemaAsRole(ctx, state.Destination, target, "")
 		if err != nil {
 			if _, ok := err.(*connectors.UnavailableError); ok {
 				err = errors.Unavailable("an error occurred fetching the destination schema: %w", err)
@@ -2083,7 +2082,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	}
 	// Check if the event type is supported by the connection.
 	if eventType != "" {
-		schema, err := this.app().Schema(ctx, state.Target(target), eventType)
+		schema, err := this.api().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
 			if err == meergo.ErrEventTypeNotExist {
 				err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
@@ -2338,8 +2337,8 @@ type ConnectionToSet struct {
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It can only be provided for
-	// destination app connections that support it. In this case, it must be one of
-	// the sending modes supported by the app.
+	// destination api connections that support it. In this case, it must be one of
+	// the sending modes supported by the api.
 	SendingMode *SendingMode `json:"sendingMode"`
 }
 

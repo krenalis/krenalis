@@ -44,11 +44,11 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
+	meergo.RegisterAPI(meergo.APISpec{
 		Code:       "mailchimp",
 		Label:      "Mailchimp",
-		Categories: meergo.CategoryMarketing,
-		AsSource: &meergo.AsAppSource{
+		Categories: meergo.CategorySaaS,
+		AsSource: &meergo.AsAPISource{
 			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -56,7 +56,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAppDestination{
+		AsDestination: &meergo.AsAPIDestination{
 			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -64,7 +64,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.AppTerms{
+		Terms: meergo.APITerms{
 			User:  "contact",
 			Users: "contacts",
 		},
@@ -105,7 +105,7 @@ func init() {
 }
 
 // New returns a new connector instance for Mailchimp.
-func New(env *meergo.AppEnv) (*MailChimp, error) {
+func New(env *meergo.APIEnv) (*MailChimp, error) {
 	c := MailChimp{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -122,7 +122,7 @@ func New(env *meergo.AppEnv) (*MailChimp, error) {
 }
 
 type MailChimp struct {
-	env      *meergo.AppEnv
+	env      *meergo.APIEnv
 	settings *innerSettings
 }
 
@@ -132,7 +132,7 @@ type innerSettings struct {
 	WebhookSecret string
 }
 
-// OAuthAccount returns the app's account associated with the OAuth
+// OAuthAccount returns the API's account associated with the OAuth
 // authorization.
 func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
 	_, account, err := mc.metadata(ctx)
@@ -390,7 +390,7 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Va
 const maxBodyRecordsBytes = 100 * 1024 * 1024
 const maxBodyRecords = 5000
 
-// Upsert updates or creates records in the app for the specified target.
+// Upsert updates or creates records in the API for the specified target.
 func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	basePath := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"

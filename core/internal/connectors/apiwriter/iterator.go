@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package appwriter
+package apiwriter
 
 import (
 	"fmt"
@@ -69,7 +69,7 @@ func (it *iterator) First() meergo.Record {
 	record, ok := it.writer.read(opAll, true)
 	it.writer.complete()
 	if !ok {
-		panic("core/connectors/appwriter: iterator has called Writer.read, but no records are available")
+		panic("core/connectors/apiwriter: iterator has called Writer.read, but no records are available")
 	}
 	return record
 }

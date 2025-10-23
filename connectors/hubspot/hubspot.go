@@ -39,25 +39,25 @@ var destinationOverview string
 // needed.
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
+	meergo.RegisterAPI(meergo.APISpec{
 		Code:       "hubspot",
 		Label:      "HubSpot",
-		Categories: meergo.CategoryCRM,
-		AsSource: &meergo.AsAppSource{
+		Categories: meergo.CategorySaaS,
+		AsSource: &meergo.AsAPISource{
 			Targets: meergo.TargetUser,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import contacts as users from HubSpot",
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAppDestination{
+		AsDestination: &meergo.AsAPIDestination{
 			Targets: meergo.TargetUser,
 			Documentation: meergo.ConnectorRoleDocumentation{
 				Summary:  "Export users as contacts to HubSpot",
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.AppTerms{
+		Terms: meergo.APITerms{
 			User:  "contact",
 			Users: "contacts",
 		},
@@ -84,16 +84,16 @@ func init() {
 }
 
 // New returns a new connector instance for HubSpot.
-func New(env *meergo.AppEnv) (*HubSpot, error) {
+func New(env *meergo.APIEnv) (*HubSpot, error) {
 	c := HubSpot{env: env}
 	return &c, nil
 }
 
 type HubSpot struct {
-	env *meergo.AppEnv
+	env *meergo.APIEnv
 }
 
-// OAuthAccount returns the app's account associated with the OAuth
+// OAuthAccount returns the API's account associated with the OAuth
 // authorization.
 func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 	var res struct {
@@ -357,7 +357,7 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 	return records, cursor, err
 }
 
-// Upsert updates or creates records in the app for the specified target.
+// Upsert updates or creates records in the API for the specified target.
 func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	// Note that records.All() cannot be used because the HubSpot API's "upsert" method does not allow updating contacts using "hs_object_id".

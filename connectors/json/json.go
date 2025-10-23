@@ -29,7 +29,7 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFile(meergo.FileInfo{
+	meergo.RegisterFile(meergo.FileSpec{
 		Code:       "json",
 		Label:      "JSON",
 		Categories: meergo.CategoryFile,

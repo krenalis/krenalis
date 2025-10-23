@@ -231,8 +231,8 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 
 // DestinationUser represents a user to be merged.
 type DestinationUser struct {
-	ExternalID       string // The unique identifier assigned to the user by the app.
-	OutMatchingValue string // The value for the out matching property in the app.
+	ExternalID       string // The unique identifier assigned to the user by the API.
+	OutMatchingValue string // The value for the out matching property in the API.
 }
 
 // MergeDestinationUsers merges the destination users for an action. users

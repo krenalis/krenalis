@@ -36,11 +36,11 @@ const contentEncoding = meergo.Gzip
 var overview string
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
+	meergo.RegisterAPI(meergo.APISpec{
 		Code:       "mixpanel",
 		Label:      "Mixpanel",
-		Categories: meergo.CategoryAnalytics,
-		AsDestination: &meergo.AsAppDestination{
+		Categories: meergo.CategorySaaS,
+		AsDestination: &meergo.AsAPIDestination{
 			Targets:     meergo.TargetEvent,
 			HasSettings: true,
 			SendingMode: meergo.Server,
@@ -62,7 +62,7 @@ func init() {
 }
 
 type Mixpanel struct {
-	env      *meergo.AppEnv
+	env      *meergo.APIEnv
 	settings *innerSettings
 }
 
@@ -73,7 +73,7 @@ type innerSettings struct {
 }
 
 // New returns a new connector instance for Mixpanel.
-func New(env *meergo.AppEnv) (*Mixpanel, error) {
+func New(env *meergo.APIEnv) (*Mixpanel, error) {
 	c := Mixpanel{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -121,12 +121,12 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 }
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
-// events to the app, without actually sending it.
+// events to the application API, without actually sending it.
 func (mp *Mixpanel) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
 	return mp.sendEvents(ctx, events, true)
 }
 
-// SendEvents sends events to the app.
+// SendEvents sends events to the application API.
 func (mp *Mixpanel) SendEvents(ctx context.Context, events meergo.Events) error {
 	_, err := mp.sendEvents(ctx, events, false)
 	return err
@@ -289,12 +289,12 @@ type contextKey byte
 // Request error.
 const sendBadRequestContextKey contextKey = 0
 
-// sendEvents sends the given events to the app and returns the sent HTTP
+// sendEvents sends the given events to the application API and returns the sent HTTP
 // request.
 // If preview is true, the HTTP request is built but not sent, so it is
 // only returned.
 //
-// If an error occurs while sending the events to the app, a nil *http.Request
+// If an error occurs while sending the events to the application API, a nil *http.Request
 // and the error are returned.
 func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 

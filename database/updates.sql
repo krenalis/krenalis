@@ -79,3 +79,7 @@ SET settings = (
      (settings::jsonb || jsonb_build_object('CollectionEndpoint', 'Global'))::text
      )
 WHERE connector = 'google-analytics';
+
+---
+
+UPDATE connections SET connector = 'webhook' WHERE connector = 'meergo-api';

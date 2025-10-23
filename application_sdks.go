@@ -11,12 +11,12 @@ import (
 	"reflect"
 )
 
-// SDKInfo represents an SDK connector info.
-type SDKInfo struct {
+// SDKSpec represents an application SDK connector specification.
+type SDKSpec struct {
 	Code                string
 	Label               string
 	Categories          Categories // categories
-	Strategies          bool       // whether this connector supports users strategies
+	Strategies          bool       // whether this connector supports user strategies
 	FallbackToRequestIP bool       // whether to use the request IP as the event IP if context.ip was not provided
 	Documentation       ConnectorDocumentation
 
@@ -24,21 +24,21 @@ type SDKInfo struct {
 	ct      reflect.Type
 }
 
-// ReflectType returns the type of the value implementing the SDK connector
-// info.
-func (info SDKInfo) ReflectType() reflect.Type {
-	return info.ct
+// ReflectType returns the type of the value implementing the application SDK
+// connector specification.
+func (spec SDKSpec) ReflectType() reflect.Type {
+	return spec.ct
 }
 
-// New returns a new SDK connector instance.
-func (info SDKInfo) New(env *SDKEnv) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
+// New returns a new application SDK connector instance.
+func (spec SDKSpec) New(env *SDKEnv) (any, error) {
+	out := spec.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err
 }
 
-// SDKEnv is the environment for an SDK connector.
+// SDKEnv is the environment for an application SDK connector.
 type SDKEnv struct {
 
 	// Settings is the raw settings data.
@@ -48,5 +48,6 @@ type SDKEnv struct {
 	SetSettings SetSettingsFunc
 }
 
-// SDKNewFunc represents functions that create new SDK connector instances.
+// SDKNewFunc represents functions that create new application SDK connector
+// instances.
 type SDKNewFunc[T any] func(*SDKEnv) (T, error)

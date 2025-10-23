@@ -5,8 +5,8 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package connectors provides the interface to interact with app, database,
-// file, SDK and stream connectors.
+// Package connectors provides the interface to interact with api, database,
+// file, SDK and message broker connectors.
 package connectors
 
 import (
@@ -51,7 +51,7 @@ type Authorization struct {
 
 var (
 	ErrNoColumnsFound = errors.New("file has no columns")
-	ErrNoWebhooks     = errors.New("app has no webhooks")
+	ErrNoWebhooks     = errors.New("api has no webhooks")
 )
 
 // LastChangeTimeColumn represents the last change time column passed to the
@@ -132,7 +132,7 @@ type Record struct {
 	Err error
 }
 
-// Writer is the interface implemented by app, database, and file connectors to
+// Writer is the interface implemented by api, database, and file connectors to
 // write records.
 type Writer interface {
 
@@ -154,8 +154,8 @@ type Writer interface {
 	Write(ctx context.Context, id string, properties map[string]any) bool
 }
 
-// Connectors provides access to app, database, file, file storage, SDK, and
-// stream connectors.
+// Connectors provides access to api, database, file, file storage, SDK, and
+// message broker connectors.
 type Connectors struct {
 	state *state.State
 	http  *httpclient.HTTP
@@ -168,7 +168,7 @@ func New(state *state.State) *Connectors {
 }
 
 // AuthorizationEndpoint returns the OAuth authorization endpoint URI for the
-// provided app connector. This URI is used to redirect users to the OAuth
+// provided API connector. This URI is used to redirect users to the OAuth
 // provider's consent page, where they can grant permissions for the scopes of
 // the specified role. After granting permissions, the provider redirects the
 // user to the URI specified by redirectionURI.
@@ -209,7 +209,7 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 	return b.String(), nil
 }
 
-// GrantAuthorization grants an OAuth authorization for an app connector, using
+// GrantAuthorization grants an OAuth authorization for an API connector, using
 // the provided authorization code and redirection URI.
 //
 // This method can only be called on a connector that implements OAuth.
@@ -218,13 +218,13 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	if err != nil {
 		return nil, err
 	}
-	app, err := meergo.RegisteredApp(connector.Code).New(&meergo.AppEnv{
+	api, err := meergo.RegisteredAPI(connector.Code).New(&meergo.APIEnv{
 		HTTPClient: connectors.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	account, err := app.(appOAuthConnector).OAuthAccount(ctx)
+	account, err := api.(apiOAuthConnector).OAuthAccount(ctx)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -241,7 +241,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //// ReceivePerAccountWebhook receives a per account webhook request and returns
 //// its payloads. The context is the request's context.
 ////
-//// If the connector of the account is not an app or does not support per account
+//// If the connector of the account is not an api or does not support per account
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the meergo.ErrWebhookUnauthorized error.
 //func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]meergo.WebhookPayload, error) {
@@ -249,13 +249,13 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //	if connector.WebhooksPer != state.WebhooksPerAccount {
 //		return nil, ErrNoWebhooks
 //	}
-//	config := &meergo.AppEnv{
+//	config := &meergo.APIEnv{
 //		OAuthAccount: account.Code,
 //	}
 //	if connector.OAuth != nil {
 //		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken, connector.RetryPolicy)
 //	}
-//	inner, err := meergo.RegisteredApp(connector.Name).New(config)
+//	inner, err := meergo.RegisteredAPI(connector.Name).New(config)
 //	if err != nil {
 //		return nil, err
 //	}
@@ -270,7 +270,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //// ReceivePerConnectionWebhook receives a per connection webhook request and
 //// returns its payloads. The context is the request's context.
 ////
-//// if the connection is not an app, or it does not support per connection
+//// if the connection is not an api, or it does not support per connection
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the meergo.ErrWebhookUnauthorized error.
 //func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]meergo.WebhookPayload, error) {
@@ -284,7 +284,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //		accountID = a.ID
 //		accountCode = a.Code
 //	}
-//	inner, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppEnv{
+//	inner, err := meergo.RegisteredAPI(connector.Name).New(&meergo.APIEnv{
 //		Settings:     connection.Settings,
 //		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 //		OAuthAccount: accountCode,
@@ -305,14 +305,14 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //// ReceivePerConnectorWebhook receives a per connector webhook request and
 //// returns its payloads. The context is the request's context.
 ////
-//// If the connector is not an app, or it does not support per connector
+//// If the connector is not an api, or it does not support per connector
 //// webhooks, it returns the ErrNoWebhooks error. If the request was not
 //// authorized, it returns the meergo.ErrWebhookUnauthorized error.
 //func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]meergo.WebhookPayload, error) {
 //	if connector.WebhooksPer != state.WebhooksPerConnector {
 //		return nil, ErrNoWebhooks
 //	}
-//	inner, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppEnv{})
+//	inner, err := meergo.RegisteredAPI(connector.Name).New(&meergo.APIEnv{})
 //	if err != nil {
 //		return nil, err
 //	}

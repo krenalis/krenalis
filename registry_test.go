@@ -20,14 +20,15 @@ import (
 )
 
 type registrySnapshot struct {
-	apps       map[string]AppInfo
-	databases  map[string]DatabaseInfo
-	files      map[string]FileInfo
-	storages   map[string]FileStorageInfo
-	sdks       map[string]SDKInfo
-	streams    map[string]StreamInfo
-	usedCodes  map[string]struct{}
-	warehouses map[string]WarehouseDriver
+	apis           map[string]APISpec
+	databases      map[string]DatabaseSpec
+	files          map[string]FileSpec
+	storages       map[string]FileStorageSpec
+	messageBrokers map[string]MessageBrokerSpec
+	sdks           map[string]SDKSpec
+	webhooks       map[string]WebhookSpec
+	usedCodes      map[string]struct{}
+	warehouses     map[string]WarehouseDriver
 }
 
 func replaceRegistryForTest(t *testing.T) {
@@ -35,33 +36,36 @@ func replaceRegistryForTest(t *testing.T) {
 
 	registryMu.Lock()
 	snapshot := registrySnapshot{
-		apps:       maps.Clone(registry.apps),
-		databases:  maps.Clone(registry.databases),
-		files:      maps.Clone(registry.files),
-		storages:   maps.Clone(registry.storages),
-		sdks:       maps.Clone(registry.sdks),
-		streams:    maps.Clone(registry.streams),
-		usedCodes:  maps.Clone(registry.usedCodes),
-		warehouses: maps.Clone(registry.warehouses),
+		apis:           maps.Clone(registry.apis),
+		databases:      maps.Clone(registry.databases),
+		files:          maps.Clone(registry.files),
+		storages:       maps.Clone(registry.storages),
+		messageBrokers: maps.Clone(registry.messageBrokers),
+		sdks:           maps.Clone(registry.sdks),
+		webhooks:       maps.Clone(registry.webhooks),
+		usedCodes:      maps.Clone(registry.usedCodes),
+		warehouses:     maps.Clone(registry.warehouses),
 	}
-	registry.apps = make(map[string]AppInfo)
-	registry.databases = make(map[string]DatabaseInfo)
-	registry.files = make(map[string]FileInfo)
-	registry.storages = make(map[string]FileStorageInfo)
-	registry.sdks = make(map[string]SDKInfo)
-	registry.streams = make(map[string]StreamInfo)
+	registry.apis = make(map[string]APISpec)
+	registry.databases = make(map[string]DatabaseSpec)
+	registry.files = make(map[string]FileSpec)
+	registry.storages = make(map[string]FileStorageSpec)
+	registry.messageBrokers = make(map[string]MessageBrokerSpec)
+	registry.sdks = make(map[string]SDKSpec)
+	registry.webhooks = make(map[string]WebhookSpec)
 	registry.usedCodes = make(map[string]struct{})
 	registry.warehouses = make(map[string]WarehouseDriver)
 	registryMu.Unlock()
 
 	t.Cleanup(func() {
 		registryMu.Lock()
-		registry.apps = snapshot.apps
+		registry.apis = snapshot.apis
 		registry.databases = snapshot.databases
 		registry.files = snapshot.files
 		registry.storages = snapshot.storages
+		registry.messageBrokers = snapshot.messageBrokers
 		registry.sdks = snapshot.sdks
-		registry.streams = snapshot.streams
+		registry.webhooks = snapshot.webhooks
 		registry.usedCodes = snapshot.usedCodes
 		registry.warehouses = snapshot.warehouses
 		registryMu.Unlock()
@@ -111,33 +115,33 @@ func TestValidateConnectorCode(t *testing.T) {
 	}
 }
 
-func TestRegisterAppRegistersConnector(t *testing.T) {
+func TestRegisterAPIRegistersConnector(t *testing.T) {
 	replaceRegistryForTest(t)
 
-	app := AppInfo{
-		Code:       "test-app",
-		Label:      "Test App",
-		Categories: CategoryTest,
-		AsDestination: &AsAppDestination{
+	app := APISpec{
+		Code:       "test-api",
+		Label:      "Test API",
+		Categories: CategoryTesting,
+		AsDestination: &AsAPIDestination{
 			Targets:     TargetEvent,
 			SendingMode: Server,
 		},
 	}
-	RegisterApp(app, newTestApp)
+	RegisterAPI(app, newTestAPI)
 
-	got := RegisteredApp("test-app")
-	if got.Code != "test-app" {
-		t.Fatalf("expected code test-app, got %s", got.Code)
+	got := RegisteredAPI("test-api")
+	if got.Code != "test-api" {
+		t.Fatalf("expected code test-api, got %s", got.Code)
 	}
-	if _, ok := registry.usedCodes["test-app"]; !ok {
-		t.Fatalf("expected code test-app to be tracked in used codes")
+	if _, ok := registry.usedCodes["test-api"]; !ok {
+		t.Fatalf("expected code test-api to be tracked in used codes")
 	}
 }
 
 func TestRegisterDatabaseRegistersConnector(t *testing.T) {
 	replaceRegistryForTest(t)
 
-	database := DatabaseInfo{
+	database := DatabaseSpec{
 		Code:       "test-database",
 		Label:      "Test Database",
 		Categories: CategoryDatabase,
@@ -156,7 +160,7 @@ func TestRegisterDatabaseRegistersConnector(t *testing.T) {
 func TestRegisterFileRegistersConnector(t *testing.T) {
 	replaceRegistryForTest(t)
 
-	file := FileInfo{
+	file := FileSpec{
 		Code:          "test-file",
 		Label:         "Test File",
 		Categories:    CategoryFile,
@@ -176,7 +180,7 @@ func TestRegisterFileRegistersConnector(t *testing.T) {
 func TestRegisterFileStorageRegistersConnector(t *testing.T) {
 	replaceRegistryForTest(t)
 
-	storage := FileStorageInfo{
+	storage := FileStorageSpec{
 		Code:          "test-file-storage",
 		Label:         "Test File Storage",
 		Categories:    CategoryFileStorage,
@@ -193,13 +197,32 @@ func TestRegisterFileStorageRegistersConnector(t *testing.T) {
 	}
 }
 
+func TestRegisterMessageBrokerRegistersConnector(t *testing.T) {
+	replaceRegistryForTest(t)
+
+	broker := MessageBrokerSpec{
+		Code:       "test-broker",
+		Label:      "Test Message Broker",
+		Categories: CategoryMessageBroker,
+	}
+	RegisterMessageBroker(broker, newTestMessageBroker)
+
+	got := RegisteredMessageBroker("test-broker")
+	if got.Code != "test-broker" {
+		t.Fatalf("expected code test-broker, got %s", got.Code)
+	}
+	if _, ok := registry.usedCodes["test-broker"]; !ok {
+		t.Fatalf("expected code test-broker to be tracked in used codes")
+	}
+}
+
 func TestRegisterSDKRegistersConnector(t *testing.T) {
 	replaceRegistryForTest(t)
 
-	sdk := SDKInfo{
+	sdk := SDKSpec{
 		Code:       "test-sdk",
 		Label:      "Test SDK",
-		Categories: CategoryTest,
+		Categories: CategoryTesting,
 	}
 	RegisterSDK(sdk, newTestSDK)
 
@@ -212,32 +235,32 @@ func TestRegisterSDKRegistersConnector(t *testing.T) {
 	}
 }
 
-func TestRegisterStreamRegistersConnector(t *testing.T) {
+func TestRegisterWebhookRegistersConnector(t *testing.T) {
 	replaceRegistryForTest(t)
 
-	stream := StreamInfo{
-		Code:       "test-stream",
-		Label:      "Test Stream",
-		Categories: CategoryEventStreaming,
+	webhook := WebhookSpec{
+		Code:       "test-webhook",
+		Label:      "Test Webhook",
+		Categories: CategoryWebhook,
 	}
-	RegisterStream(stream, newTestStream)
+	RegisterWebhook(webhook, newTestWebhook)
 
-	got := RegisteredStream("test-stream")
-	if got.Code != "test-stream" {
-		t.Fatalf("expected code test-stream, got %s", got.Code)
+	got := RegisteredWebhook("test-webhook")
+	if got.Code != "test-webhook" {
+		t.Fatalf("expected code test-webhook, got %s", got.Code)
 	}
-	if _, ok := registry.usedCodes["test-stream"]; !ok {
-		t.Fatalf("expected code test-stream to be tracked in used codes")
+	if _, ok := registry.usedCodes["test-webhook"]; !ok {
+		t.Fatalf("expected code test-webhook to be tracked in used codes")
 	}
 }
 
 func TestRegisterConnectorDuplicateCodePanics(t *testing.T) {
 	replaceRegistryForTest(t)
 
-	RegisterSDK(SDKInfo{
+	RegisterSDK(SDKSpec{
 		Code:       "duplicate",
 		Label:      "Duplicate",
-		Categories: CategoryTest,
+		Categories: CategoryTesting,
 	}, newTestSDK)
 
 	defer func() {
@@ -245,32 +268,32 @@ func TestRegisterConnectorDuplicateCodePanics(t *testing.T) {
 			t.Fatalf("expected panic when registering duplicate code")
 		}
 	}()
-	RegisterStream(StreamInfo{
+	RegisterMessageBroker(MessageBrokerSpec{
 		Code:       "duplicate",
-		Label:      "Duplicate Stream",
-		Categories: CategoryEventStreaming,
-	}, newTestStream)
+		Label:      "Duplicate Message Broker",
+		Categories: CategoryMessageBroker,
+	}, newTestMessageBroker)
 }
 
-func newTestApp(*AppEnv) (testAppConnector, error) {
-	return testAppConnector{}, nil
+func newTestAPI(*APIEnv) (testAPIConnector, error) {
+	return testAPIConnector{}, nil
 }
 
-type testAppConnector struct{}
+type testAPIConnector struct{}
 
-func (testAppConnector) EventTypeSchema(context.Context, string) (types.Type, error) {
+func (testAPIConnector) EventTypeSchema(context.Context, string) (types.Type, error) {
 	return types.Text(), nil
 }
 
-func (testAppConnector) EventTypes(context.Context) ([]*EventType, error) {
+func (testAPIConnector) EventTypes(context.Context) ([]*EventType, error) {
 	return nil, nil
 }
 
-func (testAppConnector) PreviewSendEvents(context.Context, Events) (*http.Request, error) {
+func (testAPIConnector) PreviewSendEvents(context.Context, Events) (*http.Request, error) {
 	return nil, nil
 }
 
-func (testAppConnector) SendEvents(context.Context, Events) error {
+func (testAPIConnector) SendEvents(context.Context, Events) error {
 	return nil
 }
 
@@ -336,26 +359,32 @@ func (testFileStorageConnector) Write(context.Context, io.Reader, string, string
 	return nil
 }
 
+func newTestMessageBroker(*MessageBrokerEnv) (testMessageBrokerConnector, error) {
+	return testMessageBrokerConnector{}, nil
+}
+
+type testMessageBrokerConnector struct{}
+
+func (testMessageBrokerConnector) Close() error {
+	return nil
+}
+
+func (testMessageBrokerConnector) Receive(context.Context) ([]byte, func(), error) {
+	return nil, func() {}, nil
+}
+
+func (testMessageBrokerConnector) Send(context.Context, []byte, SendOptions, func(error)) error {
+	return nil
+}
+
 func newTestSDK(*SDKEnv) (testSDKConnector, error) {
 	return testSDKConnector{}, nil
 }
 
 type testSDKConnector struct{}
 
-func newTestStream(*StreamEnv) (testStreamConnector, error) {
-	return testStreamConnector{}, nil
+func newTestWebhook(*WebhookEnv) (testWebhookConnector, error) {
+	return testWebhookConnector{}, nil
 }
 
-type testStreamConnector struct{}
-
-func (testStreamConnector) Close() error {
-	return nil
-}
-
-func (testStreamConnector) Receive(context.Context) ([]byte, func(), error) {
-	return nil, func() {}, nil
-}
-
-func (testStreamConnector) Send(context.Context, []byte, SendOptions, func(error)) error {
-	return nil
-}
+type testWebhookConnector struct{}

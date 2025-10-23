@@ -57,7 +57,7 @@ func Test_validateAction(t *testing.T) {
 		// Actions that are correct.
 
 		{
-			name: "GOOD: Source/App/User - with mapping",
+			name: "GOOD: Source/API/User - with mapping",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -74,10 +74,10 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Source/App/User - with mapping and filter",
+			name: "GOOD: Source/API/User - with mapping and filter",
 			action: ActionToSet{
 				Name: "Import users",
 				Filter: &Filter{
@@ -104,10 +104,10 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Source/App/User - with transformation function",
+			name: "GOOD: Source/API/User - with transformation function",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -131,11 +131,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Source/App/User - incremental",
+			name: "GOOD: Source/API/User - incremental",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -153,7 +153,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 		},
 		{
@@ -430,7 +430,34 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.SDK,
 		},
 		{
-			name: "GOOD: Destination/App/User - with mapping",
+			name: "GOOD: Source/Webhook/User - with mapping",
+			action: ActionToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Webhook,
+		},
+		{
+			name: "GOOD: Source/Webhook/Event - valid action",
+			action: ActionToSet{
+				Name: "Import events",
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Webhook,
+		},
+		{
+			name: "GOOD: Destination/API/User - with mapping",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -455,10 +482,10 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Destination/App/User - update on duplicates allowed",
+			name: "GOOD: Destination/API/User - update on duplicates allowed",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -483,10 +510,10 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Destination/App/User - with transformation",
+			name: "GOOD: Destination/API/User - with transformation",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -518,11 +545,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Destination/App/User - with mapping and filters",
+			name: "GOOD: Destination/API/User - with mapping and filters",
 			action: ActionToSet{
 				Name: "Export users",
 				Filter: &Filter{
@@ -557,12 +584,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Destination/App/Event - with a mapping",
+			name: "GOOD: Destination/API/Event - with a mapping",
 			action: ActionToSet{
-				Name:     "Dispatch events to app",
+				Name:     "Dispatch events to api",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -575,12 +602,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Destination/App/Event - with a constant mapping",
+			name: "GOOD: Destination/API/Event - with a constant mapping",
 			action: ActionToSet{
-				Name:     "Dispatch events to app",
+				Name:     "Dispatch events to api",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -593,12 +620,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Destination/App/Event - with a transformation function",
+			name: "GOOD: Destination/API/Event - with a transformation function",
 			action: ActionToSet{
-				Name:     "Dispatch events to app",
+				Name:     "Dispatch events to api",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -618,13 +645,13 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Destination/App/Event - with a constant transformation function",
+			name: "GOOD: Destination/API/Event - with a constant transformation function",
 			action: ActionToSet{
-				Name:     "Dispatch events to app",
+				Name:     "Dispatch events to api",
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
@@ -644,7 +671,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 		},
 		{
@@ -778,7 +805,7 @@ func Test_validateAction(t *testing.T) {
 			formatHasSheets:         false,
 		},
 		{
-			name: "GOOD: Source/App/User - input schema can contain meta properties",
+			name: "GOOD: Source/API/User - input schema can contain meta properties",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -796,10 +823,10 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Source/App/User - InPaths refers to second-level property of input schema",
+			name: "GOOD: Source/API/User - InPaths refers to second-level property of input schema",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -833,14 +860,14 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 		},
 
 		// Actions that are invalid.
 
 		{
-			name: "BAD: Source/App/User - empty name",
+			name: "BAD: Source/API/User - empty name",
 			action: ActionToSet{
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.Text()},
@@ -856,11 +883,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "name is empty",
 		},
 		{
-			name: "BAD: Source/App/User - action name contains invalid UTF-8 encoded characters",
+			name: "BAD: Source/API/User - action name contains invalid UTF-8 encoded characters",
 			action: ActionToSet{
 				Name: "hello\xc5world",
 				InSchema: types.Object([]types.Property{
@@ -877,11 +904,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "name contains invalid UTF-8 encoded characters",
 		},
 		{
-			name: "BAD: Source/App/User - name is too long",
+			name: "BAD: Source/API/User - name is too long",
 			action: ActionToSet{
 				Name: "qwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyqwertyq",
 				InSchema: types.Object([]types.Property{
@@ -898,11 +925,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "name is longer than 60 runes",
 		},
 		{
-			name: "BAD: Source/App/User - mapping a not existent property",
+			name: "BAD: Source/API/User - mapping a not existent property",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -919,11 +946,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `invalid mapping: property path "not_existent_property" does not exist`,
 		},
 		{
-			name: "BAD: Source/App/User - invalid input schema with mapping",
+			name: "BAD: Source/API/User - invalid input schema with mapping",
 			action: ActionToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
@@ -937,11 +964,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `input schema is required by the mapping`,
 		},
 		{
-			name: "BAD: Source/App/User - invalid output schema with mapping",
+			name: "BAD: Source/API/User - invalid output schema with mapping",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -955,11 +982,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "output schema is required by the mapping",
 		},
 		{
-			name: "BAD: Source/App/User - invalid input schema with transformation function",
+			name: "BAD: Source/API/User - invalid input schema with transformation function",
 			action: ActionToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
@@ -980,12 +1007,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     `input schema is required by the transformation function`,
 		},
 		{
-			name: "BAD: Source/App/User - invalid output schema with transformation function",
+			name: "BAD: Source/API/User - invalid output schema with transformation function",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1006,12 +1033,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "output schema is required by the transformation function",
 		},
 		{
-			name: "BAD: Source/App/User - empty source code in transformation function",
+			name: "BAD: Source/API/User - empty source code in transformation function",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1030,12 +1057,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "source of transformation function is empty",
 		},
 		{
-			name: "BAD: Source/App/User - transformation language is empty",
+			name: "BAD: Source/API/User - transformation language is empty",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1058,12 +1085,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "transformation language is empty",
 		},
 		{
-			name: "BAD: Source/App/User - transformation language is invalid",
+			name: "BAD: Source/API/User - transformation language is invalid",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1087,7 +1114,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     `transformation language "SomeWeirdLanguage" is not valid`,
 		},
@@ -1118,7 +1145,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "actions on file storage connections must have a format",
 		},
 		{
-			name: "BAD: Source/App/User - cannot specify a connector",
+			name: "BAD: Source/API/User - cannot specify a connector",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1136,12 +1163,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			formatType:              state.File,
 			formatTargets:           state.UsersFlag,
 			formatHasSettings:       false,
 			formatHasSheets:         false,
-			err:                     "actions on App connections cannot have a format",
+			err:                     "actions on API connections cannot have a format",
 		},
 		{
 			name: "BAD: Source/FileStorage/User - connector does not exist",
@@ -1195,7 +1222,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			formatType:              state.App,
+			formatType:              state.API,
 			err:                     "format does not refer to a file connector",
 		},
 		{
@@ -1300,7 +1327,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "identity column \"id\" has kind array instead of int, uint uuid, json, or text",
 		},
 		{
-			name: "BAD: Source/App/User - cannot specify an identity column",
+			name: "BAD: Source/API/User - cannot specify an identity column",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1318,11 +1345,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "action cannot specify an identity column",
 		},
 		{
-			name: "BAD: Source/App/User - with both mapping and transformation function",
+			name: "BAD: Source/API/User - with both mapping and transformation function",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1349,7 +1376,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "action cannot have both transformation mapping and function",
 		},
 		{
@@ -1416,7 +1443,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "placeholders syntax is not supported by source actions",
 		},
 		{
-			name: "BAD: Source/App/User - cannot specify a path",
+			name: "BAD: Source/API/User - cannot specify a path",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1434,11 +1461,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
-			err:                     "App actions cannot have a path",
+			connectionConnectorType: state.API,
+			err:                     "API actions cannot have a path",
 		},
 		{
-			name: "BAD: Source/App/User - cannot specify a sheet",
+			name: "BAD: Source/API/User - cannot specify a sheet",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1456,8 +1483,8 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
-			err:                     "App actions cannot have a sheet",
+			connectionConnectorType: state.API,
+			err:                     "API actions cannot have a sheet",
 		},
 		{
 			name: "BAD: Source/FileStorage/User - invalid input schema",
@@ -1605,7 +1632,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     `table name cannot be empty for destination database actions`,
 		},
 		{
-			name: "BAD: Source/App/User - output schema is not an object",
+			name: "BAD: Source/API/User - output schema is not an object",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1620,11 +1647,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "out schema, if provided, must be an object",
 		},
 		{
-			name: "BAD: Source/App/User - input schema is not an object",
+			name: "BAD: Source/API/User - input schema is not an object",
 			action: ActionToSet{
 				Name:     "Import users",
 				InSchema: types.Int(32),
@@ -1639,11 +1666,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "input schema, if provided, must be an object",
 		},
 		{
-			name: "BAD: Source/App/User - output schema contains a nullable property",
+			name: "BAD: Source/API/User - output schema contains a nullable property",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1662,11 +1689,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `output action schema property "x.email" cannot have Nullable set to true`,
 		},
 		{
-			name: "BAD: Source/App/User - output schema contains a required property",
+			name: "BAD: Source/API/User - output schema contains a required property",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1683,11 +1710,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `output action schema property "email_out" cannot have CreateRequired set to true`,
 		},
 		{
-			name: "BAD: Destination/App/User - input schema contains a nullable property",
+			name: "BAD: Destination/API/User - input schema contains a nullable property",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -1711,11 +1738,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `input action schema property "email_in" cannot have Nullable set to true`,
 		},
 		{
-			name: "BAD: Destination/App/User - input schema contains a required property",
+			name: "BAD: Destination/API/User - input schema contains a required property",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -1739,11 +1766,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `input action schema property "email_in" cannot have CreateRequired set to true`,
 		},
 		{
-			name: "BAD: Source/App/User - output schema cannot contain meta properties",
+			name: "BAD: Source/API/User - output schema cannot contain meta properties",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1762,11 +1789,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `output action schema property "__id__" is a meta property`,
 		},
 		{
-			name: "BAD: Destination/App/User - input schema cannot contain meta properties",
+			name: "BAD: Destination/API/User - input schema cannot contain meta properties",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -1791,11 +1818,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `input action schema property "__id__" is a meta property`,
 		},
 		{
-			name: "BAD: Destination/App/User - incremental is not supported",
+			name: "BAD: Destination/API/User - incremental is not supported",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1813,13 +1840,13 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "incremental cannot be true for destination actions",
 		},
 		{
-			name: "BAD: Destination/App/Event - input schema must be invalid",
+			name: "BAD: Destination/API/Event - input schema must be invalid",
 			action: ActionToSet{
-				Name: "Dispatch events to app",
+				Name: "Dispatch events to api",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.Text()},
 				}),
@@ -1834,7 +1861,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "input schema must be invalid for actions that send events to apps",
 		},
 		{
@@ -1856,6 +1883,27 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.SDK,
+			err:                     "input schema must be invalid for actions that import user identities from events",
+		},
+		{
+			name: "BAD: Source/Webhook/User - input schema must be invalid",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Webhook,
 			err:                     "input schema must be invalid for actions that import user identities from events",
 		},
 		{
@@ -2132,7 +2180,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "the out properties of the transformation function must contain the table key",
 		},
 		{
-			name: "BAD: Source/App/User - table key cannot be specified",
+			name: "BAD: Source/API/User - table key cannot be specified",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2150,11 +2198,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "table key is not allowed",
 		},
 		{
-			name: "BAD: Source/App/User - transformation function with unused property in input schema",
+			name: "BAD: Source/API/User - transformation function with unused property in input schema",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2179,12 +2227,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "input schema contains an unused property: tax_code",
 		},
 		{
-			name: "BAD: Source/App/User - transformation function with unused property in output schema",
+			name: "BAD: Source/API/User - transformation function with unused property in output schema",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2209,12 +2257,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "output schema contains an unused property: last_name",
 		},
 		{
-			name: "GOOD: Source/App/Group - target Group is not supported, but this should be checked before validating the action, not by the action validation itself",
+			name: "GOOD: Source/API/Group - target Group is not supported, but this should be checked before validating the action, not by the action validation itself",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2231,10 +2279,10 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetGroup,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 		},
 		{
-			name: "GOOD: Destination/App/User - in matching property can be a property path",
+			name: "GOOD: Destination/API/User - in matching property can be a property path",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2261,11 +2309,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 		},
 		{
-			name: "GOOD: Destination/App/User - out matching property can be a property path",
+			name: "GOOD: Destination/API/User - out matching property can be a property path",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2291,11 +2339,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 		},
 		{
-			name: "BAD: Source/App/User - input schema cannot contain a property with a prefilled value",
+			name: "BAD: Source/API/User - input schema cannot contain a property with a prefilled value",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2312,11 +2360,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `input action schema property "email_in" has a prefilled value, but action schema properties cannot have prefilled values`,
 		},
 		{
-			name: "BAD: Source/App/User - output schema cannot contain a property with a prefilled value",
+			name: "BAD: Source/API/User - output schema cannot contain a property with a prefilled value",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2333,11 +2381,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `output action schema property "email_out" has a prefilled value, but action schema properties cannot have prefilled values`,
 		},
 		{
-			name: "BAD: Source/App/User - output schema - which refers to users - cannot contain conflicting properties",
+			name: "BAD: Source/API/User - output schema - which refers to users - cannot contain conflicting properties",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2358,11 +2406,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `two output action schema properties would have the same column name "email_out" in the data warehouse, case-insensitively`,
 		},
 		{
-			name: "BAD: Source/App/User - output schema - which refers to users - cannot have a property with type array(object)",
+			name: "BAD: Source/API/User - output schema - which refers to users - cannot have a property with type array(object)",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2386,11 +2434,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `output action schema property "many_values_out" cannot have type array(object)`,
 		},
 		{
-			name: "BAD: Destination/App/User - filter refers to a property not in input schema",
+			name: "BAD: Destination/API/User - filter refers to a property not in input schema",
 			action: ActionToSet{
 				Name: "Export users",
 				Filter: &Filter{
@@ -2424,11 +2472,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "filter is not valid: property path \"__id__\" does not exist",
 		},
 		{
-			name: "BAD: Destination/App/User - filter refers to a meta property in input schema",
+			name: "BAD: Destination/API/User - filter refers to a meta property in input schema",
 			action: ActionToSet{
 				Name: "Export users",
 				Filter: &Filter{
@@ -2463,7 +2511,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     `input action schema property "__id__" is a meta property`,
 		},
 		{
@@ -2485,7 +2533,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "input schema must be valid when exporting users to file",
 		},
 		{
-			name: "BAD: Destination/App/User - output matching property transformed using mapping",
+			name: "BAD: Destination/API/User - output matching property transformed using mapping",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2513,11 +2561,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "mapping cannot map over the output matching property",
 		},
 		{
-			name: "BAD: Destination/App/User - output matching property, with simple name, transformed with mapping",
+			name: "BAD: Destination/API/User - output matching property, with simple name, transformed with mapping",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2543,11 +2591,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "mapping cannot map over the output matching property",
 		},
 		{
-			name: "BAD: Destination/App/User - parent of an output matching property transformed with mapping",
+			name: "BAD: Destination/API/User - parent of an output matching property transformed with mapping",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2576,11 +2624,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "mapping cannot map over the output matching property",
 		},
 		{
-			name: "BAD: Destination/App/User - output matching property transformed with function",
+			name: "BAD: Destination/API/User - output matching property transformed with function",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2615,12 +2663,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
-			name: "BAD: Destination/App/User - output matching property, with simple name, transformed with function",
+			name: "BAD: Destination/API/User - output matching property, with simple name, transformed with function",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2653,12 +2701,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
-			name: "BAD: Destination/App/User - parent of an output matching property transformed with with function",
+			name: "BAD: Destination/API/User - parent of an output matching property transformed with with function",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2695,12 +2743,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
-			name: "BAD: Destination/App/User - output matching property not in out schema",
+			name: "BAD: Destination/API/User - output matching property not in out schema",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2724,7 +2772,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "output matching property \"email_out\" not found within the output schema",
 		},
 		{
@@ -2805,7 +2853,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "output schema must be invalid when importing events into data warehouse",
 		},
 		{
-			name: "BAD: Source/App/User - InPaths refers to a not-existent second-level property of input schema",
+			name: "BAD: Source/API/User - InPaths refers to a not-existent second-level property of input schema",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2840,12 +2888,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "input property \"additional_properties.zzzz\" of transformation function does not exist in schema",
 		},
 		{
-			name: "BAD: Destination/App/User - with mapping transformation that overwrites the out matching property",
+			name: "BAD: Destination/API/User - with mapping transformation that overwrites the out matching property",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2868,12 +2916,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "mapping cannot map over the output matching property",
 		},
 		{
-			name: "BAD: Destination/App/User - with transformation function that overwrites the out matching property",
+			name: "BAD: Destination/API/User - with transformation function that overwrites the out matching property",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2903,12 +2951,12 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			provider:                testProvider{},
 			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
-			name: "BAD: Source/App/User - with constant mapping (not allowed) and filter",
+			name: "BAD: Source/API/User - with constant mapping (not allowed) and filter",
 			action: ActionToSet{
 				Name: "Import users",
 				Filter: &Filter{
@@ -2935,7 +2983,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "transformation must map at least one property",
 		},
 		{
@@ -2993,7 +3041,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "the out properties of the transformation function must contain at least one other property in addition to the table key",
 		},
 		{
-			name: "BAD: Source/App/User - unused property in output schema",
+			name: "BAD: Source/API/User - unused property in output schema",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -3013,11 +3061,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "output schema contains an unused property: x.z",
 		},
 		{
-			name: "BAD: Source/App/User - with filter but no input schema",
+			name: "BAD: Source/API/User - with filter but no input schema",
 			action: ActionToSet{
 				Name: "Import users",
 				Filter: &Filter{
@@ -3041,11 +3089,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "input schema is required by the filter",
 		},
 		{
-			name: "BAD: Source/App/User - with non-nil mapping but no properties mapped",
+			name: "BAD: Source/API/User - with non-nil mapping but no properties mapped",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -3060,11 +3108,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "transformation mapping must have mapped properties",
 		},
 		{
-			name: "BAD: Destination/App/User - missing input matching property",
+			name: "BAD: Destination/API/User - missing input matching property",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -3088,11 +3136,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "input matching property cannot be empty if output matching property is not empty",
 		},
 		{
-			name: "BAD: Destination/App/User - missing output matching property",
+			name: "BAD: Destination/API/User - missing output matching property",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -3116,7 +3164,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "output matching property cannot be empty if input matching property is not empty",
 		},
 		{
@@ -3172,7 +3220,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "identity column is longer than 1024 runes",
 		},
 		{
-			name: "BAD: Source/App/User - table name is not allowed",
+			name: "BAD: Source/API/User - table name is not allowed",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -3190,11 +3238,11 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "table name is not allowed",
 		},
 		{
-			name: "BAD: Source/App/User - update on duplicates is not allowed",
+			name: "BAD: Source/API/User - update on duplicates is not allowed",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -3212,7 +3260,7 @@ func Test_validateAction(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
+			connectionConnectorType: state.API,
 			err:                     "update on duplicates is not allowed",
 		},
 	}

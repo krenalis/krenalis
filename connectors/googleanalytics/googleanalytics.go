@@ -32,11 +32,11 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
+	meergo.RegisterAPI(meergo.APISpec{
 		Code:       "google-analytics",
 		Label:      "Google Analytics",
-		Categories: meergo.CategoryAnalytics,
-		AsDestination: &meergo.AsAppDestination{
+		Categories: meergo.CategorySaaS,
+		AsDestination: &meergo.AsAPIDestination{
 			Targets:     meergo.TargetEvent,
 			HasSettings: true,
 			SendingMode: meergo.Server,
@@ -53,7 +53,7 @@ func init() {
 }
 
 // New returns a new connector instance for Google Analytics.
-func New(env *meergo.AppEnv) (*Analytics, error) {
+func New(env *meergo.APIEnv) (*Analytics, error) {
 	c := Analytics{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -65,7 +65,7 @@ func New(env *meergo.AppEnv) (*Analytics, error) {
 }
 
 type Analytics struct {
-	env      *meergo.AppEnv
+	env      *meergo.APIEnv
 	settings *innerSettings
 }
 
@@ -90,12 +90,12 @@ func (ga *Analytics) EventTypeSchema(ctx context.Context, eventType string) (typ
 }
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
-// events to the app, without actually sending it.
+// events to the API, without actually sending it.
 func (ga *Analytics) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
 	return ga.sendEvents(ctx, events, true)
 }
 
-// SendEvents sends events to the app.
+// SendEvents sends events to the API.
 func (ga *Analytics) SendEvents(ctx context.Context, events meergo.Events) error {
 	_, err := ga.sendEvents(ctx, events, false)
 	return err
@@ -180,12 +180,12 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 
 const maxEventRequestSize = 130 * 1024 // from https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#limitations.
 
-// sendEvents sends the given events to the app and returns the sent HTTP
+// sendEvents sends the given events to the API and returns the sent HTTP
 // request.
 // If preview is true, the HTTP request is built but not sent, so it is
 // only returned.
 //
-// If an error occurs while sending the events to the app, a nil *http.Request
+// If an error occurs while sending the events to the API, a nil *http.Request
 // and the error are returned.
 func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 

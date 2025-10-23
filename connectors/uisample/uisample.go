@@ -24,11 +24,11 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
+	meergo.RegisterAPI(meergo.APISpec{
 		Code:       "ui-sample",
 		Label:      "UISample",
-		Categories: meergo.CategoryTest,
-		AsSource: &meergo.AsAppSource{
+		Categories: meergo.CategoryTesting,
+		AsSource: &meergo.AsAPISource{
 			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -36,7 +36,7 @@ func init() {
 				Overview: overview,
 			},
 		},
-		AsDestination: &meergo.AsAppDestination{
+		AsDestination: &meergo.AsAPIDestination{
 			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -48,7 +48,7 @@ func init() {
 }
 
 // New returns a new connector instance for UI sample.
-func New(env *meergo.AppEnv) (*UISample, error) {
+func New(env *meergo.APIEnv) (*UISample, error) {
 	c := UISample{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -60,7 +60,7 @@ func New(env *meergo.AppEnv) (*UISample, error) {
 }
 
 type UISample struct {
-	env      *meergo.AppEnv
+	env      *meergo.APIEnv
 	settings *innerSettings
 }
 
@@ -149,7 +149,7 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings js
 	return ui, nil
 }
 
-// Upsert updates or creates records in the app for the specified target.
+// Upsert updates or creates records in the API for the specified target.
 func (uiSample *UISample) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 	return nil
 }

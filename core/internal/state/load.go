@@ -28,10 +28,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	for code, connector := range connectors {
 		c := Connector{}
 		switch connector := connector.(type) {
-		case meergo.AppInfo:
+		case meergo.APISpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
-			c.Type = App
+			c.Type = API
 			c.Categories = connector.Categories
 			if asSource := connector.AsSource; asSource != nil {
 				c.SourceTargets = ConnectorTargets(asSource.Targets)
@@ -72,7 +72,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					c.OAuth.ClientSecret = oAuth.ClientSecret
 				}
 			}
-		case meergo.DatabaseInfo:
+		case meergo.DatabaseSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = Database
@@ -94,7 +94,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			if summary := c.Documentation.Destination.Summary; summary == "" {
 				c.Documentation.Destination.Summary = "Exports users to " + article(c.Label) + " " + c.Label + " database"
 			}
-		case meergo.FileInfo:
+		case meergo.FileSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = File
@@ -118,7 +118,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.FileExtension = connector.Extension
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 			c.HasSheets = connector.HasSheets
-		case meergo.FileStorageInfo:
+		case meergo.FileStorageSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = FileStorage
@@ -144,7 +144,17 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					c.Documentation.Source.Summary = "Exports users to a file on " + c.Label
 				}
 			}
-		case meergo.SDKInfo:
+		case meergo.MessageBrokerSpec:
+			c.Code = connector.Code
+			c.Label = connector.Label
+			c.Type = MessageBroker
+			c.Categories = connector.Categories
+			c.SourceTargets = EventsFlag
+			// It is assumed that a message broker connector always have settings.
+			c.HasSourceSettings = true
+			c.HasDestinationSettings = true
+			c.Documentation = connector.Documentation
+		case meergo.SDKSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = SDK
@@ -159,15 +169,18 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Strategies = connector.Strategies
 			c.FallbackToRequestIP = connector.FallbackToRequestIP
 			c.Documentation = connector.Documentation
-		case meergo.StreamInfo:
+		case meergo.WebhookSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
-			c.Type = Stream
+			c.Type = Webhook
 			c.Categories = connector.Categories
-			c.SourceTargets = EventsFlag
-			// It is assumed that a stream connector always have settings.
-			c.HasSourceSettings = true
-			c.HasDestinationSettings = true
+			c.Terms = ConnectorTerms{
+				User:  "user",
+				Users: "users",
+				// Group:  "group", TODO(marco): Implement groups
+				// Groups: "groups",
+			}
+			c.SourceTargets = EventsFlag | UsersFlag
 			c.Documentation = connector.Documentation
 		}
 		state.connectors[code] = &c

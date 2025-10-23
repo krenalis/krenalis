@@ -28,8 +28,8 @@ func (err *InvalidPathError) Error() string {
 	return err.err.Error()
 }
 
-// FileStorageInfo represents a file storage connector info.
-type FileStorageInfo struct {
+// FileStorageSpec represents a file storage connector specification.
+type FileStorageSpec struct {
 	Code          string
 	Label         string
 	Categories    Categories // categories
@@ -53,14 +53,14 @@ type AsFileStorageDestination struct {
 }
 
 // ReflectType returns the type of the value implementing the file storage
-// connector info.
-func (info FileStorageInfo) ReflectType() reflect.Type {
-	return info.ct
+// connector specification.
+func (spec FileStorageSpec) ReflectType() reflect.Type {
+	return spec.ct
 }
 
 // New returns a new file storage connector instance.
-func (info FileStorageInfo) New(env *FileStorageEnv) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
+func (spec FileStorageSpec) New(env *FileStorageEnv) (any, error) {
+	out := spec.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err

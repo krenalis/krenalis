@@ -49,7 +49,7 @@ type Ack struct {
 // delivery.
 type AcksFunc func(acks []Ack, err error)
 
-type App interface {
+type API interface {
 
 	// Connection returns the ID of the connection.
 	Connection() int
@@ -73,7 +73,7 @@ type App interface {
 // sent. See also the Sender.minBatchSize field.
 const maxQueueDelay = 200 * time.Millisecond
 
-// Event represents a message to be delivered to an application.
+// Event represents a message to be delivered to an API.
 type Event struct {
 	meergo.Event           // original event.
 	CreatedAt    time.Time // time at which the event was created.
@@ -96,7 +96,7 @@ type user struct {
 
 // Sender sends events, buffering them internally for batch delivery.
 // It ensures that events from the same user (i.e., with the same AnonymousId)
-// are delivered to the app in the exact order they were received.
+// are delivered to the API in the exact order they were received.
 //
 // To send an event, follow these steps:
 //  1. Call the CreateEvent method. The order in which this is called determines
@@ -104,7 +104,7 @@ type user struct {
 //  2. (Optional) Transform the event and set 0the Event.Properties field.
 //  3. Call the QueueEvent method.
 type Sender struct {
-	connector string   // app connector.
+	connector string   // API connector.
 	acks      AcksFunc // ack function.
 
 	metrics struct {
@@ -114,7 +114,7 @@ type Sender struct {
 
 	mu                 sync.Mutex
 	waitTime           func(pattern string) (time.Duration, error)           // function that returns an estimate of how long to wait before calling sendEvents.
-	sendEvents         func(ctx context.Context, events meergo.Events) error // function that sends the events to the app.
+	sendEvents         func(ctx context.Context, events meergo.Events) error // function that sends the events to the API.
 	events             []*Event                                              // events in the queue; protected by mu.
 	users              map[string]*user                                      // users by anonymous id; protected by mu.
 	releasableUsers    map[*user]struct{}                                    // users that have been iterated and are now ready to be released.
@@ -134,15 +134,15 @@ type Sender struct {
 	}
 }
 
-// New returns a new Sender. connector is the app's connector, waitTime is the
+// New returns a new Sender. connector is the API's connector, waitTime is the
 // function used to estimate how long to wait before sending a batch of events,
-// sendEvents is the function that sends the events to the app, and acks
+// sendEvents is the function that sends the events to the API, and acks
 // acknowledges both successes and failures.
-func New(app App, acks AcksFunc) *Sender {
+func New(api API, acks AcksFunc) *Sender {
 	s := &Sender{
-		connector:       app.Connector(),
-		waitTime:        app.WaitTime,
-		sendEvents:      app.SendEvents,
+		connector:       api.Connector(),
+		waitTime:        api.WaitTime,
+		sendEvents:      api.SendEvents,
 		acks:            acks,
 		events:          make([]*Event, 0, 1000),
 		users:           make(map[string]*user, 1000),
@@ -171,7 +171,7 @@ func New(app App, acks AcksFunc) *Sender {
 				pattern = s.rateLimiterPattern
 			}
 			s.resetTimerLocked()
-			waitTime := app.WaitTime
+			waitTime := api.WaitTime
 			s.mu.Unlock()
 			if iter == nil {
 				continue
@@ -190,7 +190,7 @@ func New(app App, acks AcksFunc) *Sender {
 		}
 	}()
 	// Set the metrics.
-	connection := strconv.Itoa(app.Connection())
+	connection := strconv.Itoa(api.Connection())
 	s.metrics.queueAvailable = queueAvailableMetric.Register(func() float64 {
 		s.mu.Lock()
 		a := s.available
@@ -316,11 +316,11 @@ func (s *Sender) QueueEvent(event *Event) {
 	s.queueOrDiscardEvent(event, false)
 }
 
-// SetApp replaces the aap.
-func (s *Sender) SetApp(app *connectors.App) {
+// SetAPI replaces the API.
+func (s *Sender) SetAPI(api *connectors.API) {
 	s.mu.Lock()
-	s.waitTime = app.WaitTime
-	s.sendEvents = app.SendEvents
+	s.waitTime = api.WaitTime
+	s.sendEvents = api.SendEvents
 	s.mu.Unlock()
 }
 
@@ -639,7 +639,8 @@ func (s *Sender) resetTimerLocked() {
 	}
 }
 
-// send sends events to the app by calling the connector's SendEvents method.
+// send sends events to the API by calling the connector's
+// SendEvents method.
 func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 
 	trace("Sender.send: iterator %p started\n", iter)

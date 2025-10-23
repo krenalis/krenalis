@@ -22,7 +22,7 @@ import (
 // Record represents a record.
 type Record struct {
 	ID         any            // Identifier.
-	ExternalID string         // App external ID.
+	ExternalID string         // API external ID.
 	Properties map[string]any // Properties.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
@@ -30,8 +30,8 @@ type Record struct {
 }
 
 // Matching specifies criteria for the UserRecords method when exporting users
-// to an app. It filters users based on whether they have or do not have a match
-// with the app users.
+// to an API. It filters users based on whether they have or do not have a match
+// with the API users.
 type Matching struct {
 	Action             int
 	InProperty         string
@@ -46,12 +46,12 @@ type Matching struct {
 // with a nil value should be omitted from each record.
 //
 // action and appExport parameters (if specified) represent the action
-// identifier and the export options for an app action, respectively. When
+// identifier and the export options for an API action, respectively. When
 // provided, the resulting records are compared against the destination users
 // table.
 //
-// If matching is not nil and a matching app user exists for a record, the
-// record's ExternalID will be set to the external ID of the matched app user.
+// If matching is not nil and a matching API user exists for a record, the
+// record's ExternalID will be set to the external ID of the matched API user.
 func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idProperty string, columnByProperty map[string]meergo.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
@@ -311,7 +311,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				ID:         row[last],              // the User ID is the last column.
 				Properties: r.unflat(row[:last-1]), // skip the last 2 columns: the External ID and the User ID.
 			}
-			// If there is no matching app user and the external ID is nil, assign an empty string.
+			// If there is no matching API user and the external ID is nil, assign an empty string.
 			record.ExternalID, _ = row[last-1].(string)
 			// Process the previous records if the value of the matching property differs from the previous records.
 			if len(previous.records) > 0 && value != previous.value {

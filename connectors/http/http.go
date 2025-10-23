@@ -34,7 +34,7 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFileStorage(meergo.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageSpec{
 		Code:       "http-get",
 		Label:      "HTTP GET",
 		Categories: meergo.CategoryFileStorage,
@@ -44,7 +44,7 @@ func init() {
 			},
 		},
 	}, New)
-	meergo.RegisterFileStorage(meergo.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageSpec{
 		Code:       "http-post",
 		Label:      "HTTP POST",
 		Categories: meergo.CategoryFileStorage,

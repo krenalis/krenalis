@@ -1,18 +1,18 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}App Connectors{% end %}
+{% macro Title string %}API Connectors{% end %}
 {% Article %}
 
-# Apps
+# APIs
 
-App connectors allow to connect to apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and to send events.
+APIs connectors allow to connect to application APIs, such as Klaviyo, Salesforce, or Mailchimp, to import and export users and to send events.
 
-App connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
+APIs connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
 
-Note that it is possible to implement an app connector that supports only reading or only writing of records, or only sending of events, as it is not necessary that an app connector supports all of them. It is sufficient to specify the functionalities that the connector implements through the `AppInfo`, described below, then implement the required methods for those functionalities.
+Note that it is possible to implement an API connector that supports only reading or only writing of records, or only sending of events, as it is not necessary that an API connector supports all of them. It is sufficient to specify the functionalities that the connector implements through the `APISpec`, described below, then implement the required methods for those functionalities.
 
 ## Quick start
 
-In the creation of a new Go module, for your app connector, you can utilize the following template by pasting it into a Go file. Not all methods in the file need to be implemented; see below for descriptions of individual methods. Customize the template with your desired package name, type name, and pertinent connector information:
+In the creation of a new Go module, for your API connector, you can utilize the following template by pasting it into a Go file. Not all methods in the file need to be implemented; see below for descriptions of individual methods. Customize the template with your desired package name, type name, and pertinent connector information:
 
 ```go
 // Package klaviyo provides a connector for Klaviyo.
@@ -21,24 +21,25 @@ package klaviyo
 import (
     "context"
     "net/http"
+    "time"
 
     "github.com/meergo/meergo"
     "github.com/meergo/meergo/core/types"
 )
 
 func init() {
-    meergo.RegisterApp(meergo.AppInfo{
+    meergo.RegisterAPI(meergo.APISpec{
         Code:       "klaviyo",
         Label:      "Klaviyo",
         Categories: meergo.CategoryAutomation | meergo.CategoryMarketing,
-        AsSource: &meergo.AsAppSource{
+        AsSource: &meergo.AsAPISource{
             Targets:       meergo.TargetUser,
             HasSettings:   true,
             Documentation: meergo.ConnectorRoleDocumentation{
                 Summary: "Import profiles as users from Klaviyo",	
             },
         },
-        AsDestination: &meergo.AsAppDestination{
+        AsDestination: &meergo.AsAPIDestination{
             Targets:       meergo.TargetEvent | meergo.TargetUser,
             HasSettings:   true,
             SendingMode:   meergo.Server,
@@ -46,7 +47,7 @@ func init() {
                 Summary: "Export users as profiles and send events to Klaviyo",	
             },
         },
-        Terms: meergo.AppTerms{
+        Terms: meergo.APITerms{
             User:  "client",
             Users: "clients",
         },
@@ -75,7 +76,7 @@ type Klaviyo struct {
 }
 
 // New returns a new connector instance for Klaviyo.
-func New(env *meergo.AppEnv) (*Klaviyo, error) {
+func New(env *meergo.APIEnv) (*Klaviyo, error) {
     // ...
 }
 
@@ -90,8 +91,8 @@ func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 }
 
 // PreviewSendEvents builds and returns the HTTP request that would be used to
-// send the given events to the app, without actually sending it.
-func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events Events) (*http.Request, error) {
+// send the given events to the API, without actually sending it.
+func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
     // ...
 }
 
@@ -111,13 +112,13 @@ func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, lastChang
     // ...
 }
 
-// SendEvents sends events to an app. events is a non-empty sequence of
-// events to send.
-func (ky *Klaviyo) SendEvents(ctx context.Context, events Events) error {
+// SendEvents sends events to the API. events is a non-empty sequence of events
+// to send.
+func (ky *Klaviyo) SendEvents(ctx context.Context, events meergo.Events) error {
     // ...
 }
 
-// Upsert updates or creates records in the app for the specified target.
+// Upsert updates or creates records in the API for the specified target.
 func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
     // ...
 }
@@ -125,7 +126,7 @@ func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records me
 
 ## Implementation
 
-Let's explore how to implement an app connector, for example for Klaviyo.
+Let's explore how to implement an API connector, for example for Klaviyo.
 
 First create a Go module:
 
@@ -141,43 +142,43 @@ Later on, you can [build an executable with your connector](/installation/from-s
 
 ### About the connector
 
-The `AppInfo` type describes information about the app connector:
+The `APISpec` type describes the specification of the API connector:
 
 - `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "hubspot", "google-analytics", "salesforce".
-- `Label`: display label in the Admin console, typically the app's name (e.g. "HubSpot", "Google Analytics", "Salesforce").
+- `Label`: display label in the Admin console, typically the application's name (e.g. "HubSpot", "Google Analytics", "Salesforce").
 - `Categories`: the categories that the connector falls into. There must be at least one category.
-- `AsSource`: information about the app connector when it used as source. This should be set only when the app connector can be used as a source, otherwise should be nil.
-  - `Targets`: targets supported by the app connector when it is used as source. Can only contain `TargetUser`.
+- `AsSource`: information about the API connector when it used as source. This should be set only when the API connector can be used as a source, otherwise should be nil.
+  - `Targets`: targets supported by the API connector when it is used as source. Can only contain `TargetUser`.
   - `HasSettings`: indicates whether the connection has settings when used as a source
   - `Description`: description of the connector when it is used as a source.
-- `AsDestination`: information about the app connector when it used as destination. This should be set only when the app connector can be used as a destination, otherwise should be nil.
-  - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `TargetEvent` and `TargetUser`.
+- `AsDestination`: information about the API connector when it used as destination. This should be set only when the API connector can be used as a destination, otherwise should be nil.
+  - `Targets`: targets supported by the API connector when it is used as a destination. Can contain `TargetEvent` and `TargetUser`.
   - `HasSettings`: indicates whether the connection has settings when used as destination
-  - `SendingMode`: mode used to send the events to the app, if the app supports events. It can be `Client`, `Server`, or `ClientAndServer`.
+  - `SendingMode`: mode used to send events to the API, if the API supports events. Possible values are `Client`, `Server`, or `ClientAndServer`.
   - `Description`: description of the connector when it is used as a destination.
-  - `Terms`: singular and plural terms used by the app to refer to users—for example, "client"/"clients", "customer"/"customers", or "user"/"users".
-{# - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups". #}
-- `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
+  - `Terms`: singular and plural terms used by the API to refer to users—for example, "client"/"clients", "customer"/"customers", or "user"/"users".
+{# - `TermForGroups`: term used by the API to indicate the groups, if they are supported. For example "organizations", "teams", or "groups". #}
+- `IdentityIDLabel`: descriptive name of the identifier used by the API to identify a user. For example "ID", "User ID", or "HubSpot ID".
 {# - `WebhooksPer`: indicates if webhooks are per account, connection, or connector. #}
-- `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth).
-- `EndpointGroups`: rate limiting and retry policies per endpoint group. See [Endpoint groups documentation](app/endpoint-groups).
+- `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](apis/oauth).
+- `EndpointGroups`: rate limiting and retry policies per endpoint group. See [Endpoint groups documentation](apis/endpoint-groups).
 - `Layouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 
-This information is passed to the `RegisterApp` function that, executed during package initialization, registers the app connector:
+This information is passed to the `RegisterAPI` function that, executed during package initialization, registers the API connector:
 
 ```go
 func init() {
-    meergo.RegisterApp(meergo.AppInfo{
+    meergo.RegisterAPI(meergo.APISpec{
         Code:  "klaviyo",
         label: "Klaviyo",
-        AsSource: &meergo.AsAppSource{
+        AsSource: &meergo.AsAPISource{
             Targets:       meergo.TargetUser,
             HasSettings:   true,
             Documentation: meergo.ConnectorRoleDocumentation{
                 Summary: "Import profiles as users from Klaviyo",	
             },
         },
-        AsDestination: &meergo.AsAppDestination{
+        AsDestination: &meergo.AsAPIDestination{
             Targets:       meergo.TargetEvent | meergo.TargetUser,
             HasSettings:   true,
             SendingMode:   meergo.Server,
@@ -185,7 +186,7 @@ func init() {
                 Summary: "Export users as profiles and send events to Klaviyo",	
             },
         },
-        Terms: meergo.AppTerms{
+        Terms: meergo.APITerms{
             User:  "client",
             Users: "clients",
         },
@@ -207,19 +208,19 @@ func init() {
 
 ### Constructor
 
-The second argument supplied to the `RegisterApp` function is the function utilized for creating an app instance:
+The second argument supplied to the `RegisterAPI` function is the function utilized for creating an API instance:
 
 ```go
-func New(env *meergo.AppEnv) (*Klaviyo, error)
+func New(env *meergo.APIEnv) (*Klaviyo, error)
 ```
 
-This function accepts an app environment and yields a value representing your custom type.
+This function accepts an API environment and yields a value representing your custom type.
 
-The structure of `AppEnv` is defined as follows:
+The structure of `APIEnv` is defined as follows:
 
 ```go
-// AppEnv is the environment for an app connector.
-type AppEnv struct {
+// APIEnv is the environment for an API connector.
+type APIEnv struct {
 
     // Settings holds the raw settings data.
     Settings []byte
@@ -237,13 +238,13 @@ type AppEnv struct {
 
 - `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
 - `SetSettings`: A function that enables the connector to update its settings as necessary.
-- `OAuthAccount`: The app's account associated with the OAuth authorization.
-- `HTTPClient`: The HTTP client used by the connector to make requests to the app. It seamlessly implements OAuth authorization if required and retries idempotent requests as specified.
+- `OAuthAccount`: The API's account associated with the OAuth authorization.
+- `HTTPClient`: The HTTP client used by the connector to make requests to the API. It seamlessly implements OAuth authorization if required and retries idempotent requests as specified.
 {# - `WebhookURL`: The URL where the webhook can be sent, provided the connector supports webhooks. #}
 
 ### Continue reading
 
-- [Users](apps/users)
-- [Send events](apps/send-events)
-- [OAuth](apps/oauth)
-- [Rate limits and retry](apps/rate-limits-and-retry)
+- [Users](apis/users)
+- [Send events](apis/send-events)
+- [OAuth](apis/oauth)
+- [Rate limits and retry](apis/rate-limits-and-retry)

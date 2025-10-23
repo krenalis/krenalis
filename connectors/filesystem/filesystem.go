@@ -39,7 +39,7 @@ var (
 )
 
 func init() {
-	meergo.RegisterFileStorage(meergo.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageSpec{
 		Code:       "filesystem",
 		Label:      "Filesystem",
 		Categories: meergo.CategoryFileStorage,

@@ -4,14 +4,14 @@
 
 # Send events
 
-Meergo makes it easy to send events to apps that can receive them.
+Meergo makes it easy to send events to APIs that can receive them.
 
 Here's how to get started with setting up your connector to send events:
 
 ```go
-meergo.RegisterApp(meergo.AppInfo{
+meergo.RegisterAPI(meergo.APISpec{
     ...
-    AsDestination: &meergo.AsAppDestination{
+    AsDestination: &meergo.AsAPIDestination{
         ...
         Targets: meergo.TargetEvent | meergo.TargetUser,
         ...
@@ -23,7 +23,8 @@ meergo.RegisterApp(meergo.AppInfo{
 This piece of code registers your connector, telling Meergo that it's ready to manage events (as well as users) when used as destination. Next, you'll need to implement the `EventSender` interface:
 
 ```go
-// EventSender is implemented by app connectors that support event sending.
+// EventSender is implemented by API connectors that support event
+// sending.
 type EventSender interface {
 
 	// EventTypeSchema returns the schema of the specified event type.
@@ -43,7 +44,7 @@ type EventSender interface {
 	EventTypes(ctx context.Context) ([]*EventType, error)
 
 	// PreviewSendEvents builds and returns the HTTP request that would be used to
-	// send the given events to the app, without actually sending it.
+	// send the given events to the API, without actually sending it.
 	//
 	// If any event type does not exist, it returns the ErrEventTypeNotExist error.
 	//
@@ -55,7 +56,7 @@ type EventSender interface {
 	// goroutines.
 	PreviewSendEvents(ctx context.Context, events Events) (*http.Request, error)
 
-	// SendEvents sends a non-empty sequence of events to an app.
+	// SendEvents sends a non-empty sequence of events to an API.
 	//
 	// If any event type does not exist, it returns the ErrEventTypeNotExist error.
 	//
@@ -93,7 +94,7 @@ You have the freedom to decide on the identifiers, names, and descriptions, as l
 
 ### Adding schema
 
-Sometimes, the event might lack necessary information required for sending to the app. In such cases, the schema of the event type specifies the extra information needed.
+Sometimes, the event might lack necessary information required for sending to the API. In such cases, the schema of the event type specifies the extra information needed.
 
 Actions based on an event type involve a transformation that, given an event, provides the extra information required by the connector. This information, along with the event, is passed to the connector's `PreviewSendEvents` and `SendEvents` methods.
 
@@ -131,20 +132,20 @@ If a field in the schema is mandatory, set the `Required` field in the `types.Pr
 
 > When selecting a placeholder, consider that certain property names and traits hold specific meanings and can thus serve as suitable placeholders. Refer to the prefilled properties and traits sections within the events for further details:
 >
->    - [page](/integrations/events/specs/page#prefilled-properties)
->    - [screen](/integrations/events/specs/screen#prefilled-properties)
->    - [track](/integrations/events/specs/track#prefilled-properties)
->    - [identify](/integrations/events/specs/identify#prefilled-traits)
->    - [group](/integrations/events/specs/group#prefilled-traits)
+>    - [page](/events/specs/page#prefilled-properties)
+>    - [screen](/events/specs/screen#prefilled-properties)
+>    - [track](/events/specs/track#prefilled-properties)
+>    - [identify](/events/specs/identify#prefilled-traits)
+>    - [group](/events/specs/group#prefilled-traits)
 
-Now, let's move on to sending events to the app using the `SendEvents` method.
+Now, let's move on to sending events to the API using the `SendEvents` method.
 
 ## Send events
 
-Finally, to actually send events to the app, the `SendEvents` method sends the events to the app:
+Finally, to actually send events to the API, the `SendEvents` method sends the events to the API:
 
 ```go
-SendEvents(ctx context.Context, events Events) error
+SendEvents(ctx context.Context, events meergo.Events) error
 ```
 
 The parameters are:
@@ -152,15 +153,15 @@ The parameters are:
 - `ctx`: The context.
 - `events`: An iterator over the events.
 
-The `events` parameter is a collection of events to send. **You don’t need to process all the events in the collection at once.** Instead, handle only as many as can be sent in a single HTTP request to the application. Even if the application supports processing only one event per request, that's fine. Meergo will automatically call the method again for any events that remain unprocessed.
+The `events` parameter is a collection of events to send. **You don't need to process all the events in the collection at once.** Instead, handle only as many as can be sent in a single HTTP request to the API. Even if the API supports processing only one event per request, that's fine. Meergo will automatically call the method again for any events that remain unprocessed.
 
 #### Key concept: processed events
 
-Meergo considers a event processed as soon as it has been read from the `Events` collection. To better understand how this works, let’s first explore the methods provided by the `Events` interface. Afterward, we’ll review how to use these methods effectively in various scenarios.
+Meergo considers an event processed as soon as it has been read from the `Events` collection. To better understand how this works, let’s first explore the methods provided by the `Events` interface. Afterward, we'll review how to use these methods effectively in various scenarios.
 
 ```go
 // Events provides access to a non-empty sequence of events to be sent to an
-// app.
+// API.
 //
 // To iterate over events, call either All, SameUser, or First — only one of
 // these can be used per Events value:
@@ -225,12 +226,12 @@ type Events interface {
 
 ### Sending one event at a time
 
-If the application can process only one event per request, use the `Events.First` method to retrieve just the first event.
+If the API can process only one event per request, use the `Events.First` method to retrieve just the first event.
 
 Below is an example implementation:
 
 ```go
-func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
+func (my *MyAPI) SendEvents(ctx context.Context, events meergo.Events) error {
 
     // Read only the first event.
     event := events.First()
@@ -243,7 +244,7 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
     // Create the HTTP request.
     req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-        "https://api.myapp.com/v1/event", bytes.NewReader(body.Bytes()))
+        "https://api.myapi.com/v1/event", bytes.NewReader(body.Bytes()))
     if err != nil {
         return err
     }
@@ -284,12 +285,12 @@ This method ensures that only one event is processed per request, in accordance 
 
 ### Batch of events from the same user
 
-If the application supports processing multiple events in a batch but requires them to belong to the same user (events with the same anonymous ID), you can iterate over `events.SameUser()` to retrieve only the events associated with the first event's user.
+If the API supports processing multiple events in a batch but requires them to belong to the same user (events with the same anonymous ID), you can iterate over `events.SameUser()` to retrieve only the events associated with the first event's user.
 
 Below is an example implementation:
 
 ```go
-func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
+func (my *MyAPI) SendEvents(ctx context.Context, events meergo.Events) error {
 
     // Prepare the body.
     var body json.Buffer
@@ -311,7 +312,7 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
     body.WriteString(`]}`)
 
     // Create the HTTP request.
-    req, err := http.NewRequestWithContext(ctx, http.MethodPost,  "https://api.myapp.com/v1/events", &body)
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost,  "https://api.myapi.com/v1/events", &body)
     if err != nil {
         return err
     }
@@ -349,16 +350,16 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
   Use `events.SameUser()` to read only the events belonging to the same user (events with the same anonymous ID) as the first event. This ensures that all events in the batch come from the same user.
 
 * **Batch size limitation**\
-  The example demonstrates breaking the loop once the maximum number of events (`bodyMaxEvents`) is reached. This ensures the request complies with the application's API limits.
-
+  The example demonstrates breaking the loop once the maximum number of events (`bodyMaxEvents`) is reached. This ensures the request complies with the API's limits.
+  
 ### Batch of events from mixed users
 
-If the application supports sending multiple events from different users in a single HTTP request, you can iterate over all events using `events.All()`.
+If the API supports sending multiple events from different users in a single HTTP request, you can iterate over all events using `events.All()`.
 
 Here is an example implementation:
 
 ```go
-func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
+func (my *MyAPI) SendEvents(ctx context.Context, events meergo.Events) error {
 
     // Prepare the body.
     var body json.Buffer
@@ -381,7 +382,7 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
 
     // Create the HTTP request.
     req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-        "https://api.myapp.com/v1/events", bytes.NewReader(body.Bytes()))	
+        "https://api.myapi.com/v1/events", bytes.NewReader(body.Bytes()))	
     if err != nil {
         return err
     }
@@ -419,9 +420,9 @@ func (my *MyApp) SendEvents(ctx context.Context, events meergo.Events) error {
   The `events.All()` method iterates over all events, regardless of the user, allowing mixed batches to be processed in a single request.
 
 * **Limit on events**\
-  The loop stops once the maximum number of events (`bodyMaxEvents`) is reached, ensuring that the request body size stays within the application's limits.
+  The loop stops once the maximum number of events (`bodyMaxEvents`) is reached, ensuring that the request body size stays within the API's limits.
 
-This approach enables efficient processing of mixed events from different users in a single batch request, reducing the number of API calls needed.
+This approach enables efficient processing of mixed events from different users in a single batch request, reducing the number of API requests needed.
 
 ### Handling body size limits
 
@@ -430,34 +431,34 @@ In the previous examples, the loop stops when the number of events reaches the A
 Below is an example implementation:
 
 ```go
-    body.WriteString(`{"events":[`)
+body.WriteString(`{"events":[`)
 
-    first := true
-    for event := range events.All() {
+first := true
+for event := range events.All() {
 
-        // Track size before adding the event.
-        size := body.Len()
+    // Track size before adding the event.
+    size := body.Len()
 
-        if !first {
-            body.WriteString(`,`)
-        }
-        first = false
+    if !first {
+        body.WriteString(`,`)
+    }
+    first = false
 
-        // Build the event JSON object.
-        body.WriteString(`{"values":`)
-        body.Encode(event.Type.Values)
-        body.WriteString(`}`)
+    // Build the event JSON object.
+    body.WriteString(`{"values":`)
+    body.Encode(event.Type.Values)
+    body.WriteString(`}`)
 
-        // Stop if body exceeds app size limit.
-        if body.Len() + len(`]}`) > bodySizeLimit {
-            body.Truncate(size)
-            events.Postpone()
-            break
-        }
-
+    // Stop if body exceeds API size limit.
+    if body.Len() + len(`]}`) > bodySizeLimit {
+        body.Truncate(size)
+        events.Postpone()
+        break
     }
 
-    body.WriteString(`]}`)
+}
+
+body.WriteString(`]}`)
 ```
 
 #### Key concepts:
@@ -479,28 +480,28 @@ Below is an example implementation:
 If, during the iteration over the event sequence, an event cannot be processed—for example, because it fails validation—you should call the `Discard` method on the iterator:
 
 ```go
-    n := 0
-    for event := range events.All() {
-        if !valid(event) {
-            events.Discard(errors.new("event is invalid"))
-        }
-        // ...
-        n++
+n := 0
+for event := range events.All() {
+    if !valid(event) {
+        events.Discard(errors.new("event is invalid"))
     }
-    // Return early if all events have been discarded. 
-    if n == 0 {
-        return nil
-    }
+    // ...
+    n++
+}
+// Return early if all events have been discarded. 
+if n == 0 {
+    return nil
+}
 ```
 
 Unlike postponed events, **discarded** events will not be retried in future calls to `SendEvents` or `PreviewSendEvents`.
 
-If a validation error occurs _after_ sending the request to the app, you should return an `EventsError`. This type of error lets you indicate which events failed and why:
+If a validation error occurs _after_ sending the request to the API, you should return an `EventsError`. This type of error lets you indicate which events failed and why:
 
 ```go
 // EventsError can be returned by the SendEvents and PreviewSendEvents methods
-// of an app connector when one or more events are rejected by the destination
-// app due to validation issues—such as schema mismatches, missing required
+// of an API connector when one or more events are rejected by the
+// API due to validation issues—such as schema mismatches, missing require
 // fields, or invalid values. It maps the index of each failed event (starting
 // from 0) to the corresponding error.
 //
@@ -523,19 +524,19 @@ If the error affects all events—such as when the entire request fails—you sh
   If an event fails validation before sending, you can discard it during iteration using `events.Discard(err)`. Discarded events are removed from processing entirely and will not be retried in future calls to `SendEvents` or `PreviewSendEvents`.  
 
 * **Handling individual event errors**\
-  When certain events fail due to validation issues (e.g., returned by the app), you can return an `EventsError` that maps each failed event to its specific error, instead of returning a single error for the whole batch.
+  When certain events fail due to validation issues (e.g., returned by the API), you can return an `EventsError` that maps each failed event to its specific error, instead of returning a single error for the whole batch.
 
 * **Error index mapping**\
   Each key in the `EventsError` type represents the index of a failed event (in the order they were consumed and likely sent in the HTTP request), and each value holds the corresponding error.
 
 ### When to validate events
 
-When it comes to event validation, there are a few possible scenarios depending on the target app:
+When it comes to event validation, there are a few possible scenarios depending on the target API:
 
-* **The app never returns validation errors** (e.g., Google Analytics). In this case, your connector should validate events as much as possible before sending them. This allows users to quickly understand why certain events aren't accepted by the app.
+* **The API never returns validation errors** (e.g., Google Analytics's API). In this case, your connector should validate events as much as possible before sending them. This allows users to quickly understand why certain events aren't accepted by the API.
 
-* **The app validates events but only returns a single error in the response** (e.g., Klaviyo), typically the first error encountered. In this case, it's important that your connector performs validation ahead of time — otherwise, a validation error on a single event would cause all events in the same request to be marked as invalid. If the app still returns a validation error, you should return a generic error, which will mark all events as invalid.
+* **The API validates events but only returns a single error in the response** (e.g., Klaviyo's API), typically the first error encountered. In this case, it's important that your connector performs validation ahead of time — otherwise, a validation error on a single event would cause all events in the same request to be marked as invalid. If the API still returns a validation error, you should return a generic error, which will mark all events as invalid.
 
-* **The app validates events and returns a separate error for each invalid event** (e.g., Mixpanel). In this case, you can return an `EventsError` that maps each failed event to its corresponding error. However, note that these validation errors won't be visible in the preview (`PreviewSendEvents`), since no actual request is sent during that step.
+* **The API validates events and returns a separate error for each invalid event** (e.g., Mixpanel's API). In this case, you can return an `EventsError` that maps each failed event to its corresponding error. However, note that these validation errors won't be visible in the preview (`PreviewSendEvents`), since no actual request is sent during that step.
 
-If your connector relies entirely on the app's validation and doesn't perform any local checks, validation errors **won't** appear in the preview—because the events aren't actually sent. But if the app provides a dedicated validation endpoint, you can call it from `PreviewSendEvents` to simulate the validation step. If such an endpoint is not available, your connector should implement its own validation logic.
+If your connector relies entirely on the API's validation and doesn't perform any local checks, validation errors **won't** appear in the preview—because the events aren't actually sent. But if the API provides a dedicated validation endpoint, you can call it from `PreviewSendEvents` to simulate the validation step. If such an endpoint is not available, your connector should implement its own validation logic.

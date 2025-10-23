@@ -4,14 +4,14 @@
 
 # OAuth
 
-For applications that need OAuth authentication to access an account's information, Meergo provides an OAuth implementation for connectors. The connector only needs to provide some information during registration and implement a method to retrieve the app's account that was connected through authentication.
+For APIs that need OAuth authentication to access an account's information, Meergo provides an OAuth implementation for connectors. The connector only needs to provide some information during registration and implement a method to retrieve the API's account that was connected through authentication.
 
-After that, you just need to use the HTTP client provided to the constructor to make HTTP calls to the app. Meergo will automatically handle adding authentication information and keep it updated.
+After that, you just need to use the HTTP client provided to the constructor to make HTTP requests to the API. Meergo will automatically handle adding authentication information and keep it updated.
 
-The following example shows how the HubSpot connector provides some OAuth-specific information about HubSpot during registration:
+The following example shows how the connector for HubSpot provides some OAuth-specific information about HubSpot during registration:
 
 ```go
-meergo.RegisterApp(meergo.AppInfo{
+meergo.RegisterAPI(meergo.APISpec{
     OAuth:   meergo.OAuth{
         AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
         TokenURL:          "https://api.hubapi.com/oauth/v1/token",
@@ -52,7 +52,7 @@ If `AuthURL` and `TokenURL` contain query string arguments, they will be preserv
 OAuthAccount(ctx context.Context) (string, error)
 ```
 
-The `OAuthAccount` method is called by Meergo after a successful OAuth authentication to obtain the app's account associated with the given authorization. The connector uses the HTTP client provided to the constructor to call the app's API to obtain the account. The account must be a non-empty UTF-8 encoded string.
+The `OAuthAccount` method is called by Meergo after a successful OAuth authentication to obtain the API's account associated with the given authorization. The connector uses the HTTP client provided to the constructor to call the API to obtain the account. The account must be a non-empty UTF-8 encoded string.
 
 ## ClientSecret and AccessToken
 

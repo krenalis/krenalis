@@ -49,8 +49,8 @@ func init() {
 		Prefilled:      `"Server"`,
 		UpdateRequired: true,
 		Nullable:       true,
-		Description: "The mode for sending events. It can be one of the sending modes supported by the app.\n\n" +
-			"It is required and can only be provided with destination app connections that support it.",
+		Description: "The mode for sending events. It can be one of the sending modes supported by the API.\n\n" +
+			"It is required and can only be provided with destination API connections that support it.",
 	}
 	linkedConnectionsParameter := types.Property{
 		Name:      "linkedConnections",
@@ -58,9 +58,9 @@ func init() {
 		Nullable:  true,
 		Prefilled: "null",
 		Description: "The IDs of the connections to which events are sent or from which events are received.\n\n" +
-			"For source connections (SDK), the linked connections are the destination app connections where the received events are forwarded. " +
-			"On the other hand, for destination app connections, the linked connections are the source SDK connections from which events are received.\n\n" +
-			"If this field is null, it means there are no linked connections, or the connection type does not match any of the types mentioned above.",
+			"For source connections (SDK and webhook), the linked connections are the destination API connections to which received events are forwarded. " +
+			"Conversely, for destination API connections, the linked connections are the source SDK and webhook connections from which events are received.\n\n" +
+			"If this field is null, it means there are no linked connections or the connection type does not match any of the types mentioned above.",
 	}
 	settingsParameter := types.Property{
 		Name:      "settings",
@@ -82,7 +82,7 @@ func init() {
 		},
 		{
 			Name:        "connectorType",
-			Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK", "Stream"),
+			Type:        types.Text().WithValues("API", "Database", "FileStorage", "MessageBroker", "SDK", "Webhook"),
 			Prefilled:   `"SDK"`,
 			Description: "The type of the connection's connector.",
 		},
@@ -100,7 +100,7 @@ func init() {
 			Type:        types.Text().WithValues("Client", "Server", "ClientAndServer"),
 			Prefilled:   `"Server"`,
 			Nullable:    true,
-			Description: "The mode for sending events. It is null if the connection is not a destination app that supports sending mode.",
+			Description: "The mode for sending events. It is null if the connection is not a destination API that supports sending mode.",
 		},
 		linkedConnectionsParameter,
 		{
@@ -144,12 +144,12 @@ func init() {
 				{
 					Name:        "filter",
 					Type:        types.Text(),
-					Description: "The recommended default filter for actions that send events to apps using this event type.",
+					Description: "The recommended default filter for actions that send events to APIs using this event type.",
 				},
 			})),
 			Nullable: true,
-			Description: "The type of events that can be sent to a destination app connection.\n\n" +
-				"It has a null value if the connection is not a destination connection of type app or if it does not support events.\n\n" +
+			Description: "The type of events that can be sent to a destination API connection.\n\n" +
+				"It has a null value if the connection is not a destination connection of type API or if it does not support events.\n\n" +
 				"Once you have retrieved an event type and its ID, you can obtain its schema through the method [`/connections/:id/schemas/event/:type`](api/connections/apps#get-event-schema).",
 		},
 	)
@@ -157,7 +157,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "connections",
 		Name: "Connections",
-		Description: "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n" +
+		Description: "Connections serve as a channel between workspaces and external sources or destinations, such as websites, applications, databases, file storage, and files.\n\n" +
 			"[Actions](actions) then allow you to perform operations on these connections.",
 		Endpoints: []*Endpoint{
 			{
@@ -174,12 +174,12 @@ func init() {
 					roleParameter,
 					{
 						Name:           "connector",
-						Type:           types.Text(),
+						Type:           types.Text().WithValues("API", "Database", "FileStorage", "SDK", "Webhook"),
 						CreateRequired: true,
 						Prefilled:      `"javascript"`,
 						Description: "The code of the [connector](/connectors/) for which to create the connection. " +
-							"It can be an app, database, file storage or SDK connector, " +
-							"but cannot be a file connector or a stream connector.\n\nStream connections will be available soon.",
+							"It can be an API, database, file storage, SDK, or webhook connector, " +
+							"but cannot be a file connector or a message broker connector.\n\nMessage broker connectors will be available soon.",
 					},
 					strategyParameter,
 					sendingModeParameter,
@@ -212,7 +212,7 @@ func init() {
 			},
 			{
 				Name:        "Get auth URL",
-				Description: "Gets the URL for an app connector that directs to the authorization page of the app.\n\n",
+				Description: "Gets the URL for an API connector that directs to the authorization page of the API.\n\n",
 				Method:      GET,
 				URL:         "/v1/connections/auth-url",
 				Parameters: []types.Property{
@@ -221,7 +221,7 @@ func init() {
 						Type:           types.Text(),
 						CreateRequired: true,
 						Prefilled:      `hubspot`,
-						Description:    "The connector's code. It must be an app connector that requires authorization.",
+						Description:    "The connector's code. It must be an API connector that requires authorization.",
 					},
 					{
 						Name:           "role",
@@ -244,7 +244,7 @@ func init() {
 							Name:        "url",
 							Type:        types.Text(),
 							Prefilled:   `"https://app-eu1.hubspot.com/oauth/authorize"`,
-							Description: "The authorization URL that directs to the consent page of the app. This page requests explicit permissions for the role.",
+							Description: "The authorization URL that directs to the consent page of the API. This page requests explicit permissions for the role.",
 						},
 					},
 				},

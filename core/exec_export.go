@@ -38,12 +38,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	connector := action.Connection().Connector()
 	meergoMetrics.Increment("Action.exportUsers.calls", 1)
 
-	// Synchronize destinations users with the app users.
-	if connector.Type == state.App {
+	// Synchronize destinations users with the api users.
+	if connector.Type == state.API {
 		err := this.syncDestinationUsers(ctx)
 		if err != nil {
 			if err, ok := err.(*schemas.Error); ok {
-				err.Msg = "in the app matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
+				err.Msg = "in the api matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
 			}
 			return newActionError(metrics.OutputValidationStep, err)
 		}
@@ -51,7 +51,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	// Get the matching properties.
 	var matchingIn, matchingOut types.Property
-	if connector.Type == state.App {
+	if connector.Type == state.API {
 		matchingIn, _ = action.InSchema.Properties().ByPath(action.Matching.In)
 		matchingOut, _ = action.OutSchema.Properties().ByPath(action.Matching.Out)
 	}
@@ -72,7 +72,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		query.OrderBy = action.OrderBy
 	}
 	var matching *datastore.Matching
-	if connector.Type == state.App {
+	if connector.Type == state.API {
 		matching = &datastore.Matching{
 			Action:             action.ID,
 			InProperty:         action.Matching.In,
@@ -117,12 +117,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	// Get the writer.
 	switch connector.Type {
-	case state.App:
-		// The value of the out matching property is written to the app only when
+	case state.API:
+		// The value of the out matching property is written to the api only when
 		// creating a new user or updating an existing user if the property is update-required.
 		// When updating a user and the property is not update-required, it should not be written again
-		// with the same value. In this case, alignment with the app schema does not need to be validated.
-		// Therefore, the property must be removed from the schema passed to App.Writer
+		// with the same value. In this case, alignment with the api schema does not need to be validated.
+		// Therefore, the property must be removed from the schema passed to API.Writer
 		// so that the alignment check is skipped.
 		outSchema := action.OutSchema
 		if action.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
@@ -130,7 +130,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				return path != action.Matching.Out
 			})
 		}
-		writer, err = this.app().Writer(ctx, outSchema, action.ExportMode, action.Target, ack)
+		writer, err = this.api().Writer(ctx, outSchema, action.ExportMode, action.Target, ack)
 	case state.Database:
 		writer, err = this.database().Writer(ctx, action, ack)
 		alreadyExportedKeys = make(map[any]struct{})
@@ -154,9 +154,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	// User represents a user to update or create.
 	type User struct {
-		ID            string           // External app identifier; is non-empty only for app users to update.
+		ID            string           // External api identifier; is non-empty only for api users to update.
 		Record        datastore.Record // User record.
-		MatchingValue any              // External matching property value added to properties when creating an app user.
+		MatchingValue any              // External matching property value added to properties when creating an api user.
 	}
 
 	users := make([]User, 0, 100)
@@ -191,7 +191,7 @@ Records:
 		switch connector.Type {
 		default:
 			users = append(users, User{Record: record})
-		case state.App:
+		case state.API:
 			user := User{Record: record}
 			// Update: use ExternalID as the user ID.
 			if isUpdate := record.ExternalID != ""; isUpdate {
@@ -262,7 +262,7 @@ Records:
 				if user.MatchingValue != nil {
 					setPropertyValue(record.Properties, action.Matching.Out, user.MatchingValue)
 				}
-				if connector.Type == state.App && len(record.Properties) == 0 {
+				if connector.Type == state.API && len(record.Properties) == 0 {
 					this.core.metrics.FinalizePassed(action.ID, 1)
 					continue
 				}
@@ -324,7 +324,7 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 	// Build a schema containing only the hierarchy that leads to the matching output property.
 	schema, _ := types.PruneAtPath(this.action.OutSchema, this.action.Matching.Out)
 
-	records, err := this.app().Users(ctx, schema, nil, time.Time{})
+	records, err := this.api().Users(ctx, schema, nil, time.Time{})
 	if err != nil {
 		return err
 	}
@@ -392,7 +392,7 @@ func newPathPlaceholderReplacer(t time.Time) func(string) (string, bool) {
 }
 
 func errMatchingPropertyConversion(in, ex string) error {
-	return fmt.Errorf("%s property value cannot be converted to the app's %s property", in, ex)
+	return fmt.Errorf("%s property value cannot be converted to the api's %s property", in, ex)
 }
 
 // convertToExternal converts the value of an internal property to a type

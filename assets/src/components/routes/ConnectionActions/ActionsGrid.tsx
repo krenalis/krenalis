@@ -146,7 +146,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		}
 
 		const isActionExecutionSupported =
-			(action.target === 'User' || action.target === 'Group') && connection.connector.type !== 'SDK';
+			(action.target === 'User' || action.target === 'Group') &&
+			connection.connector.type !== 'SDK' &&
+			connection.connector.type !== 'Webhook';
 
 		let description = actionType.description;
 		if (connection.isFileStorage) {

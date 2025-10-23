@@ -37,7 +37,7 @@ func TestExportZeroUsers(t *testing.T) {
 
 	c.UpdateIdentityResolution(true, []string{"email"})
 
-	// Test the export of zero users to an app (Dummy).
+	// Test the export of zero users to an API (Dummy).
 	func() {
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
 		exportUsersActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{

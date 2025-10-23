@@ -151,7 +151,7 @@ const ConnectionMetrics = () => {
 	const steps = useMemo(() => {
 		let steps: StepIdentifier[] = [...STEP_IDENTIFIERS];
 		switch (c.connector.type) {
-			case 'App':
+			case 'API':
 				if (c.role == 'Destination') {
 					if (selectedTarget == 'Event') {
 						steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
@@ -167,6 +167,7 @@ const ConnectionMetrics = () => {
 				}
 				break;
 			case 'SDK':
+			case 'Webhook':
 				if (selectedTarget == 'User') {
 					steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
 				} else {
@@ -554,23 +555,24 @@ const ConnectionMetrics = () => {
 								Users
 							</SlButton>
 						</SlButtonGroup>
-						{c.actions?.length > 1 && !(c.isSDK && c.isSource && selectedTarget === 'Event') && (
-							<SlSelect
-								size='small'
-								label='Action'
-								onSlChange={onChangeSelectedAction}
-								value={selectedAction == null ? '' : String(selectedAction)}
-								className={`connection-metrics__actions${selectedAction != null ? ' connection-metrics__actions--filtered' : ''}`}
-								clearable
-							>
-								{c.actions?.map((a) => {
-									if (a.target == selectedTarget) {
-										return <SlOption value={String(a.id)}>{a.name}</SlOption>;
-									}
-									return null;
-								})}
-							</SlSelect>
-						)}
+						{c.actions?.length > 1 &&
+							!((c.isSDK || c.isWebhook) && c.isSource && selectedTarget === 'Event') && (
+								<SlSelect
+									size='small'
+									label='Action'
+									onSlChange={onChangeSelectedAction}
+									value={selectedAction == null ? '' : String(selectedAction)}
+									className={`connection-metrics__actions${selectedAction != null ? ' connection-metrics__actions--filtered' : ''}`}
+									clearable
+								>
+									{c.actions?.map((a) => {
+										if (a.target == selectedTarget) {
+											return <SlOption value={String(a.id)}>{a.name}</SlOption>;
+										}
+										return null;
+									})}
+								</SlSelect>
+							)}
 					</div>
 					<div className='connection-metrics__chart'>
 						<div className='connection-metrics__chart-heading'>

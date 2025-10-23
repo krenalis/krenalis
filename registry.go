@@ -22,37 +22,39 @@ import (
 var (
 	registryMu sync.RWMutex
 	registry   = struct {
-		apps      map[string]AppInfo
-		databases map[string]DatabaseInfo
-		files     map[string]FileInfo
-		storages  map[string]FileStorageInfo
-		sdks      map[string]SDKInfo
-		streams   map[string]StreamInfo
-		usedCodes map[string]struct{} // used connector codes
+		apis           map[string]APISpec
+		databases      map[string]DatabaseSpec
+		files          map[string]FileSpec
+		messageBrokers map[string]MessageBrokerSpec
+		sdks           map[string]SDKSpec
+		storages       map[string]FileStorageSpec
+		webhooks       map[string]WebhookSpec
+		usedCodes      map[string]struct{} // used connector codes
 
 		warehouses map[string]WarehouseDriver
 	}{
-		apps:      make(map[string]AppInfo),
-		databases: make(map[string]DatabaseInfo),
-		files:     make(map[string]FileInfo),
-		storages:  make(map[string]FileStorageInfo),
-		sdks:      make(map[string]SDKInfo),
-		streams:   make(map[string]StreamInfo),
-		usedCodes: make(map[string]struct{}),
+		apis:           make(map[string]APISpec),
+		databases:      make(map[string]DatabaseSpec),
+		files:          make(map[string]FileSpec),
+		messageBrokers: make(map[string]MessageBrokerSpec),
+		sdks:           make(map[string]SDKSpec),
+		storages:       make(map[string]FileStorageSpec),
+		webhooks:       make(map[string]WebhookSpec),
+		usedCodes:      make(map[string]struct{}),
 
 		warehouses: make(map[string]WarehouseDriver),
 	}
 )
 
 // Connectors returns the registered connectors as a map from the code to its
-// ConnectorInfo.
-func Connectors() map[string]ConnectorInfo {
+// ConnectorSpec.
+func Connectors() map[string]ConnectorSpec {
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	n := len(registry.apps) + len(registry.databases) + len(registry.files) + len(registry.storages) +
-		len(registry.sdks) + len(registry.streams)
-	connectors := make(map[string]ConnectorInfo, n)
-	for _, c := range registry.apps {
+	n := len(registry.apis) + len(registry.databases) + len(registry.files) + len(registry.storages) +
+		len(registry.sdks) + len(registry.messageBrokers)
+	connectors := make(map[string]ConnectorSpec, n)
+	for _, c := range registry.apis {
 		connectors[c.Code] = c
 	}
 	for _, c := range registry.databases {
@@ -61,40 +63,43 @@ func Connectors() map[string]ConnectorInfo {
 	for _, c := range registry.files {
 		connectors[c.Code] = c
 	}
-	for _, c := range registry.storages {
+	for _, c := range registry.messageBrokers {
 		connectors[c.Code] = c
 	}
 	for _, c := range registry.sdks {
 		connectors[c.Code] = c
 	}
-	for _, c := range registry.streams {
+	for _, c := range registry.storages {
+		connectors[c.Code] = c
+	}
+	for _, c := range registry.webhooks {
 		connectors[c.Code] = c
 	}
 	return connectors
 }
 
-// RegisterApp makes an app connector available by the provided code. If
-// RegisterApp is called twice with the same code or if new is nil, it panics.
-func RegisterApp[T any](app AppInfo, new AppNewFunc[T]) {
+// RegisterAPI makes an API connector available by the provided code. If
+// RegisterAPI is called twice with the same code or if new is nil, it panics.
+func RegisterAPI[T any](api APISpec, new APINewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + app.Code)
+		panic("meergo: new function is nil for connector " + api.Code)
 	}
-	app.newFunc = reflect.ValueOf(new)
-	app.ct = reflect.TypeOf((*T)(nil)).Elem()
-	validateAppConnector(app)
+	api.newFunc = reflect.ValueOf(new)
+	api.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateAPIConnector(api)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, ok := registry.usedCodes[app.Code]; ok {
-		panic("meergo: RegisterApp called with a connector code already registered: " + app.Code)
+	if _, ok := registry.usedCodes[api.Code]; ok {
+		panic("meergo: RegisterAPI called with a connector code already registered: " + api.Code)
 	}
-	registry.apps[app.Code] = app
-	registry.usedCodes[app.Code] = struct{}{}
+	registry.apis[api.Code] = api
+	registry.usedCodes[api.Code] = struct{}{}
 }
 
 // RegisterDatabase makes a database connector available by the provided code.
 // If RegisterDatabase is called twice with the same code or if new is nil, it
 // panics.
-func RegisterDatabase[T any](database DatabaseInfo, new DatabaseNewFunc[T]) {
+func RegisterDatabase[T any](database DatabaseSpec, new DatabaseNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + database.Code)
 	}
@@ -112,7 +117,7 @@ func RegisterDatabase[T any](database DatabaseInfo, new DatabaseNewFunc[T]) {
 
 // RegisterFile makes a file connector available by the provided code. If
 // RegisterFile is called twice with the same code or if new is nil, it panics.
-func RegisterFile[T any](file FileInfo, new FileNewFunc[T]) {
+func RegisterFile[T any](file FileSpec, new FileNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + file.Code)
 	}
@@ -131,7 +136,7 @@ func RegisterFile[T any](file FileInfo, new FileNewFunc[T]) {
 // RegisterFileStorage makes a file storage connector available by the provided
 // code. If RegisterFileStorage is called twice with the same code or if new is
 // nil, it panics.
-func RegisterFileStorage[T any](storage FileStorageInfo, new FileStorageNewFunc[T]) {
+func RegisterFileStorage[T any](storage FileStorageSpec, new FileStorageNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + storage.Code)
 	}
@@ -147,10 +152,29 @@ func RegisterFileStorage[T any](storage FileStorageInfo, new FileStorageNewFunc[
 	registry.usedCodes[storage.Code] = struct{}{}
 }
 
+// RegisterMessageBroker makes a message broker connector available by the
+// provided code. If RegisterMessageBroker is called twice with the same code or
+// if new is nil, it panics.
+func RegisterMessageBroker[T any](broker MessageBrokerSpec, new MessageBrokerNewFunc[T]) {
+	if new == nil {
+		panic("meergo: new function is nil for connector " + broker.Code)
+	}
+	broker.newFunc = reflect.ValueOf(new)
+	broker.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateMessageBrokerConnector(broker)
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	if _, ok := registry.usedCodes[broker.Code]; ok {
+		panic("meergo: RegisterMessageBroker called with a connector code already registered: " + broker.Code)
+	}
+	registry.messageBrokers[broker.Code] = broker
+	registry.usedCodes[broker.Code] = struct{}{}
+}
+
 // RegisterSDK makes an SDK connector available by the provided code. If
 // RegisterSDK is called twice with the same code or if new is nil, it
 // panics.
-func RegisterSDK[T any](sdk SDKInfo, new SDKNewFunc[T]) {
+func RegisterSDK[T any](sdk SDKSpec, new SDKNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + sdk.Code)
 	}
@@ -166,23 +190,23 @@ func RegisterSDK[T any](sdk SDKInfo, new SDKNewFunc[T]) {
 	registry.usedCodes[sdk.Code] = struct{}{}
 }
 
-// RegisterStream makes a stream connector available by the provided code.
-// If RegisterStream is called twice with the same code or if new is nil, it
+// RegisterWebhook makes a webhook connector available by the provided code. If
+// RegisterWebhook is called twice with the same code or if new is nil, it
 // panics.
-func RegisterStream[T any](stream StreamInfo, new StreamNewFunc[T]) {
+func RegisterWebhook[T any](webhook WebhookSpec, new WebhookNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + stream.Code)
+		panic("meergo: new function is nil for connector " + webhook.Code)
 	}
-	stream.newFunc = reflect.ValueOf(new)
-	stream.ct = reflect.TypeOf((*T)(nil)).Elem()
-	validateStreamConnector(stream)
+	webhook.newFunc = reflect.ValueOf(new)
+	webhook.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateWebhookConnector(webhook)
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, ok := registry.usedCodes[stream.Code]; ok {
-		panic("meergo: RegisterStream called with a connector code already registered: " + stream.Code)
+	if _, ok := registry.usedCodes[webhook.Code]; ok {
+		panic("meergo: RegisterWebhook called with a connector code already registered: " + webhook.Code)
 	}
-	registry.streams[stream.Code] = stream
-	registry.usedCodes[stream.Code] = struct{}{}
+	registry.webhooks[webhook.Code] = webhook
+	registry.usedCodes[webhook.Code] = struct{}{}
 }
 
 // RegisterWarehouseDriver makes a warehouse driver available by the provided
@@ -202,21 +226,21 @@ func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriv
 	registry.warehouses[typ.Name] = typ
 }
 
-// RegisteredApp returns the app registered with the given code.
-// If an app with this code is not registered, it panics.
-func RegisteredApp(code string) AppInfo {
+// RegisteredAPI returns the API registered with the given code. If an API with
+// this code is not registered, it panics.
+func RegisteredAPI(code string) APISpec {
 	registryMu.Lock()
-	app, ok := registry.apps[code]
+	api, ok := registry.apis[code]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown app connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo: unknown API connector %q (forgotten import?)", code))
 	}
-	return app
+	return api
 }
 
 // RegisteredDatabase returns the database registered with the given code.
 // If a database with this code is not registered, it panics.
-func RegisteredDatabase(code string) DatabaseInfo {
+func RegisteredDatabase(code string) DatabaseSpec {
 	registryMu.Lock()
 	database, ok := registry.databases[code]
 	registryMu.Unlock()
@@ -226,21 +250,21 @@ func RegisteredDatabase(code string) DatabaseInfo {
 	return database
 }
 
-// RegisteredStream returns the stream registered with the given code.
-// If a stream with this code is not registered, it panics.
-func RegisteredStream(code string) StreamInfo {
+// RegisteredMessageBroker returns the message broker registered with the given
+// code. If a message broker with this code is not registered, it panics.
+func RegisteredMessageBroker(code string) MessageBrokerSpec {
 	registryMu.Lock()
-	stream, ok := registry.streams[code]
+	broker, ok := registry.messageBrokers[code]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown stream connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo: unknown message broker connector %q (forgotten import?)", code))
 	}
-	return stream
+	return broker
 }
 
 // RegisteredFile returns the file registered with the given code.
 // If a file with this code is not registered, it panics.
-func RegisteredFile(code string) FileInfo {
+func RegisteredFile(code string) FileSpec {
 	registryMu.Lock()
 	file, ok := registry.files[code]
 	registryMu.Unlock()
@@ -252,7 +276,7 @@ func RegisteredFile(code string) FileInfo {
 
 // RegisteredFileStorage returns the file storage registered with the given
 // code. If a file storage with this code is not registered, it panics.
-func RegisteredFileStorage(code string) FileStorageInfo {
+func RegisteredFileStorage(code string) FileStorageSpec {
 	registryMu.Lock()
 	storage, ok := registry.storages[code]
 	registryMu.Unlock()
@@ -264,7 +288,7 @@ func RegisteredFileStorage(code string) FileStorageInfo {
 
 // RegisteredSDK returns the SDK registered with the given code.
 // If an SDK with this code is not registered, it panics.
-func RegisteredSDK(code string) SDKInfo {
+func RegisteredSDK(code string) SDKSpec {
 	registryMu.Lock()
 	sdk, ok := registry.sdks[code]
 	registryMu.Unlock()
@@ -272,6 +296,18 @@ func RegisteredSDK(code string) SDKInfo {
 		panic(fmt.Errorf("meergo: unknown SDK connector %q (forgotten import?)", code))
 	}
 	return sdk
+}
+
+// RegisteredWebhook returns the webhook registered with the given code.
+// If a webhook with this code is not registered, it panics.
+func RegisteredWebhook(code string) WebhookSpec {
+	registryMu.Lock()
+	webhook, ok := registry.webhooks[code]
+	registryMu.Unlock()
+	if !ok {
+		panic(fmt.Errorf("meergo: unknown webhook connector %q (forgotten import?)", code))
+	}
+	return webhook
 }
 
 // RegisteredWarehouseDriver returns the warehouse driver registered with the
@@ -305,120 +341,120 @@ func validateCategories(connectorName string, categories Categories) {
 	}
 }
 
-// validateAppConnector validates the passed app connector, performing checks to
+// validateAPIConnector validates the passed API connector, performing checks to
 // detect errors that could cause panic or errors in the Meergo code that uses
 // the connectors.
 //
 // In case of a validation error, this function panics.
-func validateAppConnector(app AppInfo) {
+func validateAPIConnector(api APISpec) {
 
-	validateConnectorCode("App", app.Code)
-	validateCategories(app.Code, app.Categories)
+	validateConnectorCode("API", api.Code)
+	validateCategories(api.Code, api.Categories)
 
-	if app.AsSource == nil && app.AsDestination == nil {
-		panic(fmt.Sprintf("connector %s: AppInfo must include at least the AsSource and AsDestination fields", app.Code))
+	if api.AsSource == nil && api.AsDestination == nil {
+		panic(fmt.Sprintf("connector %s: APISpec must include at least the AsSource and AsDestination fields", api.Code))
 	}
 
-	if app.AsSource != nil {
-		targets := app.AsSource.Targets
+	if api.AsSource != nil {
+		targets := api.AsSource.Targets
 		//if targets == 0 || (targets&^(TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^TargetUser) != 0 {
-			panic(fmt.Sprintf("connector %s: AppInfo.AsSource.Target is not valid; possible value is meergo.TargetUser", app.Code))
+			panic(fmt.Sprintf("connector %s: APISpec.AsSource.Target is not valid; possible value is meergo.TargetUser", api.Code))
 		}
 		if targets&TargetUser != 0 {
-			if !app.ct.Implements(reflect.TypeFor[RecordFetcher]()) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
+			if !api.ct.Implements(reflect.TypeFor[RecordFetcher]()) {
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 			}
 		}
 	}
 
-	if app.AsDestination != nil {
-		targets := app.AsDestination.Targets
+	if api.AsDestination != nil {
+		targets := api.AsDestination.Targets
 		//if targets == 0 || (targets&^(TargetEvent|TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^(TargetEvent|TargetUser)) != 0 {
-			panic(fmt.Sprintf("connector %s: AppInfo.AsDestination.Target is not valid; possible values are meergo.TargetEvent, meergo.TargetUser, or a combination of them using the bitwise OR operator", app.Code))
+			panic(fmt.Sprintf("connector %s: APISpec.AsDestination.Target is not valid; possible values are meergo.TargetEvent, meergo.TargetUser, or a combination of them using the bitwise OR operator", api.Code))
 		}
 		if targets&TargetEvent != 0 {
-			if !app.ct.Implements(reflect.TypeFor[EventSender]()) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
+			if !api.ct.Implements(reflect.TypeFor[EventSender]()) {
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 			}
-			if app.AsDestination.SendingMode == None {
-				panic(fmt.Sprintf("connector %s is declared to support Event as destination, but it does not specify a sending mode", app.Code))
+			if api.AsDestination.SendingMode == None {
+				panic(fmt.Sprintf("connector %s is declared to support Event as destination, but it does not specify a sending mode", api.Code))
 			}
 		}
 		if targets&TargetUser != 0 {
-			if !app.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
+			if !api.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
+				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 			}
 		}
 	}
 
-	if app.Terms.User != "" || app.Terms.Users != "" {
-		if (app.AsSource == nil || app.AsSource.Targets&TargetUser == 0) &&
-			(app.AsDestination == nil || app.AsDestination.Targets&TargetUser == 0) {
+	if api.Terms.User != "" || api.Terms.Users != "" {
+		if (api.AsSource == nil || api.AsSource.Targets&TargetUser == 0) &&
+			(api.AsDestination == nil || api.AsDestination.Targets&TargetUser == 0) {
 			panic(fmt.Sprintf("connector %s: cannot specify a term for user and/or users"+
-				" if it does not support the User target neither as source nor as destination", app.Code))
+				" if it does not support the User target neither as source nor as destination", api.Code))
 		}
 	}
 
 	// TODO(marco): Implement groups
-	//if app.Terms.Group != "" || app.Terms.Groups != "" {
-	//	if (app.AsSource == nil || app.AsSource.Targets&GroupTarget == 0) &&
-	//		(app.AsDestination == nil || app.AsDestination.Targets&GroupTarget == 0) {
+	//if api.Terms.Group != "" || api.Terms.Groups != "" {
+	//	if (api.AsSource == nil || api.AsSource.Targets&GroupTarget == 0) &&
+	//		(api.AsDestination == nil || api.AsDestination.Targets&GroupTarget == 0) {
 	//		panic(fmt.Sprintf("connector %s: cannot specify a term for group and/or groups"+
-	//			" if it does not support the Group target neither as source nor as destination", app.Name))
+	//			" if it does not support the Group target neither as source nor as destination", api.Name))
 	//	}
 	//}
 
-	var hasSourceSettings = app.AsSource != nil && app.AsSource.HasSettings
-	var hasDestinationSettings = app.AsDestination != nil && app.AsDestination.HasSettings
+	var hasSourceSettings = api.AsSource != nil && api.AsSource.HasSettings
+	var hasDestinationSettings = api.AsDestination != nil && api.AsDestination.HasSettings
 	if hasSourceSettings || hasDestinationSettings {
 		iface := reflect.TypeFor[interface {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
-		if !app.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
+		if !api.ct.Implements(iface) {
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 		}
 	} else {
 		iface := reflect.TypeFor[interface {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
-		if app.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: ServeUI is implemented, but neither app.AsSource.HasSettings nor app.AsDestination.HasSettings is set to true", app.Code))
+		if api.ct.Implements(iface) {
+			panic(fmt.Sprintf("connector %s: ServeUI is implemented, but neither API.AsSource.HasSettings nor API.AsDestination.HasSettings is set to true", api.Code))
 		}
 	}
 
-	if app.OAuth.AuthURL != "" {
+	if api.OAuth.AuthURL != "" {
 		iface := reflect.TypeFor[interface {
 			OAuthAccount(ctx context.Context) (string, error)
 		}]()
-		if !app.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", app.Code))
+		if !api.ct.Implements(iface) {
+			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 		}
 	}
 
 	// Patterns are checked for validity when rate limiters are created; invalid patterns will cause construction to panic.
 	var requireOAuth bool
-	for _, group := range app.EndpointGroups {
+	for _, group := range api.EndpointGroups {
 		requireOAuth = requireOAuth || group.RequireOAuth
 		if group.Patterns != nil && len(group.Patterns) == 0 {
-			panic(fmt.Sprintf("connector %s: Patterns must be nil or contain at least one pattern", app.Code))
+			panic(fmt.Sprintf("connector %s: Patterns must be nil or contain at least one pattern", api.Code))
 		}
 		if group.RateLimit.RequestsPerSecond <= 0 {
-			panic(fmt.Sprintf("connector %s: RequestsPerSecond must be > 0", app.Code))
+			panic(fmt.Sprintf("connector %s: RequestsPerSecond must be > 0", api.Code))
 		}
 		if group.RateLimit.Burst <= 0 {
-			panic(fmt.Sprintf("connector %s: Burst must be > 0", app.Code))
+			panic(fmt.Sprintf("connector %s: Burst must be > 0", api.Code))
 		}
 		if group.RateLimit.MaxConcurrentRequests < 0 {
-			panic(fmt.Sprintf("connector %s: MaxConcurrentRequests must be >= 0", app.Code))
+			panic(fmt.Sprintf("connector %s: MaxConcurrentRequests must be >= 0", api.Code))
 		}
 	}
-	if app.OAuth.AuthURL == "" && requireOAuth {
-		panic(fmt.Sprintf("connector %s: RequireOAuth cannot be true when OAuth is not supported", app.Code))
+	if api.OAuth.AuthURL == "" && requireOAuth {
+		panic(fmt.Sprintf("connector %s: RequireOAuth cannot be true when OAuth is not supported", api.Code))
 	}
-	if app.OAuth.AuthURL != "" && !requireOAuth {
-		panic(fmt.Sprintf("connector %s: OAuth is supported, but there are no endpoint groups that require it", app.Code))
+	if api.OAuth.AuthURL != "" && !requireOAuth {
+		panic(fmt.Sprintf("connector %s: OAuth is supported, but there are no endpoint groups that require it", api.Code))
 	}
 
 }
@@ -428,7 +464,7 @@ func validateAppConnector(app AppInfo) {
 // that uses the connectors.
 //
 // In case of a validation error, this function panics.
-func validateDatabaseConnector(database DatabaseInfo) {
+func validateDatabaseConnector(database DatabaseSpec) {
 	validateConnectorCode("Database", database.Code)
 	validateCategories(database.Code, database.Categories)
 	iface := reflect.TypeFor[interface {
@@ -444,12 +480,30 @@ func validateDatabaseConnector(database DatabaseInfo) {
 	}
 }
 
+// validateMessageBrokerConnector validates the passed message broker connector,
+// performing checks to detect errors that could cause panic or errors in the
+// Meergo code that uses the connectors.
+//
+// In case of a validation error, this function panics.
+func validateMessageBrokerConnector(broker MessageBrokerSpec) {
+	validateConnectorCode("Message Broker", broker.Code)
+	validateCategories(broker.Code, broker.Categories)
+	iface := reflect.TypeFor[interface {
+		Close() error
+		Receive(ctx context.Context) (event []byte, ack func(), err error)
+		Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error
+	}]()
+	if !broker.ct.Implements(iface) {
+		panic(fmt.Sprintf("connector %s: it does not implement the required methods", broker.Code))
+	}
+}
+
 // validateFileConnector validates the passed file connector, performing checks
 // to detect errors that could cause panic or errors in the Meergo code that
 // uses the connectors.
 //
 // In case of a validation error, this function panics.
-func validateFileConnector(file FileInfo) {
+func validateFileConnector(file FileSpec) {
 
 	validateConnectorCode("File", file.Code)
 	validateCategories(file.Code, file.Categories)
@@ -499,7 +553,7 @@ func validateFileConnector(file FileInfo) {
 // Meergo code that uses the connectors.
 //
 // In case of a validation error, this function panics.
-func validateFileStorageConnector(fileStorage FileStorageInfo) {
+func validateFileStorageConnector(fileStorage FileStorageSpec) {
 
 	validateConnectorCode("File Storage", fileStorage.Code)
 	validateCategories(fileStorage.Code, fileStorage.Categories)
@@ -537,27 +591,19 @@ func validateFileStorageConnector(fileStorage FileStorageInfo) {
 // the connectors.
 //
 // In case of a validation error, this function panics.
-func validateSDKConnector(sdk SDKInfo) {
+func validateSDKConnector(sdk SDKSpec) {
 	validateConnectorCode("SDK", sdk.Code)
 	validateCategories(sdk.Code, sdk.Categories)
 }
 
-// validateStreamConnector validates the passed stream connector, performing
+// validateWebhookConnector validates the passed webhook connector, performing
 // checks to detect errors that could cause panic or errors in the Meergo code
 // that uses the connectors.
 //
 // In case of a validation error, this function panics.
-func validateStreamConnector(stream StreamInfo) {
-	validateConnectorCode("Stream", stream.Code)
-	validateCategories(stream.Code, stream.Categories)
-	iface := reflect.TypeFor[interface {
-		Close() error
-		Receive(ctx context.Context) (event []byte, ack func(), err error)
-		Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error
-	}]()
-	if !stream.ct.Implements(iface) {
-		panic(fmt.Sprintf("connector %s: it does not implement the required methods", stream.Code))
-	}
+func validateWebhookConnector(webhook WebhookSpec) {
+	validateConnectorCode("Webhook", webhook.Code)
+	validateCategories(webhook.Code, webhook.Categories)
 }
 
 // validateConnectorCode validates a connector code. Valid codes contain only

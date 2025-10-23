@@ -19,7 +19,6 @@ import (
 	_ "github.com/meergo/meergo/connectors/json"
 	_ "github.com/meergo/meergo/connectors/klaviyo"
 	_ "github.com/meergo/meergo/connectors/mailchimp"
-	_ "github.com/meergo/meergo/connectors/meergoapi"
 	_ "github.com/meergo/meergo/connectors/mixpanel"
 	_ "github.com/meergo/meergo/connectors/mysql"
 	_ "github.com/meergo/meergo/connectors/parquet"
@@ -31,4 +30,5 @@ import (
 	_ "github.com/meergo/meergo/connectors/sftp"
 	_ "github.com/meergo/meergo/connectors/snowflake"
 	_ "github.com/meergo/meergo/connectors/stripe"
+	_ "github.com/meergo/meergo/connectors/webhook"
 )

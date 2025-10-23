@@ -27,18 +27,18 @@ import (
 	"github.com/google/uuid"
 )
 
-// nopApp is a no-op App that returns zero wait time and skips sending events.
-type nopApp struct{}
+// nopAPI is a no-op API that returns zero wait time and skips sending events.
+type nopAPI struct{}
 
-func (nopApp) Connection() int { return 1 }
+func (nopAPI) Connection() int { return 1 }
 
-func (nopApp) Connector() string { return "nop" }
+func (nopAPI) Connector() string { return "nop" }
 
-func (nopApp) WaitTime(string) (time.Duration, error) {
+func (nopAPI) WaitTime(string) (time.Duration, error) {
 	return 0, nil
 }
 
-func (nopApp) SendEvents(context.Context, meergo.Events) error {
+func (nopAPI) SendEvents(context.Context, meergo.Events) error {
 	return nil
 }
 
@@ -66,14 +66,14 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	}
 
 	t.Run("PostponeOutsideIteration", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		expectPanic(func() { it.Postpone() })
 	})
 
 	t.Run("PostponeFirstEvent", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -82,7 +82,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PostponeDiscardedEvent", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -91,7 +91,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardDiscardedEvent", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -100,7 +100,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("DiscardPostponedEvent", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.iterating = true
@@ -109,7 +109,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("PeekAfterConsumed", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -117,7 +117,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("AllAfterConsumed", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -125,7 +125,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("FirstAfterConsumed", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -133,7 +133,7 @@ func Test_iterator_invalidUsage(t *testing.T) {
 	})
 
 	t.Run("SameUserAfterConsumed", func(t *testing.T) {
-		s := New(nopApp{}, func([]Ack, error) {})
+		s := New(nopAPI{}, func([]Ack, error) {})
 		defer s.Close(t.Context())
 		it := newIterator(s)
 		it.consumed = true
@@ -172,8 +172,8 @@ func Test_Sender(t *testing.T) {
 			src := rand.NewPCG(test.seed, ^test.seed)
 			rng := rand.New(src)
 
-			app := newApp(t, test.seed)
-			s := New(app, app.ack)
+			api := newAPI(t, test.seed)
+			s := New(api, api.ack)
 
 			ctx := context.Background()
 
@@ -239,7 +239,7 @@ func Test_Sender(t *testing.T) {
 
 			for n := 0; n != test.num; {
 				time.Sleep(1 * time.Second)
-				n = app.N()
+				n = api.N()
 				trace("acks: %d\n", n)
 			}
 
@@ -251,7 +251,7 @@ func Test_Sender(t *testing.T) {
 
 			// Check that all valid events have been consumed and in the correct order.
 			expectedByUser := map[string]int{}
-			for i, id := range app.Consumed() {
+			for i, id := range api.Consumed() {
 				u, ok := userByEvent[id]
 				if !ok {
 					t.Fatalf("ack %d/%d: unexpected non-existent event %q", i+1, test.num, id)
@@ -274,7 +274,7 @@ func Test_Sender(t *testing.T) {
 			}
 
 			// Check that all acks have been received.
-			for i, ack := range app.Acks() {
+			for i, ack := range api.Acks() {
 				for _, id := range ack.ids {
 					if r, ok := receivedAck[id]; !ok {
 						t.Fatalf("ack %d/%d: unexpected ID %q", i+1, test.num, id)
@@ -313,7 +313,7 @@ type ack struct {
 	err error
 }
 
-type app struct {
+type api struct {
 	t    *testing.T
 	seed uint64
 
@@ -324,8 +324,8 @@ type app struct {
 	acks      []ack    // protected by mu
 }
 
-func newApp(t *testing.T, seed uint64) *app {
-	a := app{
+func newAPI(t *testing.T, seed uint64) *api {
+	a := api{
 		t:    t,
 		seed: seed,
 		acks: []ack{},
@@ -333,73 +333,73 @@ func newApp(t *testing.T, seed uint64) *app {
 	return &a
 }
 
-func (app *app) Acks() []ack {
-	app.mu.Lock()
-	acks := slices.Clone(app.acks)
-	app.mu.Unlock()
+func (api *api) Acks() []ack {
+	api.mu.Lock()
+	acks := slices.Clone(api.acks)
+	api.mu.Unlock()
 	return acks
 }
 
-func (app *app) Connection() int {
+func (api *api) Connection() int {
 	return 1
 }
 
-func (app *app) Connector() string {
+func (api *api) Connector() string {
 	return "test"
 }
 
-func (app *app) Consumed() []string {
-	app.mu.Lock()
-	consumed := slices.Clone(app.consumed)
-	app.mu.Unlock()
+func (api *api) Consumed() []string {
+	api.mu.Lock()
+	consumed := slices.Clone(api.consumed)
+	api.mu.Unlock()
 	return consumed
 }
 
-func (app *app) N() int {
-	app.mu.Lock()
-	n := app.n
-	app.mu.Unlock()
+func (api *api) N() int {
+	api.mu.Lock()
+	n := api.n
+	api.mu.Unlock()
 	return n
 }
 
-func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
+func (api *api) SendEvents(ctx context.Context, events meergo.Events) error {
 
 	// Get the current iteration number.
 	var iteration uint64
-	app.mu.Lock()
-	iteration = app.iteration
-	app.iteration++
-	app.mu.Unlock()
+	api.mu.Lock()
+	iteration = api.iteration
+	api.iteration++
+	api.mu.Unlock()
 
-	if app.iteration == math.MaxUint64 {
+	if api.iteration == math.MaxUint64 {
 		panic("iteration is out of range")
 	}
 
-	seed := app.seed + iteration
+	seed := api.seed + iteration
 	src := rand.NewPCG(seed, ^seed)
 	rng := rand.New(src)
 
 	// Test Peek.
 	if rng.Int()%8 == 0 {
 		event, _ := events.Peek()
-		app.validateEvent(event)
+		api.validateEvent(event)
 		if rng.Int()%4 == 0 {
 			event, ok := events.Peek()
 			if !ok {
 				return nil
 			}
-			app.validateEvent(event)
+			api.validateEvent(event)
 		}
 	}
 
 	// Test First.
 	if rng.Int()%5 == 0 {
 		event := events.First()
-		app.validateEvent(event)
+		api.validateEvent(event)
 		if event.Type.ID == "Valid" {
-			app.mu.Lock()
-			app.consumed = append(app.consumed, event.Received.MessageId())
-			app.mu.Unlock()
+			api.mu.Lock()
+			api.consumed = append(api.consumed, event.Received.MessageId())
+			api.mu.Unlock()
 			time.Sleep(time.Duration(rng.Int()%10) * time.Nanosecond)
 			return nil
 		}
@@ -416,10 +416,10 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 	var n int
 	var consumed []string
 	for event := range seq {
-		app.validateEvent(event)
+		api.validateEvent(event)
 		if n%4 == 0 {
 			if p, ok := events.Peek(); ok {
-				app.validateEvent(p)
+				api.validateEvent(p)
 			}
 		}
 		if n > 0 && rng.Int()%3 == 0 {
@@ -439,51 +439,51 @@ func (app *app) SendEvents(ctx context.Context, events meergo.Events) error {
 		return nil
 	}
 
-	app.mu.Lock()
-	app.consumed = append(app.consumed, consumed...)
-	app.mu.Unlock()
+	api.mu.Lock()
+	api.consumed = append(api.consumed, consumed...)
+	api.mu.Unlock()
 	time.Sleep(time.Duration(rng.Int()%10) * time.Microsecond)
 
 	return nil
 }
 
-func (app *app) ack(acks []Ack, err error) {
-	app.t.Helper()
+func (api *api) ack(acks []Ack, err error) {
+	api.t.Helper()
 	if len(acks) == 0 {
-		app.t.Fatalf("ack: expected at least one ack, got none")
+		api.t.Fatalf("ack: expected at least one ack, got none")
 	}
 	ids := make([]string, len(acks))
 	for i, ack := range acks {
 		ids[i] = ack.Event
 	}
-	app.mu.Lock()
-	app.acks = append(app.acks, ack{ids: ids, err: err})
-	app.n += len(ids)
-	app.mu.Unlock()
+	api.mu.Lock()
+	api.acks = append(api.acks, ack{ids: ids, err: err})
+	api.n += len(ids)
+	api.mu.Unlock()
 }
 
-func (app *app) validateEvent(e *meergo.Event) {
-	app.t.Helper()
+func (api *api) validateEvent(e *meergo.Event) {
+	api.t.Helper()
 	if e.Received.MessageId() == "" {
-		app.t.Fatal("SendEvents: expected non-empty message ID, got empty")
+		api.t.Fatal("SendEvents: expected non-empty message ID, got empty")
 	}
 	if e.Type.ID != "Valid" && e.Type.ID != "Invalid" {
-		app.t.Fatalf(`SendEvents: expected type "Valid" or "Invalid", got %q`, e.Type)
+		api.t.Fatalf(`SendEvents: expected type "Valid" or "Invalid", got %q`, e.Type)
 	}
 	if e.Type.Schema.Valid() {
 		if e.Type.Values == nil {
-			app.t.Fatal("SendEvents: expected non-nil values with a valid schema, got nil")
+			api.t.Fatal("SendEvents: expected non-nil values with a valid schema, got nil")
 		}
 	} else {
 		if e.Type.Values != nil {
-			app.t.Fatal("SendEvents: expected nil values with an invalid schema, got non-nil")
+			api.t.Fatal("SendEvents: expected nil values with an invalid schema, got non-nil")
 		}
 	}
 	if e.Received == nil {
-		app.t.Fatal("SendEvents: expected non-nil received event, got nil")
+		api.t.Fatal("SendEvents: expected non-nil received event, got nil")
 	}
 }
 
-func (app *app) WaitTime(string) (time.Duration, error) {
+func (api *api) WaitTime(string) (time.Duration, error) {
 	return 0, nil
 }
