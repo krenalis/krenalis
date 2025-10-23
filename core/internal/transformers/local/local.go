@@ -59,12 +59,12 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return err
 	}
 
-	var executable string
+	var langExecutable string
 	switch language {
 	case state.JavaScript:
-		executable = fn.settings.NodeExecutable
+		langExecutable = fn.settings.NodeExecutable
 	case state.Python:
-		executable = fn.settings.PythonExecutable
+		langExecutable = fn.settings.PythonExecutable
 	default:
 		return errors.New("language is not supported")
 	}
@@ -86,7 +86,12 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return err
 	}
 	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, executable, "-", string(payload))
+	args := []string{
+		langExecutable, // node or python executable.
+		"-",            // read source code of transformation function from stdin. This is the same for both Node and Python.
+		string(payload),
+	}
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Meergo process.
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
