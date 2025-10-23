@@ -73,7 +73,8 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return fmt.Errorf("invalid version %q", version)
 	}
 	filename := fn.filename(name, version, language)
-	if _, err := os.Stat(filename); err != nil {
+	source, err := os.ReadFile(filename)
+	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return transformers.ErrFunctionNotExist
 		}
@@ -85,11 +86,11 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return err
 	}
 	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, executable, filename, string(payload))
+	cmd := exec.CommandContext(ctx, executable, "-", string(payload))
 	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Meergo process.
-	cmd.Dir = fn.settings.FunctionsDir
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Stdin = bytes.NewReader(source)
 	err = cmd.Run()
 	if err != nil {
 		return err
@@ -135,7 +136,7 @@ try {
 	Function(` + "`" + escapedSource + "`" + `);
 } catch (error) {
 	process.stdout.write(JSON.stringify({ error: error.toString() }));
-	return;
+	process.exit() 
 }
 const transform = Function('event', ` + "`" + escapedSource + "; return transform(event)`" + `);
 const records = [];
