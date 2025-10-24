@@ -21,6 +21,8 @@ import (
 func TestLoad(t *testing.T) {
 	t.Helper()
 
+	isWindows := runtime.GOOS == "Windows"
+
 	origWD, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("failed to read current working directory: %v", err)
@@ -220,6 +222,9 @@ func TestLoad(t *testing.T) {
 		restoreEnv()
 
 		for _, key := range test.expectedAbsent {
+			if isWindows && strings.IndexByte(key, 0) != -1 {
+				continue // Windows does not allow keys with NUL bytes, so this key cannot exist.
+			}
 			if err := os.Unsetenv(key); err != nil {
 				t.Fatalf("%s: failed to unset %q before test: %v", test.name, key, err)
 			}
