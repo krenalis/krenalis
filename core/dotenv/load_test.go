@@ -213,7 +213,7 @@ func TestLoad(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		if runtime.GOOS == "windows" && test.skipOnWindows {
+		if test.skipOnWindows && runtime.GOOS == "windows" {
 			continue
 		}
 
@@ -285,7 +285,7 @@ func snapshotEnv() map[string]string {
 	env := make(map[string]string)
 	for _, kv := range os.Environ() {
 		key, value, found := strings.Cut(kv, "=")
-		if !found {
+		if !found || key == "" || strings.Contains(key, "\x00") {
 			continue
 		}
 		env[key] = value
