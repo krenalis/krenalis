@@ -476,11 +476,11 @@ func init() {
 
 	eventsGetParameter := types.Array(types.Object(append([]types.Property{
 		{
-			Name:         "user",
+			Name:         "muid",
 			Type:         types.UUID(),
 			ReadOptional: true,
 			Prefilled:    `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`,
-			Description:  "The Meergo user associated with the event, if any; otherwise, this field is absent.\n\n`user` is set for each event by the Identity Resolution process, and its value may change over time depending on how users are unified and associated with events.",
+			Description:  "The ID of the Meergo user associated with the event, if any; otherwise, this field is absent.\n\n`muid` is set for each event by the Identity Resolution process, and its value may change over time depending on how users are unified and associated with events.",
 		},
 		{
 			Name:        "connectionId",
@@ -492,10 +492,10 @@ func init() {
 	observedEventsParameter := types.Array(types.Object(
 		append([]types.Property{
 			{
-				Name:         "user",
+				Name:         "muid",
 				Type:         types.UUID(),
 				ReadOptional: true,
-				Description:  "The user associated with the event.\n\nPlease note that, currently, this value is set by the Identity Resolution on the events on the data warehouse, so this field is never returned for observed events.",
+				Description:  "The ID of the Meergo user associated with the event.\n\nPlease note that, currently, this value is set by the Identity Resolution on the events on the data warehouse, so this field is never returned for observed events.",
 			},
 		}, eventGetProperties...),
 	))
@@ -804,21 +804,21 @@ func init() {
 						Prefilled:      `connectionId,anonymousId`,
 						Description: "The event properties to return. " +
 							"The properties can be specified in the query string in this way:\n" +
-							"```\nproperties=user&properties=connectionId&properties=anonymousId\n```",
+							"```\nproperties=muid&properties=connectionId&properties=anonymousId\n```",
 					},
 					{
 						Name: "filter",
 						Type: filterType,
 						Description: "The filter applied to the events. Only the events that match the filter will be returned.\n\n" +
 							"It must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n" +
-							"`" + `{"logical":"and","conditions":[{"property":"user","operator":"is","values":["960ae86c-fc6e-438a-ae03-838fa6c94946"]}]}` + "`\n\n" +
+							"`" + `{"logical":"and","conditions":[{"property":"muid","operator":"is","values":["960ae86c-fc6e-438a-ae03-838fa6c94946"]}]}` + "`\n\n" +
 							"must then be escaped and passed in the query string as:\n\n" +
-							"`filter=%7B%22logical%22%3A%22and%22%2C%22conditions\n%22%3A%5B%7B%22property%22%3A%22user%22%2C%22\n" +
+							"`filter=%7B%22logical%22%3A%22and%22%2C%22conditions\n%22%3A%5B%7B%22property%22%3A%muid%22%2C%22\n" +
 							"operator%22%3A%22is%22%2C%22values%22%3A%5B%22\n960ae86c-fc6e-438a-ae03-838fa6c94946%22%5D%7D%5D%7D`",
 					},
 					{
 						Name:        "order",
-						Type:        types.Text().WithValues("user", "connectionId", "anonymousId", "channel", "category", "event", "groupId", "messageId", "name", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type", "userId"),
+						Type:        types.Text().WithValues("muid", "connectionId", "anonymousId", "channel", "category", "event", "groupId", "messageId", "name", "receivedAt", "sentAt", "originalTimestamp", "timestamp", "type", "userId"),
 						Prefilled:   `id`,
 						Description: "The name of the property by which to sort the events to be returned.\n\nIf not provided, the events are sorted by `messageId`.",
 					},

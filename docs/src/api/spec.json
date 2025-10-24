@@ -12633,7 +12633,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The event properties to return. The properties can be specified in the query string in this way:\n```\nproperties=user&properties=connectionId&properties=anonymousId\n```"
+                            "description": "The event properties to return. The properties can be specified in the query string in this way:\n```\nproperties=muid&properties=connectionId&properties=anonymousId\n```"
                         },
                         {
                             "name": "filter",
@@ -12724,7 +12724,7 @@
                                     }
                                 ]
                             },
-                            "description": "The filter applied to the events. Only the events that match the filter will be returned.\n\nIt must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n`{\"logical\":\"and\",\"conditions\":[{\"property\":\"user\",\"operator\":\"is\",\"values\":[\"960ae86c-fc6e-438a-ae03-838fa6c94946\"]}]}`\n\nmust then be escaped and passed in the query string as:\n\n`filter=%7B%22logical%22%3A%22and%22%2C%22conditions\n%22%3A%5B%7B%22property%22%3A%22user%22%2C%22\noperator%22%3A%22is%22%2C%22values%22%3A%5B%22\n960ae86c-fc6e-438a-ae03-838fa6c94946%22%5D%7D%5D%7D`"
+                            "description": "The filter applied to the events. Only the events that match the filter will be returned.\n\nIt must be encoded in JSON, then escaped for the context of the query string. So, for example, the JSON-encoded filter:\n\n`{\"logical\":\"and\",\"conditions\":[{\"property\":\"muid\",\"operator\":\"is\",\"values\":[\"960ae86c-fc6e-438a-ae03-838fa6c94946\"]}]}`\n\nmust then be escaped and passed in the query string as:\n\n`filter=%7B%22logical%22%3A%22and%22%2C%22conditions\n%22%3A%5B%7B%22property%22%3A%muid%22%2C%22\noperator%22%3A%22is%22%2C%22values%22%3A%5B%22\n960ae86c-fc6e-438a-ae03-838fa6c94946%22%5D%7D%5D%7D`"
                         },
                         {
                             "name": "order",
@@ -12732,7 +12732,7 @@
                             "type": {
                                 "kind": "text",
                                 "values": [
-                                    "user",
+                                    "muid",
                                     "connectionId",
                                     "anonymousId",
                                     "channel",
@@ -12794,13 +12794,13 @@
                                         "kind": "object",
                                         "properties": [
                                             {
-                                                "name": "user",
+                                                "name": "muid",
                                                 "prefilled": "\"9102d2a1-0714-4c13-bafd-8a38bc3d0cff\"",
                                                 "type": {
                                                     "kind": "uuid"
                                                 },
                                                 "readOptional": true,
-                                                "description": "The Meergo user associated with the event, if any; otherwise, this field is absent.\n\n`user` is set for each event by the Identity Resolution process, and its value may change over time depending on how users are unified and associated with events."
+                                                "description": "The ID of the Meergo user associated with the event, if any; otherwise, this field is absent.\n\n`muid` is set for each event by the Identity Resolution process, and its value may change over time depending on how users are unified and associated with events."
                                             },
                                             {
                                                 "name": "connectionId",
@@ -13727,12 +13727,12 @@
                                         "kind": "object",
                                         "properties": [
                                             {
-                                                "name": "user",
+                                                "name": "muid",
                                                 "type": {
                                                     "kind": "uuid"
                                                 },
                                                 "readOptional": true,
-                                                "description": "The user associated with the event.\n\nPlease note that, currently, this value is set by the Identity Resolution on the events on the data warehouse, so this field is never returned for observed events."
+                                                "description": "The ID of the Meergo user associated with the event.\n\nPlease note that, currently, this value is set by the Identity Resolution on the events on the data warehouse, so this field is never returned for observed events."
                                             },
                                             {
                                                 "name": "anonymousId",
@@ -15519,7 +15519,7 @@
                                         "kind": "object",
                                         "properties": [
                                             {
-                                                "name": "user",
+                                                "name": "muid",
                                                 "prefilled": "\"9102d2a1-0714-4c13-bafd-8a38bc3d0cff\"",
                                                 "type": {
                                                     "kind": "uuid"

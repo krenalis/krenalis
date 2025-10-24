@@ -121,8 +121,8 @@ BEGIN
 
     -- Update associations between events and users by updating the user ID of
     -- the events.
-    UPDATE "EVENTS" SET "USER" = null;
-    UPDATE "EVENTS" SET "USER" = "_USER_IDENTITIES"."__GID__"
+    UPDATE "EVENTS" SET "MUID" = null;
+    UPDATE "EVENTS" SET "MUID" = "_USER_IDENTITIES"."__GID__"
     FROM "_USER_IDENTITIES" WHERE
        "EVENTS"."CONNECTION_ID" = "_USER_IDENTITIES"."__CONNECTION__"
            AND

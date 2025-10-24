@@ -365,7 +365,7 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						InPaths:  []string{"user"},
+						InPaths:  []string{"muid"},
 						OutPaths: []string{"email_out"},
 					},
 				},

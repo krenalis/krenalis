@@ -861,7 +861,7 @@ func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (a
 		Logical: core.OpAnd,
 		Conditions: []core.FilterCondition{
 			{
-				Property: "user",
+				Property: "muid",
 				Operator: core.OpIs,
 				Values:   []string{id},
 			},
