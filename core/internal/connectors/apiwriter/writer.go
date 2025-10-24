@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package appwriter
+package apiwriter
 
 import (
 	"context"
@@ -23,24 +23,23 @@ const trace = false  // set to true to trace execution flow
 
 type AcksFunc func(ids []string, err error)
 
-// UpsertFunc is a function that updates or creates records in the app for the
-// specified target.
+// UpsertFunc updates or creates records via the API for the specified target.
 type UpsertFunc func(ctx context.Context, target meergo.Targets, records meergo.Records) error
 
 const minBatchSize = 1000
 const maxQueueDelay = 200 * time.Millisecond
 
-// Writer represents a writer for app records.
+// Writer represents a writer for records in the API.
 // It implements the connectors.Writer interface.
 //
-// By calling the Write method for each record to be written, the records are
-// sent to the application, potentially in batches, and the acks function is
-// called for confirmation. To ensure that all records are successfully sent to
-// the app, the Close method must be called once all Write calls have completed.
+// By calling Write for each record to be written, the records are sent to the
+// API, potentially in batches, and the acks function is called for
+// confirmation. To ensure all records are successfully sent to the API, Close
+// must be called after all Write calls have completed.
 type Writer struct {
-	connector string         // app connector.
+	connector string         // API connector.
 	target    meergo.Targets // target, can be TargetUser or TargetGroup
-	upsert    UpsertFunc     // function that updates or creates records in the app.
+	upsert    UpsertFunc     // function that updates or creates records in the API.
 	acks      AcksFunc       // ack function
 
 	mu        sync.Mutex  // mutex for iterator, records, index, and available fields
@@ -58,16 +57,16 @@ type Writer struct {
 	}
 }
 
-// record represents a single user or group to be written and sent to the app.
+// record represents a single user or group to be written and sent to the API.
 type record struct {
 	iterator   *iterator      // iterator that has consumed the record, if any
 	id         string         // user or group identifier
 	properties map[string]any // user or group properties
 }
 
-// New returns a new Writer. connector is the app's connector, target is the
+// New returns a new Writer. connector is the API's connector, target is the
 // record target, upsert is the function that creates or updates records in the
-// app, and acks acknowledges both successes and failures.
+// API, and acks acknowledges both successes and failures.
 func New(connector string, target state.Target, upsert UpsertFunc, acks AcksFunc) *Writer {
 	w := &Writer{
 		connector: connector,
@@ -164,7 +163,7 @@ func (w *Writer) Close(ctx context.Context) error {
 // It panics if it called after w has been closed.
 func (w *Writer) Write(_ context.Context, id string, properties map[string]any) bool {
 	if w.close.closed.Load() {
-		panic("core/connectors/appwriter: Write called on a closed writer")
+		panic("core/connectors/apiwriter: Write called on a closed writer")
 	}
 	var iter *iterator
 	w.mu.Lock()
@@ -386,7 +385,7 @@ func (w *Writer) _assertAvailable(n int) {
 		}
 	}
 	if n != got {
-		panic(fmt.Sprintf("core/connectors/appwriter: expected %d available, got %d", n, got))
+		panic(fmt.Sprintf("core/connectors/apiwriter: expected %d available, got %d", n, got))
 	}
 }
 

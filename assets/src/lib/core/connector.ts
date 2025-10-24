@@ -51,13 +51,11 @@ class TransformedConnector {
 	}
 
 	get hasSnippet() {
-		return (
-			this.type === 'SDK' && this.code !== 'meergo-api' && this.code !== 'segment' && this.code !== 'rudderstack'
-		);
+		return this.type === 'SDK';
 	}
 
-	get isApp() {
-		return this.type === 'App';
+	get isAPI() {
+		return this.type === 'API';
 	}
 
 	get isDatabase() {
@@ -72,12 +70,16 @@ class TransformedConnector {
 		return this.type === 'FileStorage';
 	}
 
+	get isMessageBroker() {
+		return this.type === 'MessageBroker';
+	}
+
 	get isSDK() {
 		return this.type === 'SDK';
 	}
 
-	get isStream() {
-		return this.type === 'Stream';
+	get isWebhook() {
+		return this.type === 'Webhook';
 	}
 
 	get supportedSendingModes(): SendingMode[] {
@@ -96,14 +98,14 @@ class TransformedConnector {
 
 	getIdentityIDLabel(): string {
 		let identityIDLabel: string = '';
-		if (this.isApp) {
+		if (this.isAPI) {
 			identityIDLabel = this.identityIDLabel;
 			if (identityIDLabel === '') {
 				identityIDLabel = 'ID';
 			}
 		} else if (this.isDatabase || this.isFileStorage) {
 			identityIDLabel = 'ID';
-		} else if (this.isSDK) {
+		} else if (this.isSDK || this.isWebhook) {
 			identityIDLabel = 'User ID';
 		}
 		return identityIDLabel;

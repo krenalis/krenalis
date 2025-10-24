@@ -18,8 +18,8 @@ import (
 // ErrSheetNotExist indicates that a file does not contain a sheet.
 var ErrSheetNotExist = errors.New("sheet does not exist")
 
-// FileInfo represents a file connector info.
-type FileInfo struct {
+// FileSpec represents a file connector specification.
+type FileSpec struct {
 	Code          string
 	Label         string
 	Categories    Categories // categories
@@ -47,14 +47,15 @@ type AsDestinationFile struct {
 	Documentation ConnectorRoleDocumentation
 }
 
-// ReflectType returns the type of the value implementing the file connector info.
-func (info FileInfo) ReflectType() reflect.Type {
-	return info.ct
+// ReflectType returns the type of the value implementing the file connector
+// specification.
+func (spec FileSpec) ReflectType() reflect.Type {
+	return spec.ct
 }
 
 // New returns a new file connector instance.
-func (info FileInfo) New(env *FileEnv) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
+func (spec FileSpec) New(env *FileEnv) (any, error) {
+	out := spec.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err

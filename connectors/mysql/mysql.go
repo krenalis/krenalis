@@ -36,7 +36,7 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterDatabase(meergo.DatabaseInfo{
+	meergo.RegisterDatabase(meergo.DatabaseSpec{
 		Code:        "mysql",
 		Label:       "MySQL",
 		Categories:  meergo.CategoryDatabase,

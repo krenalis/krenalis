@@ -30,10 +30,10 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterStream(meergo.StreamInfo{
+	meergo.RegisterMessageBroker(meergo.MessageBrokerSpec{
 		Code:       "rabbitmq",
 		Label:      "RabbitMQ",
-		Categories: meergo.CategoryEventStreaming,
+		Categories: meergo.CategoryMessageBroker,
 		Documentation: meergo.ConnectorDocumentation{
 			Source: meergo.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from RabbitMQ",
@@ -44,7 +44,7 @@ func init() {
 }
 
 // New returns a new connector instance for RabbitMQ.
-func New(env *meergo.StreamEnv) (*RabbitMQ, error) {
+func New(env *meergo.MessageBrokerEnv) (*RabbitMQ, error) {
 	c := RabbitMQ{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -56,14 +56,14 @@ func New(env *meergo.StreamEnv) (*RabbitMQ, error) {
 }
 
 type RabbitMQ struct {
-	env        *meergo.StreamEnv
+	env        *meergo.MessageBrokerEnv
 	settings   *innerSettings
 	conn       *amqp.Connection
 	ch         *amqp.Channel
 	deliveries <-chan amqp.Delivery
 }
 
-// Close closes the stream.
+// Close closes the message broker.
 func (rmq *RabbitMQ) Close() error {
 	if rmq.conn == nil {
 		return nil
@@ -78,7 +78,7 @@ func (rmq *RabbitMQ) Close() error {
 	return err
 }
 
-// Receive receives an event from the stream.
+// Receive receives an event from the message broker.
 func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
 	err := rmq.connect(ctx, true)
 	if err != nil {
@@ -96,7 +96,7 @@ func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
 	}
 }
 
-// Send sends an event to the stream.
+// Send sends an event to the message broker.
 func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
 	err := rmq.connect(ctx, true)
 	if err != nil {

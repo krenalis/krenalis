@@ -79,8 +79,8 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	var inner any
 	var err error
 	switch c := connection.Connector(); c.Type {
-	case state.App:
-		inner, err = meergo.RegisteredApp(c.Code).New(&meergo.AppEnv{
+	case state.API:
+		inner, err = meergo.RegisteredAPI(c.Code).New(&meergo.APIEnv{
 			Settings:     connection.Settings,
 			SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 			OAuthAccount: accountCode,
@@ -100,13 +100,18 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
+	case state.MessageBroker:
+		inner, err = meergo.RegisteredMessageBroker(c.Code).New(&meergo.MessageBrokerEnv{
+			Settings:    connection.Settings,
+			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+		})
 	case state.SDK:
 		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
-	case state.Stream:
-		inner, err = meergo.RegisteredStream(c.Code).New(&meergo.StreamEnv{
+	case state.Webhook:
+		inner, err = meergo.RegisteredWebhook(c.Code).New(&meergo.WebhookEnv{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
@@ -143,8 +148,8 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	var inner any
 	var err error
 	switch c := connector; c.Type {
-	case state.App:
-		inner, err = meergo.RegisteredApp(c.Code).New(&meergo.AppEnv{
+	case state.API:
+		inner, err = meergo.RegisteredAPI(c.Code).New(&meergo.APIEnv{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.ConnectorClient(c, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 		})
@@ -157,10 +162,12 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 		inner, err = meergo.RegisteredFile(c.Code).New(&meergo.FileEnv{})
 	case state.FileStorage:
 		inner, err = meergo.RegisteredFileStorage(c.Code).New(&meergo.FileStorageEnv{})
+	case state.MessageBroker:
+		inner, err = meergo.RegisteredMessageBroker(c.Code).New(&meergo.MessageBrokerEnv{})
 	case state.SDK:
 		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{})
-	case state.Stream:
-		inner, err = meergo.RegisteredStream(c.Code).New(&meergo.StreamEnv{})
+	case state.Webhook:
+		inner, err = meergo.RegisteredWebhook(c.Code).New(&meergo.WebhookEnv{})
 	}
 	if err != nil {
 		return nil, connectorError(err)
@@ -194,8 +201,8 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 		return nil
 	}
 	switch c := connector; c.Type {
-	case state.App:
-		inner, err = meergo.RegisteredApp(c.Code).New(&meergo.AppEnv{
+	case state.API:
+		inner, err = meergo.RegisteredAPI(c.Code).New(&meergo.APIEnv{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.ConnectorClient(c, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			SetSettings:  setSettings,
@@ -207,12 +214,14 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 		inner = database
 	case state.File:
 		inner, err = meergo.RegisteredFile(c.Code).New(&meergo.FileEnv{SetSettings: setSettings})
-	case state.SDK:
-		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{SetSettings: setSettings})
 	case state.FileStorage:
 		inner, err = meergo.RegisteredFileStorage(c.Code).New(&meergo.FileStorageEnv{SetSettings: setSettings})
-	case state.Stream:
-		inner, err = meergo.RegisteredStream(c.Code).New(&meergo.StreamEnv{SetSettings: setSettings})
+	case state.MessageBroker:
+		inner, err = meergo.RegisteredMessageBroker(c.Code).New(&meergo.MessageBrokerEnv{SetSettings: setSettings})
+	case state.SDK:
+		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{SetSettings: setSettings})
+	case state.Webhook:
+		inner, err = meergo.RegisteredWebhook(c.Code).New(&meergo.WebhookEnv{SetSettings: setSettings})
 	}
 	if err != nil {
 		return nil, connectorError(err)

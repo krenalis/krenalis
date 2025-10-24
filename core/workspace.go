@@ -457,9 +457,9 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 	}
 
 	// Set the event types.
-	if conn.Type == state.App && c.Role == state.Destination &&
+	if conn.Type == state.API && c.Role == state.Destination &&
 		c.Connector().DestinationTargets.Contains(state.TargetEvent) {
-		appEventTypes, err := connection.app().EventTypes(ctx)
+		appEventTypes, err := connection.api().EventTypes(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -535,7 +535,7 @@ func (this *Workspace) Connections() []*Connection {
 // token returned by the AuthToken method and must be empty if the connector
 // does not support authorization.
 //
-// Stream connectors are not currently supported.
+// Message broker connectors are not currently supported.
 //
 // It returns an errors.UnprocessableError error with code
 //
@@ -574,12 +574,16 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	switch c.Type {
 	case state.File:
 		return 0, errors.BadRequest("connections cannot have type file")
+	case state.MessageBroker:
+		return 0, errors.BadRequest("message broker connectors are not currently supported")
 	case state.SDK:
 		if connection.Role == Destination {
-			return 0, errors.BadRequest("%s connections cannot be destinations", strings.ToLower(c.Type.String()))
+			return 0, errors.BadRequest("SDK connections cannot be destinations")
 		}
-	case state.Stream:
-		return 0, errors.BadRequest("stream connectors are not currently supported")
+	case state.Webhook:
+		if connection.Role == Destination {
+			return 0, errors.BadRequest("webhook connections cannot be destinations")
+		}
 	}
 
 	// Validate and normalize linked connections.
@@ -704,7 +708,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	}
 
 	// Generate an event write key.
-	if c.Type == state.SDK {
+	if c.Type == state.SDK || c.Type == state.Webhook {
 		n.EventWriteKey, err = generateEventWriteKey()
 		if err != nil {
 			return 0, err
@@ -1983,13 +1987,13 @@ type ConnectionToAdd struct {
 	Connector string `json:"connector"`
 
 	// Strategy is the strategy that determines how to merge anonymous and
-	// non-anonymous users. It can only be provided for Source SDK connections
+	// non-anonymous users. It can only be provided for source SDK connections
 	// whose connector supports the strategies.
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It can only be provided for
-	// destination app connections that support it. In this case, it must be one of
-	// the sending modes supported by the app.
+	// destination API connections that support it. In this case, it must be one of
+	// the sending modes supported by the API.
 	SendingMode *SendingMode `json:"sendingMode"`
 
 	// LinkedConnections, for connections supporting events, indicate the

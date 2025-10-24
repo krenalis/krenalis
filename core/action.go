@@ -73,10 +73,10 @@ type Action struct {
 }
 
 // Matching establishes a relationship between a property in Meergo (input
-// property) and a corresponding property in the app (output property) used
+// property) and a corresponding property in the API (output property) used
 // during an export. This relationship determines whether a user or group in
-// Meergo exists in the app and identifies the corresponding user or group in
-// the app.
+// Meergo exists in the API and identifies the corresponding user or group in
+// the API.
 //
 // The input property should be a property in the user schema, while the output
 // property should be a property in the source schema of the connection.
@@ -221,8 +221,8 @@ func (this *Action) Delete(ctx context.Context) error {
 	return err
 }
 
-// Execute executes the action, which must be an app, database, or file storage
-// action with a target of User or Group. It starts an execution and returns its
+// Execute executes the action, which must be an API, database, or file action
+// with a target of User or Group. It starts an execution and returns its
 // identifier. Both the action and its connection must be enabled and the action
 // must not already be executing.
 //
@@ -244,7 +244,7 @@ func (this *Action) Execute(ctx context.Context, incremental *bool) (int, error)
 	}
 	typ := c.Connector().Type
 	switch typ {
-	case state.App, state.Database, state.FileStorage:
+	case state.API, state.Database, state.FileStorage:
 	default:
 		return 0, errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
 	}
@@ -252,7 +252,7 @@ func (this *Action) Execute(ctx context.Context, incremental *bool) (int, error)
 		if c.Role == state.Destination {
 			return 0, errors.BadRequest("incremental cannot be provided for destination actions")
 		}
-		if *incremental && typ != state.App && this.action.LastChangeTimeColumn == "" {
+		if *incremental && typ != state.API && this.action.LastChangeTimeColumn == "" {
 			return 0, errors.Unprocessable(CannotExecuteIncrementally, "incremental requires a last change time column")
 		}
 	}
@@ -297,7 +297,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 	if a.ConnectionRole == Source {
 		if a.Target == TargetUser {
 			switch a.ConnectorType {
-			case App:
+			case API:
 				serialized = struct {
 					serializedAction
 					Filter         *Filter         `json:"filter"`
@@ -383,7 +383,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					ScheduleStart:        this.ScheduleStart,
 					SchedulePeriod:       this.SchedulePeriod,
 				}
-			case SDK:
+			case SDK, Webhook:
 				serialized = struct {
 					serializedAction
 					Filter         *Filter         `json:"filter"`
@@ -414,7 +414,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 	if a.ConnectionRole == Destination {
 		if a.Target == TargetUser {
 			switch a.ConnectorType {
-			case App:
+			case API:
 				serialized = struct {
 					serializedAction
 					Filter             *Filter         `json:"filter"`
@@ -659,8 +659,8 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	inSchema := action.InSchema
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target)
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(c.Connector().Type, c.Role, this.action.Target)
-	dispatchEventsToApps := isDispatchingEventsToApps(c.Connector().Type, c.Role, this.action.Target)
-	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
+	dispatchEventsToAPIs := isDispatchingEventsToAPIs(c.Connector().Type, c.Role, this.action.Target)
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs {
 		inSchema = schemas.Event
 	}
 
@@ -839,9 +839,9 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	return err
 }
 
-// app returns the app of the action.
-func (this *Action) app() *connectors.App {
-	return this.core.connectors.App(this.action.Connection())
+// api returns the API of the action.
+func (this *Action) api() *connectors.API {
+	return this.core.connectors.API(this.action.Connection())
 }
 
 // createExecution creates an execution for the action and returns its
@@ -1198,11 +1198,11 @@ type ActionToSet struct {
 	ExportMode ExportMode `json:"exportMode"`
 
 	// Matching defines a relationship between a property in Meergo ("in") and
-	// a corresponding property in the app ("out") used during an export.
+	// a corresponding property in the API ("out") used during an export.
 	Matching Matching `json:"matching"`
 
 	// UpdateOnDuplicates indicates whether to proceed with the export even if
-	// duplicate users or groups are found in the app.
+	// duplicate users or groups are found in the API.
 	UpdateOnDuplicates bool `json:"updateOnDuplicates"`
 
 	// TableName is the name of the table for the export and it is defined for
@@ -1333,11 +1333,11 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// isDispatchingEventsToApps reports whether a connector of the given type,
+// isDispatchingEventsToAPIs reports whether a connector of the given type,
 // on a connection with the given role, and an action with the given target,
-// is dispatching events to apps.
-func isDispatchingEventsToApps(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Destination && target == state.TargetEvent && connectorType == state.App
+// is dispatching events to APIs.
+func isDispatchingEventsToAPIs(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	return role == state.Destination && target == state.TargetEvent && connectorType == state.API
 }
 
 // isExportUsersToFile reports whether a connector of the given type, on a
@@ -1350,14 +1350,14 @@ func isExportUsersToFile(connectorType state.ConnectorType, role state.Role, tar
 // on a connection with the given role, and an action with the given target, is
 // importing events into the data warehouse.
 func isImportingEventsIntoWarehouse(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Source && target == state.TargetEvent && connectorType == state.SDK
+	return role == state.Source && target == state.TargetEvent && (connectorType == state.SDK || connectorType == state.Webhook)
 }
 
 // isImportingUserIdentitiesFromEvents reports whether a connector of the
 // given type, on a connection with the given role, and an action with the
 // given target, is importing user identities from events.
 func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Source && target == state.TargetUser && connectorType == state.SDK
+	return role == state.Source && target == state.TargetUser && (connectorType == state.SDK || connectorType == state.Webhook)
 }
 
 // onlyForMatching returns a schema which contains only the properties of schema

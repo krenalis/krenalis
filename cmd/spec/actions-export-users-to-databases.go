@@ -242,7 +242,7 @@ func init() {
 						},
 						{
 							Name:        "connectorType",
-							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
+							Type:        types.Text().WithValues("API", "Database", "FileStorage", "MessageBroker", "SDK", "Webhook"),
 							Prefilled:   `"Database"`,
 							Description: "The type of the connection's connector. It is always `\"Database\"` when the action exports users to a database.",
 						},

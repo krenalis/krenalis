@@ -14,7 +14,7 @@ This package provides functions to construct data types to use in connectors. Fo
 
 In connectors, data types need to be defined for:
 
-- User and event type schemas for [apps](apps).
+- User and event type schemas for [APIs](apis).
 - Query result column types for [databases](databases).
 - Table column types for [databases](databases).
 - File column types for [files](files).

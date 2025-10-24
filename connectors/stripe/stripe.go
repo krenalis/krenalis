@@ -39,11 +39,11 @@ var destinationOverview string
 var baseURL = "https://api.stripe.com"
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
+	meergo.RegisterAPI(meergo.APISpec{
 		Code:       "stripe",
 		Label:      "Stripe",
-		Categories: meergo.CategoryEcommerce,
-		AsSource: &meergo.AsAppSource{
+		Categories: meergo.CategorySaaS,
+		AsSource: &meergo.AsAPISource{
 			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -51,7 +51,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAppDestination{
+		AsDestination: &meergo.AsAPIDestination{
 			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -59,7 +59,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.AppTerms{
+		Terms: meergo.APITerms{
 			User:  "customer",
 			Users: "customers",
 		},
@@ -79,7 +79,7 @@ func init() {
 }
 
 // New returns a new connector instance for Stripe.
-func New(env *meergo.AppEnv) (*Stripe, error) {
+func New(env *meergo.APIEnv) (*Stripe, error) {
 	c := Stripe{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -91,7 +91,7 @@ func New(env *meergo.AppEnv) (*Stripe, error) {
 }
 
 type Stripe struct {
-	env      *meergo.AppEnv
+	env      *meergo.APIEnv
 	settings *innerSettings
 }
 
@@ -174,7 +174,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 var arrayIndex = regexp.MustCompile(`^\w+\[(\d+)\]`)
 var localeCode = regexp.MustCompile(`^[a-z]{2}(?:-[A-Z]{2})?$`)
 
-// Upsert updates or creates records in the app for the specified target.
+// Upsert updates or creates records in the API for the specified target.
 func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	record := records.First()

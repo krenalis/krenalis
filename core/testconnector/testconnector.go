@@ -62,28 +62,28 @@ func DecodeNDJSON(r io.Reader, enc meergo.ContentEncoding) ([]json.Value, error)
 	return values, nil
 }
 
-// NewApp returns an instance of the connector with the specified code for
+// NewAPI returns an instance of the connector with the specified code for
 // testing purposes. Settings are the connector settings, encoded in JSON and
 // passed to the connector instance.
 //
 // It panics if no connector with the specified code has been registered.
-func NewApp(code string, settings any) (any, error) {
-	registeredApp := meergo.RegisteredApp(code)
+func NewAPI(code string, settings any) (any, error) {
+	registeredAPI := meergo.RegisteredAPI(code)
 	connector := &state.Connector{
 		Code:           code,
-		EndpointGroups: registeredApp.EndpointGroups,
+		EndpointGroups: registeredAPI.EndpointGroups,
 	}
 	s, err := json.Marshal(settings)
 	if err != nil {
 		return nil, fmt.Errorf("cannot marshal settings: %s", err)
 	}
 	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
-	app, err := registeredApp.New(&meergo.AppEnv{
+	api, err := registeredAPI.New(&meergo.APIEnv{
 		Settings:    s,
 		SetSettings: func(ctx context.Context, b []byte) error { return nil },
 		HTTPClient:  httpClient,
 	})
-	return app, err
+	return api, err
 }
 
 // ReceivedEvent wraps a map[string]any and returns a value that implements the

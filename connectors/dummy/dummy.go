@@ -36,11 +36,11 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
+	meergo.RegisterAPI(meergo.APISpec{
 		Code:       "dummy",
 		Label:      "Dummy",
-		Categories: meergo.CategoryTest,
-		AsSource: &meergo.AsAppSource{
+		Categories: meergo.CategoryTesting,
+		AsSource: &meergo.AsAPISource{
 			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -48,7 +48,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAppDestination{
+		AsDestination: &meergo.AsAPIDestination{
 			Targets:     meergo.TargetEvent | meergo.TargetUser,
 			SendingMode: meergo.Server,
 			HasSettings: true,
@@ -57,7 +57,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.AppTerms{
+		Terms: meergo.APITerms{
 			User:  "customer",
 			Users: "customers",
 		},
@@ -72,7 +72,7 @@ func init() {
 }
 
 // New returns a new connector instance for testing.
-func New(env *meergo.AppEnv) (*Dummy, error) {
+func New(env *meergo.APIEnv) (*Dummy, error) {
 	c := Dummy{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -84,7 +84,7 @@ func New(env *meergo.AppEnv) (*Dummy, error) {
 }
 
 type Dummy struct {
-	env      *meergo.AppEnv
+	env      *meergo.APIEnv
 	settings *innerSettings
 }
 
@@ -172,7 +172,7 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 }
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
-// events to the app, without actually sending it.
+// events to the API, without actually sending it.
 func (dummy *Dummy) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
 	return dummy.sendEvents(ctx, events, true)
 }
@@ -275,7 +275,7 @@ type innerSettings struct {
 	SimulateHTTPDelay            bool
 }
 
-// SendEvents sends events to the app.
+// SendEvents sends events to the API.
 func (dummy *Dummy) SendEvents(ctx context.Context, events meergo.Events) error {
 	_, err := dummy.sendEvents(ctx, events, false)
 	return err
@@ -330,7 +330,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 // the source and destination schema and are not requires for create.
 var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName", "favouriteDrink", "address"}
 
-// Upsert updates or creates records in the app for the specified target.
+// Upsert updates or creates records in the API for the specified target.
 func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	dummy.simulateHTTPDelay()
@@ -448,12 +448,11 @@ func (dummy *Dummy) simulateHTTPDelay() {
 	metrics.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
 }
 
-// sendEvents sends the given events to the app and returns the sent HTTP
-// request.
-// If preview is true, the HTTP request is built but not sent, so it is
+// sendEvents sends the given events to the API and returns the sent HTTP
+// request. If preview is true, the HTTP request is built but not sent, so it is
 // only returned.
 //
-// If an error occurs while sending the events to the app, a nil *http.Request
+// If an error occurs while sending the events to the API, a nil *http.Request
 // and the error are returned.
 func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
 	event := events.First()

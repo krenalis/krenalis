@@ -17,24 +17,16 @@ func init() {
 		Name:           "name",
 		Type:           types.Text().WithCharLen(60),
 		CreateRequired: true,
-		Prefilled:      `"HubSpot"`,
+		Prefilled:      `"Mixpanel"`,
 		Description:    "The action's name.",
 	}
 	filterParameter := types.Property{
 		Name:      "filter",
 		Type:      filterType,
 		Nullable:  true,
-		Prefilled: `{ "logical": "and", "conditions": [ { "property": "country", "operator": "is", "values": [ "US" ] } ] }`,
-		Description: "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\n" +
+		Prefilled: `{ "logical": "and", "conditions": [ { "property": "type", "operator": "is", "values": [ "track" ] } ] }`,
+		Description: "The filter applied to the events. If it's not null, only the events that match the filter will be sent to the destination.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
-	}
-	incrementalParameter := types.Property{
-		Name:      "incremental",
-		Type:      types.Boolean(),
-		Prefilled: `true`,
-		Description: "Determines whether users are imported incrementally:\n" +
-			"* `true`: imports only users who were created or updated since the last import.\n" +
-			"* `false`: imports all users, regardless of previous imports.",
 	}
 	transformationParameter := types.Property{
 		Name: "transformation",
@@ -45,7 +37,7 @@ func init() {
 				Prefilled:      `{ "first_name": "firstName" }`,
 				UpdateRequired: true,
 				Nullable:       true,
-				Description:    "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app.",
+				Description:    "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema.",
 			},
 			{
 				Name: "function",
@@ -53,7 +45,7 @@ func init() {
 					{
 						Name:           "source",
 						Type:           types.Text().WithCharLen(50_000),
-						Prefilled:      `"const transform = (user) => { ... }"`,
+						Prefilled:      `"const transform = (event) => { ... }"`,
 						CreateRequired: true,
 						Description:    "The source code of the JavaScript or Python function.",
 					},
@@ -73,56 +65,50 @@ func init() {
 					{
 						Name:           "inPaths",
 						Type:           types.Array(types.Text()),
-						Prefilled:      `[ "email", "firstName", "lastName" ]`,
+						Prefilled:      `[ "traits.firstName", "traits.lastName" ]`,
 						CreateRequired: true,
-						Description:    "The paths of the properties that will be passed to the function. At least one path must be present.",
+						Description:    "The property paths that will be passed to the function. If the function does not depend on the event to produce its response, specify an empty array.",
 					},
 					{
 						Name:           "outPaths",
 						Type:           types.Array(types.Text()),
-						Prefilled:      `[ "email_address", "first_name", "last_name" ]`,
+						Prefilled:      `[ "first_name", "last_name" ]`,
 						CreateRequired: true,
 						Description:    "The paths of the properties that may be returned by the function. At least one path must be present.",
 					},
 				}),
 				UpdateRequired: true,
 				Nullable:       true,
-				Description:    "The transformation function. A JavaScript or Python function that given an app user, returns a user identity.",
+				Description:    "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the API.",
 			},
 		}),
 		Prefilled:      `...`,
+		Nullable:       true,
 		CreateRequired: true,
 		UpdateRequired: true,
-		Description: "The mapping or function responsible for transforming app users into user identities linked to the action. " +
-			"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
-			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
-	}
-	inSchemaParameter := types.Property{
-		Name:           "inSchema",
-		Type:           types.Parameter("schema"),
-		CreateRequired: true,
-		Prefilled:      `{...}`,
-		Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\n" +
-			"When importing users from apps, this should be a subset of the app's destination schema.",
+		Description: "This mapping or function is responsible for transforming events into the values required for sending the event to the API.\n\n" +
+			"If the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\n" +
+			"If a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null.",
 	}
 	outSchemaParameter := types.Property{
 		Name:           "outSchema",
 		Type:           types.Parameter("schema"),
-		CreateRequired: true,
 		Prefilled:      `{...}`,
-		Description: "The schema for the output properties of the transformation.\n\n" +
-			"When importing users from apps, this should be a subset of the user schema.",
+		UpdateRequired: true,
+		Nullable:       true,
+		Description: "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\n" +
+			"It should be a subset of the schema of the passed event type.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions/import-users-from-apps",
-		Name: "Import users from apps",
-		Description: "This type of action imports user data from an application into the workspace's data warehouse. " +
-			"It operates on a source app connection that supports users.",
+		ID:   "actions/send-events-to-apis",
+		Name: "Send events to APIs",
+		Description: "This type of action sends the received events to APIs. " +
+			"It operates on a destination API connection that supports events.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
-				Description: "Create a source action to import users from an app.",
+				Description: "Create a destination action that sends events to an API.",
 				Method:      POST,
 				URL:         "/v1/actions",
 				Parameters: []types.Property{
@@ -131,15 +117,15 @@ func init() {
 						Name:           "connection",
 						Type:           types.Int(32),
 						CreateRequired: true,
-						Prefilled:      "230527183",
-						Description:    "The ID of the connection from which to read the users. It must be a source app that can import users.",
+						Prefilled:      "753166510",
+						Description:    "The ID of the connection to which the events will be sent. It must be a destination API that supports events.",
 					},
 					{
 						Name:           "target",
-						Type:           types.Text().WithValues("User"),
+						Type:           types.Text().WithValues("Event"),
 						CreateRequired: true,
-						Prefilled:      `"User"`,
-						Description:    "The entity on which the action operates, which must be `\"User\"` in order to create an action that imports users.",
+						Prefilled:      `"Event"`,
+						Description:    "The entity on which the action operates, which must be `\"Event\"` in order to create an action that sends events.",
 					},
 					{
 						Name:        "enabled",
@@ -147,10 +133,16 @@ func init() {
 						Prefilled:   "true",
 						Description: "Indicates if the action is enabled once created.",
 					},
+					{
+						Name:           "eventType",
+						Type:           types.Text().WithCharLen(100),
+						CreateRequired: true,
+						Prefilled:      `"send_add_to_cart"`,
+						Description: "The action's event type.\n\n" +
+							"This should be the ID of one of the event types supported by the connection, which can be retrieved with the [`/connections/:id`](connections#get-connection) method.",
+					},
 					filterParameter,
-					incrementalParameter,
 					transformationParameter,
-					inSchemaParameter,
 					outSchemaParameter,
 				},
 				Response: &Response{
@@ -166,13 +158,14 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, ConnectionNotExist, "connection does not exist"},
+					{422, EventTypeNotExist, "connection does not have event type"},
 					{422, ConnectorNotExist, "connector does not exist"},
 					{422, UnsupportedLanguage, "transformation language is not supported"},
 				},
 			},
 			{
 				Name:        "Update action",
-				Description: "Update a source action that imports users from an app.",
+				Description: "Update a destination action that sends events to an API.",
 				Method:      PUT,
 				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
@@ -181,7 +174,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "705981339",
-						Description:    "The ID of the source app action to update.",
+						Description:    "The ID of the destination API action.",
 					},
 					nameParameter,
 					{
@@ -191,9 +184,7 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
-					incrementalParameter,
 					transformationParameter,
-					inSchemaParameter,
 					outSchemaParameter,
 				},
 				Errors: []Error{
@@ -204,7 +195,7 @@ func init() {
 			},
 			{
 				Name:        "Get action",
-				Description: "Get a source action that imports users from an app.",
+				Description: "Get a destination action that sends events to an API.",
 				Method:      GET,
 				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
@@ -213,7 +204,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "705981339",
-						Description:    "The ID of the source app action that imports users.",
+						Description:    "The ID of the destination API event action.",
 					},
 				},
 				Response: &Response{
@@ -222,38 +213,38 @@ func init() {
 							Name:        "id",
 							Type:        types.Int(32),
 							Prefilled:   "705981339",
-							Description: "The ID of the source app action that imports users.",
+							Description: "The ID of the destination API event action.",
 						},
 						nameParameter,
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Prefilled:   `"hubspot"`,
+							Prefilled:   `"klaviyo"`,
 							Description: "The code of the connection's connector.",
 						},
 						{
 							Name:        "connectorType",
-							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
-							Prefilled:   `"App"`,
-							Description: "The type of the connection's connector. It is always `\"App\"` when the action imports users from an app.",
+							Type:        types.Text().WithValues("API", "Database", "FileStorage", "MessageBroker", "SDK", "Webhook"),
+							Prefilled:   `"API"`,
+							Description: "The type of the connection's connector. It is always `\"API\"` when the action sends events to an API.",
 						},
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Prefilled:   "1371036433",
-							Description: "The ID of the connection from which users are read. It is a source app that supports users.",
+							Description: "The ID of the connection to which the events will be sent. It is a destination API that supports events.",
 						},
 						{
 							Name:        "connectionRole",
 							Type:        types.Text().WithValues("Source", "Destination"),
-							Prefilled:   `"Source"`,
-							Description: "The role of the action's connection. It is always `\"Source\"` when the action imports users from an app.",
+							Prefilled:   `"Destination"`,
+							Description: "The role of the action's connection. It is always `\"Destination\"` when the action sends events to an API.",
 						},
 						{
 							Name:        "target",
 							Type:        types.Text().WithValues("User", "Event"),
-							Prefilled:   `"User"`,
-							Description: "The entity on which the action operates. It is always `\"User\"` when the action imports users from an app.",
+							Prefilled:   `"Event"`,
+							Description: "The entity on which the action operates. It is always `\"Event\"` when the action sends events to an API.",
 						},
 						{
 							Name:        "enabled",
@@ -261,15 +252,14 @@ func init() {
 							Prefilled:   "true",
 							Description: "Indicates if the action is enabled.",
 						},
-						filterParameter,
 						{
-							Name:      "incremental",
-							Type:      types.Boolean(),
-							Prefilled: `true`,
-							Description: "Indicates whether users are imported incrementally:\n" +
-								"* `true`: imports only users who were created or updated since the last import.\n" +
-								"* `false`: imports all users, regardless of previous imports.",
+							Name:           "eventType",
+							Type:           types.Text().WithCharLen(100),
+							CreateRequired: true,
+							Prefilled:      `send_add_to_cart`,
+							Description:    "The action's event type.",
 						},
+						filterParameter,
 						{
 							Name: "transformation",
 							Type: types.Object([]types.Property{
@@ -278,7 +268,7 @@ func init() {
 									Type:        types.Map(types.Text()),
 									Prefilled:   `{ "first_name": "firstName" }`,
 									Nullable:    true,
-									Description: "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app.",
+									Description: "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema.",
 								},
 								{
 									Name: "function",
@@ -286,7 +276,7 @@ func init() {
 										{
 											Name:        "source",
 											Type:        types.Text().WithCharLen(50_000),
-											Prefilled:   `"const transform = (user) => { ... }"`,
+											Prefilled:   `"const transform = (event) => { ... }"`,
 											Description: "The source code of the JavaScript or Python function.",
 										},
 										{
@@ -304,40 +294,39 @@ func init() {
 										{
 											Name:        "inPaths",
 											Type:        types.Array(types.Text()),
-											Prefilled:   `[ "email", "firstName", "lastName" ]`,
-											Description: "The paths of the properties that will be passed to the function. It contains at least one property path.",
+											Prefilled:   `[ "traits.firstName", "traits.lastName" ]`,
+											Description: "The property paths that will be passed to the function. If empty, the function does not rely on the event to generate the response.",
 										},
 										{
 											Name:        "outPaths",
 											Type:        types.Array(types.Text()),
-											Prefilled:   `[ "email_address", "first_name", "last_name" ]`,
+											Prefilled:   `[ "first_name", "last_name" ]`,
 											Description: "The paths of the properties that may be returned by the function. It contains at least one property path.",
 										},
 									}),
 									Nullable:    true,
-									Description: "The transformation function. A JavaScript or Python function that given an app user, returns a user identity.",
+									Description: "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the API.",
 								},
 							}),
 							Prefilled: `...`,
-							Description: "The mapping or function responsible for transforming app users into user identities linked to the action. " +
-								"Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\n" +
-								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
+							Nullable:  true,
+							Description: "This mapping or function is responsible for transforming events into the values required for sending them to the API.\n\n" +
+								"If there is no mapping, it is null. Otherwise one of either a mapping or a function is present, but not both. The one that is not present is null.",
 						},
 						{
-							Name:        "inSchema",
-							Type:        types.Parameter("schema"),
-							Prefilled:   `{...}`,
-							Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.",
+							Name:      "inSchema",
+							Type:      types.Parameter("schema"),
+							Prefilled: `{...}`,
+							Description: "The schema for the properties used in the filter and the input properties in the transformation.\n\n" +
+								"When sending events to apps, this is the event schema.",
 						},
 						{
 							Name:        "outSchema",
 							Type:        types.Parameter("schema"),
+							Nullable:    true,
 							Prefilled:   `{...}`,
-							Description: "The schema for the output properties of the transformation.",
+							Description: "The schema for the output properties of the transformation. It is null if no transformation is present.",
 						},
-						runningParameter,
-						scheduleStartParameter,
-						importSchedulePeriodParameter,
 					},
 				},
 				Errors: []Error{

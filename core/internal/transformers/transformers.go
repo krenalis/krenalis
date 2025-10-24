@@ -25,8 +25,8 @@ type Purpose int
 
 const (
 	Import Purpose = iota // used when importing a user or group into the data warehouse.
-	Create                // used when creating a user or group in an app or sending an event to an app.
-	Update                // used when updating a user or group in an app.
+	Create                // used when creating a user or group in an API or sending an event to an API.
+	Update                // used when updating a user or group in an API.
 )
 
 // Record represents a record to transform.

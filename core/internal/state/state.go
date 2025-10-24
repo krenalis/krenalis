@@ -751,12 +751,13 @@ type ConnectorTerms struct {
 type ConnectorType int
 
 const (
-	App ConnectorType = iota + 1
+	API ConnectorType = iota + 1
 	Database
 	File
 	FileStorage
+	MessageBroker
 	SDK
-	Stream
+	Webhook
 )
 
 // Scan implements the sql.Scanner interface.
@@ -767,18 +768,20 @@ func (typ *ConnectorType) Scan(src any) error {
 	}
 	var t ConnectorType
 	switch s {
-	case "App":
-		t = App
+	case "API":
+		t = API
 	case "Database":
 		t = Database
 	case "File":
 		t = File
 	case "FileStorage":
 		t = FileStorage
+	case "MessageBroker":
+		t = MessageBroker
 	case "SDK":
 		t = SDK
-	case "Stream":
-		t = Stream
+	case "Webhook":
+		t = Webhook
 	default:
 		return fmt.Errorf("invalid state.ConnectionType: %s", s)
 	}
@@ -800,18 +803,20 @@ func (typ ConnectorType) String() string {
 // It returns an error if typ is not a valid ConnectorType.
 func (typ ConnectorType) Value() (driver.Value, error) {
 	switch typ {
-	case App:
-		return "App", nil
+	case API:
+		return "API", nil
 	case Database:
 		return "Database", nil
 	case File:
 		return "File", nil
 	case FileStorage:
 		return "FileStorage", nil
+	case MessageBroker:
+		return "MessageBroker", nil
 	case SDK:
 		return "SDK", nil
-	case Stream:
-		return "Stream", nil
+	case Webhook:
+		return "Webhook", nil
 	}
 	return nil, fmt.Errorf("not a valid ConnectorType: %d", typ)
 }

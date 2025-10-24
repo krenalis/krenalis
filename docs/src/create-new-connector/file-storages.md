@@ -84,7 +84,7 @@ The `FileStorageInfo` type describes information about the file storage connecto
 
 - `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "s3", "http", "sftp".
 - `Label`: display label in the Admin console, typically the storage's name (e.g. "S3", "HTTP", "SFTP").
-- `Categories`: the categories that the connector falls into. There must be at least one category.
+- `Categories`: the categories the connector belongs to. There must be at least one category, but for a file storage connector it should be only `meergo.CategoryFileStorage`.
 
 This information is passed to the `RegisterFileStorage` function that, executed during package initialization, registers the file storage connector:
 
@@ -93,6 +93,7 @@ func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
 		Code:          "s3",
 		Label:         "S3",
+        Categories:    meergo.CategoryFileStorage,
 		AsSource:      true,
 		AsDestination: true,
 	}, New)

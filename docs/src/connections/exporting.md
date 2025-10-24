@@ -10,7 +10,7 @@ The export of Meergo users to an app is performed through a user export action o
 
 When executed, this action determines the matches between Meergo users and app users, and it then updates the app users' properties specified in the action (or creates a new user if one did not already exist in the app) with the values returned by the action's transformation.
 
-In this scenario, therefore, **Meergo represents the authoritative source of data on the app**, **limited to the exported users** (determined by the filter, the matching and the export mode) and **limited to the properties exported to the app** (determined by the action transformation and the app connector).
+In this scenario, therefore, **Meergo represents the authoritative source of data on the app**, **limited to the exported users** (determined by the filter, the matching and the export mode) and **limited to the properties exported to the app** (determined by the action transformation and the API connector).
 
 > Note that it is possible to specify for an export action whether to update only users already existing on the app, create only new ones, or perform both operations,s depending on the match result.
 

@@ -27,7 +27,7 @@ import {
 	AccessKeyResponse,
 	ActionErrorsResponse,
 	ActionSchemasResponse,
-	AppUsersResponse,
+	APIUsersResponse,
 	AbsolutePathResponse,
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
@@ -517,12 +517,12 @@ class Connections {
 		);
 	};
 
-	appUsers = async (
+	apiUsers = async (
 		connection: number,
 		schema: ObjectType,
 		filter: Filter | null,
 		cursor?: string,
-	): Promise<AppUsersResponse> => {
+	): Promise<APIUsersResponse> => {
 		let params = [];
 		params.push(['schema', JSON.stringify(schema)]);
 		if (filter != null) {

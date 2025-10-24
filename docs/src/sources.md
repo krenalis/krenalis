@@ -49,7 +49,7 @@ Customer and event data collected from various sources can be stored in real-tim
   <li><a href="sources/java">{{ Image("Java", "java.svg") }} Java</a></li>
   <li><a href="sources/nodejs">{{ Image("Node.js", "node.svg") }} Node.js</a></li>
   <li><a href="sources/python">{{ Image("Python", "python.svg") }} Python</a></li>
-  <li><a href="sources/meergoapi">{{ Image("Meergo API", "meergo-api.svg") }} Meergo API</a></li>
+  <li><a href="sources/webhook">{{ Image("Webhook", "webhook.svg") }} Webhook</a></li>
 </ul>
 
 ### Need more sources?

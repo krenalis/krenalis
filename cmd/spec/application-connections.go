@@ -14,13 +14,13 @@ import (
 func init() {
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "connections/apps",
-		Name:        "Apps",
-		Description: "These endpoints are specific to app connections.",
+		ID:          "connections/applications",
+		Name:        "Applications",
+		Description: "These endpoints are specific to **application API** connections and cannot be used with application SDK or webhook connections.",
 		Endpoints: []*Endpoint{
 			{
-				Name: "Retrieve app users",
-				Description: "Retrieves users directly from the app. These are the users as they appear in the app.\n\n" +
+				Name: "Retrieve users",
+				Description: "Retrieves users directly from an application, reflecting their current state in that application.\n\n" +
 					"For users that have already been imported into the workspace, refer to the [Users](users) endpoints.",
 				Method: GET,
 				URL:    "/v1/connections/:id/users",
@@ -30,7 +30,7 @@ func init() {
 						Type:           types.Int(32),
 						Prefilled:      "1371036433",
 						CreateRequired: true,
-						Description:    "The ID of the app connection from which to read users.",
+						Description:    "The ID of the API connection from which to read users.",
 					},
 					{
 						Name:           "schema",
@@ -57,7 +57,7 @@ func init() {
 							Name:        "users",
 							Type:        types.Array(types.Map(types.JSON())),
 							Prefilled:   `[ { "id": "30cae655-4f86-4696-ae2c-2c9105b282ba" } ]`,
-							Description: "The app users from the provided cursor.",
+							Description: "The application users from the provided cursor.",
 						},
 						{
 							Name:        "cursor",
@@ -70,12 +70,12 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
-					{422, SchemaNotAligned, "schema is not aligned with the app's source schema"},
+					{422, SchemaNotAligned, "schema is not aligned with the API's source schema"},
 				},
 			},
 			{
 				Name:        "Preview send event",
-				Description: "Returns a preview of an event as it would be sent to an app, but no event is actually sent.",
+				Description: "Returns a preview of an event as it would be sent to an application API, but no event is actually sent.",
 				Method:      POST,
 				URL:         "/v1/connections/:id/preview-send-event",
 				Parameters: []types.Property{
@@ -84,21 +84,21 @@ func init() {
 						Type:           types.Int(32),
 						Prefilled:      "1371036433",
 						CreateRequired: true,
-						Description:    "The ID of the destination app connection through which the event would be sent.",
+						Description:    "The ID of the destination API connection through which the event would be sent.",
 					},
 					{
 						Name:           "type",
 						Type:           types.Text(),
 						Prefilled:      `"addToCart"`,
 						CreateRequired: true,
-						Description:    "The ID of the event type to be sent. It must be one of the event types supported by the app connection.",
+						Description:    "The ID of the event type to be sent. It must be one of the event types supported by the API connection.",
 					},
 					{
 						Name:           "event",
 						Type:           types.JSON(),
 						Prefilled:      `{...}`,
 						CreateRequired: true,
-						Description: "The event (as it would be received from an SDK connection) that is sent to the app. " +
+						Description: "The event (as it would be received from an SDK or webhook connection) that is sent to the API. " +
 							"It must adhere to the [event schema](events#get-event-schema).",
 					},
 					{
@@ -126,7 +126,7 @@ func init() {
 			},
 			{
 				Name:        "Get user schemas",
-				Description: "Returns the source and destination user schema of a connection. The connection must be an app connection that supports users.",
+				Description: "Returns the source and destination user schema of an API connection. The connection must be an API connection that supports users.",
 				Method:      GET,
 				URL:         "/v1/connections/:id/schemas/user",
 				Parameters: []types.Property{
@@ -135,7 +135,7 @@ func init() {
 						Type:           types.Int(32),
 						Prefilled:      "1371036433",
 						CreateRequired: true,
-						Description:    "The ID of the app connection. It must support users.",
+						Description:    "The ID of the API connection. It must support users.",
 					},
 				},
 				Response: &Response{
@@ -157,7 +157,7 @@ func init() {
 								},
 							}),
 							Prefilled:   `...`,
-							Description: "The user schemas of the app connection.",
+							Description: "The user schemas of the API connection.",
 						},
 					},
 				},
@@ -168,7 +168,7 @@ func init() {
 			},
 			{
 				Name:        "Get event schema",
-				Description: "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
+				Description: "Returns the schema for a specified event type in a connection. The connection must be a destination API connection that supports events.",
 				Method:      GET,
 				URL:         "/v1/connections/:id/schemas/event",
 				Parameters: []types.Property{
@@ -177,7 +177,7 @@ func init() {
 						Type:           types.Int(32),
 						Prefilled:      "1371036433",
 						CreateRequired: true,
-						Description:    "The ID of the destination app connection. It must support events.",
+						Description:    "The ID of the destination API connection. It must support events.",
 					},
 					{
 						Name:           "type",

@@ -52,7 +52,7 @@ If the `Patterns` slice is omitted or left empty for an endpoint group, it defau
 
 ## Rate limit
 
-Meergo applies client-side rate limits to avoid hitting the limits imposed by an app. When you register your connector you must provide them using the `RateLimit` field of `EndpointGroup`.
+Meergo applies client-side rate limits to avoid hitting the limits imposed by an API. When you register your connector you must provide them using the `RateLimit` field of `EndpointGroup`.
 
 A `RateLimit` defines how quickly requests can be made and optionally how many can be in flight at the same time:
 
@@ -111,14 +111,14 @@ EndpointGroups: []meergo.EndpointGroup{
 
 ## Retry policy
 
-App connectors can use retry policies to manage retries of idempotent HTTP requests based on the app's response status code.
+API connectors can use retry policies to manage retries of idempotent HTTP requests based on the API's response status code.
 
 You only need to set up the retry policy when you register the connector. After that, use the provided HTTP client to make calls, and Meergo will handle retries using the policy you set.
 
 Here's an example of how to register a connector with two retry strategies: one that uses the "Retry-After" header for status code 429 (Too Many Requests) and another that uses an exponential backoff strategy for status codes 500 (Internal Server Error) and 503 (Service Unavailable).
 
 ```go
-meergo.RegisterApp(meergo.AppInfo{
+meergo.RegisterAPI(meergo.APISpec{
     EndpointGroups: []meergo.EndPointGroup{
         RetryPolicy: meergo.RetryPolicy{
             "429":     meergo.RetryAfterStrategy(),
@@ -132,11 +132,11 @@ meergo.RegisterApp(meergo.AppInfo{
 
 The `RetryPolicy` field specifies the retry policy for the connector. It maps one or more HTTP status codes to the corresponding retry strategy. If an idempotent HTTP request fails, Meergo will look up the status code in the connector policy and retry the request using the corresponding strategy.
 
-You can use the strategies provided by Meergo, so you do not have to implement it, or create your own. If the app documentation does not specify how to handle errors, do not set a retry policy. Meergo will use a default policy in that case.
+You can use the strategies provided by Meergo, so you do not have to implement it, or create your own. If the API documentation does not specify how to handle errors, do not set a retry policy. Meergo will use a default policy in that case.
 
 ### Retriable requests
 
-Only idempotent requests can be retried. The `Do` method of the HTTP client passed to a connector decides whether a request is retriable using the same rules as Go's standard library (see [http.Transport](https://pkg.go.dev/net/http#Transport)).
+Only idempotent requests can be retried. The `Do` method of the HTTP client passed to a connector decides whether a request is retriable using the same rules as Go's standard library (see [http.Transport](https://pkg.go.dev/net/http#Transport) for details).
 
 A request is considered retriable if:
 
@@ -152,7 +152,7 @@ If the idempotency header is present but is empty (`nil` or empty slice), the re
 
 #### Example
 
-If your app supports idempotency and requires an idempotency key in the header called `Idempotency-Key`, you can do this:
+If the API supports idempotency and requires an idempotency key in the header called `Idempotency-Key`, you can do this:
 
 ```go
 // Mark the request as idempotent.
@@ -176,7 +176,7 @@ req.GetBody = func() (io.ReadCloser, error) {
 
 #### Idempotent events
 
-Events are usually idempotent, meaning apps don't require an idempotency key to receive them. Instead, an app generally uses each event's unique ID for deduplication.
+Events are usually idempotent, meaning APIs don't require an idempotency key to receive them. Instead, an API generally uses each event's unique ID for deduplication.
 
 However, even if an idempotency key is not needed, the request must still be marked as idempotent. You can mark the request as idempotent without sending the header like this:
 
@@ -188,11 +188,11 @@ req.GetBody = func() (io.ReadCloser, error) {
 }
 ```
 
-Setting the header value to `nil` tells the HTTP client that the request is idempotent and should be retried on failure, but the header itself will not be sent to the app.
+Setting the header value to `nil` tells the HTTP client that the request is idempotent and should be retried on failure, but the header itself will not be sent to the API.
 
 ### Retry strategies
 
-Meergo offers Constant, Exponential, RetryAfter, and Header strategies for managing retries. Jitter is automatically added to the wait time calculated by strategies to introduce variability.
+Meergo offers **Constant**, **Exponential**, **RetryAfter**, and **Header** strategies for managing retries. Jitter is automatically added to the wait time calculated by strategies to introduce variability.
 
 #### Constant strategy
 
@@ -254,7 +254,7 @@ type RetryStrategy func(res *http.Response, retries int) (reason FailureReason, 
 
 This function takes the failed response and the number of retries so far, and returns a failure reason and time to wait before retrying. Parameters include: 
 
-- `res`: The HTTP response from the app.
+- `res`: The HTTP response from the API.
 - `retries`: The number of times the request has been retried, starting from 0.
 - `reason`: The reason of the failure.
 - `waitTime`: The amount of time to wait before retrying.
@@ -265,7 +265,7 @@ Do not add jitter to the wait time; it is added automatically.
 
 The failure reason determines whether a request is eligible for retry and how it affects the rate control system: 
 
-* `meergo.PermanentFailure`: the request cannot be retried, and the error contributes to the app’s error rate.
+* `meergo.PermanentFailure`: the request cannot be retried, and the error contributes to the  API's error rate.
 * `meergo.NetFailure`: the request can be retried, and the error still counts toward the error rate.
 * `meergo.Unauthorized`: the request can be retried if the connector supports OAuth.
 * `meergo.Slowdown`: the request can be retried. Upon receiving the first `Slowdown`, request rate is significantly reduced; further slowdowns also contribute to the error rate.

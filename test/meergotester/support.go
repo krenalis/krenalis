@@ -18,12 +18,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/meergo/analytics-go"
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/types"
 
 	"github.com/google/uuid"
+	"github.com/meergo/analytics-go"
 )
 
 var defaultStrategy Strategy = "Conversion"
@@ -251,11 +251,11 @@ func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSe
 	return id
 }
 
-func (c *Meergo) CreateMeergoAPISource(name string, linkedConnections []int) int {
+func (c *Meergo) CreateWebhookSource(name string, linkedConnections []int) int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
-		Connector:         "meergo-api",
+		Connector:         "webhook",
 		LinkedConnections: linkedConnections,
 	})
 }

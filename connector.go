@@ -25,41 +25,38 @@ const (
 	// (defined below) must also be changed accordingly, as well as the various
 	// references to the categories under 'doc'.
 
-	CategoryAnalytics Categories = 1 << iota
-	CategorySDKAndAPI
-	CategoryCRM
+	CategoryWebsite Categories = 1 << iota
+	CategorySDK
+	CategoryWebhook
 	CategoryDatabase
-	CategoryEcommerce
-	CategoryEventStreaming
 	CategoryFile
 	CategoryFileStorage
-	CategoryMarketing
-	CategoryTest
+	CategoryMessageBroker
+	CategorySaaS
+	CategoryTesting
 )
 
 // String returns the string representation of a single category.
 func (c Categories) String() string {
 	switch c {
-	case CategoryAnalytics:
-		return "Analytics"
-	case CategorySDKAndAPI:
-		return "SDK & API"
-	case CategoryCRM:
-		return "CRM"
+	case CategoryWebsite:
+		return "Website"
+	case CategorySDK:
+		return "SDK"
+	case CategoryWebhook:
+		return "Webhook"
 	case CategoryDatabase:
 		return "Database"
-	case CategoryEcommerce:
-		return "E-commerce"
-	case CategoryEventStreaming:
-		return "Event streaming"
 	case CategoryFile:
 		return "File"
 	case CategoryFileStorage:
-		return "File storage"
-	case CategoryMarketing:
-		return "Marketing"
-	case CategoryTest:
-		return "Test"
+		return "File Storage"
+	case CategoryMessageBroker:
+		return "Message Broker"
+	case CategorySaaS:
+		return "SaaS"
+	case CategoryTesting:
+		return "Testing"
 	default:
 		return fmt.Sprintf("<unexpected category %d>", c)
 	}
@@ -75,8 +72,8 @@ type ConnectorRoleDocumentation struct {
 	Overview string
 }
 
-// ConnectorInfo is the interface implemented by connector infos.
-type ConnectorInfo interface {
+// ConnectorSpec is the interface implemented by connector specifications.
+type ConnectorSpec interface {
 	ReflectType() reflect.Type
 }
 

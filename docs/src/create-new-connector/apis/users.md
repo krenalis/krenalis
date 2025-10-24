@@ -4,19 +4,19 @@
 
 # Users
 
-An app connector, if the related app allows it, can read, create, and update users within the app, enabling Meergo to import and export users.
+An API connector, if the related API allows it, can read, create, and update users within the API, enabling Meergo to import and export users.
 
 Firstly, include the `TargetUser` flag during connector registration as the targets for source and destination:
 
 ```go
-meergo.RegisterApp(meergo.AppInfo{
+meergo.RegisterAPI(meergo.APISpec{
     ...
-    AsSource: &meergo.AsAppSource{
+    AsSource: &meergo.AsAPISource{
         ...
         Targets: meergo.TargetUser,
         ...
     },
-    AsDestination: &meergo.AsAppDestination{
+    AsDestination: &meergo.AsAPIDestination{
         ...
         Targets: meergo.TargetUser,
         ...
@@ -25,7 +25,7 @@ meergo.RegisterApp(meergo.AppInfo{
 }, New)
 ```
 
-After that, to read, update, and create app records, the connector must implement the `Records` and `Upserts` methods. These methods take the target they should operate on as an argument, which currently can only be `TargetUser`.
+After that, to read, update, and create API records, the connector must implement the `Records` and `Upserts` methods. These methods take the target they should operate on as an argument, which currently can only be `TargetUser`.
 
 Here, we'll use the term "records" to refer to users.
 
@@ -33,7 +33,7 @@ Let's start by looking at how to read records using the `Records` method.
 
 ## Read records
 
-Meergo calls the connector's `Records` method to read records from the app:
+Meergo calls the connector's `Records` method to read records from the API:
 
 ```go
 Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error)
@@ -44,7 +44,7 @@ The parameters for this method are:
 - `ctx`: The context.
 - `target`: Specifies the type of entities to return. Currently, only `TargetUser` is supported.
 - `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
-- `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.Ho corretto la documen
+- `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
 - `cursor`: Indicates the starting position for reading records. This is the cursor value from a previous call in a paginated query. For the first call, it is empty.
 - `schema`: The user source schema containing only the properties that must be returned. This schema is derived from the most recently returned result of `RecordSchema`.
 
@@ -64,16 +64,16 @@ type Record struct {
 }
 ```
 
-- `ID`: The record's identifier in the app. It must be a valid, non-empty UTF-8 string.
+- `ID`: The record's identifier in the API. It must be a valid, non-empty UTF-8 string.
 - `Properties`: The record's properties and their values. Additional properties not requested are not considered. The connector may omit a property for a user if that user does not have that property. This is distinct from a property with a `null` value.
 - `LastChangeTime`:  The date and time the record was last changed. It can have any time zone. The precision of this time is limited to microseconds; any precision beyond microseconds will be truncated. If the date is unknown, return the zero time `time.Time{}`.
-{# - `Associations`: Identifiers of the groups the user belongs to, if the record refers to a user, or identifiers of the users that belong to the group. If none exist, or if the app only supports users or groups, indicate `nil` or an empty slice. #}
+{# - `Associations`: Identifiers of the groups the user belongs to, if the record refers to a user, or identifiers of the users that belong to the group. If none exist, or if the API only supports users or groups, indicate `nil` or an empty slice. #}
 
-If an error occurs, `Records` must return a non-nil error, and it should not be an EOF error. 
+If an error occurs, `Records` must return a non-nil error, and it should not be an [io.EOF](https://pkg.go.dev/io#EOF) error. 
 
-### Making HTTP calls to the app
+### Sending requests to the API
 
-When a connector instance is created, an HTTP client is passed to the constructor through the `AppEnv.HTTPClient` field. This client should be used by the connector's methods to make HTTP calls to the app. It takes care of:
+When a connector instance is created, an HTTP client is passed to the constructor through the `APIEnv.HTTPClient` field. This client should be used by the connector's methods to make HTTP requests to the API. It takes care of:
 
 - Retrying calls in case of an error, if the request allows for it.
 - Proper resource management.
@@ -112,7 +112,7 @@ type HTTPClient interface {
 }
 ```
 
-If you need to make direct HTTP calls without using the provided client, the `ClientSecret` and `AccessToken` methods can be used by OAuth connectors to obtain the client secret and an access token for authentication with the app.
+If you need to make direct HTTP requests without using the provided client, the `ClientSecret` and `AccessToken` methods can be used by OAuth connectors to obtain the client secret and an access token for authentication with the API.
 
 If a method from `HTTPClient` returns an error, connector methods should return that exact error, without any modification or wrapping.
 
@@ -124,19 +124,19 @@ To update or create a record, Meergo uses the connector's `Upsert` method:
 Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error
 ```
 
-This method is used during the export process to update existing users or create new ones in the application. The target parameter must be set to `TargetUser` to indicate that the operation applies to users.
+This method is used during the export process to update existing users or create new ones in the API. The target parameter must be set to `TargetUser` to indicate that the operation applies to users.
 
-The `records` parameter contains a collection of records to update or create. **You don’t need to process all the records in the collection at once.** Instead, only handle as many as you can send in a single HTTP request to the application. Even if the application supports processing only one record per request, that's fine. Meergo will automatically call the method again for any records that remain unprocessed.
+The `records` parameter contains a collection of records to update or create. **You don’t need to process all the records in the collection at once.** Instead, only handle as many as you can send in a single HTTP request to the API. Even if the API supports processing only one record per request, that's fine. Meergo will automatically call the method again for any records that remain unprocessed.
 
 As soon as an iteration over the records parameter completes—either when `First` returns or when the iteration over the sequence returned by `All` or `Same` ends—Meergo can immediately start a new call to `Upsert` with the remaining unconsumed records, even if previous `Upsert` calls are still in progress.
 
-This ensures that only one iteration over a given `Records` sequence is active at any time, but allows multiple concurrent HTTP requests to the application, improving throughput and efficiency.
+This ensures that only one iteration over a given `Records` sequence is active at any time, but allows multiple concurrent HTTP requests to the API, improving throughput and efficiency.
 
 Each call to `Upsert` must consume at least one record from the provided `records` sequence (by calling `First`, `All`, or `Same`). If the implementation cannot consume any record, it must return an error. If such an error is returned, the iteration is aborted and no further calls to `Upsert` will be made for the remaining records.
 
 #### Key concept: processed records
 
-Meergo considers a record processed as soon as it has been read from the `Records` collection. To better understand how this works, let’s first explore the methods provided by the `Records` interface. Afterward, we’ll review how to use these methods effectively in various scenarios.
+Meergo considers a record processed as soon as it has been read from the `Records` collection. To better understand how this works, let's first explore the methods provided by the `Records` interface. Afterward, we'll review how to use these methods effectively in various scenarios.
 
 ```go
 // Records provides access to a non-empty sequence of records to be created or
@@ -183,8 +183,8 @@ type Records interface {
 	Discard(err error)
 
 	// First returns the first record. The record's properties may be modified.
-	// Use it instead of All or Some when the app only needs to create or update one
-	// record at a time.
+	// Use it instead of All or Some when the API only needs to create or update
+	// one record at a time.
 	First() Record
 
 	// Postpone postpones the current record in the iteration and marks it as
@@ -212,12 +212,12 @@ type Records interface {
 
 #### Sending one record at a time
 
-The most common scenario involves an application whose API can handle only one record (user) per request. In this case, you should use the `First` method of `Records` to read only the first record.
+The most common scenario involves an API can handle only one record (user) per request. In this case, you should use the `First` method of `Records` to read only the first record.
 
 Below is an example implementation:
 
 ```go
-func (my *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (my *MyAPI) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
     // Read the first record.
     record := records.First()
@@ -242,7 +242,7 @@ func (my *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meer
 
     // Create the HTTP request.
     req, _ := http.NewRequestWithContext(ctx, method,
-        "https://api.myapp.com"+path, bytes.NewReader(body.Bytes()))
+        "https://api.myapi.com"+path, bytes.NewReader(body.Bytes()))
 
     // Mark the request as idempotent for updates.
     if method == http.MethodPut {
@@ -261,7 +261,7 @@ func (my *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meer
 
     // Check the response status code.
     if res.StatusCode != 200 {
-        return fmt.Errorf("app server response: %s", res.Status)
+        return fmt.Errorf("API server response: %s", res.Status)
     }
 
     return nil
@@ -280,12 +280,12 @@ This method ensures that only one record is processed per request, aligning with
 
 ### Batch of records of the same type (update or create)
 
-If the application allows processing multiple records in a batch but requires them to be of the same type (either all updates or all creates), you can use the `Peek` method to peek the first record without consuming it. This helps you determine whether the batch should execute an update or a create operation. After that, you can iterate over `records.Same()` to read only records of the same type as the first record.
+If the API allows processing multiple records in a batch but requires them to be of the same type (either all updates or all creates), you can use the `Peek` method to peek the first record without consuming it. This helps you determine whether the batch should execute an update or a create operation. After that, you can iterate over `records.Same()` to read only records of the same type as the first record.
 
 Below is an example implementation:
 
 ```go
-func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (m *MyAPI) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
     // Peek at the first record to determine the type of request.
     record, _ := records.Peek()
@@ -321,7 +321,7 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
 
     // Create the HTTP request.
     req, _ := http.NewRequestWithContext(ctx, method,
-        "https://api.myapp.com/v1/customers/batch", bytes.NewReader(body.Bytes()))
+        "https://api.myapi.com/v1/customers/batch", bytes.NewReader(body.Bytes()))
 
     // Mark the request as idempotent for updates.
     if method == http.MethodPut {
@@ -360,16 +360,16 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
    Use `records.Same()` to read only records of the same type as the first one. This ensures all records in the batch are valid for the chosen operation.
 
 * **Batch size limitation**\
-   The example demonstrates breaking the loop once the maximum number of records (`bodyMaxRecords`) is reached. This ensures the request complies with the application's API limits.
+   The example demonstrates breaking the loop once the maximum number of records (`bodyMaxRecords`) is reached. This ensures the request complies with the API's limits.
 
 ### Batch of records of mixed types (create and update)
 
-When the application allows sending multiple records of different types (both records to create and records to update) in a single HTTP request, you can iterate over all records using `records.All()`.
+When the API allows sending multiple records of different types (both records to create and records to update) in a single HTTP request, you can iterate over all records using `records.All()`.
 
 Here is an example implementation:
 
 ```go
-func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (m *MyAPI) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
     // Prepare request body.
     var body bytes.Buffer
@@ -398,7 +398,7 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
 
     // Create the HTTP request.
     req, _ := http.NewRequestWithContext(ctx, http.MethodPost,
-        "https://api.myapp.com/v1/customers/batch", &body)
+        "https://api.myapi.com/v1/customers/batch", &body)
 
     // Send the HTTP request.
     res, err := m.httpClient.Do(req)
@@ -425,9 +425,9 @@ func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meerg
    If the record has an `ID`, it's an update, if `ID` is empty, it's a creation.
 
 * **Limit on records**\
-   The loop stops once the maximum number of records (`bodyMaxRecords`) is reached, ensuring that the body size does not exceed the application’s limit.
+   The loop stops once the maximum number of records (`bodyMaxRecords`) is reached, ensuring that the body size does not exceed the API's limit.
 
-This approach allows you to efficiently handle mixed record types (create and update) in a single batch request, reducing the number of API calls required.
+This approach allows you to efficiently handle mixed record types (create and update) in a single batch request, reducing the number of API requests required.
 
 ### Handling body size limits
 
@@ -460,7 +460,7 @@ Below is an example implementation:
         json.Encode(&body, record.Properties)
         body.WriteString(`}`)
 
-        // Stop if body exceeds app size limit.
+        // Stop if body exceeds the API's size limit.
         if body.Len() + len(`]}`) > bodySizeLimit {
             body.Truncate(size)
             records.Postpone()
@@ -505,12 +505,12 @@ If, during the iteration over the record sequence, a record cannot be processed�
     }
 ```
 
-Unlike postponed records, **discarded** records will not be retried in future calls to `Upsert`.
+Unlike postponed records, **discarded** records will not be retried in future requests to `Upsert`.
 
-If a validation error occurs _after_ sending the request to the app, you should return a `RecordsError`. This type of error lets you indicate which records failed and why:
+If a validation error occurs _after_ sending the request to the API, you should return a `RecordsError`. This type of error lets you indicate which records failed and why:
 
 ```go
-// RecordsError is returned by the Upsert method of an app connector when only
+// RecordsError is returned by the Upsert method of an API connector when only
 // some records have failed or when the method can distinguish errors based on
 // individual records. It maps record indices to their respective errors.
 type RecordsError map[int]error
@@ -524,17 +524,17 @@ If the error affects all records—such as when the entire request fails—you s
   If a record fails validation before sending, you can discard it during iteration using `records.Discard(err)`. Discarded records are removed from processing entirely and will not be retried in future calls to `Upsert`.
 
 * **Handling individual record errors**\
-  When certain records fail due to validation issues (e.g., returned by the app), you can return a `RecordsError` that maps each failed record to its specific error, instead of returning a single error for the whole batch.
+  When certain records fail due to validation issues (e.g., returned by the API), you can return a `RecordsError` that maps each failed record to its specific error, instead of returning a single error for the whole batch.
 
 * **Error index mapping**\
   Each key in the `RecordsError` type represents the index of a failed record (in the order they were consumed and likely sent in the HTTP request), and each value holds the corresponding error.
 
 ### When to validate records
 
-When it comes to record validation, there are a few possible scenarios depending on the target app:
+When it comes to record validation, there are a few possible scenarios depending on the target API:
 
-* **The app never returns validation errors**. In this case, your connector should validate records as much as possible before sending them. This allows users to quickly understand why certain records aren't accepted by the app.
+* **The API never returns validation errors**. In this case, your connector should validate records as much as possible before sending them. This allows users to quickly understand why certain records aren't accepted by the API.
 
-* **The app validates records but only returns a single error in the response**, typically the first error encountered. In this case, it's important that your connector performs validation ahead of time — otherwise, a validation error on a single record would cause all records in the same request to be marked as invalid. If the app still returns a validation error, you should return a generic error, which will mark all records as invalid.
+* **The API validates records but only returns a single error in the response**, typically the first error encountered. In this case, it's important that your connector performs validation ahead of time — otherwise, a validation error on a single record would cause all records in the same request to be marked as invalid. If the API still returns a validation error, you should return a generic error, which will mark all records as invalid.
 
-* **The app validates records and returns a separate error for each invalid record**. In this case, you can return a `RecordsError` that maps each failed record to its corresponding error.
+* **The API validates records and returns a separate error for each invalid record**. In this case, you can return a `RecordsError` that maps each failed record to its corresponding error.

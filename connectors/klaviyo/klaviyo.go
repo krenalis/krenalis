@@ -41,11 +41,11 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterApp(meergo.AppInfo{
+	meergo.RegisterAPI(meergo.APISpec{
 		Code:       "klaviyo",
 		Label:      "Klaviyo",
-		Categories: meergo.CategoryMarketing,
-		AsSource: &meergo.AsAppSource{
+		Categories: meergo.CategorySaaS,
+		AsSource: &meergo.AsAPISource{
 			Targets:     meergo.TargetUser,
 			HasSettings: true,
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -53,7 +53,7 @@ func init() {
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAppDestination{
+		AsDestination: &meergo.AsAPIDestination{
 			Targets:     meergo.TargetEvent | meergo.TargetUser,
 			HasSettings: true,
 			SendingMode: meergo.Server,
@@ -62,7 +62,7 @@ func init() {
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.AppTerms{
+		Terms: meergo.APITerms{
 			User:  "client",
 			Users: "clients",
 		},
@@ -91,7 +91,7 @@ var retryPolicy = meergo.RetryPolicy{
 const apiRevision = "2024-07-15"
 
 // New returns a new connector instance for Klaviyo.
-func New(env *meergo.AppEnv) (*Klaviyo, error) {
+func New(env *meergo.APIEnv) (*Klaviyo, error) {
 	c := Klaviyo{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -103,7 +103,7 @@ func New(env *meergo.AppEnv) (*Klaviyo, error) {
 }
 
 type Klaviyo struct {
-	env      *meergo.AppEnv
+	env      *meergo.APIEnv
 	settings *innerSettings
 }
 
@@ -137,7 +137,7 @@ func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 }
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
-// events to the app, without actually sending it.
+// events to the API, without actually sending it.
 func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
 	return ky.sendEvents(ctx, events, true)
 }
@@ -412,7 +412,7 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role
 	return schema, nil
 }
 
-// SendEvents sends events to the app.
+// SendEvents sends events to the API.
 func (ky *Klaviyo) SendEvents(ctx context.Context, events meergo.Events) error {
 	_, err := ky.sendEvents(ctx, events, false)
 	return err
@@ -444,7 +444,7 @@ func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Valu
 	return ui, nil
 }
 
-// Upsert updates or creates records in the app for the specified target.
+// Upsert updates or creates records in the API for the specified target.
 func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	record := records.First()
@@ -571,7 +571,7 @@ const maxBodyEvents = 1000
 
 var emailRegex = regexp.MustCompile(`(?i)^(?:[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)])$`)
 
-// sendEvents sends the given events to the app and returns the HTTP request
+// sendEvents sends the given events to the API and returns the HTTP request
 // that was sent. If preview is true, the HTTP request is constructed but not
 // sent, and is only returned. If all events are discarded due to validation
 // failures, it returns nil for the request.
@@ -579,7 +579,7 @@ var emailRegex = regexp.MustCompile(`(?i)^(?:[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~
 // When preview is true and a non-nil request is returned, the caller is
 // responsible for eventually closing the request body.
 //
-// If an error occurs while sending the events to the app, a nil *http.Request
+// If an error occurs while sending the events to the API, a nil *http.Request
 // and the error are returned.
 //
 // An event is discarded if it does not satisfy these validations:

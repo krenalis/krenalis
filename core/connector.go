@@ -68,12 +68,13 @@ type DestinationConnector struct {
 type ConnectorType int
 
 const (
-	App ConnectorType = iota + 1
+	API ConnectorType = iota + 1
 	Database
 	File
 	FileStorage
+	MessageBroker
 	SDK
-	Stream
+	Webhook
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -86,18 +87,20 @@ func (typ ConnectorType) MarshalJSON() ([]byte, error) {
 // It panics if typ is not a valid ConnectorType value.
 func (typ ConnectorType) String() string {
 	switch typ {
-	case App:
-		return "App"
+	case API:
+		return "API"
 	case Database:
 		return "Database"
 	case File:
 		return "File"
 	case FileStorage:
 		return "FileStorage"
+	case MessageBroker:
+		return "MessageBroker"
 	case SDK:
 		return "SDK"
-	case Stream:
-		return "Stream"
+	case Webhook:
+		return "Webhook"
 	}
 	panic("invalid connector type")
 }
@@ -114,22 +117,24 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an api.ConnectorType value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an core.ConnectorType value", v)
 	}
 	var t ConnectorType
 	switch s {
-	case "App":
-		t = App
+	case "API":
+		t = API
 	case "Database":
 		t = Database
 	case "File":
 		t = File
 	case "FileStorage":
 		t = FileStorage
+	case "MessageBroker":
+		t = MessageBroker
 	case "SDK":
 		t = SDK
-	case "Stream":
-		t = Stream
+	case "Webhook":
+		t = Webhook
 	default:
 		return fmt.Errorf("json: invalid core.ConnectorType: %s", s)
 	}

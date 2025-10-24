@@ -189,15 +189,16 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
       <li class="{{ expandable(`create-new-connector/`) }}">
         {{ item(`create-new-connector`, `Create new connector`) }}
         <ul>
-          <li class="{{ expandable(`create-new-connector/apps/`) }}">
-            {{ item(`create-new-connector/apps`, `Apps`) }}
+          <li class="{{ expandable(`create-new-connector/apis/`) }}">
+            {{ item(`create-new-connector/apis`, `APIs`) }}
             <ul>
-              <li>{{ item(`create-new-connector/apps/users`, `Users`) }}</li>
-              <li>{{ item(`create-new-connector/apps/send-events`, `Send events`) }}</li>
-              <li>{{ item(`create-new-connector/apps/oauth`, `OAuth`) }}</li>
-              <li>{{ item(`create-new-connector/apps/rate-limits-and-retry`, `Rate limits and retry`) }}</li>
+              <li>{{ item(`create-new-connector/apis/users`, `Users`) }}</li>
+              <li>{{ item(`create-new-connector/apis/send-events`, `Send events`) }}</li>
+              <li>{{ item(`create-new-connector/apis/oauth`, `OAuth`) }}</li>
+              <li>{{ item(`create-new-connector/apis/rate-limits-and-retry`, `Rate limits and retry`) }}</li>
             </ul>
           </li>
+          <li>{{ item(`create-new-connector/sdks`, `SDKs`) }}</li>
           <li>{{ item(`create-new-connector/databases`, `Databases`) }}</li>
           <li>{{ item(`create-new-connector/files`, `Files`) }}</li>
           <li>{{ item(`create-new-connector/file-storages`, `File storages`) }}</li>

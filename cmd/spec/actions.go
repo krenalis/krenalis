@@ -156,7 +156,7 @@ func init() {
 			},
 			{
 				Name: "Execute action",
-				Description: "Starts an action execution to import its users into the data warehouse or export the users in the data warehouse to the app, applying the action's filter and transformation.\n\n" +
+				Description: "Starts an action execution to import its users into the data warehouse or export the users in the data warehouse to the API, applying the action's filter and transformation.\n\n" +
 					"It returns immediately without waiting for the execution to complete. To track the progress, call the [Get execution](#get-execution) endpoint using the returned execution ID.\n\n" +
 					"The action must be enabled.",
 				Method: POST,

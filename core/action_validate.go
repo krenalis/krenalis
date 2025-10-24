@@ -80,11 +80,11 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	outSchema := action.OutSchema
 
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
-	dispatchEventsToApps := isDispatchingEventsToApps(v.connection.connector.typ, v.connection.role, v.target)
+	dispatchEventsToAPIs := isDispatchingEventsToAPIs(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
 
-	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToApps
+	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAPIs
 
 	// In cases where the input schema refers to events, that is when:
 	//
@@ -93,7 +93,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps
+	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs
 	if inSchemaIsEventSchema {
 		if inSchema.Valid() {
 			switch {
@@ -101,7 +101,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 				return errors.BadRequest("input schema must be invalid for actions that import user identities from events")
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for actions that import events into data warehouse")
-			case dispatchEventsToApps:
+			case dispatchEventsToAPIs:
 				return errors.BadRequest("input schema must be invalid for actions that send events to apps")
 			}
 		}
@@ -396,7 +396,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			return errors.BadRequest("incremental cannot be true for destination actions")
 		}
 		switch v.connection.connector.typ {
-		case state.App:
+		case state.API:
 		case state.Database, state.FileStorage:
 			if action.LastChangeTimeColumn == "" {
 				return errors.BadRequest("incremental requires a last change time column")
@@ -627,7 +627,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	}
 
 	// Check if the export options are needed.
-	needsExportOptions := v.connection.connector.typ == state.App &&
+	needsExportOptions := v.connection.connector.typ == state.API &&
 		v.connection.role == state.Destination && v.target == state.TargetUser
 	if needsExportOptions {
 		if action.ExportMode == "" {
@@ -648,7 +648,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	targetUsersOrGroups := v.target == state.TargetUser || v.target == state.TargetGroup
 
 	// Check that UpdateOnDuplicates is allowed.
-	updateOnDuplicatesAllowed := v.connection.connector.typ == state.App &&
+	updateOnDuplicatesAllowed := v.connection.connector.typ == state.API &&
 		v.connection.role == state.Destination && targetUsersOrGroups
 	if !updateOnDuplicatesAllowed && action.UpdateOnDuplicates {
 		return errors.BadRequest("update on duplicates is not allowed")
@@ -656,7 +656,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 
 	// Check the connections for which the transformation is prohibited.
 	transformationProhibited :=
-		(v.connection.role == state.Source && v.connection.connector.typ == state.SDK && v.target == state.TargetEvent) ||
+		(v.connection.role == state.Source && (v.connection.connector.typ == state.SDK || v.connection.connector.typ == state.Webhook) && v.target == state.TargetEvent) ||
 			(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
 	if transformationProhibited && action.Transformation != nil {
 		return errors.BadRequest("action cannot have a transformation")
@@ -665,7 +665,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	// Check if the transformation is mandatory, with at least one input
 	// property.
 	transformationMandatory := targetUsersOrGroups &&
-		(v.connection.connector.typ == state.App || v.connection.connector.typ == state.Database ||
+		(v.connection.connector.typ == state.API || v.connection.connector.typ == state.Database ||
 			(v.connection.role == state.Source && v.connection.connector.typ == state.FileStorage))
 	if transformationMandatory && action.Transformation == nil {
 		return errors.BadRequest("action must have a transformation")
@@ -725,7 +725,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 }
 
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
-// matching property when exporting users to an app.
+// matching property when exporting users to an API.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
 	// Only int, uint, uuid, and text types are allowed.
 	return k == types.TextKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind
@@ -819,7 +819,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		}
 		if role == state.Destination && io == "output" {
 			switch {
-			case typ == state.App && target == state.TargetEvent:
+			case typ == state.API && target == state.TargetEvent:
 				if p.UpdateRequired {
 					return fmt.Errorf("output action schema property %q cannot have UpdateRequired set to true", path)
 				}

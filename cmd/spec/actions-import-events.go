@@ -33,7 +33,7 @@ func init() {
 		ID:   "actions/import-events",
 		Name: "Import events",
 		Description: "This type of action imports events into the workspace's data warehouse. " +
-			"It operates on an SDK connection.",
+			"It operates on SDK and webhook connections.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
@@ -47,7 +47,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "230527183",
-						Description:    "The ID of the connection from which the events are received. It must be an SDK connection.",
+						Description:    "The ID of the connection from which the events are received. It must be an SDK or webhook connection.",
 					},
 					{
 						Name:           "target",
@@ -138,15 +138,15 @@ func init() {
 						},
 						{
 							Name:        "connectorType",
-							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
+							Type:        types.Text().WithValues("API", "Database", "FileStorage", "MessageBroker", "SDK", "Webhook"),
 							Prefilled:   `"SDK"`,
-							Description: "The type of the connection's connector. It is always `\"SDK\"` when the action imports events.",
+							Description: "The type of the connection's connector. It is always `\"SDK\"` or `\"Webhook\"` when the action imports events.",
 						},
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Prefilled:   "1371036433",
-							Description: "The ID of the connection from which the events are received. It is a source SDK connection.",
+							Description: "The ID of the connection from which the events are received. It is a source SDK or webhook connection.",
 						},
 						{
 							Name:        "connectionRole",

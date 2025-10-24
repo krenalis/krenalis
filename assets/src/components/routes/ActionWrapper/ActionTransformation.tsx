@@ -52,7 +52,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 import {
-	AppUsersResponse,
+	APIUsersResponse,
 	ExecQueryResponse,
 	FindUsersResponse,
 	PreviewSendEventResponse,
@@ -1311,7 +1311,7 @@ const FullscreenTransformation = ({
 	const { isEventBasedUserImport, isAppEventsExport } = useMemo(() => {
 		return {
 			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.target === 'User',
-			isAppEventsExport: connection.isApp && connection.isDestination && actionType.target === 'Event',
+			isAppEventsExport: connection.isAPI && connection.isDestination && actionType.target === 'Event',
 		};
 	}, [connection, actionType]);
 
@@ -1398,10 +1398,10 @@ const FullscreenTransformation = ({
 				return;
 			}
 			if (
-				!(connection.isApp || (connection.isDatabase && connection.isDestination)) &&
+				!(connection.isAPI || (connection.isDatabase && connection.isDestination)) &&
 				hasAlreadyFetchedSamples.current
 			) {
-				// App import and app/database export are the only cases where
+				// API import and API/database export are the only cases where
 				// samples must be refetched every time the full mode is opened,
 				// to apply any updated filter.
 				return;
@@ -1441,17 +1441,17 @@ const FullscreenTransformation = ({
 				// samples (as the query can be potentially destructive).
 				setIsFetchingSamples(false);
 				return;
-			} else if (connection.isApp && connection.isSource) {
-				let res: AppUsersResponse;
+			} else if (connection.isAPI && connection.isSource) {
+				let res: APIUsersResponse;
 				try {
-					res = await api.workspaces.connections.appUsers(connection.id, inputSchema, filter);
+					res = await api.workspaces.connections.apiUsers(connection.id, inputSchema, filter);
 				} catch (err) {
 					setIsFetchingSamples(false);
 					handleError(err);
 					return;
 				}
 				samples = res.users;
-			} else if ((connection.isApp || connection.isDatabase) && connection.isDestination) {
+			} else if ((connection.isAPI || connection.isDatabase) && connection.isDestination) {
 				const properties: string[] = [];
 				for (const prop of inputSchema.properties) {
 					properties.push(prop.name);
@@ -2423,7 +2423,7 @@ const FullscreenTransformation = ({
 									<div className='fullscreen-transformation__output-error'>{outputError}</div>
 								) : (
 									<div className='fullscreen-transformation__output-success'>
-										{connection.isApp &&
+										{connection.isAPI &&
 										connection.isDestination &&
 										actionType.target === 'Event' ? (
 											output
@@ -3687,21 +3687,23 @@ type TransformationHeaderMode = 'compact' | 'full';
 const TRANSFORMATION_HEADERS: Record<TransformationHeaderMode, Record<string, [string, string]>> = {
 	compact: {
 		'source:sdk': ['Event schema', 'Customer model schema'],
+		'source:webhook': ['Event schema', 'Customer model schema'],
 		'source:database': ['Database user schema', 'Customer model schema'],
 		'source:file': ['File user schema', 'Customer model schema'],
-		'source:app': ['App user schema', 'Customer model schema'],
+		'source:api': ['App user schema', 'Customer model schema'],
 		'destination:event': ['Event schema', 'Sending event parameters'],
 		'destination:database': ['Customer model schema', 'Database table schema'],
-		'destination:app': ['Customer model schema', 'App user schema'],
+		'destination:api': ['Customer model schema', 'App user schema'],
 	},
 	full: {
 		'source:sdk': ['Event', 'Customer model'],
+		'source:webhook': ['Event', 'Customer model'],
 		'source:database': ['Database user', 'Customer model'],
 		'source:file': ['File user', 'Customer model'],
-		'source:app': ['App user', 'Customer model'],
+		'source:api': ['App user', 'Customer model'],
 		'destination:event': ['Event', 'Sending event'],
 		'destination:database': ['Customer model', 'Database table'],
-		'destination:app': ['Customer model', 'App user'],
+		'destination:api': ['Customer model', 'App user'],
 	},
 };
 
@@ -3717,12 +3719,14 @@ function transformationHeaders(
 	if (connection.isSource) {
 		if (connection.isSDK) {
 			scenario = 'source:sdk';
+		} else if (connection.isWebhook) {
+			scenario = 'source:webhook';
 		} else if (connection.isDatabase) {
 			scenario = 'source:database';
 		} else if (connection.isFileStorage || connection.isFile) {
 			scenario = 'source:file';
 		} else {
-			scenario = 'source:app';
+			scenario = 'source:api';
 		}
 	} else {
 		if (action.target === 'Event') {
@@ -3730,7 +3734,7 @@ function transformationHeaders(
 		} else if (connection.isDatabase) {
 			scenario = 'destination:database';
 		} else {
-			scenario = 'destination:app';
+			scenario = 'destination:api';
 		}
 	}
 

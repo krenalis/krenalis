@@ -18,20 +18,20 @@ func init() {
 		Type:           types.Int(32),
 		CreateRequired: true,
 		Prefilled:      "1371036433",
-		Description:    "The ID of the source connection. It must be an SDK connection.",
+		Description:    "The ID of the source connection. It must be an SDK or webhook connection.",
 	}
 	dstParameter := types.Property{
 		Name:           "dst",
 		Type:           types.Int(32),
 		CreateRequired: true,
 		Prefilled:      "1554801134",
-		Description:    "The ID of a destination connection. It must be an app that supports events.",
+		Description:    "The ID of a destination connection. It must be an API that supports events.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "linked-connections",
 		Name:        "Linked connections",
-		Description: "A source SDK connection is linked to a destination connection so that destination actions can send the events to an external application.",
+		Description: "SDK and webhook source connections can be linked to destination API connections. When linked, events received from the source are sent to the API.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Link connections",

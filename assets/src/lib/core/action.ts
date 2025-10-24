@@ -405,7 +405,7 @@ const validateTransformation = (
 	action: ActionToSet,
 ) => {
 	if (connection.isSource) {
-		if (connection.isApp) {
+		if (connection.isAPI) {
 			if (actionType.target === 'User' || actionType.target === 'Group') {
 				if (!hasValidTransformation(action)) {
 					throw errInvalidTransformation;
@@ -423,7 +423,7 @@ const validateTransformation = (
 					throw errInvalidTransformation;
 				}
 			}
-		} else if (connection.isSDK) {
+		} else if (connection.isSDK || connection.isWebhook) {
 			if (actionType.target === 'Event') {
 				if (hasValidTransformation(action)) {
 					throw errTransformationNotSupported;
@@ -431,7 +431,7 @@ const validateTransformation = (
 			}
 		}
 	} else {
-		if (connection.isApp) {
+		if (connection.isAPI) {
 			if (actionType.target === 'User' || actionType.target === 'Group') {
 				if (!hasValidTransformation(action)) {
 					throw errInvalidTransformation;
@@ -677,7 +677,7 @@ const transformInActionToSet = async (
 
 	const allowsConstantTransformation =
 		(connection.isSource && connection.isEventBased && actionType.target === 'User') ||
-		(connection.isDestination && connection.isApp && actionType.target === 'Event');
+		(connection.isDestination && connection.isAPI && actionType.target === 'Event');
 
 	if (action.transformation.mapping != null) {
 		const inputSchema: ObjectType = { kind: 'object', properties: [] };
@@ -1103,7 +1103,7 @@ const transformInActionToSet = async (
 	// the input schema must be nil, which means the schema of the events.
 	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && actionType.target == 'Event';
 	let dispatchEventsToApps =
-		connection.isDestination && connection.connector.type == 'App' && actionType.target == 'Event';
+		connection.isDestination && connection.connector.type == 'API' && actionType.target == 'Event';
 	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && actionType.target == 'User';
 	if (importIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps) {
 		inSchema = null;
@@ -1180,7 +1180,7 @@ const computeDefaultAction = (
 		target: actionType.target,
 		name: actionType.name,
 		// The action is enabled by default only for batch operations importing or exporting users.
-		enabled: actionType.target == 'User' && (connection.isApp || connection.isDatabase || connection.isFileStorage),
+		enabled: actionType.target == 'User' && (connection.isAPI || connection.isDatabase || connection.isFileStorage),
 		filter: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema, true),
@@ -1193,7 +1193,7 @@ const computeDefaultAction = (
 		const eventType = connection.eventTypes.find((t) => t.id === actionType.eventType);
 		if (eventType != null && eventType.filter != null) {
 			action.filter = eventType.filter;
-		} else if (connection.isSDK && actionType.target === 'User') {
+		} else if ((connection.isSDK || connection.isWebhook) && actionType.target === 'User') {
 			action.filter = {
 				logical: 'or',
 				conditions: [
@@ -1255,20 +1255,20 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 
 	const type = connection.connector.type;
 
-	if (type === 'App') {
+	if (type === 'API') {
 		fields.push('Transformation');
 	} else if (type === 'Database') {
 		fields.push('Transformation');
 	} else if (type === 'FileStorage' && connection.role === 'Source') {
 		fields.push('Transformation');
-	} else if (type === 'SDK') {
+	} else if (type === 'SDK' || type == 'Webhook') {
 		if (connection.role === 'Source' && (actionType.target === 'User' || actionType.target === 'Group')) {
 			fields.push('Transformation');
 		}
 	}
 
 	if (
-		type === 'App' &&
+		type === 'API' &&
 		connection.role === 'Destination' &&
 		(actionType.target === 'User' || actionType.target === 'Group')
 	) {
@@ -1295,7 +1295,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	}
 
 	if (
-		(type === 'App' || type === 'Database' || type === 'FileStorage') &&
+		(type === 'API' || type === 'Database' || type === 'FileStorage') &&
 		connection.role === 'Source' &&
 		(actionType.target === 'User' || actionType.target === 'Group')
 	) {

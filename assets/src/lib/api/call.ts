@@ -60,7 +60,7 @@ const call = async (url: string, method: string, workspaceID?: number, body?: an
 						'background:#dc362e;color:#dcdcdc',
 					);
 					throw new Error(
-						'An error occured in the application. Server responded with a Bad Request. Please contact the administrator.',
+						'An error occurred in the application. Server responded with a Bad Request. Please contact the administrator.',
 					);
 				} else if (res.status === 401) {
 					throw new UnauthorizedError();

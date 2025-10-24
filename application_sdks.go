@@ -11,12 +11,12 @@ import (
 	"reflect"
 )
 
-// SDKInfo represents an SDK connector info.
-type SDKInfo struct {
+// SDKSpec represents an SDK connector specification.
+type SDKSpec struct {
 	Code                string
 	Label               string
 	Categories          Categories // categories
-	Strategies          bool       // whether this connector supports users strategies
+	Strategies          bool       // whether this connector supports user strategies
 	FallbackToRequestIP bool       // whether to use the request IP as the event IP if context.ip was not provided
 	Documentation       ConnectorDocumentation
 
@@ -25,14 +25,14 @@ type SDKInfo struct {
 }
 
 // ReflectType returns the type of the value implementing the SDK connector
-// info.
-func (info SDKInfo) ReflectType() reflect.Type {
-	return info.ct
+// specification.
+func (spec SDKSpec) ReflectType() reflect.Type {
+	return spec.ct
 }
 
 // New returns a new SDK connector instance.
-func (info SDKInfo) New(env *SDKEnv) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
+func (spec SDKSpec) New(env *SDKEnv) (any, error) {
+	out := spec.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err

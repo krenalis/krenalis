@@ -36,7 +36,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 						Metrics
 					</div>
 				</Link>
-				{(connection.isSDK || connection.isStream) && (
+				{(connection.isMessageBroker || connection.isSDK || connection.isWebhook) && (
 					<Link path={`connections/${connection.id}/events`}>
 						<div
 							className={`connection-wrapper__link${tab === 'events' ? ' connection-wrapper__link--selected' : ''}`}

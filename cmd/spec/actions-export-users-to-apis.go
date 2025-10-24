@@ -25,7 +25,7 @@ func init() {
 		Type:      filterType,
 		Nullable:  true,
 		Prefilled: `{ "logical": "and", "conditions": [ { "property": "country", "operator": "is", "values": [ "US" ] } ] }`,
-		Description: "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\n" +
+		Description: "The filter applied to the users. If it's not null, only the users that match the filter will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
 	matchingParameter := types.Property{
@@ -43,12 +43,11 @@ func init() {
 				Type:           types.Text(),
 				CreateRequired: true,
 				Prefilled:      `"customer.email"`,
-				Description:    "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the app's user schema. Its definition must also be included in the action's output schema.",
+				Description:    "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the application API's user schema. Its definition must also be included in the action's output schema.",
 			},
 		}),
 		CreateRequired: true,
-		Description: "The properties used to identify the match between a user in the workspace and a user in the app. " +
-			"These properties are required to determine which users should be updated and which should be created as new in the app.",
+		Description:    "The properties that identify whether a user in the workspace matches a user in the API, to decide which users to update and which to create.",
 	}
 	exportModeParameter := types.Property{
 		Name:           "exportMode",
@@ -56,16 +55,16 @@ func init() {
 		CreateRequired: true,
 		Prefilled:      `"CreateOnly"`,
 		Description: "The mode in which users are exported:\n\n" +
-			"* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n" +
-			"* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n" +
-			"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\n" +
+			"* `\"CreateOnly\"`: Only new users are created via the API. No existing users are modified.\n" +
+			"* `\"UpdateOnly\"`: Only existing users are updated via the API. No new users are created.\n" +
+			"* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.\n\n" +
 			"It should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable.",
 	}
 	updateOnDuplicatesParameter := types.Property{
 		Name:      "updateOnDuplicates",
 		Type:      types.Boolean(),
 		Prefilled: `false`,
-		Description: "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
+		Description: "Specifies whether to update API users even when multiple matches are found for a single user in the workspace's data warehouse.\n\n" +
 			"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\n" +
 			"This field does not affect user creation.",
 	}
@@ -78,7 +77,7 @@ func init() {
 				Prefilled:      `{ "firstName": "first_name" }`,
 				UpdateRequired: true,
 				Nullable:       true,
-				Description:    "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema.",
+				Description:    "The transformation mapping. A key represents a path of a property in the destination schema of the API, and its corresponding value is an expression. This expression can reference property paths from the user schema.",
 			},
 			{
 				Name: "function",
@@ -120,13 +119,13 @@ func init() {
 				}),
 				UpdateRequired: true,
 				Nullable:       true,
-				Description:    "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user.",
+				Description:    "The transformation function. A JavaScript or Python function that given a workspace's user, returns an API user.",
 			},
 		}),
 		Prefilled:      `...`,
 		CreateRequired: true,
 		UpdateRequired: true,
-		Description: "The mapping or function responsible for transforming unified users into app users.\n\n" +
+		Description: "Defines the mapping or function that transforms unified users into users for the API.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
 	inSchemaParameter := types.Property{
@@ -143,18 +142,18 @@ func init() {
 		Prefilled:      `{...}`,
 		CreateRequired: true,
 		Description: "The schema of the output matching property and the output properties within the transformation.\n\n" +
-			"When exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present.",
+			"When exporting users to apps, it should be a subset of API's destination schema, also including the schema of the output matching property if it is not already present.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions/export-users-to-apps",
-		Name: "Export users to apps",
-		Description: "This type of action exports user data from the workspace's data warehouse to an application. " +
-			"It operates on a destination app connection that supports users.",
+		ID:   "actions/export-users-to-apis",
+		Name: "Export users to APIs",
+		Description: "This type of action exports user data from the workspace's data warehouse to an API. " +
+			"It operates on a destination API connection that supports users.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
-				Description: "Create a destination action that exports users to an app.",
+				Description: "Create a destination action that exports users to an API.",
 				Method:      POST,
 				URL:         "/v1/actions",
 				Parameters: []types.Property{
@@ -164,7 +163,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "230527183",
-						Description:    "The ID of the connection to which the users will be written. It must be a destination app connection that exports users.",
+						Description:    "The ID of the connection to which the users will be written. It must be a destination API connection that exports users.",
 					},
 					{
 						Name:           "target",
@@ -206,7 +205,7 @@ func init() {
 			},
 			{
 				Name:        "Update action",
-				Description: "Update a destination action that exports users to an app.",
+				Description: "Update a destination action that exports users to an API.",
 				Method:      PUT,
 				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
@@ -215,7 +214,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "705981339",
-						Description:    "The ID of the destination app action that exports users.",
+						Description:    "The ID of the destination API action that exports users.",
 					},
 					nameParameter,
 					{
@@ -240,7 +239,7 @@ func init() {
 			},
 			{
 				Name:        "Get action",
-				Description: "Get a destination action that exports users to an app.",
+				Description: "Get a destination action that exports users to an API.",
 				Method:      GET,
 				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
@@ -249,7 +248,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "705981339",
-						Description:    "The ID of the destination app action that exports users.",
+						Description:    "The ID of the destination API action that exports users.",
 					},
 				},
 				Response: &Response{
@@ -258,7 +257,7 @@ func init() {
 							Name:        "id",
 							Type:        types.Int(32),
 							Prefilled:   "705981339",
-							Description: "The ID of the destination app action that exports users.",
+							Description: "The ID of the destination API action that exports users.",
 						},
 						nameParameter,
 						{
@@ -269,27 +268,27 @@ func init() {
 						},
 						{
 							Name:        "connectorType",
-							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
-							Prefilled:   `"App"`,
-							Description: "The type of the connection's connector. It is always `\"App\"` when the action exports users to an app.",
+							Type:        types.Text().WithValues("API", "Database", "FileStorage", "MessageBroker", "SDK", "Webhook"),
+							Prefilled:   `"API"`,
+							Description: "The type of the connection's connector. It is always `\"API\"` when the action exports users to an API.",
 						},
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Prefilled:   "1371036433",
-							Description: "The ID of the connection to which the users will be exported. It is a destination app.",
+							Description: "The ID of the connection to which the users will be exported. It is a destination API.",
 						},
 						{
 							Name:        "connectionRole",
 							Type:        types.Text().WithValues("Source", "Destination"),
 							Prefilled:   `"Destination"`,
-							Description: "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an app.",
+							Description: "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an API.",
 						},
 						{
 							Name:        "target",
 							Type:        types.Text().WithValues("User", "Event"),
 							Prefilled:   `"User"`,
-							Description: "The entity on which the action operates. It is always `\"User\"` when the action exports users to an app.",
+							Description: "The entity on which the action operates. It is always `\"User\"` when the action exports users to an API.",
 						},
 						{
 							Name:        "enabled",
@@ -313,12 +312,12 @@ func init() {
 									Type:           types.Text(),
 									CreateRequired: true,
 									Prefilled:      `"email"`,
-									Description:    "The matching output property.\n\nIt represents the name of the property in the app's user schema. Its definition is included in the action's output schema.",
+									Description:    "The matching output property.\n\nIt represents the name of the property in the API's user schema. Its definition is included in the action's output schema.",
 								},
 							}),
 							CreateRequired: true,
-							Description: "The properties used to identify the match between a user in the workspace and a user in the app. " +
-								"These properties determine which users should be updated and which should be created as new in the app.",
+							Description: "The properties used to identify the match between a user in the workspace and a user in the API. " +
+								"These properties determine which users should be updated and which should be created as new in the API.",
 						},
 						{
 							Name:           "exportMode",
@@ -326,15 +325,15 @@ func init() {
 							CreateRequired: true,
 							Prefilled:      `"CreateOnly"`,
 							Description: "The mode in which users are exported:\n\n" +
-								"* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n" +
-								"* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n" +
-								"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.",
+								"* `\"CreateOnly\"`: Only new users are created in the API. No existing users are modified.\n" +
+								"* `\"UpdateOnly\"`: Only existing users are updated in the API. No new users are created.\n" +
+								"* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.",
 						},
 						{
 							Name:      "updateOnDuplicates",
 							Type:      types.Boolean(),
 							Prefilled: `false`,
-							Description: "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
+							Description: "Determines whether, when multiple API users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
 								"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged.\n\n" +
 								"This field does not affect user creation.",
 						},
@@ -346,7 +345,7 @@ func init() {
 									Type:        types.Map(types.Text()),
 									Prefilled:   `{ "firstName": "first_name" }`,
 									Nullable:    true,
-									Description: "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema.",
+									Description: "The transformation mapping. A key represents a path of a property in the destination schema of the API, and its corresponding value is an expression. This expression can reference property paths from the user schema.",
 								},
 								{
 									Name: "function",
@@ -383,11 +382,11 @@ func init() {
 										},
 									}),
 									Nullable:    true,
-									Description: "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user.",
+									Description: "The transformation function. A JavaScript or Python function that given a workspace's user, returns an API user.",
 								},
 							}),
 							Prefilled: `...`,
-							Description: "The mapping or function responsible for transforming unified users into app users.\n\n" +
+							Description: "The mapping or function responsible for transforming unified users into API users.\n\n" +
 								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
 						},
 						{

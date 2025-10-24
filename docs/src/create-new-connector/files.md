@@ -87,7 +87,7 @@ The `FileInfo` type describes information about the file connector:
 
 - `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "excel", "csv", "parquet".
 - `Label`: display label in the Admin console, typically the format's name (e.g. "Excel", "CSV", "Parquet").
-- `Categories`: the categories that the connector falls into. There must be at least one category.
+- `Categories`: the categories the connector belongs to. There must be at least one category, but for a file connector it should be only `meergo.CategoryFile`.
 - `AsSource`: information about the file connector when it used as source. This should be set only when the file connector can be used as a source, otherwise should be nil.
   - `HasSettings`: indicates whether the connection has format settings when used as source.
 - `AsDestination`: information about the file connector when it used as destination. This should be set only when the file connector can be used as a destination, otherwise should be nil.
@@ -103,6 +103,7 @@ func init() {
 	meergo.RegisterFile(meergo.FileInfo{
 		Code:      "csv",
 		Label:     "CSV",
+		Category:  meergo.CategoryFile,
 		Extension: "csv",
 		AsSource: &meergo.AsSourceFile{
 			HasSettings: true,

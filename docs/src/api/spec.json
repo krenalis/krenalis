@@ -519,13 +519,13 @@
             ]
         },
         {
-            "id": "actions/export-users-to-apps",
-            "name": "Export users to apps",
-            "description": "This type of action exports user data from the workspace's data warehouse to an application. It operates on a destination app connection that supports users.",
+            "id": "actions/export-users-to-apis",
+            "name": "Export users to APIs",
+            "description": "This type of action exports user data from the workspace's data warehouse to an API. It operates on a destination API connection that supports users.",
             "endpoints": [
                 {
                     "name": "Create action",
-                    "description": "Create a destination action that exports users to an app.",
+                    "description": "Create a destination action that exports users to an API.",
                     "method": "POST",
                     "url": "/v1/actions",
                     "parameters": [
@@ -547,7 +547,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection to which the users will be written. It must be a destination app connection that exports users."
+                            "description": "The ID of the connection to which the users will be written. It must be a destination API connection that exports users."
                         },
                         {
                             "name": "target",
@@ -660,7 +660,7 @@
                                 ]
                             },
                             "nullable": true,
-                            "description": "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
+                            "description": "The filter applied to the users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
                             "name": "matching",
@@ -683,12 +683,12 @@
                                             "kind": "text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the app's user schema. Its definition must also be included in the action's output schema."
+                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the application API's user schema. Its definition must also be included in the action's output schema."
                                     }
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties are required to determine which users should be updated and which should be created as new in the app."
+                            "description": "The properties that identify whether a user in the workspace matches a user in the API, to decide which users to update and which to create."
                         },
                         {
                             "name": "exportMode",
@@ -702,7 +702,7 @@
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created via the API. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated via the API. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
                             "name": "updateOnDuplicates",
@@ -710,7 +710,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
+                            "description": "Specifies whether to update API users even when multiple matches are found for a single user in the workspace's data warehouse.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
                         },
                         {
                             "name": "transformation",
@@ -729,7 +729,7 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema."
+                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the API, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
                                     {
                                         "name": "function",
@@ -795,13 +795,13 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user."
+                                        "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an API user."
                                     }
                                 ]
                             },
                             "createRequired": true,
                             "updateRequired": true,
-                            "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                            "description": "Defines the mapping or function that transforms unified users into users for the API.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         },
                         {
                             "name": "inSchema",
@@ -819,7 +819,7 @@
                                 "kind": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
+                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of API's destination schema, also including the schema of the output matching property if it is not already present."
                         }
                     ],
                     "moreParameters": null,
@@ -862,7 +862,7 @@
                 },
                 {
                     "name": "Update action",
-                    "description": "Update a destination action that exports users to an app.",
+                    "description": "Update a destination action that exports users to an API.",
                     "method": "PUT",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -874,7 +874,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the destination app action that exports users."
+                            "description": "The ID of the destination API action that exports users."
                         },
                         {
                             "name": "name",
@@ -985,7 +985,7 @@
                                 ]
                             },
                             "nullable": true,
-                            "description": "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
+                            "description": "The filter applied to the users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
                             "name": "matching",
@@ -1008,12 +1008,12 @@
                                             "kind": "text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the app's user schema. Its definition must also be included in the action's output schema."
+                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the application API's user schema. Its definition must also be included in the action's output schema."
                                     }
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties are required to determine which users should be updated and which should be created as new in the app."
+                            "description": "The properties that identify whether a user in the workspace matches a user in the API, to decide which users to update and which to create."
                         },
                         {
                             "name": "exportMode",
@@ -1027,7 +1027,7 @@
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created via the API. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated via the API. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
                             "name": "updateOnDuplicates",
@@ -1035,7 +1035,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
+                            "description": "Specifies whether to update API users even when multiple matches are found for a single user in the workspace's data warehouse.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
                         },
                         {
                             "name": "transformation",
@@ -1054,7 +1054,7 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema."
+                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the API, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
                                     {
                                         "name": "function",
@@ -1120,13 +1120,13 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user."
+                                        "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an API user."
                                     }
                                 ]
                             },
                             "createRequired": true,
                             "updateRequired": true,
-                            "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                            "description": "Defines the mapping or function that transforms unified users into users for the API.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         },
                         {
                             "name": "inSchema",
@@ -1144,7 +1144,7 @@
                                 "kind": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
+                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of API's destination schema, also including the schema of the output matching property if it is not already present."
                         }
                     ],
                     "moreParameters": null,
@@ -1169,7 +1169,7 @@
                 },
                 {
                     "name": "Get action",
-                    "description": "Get a destination action that exports users to an app.",
+                    "description": "Get a destination action that exports users to an API.",
                     "method": "GET",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -1181,7 +1181,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the destination app action that exports users."
+                            "description": "The ID of the destination API action that exports users."
                         }
                     ],
                     "moreParameters": null,
@@ -1195,7 +1195,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the destination app action that exports users."
+                                "description": "The ID of the destination API action that exports users."
                             },
                             {
                                 "name": "name",
@@ -1217,17 +1217,19 @@
                             },
                             {
                                 "name": "connectorType",
-                                "prefilled": "\"App\"",
+                                "prefilled": "\"API\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "MessageBroker",
+                                        "SDK",
+                                        "Webhook"
                                     ]
                                 },
-                                "description": "The type of the connection's connector. It is always `\"App\"` when the action exports users to an app."
+                                "description": "The type of the connection's connector. It is always `\"API\"` when the action exports users to an API."
                             },
                             {
                                 "name": "connection",
@@ -1236,7 +1238,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the connection to which the users will be exported. It is a destination app."
+                                "description": "The ID of the connection to which the users will be exported. It is a destination API."
                             },
                             {
                                 "name": "connectionRole",
@@ -1248,7 +1250,7 @@
                                         "Destination"
                                     ]
                                 },
-                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an app."
+                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an API."
                             },
                             {
                                 "name": "target",
@@ -1260,7 +1262,7 @@
                                         "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"User\"` when the action exports users to an app."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action exports users to an API."
                             },
                             {
                                 "name": "enabled",
@@ -1361,7 +1363,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
+                                "description": "The filter applied to the users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
                                 "name": "matching",
@@ -1384,12 +1386,12 @@
                                                 "kind": "text"
                                             },
                                             "createRequired": true,
-                                            "description": "The matching output property.\n\nIt represents the name of the property in the app's user schema. Its definition is included in the action's output schema."
+                                            "description": "The matching output property.\n\nIt represents the name of the property in the API's user schema. Its definition is included in the action's output schema."
                                         }
                                     ]
                                 },
                                 "createRequired": true,
-                                "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties determine which users should be updated and which should be created as new in the app."
+                                "description": "The properties used to identify the match between a user in the workspace and a user in the API. These properties determine which users should be updated and which should be created as new in the API."
                             },
                             {
                                 "name": "exportMode",
@@ -1403,7 +1405,7 @@
                                     ]
                                 },
                                 "createRequired": true,
-                                "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
+                                "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the API. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the API. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user."
                             },
                             {
                                 "name": "updateOnDuplicates",
@@ -1411,7 +1413,7 @@
                                 "type": {
                                     "kind": "boolean"
                                 },
-                                "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged.\n\nThis field does not affect user creation."
+                                "description": "Determines whether, when multiple API users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged.\n\nThis field does not affect user creation."
                             },
                             {
                                 "name": "transformation",
@@ -1429,7 +1431,7 @@
                                                 }
                                             },
                                             "nullable": true,
-                                            "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema."
+                                            "description": "The transformation mapping. A key represents a path of a property in the destination schema of the API, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                         },
                                         {
                                             "name": "function",
@@ -1490,11 +1492,11 @@
                                                 ]
                                             },
                                             "nullable": true,
-                                            "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user."
+                                            "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an API user."
                                         }
                                     ]
                                 },
-                                "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
+                                "description": "The mapping or function responsible for transforming unified users into API users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
                             },
                             {
                                 "name": "inSchema",
@@ -2023,10 +2025,12 @@
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "MessageBroker",
+                                        "SDK",
+                                        "Webhook"
                                     ]
                                 },
                                 "description": "The type of the connection's connector. It is always `\"Database\"` when the action exports users to a database."
@@ -2868,10 +2872,12 @@
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "MessageBroker",
+                                        "SDK",
+                                        "Webhook"
                                     ]
                                 },
                                 "description": "The type of the connection's connector. It is always `\"FileStorage\"` when the action exports users to a file."
@@ -3134,7 +3140,7 @@
         {
             "id": "actions/import-events",
             "name": "Import events",
-            "description": "This type of action imports events into the workspace's data warehouse. It operates on an SDK connection.",
+            "description": "This type of action imports events into the workspace's data warehouse. It operates on SDK and webhook connections.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -3160,7 +3166,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection from which the events are received. It must be an SDK connection."
+                            "description": "The ID of the connection from which the events are received. It must be an SDK or webhook connection."
                         },
                         {
                             "name": "target",
@@ -3506,13 +3512,15 @@
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "MessageBroker",
+                                        "SDK",
+                                        "Webhook"
                                     ]
                                 },
-                                "description": "The type of the connection's connector. It is always `\"SDK\"` when the action imports events."
+                                "description": "The type of the connection's connector. It is always `\"SDK\"` or `\"Webhook\"` when the action imports events."
                             },
                             {
                                 "name": "connection",
@@ -3521,7 +3529,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the connection from which the events are received. It is a source SDK connection."
+                                "description": "The ID of the connection from which the events are received. It is a source SDK or webhook connection."
                             },
                             {
                                 "name": "connectionRole",
@@ -3674,13 +3682,13 @@
             ]
         },
         {
-            "id": "actions/import-users-from-apps",
-            "name": "Import users from apps",
-            "description": "This type of action imports user data from an application into the workspace's data warehouse. It operates on a source app connection that supports users.",
+            "id": "actions/import-users-from-apis",
+            "name": "Import users from APIs",
+            "description": "This type of action imports user data from an API into the workspace's data warehouse. It operates on a source API connection that supports users.",
             "endpoints": [
                 {
                     "name": "Create action",
-                    "description": "Create a source action to import users from an app.",
+                    "description": "Create a source action to import users from an API.",
                     "method": "POST",
                     "url": "/v1/actions",
                     "parameters": [
@@ -3702,7 +3710,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection from which to read the users. It must be a source app that can import users."
+                            "description": "The ID of the connection from which to read the users. It must be a source API that can import users."
                         },
                         {
                             "name": "target",
@@ -3815,7 +3823,7 @@
                                 ]
                             },
                             "nullable": true,
-                            "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
+                            "description": "The filter applied to the API users. If it's not null, only the API users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
                             "name": "incremental",
@@ -3842,7 +3850,7 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app."
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the API."
                                     },
                                     {
                                         "name": "function",
@@ -3908,13 +3916,13 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation function. A JavaScript or Python function that given an app user, returns a user identity."
+                                        "description": "The transformation function. A JavaScript or Python function that given an API user, returns a user identity."
                                     }
                                 ]
                             },
                             "createRequired": true,
                             "updateRequired": true,
-                            "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                            "description": "The mapping or function responsible for transforming API users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         },
                         {
                             "name": "inSchema",
@@ -3923,7 +3931,7 @@
                                 "kind": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the app's destination schema."
+                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the API's destination schema."
                         },
                         {
                             "name": "outSchema",
@@ -3975,7 +3983,7 @@
                 },
                 {
                     "name": "Update action",
-                    "description": "Update a source action that imports users from an app.",
+                    "description": "Update a source action that imports users from an API.",
                     "method": "PUT",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -3987,7 +3995,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the source app action to update."
+                            "description": "The ID of the source API action to update."
                         },
                         {
                             "name": "name",
@@ -4098,7 +4106,7 @@
                                 ]
                             },
                             "nullable": true,
-                            "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
+                            "description": "The filter applied to the API users. If it's not null, only the API users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
                             "name": "incremental",
@@ -4125,7 +4133,7 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app."
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the API."
                                     },
                                     {
                                         "name": "function",
@@ -4191,13 +4199,13 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation function. A JavaScript or Python function that given an app user, returns a user identity."
+                                        "description": "The transformation function. A JavaScript or Python function that given an API user, returns a user identity."
                                     }
                                 ]
                             },
                             "createRequired": true,
                             "updateRequired": true,
-                            "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                            "description": "The mapping or function responsible for transforming API users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         },
                         {
                             "name": "inSchema",
@@ -4206,7 +4214,7 @@
                                 "kind": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the app's destination schema."
+                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the API's destination schema."
                         },
                         {
                             "name": "outSchema",
@@ -4240,7 +4248,7 @@
                 },
                 {
                     "name": "Get action",
-                    "description": "Get a source action that imports users from an app.",
+                    "description": "Get a source action that imports users from an API.",
                     "method": "GET",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -4252,7 +4260,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the source app action that imports users."
+                            "description": "The ID of the source API action that imports users."
                         }
                     ],
                     "moreParameters": null,
@@ -4266,7 +4274,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the source app action that imports users."
+                                "description": "The ID of the source API action that imports users."
                             },
                             {
                                 "name": "name",
@@ -4288,17 +4296,19 @@
                             },
                             {
                                 "name": "connectorType",
-                                "prefilled": "\"App\"",
+                                "prefilled": "\"API\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "MessageBroker",
+                                        "SDK",
+                                        "Webhook"
                                     ]
                                 },
-                                "description": "The type of the connection's connector. It is always `\"App\"` when the action imports users from an app."
+                                "description": "The type of the connection's connector. It is always `\"API\"` when the action imports users from an API."
                             },
                             {
                                 "name": "connection",
@@ -4307,7 +4317,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the connection from which users are read. It is a source app that supports users."
+                                "description": "The ID of the connection from which users are read. It is a source API that supports users."
                             },
                             {
                                 "name": "connectionRole",
@@ -4319,7 +4329,7 @@
                                         "Destination"
                                     ]
                                 },
-                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports users from an app."
+                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports users from an API."
                             },
                             {
                                 "name": "target",
@@ -4331,7 +4341,7 @@
                                         "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"User\"` when the action imports users from an app."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action imports users from an API."
                             },
                             {
                                 "name": "enabled",
@@ -4432,7 +4442,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
+                                "description": "The filter applied to the API users. If it's not null, only the API users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
                                 "name": "incremental",
@@ -4458,7 +4468,7 @@
                                                 }
                                             },
                                             "nullable": true,
-                                            "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app."
+                                            "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the API."
                                         },
                                         {
                                             "name": "function",
@@ -4519,11 +4529,11 @@
                                                 ]
                                             },
                                             "nullable": true,
-                                            "description": "The transformation function. A JavaScript or Python function that given an app user, returns a user identity."
+                                            "description": "The transformation function. A JavaScript or Python function that given an API user, returns a user identity."
                                         }
                                     ]
                                 },
-                                "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
+                                "description": "The mapping or function responsible for transforming API users into user identities linked to the action. Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
                             },
                             {
                                 "name": "inSchema",
@@ -5108,10 +5118,12 @@
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "MessageBroker",
+                                        "SDK",
+                                        "Webhook"
                                     ]
                                 },
                                 "description": "The type of the connection's connector. It is always `\"Database\"` when the action imports users from a database."
@@ -5384,7 +5396,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection from which the events are received. It must be a source SDK connection."
+                            "description": "The ID of the connection from which the events are received. It must be a source SDK or webhook connection."
                         },
                         {
                             "name": "target",
@@ -5647,7 +5659,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the source SDK action."
+                            "description": "The ID of the source SDK or webhook action."
                         },
                         {
                             "name": "name",
@@ -5890,7 +5902,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the source SDK action."
+                            "description": "The ID of the source SDK or webhook action."
                         }
                     ],
                     "moreParameters": null,
@@ -5904,7 +5916,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the source SDK action."
+                                "description": "The ID of the source SDK or webhook action."
                             },
                             {
                                 "name": "name",
@@ -5930,13 +5942,15 @@
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "MessageBroker",
+                                        "SDK",
+                                        "Webhook"
                                     ]
                                 },
-                                "description": "The type of the connection's connector. It is always `\"SDK\"` when the action imports users from events."
+                                "description": "The type of the connection's connector. It is always `\"SDK\"` or `\"Webhook\"` when the action imports users from events."
                             },
                             {
                                 "name": "connection",
@@ -5945,7 +5959,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the connection from which the events are received. It is a source SDK connection."
+                                "description": "The ID of the connection from which the events are received. It is a source SDK or webhook connection."
                             },
                             {
                                 "name": "connectionRole",
@@ -6972,10 +6986,12 @@
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "SDK",
+                                        "MessageBroker",
+                                        "Webhook"
                                     ]
                                 },
                                 "description": "The type of the connection's connector. It is always `\"FileStorage\"` when the action imports users from a file."
@@ -7259,13 +7275,13 @@
             ]
         },
         {
-            "id": "actions/send-events-to-apps",
-            "name": "Send events to apps",
-            "description": "This type of action sends the received events to applications. It operates on a destination app connection that supports events.",
+            "id": "actions/send-events-to-apis",
+            "name": "Send events to APIs",
+            "description": "This type of action sends the received events to APIs. It operates on a destination API connection that supports events.",
             "endpoints": [
                 {
                     "name": "Create action",
-                    "description": "Create a destination action that sends events to an app.",
+                    "description": "Create a destination action that sends events to an API.",
                     "method": "POST",
                     "url": "/v1/actions",
                     "parameters": [
@@ -7287,7 +7303,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection to which the events will be sent. It must be a destination app that supports events."
+                            "description": "The ID of the connection to which the events will be sent. It must be a destination API that supports events."
                         },
                         {
                             "name": "target",
@@ -7495,14 +7511,14 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app."
+                                        "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the API."
                                     }
                                 ]
                             },
                             "createRequired": true,
                             "updateRequired": true,
                             "nullable": true,
-                            "description": "This mapping or function is responsible for transforming events into the values required for sending the event to the app.\n\nIf the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\nIf a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null."
+                            "description": "This mapping or function is responsible for transforming events into the values required for sending the event to the API.\n\nIf the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\nIf a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null."
                         },
                         {
                             "name": "outSchema",
@@ -7560,7 +7576,7 @@
                 },
                 {
                     "name": "Update action",
-                    "description": "Update a destination action that sends events to an app.",
+                    "description": "Update a destination action that sends events to an API.",
                     "method": "PUT",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -7572,7 +7588,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the destination app event action."
+                            "description": "The ID of the destination API action."
                         },
                         {
                             "name": "name",
@@ -7768,14 +7784,14 @@
                                         },
                                         "updateRequired": true,
                                         "nullable": true,
-                                        "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app."
+                                        "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the API."
                                     }
                                 ]
                             },
                             "createRequired": true,
                             "updateRequired": true,
                             "nullable": true,
-                            "description": "This mapping or function is responsible for transforming events into the values required for sending the event to the app.\n\nIf the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\nIf a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null."
+                            "description": "This mapping or function is responsible for transforming events into the values required for sending the event to the API.\n\nIf the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\nIf a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null."
                         },
                         {
                             "name": "outSchema",
@@ -7810,7 +7826,7 @@
                 },
                 {
                     "name": "Get action",
-                    "description": "Get a destination action that sends events to an app.",
+                    "description": "Get a destination action that sends events to an API.",
                     "method": "GET",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -7822,7 +7838,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the destination app event action."
+                            "description": "The ID of the destination API event action."
                         }
                     ],
                     "moreParameters": null,
@@ -7836,7 +7852,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the destination app event action."
+                                "description": "The ID of the destination API event action."
                             },
                             {
                                 "name": "name",
@@ -7858,17 +7874,19 @@
                             },
                             {
                                 "name": "connectorType",
-                                "prefilled": "\"App\"",
+                                "prefilled": "\"API\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
-                                        "SDK"
+                                        "MessageBroker",
+                                        "SDK",
+                                        "Webhook"
                                     ]
                                 },
-                                "description": "The type of the connection's connector. It is always `\"App\"` when the action sends events to an app."
+                                "description": "The type of the connection's connector. It is always `\"API\"` when the action sends events to an API."
                             },
                             {
                                 "name": "connection",
@@ -7877,7 +7895,7 @@
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the connection to which the events will be sent. It is a destination app that supports events."
+                                "description": "The ID of the connection to which the events will be sent. It is a destination API that supports events."
                             },
                             {
                                 "name": "connectionRole",
@@ -7889,7 +7907,7 @@
                                         "Destination"
                                     ]
                                 },
-                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action sends events to an app."
+                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action sends events to an API."
                             },
                             {
                                 "name": "target",
@@ -7901,7 +7919,7 @@
                                         "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Event\"` when the action sends events to an app."
+                                "description": "The entity on which the action operates. It is always `\"Event\"` when the action sends events to an API."
                             },
                             {
                                 "name": "enabled",
@@ -8091,12 +8109,12 @@
                                                 ]
                                             },
                                             "nullable": true,
-                                            "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app."
+                                            "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the API."
                                         }
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "This mapping or function is responsible for transforming events into the values required for sending them to the app.\n\nIf there is no mapping, it is null. Otherwise one of either a mapping or a function is present, but not both. The one that is not present is null."
+                                "description": "This mapping or function is responsible for transforming events into the values required for sending them to the API.\n\nIf there is no mapping, it is null. Otherwise one of either a mapping or a function is present, but not both. The one that is not present is null."
                             },
                             {
                                 "name": "inSchema",
@@ -8234,7 +8252,7 @@
                 },
                 {
                     "name": "Execute action",
-                    "description": "Starts an action execution to import its users into the data warehouse or export the users in the data warehouse to the app, applying the action's filter and transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [Get execution](#get-execution) endpoint using the returned execution ID.\n\nThe action must be enabled.",
+                    "description": "Starts an action execution to import its users into the data warehouse or export the users in the data warehouse to the API, applying the action's filter and transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [Get execution](#get-execution) endpoint using the returned execution ID.\n\nThe action must be enabled.",
                     "method": "POST",
                     "url": "/v1/actions/:id/exec",
                     "parameters": [
@@ -8543,13 +8561,13 @@
             ]
         },
         {
-            "id": "connections/apps",
-            "name": "Apps",
-            "description": "These endpoints are specific to app connections.",
+            "id": "connections/applications",
+            "name": "Applications",
+            "description": "These endpoints are specific to **application API** connections and cannot be used with application SDK or webhook connections.",
             "endpoints": [
                 {
-                    "name": "Retrieve app users",
-                    "description": "Retrieves users directly from the app. These are the users as they appear in the app.\n\nFor users that have already been imported into the workspace, refer to the [Users](users) endpoints.",
+                    "name": "Retrieve users",
+                    "description": "Retrieves users directly from an application, reflecting their current state in that application.\n\nFor users that have already been imported into the workspace, refer to the [Users](users) endpoints.",
                     "method": "GET",
                     "url": "/v1/connections/:id/users",
                     "parameters": [
@@ -8561,7 +8579,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the app connection from which to read users."
+                            "description": "The ID of the API connection from which to read users."
                         },
                         {
                             "name": "schema",
@@ -8688,7 +8706,7 @@
                                         }
                                     }
                                 },
-                                "description": "The app users from the provided cursor."
+                                "description": "The application users from the provided cursor."
                             },
                             {
                                 "name": "cursor",
@@ -8714,13 +8732,13 @@
                         {
                             "status": 422,
                             "code": "SchemaNotAligned",
-                            "message": "schema is not aligned with the app's source schema"
+                            "message": "schema is not aligned with the API's source schema"
                         }
                     ]
                 },
                 {
                     "name": "Preview send event",
-                    "description": "Returns a preview of an event as it would be sent to an app, but no event is actually sent.",
+                    "description": "Returns a preview of an event as it would be sent to an application API, but no event is actually sent.",
                     "method": "POST",
                     "url": "/v1/connections/:id/preview-send-event",
                     "parameters": [
@@ -8732,7 +8750,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the destination app connection through which the event would be sent."
+                            "description": "The ID of the destination API connection through which the event would be sent."
                         },
                         {
                             "name": "type",
@@ -8741,7 +8759,7 @@
                                 "kind": "text"
                             },
                             "createRequired": true,
-                            "description": "The ID of the event type to be sent. It must be one of the event types supported by the app connection."
+                            "description": "The ID of the event type to be sent. It must be one of the event types supported by the API connection."
                         },
                         {
                             "name": "event",
@@ -8750,7 +8768,7 @@
                                 "kind": "json"
                             },
                             "createRequired": true,
-                            "description": "The event (as it would be received from an SDK connection) that is sent to the app. It must adhere to the [event schema](events#get-event-schema)."
+                            "description": "The event (as it would be received from an SDK or webhook connection) that is sent to the API. It must adhere to the [event schema](events#get-event-schema)."
                         },
                         {
                             "name": "transformation",
@@ -8811,7 +8829,7 @@
                 },
                 {
                     "name": "Get user schemas",
-                    "description": "Returns the source and destination user schema of a connection. The connection must be an app connection that supports users.",
+                    "description": "Returns the source and destination user schema of an API connection. The connection must be an API connection that supports users.",
                     "method": "GET",
                     "url": "/v1/connections/:id/schemas/user",
                     "parameters": [
@@ -8823,7 +8841,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the app connection. It must support users."
+                            "description": "The ID of the API connection. It must support users."
                         }
                     ],
                     "moreParameters": null,
@@ -8854,7 +8872,7 @@
                                         }
                                     ]
                                 },
-                                "description": "The user schemas of the app connection."
+                                "description": "The user schemas of the API connection."
                             }
                         ]
                     },
@@ -8873,7 +8891,7 @@
                 },
                 {
                     "name": "Get event schema",
-                    "description": "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
+                    "description": "Returns the schema for a specified event type in a connection. The connection must be a destination API connection that supports events.",
                     "method": "GET",
                     "url": "/v1/connections/:id/schemas/event",
                     "parameters": [
@@ -8885,7 +8903,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the destination app connection. It must support events."
+                            "description": "The ID of the destination API connection. It must support events."
                         },
                         {
                             "name": "type",
@@ -8934,7 +8952,7 @@
         {
             "id": "connections",
             "name": "Connections",
-            "description": "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n[Actions](actions) then allow you to perform operations on these connections.",
+            "description": "Connections serve as a channel between workspaces and external sources or destinations, such as websites, applications, databases, file storage, and files.\n\n[Actions](actions) then allow you to perform operations on these connections.",
             "endpoints": [
                 {
                     "name": "Create connection",
@@ -8969,10 +8987,17 @@
                             "name": "connector",
                             "prefilled": "\"javascript\"",
                             "type": {
-                                "kind": "text"
+                                "kind": "text",
+                                "values": [
+                                    "API",
+                                    "Database",
+                                    "FileStorage",
+                                    "SDK",
+                                    "Webhook"
+                                ]
                             },
                             "createRequired": true,
-                            "description": "The code of the [connector](/connectors/) for which to create the connection. It can be an app, database, file storage or SDK connector, but cannot be a file connector or a stream connector.\n\nStream connections will be available soon."
+                            "description": "The code of the [connector](/connectors/) for which to create the connection. It can be an API, database, file storage, SDK, or webhook connector, but cannot be a file connector or a message broker connector.\n\nMessage broker connectors will be available soon."
                         },
                         {
                             "name": "strategy",
@@ -9003,7 +9028,7 @@
                             },
                             "updateRequired": true,
                             "nullable": true,
-                            "description": "The mode for sending events. It can be one of the sending modes supported by the app.\n\nIt is required and can only be provided with destination app connections that support it."
+                            "description": "The mode for sending events. It can be one of the sending modes supported by the API.\n\nIt is required and can only be provided with destination API connections that support it."
                         },
                         {
                             "name": "linkedConnections",
@@ -9016,7 +9041,7 @@
                                 }
                             },
                             "nullable": true,
-                            "description": "The IDs of the connections to which events are sent or from which events are received.\n\nFor source connections (SDK), the linked connections are the destination app connections where the received events are forwarded. On the other hand, for destination app connections, the linked connections are the source SDK connections from which events are received.\n\nIf this field is null, it means there are no linked connections, or the connection type does not match any of the types mentioned above."
+                            "description": "The IDs of the connections to which events are sent or from which events are received.\n\nFor source connections (SDK and webhook), the linked connections are the destination API connections to which received events are forwarded. Conversely, for destination API connections, the linked connections are the source SDK and webhook connections from which events are received.\n\nIf this field is null, it means there are no linked connections or the connection type does not match any of the types mentioned above."
                         },
                         {
                             "name": "settings",
@@ -9077,7 +9102,7 @@
                 },
                 {
                     "name": "Get auth URL",
-                    "description": "Gets the URL for an app connector that directs to the authorization page of the app.\n\n",
+                    "description": "Gets the URL for an API connector that directs to the authorization page of the API.\n\n",
                     "method": "GET",
                     "url": "/v1/connections/auth-url",
                     "parameters": [
@@ -9088,7 +9113,7 @@
                                 "kind": "text"
                             },
                             "createRequired": true,
-                            "description": "The connector's code. It must be an app connector that requires authorization."
+                            "description": "The connector's code. It must be an API connector that requires authorization."
                         },
                         {
                             "name": "role",
@@ -9123,7 +9148,7 @@
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The authorization URL that directs to the consent page of the app. This page requests explicit permissions for the role."
+                                "description": "The authorization URL that directs to the consent page of the API. This page requests explicit permissions for the role."
                             }
                         ]
                     },
@@ -9251,7 +9276,7 @@
                             },
                             "updateRequired": true,
                             "nullable": true,
-                            "description": "The mode for sending events. It can be one of the sending modes supported by the app.\n\nIt is required and can only be provided with destination app connections that support it."
+                            "description": "The mode for sending events. It can be one of the sending modes supported by the API.\n\nIt is required and can only be provided with destination API connections that support it."
                         }
                     ],
                     "moreParameters": null,
@@ -9321,11 +9346,12 @@
                                                 "type": {
                                                     "kind": "text",
                                                     "values": [
-                                                        "App",
+                                                        "API",
                                                         "Database",
                                                         "FileStorage",
+                                                        "MessageBroker",
                                                         "SDK",
-                                                        "Stream"
+                                                        "Webhook"
                                                     ]
                                                 },
                                                 "description": "The type of the connection's connector."
@@ -9370,7 +9396,7 @@
                                                     ]
                                                 },
                                                 "nullable": true,
-                                                "description": "The mode for sending events. It is null if the connection is not a destination app that supports sending mode."
+                                                "description": "The mode for sending events. It is null if the connection is not a destination API that supports sending mode."
                                             },
                                             {
                                                 "name": "linkedConnections",
@@ -9383,7 +9409,7 @@
                                                     }
                                                 },
                                                 "nullable": true,
-                                                "description": "The IDs of the connections to which events are sent or from which events are received.\n\nFor source connections (SDK), the linked connections are the destination app connections where the received events are forwarded. On the other hand, for destination app connections, the linked connections are the source SDK connections from which events are received.\n\nIf this field is null, it means there are no linked connections, or the connection type does not match any of the types mentioned above."
+                                                "description": "The IDs of the connections to which events are sent or from which events are received.\n\nFor source connections (SDK and webhook), the linked connections are the destination API connections to which received events are forwarded. Conversely, for destination API connections, the linked connections are the source SDK and webhook connections from which events are received.\n\nIf this field is null, it means there are no linked connections or the connection type does not match any of the types mentioned above."
                                             },
                                             {
                                                 "name": "actionsCount",
@@ -9464,11 +9490,12 @@
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "FileStorage",
+                                        "MessageBroker",
                                         "SDK",
-                                        "Stream"
+                                        "Webhook"
                                     ]
                                 },
                                 "description": "The type of the connection's connector."
@@ -9513,7 +9540,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The mode for sending events. It is null if the connection is not a destination app that supports sending mode."
+                                "description": "The mode for sending events. It is null if the connection is not a destination API that supports sending mode."
                             },
                             {
                                 "name": "linkedConnections",
@@ -9526,7 +9553,7 @@
                                     }
                                 },
                                 "nullable": true,
-                                "description": "The IDs of the connections to which events are sent or from which events are received.\n\nFor source connections (SDK), the linked connections are the destination app connections where the received events are forwarded. On the other hand, for destination app connections, the linked connections are the source SDK connections from which events are received.\n\nIf this field is null, it means there are no linked connections, or the connection type does not match any of the types mentioned above."
+                                "description": "The IDs of the connections to which events are sent or from which events are received.\n\nFor source connections (SDK and webhook), the linked connections are the destination API connections to which received events are forwarded. Conversely, for destination API connections, the linked connections are the source SDK and webhook connections from which events are received.\n\nIf this field is null, it means there are no linked connections or the connection type does not match any of the types mentioned above."
                             },
                             {
                                 "name": "actionsCount",
@@ -9581,13 +9608,13 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "description": "The recommended default filter for actions that send events to apps using this event type."
+                                                "description": "The recommended default filter for actions that send events to APIs using this event type."
                                             }
                                         ]
                                     }
                                 },
                                 "nullable": true,
-                                "description": "The type of events that can be sent to a destination app connection.\n\nIt has a null value if the connection is not a destination connection of type app or if it does not support events.\n\nOnce you have retrieved an event type and its ID, you can obtain its schema through the method [`/connections/:id/schemas/event/:type`](api/connections/apps#get-event-schema)."
+                                "description": "The type of events that can be sent to a destination API connection.\n\nIt has a null value if the connection is not a destination connection of type API or if it does not support events.\n\nOnce you have retrieved an event type and its ID, you can obtain its schema through the method [`/connections/:id/schemas/event/:type`](api/connections/apps#get-event-schema)."
                             }
                         ]
                     },
@@ -9764,16 +9791,17 @@
                                             },
                                             {
                                                 "name": "type",
-                                                "prefilled": "\"App\"",
+                                                "prefilled": "\"API\"",
                                                 "type": {
                                                     "kind": "text",
                                                     "values": [
-                                                        "App",
+                                                        "API",
                                                         "Database",
                                                         "File",
                                                         "FileStorage",
+                                                        "MessageBroker",
                                                         "SDK",
-                                                        "Stream"
+                                                        "Webhook"
                                                     ]
                                                 },
                                                 "description": "The type of connector."
@@ -9880,7 +9908,7 @@
                                                                 ]
                                                             },
                                                             "nullable": true,
-                                                            "description": "The mode used by app connectors to send the events to the app, if the app supports events. It is empty if the connector is not an app or it does not handle events."
+                                                            "description": "The mode used by API connectors to send the events to the API, if the API supports events. It is empty if the connector is not an API or it does not handle events."
                                                         },
                                                         {
                                                             "name": "summary",
@@ -9906,7 +9934,7 @@
                                                             "type": {
                                                                 "kind": "text"
                                                             },
-                                                            "description": "The term used by an app to indicate a single user. For example \"client\", \"customer\" or \"user\".\n\nIt will be empty if the connector is not an app or if the app does not handle users."
+                                                            "description": "The term used by an API to indicate a single user. For example \"client\", \"customer\" or \"user\".\n\nIt will be empty if the connector is not an API or if the API does not handle users."
                                                         },
                                                         {
                                                             "name": "users",
@@ -9914,7 +9942,7 @@
                                                             "type": {
                                                                 "kind": "text"
                                                             },
-                                                            "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\".\n\nIt will be empty if the connector is not an app or if the app does not handle users."
+                                                            "description": "The term used by an API to indicate the users. For example \"clients\", \"customers\" or \"users\".\n\nIt will be empty if the connector is not an API or if the API does not handle users."
                                                         },
                                                         {
                                                             "name": "group",
@@ -9922,7 +9950,7 @@
                                                             "type": {
                                                                 "kind": "text"
                                                             },
-                                                            "description": "The term used by an app to indicate a single group. For example \"organization\", \"team\", or \"group\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                                            "description": "The term used by an API to indicate a single group. For example \"organization\", \"team\", or \"group\".\n\nIt will be empty if the connector is not an API or if the API does not handle groups."
                                                         },
                                                         {
                                                             "name": "groups",
@@ -9930,7 +9958,7 @@
                                                             "type": {
                                                                 "kind": "text"
                                                             },
-                                                            "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                                            "description": "The term used by an API to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an API or if the API does not handle groups."
                                                         }
                                                     ]
                                                 },
@@ -9950,7 +9978,7 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "description": "The descriptive name of the identifier used by the app to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an app."
+                                                "description": "The descriptive name of the identifier used by the API to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an API."
                                             },
                                             {
                                                 "name": "fileExtension",
@@ -9966,7 +9994,7 @@
                                                 "type": {
                                                     "kind": "boolean"
                                                 },
-                                                "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization."
+                                                "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an API or does not require authorization."
                                             },
                                             {
                                                 "name": "authConfigured",
@@ -10031,16 +10059,17 @@
                             },
                             {
                                 "name": "type",
-                                "prefilled": "\"App\"",
+                                "prefilled": "\"API\"",
                                 "type": {
                                     "kind": "text",
                                     "values": [
-                                        "App",
+                                        "API",
                                         "Database",
                                         "File",
                                         "FileStorage",
+                                        "MessageBroker",
                                         "SDK",
-                                        "Stream"
+                                        "Webhook"
                                     ]
                                 },
                                 "description": "The type of connector."
@@ -10147,7 +10176,7 @@
                                                 ]
                                             },
                                             "nullable": true,
-                                            "description": "The mode used by app connectors to send the events to the app, if the app supports events. It is empty if the connector is not an app or it does not handle events."
+                                            "description": "The mode used by API connectors to send the events to the API, if the API supports events. It is empty if the connector is not an API or it does not handle events."
                                         },
                                         {
                                             "name": "summary",
@@ -10173,7 +10202,7 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": "The term used by an app to indicate a single user. For example \"client\", \"customer\" or \"user\".\n\nIt will be empty if the connector is not an app or if the app does not handle users."
+                                            "description": "The term used by an API to indicate a single user. For example \"client\", \"customer\" or \"user\".\n\nIt will be empty if the connector is not an API or if the API does not handle users."
                                         },
                                         {
                                             "name": "users",
@@ -10181,7 +10210,7 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\".\n\nIt will be empty if the connector is not an app or if the app does not handle users."
+                                            "description": "The term used by an API to indicate the users. For example \"clients\", \"customers\" or \"users\".\n\nIt will be empty if the connector is not an API or if the API does not handle users."
                                         },
                                         {
                                             "name": "group",
@@ -10189,7 +10218,7 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": "The term used by an app to indicate a single group. For example \"organization\", \"team\", or \"group\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                            "description": "The term used by an API to indicate a single group. For example \"organization\", \"team\", or \"group\".\n\nIt will be empty if the connector is not an API or if the API does not handle groups."
                                         },
                                         {
                                             "name": "groups",
@@ -10197,7 +10226,7 @@
                                             "type": {
                                                 "kind": "text"
                                             },
-                                            "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                            "description": "The term used by an API to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an API or if the API does not handle groups."
                                         }
                                     ]
                                 },
@@ -10217,7 +10246,7 @@
                                 "type": {
                                     "kind": "text"
                                 },
-                                "description": "The descriptive name of the identifier used by the app to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an app."
+                                "description": "The descriptive name of the identifier used by the API to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an API."
                             },
                             {
                                 "name": "fileExtension",
@@ -10233,7 +10262,7 @@
                                 "type": {
                                     "kind": "boolean"
                                 },
-                                "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization."
+                                "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an API or does not require authorization."
                             },
                             {
                                 "name": "authConfigured",
@@ -10718,11 +10747,11 @@
         {
             "id": "event-write-keys",
             "name": "Event write keys",
-            "description": "Event write keys are used for authentication when sending events from websites, mobile apps, and servers through the [Ingest event](events#ingest-event) and [Ingest events](events#ingest-events) endpoints.\n\nKeys for SDK connections that receive events from a website or a mobile are usually public, as they can be exposed in a website's source code or on a mobile device. In contrast, keys for SDK connections used on servers should always remain private.",
+            "description": "Event write keys are used for authentication when sending events from websites, mobile apps, and servers through the [Ingest event](events#ingest-event) and [Ingest events](events#ingest-events) endpoints.\n\nKeys for SDK connections that receive events from a website or a mobile are usually public, as they can be exposed in a website's source code or on a mobile device. In contrast, keys for server-side SDK and webhook connections should always remain private.",
             "endpoints": [
                 {
                     "name": "Create event write key",
-                    "description": "Creates an event write key for an SDK connection. Returns an error if the connection already has the maximum limit of 20 keys.",
+                    "description": "Creates an event write key for an SDK or webhook connection. Returns an error if the connection already has the maximum limit of 20 keys.",
                     "method": "POST",
                     "url": "/v1/connections/:id/event-write-keys",
                     "parameters": [
@@ -10734,7 +10763,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection for which to create the key. It must be an SDK connection."
+                            "description": "The ID of the connection for which to create the key. It must be an SDK or webhook connection."
                         }
                     ],
                     "moreParameters": null,
@@ -10771,7 +10800,7 @@
                 },
                 {
                     "name": "List all event write keys",
-                    "description": "Returns all event write keys for an SDK connection.",
+                    "description": "Returns all event write keys for an SDK or webhook connection.",
                     "method": "GET",
                     "url": "/v1/connections/:id/event-write-keys",
                     "parameters": [
@@ -10783,7 +10812,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection for which to return the keys. It must be an SDK connection."
+                            "description": "The ID of the connection for which to return the keys. It must be an SDK or webhook connection."
                         }
                     ],
                     "moreParameters": null,
@@ -10818,7 +10847,7 @@
                 },
                 {
                     "name": "Delete event write key",
-                    "description": "Deletes an event write key from an SDK connection. If the connection has only one key, it cannot be deleted.",
+                    "description": "Deletes an event write key from an SDK or webhook connection. If the connection has only one key, it cannot be deleted.",
                     "method": "DELETE",
                     "url": "/v1/connections/:id/event-write-keys/:key",
                     "parameters": [
@@ -10830,7 +10859,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection for which to delete the key. It must be an SDK connection."
+                            "description": "The ID of the connection for which to delete the key. It must be an SDK or webhook connection."
                         },
                         {
                             "name": "key",
@@ -10872,7 +10901,7 @@
         {
             "id": "events",
             "name": "Events",
-            "description": "Events are customer behavioral events (such as page views, clicks, or purchases) received from websites, mobile apps, and servers. They can be stored in the workspace's data warehouse and forwarded to apps. You can also import customer data for identity resolution and unification.\n\nThese endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.\n\nYou can also use one of the available [SDKs to send events](/integrations/sources), instead of interacting with these API endpoints directly.",
+            "description": "Events are customer behavioral events (such as page views, clicks, or purchases) received from websites, mobile apps, and servers. They can be stored in the workspace's data warehouse and forwarded to application APIs. You can also import customer data for identity resolution and unification.\n\nThese endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.\n\nYou can also use one of the available [SDKs to send events](/integrations/sources), instead of interacting with these API endpoints directly.",
             "endpoints": [
                 {
                     "name": "Ingest events",
@@ -10888,7 +10917,7 @@
                                 "bitSize": 32
                             },
                             "updateRequired": true,
-                            "description": "The ID of the source connection to which the events refer. It can only be a source SDK connection.\n\nIt is required only if the call is authenticated using an API key. If authentication is done with an event write key, it is not needed, as the connection is that of the key."
+                            "description": "The ID of the source connection to which the events refer. It can only be a source SDK or webhook connection.\n\nIt is required only if the call is authenticated using an API key. If authentication is done with an event write key, it is not needed, as the connection is that of the key."
                         },
                         {
                             "name": "batch",
@@ -14773,7 +14802,7 @@
         {
             "id": "identity-resolution",
             "name": "Identity resolution",
-            "description": "Identities are the users obtained from sources like [apps](api/connections/apps), [databases](api/connections/databases), [files](api/connections/file-storages), or events. These identities are filtered and transformed according to a defined action. Once identity resolution is complete, the collected identities from all [connections](connections) are unified to form the workspace [users](users).",
+            "description": "Identities are the users obtained from sources like [application APIs](api/connections/applications), [databases](api/connections/databases), [files](api/connections/file-storages), or events. These identities are filtered and transformed according to a defined action. Once identity resolution is complete, the collected identities from all [connections](connections) are unified to form the workspace [users](users).",
             "endpoints": [
                 {
                     "name": "Start identity resolution",
@@ -14945,7 +14974,7 @@
         {
             "id": "linked-connections",
             "name": "Linked connections",
-            "description": "A source SDK connection is linked to a destination connection so that destination actions can send the events to an external application.",
+            "description": "SDK and webhook source connections can be linked to destination API connections. When linked, events received from the source are sent to the API.",
             "endpoints": [
                 {
                     "name": "Link connections",
@@ -14961,7 +14990,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the source connection. It must be an SDK connection."
+                            "description": "The ID of the source connection. It must be an SDK or webhook connection."
                         },
                         {
                             "name": "dst",
@@ -14971,7 +15000,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of a destination connection. It must be an app that supports events."
+                            "description": "The ID of a destination connection. It must be an API that supports events."
                         }
                     ],
                     "moreParameters": null,
@@ -15003,7 +15032,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the source connection. It must be an SDK connection."
+                            "description": "The ID of the source connection. It must be an SDK or webhook connection."
                         },
                         {
                             "name": "dst",
@@ -15013,7 +15042,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of a destination connection. It must be an app that supports events."
+                            "description": "The ID of a destination connection. It must be an API that supports events."
                         }
                     ],
                     "moreParameters": null,
@@ -16279,7 +16308,7 @@
                                                 "type": {
                                                     "kind": "text"
                                                 },
-                                                "description": "The unique identifier that represents the identity in the source from which it was retrieved. This field is empty for anonymous users. Specifically:\n* For an SDK connection, it corresponds to the User ID of the event. This field is empty for identities imported from anonymous events.\n* For an app connection, it is the value used to identify the user in the app. For example, in HubSpot, it corresponds to the HubSpot ID.\n* For a database or file storage connection, it is the value in the column designated as the identity."
+                                                "description": "The unique identifier that represents the identity in the source from which it was retrieved. This field is empty for anonymous users. Specifically:\n* For SDK and webhook connections, it corresponds to the User ID of the event. This field is empty for identities imported from anonymous events.\n* For an API connection, it is the value used to identify the user in the API. For example, in HubSpot's API, it corresponds to the HubSpot ID.\n* For a database or file storage connection, it is the value in the column designated as the identity."
                                             },
                                             {
                                                 "name": "anonymousIds",

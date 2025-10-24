@@ -116,7 +116,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "230527183",
-						Description:    "The ID of the connection from which the events are received. It must be a source SDK connection.",
+						Description:    "The ID of the connection from which the events are received. It must be a source SDK or webhook connection.",
 					},
 					{
 						Name:           "target",
@@ -162,7 +162,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "705981339",
-						Description:    "The ID of the source SDK action.",
+						Description:    "The ID of the source SDK or webhook action.",
 					},
 					nameParameter,
 					{
@@ -191,7 +191,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Prefilled:      "705981339",
-						Description:    "The ID of the source SDK action.",
+						Description:    "The ID of the source SDK or webhook action.",
 					},
 				},
 				Response: &Response{
@@ -200,7 +200,7 @@ func init() {
 							Name:        "id",
 							Type:        types.Int(32),
 							Prefilled:   "705981339",
-							Description: "The ID of the source SDK action.",
+							Description: "The ID of the source SDK or webhook action.",
 						},
 						nameParameter,
 						{
@@ -211,15 +211,15 @@ func init() {
 						},
 						{
 							Name:        "connectorType",
-							Type:        types.Text().WithValues("App", "Database", "FileStorage", "SDK"),
+							Type:        types.Text().WithValues("API", "Database", "FileStorage", "MessageBroker", "SDK", "Webhook"),
 							Prefilled:   `"SDK"`,
-							Description: "The type of the connection's connector. It is always `\"SDK\"` when the action imports users from events.",
+							Description: "The type of the connection's connector. It is always `\"SDK\"` or `\"Webhook\"` when the action imports users from events.",
 						},
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Prefilled:   "1371036433",
-							Description: "The ID of the connection from which the events are received. It is a source SDK connection.",
+							Description: "The ID of the connection from which the events are received. It is a source SDK or webhook connection.",
 						},
 						{
 							Name:        "connectionRole",

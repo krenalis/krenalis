@@ -14,7 +14,9 @@ Creating a new connector involves:
 
 1. Writing the package according to the documentation, based on the type of connector you want to create.
 
-    - [Apps](create-new-connector/apps)
+    - Applications
+        - [APIs](create-new-connector/apis)
+        - [SDKs](create-new-connector/sdks)
     - [Databases](create-new-connector/databases)
     - [Files](create-new-connector/files)
     - [File storages](create-new-connector/file-storages)

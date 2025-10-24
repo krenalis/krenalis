@@ -8,10 +8,10 @@ When representing user and event data in a connector, these are mapped to specif
 
 ## Import
 
-During an import, connectors return data to import, such as user information. This data must use specific types according to the data type. Key scenarios for handling data in an app connector include:
+During an import, connectors return data to import, such as user information. This data must use specific types according to the data type. Key scenarios for handling data in an API connector include:
 
-- [`Records`](apps/users#read-records) method of apps returns properties of users.
-{#- `ReceiveWebhook` method of apps may return properties of users.#}
+- [`Records`](apis/users#read-records) method of APIs returns properties of users.
+{#- `ReceiveWebhook` method of APIs may return properties of users.#}
 - [`Query`](databases#query-method) method of databases returns the resulting rows from a query.
 - [`Read`](files#read-method) method of files takes a `RecordWriter` whose methods return the read records.
 
@@ -56,10 +56,10 @@ The table below shows, for each data type, which Go type a connector can return.
 
 By default, values of type `datetime`, `date`, and `time` returned as `string` are parsed using the ISO 8601 format. The same applies to values of type `time` returned as `[]byte`.
 
-When registering the app connector, you can specify a different format if the values are not in ISO 8601, using any layout supported by the [time.Parse](https://pkg.go.dev/time#Parse) function:
+When registering the API connector, you can specify a different format if the values are not in ISO 8601, using any layout supported by the [time.Parse](https://pkg.go.dev/time#Parse) function:
 
 ```go
-meergo.RegisterApp(meergo.AppInfo{
+meergo.RegisterAPI(meergo.APIInfo{
     ...
     TimeLayouts: meergo.TimeLayouts{
         DateTime: "2006-01-02T15:04:05.999Z",
@@ -72,15 +72,15 @@ meergo.RegisterApp(meergo.AppInfo{
 
 #### Unix epoch
 
-For the `TimeLayouts.DateTime` field of `meergo.AppInfo`, you can also use special layout strings: `"unix"`, `"unixmilli"`, `"unixmicro"`, or `"unixnano"`. With these layouts, values returned as `string` or `float64` are interpreted as the number of seconds, milliseconds, microseconds, or nanoseconds since the Unix epoch (January 1, 1970, 00:00:00 UTC).
+For the `TimeLayouts.DateTime` field of `meergo.APIInfo`, you can also use special layout strings: `"unix"`, `"unixmilli"`, `"unixmicro"`, or `"unixnano"`. With these layouts, values returned as `string` or `float64` are interpreted as the number of seconds, milliseconds, microseconds, or nanoseconds since the Unix epoch (January 1, 1970, 00:00:00 UTC).
 
 ## Export
 
-During an export, when a connector (whether app, database, or file) receives data to export, such as user information, it receives Go types specific to the data types. This involves methods such as:
+During an export, when a connector (whether API, database, or file) receives data to export, such as user information, it receives Go types specific to the data types. This involves methods such as:
 
-- [`PreviewSendEvents`](apps/send-events#send-events-1) method of apps takes extra event information.
-- [`SendEvents`](apps/send-events#send-events-1) method of apps takes extra event information.
-- [`Upsert`](apps/users#updating-and-creating-records) method of apps takes properties of a user.
+- [`PreviewSendEvents`](apis/send-events#send-events-1) method of APIs takes extra event information.
+- [`SendEvents`](apis/send-events#send-events-1) method of APIs takes extra event information.
+- [`Upsert`](apis/users#updating-and-creating-records) method of APIs takes properties of a user.
 - [`Merge`](databases#merge-method) method of databases takes rows to be added or updated.
 - [`Write`](files#write-method) method of files takes a `RecordReader` whose `Record` method returns the next record to write.
 

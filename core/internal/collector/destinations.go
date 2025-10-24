@@ -77,7 +77,7 @@ func newDestinations(st *state.State, connectors *connectors.Connectors, provide
 		if !c.Connector().DestinationTargets.Contains(state.TargetEvent) {
 			continue
 		}
-		app := connectors.App(c)
+		app := connectors.API(c)
 		sender := sender.New(app, d.sentAcks)
 		actions := make([]*destinationAction, 0, 1)
 		// Keeps all actions active on the connection's events.
@@ -114,8 +114,8 @@ func (d *destinations) createDestinationAction(action *state.Action, sender *sen
 	ctx, cancel := context.WithCancelCause(d.close.ctx)
 
 	connection := action.Connection()
-	app := d.connectors.App(connection)
-	schema, err := app.Schema(ctx, state.TargetEvent, action.EventType)
+	api := d.connectors.API(connection)
+	schema, err := api.Schema(ctx, state.TargetEvent, action.EventType)
 	if err != nil {
 		panic("TODO")
 	}
@@ -188,8 +188,8 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 	if !connector.DestinationTargets.Contains(state.TargetEvent) {
 		return
 	}
-	app := d.connectors.App(c)
-	d.senders[n.ID] = sender.New(app, d.sentAcks)
+	api := d.connectors.API(c)
+	d.senders[n.ID] = sender.New(api, d.sentAcks)
 	actions := make([]*destinationAction, 0, 1)
 	d.mu.Lock()
 	d.actions[n.ID] = actions
@@ -317,8 +317,8 @@ func (d *destinations) onSetConnectionSettings(n state.SetConnectionSettings) {
 		return
 	}
 	connection, _ := d.state.Connection(n.Connection)
-	app := d.connectors.App(connection)
-	sender.SetApp(app)
+	api := d.connectors.API(connection)
+	sender.SetAPI(api)
 }
 
 // onUpdateAction is called when an action is updated.

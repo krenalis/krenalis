@@ -1,7 +1,7 @@
 import { Action, ActionInfo, ActionType } from './action';
 import { ConnectorSettings } from './responses';
 
-type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'SDK' | 'Stream';
+type ConnectorType = 'API' | 'Database' | 'File' | 'FileStorage' | 'MessageBroker' | 'SDK' | 'Webhook';
 
 type ConnectionRole = 'Source' | 'Destination';
 

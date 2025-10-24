@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package appwriter
+package apiwriter
 
 import (
 	"context"
@@ -40,8 +40,8 @@ func Test_Writer(t *testing.T) {
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d/%d/%f", test.num, test.seed, test.create), func(t *testing.T) {
 
-			app := newApp(t, test.seed)
-			w := New("test", state.TargetUser, app.Upsert, app.ack)
+			api := newAPI(t, test.seed)
+			w := New("test", state.TargetUser, api.Upsert, api.ack)
 
 			ctx := context.Background()
 
@@ -67,9 +67,9 @@ func Test_Writer(t *testing.T) {
 			var n int
 			for {
 				time.Sleep(10 * time.Millisecond)
-				app.mu.Lock()
-				n = app.n
-				app.mu.Unlock()
+				api.mu.Lock()
+				n = api.n
+				api.mu.Unlock()
 				if n == test.num {
 					break
 				}
@@ -78,10 +78,10 @@ func Test_Writer(t *testing.T) {
 				t.Fatalf("expected %d IDs, got %d", test.num, n)
 			}
 
-			app.mu.Lock()
-			defer app.mu.Unlock()
+			api.mu.Lock()
+			defer api.mu.Unlock()
 
-			for i, ack := range app.acks {
+			for i, ack := range api.acks {
 				for _, id := range ack.ids {
 					ids[id]--
 					if id != "" && ids[id] < 0 {
@@ -107,7 +107,7 @@ type ack struct {
 	err error
 }
 
-type app struct {
+type api struct {
 	t    *testing.T
 	rng  *rand.Rand
 	mu   sync.Mutex
@@ -115,42 +115,42 @@ type app struct {
 	acks []ack
 }
 
-func newApp(t *testing.T, seed int64) *app {
-	return &app{t: t, rng: rand.New(rand.NewSource(seed))}
+func newAPI(t *testing.T, seed int64) *api {
+	return &api{t: t, rng: rand.New(rand.NewSource(seed))}
 }
-func (app *app) validateRecord(r meergo.Record) {
+func (api *api) validateRecord(r meergo.Record) {
 	if r.Properties == nil {
-		app.t.Fatal("Upsert: expected properties, got nil")
+		api.t.Fatal("Upsert: expected properties, got nil")
 	}
 	if r.Properties["id"] != r.ID {
-		app.t.Fatalf("Upsert: expected properties[\"id\"] == %q, got %q", r.Properties["id"], r.ID)
+		api.t.Fatalf("Upsert: expected properties[\"id\"] == %q, got %q", r.Properties["id"], r.ID)
 	}
 }
 
-func (app *app) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (api *api) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	// Test Peek.
-	if app.rng.Int()%8 == 0 {
+	if api.rng.Int()%8 == 0 {
 		record, _ := records.Peek()
-		app.validateRecord(record)
-		if app.rng.Int()%4 == 0 {
+		api.validateRecord(record)
+		if api.rng.Int()%4 == 0 {
 			record, ok := records.Peek()
 			if !ok {
 				return nil
 			}
-			app.validateRecord(record)
+			api.validateRecord(record)
 		}
 	}
 
 	// Test First.
-	if app.rng.Int()%5 == 0 {
-		app.validateRecord(records.First())
-		time.Sleep(time.Duration(app.rng.Int()%10) * time.Nanosecond)
+	if api.rng.Int()%5 == 0 {
+		api.validateRecord(records.First())
+		time.Sleep(time.Duration(api.rng.Int()%10) * time.Nanosecond)
 		return nil
 	}
 
 	var seq iter.Seq[meergo.Record]
-	if app.rng.Int()%3 == 0 {
+	if api.rng.Int()%3 == 0 {
 		seq = records.Same()
 	} else {
 		seq = records.All()
@@ -158,37 +158,37 @@ func (app *app) Upsert(ctx context.Context, target meergo.Targets, records meerg
 
 	n := 0
 	for r := range seq {
-		app.validateRecord(r)
+		api.validateRecord(r)
 		if n%4 == 0 {
 			if p, ok := records.Peek(); ok {
-				app.validateRecord(p)
+				api.validateRecord(p)
 			}
 		}
-		if n > 0 && app.rng.Int()%3 == 0 {
+		if n > 0 && api.rng.Int()%3 == 0 {
 			records.Postpone()
-		} else if app.rng.Int()%16 == 0 {
+		} else if api.rng.Int()%16 == 0 {
 			records.Discard(errors.New("event is invalid"))
 		}
-		if n == app.rng.Int()/2 {
+		if n == api.rng.Int()/2 {
 			break
 		}
 		n++
 	}
 
-	time.Sleep(time.Duration(app.rng.Int()%10) * time.Microsecond)
+	time.Sleep(time.Duration(api.rng.Int()%10) * time.Microsecond)
 
 	return nil
 }
 
-func (app *app) ack(ids []string, err error) {
+func (api *api) ack(ids []string, err error) {
 	if len(ids) == 0 {
-		app.t.Fatalf("ack: expected at least one id, got none")
+		api.t.Fatalf("ack: expected at least one id, got none")
 	}
-	app.mu.Lock()
-	if app.acks == nil {
-		app.acks = []ack{}
+	api.mu.Lock()
+	if api.acks == nil {
+		api.acks = []ack{}
 	}
-	app.acks = append(app.acks, ack{ids: ids, err: err})
-	app.n += len(ids)
-	app.mu.Unlock()
+	api.acks = append(api.acks, ack{ids: ids, err: err})
+	api.n += len(ids)
+	api.mu.Unlock()
 }

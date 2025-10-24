@@ -59,14 +59,14 @@ func TestConnections(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check that a stream connection cannot be created.
-	stream := &meergotester.ConnectionToCreate{
+	// Check that a message broker connection cannot be created.
+	broker := &meergotester.ConnectionToCreate{
 		Name:      "Kafka",
 		Role:      meergotester.Source,
 		Connector: "kafka",
 	}
 	var id int
-	err := c.Call("POST", "/api/v1/connections", stream, &id)
+	err := c.Call("POST", "/api/v1/connections", broker, &id)
 	if err == nil {
 		t.Fatalf("expected Bad Request error, got no error")
 	}
@@ -77,7 +77,7 @@ func TestConnections(t *testing.T) {
 	if errStatusCode.Code != 400 {
 		t.Fatalf("expected error status 400, got error: %v", errStatusCode)
 	}
-	const expectedText = `{"error":{"code":"BadRequest","message":"stream connectors are not currently supported"}}`
+	const expectedText = `{"error":{"code":"BadRequest","message":"message broker connectors are not currently supported"}}`
 	if expectedText != errStatusCode.ResponseText {
 		t.Fatalf("expected error text %q, got %q", expectedText, errStatusCode.ResponseText)
 	}

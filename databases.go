@@ -13,8 +13,8 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-// DatabaseInfo represents a database connector info.
-type DatabaseInfo struct {
+// DatabaseSpec represents a database connector specification.
+type DatabaseSpec struct {
 	Code          string
 	Label         string
 	Categories    Categories  // categories
@@ -27,14 +27,14 @@ type DatabaseInfo struct {
 }
 
 // ReflectType returns the type of the value implementing the database
-// connector info.
-func (info DatabaseInfo) ReflectType() reflect.Type {
-	return info.ct
+// connector specification.
+func (spec DatabaseSpec) ReflectType() reflect.Type {
+	return spec.ct
 }
 
 // New returns a new database connector instance.
-func (info DatabaseInfo) New(env *DatabaseEnv) (any, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
+func (spec DatabaseSpec) New(env *DatabaseEnv) (any, error) {
+	out := spec.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
 	err, _ := reflect.TypeAssert[error](out[1])
 	return c, err
