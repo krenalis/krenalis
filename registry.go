@@ -51,8 +51,13 @@ var (
 func Connectors() map[string]ConnectorSpec {
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	n := len(registry.apis) + len(registry.databases) + len(registry.files) + len(registry.storages) +
-		len(registry.sdks) + len(registry.messageBrokers)
+	n := len(registry.apis) +
+		len(registry.databases) +
+		len(registry.files) +
+		len(registry.storages) +
+		len(registry.messageBrokers) +
+		len(registry.sdks) +
+		len(registry.webhooks)
 	connectors := make(map[string]ConnectorSpec, n)
 	for _, c := range registry.apis {
 		connectors[c.Code] = c
@@ -250,18 +255,6 @@ func RegisteredDatabase(code string) DatabaseSpec {
 	return database
 }
 
-// RegisteredMessageBroker returns the message broker registered with the given
-// code. If a message broker with this code is not registered, it panics.
-func RegisteredMessageBroker(code string) MessageBrokerSpec {
-	registryMu.Lock()
-	broker, ok := registry.messageBrokers[code]
-	registryMu.Unlock()
-	if !ok {
-		panic(fmt.Errorf("meergo: unknown message broker connector %q (forgotten import?)", code))
-	}
-	return broker
-}
-
 // RegisteredFile returns the file registered with the given code.
 // If a file with this code is not registered, it panics.
 func RegisteredFile(code string) FileSpec {
@@ -284,6 +277,18 @@ func RegisteredFileStorage(code string) FileStorageSpec {
 		panic(fmt.Errorf("meergo: unknown file storage connector %q (forgotten import?)", code))
 	}
 	return storage
+}
+
+// RegisteredMessageBroker returns the message broker registered with the given
+// code. If a message broker with this code is not registered, it panics.
+func RegisteredMessageBroker(code string) MessageBrokerSpec {
+	registryMu.Lock()
+	broker, ok := registry.messageBrokers[code]
+	registryMu.Unlock()
+	if !ok {
+		panic(fmt.Errorf("meergo: unknown message broker connector %q (forgotten import?)", code))
+	}
+	return broker
 }
 
 // RegisteredSDK returns the SDK registered with the given code.
@@ -420,7 +425,7 @@ func validateAPIConnector(api APISpec) {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if api.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: ServeUI is implemented, but neither API.AsSource.HasSettings nor API.AsDestination.HasSettings is set to true", api.Code))
+			panic(fmt.Sprintf("connector %s: ServeUI is implemented, but neither APISpec.AsSource.HasSettings nor APISpec.AsDestination.HasSettings is set to true", api.Code))
 		}
 	}
 
@@ -477,24 +482,6 @@ func validateDatabaseConnector(database DatabaseSpec) {
 	}]()
 	if !database.ct.Implements(iface) {
 		panic(fmt.Sprintf("connector %s: it does not implement the required methods", database.Code))
-	}
-}
-
-// validateMessageBrokerConnector validates the passed message broker connector,
-// performing checks to detect errors that could cause panic or errors in the
-// Meergo code that uses the connectors.
-//
-// In case of a validation error, this function panics.
-func validateMessageBrokerConnector(broker MessageBrokerSpec) {
-	validateConnectorCode("Message Broker", broker.Code)
-	validateCategories(broker.Code, broker.Categories)
-	iface := reflect.TypeFor[interface {
-		Close() error
-		Receive(ctx context.Context) (event []byte, ack func(), err error)
-		Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error
-	}]()
-	if !broker.ct.Implements(iface) {
-		panic(fmt.Sprintf("connector %s: it does not implement the required methods", broker.Code))
 	}
 }
 
@@ -584,6 +571,24 @@ func validateFileStorageConnector(fileStorage FileStorageSpec) {
 		}
 	}
 
+}
+
+// validateMessageBrokerConnector validates the passed message broker connector,
+// performing checks to detect errors that could cause panic or errors in the
+// Meergo code that uses the connectors.
+//
+// In case of a validation error, this function panics.
+func validateMessageBrokerConnector(broker MessageBrokerSpec) {
+	validateConnectorCode("Message Broker", broker.Code)
+	validateCategories(broker.Code, broker.Categories)
+	iface := reflect.TypeFor[interface {
+		Close() error
+		Receive(ctx context.Context) (event []byte, ack func(), err error)
+		Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error
+	}]()
+	if !broker.ct.Implements(iface) {
+		panic(fmt.Sprintf("connector %s: it does not implement the required methods", broker.Code))
+	}
 }
 
 // validateSDKConnector validates the passed SDK connector, performing checks to

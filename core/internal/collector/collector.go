@@ -101,7 +101,7 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connec
 			if !action.Enabled {
 				continue
 			}
-			if typ := action.Connection().Connector().Type; typ != state.SDK && typ != state.Webhook {
+			if t := action.Connection().Connector().Type; t != state.SDK && t != state.Webhook {
 				continue
 			}
 			iw := newIdentityWriter(c.datastore, action, provider, metrics)
@@ -194,15 +194,16 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// connectionByKey returns the source SDK or Webhook connection for the given
-// key, and true if it exists; otherwise, it returns nil and false.
+// connectionByKey returns the SDK or webhook connection for the key and true
+// if found, or nil and false otherwise.
 func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	conn, ok := c.state.ConnectionByKey(key)
-	if ok && conn.Role == state.Source {
-		switch conn.Connector().Type {
-		case state.SDK, state.Webhook:
-			return conn, true
-		}
+	if !ok || conn.Role != state.Source {
+		return nil, false
+	}
+	t := conn.Connector().Type
+	if t == state.SDK || t == state.Webhook {
+		return conn, true
 	}
 	return nil, false
 }
@@ -499,7 +500,7 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 	if action.Target != state.TargetUser || !action.Enabled {
 		return
 	}
-	if typ := action.Connection().Connector().Type; typ != state.SDK && typ != state.Webhook {
+	if t := action.Connection().Connector().Type; t != state.SDK && t != state.Webhook {
 		return
 	}
 	iw := newIdentityWriter(c.datastore, action, c.functionProvider, c.metrics)
@@ -526,7 +527,7 @@ func (c *Collector) onDeleteAction(n state.DeleteAction) {
 // onDeleteConnection is called when a connection is deleted.
 func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	connection := n.Connection()
-	if typ := connection.Connector().Type; typ != state.SDK && typ != state.Webhook {
+	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
 		return
 	}
 	for _, action := range connection.Actions() {
@@ -554,7 +555,7 @@ func (c *Collector) onSetActionStatus(n state.SetActionStatus) {
 		return
 	}
 	connection := action.Connection()
-	if typ := connection.Connector().Type; typ != state.SDK && typ != state.Webhook {
+	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
 		return
 	}
 	if action.Enabled {
@@ -573,7 +574,7 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 		return
 	}
 	connection := action.Connection()
-	if typ := connection.Connector().Type; typ != state.SDK && typ != state.Webhook {
+	if t := connection.Connector().Type; t != state.SDK && t != state.Webhook {
 		return
 	}
 	if !action.Enabled {

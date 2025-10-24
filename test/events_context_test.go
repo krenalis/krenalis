@@ -13,9 +13,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/analytics-go"
-
 	"github.com/meergo/meergo/test/meergotester"
+
+	"github.com/meergo/analytics-go"
 )
 
 func TestEventsContext(t *testing.T) {
@@ -28,7 +28,7 @@ func TestEventsContext(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	// Create a Webhook connection, with an action to ingest the events.
+	// Create a webhook connection, with an action to ingest the events.
 	var webhookID int
 	var webhookEventWriteKey string
 	{

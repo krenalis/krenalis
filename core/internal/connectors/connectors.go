@@ -5,8 +5,8 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package connectors provides the interface to interact with api, database,
-// file, SDK and message broker connectors.
+// Package connectors provides the interface to interact with API, database,
+// file storage, and message broker connectors, and to file actions.
 package connectors
 
 import (
@@ -51,7 +51,7 @@ type Authorization struct {
 
 var (
 	ErrNoColumnsFound = errors.New("file has no columns")
-	ErrNoWebhooks     = errors.New("api has no webhooks")
+	ErrNoWebhooks     = errors.New("API has no webhooks")
 )
 
 // LastChangeTimeColumn represents the last change time column passed to the
@@ -132,7 +132,7 @@ type Record struct {
 	Err error
 }
 
-// Writer is the interface implemented by api, database, and file connectors to
+// Writer is the interface implemented by API, database, and file connectors to
 // write records.
 type Writer interface {
 
@@ -241,7 +241,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //// ReceivePerAccountWebhook receives a per account webhook request and returns
 //// its payloads. The context is the request's context.
 ////
-//// If the connector of the account is not an api or does not support per account
+//// If the connector of the account is not an API or does not support per account
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the meergo.ErrWebhookUnauthorized error.
 //func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]meergo.WebhookPayload, error) {
@@ -270,7 +270,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //// ReceivePerConnectionWebhook receives a per connection webhook request and
 //// returns its payloads. The context is the request's context.
 ////
-//// if the connection is not an api, or it does not support per connection
+//// if the connection is not an API, or it does not support per connection
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the meergo.ErrWebhookUnauthorized error.
 //func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]meergo.WebhookPayload, error) {
@@ -305,7 +305,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //// ReceivePerConnectorWebhook receives a per connector webhook request and
 //// returns its payloads. The context is the request's context.
 ////
-//// If the connector is not an api, or it does not support per connector
+//// If the connector is not an API, or it does not support per connector
 //// webhooks, it returns the ErrNoWebhooks error. If the request was not
 //// authorized, it returns the meergo.ErrWebhookUnauthorized error.
 //func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]meergo.WebhookPayload, error) {

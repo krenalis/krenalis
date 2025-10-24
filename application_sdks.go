@@ -11,7 +11,7 @@ import (
 	"reflect"
 )
 
-// SDKSpec represents an application SDK connector specification.
+// SDKSpec represents an SDK connector specification.
 type SDKSpec struct {
 	Code                string
 	Label               string
@@ -24,13 +24,13 @@ type SDKSpec struct {
 	ct      reflect.Type
 }
 
-// ReflectType returns the type of the value implementing the application SDK
-// connector specification.
+// ReflectType returns the type of the value implementing the SDK connector
+// specification.
 func (spec SDKSpec) ReflectType() reflect.Type {
 	return spec.ct
 }
 
-// New returns a new application SDK connector instance.
+// New returns a new SDK connector instance.
 func (spec SDKSpec) New(env *SDKEnv) (any, error) {
 	out := spec.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
@@ -38,7 +38,7 @@ func (spec SDKSpec) New(env *SDKEnv) (any, error) {
 	return c, err
 }
 
-// SDKEnv is the environment for an application SDK connector.
+// SDKEnv is the environment for an SDK connector.
 type SDKEnv struct {
 
 	// Settings is the raw settings data.
@@ -48,6 +48,5 @@ type SDKEnv struct {
 	SetSettings SetSettingsFunc
 }
 
-// SDKNewFunc represents functions that create new application SDK connector
-// instances.
+// SDKNewFunc represents functions that create new SDK connector instances.
 type SDKNewFunc[T any] func(*SDKEnv) (T, error)

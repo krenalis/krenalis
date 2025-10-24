@@ -43,7 +43,7 @@ func init() {
 				Type:           types.Text(),
 				CreateRequired: true,
 				Prefilled:      `"customer.email"`,
-				Description:    "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the API's user schema. Its definition must also be included in the action's output schema.",
+				Description:    "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the application API's user schema. Its definition must also be included in the action's output schema.",
 			},
 		}),
 		CreateRequired: true,
@@ -55,8 +55,8 @@ func init() {
 		CreateRequired: true,
 		Prefilled:      `"CreateOnly"`,
 		Description: "The mode in which users are exported:\n\n" +
-			"* `\"CreateOnly\"`: Only new users are created in the API. No existing users are modified.\n" +
-			"* `\"UpdateOnly\"`: Only existing users are updated in the API. No new users are created.\n" +
+			"* `\"CreateOnly\"`: Only new users are created via the API. No existing users are modified.\n" +
+			"* `\"UpdateOnly\"`: Only existing users are updated via the API. No new users are created.\n" +
 			"* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.\n\n" +
 			"It should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable.",
 	}
@@ -64,7 +64,7 @@ func init() {
 		Name:      "updateOnDuplicates",
 		Type:      types.Boolean(),
 		Prefilled: `false`,
-		Description: "Determines whether, when multiple API users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
+		Description: "Specifies whether to update API users even when multiple matches are found for a single user in the workspace's data warehouse.\n\n" +
 			"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\n" +
 			"This field does not affect user creation.",
 	}
@@ -125,7 +125,7 @@ func init() {
 		Prefilled:      `...`,
 		CreateRequired: true,
 		UpdateRequired: true,
-		Description: "The mapping or function responsible for transforming unified users into API users.\n\n" +
+		Description: "Defines the mapping or function that transforms unified users into users for the API.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
 	inSchemaParameter := types.Property{

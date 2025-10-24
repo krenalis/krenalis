@@ -448,9 +448,8 @@ func (dummy *Dummy) simulateHTTPDelay() {
 	metrics.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
 }
 
-// sendEvents sends the given events to the API and returns the sent
-// HTTP request.
-// If preview is true, the HTTP request is built but not sent, so it is
+// sendEvents sends the given events to the API and returns the sent HTTP
+// request. If preview is true, the HTTP request is built but not sent, so it is
 // only returned.
 //
 // If an error occurs while sending the events to the API, a nil *http.Request

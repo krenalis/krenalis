@@ -121,7 +121,7 @@ func TestRegisterAPIRegistersConnector(t *testing.T) {
 	app := APISpec{
 		Code:       "test-api",
 		Label:      "Test API",
-		Categories: CategoryTesting,
+		Categories: CategorySaaS,
 		AsDestination: &AsAPIDestination{
 			Targets:     TargetEvent,
 			SendingMode: Server,
@@ -222,7 +222,7 @@ func TestRegisterSDKRegistersConnector(t *testing.T) {
 	sdk := SDKSpec{
 		Code:       "test-sdk",
 		Label:      "Test SDK",
-		Categories: CategoryTesting,
+		Categories: CategorySDK,
 	}
 	RegisterSDK(sdk, newTestSDK)
 
@@ -260,7 +260,7 @@ func TestRegisterConnectorDuplicateCodePanics(t *testing.T) {
 	RegisterSDK(SDKSpec{
 		Code:       "duplicate",
 		Label:      "Duplicate",
-		Categories: CategoryTesting,
+		Categories: CategorySDK,
 	}, newTestSDK)
 
 	defer func() {

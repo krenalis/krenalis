@@ -407,7 +407,7 @@ func Test_ReceivedEventMissingFields(t *testing.T) {
 	}
 
 	if _, ok := ctx.App(); ok {
-		t.Fatalf("expected no api context")
+		t.Fatalf("expected no app context")
 	}
 	if ip, _ := ctx.IP(); ip != "1.2.3.4" {
 		t.Fatalf("unexpected IP %q", ip)

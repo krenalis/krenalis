@@ -105,8 +105,13 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
-	case state.SDK, state.Webhook:
+	case state.SDK:
 		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{
+			Settings:    connection.Settings,
+			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+		})
+	case state.Webhook:
+		inner, err = meergo.RegisteredWebhook(c.Code).New(&meergo.WebhookEnv{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
@@ -159,8 +164,10 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 		inner, err = meergo.RegisteredFileStorage(c.Code).New(&meergo.FileStorageEnv{})
 	case state.MessageBroker:
 		inner, err = meergo.RegisteredMessageBroker(c.Code).New(&meergo.MessageBrokerEnv{})
-	case state.SDK, state.Webhook:
+	case state.SDK:
 		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{})
+	case state.Webhook:
+		inner, err = meergo.RegisteredWebhook(c.Code).New(&meergo.WebhookEnv{})
 	}
 	if err != nil {
 		return nil, connectorError(err)

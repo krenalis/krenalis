@@ -23,20 +23,19 @@ const trace = false  // set to true to trace execution flow
 
 type AcksFunc func(ids []string, err error)
 
-// UpsertFunc is a function that updates or creates records in the API for the
-// specified target.
+// UpsertFunc updates or creates records via the API for the specified target.
 type UpsertFunc func(ctx context.Context, target meergo.Targets, records meergo.Records) error
 
 const minBatchSize = 1000
 const maxQueueDelay = 200 * time.Millisecond
 
-// Writer represents a writer for API records.
+// Writer represents a writer for records in the API.
 // It implements the connectors.Writer interface.
 //
-// By calling the Write method for each record to be written, the records are
-// sent to the API, potentially in batches, and the acks function is called for
-// confirmation. To ensure that all records are successfully sent to the API,
-// the Close method must be called once all Write calls have completed.
+// By calling Write for each record to be written, the records are sent to the
+// API, potentially in batches, and the acks function is called for
+// confirmation. To ensure all records are successfully sent to the API, Close
+// must be called after all Write calls have completed.
 type Writer struct {
 	connector string         // API connector.
 	target    meergo.Targets // target, can be TargetUser or TargetGroup

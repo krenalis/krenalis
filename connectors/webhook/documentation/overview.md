@@ -1,14 +1,14 @@
 
-Webhook is a connector to sending events from your application to Meergo with a webhook.
+A webhook is a connector that sends events directly from your application to Meergo.
 
 ## What can you do with this?
 
-This connector allows you to send events to the Meergo ingestion APIs directly from your application, regardless of the technology and programming language you use, since it allows you to interact directly via HTTP calls with Meergo ingestion APIs.
+This connector lets you send events to the Meergo ingestion APIs directly from your application, regardless of technology or programming language, since it interacts with the APIs over HTTP.
 
-The events can be streamed in real time to your data warehouse and to SaaS applications.
+Events can be streamed in real time to your data warehouse and third-party applications.
 
-This connector is useful in those cases where Meergo does not provide a dedicated SDK for your language. It can also be used in those cases where you want to interact with Meergo directly via the command line, making the calls with tools like `curl`.
+This connector is useful when Meergo does not provide a dedicated SDK for your language.
 
 ## What does it require?
 
-Any language or application that can make HTTP calls.
+Any application that can send HTTP requests.

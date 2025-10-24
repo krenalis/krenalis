@@ -206,7 +206,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			} else {
 				// Destination/API/User.
 				//
-				// The api's destination schema is already available here, but
+				// The API's destination schema is already available here, but
 				// we need to get the source one too because it's needed for the
 				// matching properties.
 				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetUser, "")
@@ -310,7 +310,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
 		}
-		// TODO(Gianluca): regarding MessageBroker connectors, see the issue
+		// TODO(Gianluca): regarding message broker connectors, see the issue
 		// https://github.com/meergo/meergo/issues/1264.
 		switch target {
 		case TargetUser:
@@ -619,7 +619,7 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("%s", err)
 		case *schemas.Error:
-			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the api's source schema: %w", err)
+			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the API's source schema: %w", err)
 		}
 		return nil, "", err
 	}
@@ -901,7 +901,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 }
 
 // CreateEventWriteKey creates a new event write key for the connection.
-// The connection must be an SDK or Webhook source.
+// The connection must be an SDK or webhook source.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the connection has already too many keys, it returns an
@@ -913,7 +913,7 @@ func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error)
 	switch connector.Type {
 	case state.SDK, state.Webhook:
 	default:
-		return "", errors.NotFound("connection %d is neither an SDK nor a Webhook", c.ID)
+		return "", errors.NotFound("connection %d is neither an SDK nor a webhook", c.ID)
 	}
 	if c.Role != state.Source {
 		return "", errors.NotFound("connection %d is not a source", c.ID)
@@ -1061,7 +1061,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 
 // DeleteEventWriteKey deletes the given event write key of the connection.
 // key cannot be empty and cannot be the only key for the connection.
-// The connection must be an SDK or Webhook source.
+// The connection must be an SDK or webhook source.
 //
 // If the key does not exist, it returns an errors.NotFoundError error.
 // If the key is the only key for the connection, it returns an
@@ -1079,7 +1079,7 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 	switch connector.Type {
 	case state.SDK, state.Webhook:
 	default:
-		return errors.BadRequest("connection %d is neither an SDK nor a Webhook", c.ID)
+		return errors.BadRequest("connection %d is neither an SDK nor a webhook", c.ID)
 	}
 	if c.Role != state.Source {
 		return errors.BadRequest("connection %d is not a source", c.ID)
@@ -1378,7 +1378,7 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 	return identities, total, err
 }
 
-// LinkConnection links an SDK or Webhook connection to the destination
+// LinkConnection links an SDK or webhook connection to the destination
 // connection identified by dst, which must support events. If the connections
 // are already linked, the method does nothing.
 //
@@ -1434,8 +1434,8 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	return err
 }
 
-// PreviewSendEvent returns a preview of an event as it would be sent to an api.
-// The connection must be a destination api connection, and it is expected to
+// PreviewSendEvent returns a preview of an event as it would be sent to an API.
+// The connection must be a destination API connection, and it is expected to
 // have an event type with identifier typ. If there is a transformation,
 // outSchema is the output schema of the transformation, and it must be a valid.
 //
@@ -1454,7 +1454,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	c := this.connection
 
 	if c.Connector().Type != state.API {
-		return nil, errors.BadRequest("connection %d is not an application API connection", c.ID)
+		return nil, errors.BadRequest("connection %d is not an API connection", c.ID)
 	}
 	if c.Role != state.Destination {
 		return nil, errors.BadRequest("connection %d is not a destination", c.ID)
@@ -1838,7 +1838,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	return schema, issues, err
 }
 
-// UnlinkConnection unlinks an SDK or Webhook connection from the destination
+// UnlinkConnection unlinks an SDK or webhook connection from the destination
 // connection identified by dst, which must support events. If the connections
 // are not linked, the method does nothing.
 //
@@ -1970,14 +1970,14 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 }
 
 // EventWriteKeys returns the event write keys of the connection.
-// The connection must be an SDK or Webhook source.
+// The connection must be an SDK or webhook source.
 func (this *Connection) EventWriteKeys() ([]string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
 	switch c.Connector().Type {
 	case state.SDK, state.Webhook:
 	default:
-		return nil, errors.BadRequest("connection %d is neither an SDK nor a Webhook", c.ID)
+		return nil, errors.BadRequest("connection %d is neither an SDK nor a webhook", c.ID)
 	}
 	if c.Role != state.Source {
 		return nil, errors.BadRequest("connection %d is not a source", c.ID)
@@ -1990,7 +1990,7 @@ func (this *Connection) api() *connectors.API {
 	return this.core.connectors.API(this.connection)
 }
 
-// appSchemas returns the user or group schemas, based on target, for an api
+// appSchemas returns the user or group schemas, based on target, for an API
 // connection. The connection must support the provided target.
 //
 // For a source connection, it returns only the group source schema.
@@ -2000,7 +2000,7 @@ func (this *Connection) appSchemas(ctx context.Context, target state.Target) (sr
 	c := this.connection
 	connector := c.Connector()
 	if connector.Type != state.API {
-		err = errors.BadRequest("connection %d is not an api", c.ID)
+		err = errors.BadRequest("connection %d is not an API", c.ID)
 		return
 	}
 	if !connector.DestinationTargets.Contains(target) {
@@ -2337,8 +2337,8 @@ type ConnectionToSet struct {
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It can only be provided for
-	// destination api connections that support it. In this case, it must be one of
-	// the sending modes supported by the api.
+	// destination API connections that support it. In this case, it must be one of
+	// the sending modes supported by the API.
 	SendingMode *SendingMode `json:"sendingMode"`
 }
 

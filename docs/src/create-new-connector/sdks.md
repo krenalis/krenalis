@@ -4,15 +4,15 @@
 
 # SDKs
 
-SDK connectors are paired with an SDK that can be used within an application to send events to Meergo. For example, the JavaScript connector is paired with the [JavaScript SDK](/sources/javascript-sdk), which can be integrated into a website or web application to collect and send events to Meergo.
+SDK connectors are paired with an SDK that can be used within a website or application to send events to Meergo. For example, the JavaScript connector is paired with the [JavaScript SDK](/sources/javascript-sdk), which can be integrated into a website or web application to collect and send events to Meergo.
 
-An SDK connector does not need to implement any specific methods. All event handling and transmission logic resides in the SDK paired with the connector. Therefore, if you develop an SDK connector, you must also implement the corresponding SDK to be used in the applications it targets.
+An SDK connector doesn’t need to implement specific methods to send events. All event handling and transmission logic resides in the SDK paired with the connector. Therefore, if you develop an SDK connector, you must also implement the corresponding SDK to be used in the applications it targets.
 
 Like other types of connectors, SDK connectors are written in Go. A connector is a Go module that implements specific functions and methods.
 
 ## Quick start
 
-In the creation of a new Go module, for your SDK connector, you can utilize the following template by pasting it into a Go file. Not all methods in the file need to be implemented; see below for descriptions of individual methods. Customize the template with your desired package name, type name, and pertinent connector information:
+In the creation of a new Go module, for your SDK connector, you can utilize the following template by pasting it into a Go file. Customize the template with your desired package name, type name, and pertinent connector information:
 
 ```go
 // Package javascript implements a connector for JavaScript.
@@ -26,7 +26,7 @@ func init() {
     meergo.RegisterSDK(meergo.SDKSpec{
         Code:                "javascript",
         Label:               "JavaScript",
-        Categories:          meergo.CategorySDKAndAPI,
+        Categories:          meergo.CategorySDK | meergo.CategoryWebsite,
         Strategies:          true,
         FallbackToRequestIP: true,
         Documentation: meergo.ConnectorDocumentation{
@@ -69,7 +69,7 @@ The `SDKSpec` type describes the specification of the SDK connector:
 
 - `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "javascript", "android", "dotnet".
 - `Label`: display label shown in the Admin console, typically the name of the language or platform (e.g. "JavaScript", "Android", ".NET").
-- `Categories`: the categories that the connector falls into. There must be at least one category.
+- `Categories`: the categories the connector belongs to. There must be at least one category, but for an SDK connector it should be only `meergo.CategorySaaS`. You can also add the `meergo.CategoryWebsite` category if the paired SDK can be used for websites. 
 - `Strategies`: whether this connector supports user strategies.
 - `FallbackToRequestIP`: whether to use the request IP as the event IP if `context.ip` was not provided.
 
@@ -80,7 +80,7 @@ func init() {
     meergo.RegisterSDK(meergo.SDKSpec{
         Code:                "javascript",
         Label:               "JavaScript",
-        Categories:          meergo.CategorySDKAndAPI,
+        Categories:          meergo.CategorySDK | meergo.CategoryWebsite,
         Strategies:          true,
         FallbackToRequestIP: true,
         Documentation: meergo.ConnectorDocumentation{

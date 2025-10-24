@@ -73,10 +73,10 @@ type Action struct {
 }
 
 // Matching establishes a relationship between a property in Meergo (input
-// property) and a corresponding property in the api (output property) used
+// property) and a corresponding property in the API (output property) used
 // during an export. This relationship determines whether a user or group in
-// Meergo exists in the api and identifies the corresponding user or group in
-// the api.
+// Meergo exists in the API and identifies the corresponding user or group in
+// the API.
 //
 // The input property should be a property in the user schema, while the output
 // property should be a property in the source schema of the connection.
@@ -221,8 +221,8 @@ func (this *Action) Delete(ctx context.Context) error {
 	return err
 }
 
-// Execute executes the action, which must be an api, database, or file storage
-// action with a target of User or Group. It starts an execution and returns its
+// Execute executes the action, which must be an API, database, or file action
+// with a target of User or Group. It starts an execution and returns its
 // identifier. Both the action and its connection must be enabled and the action
 // must not already be executing.
 //
@@ -1198,11 +1198,11 @@ type ActionToSet struct {
 	ExportMode ExportMode `json:"exportMode"`
 
 	// Matching defines a relationship between a property in Meergo ("in") and
-	// a corresponding property in the api ("out") used during an export.
+	// a corresponding property in the API ("out") used during an export.
 	Matching Matching `json:"matching"`
 
 	// UpdateOnDuplicates indicates whether to proceed with the export even if
-	// duplicate users or groups are found in the api.
+	// duplicate users or groups are found in the API.
 	UpdateOnDuplicates bool `json:"updateOnDuplicates"`
 
 	// TableName is the name of the table for the export and it is defined for

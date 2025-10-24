@@ -79,7 +79,7 @@ For the `TimeLayouts.DateTime` field of `meergo.APIInfo`, you can also use speci
 During an export, when a connector (whether API, database, or file) receives data to export, such as user information, it receives Go types specific to the data types. This involves methods such as:
 
 - [`PreviewSendEvents`](apis/send-events#send-events-1) method of APIs takes extra event information.
-- [`SendEvents`](apps/send-events#send-events-1) method of apps takes extra event information.
+- [`SendEvents`](apps/send-events#send-events-1) method of APIs takes extra event information.
 - [`Upsert`](apis/users#updating-and-creating-records) method of APIs takes properties of a user.
 - [`Merge`](databases#merge-method) method of databases takes rows to be added or updated.
 - [`Write`](files#write-method) method of files takes a `RecordReader` whose `Record` method returns the next record to write.

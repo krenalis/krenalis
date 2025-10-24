@@ -38,12 +38,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	connector := action.Connection().Connector()
 	meergoMetrics.Increment("Action.exportUsers.calls", 1)
 
-	// Synchronize destinations users with the api users.
+	// Synchronize destinations users with the API's users.
 	if connector.Type == state.API {
 		err := this.syncDestinationUsers(ctx)
 		if err != nil {
 			if err, ok := err.(*schemas.Error); ok {
-				err.Msg = "in the api matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
+				err.Msg = "in the destination matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
 			}
 			return newActionError(metrics.OutputValidationStep, err)
 		}
@@ -118,10 +118,10 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	// Get the writer.
 	switch connector.Type {
 	case state.API:
-		// The value of the out matching property is written to the api only when
+		// The value of the out matching property is written to the API only when
 		// creating a new user or updating an existing user if the property is update-required.
 		// When updating a user and the property is not update-required, it should not be written again
-		// with the same value. In this case, alignment with the api schema does not need to be validated.
+		// with the same value. In this case, alignment with the API schema does not need to be validated.
 		// Therefore, the property must be removed from the schema passed to API.Writer
 		// so that the alignment check is skipped.
 		outSchema := action.OutSchema
@@ -154,9 +154,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	// User represents a user to update or create.
 	type User struct {
-		ID            string           // External api identifier; is non-empty only for api users to update.
+		ID            string           // External API identifier; is non-empty only for API's users to update.
 		Record        datastore.Record // User record.
-		MatchingValue any              // External matching property value added to properties when creating an api user.
+		MatchingValue any              // External matching property value added to properties when creating an API user.
 	}
 
 	users := make([]User, 0, 100)
@@ -392,7 +392,7 @@ func newPathPlaceholderReplacer(t time.Time) func(string) (string, bool) {
 }
 
 func errMatchingPropertyConversion(in, ex string) error {
-	return fmt.Errorf("%s property value cannot be converted to the api's %s property", in, ex)
+	return fmt.Errorf("%s property value cannot be converted to the API's %s property", in, ex)
 }
 
 // convertToExternal converts the value of an internal property to a type

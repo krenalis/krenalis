@@ -23,8 +23,7 @@ meergo.RegisterAPI(meergo.APISpec{
 This piece of code registers your connector, telling Meergo that it's ready to manage events (as well as users) when used as destination. Next, you'll need to implement the `EventSender` interface:
 
 ```go
-// EventSender is implemented by API connectors that support event
-// sending.
+// EventSender is implemented by API connectors that support event sending.
 type EventSender interface {
 
 	// EventTypeSchema returns the schema of the specified event type.
@@ -142,7 +141,10 @@ Now, let's move on to sending events to the API using the `SendEvents` method.
 
 ## Send events
 
-Finally, to actually send events to the API, the `SendEvents` method sends the events to the API:
+Semplificata e fluida:
+
+Finally, use the `SendEvents` method to send events to the API:
+
 
 ```go
 SendEvents(ctx context.Context, events meergo.Events) error
@@ -449,7 +451,7 @@ for event := range events.All() {
     body.Encode(event.Type.Values)
     body.WriteString(`}`)
 
-    // Stop if body exceeds API size limit.
+    // Stop if body exceeds the API's size limit.
     if body.Len() + len(`]}`) > bodySizeLimit {
         body.Truncate(size)
         events.Postpone()
@@ -500,10 +502,10 @@ If a validation error occurs _after_ sending the request to the API, you should 
 
 ```go
 // EventsError can be returned by the SendEvents and PreviewSendEvents methods
-// of an API connector when one or more events are rejected by the
-// API due to validation issues—such as schema mismatches, missing require
-// fields, or invalid values. It maps the index of each failed event (starting
-// from 0) to the corresponding error.
+// of an API connector when one or more events are rejected by the API due to
+// validation issues—such as schema mismatches, missing require fields, or
+// invalid values. It maps the index of each failed event (starting from 0) to
+// the corresponding error.
 //
 // This error type only reports validation-related failures. Other kinds of
 // errors (e.g., network issues or internal failures) may be returned

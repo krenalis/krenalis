@@ -15,8 +15,8 @@ import (
 )
 
 // messageBrokerConnector is the interface implemented by message broker
-// connectors. A MessageBroker value can be used for sending or receiving but
-// not both.
+// connectors. A messageBrokerConnector instance can be used for sending or
+// receiving but not both.
 type messageBrokerConnector interface {
 
 	// Close closes the message broker. When Close is called, no other calls to the
@@ -43,7 +43,7 @@ type messageBrokerConnector interface {
 	Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error
 }
 
-// MessageBroker represents the Message broker of a message broker connection.
+// MessageBroker represents the broker of a message broker connection.
 type MessageBroker struct {
 	connector string
 	closed    bool
@@ -53,8 +53,8 @@ type MessageBroker struct {
 // MessageBroker returns a message broker for the provided connection. It panics
 // if connection is not a message broker connection.
 //
-// The caller must call the message broker's Close method when the message
-// broker is no longer needed.
+// The caller must call the message broker's Close method when the broker is no
+// longer needed.
 func (connectors *Connectors) MessageBroker(connection *state.Connection) (*MessageBroker, error) {
 	broker := &MessageBroker{
 		connector: connection.Connector().Code,
@@ -71,7 +71,7 @@ func (connectors *Connectors) MessageBroker(connection *state.Connection) (*Mess
 }
 
 // Close closes the message broker. When Close is called, no other calls to the
-// message broker's methods must be in progress, and no more calls must be made.
+// broker's methods must be in progress, and no more calls must be made.
 // It returns an *UnavailableError error if the connector returns an error.
 // Close is idempotent.
 func (broker *MessageBroker) Close() error {
@@ -89,8 +89,8 @@ func (broker *MessageBroker) Connector() string {
 }
 
 // Receive receives an event from the message broker. The caller can call the
-// ack function to notify that the event has been received. The message broker
-// resends the event if not acknowledged.
+// ack function to notify that the event has been received. The broker resends
+// the event if not acknowledged.
 //
 // The caller must not modify the event data, even temporarily, and must not
 // retain the event slice after the ack function has been called.
@@ -106,8 +106,8 @@ func (broker *MessageBroker) Receive(ctx context.Context) (event []byte, ack fun
 	return event, ack, nil
 }
 
-// Send sends an event to the message broker. If ack is not nil, the message
-// broker calls ack when the event has been stored or when an error occurred.
+// Send sends an event to the message broker. If ack is not nil, the broker
+// calls ack when the event has been stored or when an error occurred.
 //
 // Send may modify the event data, but the event slice is not retained after the
 // ack function has been called.

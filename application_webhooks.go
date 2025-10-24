@@ -11,7 +11,7 @@ import (
 	"reflect"
 )
 
-// WebhookSpec represents an application webhook connector specification.
+// WebhookSpec represents a webhook connector specification.
 type WebhookSpec struct {
 	Code          string
 	Label         string
@@ -22,13 +22,13 @@ type WebhookSpec struct {
 	ct      reflect.Type
 }
 
-// ReflectType returns the type of the value implementing the application
-// webhook connector specification.
+// ReflectType returns the type of the value implementing the webhook connector
+// specification.
 func (spec WebhookSpec) ReflectType() reflect.Type {
 	return spec.ct
 }
 
-// New returns a new application webhook connector instance.
+// New returns a new webhook connector instance.
 func (spec WebhookSpec) New(env *WebhookEnv) (any, error) {
 	out := spec.newFunc.Call([]reflect.Value{reflect.ValueOf(env)})
 	c := out[0].Interface()
@@ -36,7 +36,7 @@ func (spec WebhookSpec) New(env *WebhookEnv) (any, error) {
 	return c, err
 }
 
-// WebhookEnv is the environment for an application webhook connector.
+// WebhookEnv is the environment for a webhook connector.
 type WebhookEnv struct {
 
 	// Settings is the raw settings data.
@@ -46,6 +46,6 @@ type WebhookEnv struct {
 	SetSettings SetSettingsFunc
 }
 
-// WebhookNewFunc represents functions that create new application webhook
-// connector instances.
+// WebhookNewFunc represents functions that create new webhook connector
+// instances.
 type WebhookNewFunc[T any] func(*WebhookEnv) (T, error)

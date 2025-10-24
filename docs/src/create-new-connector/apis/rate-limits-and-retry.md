@@ -265,7 +265,7 @@ Do not add jitter to the wait time; it is added automatically.
 
 The failure reason determines whether a request is eligible for retry and how it affects the rate control system: 
 
-* `meergo.PermanentFailure`: the request cannot be retried, and the error contributes to the  API’s error rate.
+* `meergo.PermanentFailure`: the request cannot be retried, and the error contributes to the  API's error rate.
 * `meergo.NetFailure`: the request can be retried, and the error still counts toward the error rate.
 * `meergo.Unauthorized`: the request can be retried if the connector supports OAuth.
 * `meergo.Slowdown`: the request can be retried. Upon receiving the first `Slowdown`, request rate is significantly reduced; further slowdowns also contribute to the error rate.

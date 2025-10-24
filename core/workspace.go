@@ -535,7 +535,7 @@ func (this *Workspace) Connections() []*Connection {
 // token returned by the AuthToken method and must be empty if the connector
 // does not support authorization.
 //
-// MessageBroker connectors are not currently supported.
+// Message broker connectors are not currently supported.
 //
 // It returns an errors.UnprocessableError error with code
 //
@@ -576,9 +576,13 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		return 0, errors.BadRequest("connections cannot have type file")
 	case state.MessageBroker:
 		return 0, errors.BadRequest("message broker connectors are not currently supported")
-	case state.SDK, state.Webhook:
+	case state.SDK:
 		if connection.Role == Destination {
-			return 0, errors.BadRequest("%s connections cannot be destinations", strings.ToLower(c.Type.String()))
+			return 0, errors.BadRequest("SDK connections cannot be destinations")
+		}
+	case state.Webhook:
+		if connection.Role == Destination {
+			return 0, errors.BadRequest("webhook connections cannot be destinations")
 		}
 	}
 

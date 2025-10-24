@@ -725,7 +725,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 }
 
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
-// matching property when exporting users to an api.
+// matching property when exporting users to an API.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
 	// Only int, uint, uuid, and text types are allowed.
 	return k == types.TextKind || k == types.IntKind || k == types.UintKind || k == types.UUIDKind

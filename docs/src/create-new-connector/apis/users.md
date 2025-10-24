@@ -71,9 +71,9 @@ type Record struct {
 
 If an error occurs, `Records` must return a non-nil error, and it should not be an [io.EOF](https://pkg.go.dev/io#EOF) error. 
 
-### Making HTTP requests to the API
+### Sending requests to the API
 
-When a connector instance is created, an HTTP client is passed to the constructor through the `APIEnv.HTTPClient` field. This client should be used by the connector's methods to make HTTP calls to the API. It takes care of:
+When a connector instance is created, an HTTP client is passed to the constructor through the `APIEnv.HTTPClient` field. This client should be used by the connector's methods to make HTTP requests to the API. It takes care of:
 
 - Retrying calls in case of an error, if the request allows for it.
 - Proper resource management.
@@ -183,8 +183,8 @@ type Records interface {
 	Discard(err error)
 
 	// First returns the first record. The record's properties may be modified.
-	// Use it instead of All or Some when the API only needs to
-	// create or update one record at a time.
+	// Use it instead of All or Some when the API only needs to create or update
+	// one record at a time.
 	First() Record
 
 	// Postpone postpones the current record in the iteration and marks it as
@@ -425,7 +425,7 @@ func (m *MyAPI) Upsert(ctx context.Context, target meergo.Targets, records meerg
    If the record has an `ID`, it's an update, if `ID` is empty, it's a creation.
 
 * **Limit on records**\
-   The loop stops once the maximum number of records (`bodyMaxRecords`) is reached, ensuring that the body size does not exceed the API’s limit.
+   The loop stops once the maximum number of records (`bodyMaxRecords`) is reached, ensuring that the body size does not exceed the API's limit.
 
 This approach allows you to efficiently handle mixed record types (create and update) in a single batch request, reducing the number of API requests required.
 
@@ -460,7 +460,7 @@ Below is an example implementation:
         json.Encode(&body, record.Properties)
         body.WriteString(`}`)
 
-        // Stop if body exceeds API size limit.
+        // Stop if body exceeds the API's size limit.
         if body.Len() + len(`]}`) > bodySizeLimit {
             body.Truncate(size)
             records.Postpone()
@@ -510,10 +510,9 @@ Unlike postponed records, **discarded** records will not be retried in future re
 If a validation error occurs _after_ sending the request to the API, you should return a `RecordsError`. This type of error lets you indicate which records failed and why:
 
 ```go
-// RecordsError is returned by the Upsert method of an API connector
-// when only some records have failed or when the method can distinguish errors
-// based on individual records. It maps record indices to their respective
-// errors.
+// RecordsError is returned by the Upsert method of an API connector when only
+// some records have failed or when the method can distinguish errors based on
+// individual records. It maps record indices to their respective errors.
 type RecordsError map[int]error
 ```
 

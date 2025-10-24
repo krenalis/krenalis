@@ -19,7 +19,7 @@ func init() {
 		Description: "Event write keys are used for authentication when sending events from websites, mobile apps, and servers " +
 			"through the [Ingest event](events#ingest-event) and [Ingest events](events#ingest-events) endpoints.\n\n" +
 			"Keys for SDK connections that receive events from a website or a mobile are usually public, as they can be exposed in a website's source code or on a mobile device. " +
-			"In contrast, keys for SDK connections used on servers and webhook connections should always remain private.",
+			"In contrast, keys for server-side SDK and webhook connections should always remain private.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Create event write key",

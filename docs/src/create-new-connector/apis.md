@@ -31,7 +31,7 @@ func init() {
     meergo.RegisterAPI(meergo.APISpec{
         Code:       "klaviyo",
         Label:      "Klaviyo",
-        Categories: meergo.CategoryAutomation | meergo.CategoryMarketing,
+        Categories: meergo.CategorySaaS,
         AsSource: &meergo.AsAPISource{
             Targets:       meergo.TargetUser,
             HasSettings:   true,
@@ -146,7 +146,7 @@ The `APISpec` type describes the specification of the API connector:
 
 - `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "hubspot", "google-analytics", "salesforce".
 - `Label`: display label in the Admin console, typically the application's name (e.g. "HubSpot", "Google Analytics", "Salesforce").
-- `Categories`: the categories that the connector falls into. There must be at least one category.
+- `Categories`: the categories the connector belongs to. There must be at least one category, but for an API connector it should be only `meergo.CategorySaaS`.
 - `AsSource`: information about the API connector when it used as source. This should be set only when the API connector can be used as a source, otherwise should be nil.
   - `Targets`: targets supported by the API connector when it is used as source. Can only contain `TargetUser`.
   - `HasSettings`: indicates whether the connection has settings when used as a source
@@ -171,6 +171,7 @@ func init() {
     meergo.RegisterAPI(meergo.APISpec{
         Code:  "klaviyo",
         label: "Klaviyo",
+        Categories: meergo.CategorySaaS,
         AsSource: &meergo.AsAPISource{
             Targets:       meergo.TargetUser,
             HasSettings:   true,

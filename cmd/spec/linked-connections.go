@@ -31,7 +31,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "linked-connections",
 		Name:        "Linked connections",
-		Description: "Source SDK and webhook connection are linked to a destination connection so that destination actions can send the events to an API.",
+		Description: "SDK and webhook source connections can be linked to destination API connections. When linked, events received from the source are sent to the API.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Link connections",

@@ -11,11 +11,11 @@ import (
 	"reflect"
 )
 
-// MessageBrokerSpec represents a message broker connector info.
+// MessageBrokerSpec represents a message broker connector specification.
 type MessageBrokerSpec struct {
 	Code          string
 	Label         string
-	Categories    Categories // categories
+	Categories    Categories
 	Documentation ConnectorDocumentation
 
 	newFunc reflect.Value

@@ -683,7 +683,7 @@
                                             "kind": "text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the API's user schema. Its definition must also be included in the action's output schema."
+                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the application API's user schema. Its definition must also be included in the action's output schema."
                                     }
                                 ]
                             },
@@ -702,7 +702,7 @@
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the API. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the API. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created via the API. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated via the API. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
                             "name": "updateOnDuplicates",
@@ -710,7 +710,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Determines whether, when multiple API users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
+                            "description": "Specifies whether to update API users even when multiple matches are found for a single user in the workspace's data warehouse.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
                         },
                         {
                             "name": "transformation",
@@ -801,7 +801,7 @@
                             },
                             "createRequired": true,
                             "updateRequired": true,
-                            "description": "The mapping or function responsible for transforming unified users into API users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                            "description": "Defines the mapping or function that transforms unified users into users for the API.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         },
                         {
                             "name": "inSchema",
@@ -1008,7 +1008,7 @@
                                             "kind": "text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the API's user schema. Its definition must also be included in the action's output schema."
+                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the path of the property in the application API's user schema. Its definition must also be included in the action's output schema."
                                     }
                                 ]
                             },
@@ -1027,7 +1027,7 @@
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the API. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the API. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created via the API. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated via the API. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the API, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
                             "name": "updateOnDuplicates",
@@ -1035,7 +1035,7 @@
                             "type": {
                                 "kind": "boolean"
                             },
-                            "description": "Determines whether, when multiple API users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
+                            "description": "Specifies whether to update API users even when multiple matches are found for a single user in the workspace's data warehouse.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false.\n\nThis field does not affect user creation."
                         },
                         {
                             "name": "transformation",
@@ -1126,7 +1126,7 @@
                             },
                             "createRequired": true,
                             "updateRequired": true,
-                            "description": "The mapping or function responsible for transforming unified users into API users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                            "description": "Defines the mapping or function that transforms unified users into users for the API.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         },
                         {
                             "name": "inSchema",
@@ -10747,7 +10747,7 @@
         {
             "id": "event-write-keys",
             "name": "Event write keys",
-            "description": "Event write keys are used for authentication when sending events from websites, mobile apps, and servers through the [Ingest event](events#ingest-event) and [Ingest events](events#ingest-events) endpoints.\n\nKeys for SDK connections that receive events from a website or a mobile are usually public, as they can be exposed in a website's source code or on a mobile device. In contrast, keys for SDK connections used on servers and webhook connections should always remain private.",
+            "description": "Event write keys are used for authentication when sending events from websites, mobile apps, and servers through the [Ingest event](events#ingest-event) and [Ingest events](events#ingest-events) endpoints.\n\nKeys for SDK connections that receive events from a website or a mobile are usually public, as they can be exposed in a website's source code or on a mobile device. In contrast, keys for server-side SDK and webhook connections should always remain private.",
             "endpoints": [
                 {
                     "name": "Create event write key",
@@ -14802,7 +14802,7 @@
         {
             "id": "identity-resolution",
             "name": "Identity resolution",
-            "description": "Identities are the users obtained from sources like [application APIs](api/connections/application-apis), [databases](api/connections/databases), [files](api/connections/file-storages), or events. These identities are filtered and transformed according to a defined action. Once identity resolution is complete, the collected identities from all [connections](connections) are unified to form the workspace [users](users).",
+            "description": "Identities are the users obtained from sources like [application APIs](api/connections/applications), [databases](api/connections/databases), [files](api/connections/file-storages), or events. These identities are filtered and transformed according to a defined action. Once identity resolution is complete, the collected identities from all [connections](connections) are unified to form the workspace [users](users).",
             "endpoints": [
                 {
                     "name": "Start identity resolution",
@@ -14974,7 +14974,7 @@
         {
             "id": "linked-connections",
             "name": "Linked connections",
-            "description": "Source SDK and webhook connection are linked to a destination connection so that destination actions can send the events to an API.",
+            "description": "SDK and webhook source connections can be linked to destination API connections. When linked, events received from the source are sent to the API.",
             "endpoints": [
                 {
                     "name": "Link connections",

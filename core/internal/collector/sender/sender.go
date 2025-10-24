@@ -639,8 +639,7 @@ func (s *Sender) resetTimerLocked() {
 	}
 }
 
-// send sends events to the API by calling the connector's
-// SendEvents method.
+// send sends events to the API by calling the connector's SendEvents method.
 func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 
 	trace("Sender.send: iterator %p started\n", iter)

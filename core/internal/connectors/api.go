@@ -67,9 +67,9 @@ type apiOAuthConnector interface {
 	OAuthAccount(ctx context.Context) (string, error)
 }
 
-// API returns an API for the provided connection.
-// Errors are deferred until an API's method is called.
-// It panics if connection is not an API connection.
+// API returns the API for the provided connection.
+// Errors are deferred until a method of the API is called.
+// It panics if the connection is not an API connection.
 func (connectors *Connectors) API(connection *state.Connection) *API {
 	connector := connection.Connector()
 	var targets state.ConnectorTargets
@@ -290,7 +290,7 @@ func (api *API) Users(ctx context.Context, schema types.Type, where *state.Where
 	if !schema.Valid() {
 		return nil, fmt.Errorf("schema is not valid")
 	}
-	// Check that the user schema is aligned with the api user schema.
+	// Check that the user schema is aligned with the API's user schema.
 	apiSchema, err := api.userSchema(ctx, state.Source)
 	if err != nil {
 		return nil, err

@@ -174,7 +174,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 var arrayIndex = regexp.MustCompile(`^\w+\[(\d+)\]`)
 var localeCode = regexp.MustCompile(`^[a-z]{2}(?:-[A-Z]{2})?$`)
 
-// Upsert updates or creates records in the application API for the specified target.
+// Upsert updates or creates records in the API for the specified target.
 func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	record := records.First()

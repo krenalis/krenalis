@@ -48,8 +48,7 @@ func TestSendEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Instantiate the Google Analytics connector, with a specific configuration
-	// for testing.
+	// Instantiate the connector for Google Analytics, with a specific configuration for testing.
 	api, err := testconnector.NewAPI("google-analytics", settings)
 	if err != nil {
 		t.Fatal(err)

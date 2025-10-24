@@ -91,7 +91,7 @@ The `DatabaseInfo` type describes information about the database connector:
 
 - `Code`: unique identifier in kebab-case (`a-z0-9-`), e.g. "postgresql", "mysql", "snowflake".
 - `Label`: display label in the Admin console, typically the database's name (e.g. "PostgreSQL", "MySQL", "Snowflake").
-- `Categories`: the categories that the connector falls into. There must be at least one category.
+- `Categories`: the categories the connector belongs to. There must be at least one category, but for a database connector it should be only `meergo.CategoryDatabase`.
 - `SampleQuery`: sample query displayed in the query editor when creating a new database source action.
 - `TimeLayouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 
@@ -102,6 +102,7 @@ func init() {
     meergo.RegisterDatabase(meergo.DatabaseInfo{
         Code:        "postgresql",
         Label:       "PostgreSQL",
+        Category:    meergo.CategoryDatabase,
         SampleQuery: "SELECT *\nFROM users\n",
     }, New)
 }

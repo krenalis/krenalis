@@ -193,7 +193,8 @@ var tools = []server.ServerTool{
 					" API connections interface with external applications outside Meergo."+
 					" Database connections interface with external databases outside Meergo."+
 					" File connections work in conjunction with file storage connections to interact with files for reading and writing data."+
-					" SDK connections receive data (events and users) from SDKs, browsers, and server-side applications"+
+					" SDK connections receive data (events and users) from SDKs, browsers, and server-side applications."+
+					" Webhook connections receive data (events and users) from applications via a webhook."+
 					" Regardless of the language, use the English terms Connection, Source, Destination and Action without translating them, as they are key concepts in the software.",
 			),
 			mcp.WithTitleAnnotation("Information about workspace connections."),
