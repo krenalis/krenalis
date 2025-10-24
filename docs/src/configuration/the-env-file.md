@@ -20,10 +20,13 @@ MEERGO_HTTP_PORT=2022
 # TLS settings
 MEERGO_HTTP_TLS_ENABLED=true
 MEERGO_HTTP_TLS_CERT_FILE="/etc/ssl/certs/my meergo cert.crt"
-MEERGO_HTTP_TLS_KEY_FILE='/etc/ssl/private/meergo.key'
+MEERGO_HTTP_TLS_KEY_FILE='/etc/ssl/private/meergo.key' # key file
 
 # Commented out value
 #MEERGO_HTTP_PORT=8080
+
+# With export
+export MEERGO_HTTP_READ_TIMEOUT=10s
 ```
 
 ## Syntax
@@ -31,9 +34,14 @@ MEERGO_HTTP_TLS_KEY_FILE='/etc/ssl/private/meergo.key'
 The _.env_ file is a simple list of key-value pairs used to configure environment variables. Here's how it works:
 
 * One variable per line: `KEY=VALUE`.
-* Strings with spaces or special characters should be quoted with double quotes.
-* Lines starting with `#` are comments and ignored.
-* Empty lines are ignored.
-* To insert a value that contains double quotes, enclose the entire string in single quotes, e.g.: `MY_VAR='"my-quoted-value"'`.
+* Lines starting with `#` or empty lines are ignored.
+* Lines can start with `export `.
+* Keys and values cannot contain `NUL` characters.
+* Values can be:
+    * **Unquoted** — spaces at the end are kept; inline comments start with ` #`.
+    * **Double-quoted** — supports `\n`, `\r`, `\t`, `\\`, `\"`.
+    * **Single-quoted** — supports only `\'`.
+* Values after a closing quote must have only spaces or a comment.
+* Variables in the file override existing environment values.
 * Use `true` or `false` for booleans. Don't use `1` or `0`.
 * File paths can be absolute or relative; relative paths are based on the working directory of the Meergo process.
