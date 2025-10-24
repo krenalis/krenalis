@@ -10,8 +10,8 @@ When representing user and event data in a connector, these are mapped to specif
 
 During an import, connectors return data to import, such as user information. This data must use specific types according to the data type. Key scenarios for handling data in an API connector include:
 
-- [`Records`](apps/users#read-records) method of apps returns properties of users.
-{#- `ReceiveWebhook` method of apps may return properties of users.#}
+- [`Records`](apis/users#read-records) method of APIs returns properties of users.
+{#- `ReceiveWebhook` method of APIs may return properties of users.#}
 - [`Query`](databases#query-method) method of databases returns the resulting rows from a query.
 - [`Read`](files#read-method) method of files takes a `RecordWriter` whose methods return the read records.
 
@@ -79,7 +79,7 @@ For the `TimeLayouts.DateTime` field of `meergo.APIInfo`, you can also use speci
 During an export, when a connector (whether API, database, or file) receives data to export, such as user information, it receives Go types specific to the data types. This involves methods such as:
 
 - [`PreviewSendEvents`](apis/send-events#send-events-1) method of APIs takes extra event information.
-- [`SendEvents`](apps/send-events#send-events-1) method of APIs takes extra event information.
+- [`SendEvents`](apis/send-events#send-events-1) method of APIs takes extra event information.
 - [`Upsert`](apis/users#updating-and-creating-records) method of APIs takes properties of a user.
 - [`Merge`](databases#merge-method) method of databases takes rows to be added or updated.
 - [`Write`](files#write-method) method of files takes a `RecordReader` whose `Record` method returns the next record to write.

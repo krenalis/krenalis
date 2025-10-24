@@ -25,16 +25,16 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
       <li>{{ item(`api/connections/event-write-keys`, `Event write keys`) }}</li>
     </ul>
   </li>
-  <li class="{{ expandable(`api/actions/`) }}">
+  <li class="{{ expandable(`api/actions/`) }}"
     {{ item(`api/actions`, `Actions`) }}
     <ul>
-      <li>{{ item(`api/actions/import-users-from-apps`, `Import users from apps`) }}</li>
+      <li>{{ item(`api/actions/import-users-from-apis`, `Import users from APIs`) }}</li>
       <li>{{ item(`api/actions/import-users-from-databases`, `Import users from databases`) }}</li>
       <li>{{ item(`api/actions/import-users-from-files`, `Import users from files`) }}</li>
       <li>{{ item(`api/actions/import-users-from-events`, `Import users from events`) }}</li>
       <li>{{ item(`api/actions/import-events`, `Import events`) }}</li>
-      <li>{{ item(`api/actions/send-events-to-apps`, `Send events to apps`) }}</li>
-      <li>{{ item(`api/actions/export-users-to-apps`, `Export users to apps`) }}</li>
+      <li>{{ item(`api/actions/send-events-to-apis`, `Send events to APIs`) }}</li>
+      <li>{{ item(`api/actions/export-users-to-apis`, `Export users to APIs`) }}</li>
       <li>{{ item(`api/actions/export-users-to-databases`, `Export users to databases`) }}</li>
       <li>{{ item(`api/actions/export-users-to-files`, `Export users to files`) }}</li>
       <li>{{ item(`api/actions/metrics-and-errors`, `Metrics and errors`) }}</li>
