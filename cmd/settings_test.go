@@ -17,20 +17,18 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core"
-
-	"github.com/joho/godotenv"
+	"github.com/meergo/meergo/core/dotenv"
 )
 
 func TestEnvLoading(t *testing.T) {
 
 	// Load the environment variables form 'test-env-file.env'.
-	err := godotenv.Overload("testdata/test-env-file.env")
+	err := dotenv.Load("testdata/test-env-file.env")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Determine the got key-values from the environment variables loaded by
-	// godotenv.
+	// Determine the got key-values from the environment variables.
 	got := map[string]any{}
 	for _, env := range os.Environ() {
 		key, value, ok := strings.Cut(env, "=")
@@ -50,11 +48,7 @@ func TestEnvLoading(t *testing.T) {
 		"MEERGO_ENV_TEST_D": `"my-quoted-value"`,
 		"MEERGO_ENV_TEST_E": "my-quoted-value",
 		"MEERGO_ENV_TEST_F": "\"my-quoted-value",
-
-		// TODO(Gianluca): this is caused by a bug in the parsing library.
-		// See https://github.com/meergo/meergo/issues/1655 and
-		// https://github.com/joho/godotenv/issues/226.
-		// "MEERGO_ENV_TEST_G": "\"my-quoted-value\"",
+		"MEERGO_ENV_TEST_G": "\"my-quoted-value\"",
 
 		"MEERGO_ENV_TEST_H":     "3290",
 		"MEERGO_ENV_TEST_I":     "hello\\ world",

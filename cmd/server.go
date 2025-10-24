@@ -92,6 +92,7 @@ type LocalConfig struct {
 	NodeExecutable   string
 	PythonExecutable string
 	FunctionsDir     string
+	SudoUser         string
 }
 
 // Run runs the server.

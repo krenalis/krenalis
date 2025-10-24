@@ -102,18 +102,18 @@ const ConnectionMetrics = () => {
 	let finalizeStepTerm = '';
 	if (c.isSource) {
 		if (isUsersSelected) {
-			receiveStepTerm = `Extract from ${c.name}`;
+			receiveStepTerm = `Extract from ${c.connector.label}`;
 		} else {
-			receiveStepTerm = `Receive from ${c.name}`;
+			receiveStepTerm = `Receive from ${c.connector.label}`;
 		}
 		finalizeStepTerm = 'Load into warehouse';
 	} else {
 		if (isUsersSelected) {
 			receiveStepTerm = 'Extract from warehouse';
-			finalizeStepTerm = `Load into ${c.name}`;
+			finalizeStepTerm = `Load into ${c.connector.label}`;
 		} else {
 			receiveStepTerm = 'Receive from sources';
-			finalizeStepTerm = `Send to ${c.name}`;
+			finalizeStepTerm = `Send to ${c.connector.label}`;
 		}
 	}
 
@@ -672,7 +672,7 @@ const ConnectionMetrics = () => {
 				</>
 			) : (
 				<div className='connection-metrics__nothing-to-show'>
-					Currently there is nothing to show for connection {c.name}
+					Currently there is nothing to show for this connection
 				</div>
 			)}
 		</div>

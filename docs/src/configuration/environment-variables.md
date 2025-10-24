@@ -90,11 +90,12 @@ The following settings let you choose how transformation functions are executed.
 
 > ⚠️ Configuring transformers for local execution allows the code in transformation functions defined in Meergo to execute arbitrary code on the local machine. Therefore, use with caution and only in trusted contexts.
 
-| Variable                                      | Default | Description                                                                                                                                                                 |
-|-----------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE`   |         | Path to the Node.js executable. Example: `/usr/bin/node`.                                                                                                                   |
-| `MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE` |         | Path to the Python executable. Example: `/usr/bin/python`.                                                                                                                  |
-| `MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR`     |         | Directory where local transformation functions are stored. This directory should be writable by the user executing the Meergo executable. Example: `/var/meergo/functions`. |
+| Variable                                      | Default | Description                                                                                                                                                                                         |
+|-----------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE`   |         | Path to the Node.js executable. Example: `/usr/bin/node`.                                                                                                                                           |
+| `MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE` |         | Path to the Python executable. Example: `/usr/bin/python`.                                                                                                                                          |
+| `MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR`     |         | Directory where local transformation functions are stored. This directory should be writable by the user executing the Meergo executable. Example: `/var/meergo/functions`.                         |
+| `MEERGO_TRANSFORMERS_LOCAL_SUDO_USER`         |         | System user under which to run local transformation function processes. Switching to this user is done in Meergo via `sudo`. If left blank, the current user is retained and `sudo` is not invoked. |
 
 <!-- end tabs -->
 

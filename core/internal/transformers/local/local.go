@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
@@ -34,10 +35,13 @@ type Settings struct {
 	NodeExecutable   string // eg. "/usr/bin/node".
 	PythonExecutable string // eg. "/usr/bin/python".
 	FunctionsDir     string
+	SudoUser         string // "" means: don't call sudo and keep the current user.
 }
 
 func New(settings Settings) transformers.FunctionProvider {
-	return &function{settings: settings}
+	return &function{
+		settings: settings,
+	}
 }
 
 // Call calls the function with the given identifier and version for each record
@@ -59,12 +63,12 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return err
 	}
 
-	var executable string
+	var langExecutable string
 	switch language {
 	case state.JavaScript:
-		executable = fn.settings.NodeExecutable
+		langExecutable = fn.settings.NodeExecutable
 	case state.Python:
-		executable = fn.settings.PythonExecutable
+		langExecutable = fn.settings.PythonExecutable
 	default:
 		return errors.New("language is not supported")
 	}
@@ -73,7 +77,8 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return fmt.Errorf("invalid version %q", version)
 	}
 	filename := fn.filename(name, version, language)
-	if _, err := os.Stat(filename); err != nil {
+	source, err := os.ReadFile(filename)
+	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return transformers.ErrFunctionNotExist
 		}
@@ -85,11 +90,26 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return err
 	}
 	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, executable, filename, string(payload))
+	args := []string{
+		langExecutable, // node or python executable.
+		"-",            // read source code of transformation function from stdin. This is the same for both Node and Python.
+		string(payload),
+	}
+	if fn.settings.SudoUser != "" {
+		args = append([]string{"sudo", "-u", fn.settings.SudoUser}, args...)
+	}
+
+	// Limit the execution time to 10 seconds. This is more than enough time to
+	// run transformations locally; if a transformation takes longer than that,
+	// there's a problem and it's better to abort it.
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Meergo process.
-	cmd.Dir = fn.settings.FunctionsDir
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Stdin = bytes.NewReader(source)
 	err = cmd.Run()
 	if err != nil {
 		return err
@@ -135,7 +155,7 @@ try {
 	Function(` + "`" + escapedSource + "`" + `);
 } catch (error) {
 	process.stdout.write(JSON.stringify({ error: error.toString() }));
-	return;
+	process.exit() 
 }
 const transform = Function('event', ` + "`" + escapedSource + "; return transform(event)`" + `);
 const records = [];

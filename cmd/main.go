@@ -67,12 +67,28 @@ func Main(assets fs.FS) {
 	slog.SetDefault(fileLogger)
 
 	// Parse the settings from the environment variables.
-	//
-	// It is crucial NOT to delete the "MEERGO_" environment variables, because
-	// a connector may access them even after initialization.
 	settings, err := parseEnvSettings()
 	if err != nil {
 		fatal(1, err.Error())
+	}
+
+	// Unset the Meergo environment variables, except for those intended for
+	// connectors, which can be read by them at any time.
+	//
+	// This minimizes the possibility that any point in the code can read the
+	// configuration passed from the environment.
+	for _, v := range os.Environ() {
+		if key, _, ok := strings.Cut(v, "="); ok {
+			isMeergoVar := strings.HasPrefix(key, "MEERGO_")
+			isMeergoConnectorVar := strings.HasPrefix(key, "MEERGO_CONNECTOR_")
+			if isMeergoVar && !isMeergoConnectorVar {
+				// os.Unsetenv can only fail on Windows if the key is not UTF-8
+				// encoded. But since Meergo only supports UTF-8 keys, and this
+				// is a rare edge case, failing to unset such a variable
+				// shouldn't prevent Meergo from starting.
+				_ = os.Unsetenv(key)
+			}
+		}
 	}
 
 	// Configure Sentry, if necessary.

@@ -15,7 +15,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/joho/godotenv"
+	"github.com/meergo/meergo/core/dotenv"
 )
 
 var (
@@ -47,15 +47,8 @@ func GetEnvVars() (*EnvVars, error) {
 		return nil, envVarsErr
 	}
 
-	// Read environment variables from the '.env' file, if exists.
-	//
-	// The function 'Load' is called instead of 'Overload' because we want the
-	// environment variables passed to the process to take precedence over those
-	// read from the '.env' file.
-	// The choice is mainly driven by the fact that this behavior is the most
-	// expected by a user, since it is the default of Node, Ruby, and Python
-	// libraries that read '.env' files.
-	err := godotenv.Load()
+	// Load environment variables from the '.env' file, if exists.
+	err := dotenv.Load(".env")
 	if err != nil && !os.IsNotExist(err) {
 		p, err2 := filepath.Abs(".env")
 		if err2 != nil {
