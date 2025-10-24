@@ -153,8 +153,11 @@ const validatePotentialConnector = (connector: unknown): PotentialConnector => {
 	const asSource = validateConnectorImplementation(code, 'asSource', connector.asSource);
 	const asDestination = validateConnectorImplementation(code, 'asDestination', connector.asDestination);
 
-	if ((connectorType === 'SDK' || connectorType === 'Webhook') && asDestination != null) {
-		throw new Error(`connector '${code}' cannot have 'asDestination' because is an ${connectorType}`);
+	if (connectorType === 'SDK' && asDestination != null) {
+		throw new Error(`connector '${code}' cannot have 'asDestination' because is an SDK`);
+	}
+	if (connectorType === 'Webhook' && asDestination != null) {
+		throw new Error(`connector '${code}' cannot have 'asDestination' because is a webhook`);
 	}
 
 	return { code, label, categories, connectorType, asSource, asDestination };
