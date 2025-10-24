@@ -155,15 +155,15 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	// Write the "__identities__" column.
 	mergeUsers.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
 	// Write the "__id__" column.
-	// If all GIDs are the same - ignoring the NULL ones, which refer to new
-	// identities - then take the common value as the user's GID; otherwise, if
+	// If all MUIDs are the same - ignoring the NULL ones, which refer to new
+	// identities - then take the common value as the user's MUID; otherwise, if
 	// we are in a situation where a previously split user is now merged, in
 	// this case, create a new random GID. If the identities are all new, also
 	// in this case, create a new random GID.
 	mergeUsers.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(DISTINCT "__gid__") FILTER ( WHERE "__gid__" IS NOT NULL ) = 1
-				THEN MAX("__gid__"::text)::uuid
+			WHEN COUNT(DISTINCT "__muid__") FILTER ( WHERE "__muid__" IS NOT NULL ) = 1
+				THEN MAX("__muid__"::text)::uuid
 			ELSE gen_random_uuid()
 		END,
 		gen_random_uuid()

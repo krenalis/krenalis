@@ -1110,7 +1110,7 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__gid__"},
+		Property: []string{"__muid__"},
 		Operator: state.OpIs,
 		Values:   []any{user},
 	}}}

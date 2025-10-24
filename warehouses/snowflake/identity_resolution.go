@@ -150,8 +150,8 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	// in this case, create a new random GID.
 	mergeUsers.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(CASE WHEN "__GID__" IS NOT NULL THEN 1 ELSE 0 END) > 0
-				THEN MAX("__GID__"::text)::varchar
+			WHEN COUNT(CASE WHEN "__muid__" IS NOT NULL THEN 1 ELSE 0 END) > 0
+				THEN MAX("__muid__"::text)::varchar
 			ELSE UUID_STRING()
 		END,
 		UUID_STRING()

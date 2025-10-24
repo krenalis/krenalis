@@ -111,7 +111,7 @@ func userIdentitiesSQLSchema(userColumns []meergo.Column) string {
 		"__ANONYMOUS_IDS__" ARRAY,
 		"__LAST_CHANGE_TIME__" TIMESTAMP_NTZ NOT NULL,
 		"__EXECUTION__" INT,
-		"__GID__" VARCHAR(36),
+		"__muid__" VARCHAR(36),
 		"__CLUSTER__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
 	for _, c := range userColumns {
 		b.WriteString(",\n")
