@@ -21,7 +21,7 @@ import (
 func TestLoad(t *testing.T) {
 	t.Helper()
 
-	isWindows := runtime.GOOS == "Windows"
+	isWindows := runtime.GOOS == "windows"
 
 	origWD, err := os.Getwd()
 	if err != nil {
@@ -215,7 +215,7 @@ func TestLoad(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		if test.skipOnWindows && runtime.GOOS == "windows" {
+		if isWindows && test.skipOnWindows {
 			continue
 		}
 
