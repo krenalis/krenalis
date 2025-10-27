@@ -1,4 +1,1 @@
--- TODO(Gianluca): fill this file with update queries, or consider removing this
--- as well as the associated test (which reads this file).
-
 ALTER TABLE "events" RENAME COLUMN "user" TO "muid";
