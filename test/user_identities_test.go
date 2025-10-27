@@ -117,7 +117,7 @@ func Test_UserIdentities(t *testing.T) {
 			}
 
 			t.Logf(
-				"the APIs returned an identity for user with GID %s that has"+
+				"the APIs returned an identity for user with MUID %s that has"+
 					" action = %d, identity ID = %v and last change time = %q",
 				user.ID, identity.Action, identity.ID, identity.LastChangeTime)
 

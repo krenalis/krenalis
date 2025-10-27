@@ -109,17 +109,17 @@ AS $$
     -- This placeholder will be replaced by Meergo:
     {{ merge_identities_in_users }};
 
-    -- Update associations between identities and users by updating the GID of
+    -- Update associations between identities and users by updating the MUID of
     -- the identities.
     UPDATE "_user_identities" AS "ui"
-    SET "__gid__" = "u"."__id__"
+    SET "__muid__" = "u"."__id__"
     FROM {{ new_users_name }} AS "u"
     WHERE "ui"."__pk__" = ANY ("u"."__identities__");
 
     -- Update associations between events and users by updating the MUID of the
     -- events.
     UPDATE "events" SET "muid" = null;
-    UPDATE "events" SET "muid" = "_user_identities"."__gid__"
+    UPDATE "events" SET "muid" = "_user_identities"."__muid__"
     FROM "_user_identities" WHERE
         "events"."connection_id" = "_user_identities"."__connection__"
             AND
