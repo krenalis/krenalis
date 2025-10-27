@@ -112,7 +112,28 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	cmd.Stdin = bytes.NewReader(source)
 	err = cmd.Run()
 	if err != nil {
-		return err
+		const msg = "cannot execute local transformation"
+		runtime := "Node"
+		if language == state.Python {
+			runtime = "Python"
+		}
+		if err, ok := err.(*exec.ExitError); ok {
+			stderr := "an empty standard error"
+			if len(err.Stderr) > 0 {
+				stderr = fmt.Sprintf("standard error:\n\t%q", string(err.Stderr))
+			}
+			return fmt.Errorf("%s: %s process ('%s') is exited with error code %d and %s", msg, runtime, langExecutable, err.ExitCode(), stderr)
+		}
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %s executable ('%s') does not exist", msg, runtime, langExecutable)
+		}
+		if errors.Is(err, fs.ErrPermission) {
+			return fmt.Errorf("%s: permission denied when starting the %s interpreter ('%s'): %w", msg, runtime, langExecutable, err)
+		}
+		if ctx.Err() != nil {
+			return fmt.Errorf("%s: %s process ('%s') exceeded the maximum allowed time and was stopped", msg, runtime, langExecutable)
+		}
+		return fmt.Errorf("%s: failed to start the %s interpreter ('%s'): %w", msg, runtime, langExecutable, err)
 	}
 
 	// Unmarshal returns a FunctionExecError if execution fails, for example, due to a syntax error in the function.
