@@ -467,7 +467,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	userID := r.PathValue("id")
+	muid := r.PathValue("muid")
 	var first = 0
 	var limit = 100
 	query := r.URL.Query()
@@ -483,7 +483,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 			return nil, errors.BadRequest("limit is not valid")
 		}
 	}
-	identities, total, err := ws.Identities(r.Context(), userID, first, limit)
+	identities, total, err := ws.Identities(r.Context(), muid, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -734,14 +734,14 @@ func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Re
 	return nil, err
 }
 
-// Traits returns the traits of a user.
+// Traits returns the traits of a user, given its MUID.
 func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	userID := r.PathValue("id")
-	traits, err := ws.Traits(r.Context(), userID)
+	muid := r.PathValue("muid")
+	traits, err := ws.Traits(r.Context(), muid)
 	if err != nil {
 		return nil, err
 	}
@@ -834,10 +834,10 @@ func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 
-	// Parse the user ID.
-	id := r.PathValue("id")
-	if _, ok := types.ParseUUID(id); !ok {
-		return nil, errors.BadRequest("value %q is not a valid user identifier", id)
+	// Parse the MUID.
+	muid := r.PathValue("muid")
+	if _, ok := types.ParseUUID(muid); !ok {
+		return nil, errors.BadRequest("value %q is not a valid MUID", muid)
 	}
 
 	q := r.URL.Query()
@@ -863,7 +863,7 @@ func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (a
 			{
 				Property: "muid",
 				Operator: core.OpIs,
-				Values:   []string{id},
+				Values:   []string{muid},
 			},
 		},
 	}

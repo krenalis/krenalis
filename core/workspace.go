@@ -1085,7 +1085,7 @@ func (this *Workspace) UserPropertiesSuitableAsIdentifiers() types.Type {
 	})
 }
 
-// Identities returns the identities of the provided user, and an estimate of
+// Identities returns the identities for the provided MUID, and an estimate of
 // their total number without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0
@@ -1094,14 +1094,14 @@ func (this *Workspace) UserPropertiesSuitableAsIdentifiers() types.Type {
 // Identities are sorted by last change time, in descending order, so the most
 // recently changed identities are returned first.
 //
-// If the user does not exist, still return an empty slice instead of an error.
+// If the MUID does not exist, still return an empty slice instead of an error.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) Identities(ctx context.Context, user string, first, limit int) ([]UserIdentity, int, error) {
+func (this *Workspace) Identities(ctx context.Context, muid string, first, limit int) ([]UserIdentity, int, error) {
 	this.core.mustBeOpen()
-	if _, ok := types.ParseUUID(user); !ok {
-		return nil, 0, errors.BadRequest("user %q is not a valid user identifier", user)
+	if _, ok := types.ParseUUID(muid); !ok {
+		return nil, 0, errors.BadRequest("user %q is not a valid MUID", muid)
 	}
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", limit)
@@ -1112,7 +1112,7 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 		Property: []string{"__muid__"},
 		Operator: state.OpIs,
-		Values:   []any{user},
+		Values:   []any{muid},
 	}}}
 	ws := &Workspace{
 		core:      this.core,
@@ -1404,27 +1404,27 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	return nil
 }
 
-// Traits returns the traits of a user.
+// Traits returns the traits of a user, given its MUID.
 //
 // It returns an errors.NotFoundError error, if the user does not exist.
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, error) {
+func (this *Workspace) Traits(ctx context.Context, muid string) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
 	ws := this.workspace
 
-	// Validate the user.
-	if _, ok := types.ParseUUID(user); !ok {
-		return nil, errors.BadRequest("user %q is not a valid user identifier", user)
+	// Validate the MUID.
+	if _, ok := types.ParseUUID(muid); !ok {
+		return nil, errors.BadRequest("user %q is not a valid user identifier", muid)
 	}
 
 	properties := this.workspace.UserSchema.Properties().Names()
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 		Property: []string{"__muid__"},
 		Operator: state.OpIs,
-		Values:   []any{user},
+		Values:   []any{muid},
 	}}}
 
 	// Retrieve the user traits.
@@ -1443,7 +1443,7 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 		return nil, err
 	}
 	if len(records) == 0 {
-		return nil, errors.NotFound("user %q does not exist", user)
+		return nil, errors.NotFound("user %q does not exist", muid)
 	}
 
 	return types.Marshal(records[0], ws.UserSchema)
