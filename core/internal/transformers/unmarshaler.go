@@ -35,9 +35,9 @@ var (
 	negInfinity = []byte(`"-Infinity"`)
 )
 
-// errSyntaxInvalid is the error returned by Unmarshal when the data being
-// unmarshaled is not valid JSON, or does not conform to the expected structure.
-var errSyntaxInvalid = errors.New("syntax is not valid")
+// errInvalidResponseFormat is returned when the response JSON does not conform
+// to the expected format.
+var errInvalidResponseFormat = errors.New("invalid response format")
 
 // RecordValidationError represents an error that occurs when validating a
 // transformed record.
@@ -195,12 +195,12 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 	tok, err := d.readToken()
 	if err != nil {
 		if err == io.EOF {
-			return errSyntaxInvalid
+			return errInvalidResponseFormat
 		}
 		return err
 	}
 	if tok.Kind() != '{' {
-		return errSyntaxInvalid
+		return errInvalidResponseFormat
 	}
 	tok, err = d.readToken()
 	if err != nil {
@@ -213,29 +213,29 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 			return err
 		}
 		if tok.Kind() != '"' {
-			return errSyntaxInvalid
+			return errInvalidResponseFormat
 		}
 		msg := tok.String()
 		if tok, err = d.readToken(); err != nil {
 			return err
 		}
 		if tok.Kind() != '}' {
-			return errSyntaxInvalid
+			return errInvalidResponseFormat
 		}
 		if _, err := d.readToken(); err != io.EOF {
-			return errSyntaxInvalid
+			return errInvalidResponseFormat
 		}
 		return FunctionExecError{msg: msg}
 	}
 	if key != "records" {
-		return errSyntaxInvalid
+		return errInvalidResponseFormat
 	}
 	// Parse the records.
 	if tok, err = d.readToken(); err != nil {
 		return err
 	}
 	if tok.Kind() != '[' {
-		return errSyntaxInvalid
+		return errInvalidResponseFormat
 	}
 	i := 0
 	for {
@@ -247,7 +247,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 			break
 		}
 		if tok.Kind() != '{' {
-			return errSyntaxInvalid
+			return errInvalidResponseFormat
 		}
 		// Read the key:
 		tok, err = d.readToken()
@@ -261,7 +261,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 		case "value":
 			properties, err := d.unmarshal(schema, preserveJSON, records[i].Purpose)
 			if err != nil {
-				if err == errSyntaxInvalid {
+				if err == errInvalidResponseFormat {
 					return err
 				}
 				if e, ok := err.(RecordValidationError); ok {
@@ -279,19 +279,19 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 				return err
 			}
 			if tok.Kind() != '"' {
-				return errSyntaxInvalid
+				return errInvalidResponseFormat
 			}
 			records[i].Properties = nil
 			records[i].Err = RecordTransformationError{msg: fmt.Sprintf("%s: %s", language, tok.String())}
 		default:
-			return errSyntaxInvalid
+			return errInvalidResponseFormat
 		}
 		tok, err = d.readToken()
 		if err != nil {
 			return err
 		}
 		if tok.Kind() != '}' {
-			return errSyntaxInvalid
+			return errInvalidResponseFormat
 		}
 		i++
 	}
@@ -299,10 +299,10 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 		return err
 	}
 	if tok.Kind() != '}' {
-		return errSyntaxInvalid
+		return errInvalidResponseFormat
 	}
 	if _, err := d.readToken(); err != io.EOF {
-		return errSyntaxInvalid
+		return errInvalidResponseFormat
 	}
 	if i < len(records) {
 		return fmt.Errorf("core/transformers: expected %d results got %d", len(records), i)
@@ -320,21 +320,22 @@ func (d decoder) peekKind() json.Kind {
 func (d decoder) readToken() (json.Token, error) {
 	tok, err := d.dec.ReadToken()
 	if err == io.ErrUnexpectedEOF {
-		err = errSyntaxInvalid
+		err = errInvalidResponseFormat
 	} else if _, ok := err.(*json.SyntaxError); ok {
-		err = errSyntaxInvalid
+		err = errInvalidResponseFormat
 	}
 	return tok, err
 }
 
 // readValue reads a value.
-// It returns the errSyntaxInvalid error if the JSON source is not valid.
+// It returns the errInvalidResponseFormat error if the JSON source is not
+// valid.
 func (d decoder) readValue() (json.Value, error) {
 	v, err := d.dec.ReadValue()
 	if err == io.ErrUnexpectedEOF {
-		err = errSyntaxInvalid
+		err = errInvalidResponseFormat
 	} else if _, ok := err.(*json.SyntaxError); ok {
-		err = errSyntaxInvalid
+		err = errInvalidResponseFormat
 	}
 	return v, err
 }
