@@ -26,7 +26,7 @@ func EventColumnByPath(propertyPath string) meergo.Column {
 // Note: The "originalTimestamp" property exists in the schema but does not have
 // a corresponding column in the table.
 var eventColumnNameFromPropertyPath = map[string]string{
-	"user":                             "user",
+	"muid":                             "muid",
 	"connectionId":                     "connection_id",
 	"anonymousId":                      "anonymous_id",
 	"channel":                          "channel",
@@ -129,7 +129,7 @@ func init() {
 			Nullable: p.ReadOptional,
 		}
 		eventColumnByProperty[path] = c
-		if path != "user" {
+		if path != "muid" {
 			eventsColumnsForMerge[i] = c
 			i++
 		}

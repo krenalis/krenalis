@@ -13,12 +13,12 @@ import (
 
 // Event is the event schema.
 var Event = types.Object([]types.Property{
-	// The "user" field may be set only by the Identity Resolution for events
+	// The "muid" field may be set only by the Identity Resolution for events
 	// stored in the data warehouse.
 	// For all other events, it never has a value.
 	// For consistency, it is included in all event schemas to avoid having to
 	// differentiate between schemas.
-	{Name: "user", Type: types.UUID(), ReadOptional: true, Description: "User"},
+	{Name: "muid", Type: types.UUID(), ReadOptional: true, Description: "User"},
 	{Name: "connectionId", Type: types.Int(32), Description: "Connection Id"},
 	{Name: "anonymousId", Type: types.Text(), Description: "Anonymous Id"},
 	{Name: "channel", Type: types.Text(), ReadOptional: true, Description: "Channel"},

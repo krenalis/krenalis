@@ -14,7 +14,7 @@ Meergo creates and manages a single central table called `events` in your data w
 
 | Column                               | Type                    | Description                                                      |
 |--------------------------------------|-------------------------|------------------------------------------------------------------|
-| `user`                               | `uuid`                  | Internal user UUID if available.                                 |
+| `muid`                               | `uuid`                  | Meergo user ID, if available.                                    |
 | `connection_id`                      | `integer NOT NULL`      | Source connection identifier.                                    |
 | `anonymous_id`                       | `varchar NOT NULL`      | Anonymous identifier.                                            |
 | `channel`                            | `varchar`               | Ingestion channel (web, mobile, server).                         |
@@ -86,7 +86,7 @@ Meergo creates and manages a single central table called `events` in your data w
 
 | Column                               | Type                     | Description                                           |
 |--------------------------------------|--------------------------|-------------------------------------------------------|
-| `USER`                               | `VARCHAR(36)`            | Internal user identifier if available.                |
+| `MUID`                               | `VARCHAR(36)`            | Meergo user ID, if available.                         |
 | `CONNECTION_ID`                      | `INT NOT NULL`           | Source connection identifier.                         |
 | `ANONYMOUS_ID`                       | `VARCHAR NOT NULL`       | Anonymous identifier.                                 |
 | `CHANNEL`                            | `VARCHAR`                | Ingestion channel (web, mobile, server).              |

@@ -8,7 +8,7 @@ The following example shows how an event appears in Meergo after being received 
 
 ```json
 {
-  "user": "8bde45c4-92a1-4d8a-a2ce-36f70cfd1f52",
+  "muid": "8bde45c4-92a1-4d8a-a2ce-36f70cfd1f52",
   "connectionId": 129402661,
   "anonymousId": "f8d65981-a881-4fe4-b7fc-9e7c4a339019",
   "channel": "web",

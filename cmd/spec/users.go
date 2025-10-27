@@ -14,7 +14,7 @@ import (
 func init() {
 
 	eventsParameter := types.Array(types.Object(append([]types.Property{
-		{Name: "user", Type: types.UUID(), ReadOptional: true, Prefilled: `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`},
+		{Name: "muid", Type: types.UUID(), ReadOptional: true, Prefilled: `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`},
 		{Name: "connectionId", Type: types.Int(32), Prefilled: "1371036433"},
 	}, eventGetProperties...)))
 

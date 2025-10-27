@@ -116,10 +116,10 @@ AS $$
     FROM {{ new_users_name }} AS "u"
     WHERE "ui"."__pk__" = ANY ("u"."__identities__");
 
-    -- Update associations between events and users by updating the user ID of
-    -- the events.
-    UPDATE "events" SET "user" = null;
-    UPDATE "events" SET "user" = "_user_identities"."__gid__"
+    -- Update associations between events and users by updating the MUID of the
+    -- events.
+    UPDATE "events" SET "muid" = null;
+    UPDATE "events" SET "muid" = "_user_identities"."__gid__"
     FROM "_user_identities" WHERE
         "events"."connection_id" = "_user_identities"."__connection__"
             AND

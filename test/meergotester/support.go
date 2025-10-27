@@ -565,7 +565,7 @@ func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
 	c.MustCall("PUT", "/api/v1/warehouse", body, nil)
 }
 
-func (c *Meergo) UserEvents(user uuid.UUID, properties []string) []map[string]any {
+func (c *Meergo) UserEvents(muid uuid.UUID, properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
 		"order":      []string{"timestamp"},
@@ -576,9 +576,9 @@ func (c *Meergo) UserEvents(user uuid.UUID, properties []string) []map[string]an
 	filter := Filter{
 		Logical: OpAnd,
 		Conditions: []FilterCondition{
-			{Property: "user",
+			{Property: "muid",
 				Operator: OpIs,
-				Values:   []string{user.String()}},
+				Values:   []string{muid.String()}},
 		},
 	}
 	jsonFilter, err := json.Marshal(filter)

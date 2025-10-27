@@ -43,7 +43,7 @@ func userSchemaInfoForMCPClient(userSchema types.Type, columnTypeDescription fun
 			"name":        "__id__",
 			"type":        "uuid",
 			"nullable":    true,
-			"description": "ID that uniquely identifies the user. It doesn't have a corresponding property in the user schema. It's used to reference the 'events.user' column.",
+			"description": "ID that uniquely identifies the user. It doesn't have a corresponding property in the user schema. It's used to reference the 'events.muid' column.",
 		},
 	})
 	info = append(info, map[string]any{

@@ -644,10 +644,10 @@ class Users {
 		return await call(`${this.apiURL}/users` + queryString(params), http.GET, this.workspaceID);
 	};
 
-	events = async (user: string): Promise<UserEventsResponse> => {
+	events = async (muid: string): Promise<UserEventsResponse> => {
 		let params = [];
 		let properties = [
-			'user',
+			'muid',
 			'connectionId',
 			'anonymousId',
 			'category',
@@ -671,9 +671,9 @@ class Users {
 			logical: 'and',
 			conditions: [
 				{
-					property: 'user',
+					property: 'muid',
 					operator: 'is',
-					values: [user],
+					values: [muid],
 				},
 			],
 		};
