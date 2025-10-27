@@ -23,7 +23,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		columns         []meergo.Column // without "__id__" and "__last_change_time__", which are added by the test
+		columns         []meergo.Column // without "__muid__" and "__last_change_time__", which are added by the test
 		ops             []meergo.AlterOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     error
@@ -266,7 +266,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				}
 			}
 			columns = append([]meergo.Column{
-				{Name: "__id__", Type: types.Int(32)},
+				{Name: "__muid__", Type: types.Int(32)},
 				{Name: "__last_change_time__", Type: types.DateTime()},
 			}, columns...)
 			got := alterUserSchemaQueries("_users_0", columns, test.ops)

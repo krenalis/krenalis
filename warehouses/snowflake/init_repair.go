@@ -131,7 +131,7 @@ func usersSQLSchema(name string, userColumns []meergo.Column) string {
 	b.WriteString(`CREATE TABLE IF NOT EXISTS `)
 	b.WriteString(quoteIdent(name))
 	b.WriteString(` (
-		"__ID__" VARCHAR(36),
+		"__MUID__" VARCHAR(36),
 		"__IDENTITIES__" ARRAY,
 		"__LAST_CHANGE_TIME__" TIMESTAMP NOT NULL`)
 	for _, c := range userColumns {
@@ -150,7 +150,7 @@ func usersViewSQLSchema(userColumns []meergo.Column, fromUsersTable string) stri
 	var b strings.Builder
 	b.WriteString(`CREATE OR REPLACE VIEW "USERS" AS
 		SELECT
-			"__ID__",
+			"__MUID__",
 			"__LAST_CHANGE_TIME__"`)
 	for _, c := range userColumns {
 		b.WriteString(",\n")

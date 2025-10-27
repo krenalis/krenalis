@@ -88,14 +88,14 @@ func Test_Records(t *testing.T) {
 	usersTable := meergo.Table{
 		Name: "_users_0",
 		Columns: []meergo.Column{
-			{Name: "__id__", Type: types.UUID()},
+			{Name: "__muid__", Type: types.UUID()},
 			{Name: "__last_change_time__", Type: types.DateTime()},
 			{Name: "id", Type: types.Text()},
 			{Name: "other_id", Type: types.Text()},
 			{Name: "name", Type: types.Text()},
 			{Name: "age", Type: types.Int(8)},
 		},
-		Keys: []string{"__id__"},
+		Keys: []string{"__muid__"},
 	}
 
 	destinationsUsersTable := meergo.Table{
@@ -222,7 +222,7 @@ func Test_Records(t *testing.T) {
 	}
 
 	userColumnByProperty := map[string]meergo.Column{
-		"__id__":   {Name: "__id__", Type: types.UUID()},
+		"__muid__": {Name: "__muid__", Type: types.UUID()},
 		"id":       {Name: "id", Type: types.Text()},
 		"other.id": {Name: "other_id", Type: types.Text()},
 		"name":     {Name: "name", Type: types.Text()},
@@ -248,7 +248,7 @@ func Test_Records(t *testing.T) {
 					UpdateOnDuplicates: test.updateOnDuplicates,
 				}
 
-				r, err := records(ctx, wh, query, "__id__", userColumnByProperty, true, matching)
+				r, err := records(ctx, wh, query, "__muid__", userColumnByProperty, true, matching)
 				if err != nil {
 					t.Fatalf("cannot read records: %s", err)
 				}

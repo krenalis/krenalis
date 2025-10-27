@@ -115,7 +115,7 @@ BEGIN
     -- Update associations between identities and users by updating the MUID of
     -- the identities.
     UPDATE "_USER_IDENTITIES" AS "UI"
-    SET "__muid__" = "U"."__ID__"
+    SET "__muid__" = "U"."__MUID__"
     FROM {{ new_users_name }} AS "U"
     WHERE ARRAY_CONTAINS("UI"."__PK__", "U"."__IDENTITIES__");
 

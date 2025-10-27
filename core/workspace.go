@@ -1422,7 +1422,7 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 
 	properties := this.workspace.UserSchema.Properties().Names()
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__id__"},
+		Property: []string{"__muid__"},
 		Operator: state.OpIs,
 		Values:   []any{user},
 	}}}
@@ -1819,7 +1819,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	// Read the users.
 	rows, total, err := this.store.Users(ctx, datastore.Query{
-		Properties: append([]string{"__id__", "__last_change_time__"}, properties...),
+		Properties: append([]string{"__muid__", "__last_change_time__"}, properties...),
 		Where:      where,
 		OrderBy:    order,
 		OrderDesc:  orderDesc,
@@ -1845,10 +1845,10 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 	users := make([]User, len(rows))
 	for i, row := range rows {
-		users[i].ID = row["__id__"].(string)
+		users[i].ID = row["__muid__"].(string)
 		users[i].Traits = row
 		users[i].LastChangeTime = row["__last_change_time__"].(time.Time)
-		delete(row, "__id__")
+		delete(row, "__muid__")
 		delete(row, "__last_change_time__")
 	}
 

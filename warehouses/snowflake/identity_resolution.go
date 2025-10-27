@@ -115,7 +115,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		mergeUsers.WriteString(quoteIdent(c.Name))
 		mergeUsers.WriteByte(',')
 	}
-	mergeUsers.WriteString(`"__IDENTITIES__", "__ID__", "__LAST_CHANGE_TIME__"`)
+	mergeUsers.WriteString(`"__IDENTITIES__", "__MUID__", "__LAST_CHANGE_TIME__"`)
 	mergeUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -142,7 +142,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	}
 	// Write the "__identities__" column.
 	mergeUsers.WriteString(`ARRAY_AGG(DISTINCT "__PK__"), `)
-	// Write the "__id__" column.
+	// Write the "__muid__" column.
 	// If all MUIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the user's MUID; otherwise, if
 	// we are in a situation where a previously split user is now merged, in
@@ -167,15 +167,15 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	mergeUsers.WriteString(quoteIdent(newUsersName))
 	mergeUsers.WriteString(` "U"
 		SET
-			"__ID__" = UUID_STRING()
+			"__MUID__" = UUID_STRING()
 		WHERE
-			"U"."__ID__" IN (
+			"U"."__MUID__" IN (
 				SELECT
-					"U2"."__ID__"
+					"U2"."__MUID__"
 				FROM
 					` + quoteIdent(newUsersName) + ` "U2"
 				GROUP BY
-					"U2"."__ID__"
+					"U2"."__MUID__"
 				HAVING
 					COUNT(*) > 1
 	)`)
