@@ -1085,7 +1085,7 @@ func (this *Workspace) UserPropertiesSuitableAsIdentifiers() types.Type {
 	})
 }
 
-// Identities returns the identities of the provider user, and an estimate of
+// Identities returns the identities of the provided user, and an estimate of
 // their total number without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0
