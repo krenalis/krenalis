@@ -122,6 +122,16 @@ const ConnectionsMap = () => {
 	const newConnectionID = Number(new URL(document.location.href).searchParams.get('newConnection'));
 	const sources: TransformedConnection[] = [];
 	const destinations: TransformedConnection[] = [];
+	connections.sort((a, b) => {
+		if (a.name < b.name) {
+			return -1;
+		} else if (a.name > b.name) {
+			return 1;
+		} else {
+			// The names are equal, compare the IDs.
+			return a.id < b.id ? -1 : 1;
+		}
+	});
 	for (const c of connections) {
 		if (c.role === 'Source') sources.push(c);
 		if (c.role === 'Destination') destinations.push(c);
