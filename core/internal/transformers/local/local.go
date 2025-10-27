@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"math"
 	"os"
@@ -136,6 +137,12 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		return fmt.Errorf("%s: failed to start the %s interpreter ('%s'): %w", msg, runtime, langExecutable, err)
 	}
 
+	// Discard the data written to the standard output by the transformation function.
+	err = discardBoundary(&stdout)
+	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
+		return err
+	}
+
 	// Unmarshal returns a FunctionExecError if execution fails, for example, due to a syntax error in the function.
 	return transformers.Unmarshal(&stdout, records, outSchema, language, preserveJSON)
 }
@@ -172,9 +179,12 @@ func (fn *function) create(name, version string, language state.Language, source
 		ext = "js"
 		escapedSource := escapeJavaScriptSourceCode(source)
 		fullSource = `
+const boundary = crypto.randomUUID();
+process.stdout.write(boundary + '\n');
 try {
 	Function(` + "`" + escapedSource + "`" + `);
 } catch (error) {
+    process.stdout.write('\n----' + boundary + '\n');
 	process.stdout.write(JSON.stringify({ error: error.toString() }));
 	process.exit() 
 }
@@ -196,6 +206,7 @@ for ( let i = 0; i < event.length; i++ ) {
 		records[i] = { error: error };
 	}
 }
+process.stdout.write('\n----' + boundary + '\n');
 process.stdout.write(JSON.stringify({ records: records }));`
 	case state.Python:
 		ext = "py"
@@ -205,19 +216,24 @@ process.stdout.write(JSON.stringify({ records: records }));`
 def main():
 	import json
 	import sys
-	from uuid import UUID
+	from uuid import UUID, uuid4
 	from decimal import Decimal
 	from datetime import datetime, date, time
+
+	boundary = str(uuid4())
+	print(boundary + "\n")
 
 	try:
 		exec(_SOURCE, globals())
 	except SyntaxError as ex:
 		error = f"SyntaxError: {ex.msg} (line {ex.lineno})"
+		print("\n----" + boundary + "\n")
 		print(json.dumps({"error": error}, separators=(",", ":"), default=str))
 		return
 	except Exception as ex:
 		name = type(ex).__name__
 		error = f"{name}: {ex}"
+		print("\n----" + boundary + "\n")
 		print(json.dumps({"error": error}, separators=(",", ":"), default=str))
 		return
 
@@ -231,6 +247,7 @@ def main():
 			records.append({"error": f"{name}: {ex}"})
 		else:
 			records.append({"value": value})
+	print("\n----" + boundary + "\n")
 	print(json.dumps({"records": records}, separators=(",", ":"), default=str))
 
 if __name__ == "__main__":
@@ -453,4 +470,42 @@ func parseID(id string) (name string, language state.Language, err error) {
 		return "", 0, fmt.Errorf("transformers/local: invalid function identifier %q", id)
 	}
 	return
+}
+
+var boundaryPrefix = []byte("----")
+
+// discardBoundary discards the data written to the standard output by the
+// transformation function.
+func discardBoundary(r io.Reader) error {
+
+	const size = 40
+	var boundary [size - 4]byte
+	_, err := io.ReadFull(r, boundary[:])
+	if err != nil {
+		return err
+	}
+
+	var window [size]byte
+	_, err = io.ReadFull(r, window[:])
+	if err != nil {
+		return err
+	}
+
+	for {
+		i := bytes.Index(window[:], boundaryPrefix)
+		if i == -1 {
+			i = size - 3
+		} else if i == 0 {
+			if bytes.Equal(window[4:], boundary[:]) {
+				return nil
+			}
+			i = 1
+		}
+		copy(window[:], window[i:])
+		_, err = io.ReadFull(r, window[size-i:])
+		if err != nil {
+			return err
+		}
+	}
+
 }
