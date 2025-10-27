@@ -232,6 +232,18 @@
 	border-left: 0;
 }
 
+.connection-actions__grid-alert-action-name {
+	font-family: var(--monospace-fonts);
+	background-color: var(--sl-color-neutral-100);
+	display: inline-block;
+	padding: 0px 5px;
+	border-radius: 3px;
+}
+
+.connection-actions__grid-alert-identities {
+	text-decoration: underline;
+}
+
 @media screen and (max-width: 1440px) {
 	.connection-actions__buttons > .connection-actions__manage-button {
 		display: none;

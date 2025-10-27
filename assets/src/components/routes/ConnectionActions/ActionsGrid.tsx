@@ -28,7 +28,8 @@ interface ActionsGridProps {
 }
 
 const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps) => {
-	const [actionToDelete, setActionToDelete] = useState<number>();
+	const [actionToDelete, setActionToDelete] = useState<Action | null>();
+	const [isAlertDialogOpen, setIsDialogAlertOpen] = useState<boolean>(false);
 	const [windowWidth, setWindowWidth] = useState<number>(window.innerWidth);
 	const [gridColumnsWidths, setGridColumnsWidths] = useState<string>();
 
@@ -86,20 +87,32 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	};
 
 	const onDeleteAction = (actionID: number) => {
-		setActionToDelete(actionID);
+		setActionToDelete(actions.find((a) => a.id === actionID));
+		setIsDialogAlertOpen(true);
 	};
 
 	const onConfirmDeleteAction = async () => {
 		newActionID.current = 0; // do not re-trigger the animation of the new action's row during the repainting.
 		try {
-			await api.workspaces.connections.deleteAction(actionToDelete);
+			await api.workspaces.connections.deleteAction(actionToDelete.id);
 		} catch (err) {
 			handleError(err);
-			setActionToDelete(null);
+			closeAlertDialog();
 			return;
 		}
-		setActionToDelete(null);
-		setIsLoadingConnections(true);
+		closeAlertDialog();
+		setTimeout(() => {
+			setIsLoadingConnections(true);
+		}, 300);
+	};
+
+	const closeAlertDialog = () => {
+		setIsDialogAlertOpen(false);
+		setTimeout(() => {
+			// Reset the action to delete after a delay to prevent flash of
+			// content in the dialog, where the action name is used.
+			setActionToDelete(null);
+		}, 300);
 	};
 
 	const onSchedulerPeriodChange = async (e: any, actionID: number) => {
@@ -305,19 +318,37 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			/>
 			<AlertDialog
 				variant='danger'
-				isOpen={actionToDelete != null}
-				onClose={() => setActionToDelete(null)}
-				title='Are you sure?'
+				isOpen={isAlertDialogOpen}
+				onClose={closeAlertDialog}
+				title={
+					<span>
+						Are you sure you want to delete the action{' '}
+						<span className='connection-actions__grid-alert-action-name'>{actionToDelete?.name}</span> ?
+					</span>
+				}
+				className='connection-actions__grid-alert'
 				actions={
 					<>
-						<SlButton onClick={() => setActionToDelete(null)}>Cancel</SlButton>
+						<SlButton onClick={closeAlertDialog}>Cancel</SlButton>
 						<SlButton variant='danger' onClick={onConfirmDeleteAction}>
 							Delete
 						</SlButton>
 					</>
 				}
 			>
-				<p>If you continue, you will permanently lose the action</p>
+				<p>
+					If you continue
+					{connection.isSource && actionToDelete?.target.includes('User') && (
+						<>
+							{' '}
+							<span className='connection-actions__grid-alert-identities'>
+								you will permanently lose the identities
+							</span>
+						</>
+					)}{' '}
+					imported by the action. The user profiles will be updated accordingly at the next identity
+					resolution execution.
+				</p>
 			</AlertDialog>
 		</>
 	);
