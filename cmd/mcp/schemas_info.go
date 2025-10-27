@@ -43,7 +43,7 @@ func userSchemaInfoForMCPClient(userSchema types.Type, columnTypeDescription fun
 			"name":        "__muid__",
 			"type":        "uuid",
 			"nullable":    true,
-			"description": "ID that uniquely identifies the user. It doesn't have a corresponding property in the user schema. It's used to reference the 'events.muid' column.",
+			"description": "The MUID (Meergo user ID) is an identifier that uniquely identifies an unified user within Meergo. It doesn't have a corresponding property in the user schema. It's used to reference the 'events.muid' column.",
 		},
 	})
 	info = append(info, map[string]any{
