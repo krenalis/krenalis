@@ -158,6 +158,9 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 		if err, ok := err.(FunctionExecError); ok {
 			err.msg = fmt.Sprintf("%s: %s ", t.function.Language.String(), err.msg)
 		}
+		if err == errInvalidResponseFormat {
+			err = errors.New("cannot execute transformation: transformer has unexpectedly returned an invalid JSON response")
+		}
 		return err
 	}
 

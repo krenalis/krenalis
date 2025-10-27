@@ -176,6 +176,9 @@ var pythonDecoderOptions = decoderOptions{
 //
 // If an error occurred during the transformation function execution, it returns
 // a FunctionExecError.
+//
+// If the response JSON does not conform to the expected format, it returns the
+// errInvalidResponseFormat error.
 func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.Language, preserveJSON bool) error {
 	if r == nil {
 		return errors.New("core/transformers: r is nil")
