@@ -46,17 +46,18 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			showHead = true;
 		}
 
-		const hasRelations = c.relations(connections).length > 0;
+		const isConnected = c.actionsCount > 0;
+		const isActive = c.relations(connections).length > 0;
 
 		const hovered =
 			isHovered ||
 			c.relations(connections).includes(hoveredConnection) ||
 			(isUserDbHovered && c.relations(connections).includes('dwh-user')) ||
 			(isEventDbHovered && c.relations(connections).includes('dwh-event'));
-		const isHighlighted = hovered && hasRelations;
+		const isHighlighted = hovered && isConnected;
 
 		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
-		const isHidden = !hasRelations || (isSomethingHovered && !isHighlighted);
+		const isHidden = !isConnected || (isSomethingHovered && !isHighlighted);
 
 		const arrow = (
 			<Arrow
@@ -64,14 +65,18 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 				end={arrowEnd}
 				startAnchor={arrowStartAnchor}
 				endAnchor={arrowEndAnchor}
-				color={isHighlighted ? '#4f46e5' : undefined}
+				color={isHighlighted && isActive ? '#4f46e5' : undefined}
 				strokeWidth={1}
-				dashness={isHighlighted ? { strokeLen: 5, nonStrokeLen: 5, animation: c.isSource ? 2 : -2 } : false}
-				data-is-hovered={isHighlighted}
+				dashness={
+					isHighlighted && isActive
+						? { strokeLen: 5, nonStrokeLen: 5, animation: c.isSource ? 2 : -2 }
+						: false
+				}
+				data-is-hovered={isHighlighted && isActive}
 				isNew={isNew}
 				isHidden={isHidden}
-				showTail={showTail && (hasRelations || isHighlighted)}
-				showHead={showHead && (hasRelations || isHighlighted)}
+				showTail={showTail && isConnected}
+				showHead={showHead && isConnected}
 				useCircleShape={true}
 			/>
 		);
