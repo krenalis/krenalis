@@ -134,7 +134,7 @@ body {
 	padding-left: var(--sidebar-width);
 }
 
-/* || buttons and links */
+/* || Shoelace */
 
 sl-button {
 	position: relative;
@@ -257,8 +257,6 @@ sl-textarea::part(textarea)::placeholder {
 	font-weight: 100;
 }
 
-/* || Forms */
-
 sl-select::part(control) {
 	min-width: 150px;
 }
@@ -276,8 +274,6 @@ sl-switch::part(label) {
 sl-checkbox::part(form-control-help-text) {
 	font-size: 12px;
 }
-
-/* || Panels */
 
 sl-dialog::part(panel) {
 	border-radius: 5px;
@@ -300,30 +296,9 @@ sl-dialog::part(body) {
 	padding-top: 0px;
 }
 
-/* || Content */
-
-.app .route-content {
-	padding: 24px;
-	padding-bottom: 50px;
-	background-color: var(--bg-gray);
-	border-top-left-radius: 8px;
-	border: 1px solid #ececec;
-	min-height: calc(100vh - var(--header-height));
-}
-
-.app .route-content--connection {
-	min-height: calc(100vh - 140px);
-	border-radius: 0;
-	border-color: #f9e3fe;
-}
-
-/* || Tab panels */
-
 sl-tab-group::part(body) {
 	overflow: visible;
 }
-
-/* || Split panels */
 
 sl-split-panel {
 	--divider-width: 2px;
@@ -341,6 +316,27 @@ sl-split-panel sl-icon[slot='divider'] {
 	color: var(--sl-color-neutral-500);
 	padding: 0.5rem 0.125rem;
 	border: 1px solid var(--border-primary);
+}
+
+sl-icon::part(svg) {
+	overflow: visible !important;
+}
+
+/* || Content */
+
+.app .route-content {
+	padding: 24px;
+	padding-bottom: 50px;
+	background-color: var(--bg-gray);
+	border-top-left-radius: 8px;
+	border: 1px solid #ececec;
+	min-height: calc(100vh - var(--header-height));
+}
+
+.app .route-content--connection {
+	min-height: calc(100vh - 140px);
+	border-radius: 0;
+	border-color: #f9e3fe;
 }
 
 /* || App spinner */
