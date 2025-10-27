@@ -89,7 +89,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	if err != nil {
 		return err
 	}
-	var stdout, stderr bytes.Buffer
+	var stdout bytes.Buffer
 	args := []string{
 		langExecutable, // node or python executable.
 		"-",            // read source code of transformation function from stdin. This is the same for both Node and Python.
@@ -108,7 +108,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Env = []string{} // avoids that the transf. function can access the env. variables of the Meergo process.
 	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Stderr = &prefixSuffixSaver{N: 32 << 10}
 	cmd.Stdin = bytes.NewReader(source)
 	err = cmd.Run()
 	if err != nil {
@@ -119,8 +119,8 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 		}
 		if err, ok := err.(*exec.ExitError); ok {
 			stderr := "an empty standard error"
-			if len(err.Stderr) > 0 {
-				stderr = fmt.Sprintf("standard error:\n\t%q", string(err.Stderr))
+			if b := cmd.Stderr.(*prefixSuffixSaver).Bytes(); len(b) > 0 {
+				stderr = fmt.Sprintf("standard error: %s", string(b))
 			}
 			return fmt.Errorf("%s: %s process ('%s') is exited with error code %d and %s", msg, runtime, langExecutable, err.ExitCode(), stderr)
 		}
