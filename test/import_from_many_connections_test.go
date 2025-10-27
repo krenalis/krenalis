@@ -193,28 +193,28 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		t.Fatalf("expected 10 users, got %d", total)
 	}
 
-	// Retrieve the GID of "kbuessen0@example.com".
-	var kBuessenGid uuid.UUID
+	// Retrieve the MUID of "kbuessen0@example.com".
+	var kBuessenMUID uuid.UUID
 	for _, user := range users {
 		if user.Traits["email"] == "kbuessen0@example.com" {
-			kBuessenGid = user.ID
+			kBuessenMUID = user.ID
 			break
 		}
 	}
-	if kBuessenGid == (uuid.UUID{}) {
+	if kBuessenMUID == (uuid.UUID{}) {
 		t.Fatalf("user with email %q not found", "kbuessen0@example.com")
 	}
 
 	// Ensure that "kbuessen0@example.com" has one event associated.
-	events := c.UserEvents(kBuessenGid, []string{"timestamp"})
+	events := c.UserEvents(kBuessenMUID, []string{"timestamp"})
 	if len(events) != 1 {
 		t.Fatalf("expected %q to have one event associated, got %d", "kbuessen0@example.com", len(events))
 	}
 
 	// Validate the identities.
-	identities, total := c.UserIdentities(kBuessenGid, 0, 1000)
+	identities, total := c.UserIdentities(kBuessenMUID, 0, 1000)
 	if total != 3 {
-		t.Fatalf("expected user %s to have 3 identities associated, got %d", kBuessenGid, total)
+		t.Fatalf("expected user %s to have 3 identities associated, got %d", kBuessenMUID, total)
 	}
 	assertEqualIdentity := func(got, expected meergotester.UserIdentity) {
 		if !reflect.DeepEqual(got, expected) {

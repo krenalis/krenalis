@@ -143,11 +143,11 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	// Write the "__identities__" column.
 	mergeUsers.WriteString(`ARRAY_AGG(DISTINCT "__PK__"), `)
 	// Write the "__id__" column.
-	// If all GIDs are the same - ignoring the NULL ones, which refer to new
-	// identities - then take the common value as the user's GID; otherwise, if
+	// If all MUIDs are the same - ignoring the NULL ones, which refer to new
+	// identities - then take the common value as the user's MUID; otherwise, if
 	// we are in a situation where a previously split user is now merged, in
-	// this case, create a new random GID. If the identities are all new, also
-	// in this case, create a new random GID.
+	// this case, create a new random MUID. If the identities are all new, also
+	// in this case, create a new random MUID.
 	mergeUsers.WriteString(`COALESCE(
 		CASE
 			WHEN COUNT(CASE WHEN "__muid__" IS NOT NULL THEN 1 ELSE 0 END) > 0
@@ -161,8 +161,8 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	mergeUsers.WriteString(` FROM "_USER_IDENTITIES" GROUP BY "__CLUSTER__"';` + "\n")
 
 	// If two users who were previously one are split, they will end up having
-	// the same GID, which is incorrect. So this query, in that situation,
-	// replaces the GID of both users with new random GIDs.
+	// the same MUID, which is incorrect. So this query, in that situation,
+	// replaces the MUID of both users with new random MUIDs.
 	mergeUsers.WriteString(`UPDATE `)
 	mergeUsers.WriteString(quoteIdent(newUsersName))
 	mergeUsers.WriteString(` "U"

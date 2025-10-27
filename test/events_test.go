@@ -132,7 +132,7 @@ func TestEvents(t *testing.T) {
 
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
-	// Run the identity resolution, so that the events GID are updated.
+	// Run the identity resolution, so that the events MUID are updated.
 	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 
@@ -142,24 +142,24 @@ func TestEvents(t *testing.T) {
 	if expectedUsersTotal != total {
 		t.Fatalf("expected %d users, got %d", expectedUsersTotal, total)
 	}
-	var userGID uuid.UUID
+	var userMUID uuid.UUID
 	for _, user := range users {
 		email, _ := user.Traits["email"].(string)
 		if email == eventUserEmail {
-			userGID = user.ID
+			userMUID = user.ID
 			break
 		}
 	}
-	if userGID == (uuid.UUID{}) {
+	if userMUID == (uuid.UUID{}) {
 		t.Fatalf("user with email %q not found", eventUserEmail)
 	}
-	t.Logf("user imported from event has GID %s", userGID)
+	t.Logf("user imported from event has MUID %s", userMUID)
 
 	// Retrieve the first event for the user.
 	var event map[string]any
-	events := c.UserEvents(userGID, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
+	events := c.UserEvents(userMUID, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
 	if len(events) != expectedEventsCount {
-		t.Fatalf("expected %d events for user %s, got %d", expectedEventsCount, userGID, len(events))
+		t.Fatalf("expected %d events for user %s, got %d", expectedEventsCount, userMUID, len(events))
 	}
 	event = events[0] // most recent event.
 

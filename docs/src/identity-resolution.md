@@ -92,16 +92,16 @@ The resulting user will be then:
 
 where the value "20" for `total_orders` comes from B, which is primary for this property, instead of coming from the identity from C (even if this last one was updated more recently).
 
-## User GIDs
+## User MUIDs
 
-A GID is a UUID that uniquely identifies a user at a certain point in time.
+A MUID (Meergo user ID) is a UUID that uniquely identifies a user at a certain point in time.
 
-During the **Identity Resolution**, a user's GID **is retained unless**:
+During the **Identity Resolution**, a user's MUID **is retained unless**:
 
 - the users **has been merged** with other users
 - the users **has been split** into two or more users
 
-In these cases, the GID of the original user is deleted, and one or more new GIDs are created in its place.
+In these cases, the MUID of the original user is deleted, and one or more new MUIDs are created in its place.
 
 ## Association between events and users
 
