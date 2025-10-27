@@ -188,7 +188,7 @@ func createViewQuery(usersTableName string, userColumns []meergo.Column, replace
 		b.WriteString(`OR REPLACE `)
 	}
 	b.WriteString(`VIEW "USERS" AS SELECT` + "\n")
-	metaProps := []string{"__ID__", "__LAST_CHANGE_TIME__"}
+	metaProps := []string{"__MUID__", "__LAST_CHANGE_TIME__"}
 	for i, p := range metaProps {
 		if i > 0 {
 			b.WriteString(",\n")

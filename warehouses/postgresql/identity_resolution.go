@@ -131,7 +131,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 		mergeUsers.WriteString(quoteIdent(c.Name))
 		mergeUsers.WriteByte(',')
 	}
-	mergeUsers.WriteString(`"__identities__", "__id__", "__last_change_time__"`)
+	mergeUsers.WriteString(`"__identities__", "__muid__", "__last_change_time__"`)
 	mergeUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -154,7 +154,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	}
 	// Write the "__identities__" column.
 	mergeUsers.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
-	// Write the "__id__" column.
+	// Write the "__muid__" column.
 	// If all MUIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the user's MUID; otherwise, if
 	// we are in a situation where a previously split user is now merged, in
@@ -179,15 +179,15 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	mergeUsers.WriteString(quoteIdent(newUsersName))
 	mergeUsers.WriteString(` "u"
 		SET
-			"__id__" = gen_random_uuid()
+			"__muid__" = gen_random_uuid()
 		WHERE
-			"u"."__id__" IN (
+			"u"."__muid__" IN (
 				SELECT
-					"u2"."__id__"
+					"u2"."__muid__"
 				FROM
 					` + quoteIdent(newUsersName) + ` "u2"
 				GROUP BY
-					"u2"."__id__"
+					"u2"."__muid__"
 				HAVING
 					COUNT(*) > 1
 	)`)

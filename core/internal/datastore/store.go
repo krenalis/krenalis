@@ -101,7 +101,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	}
 	store.wh.Store(wh)
 	store.columnByProperty.user = userColumnByProperty(ws.UserSchema)
-	store.columnByProperty.user["__id__"] = meergo.Column{Name: "__id__", Type: types.UUID()}
+	store.columnByProperty.user["__muid__"] = meergo.Column{Name: "__muid__", Type: types.UUID()}
 	store.columnByProperty.user["__last_change_time__"] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	return store, nil
@@ -473,7 +473,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 	}
 	// Count the users on the current warehouse.
 	query := meergo.RowQuery{
-		Columns: []meergo.Column{{Name: "__id__", Type: types.UUID()}},
+		Columns: []meergo.Column{{Name: "__muid__", Type: types.UUID()}},
 		Table:   "users",
 		Limit:   1, // minimize the number of rows the warehouse needs to prepare — we only need the count here.
 	}
@@ -586,7 +586,7 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
-	return records(ctx, store.warehouse(), query, "__id__", store.userColumnByProperty(), true, matching)
+	return records(ctx, store.warehouse(), query, "__muid__", store.userColumnByProperty(), true, matching)
 }
 
 // Users returns the users according to the provided query.
@@ -687,7 +687,7 @@ func (store *Store) onEndAlterUserSchema(n state.EndAlterUserSchema) {
 	// Update the user and the identity columns.
 	store.columnByProperty.mu.Lock()
 	store.columnByProperty.user = userColumnByProperty(n.Schema)
-	store.columnByProperty.user["__id__"] = meergo.Column{Name: "__id__", Type: types.UUID()}
+	store.columnByProperty.user["__muid__"] = meergo.Column{Name: "__muid__", Type: types.UUID()}
 	store.columnByProperty.user["__last_change_time__"] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	store.columnByProperty.mu.Unlock()

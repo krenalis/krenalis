@@ -37,10 +37,10 @@ func userSchemaInfoForMCPClient(userSchema types.Type, columnTypeDescription fun
 			},
 		})
 	}
-	// Add information about the "__id__" and "__last_change_time__".
+	// Add information about the "__muid__" and "__last_change_time__".
 	info = append(info, map[string]any{
 		"userViewColumn": map[string]any{
-			"name":        "__id__",
+			"name":        "__muid__",
 			"type":        "uuid",
 			"nullable":    true,
 			"description": "ID that uniquely identifies the user. It doesn't have a corresponding property in the user schema. It's used to reference the 'events.muid' column.",

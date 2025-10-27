@@ -112,7 +112,7 @@ AS $$
     -- Update associations between identities and users by updating the MUID of
     -- the identities.
     UPDATE "_user_identities" AS "ui"
-    SET "__muid__" = "u"."__id__"
+    SET "__muid__" = "u"."__muid__"
     FROM {{ new_users_name }} AS "u"
     WHERE "ui"."__pk__" = ANY ("u"."__identities__");
 
