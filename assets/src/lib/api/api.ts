@@ -685,13 +685,13 @@ class Users {
 		return await call(`${this.apiURL}/events` + queryString(params), http.GET, this.workspaceID);
 	};
 
-	traits = async (user: string): Promise<userTraitsResponse> => {
-		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/traits`, http.GET, this.workspaceID);
+	traits = async (muid: string): Promise<userTraitsResponse> => {
+		return await call(`${this.apiURL}/users/${encodeURIComponent(muid)}/traits`, http.GET, this.workspaceID);
 	};
 
-	identities = async (user: string, first: number, limit: number): Promise<UserIdentitiesResponse> => {
+	identities = async (muid: string, first: number, limit: number): Promise<UserIdentitiesResponse> => {
 		return await call(
-			`${this.apiURL}/users/${encodeURIComponent(user)}/identities?first=${first}&limit=${limit}`,
+			`${this.apiURL}/users/${encodeURIComponent(muid)}/identities?first=${first}&limit=${limit}`,
 			http.GET,
 			this.workspaceID,
 		);

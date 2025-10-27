@@ -5,7 +5,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserTab } from './Users.types';
 import { UserEvent, UserIdentity } from '../../../lib/api/types/user';
 
-const useUserDrawer = (id: string, selectedTab: UserTab) => {
+const useUserDrawer = (muid: string, selectedTab: UserTab) => {
 	const [traits, setTraits] = useState<Record<string, any>>();
 	const [events, setEvents] = useState<UserEvent[]>();
 	const [identities, setIdentities] = useState<UserIdentity[]>();
@@ -19,7 +19,7 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 			// Fetch the user's traits.
 			let traitsResponse: userTraitsResponse;
 			try {
-				traitsResponse = await api.workspaces.users.traits(id);
+				traitsResponse = await api.workspaces.users.traits(muid);
 			} catch (err) {
 				setTimeout(() => setIsLoading(false), 200);
 				if (err instanceof NotFoundError) {
@@ -40,11 +40,11 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 			setTimeout(() => setIsLoading(false), 200);
 			return;
 		};
-		if (id === '') {
+		if (muid === '') {
 			return;
 		}
 		fetchUserTraits();
-	}, [id]);
+	}, [muid]);
 
 	useEffect(() => {
 		const fetchUserTab = async () => {
@@ -53,7 +53,7 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 				// Fetch the user's events.
 				let eventsResponse: UserEventsResponse;
 				try {
-					eventsResponse = await api.workspaces.users.events(id);
+					eventsResponse = await api.workspaces.users.events(muid);
 				} catch (err) {
 					setTimeout(() => setIsLoading(false), 200);
 					if (err instanceof NotFoundError) {
@@ -80,7 +80,7 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 				// Fetch the user's identities.
 				let identitiesResponse: UserIdentitiesResponse;
 				try {
-					identitiesResponse = await api.workspaces.users.identities(id, 0, 1000);
+					identitiesResponse = await api.workspaces.users.identities(muid, 0, 1000);
 				} catch (err) {
 					setTimeout(() => setIsLoading(false), 200);
 					if (err instanceof NotFoundError) {
@@ -102,11 +102,11 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 				return;
 			}
 		};
-		if (id === '') {
+		if (muid === '') {
 			return;
 		}
 		fetchUserTab();
-	}, [id, selectedTab]);
+	}, [muid, selectedTab]);
 
 	return { isLoading, traits, events, identities };
 };

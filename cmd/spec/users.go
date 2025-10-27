@@ -157,16 +157,16 @@ func init() {
 			},
 			{
 				Name:        "Retrieve user traits",
-				Description: "Retrieves, from the workspace's data warehouse, the traits of a user given its ID.",
+				Description: "Retrieves, from the workspace's data warehouse, the traits of a user given its MUID (Meergo user ID).",
 				Method:      GET,
-				URL:         "/v1/users/:id/traits",
+				URL:         "/v1/users/:muid/traits",
 				Parameters: []types.Property{
 					{
-						Name:           "id",
+						Name:           "muid",
 						Type:           types.UUID(),
 						Prefilled:      `02bc2281-f801-4f59-9c56-b96ff81df84f`,
 						CreateRequired: true,
-						Description:    "The ID of the user.",
+						Description:    "The Meergo user ID.",
 					},
 				},
 				Response: &Response{
@@ -187,17 +187,17 @@ func init() {
 			},
 			{
 				Name: "Retrieve user events",
-				Description: "Retrieves the most recent events for a user given their identifier. The events are read from the workspace's data warehouse and are listed in descending order, starting with the most recent ones.\n\n" +
+				Description: "Retrieves the most recent events for a user given their MUID (Meergo user ID). The events are read from the workspace's data warehouse and are listed in descending order, starting with the most recent ones.\n\n" +
 					"This endpoint provides a streamlined, user-focused alternative to the [Retrieve all events](events#retrieve-all-events) endpoint.",
 				Method: GET,
-				URL:    "/v1/users/:id/events",
+				URL:    "/v1/users/:muid/events",
 				Parameters: []types.Property{
 					{
-						Name:           "id",
+						Name:           "muid",
 						Type:           types.UUID(),
 						Prefilled:      `02bc2281-f801-4f59-9c56-b96ff81df84f`,
 						CreateRequired: true,
-						Description:    "The ID of the user.",
+						Description:    "The Meergo user ID.",
 					},
 					{
 						Name:           "properties",
@@ -231,18 +231,18 @@ func init() {
 			},
 			{
 				Name: "Retrieve user identities",
-				Description: "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.\n\n" +
+				Description: "Retrieves, from the workspace's data warehouse, the identities of a user given its MUID (Meergo user ID).\n\n" +
 					"Identities are sorted by last change time, in descending order, so the most recently changed identities are returned first.\n\n" +
 					"If the user does not exist, no identities are returned.",
 				Method: GET,
-				URL:    "/v1/users/:id/identities",
+				URL:    "/v1/users/:muid/identities",
 				Parameters: []types.Property{
 					{
-						Name:           "id",
+						Name:           "muid",
 						Type:           types.UUID(),
 						Prefilled:      `86de98fe-8f26-49ac-87dc-8a14997a97d9`,
 						CreateRequired: true,
-						Description:    "The ID of the user.",
+						Description:    "The Meergo user ID.",
 					},
 					{
 						Name:        "first",
