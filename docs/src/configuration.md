@@ -10,4 +10,4 @@ This section describes the [environment variables](configuration/environment-var
 
 * If you installed Meergo [using Docker](installation/using-docker), you can configure these variables in the _compose.yml_ file in your _meergo_ directory.
 
-* If you installed Meergo [from pre-compiled binaries](installation/pre-compiled-binaries) or built it [from source](installation/from-source), you can configure them in [the _.env_ file](configuration/the-env-file).
+* If you built Meergo [from source](installation/from-source), you can configure them in [the _.env_ file](configuration/the-env-file).

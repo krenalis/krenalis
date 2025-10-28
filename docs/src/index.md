@@ -53,7 +53,6 @@ Use the following SDKs to collect and send events to Meergo. Events can be store
 There are several ways to get started with Meergo:
 
 * [Using Docker](installation/using-docker). The recommended way to quickly try Meergo with a pre-configured local instance and data warehouse, customizable later.
-* [From pre-compiled binaries](installation/pre-compiled-binaries). For more control, run the downloadable binary. Requires manual setup of PostgreSQL and a data warehouse.
 * [From source](installation/from-source). The most advanced method, offering full control and flexibility. Recommended for customizing the executable or contributing by building Meergo from source.
 
 Ready to dive in? Check out [Installation](installation) to start using Meergo.
