@@ -349,10 +349,10 @@ export const _handler = async (event) => {
 		fullSource += "_SOURCE = '''" + escapePythonSourceCode(source) + "'''\n\n"
 		fullSource += `
 def _handler(event, context):
+	import datetime
+	import decimal
 	import json
-	from uuid import UUID
-	from decimal import Decimal
-	from datetime import datetime, date, time
+	import uuid
 
 	function_globals = {}
 
@@ -373,11 +373,9 @@ def _handler(event, context):
 	
 	# Names needed to evaluate all expressions that Meergo can provide.
 	eval_globals = {
-		"date": date,
 		"datetime": datetime,
-		"Decimal": Decimal,
-		"time": time,
-		"UUID": UUID,
+		"decimal": decimal,
+		"uuid": uuid,
 	}
 
 	records = []
