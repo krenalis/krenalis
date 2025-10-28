@@ -354,8 +354,10 @@ def _handler(event, context):
 	from decimal import Decimal
 	from datetime import datetime, date, time
 
+	function_globals = {}
+
 	try:
-		exec(_SOURCE, globals())
+		exec(_SOURCE, globals=function_globals)
 	except SyntaxError as ex:
 		error = f"SyntaxError: {ex.msg} (line {ex.lineno})"
 		return json.dumps({"error": error}, separators=(",", ":"), default=str)
@@ -363,6 +365,9 @@ def _handler(event, context):
 		name = type(ex).__name__
 		error = f"{name}: {ex}"
 		return json.dumps({"error": error}, separators=(",", ":"), default=str)
+
+	transform = function_globals["transform"]
+	
 	records = []
 	for e in eval(event):
 		try:
