@@ -28,6 +28,9 @@ import (
 // schema must be an object or invalid. If it is invalid, values is marshaled as
 // an array of empty objects.
 //
+// Marshalled Python type names are fully qualified, meaning they also include
+// the module name (e.g., 'decimal.Decimal', not just 'Decimal').
+//
 // Unlike Unmarshal, Marshal does not validate the values against the schema.
 // The values must already be validated.
 func Marshal(b []byte, schema types.Type, records []Record, language state.Language, preserveJSON bool) ([]byte, error) {
@@ -210,6 +213,9 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 }
 
 // marshalPython marshals v as a Python value.
+//
+// Marshalled Python type names are fully qualified, meaning they also include
+// the module name (e.g., 'decimal.Decimal', not just 'Decimal').
 func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, error) {
 	if v == nil {
 		return append(b, "None"...), nil
@@ -269,7 +275,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 	switch v := v.(type) {
 	case string:
 		if k == types.UUIDKind {
-			b = append(b, "UUID('"...)
+			b = append(b, "uuid.UUID('"...)
 			b = append(b, v...)
 			b = append(b, '\'', ')')
 		} else {
@@ -300,17 +306,17 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 			b = strconv.AppendFloat(b, v, 'g', -1, t.BitSize())
 		}
 	case decimal.Decimal:
-		b = append(b, "Decimal('"...)
+		b = append(b, "decimal.Decimal('"...)
 		b = append(b, v.String()...)
 		b = append(b, '\'', ')')
 	case time.Time:
 		switch k {
 		case types.DateTimeKind:
-			b = fmt.Appendf(b, "datetime(%d,%d,%d,%d,%d,%d,%d)", v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
+			b = fmt.Appendf(b, "datetime.datetime(%d,%d,%d,%d,%d,%d,%d)", v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
 		case types.DateKind:
-			b = fmt.Appendf(b, "date(%d,%d,%d)", v.Year(), v.Month(), v.Day())
+			b = fmt.Appendf(b, "datetime.date(%d,%d,%d)", v.Year(), v.Month(), v.Day())
 		case types.TimeKind:
-			b = fmt.Appendf(b, "time(%d,%d,%d,%d)", v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
+			b = fmt.Appendf(b, "datetime.time(%d,%d,%d,%d)", v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
 		}
 	case []any:
 		b = append(b, '[')

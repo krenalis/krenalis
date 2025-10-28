@@ -214,13 +214,13 @@ process.stdout.write(JSON.stringify({ records: records }));`
 		fullSource += "_SOURCE = '''" + escapePythonSourceCode(source) + "'''\n\n"
 		fullSource += `
 def main():
+	import datetime
+	import decimal
 	import json
 	import sys
-	from uuid import UUID, uuid4
-	from decimal import Decimal
-	from datetime import datetime, date, time
+	import uuid
 
-	boundary = str(uuid4())
+	boundary = str(uuid.uuid4())
 	print(boundary + "\n")
 
 	function_globals = {}
@@ -248,11 +248,9 @@ def main():
 
 	# Names needed to evaluate all expressions that Meergo can provide.
 	eval_globals = {
-		"date": date,
 		"datetime": datetime,
-		"Decimal": Decimal,
-		"time": time,
-		"UUID": UUID,
+		"decimal": decimal,
+		"uuid": uuid,
 	}
 
 	records = []
