@@ -146,14 +146,14 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions/export-users-to-apis",
-		Name: "Export users to APIs",
-		Description: "This type of action exports user data from the workspace's data warehouse to an API. " +
-			"It operates on a destination API connection that supports users.",
+		ID:   "actions/export-users-to-applications",
+		Name: "Export users to applications",
+		Description: "This type of action exports user data from the workspace's data warehouse to an applications.\n\n" +
+			"These endpoints are specific to **application API** connections that supports users and cannot be used with application SDK or webhook connections.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
-				Description: "Create a destination action that exports users to an API.",
+				Description: "Create a destination action that exports users to an application API.",
 				Method:      POST,
 				URL:         "/v1/actions",
 				Parameters: []types.Property{
@@ -205,7 +205,7 @@ func init() {
 			},
 			{
 				Name:        "Update action",
-				Description: "Update a destination action that exports users to an API.",
+				Description: "Update a destination action that exports users to an application API.",
 				Method:      PUT,
 				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
@@ -239,7 +239,7 @@ func init() {
 			},
 			{
 				Name:        "Get action",
-				Description: "Get a destination action that exports users to an API.",
+				Description: "Get a destination action that exports users to an application API.",
 				Method:      GET,
 				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
@@ -270,7 +270,7 @@ func init() {
 							Name:        "connectorType",
 							Type:        types.Text().WithValues("API", "Database", "FileStorage", "MessageBroker", "SDK", "Webhook"),
 							Prefilled:   `"API"`,
-							Description: "The type of the connection's connector. It is always `\"API\"` when the action exports users to an API.",
+							Description: "The type of the connection's connector. It is always `\"API\"` when the action exports users to an application API.",
 						},
 						{
 							Name:        "connection",
@@ -282,13 +282,13 @@ func init() {
 							Name:        "connectionRole",
 							Type:        types.Text().WithValues("Source", "Destination"),
 							Prefilled:   `"Destination"`,
-							Description: "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an API.",
+							Description: "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an application API.",
 						},
 						{
 							Name:        "target",
 							Type:        types.Text().WithValues("User", "Event"),
 							Prefilled:   `"User"`,
-							Description: "The entity on which the action operates. It is always `\"User\"` when the action exports users to an API.",
+							Description: "The entity on which the action operates. It is always `\"User\"` when the action exports users to an application API.",
 						},
 						{
 							Name:        "enabled",

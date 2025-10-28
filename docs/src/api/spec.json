@@ -519,13 +519,13 @@
             ]
         },
         {
-            "id": "actions/export-users-to-apis",
-            "name": "Export users to APIs",
-            "description": "This type of action exports user data from the workspace's data warehouse to an API. It operates on a destination API connection that supports users.",
+            "id": "actions/export-users-to-applications",
+            "name": "Export users to applications",
+            "description": "This type of action exports user data from the workspace's data warehouse to an applications.\n\nThese endpoints are specific to **application API** connections that supports users and cannot be used with application SDK or webhook connections.",
             "endpoints": [
                 {
                     "name": "Create action",
-                    "description": "Create a destination action that exports users to an API.",
+                    "description": "Create a destination action that exports users to an application API.",
                     "method": "POST",
                     "url": "/v1/actions",
                     "parameters": [
@@ -862,7 +862,7 @@
                 },
                 {
                     "name": "Update action",
-                    "description": "Update a destination action that exports users to an API.",
+                    "description": "Update a destination action that exports users to an application API.",
                     "method": "PUT",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -1169,7 +1169,7 @@
                 },
                 {
                     "name": "Get action",
-                    "description": "Get a destination action that exports users to an API.",
+                    "description": "Get a destination action that exports users to an application API.",
                     "method": "GET",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -1229,7 +1229,7 @@
                                         "Webhook"
                                     ]
                                 },
-                                "description": "The type of the connection's connector. It is always `\"API\"` when the action exports users to an API."
+                                "description": "The type of the connection's connector. It is always `\"API\"` when the action exports users to an application API."
                             },
                             {
                                 "name": "connection",
@@ -1250,7 +1250,7 @@
                                         "Destination"
                                     ]
                                 },
-                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an API."
+                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an application API."
                             },
                             {
                                 "name": "target",
@@ -1262,7 +1262,7 @@
                                         "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"User\"` when the action exports users to an API."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action exports users to an application API."
                             },
                             {
                                 "name": "enabled",
@@ -3682,13 +3682,13 @@
             ]
         },
         {
-            "id": "actions/import-users-from-apis",
-            "name": "Import users from APIs",
-            "description": "This type of action imports user data from an API into the workspace's data warehouse. It operates on a source API connection that supports users.",
+            "id": "actions/import-users-from-applications",
+            "name": "Import users from applications",
+            "description": "This type of action imports user data from an application into the workspace's data warehouse.\n\nThese endpoints are specific to **application API** connections that supports users and cannot be used with application SDK or webhook connections.",
             "endpoints": [
                 {
                     "name": "Create action",
-                    "description": "Create a source action to import users from an API.",
+                    "description": "Create a source action to import users from an application API.",
                     "method": "POST",
                     "url": "/v1/actions",
                     "parameters": [
@@ -3983,7 +3983,7 @@
                 },
                 {
                     "name": "Update action",
-                    "description": "Update a source action that imports users from an API.",
+                    "description": "Update a source action that imports users from an application API.",
                     "method": "PUT",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -4248,7 +4248,7 @@
                 },
                 {
                     "name": "Get action",
-                    "description": "Get a source action that imports users from an API.",
+                    "description": "Get a source action that imports users from an application API.",
                     "method": "GET",
                     "url": "/v1/actions/:id",
                     "parameters": [
@@ -4308,7 +4308,7 @@
                                         "Webhook"
                                     ]
                                 },
-                                "description": "The type of the connection's connector. It is always `\"API\"` when the action imports users from an API."
+                                "description": "The type of the connection's connector. It is always `\"API\"` when the action imports users from an application API."
                             },
                             {
                                 "name": "connection",
@@ -4329,7 +4329,7 @@
                                         "Destination"
                                     ]
                                 },
-                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports users from an API."
+                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports users from an application API."
                             },
                             {
                                 "name": "target",
@@ -4341,7 +4341,7 @@
                                         "Event"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"User\"` when the action imports users from an API."
+                                "description": "The entity on which the action operates. It is always `\"User\"` when the action imports users from an application API."
                             },
                             {
                                 "name": "enabled",
@@ -7275,9 +7275,9 @@
             ]
         },
         {
-            "id": "actions/send-events-to-apis",
-            "name": "Send events to APIs",
-            "description": "This type of action sends the received events to APIs. It operates on a destination API connection that supports events.",
+            "id": "actions/send-events-to-applications",
+            "name": "Send events to applications",
+            "description": "This type of action sends the received events to application APIs.\n\nIt operates on a destination **API connection** that supports events.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -8987,14 +8987,7 @@
                             "name": "connector",
                             "prefilled": "\"javascript\"",
                             "type": {
-                                "kind": "text",
-                                "values": [
-                                    "API",
-                                    "Database",
-                                    "FileStorage",
-                                    "SDK",
-                                    "Webhook"
-                                ]
+                                "kind": "text"
                             },
                             "createRequired": true,
                             "description": "The code of the [connector](/connectors/) for which to create the connection. It can be an API, database, file storage, SDK, or webhook connector, but cannot be a file connector or a message broker connector.\n\nMessage broker connectors will be available soon."

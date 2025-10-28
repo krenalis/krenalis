@@ -174,7 +174,7 @@ func init() {
 					roleParameter,
 					{
 						Name:           "connector",
-						Type:           types.Text().WithValues("API", "Database", "FileStorage", "SDK", "Webhook"),
+						Type:           types.Text(),
 						CreateRequired: true,
 						Prefilled:      `"javascript"`,
 						Description: "The code of the [connector](/connectors/) for which to create the connection. " +
