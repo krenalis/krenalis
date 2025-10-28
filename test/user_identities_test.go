@@ -104,7 +104,7 @@ func Test_UserIdentities(t *testing.T) {
 
 	for _, user := range users {
 
-		identities, total := c.UserIdentities(user.ID, 0, 1000)
+		identities, total := c.UserIdentities(user.MUID, 0, 1000)
 
 		if total != 1 && total != 2 {
 			t.Fatalf("expected 'total' to be 1 or 2, got %d", total)
@@ -119,7 +119,7 @@ func Test_UserIdentities(t *testing.T) {
 			t.Logf(
 				"the APIs returned an identity for user with MUID %s that has"+
 					" action = %d, identity ID = %v and last change time = %q",
-				user.ID, identity.Action, identity.ID, identity.LastChangeTime)
+				user.MUID, identity.Action, identity.ID, identity.LastChangeTime)
 
 			var idPrefix string
 			switch identity.Action {

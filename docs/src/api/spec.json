@@ -15345,12 +15345,12 @@
                                         "kind": "object",
                                         "properties": [
                                             {
-                                                "name": "id",
+                                                "name": "muid",
                                                 "prefilled": "\"02bc2281-f801-4f59-9c56-b96ff81df84f\"",
                                                 "type": {
                                                     "kind": "uuid"
                                                 },
-                                                "description": "The ID of the user."
+                                                "description": "The Meergo user ID."
                                             },
                                             {
                                                 "name": "sourcesLastUpdate",

@@ -143,7 +143,7 @@ type KV struct {
 }
 
 type User struct {
-	ID                uuid.UUID      `json:"id"`
+	MUID              uuid.UUID      `json:"muid"`
 	SourcesLastUpdate time.Time      `json:"sourcesLastUpdate"`
 	Traits            map[string]any `json:"traits"`
 }

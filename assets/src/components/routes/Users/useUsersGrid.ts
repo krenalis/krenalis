@@ -7,7 +7,7 @@ const useUsersGrid = (
 	users: ResponseUser[],
 	usersProperties: UserProperty[],
 	selectedUser: string,
-	onUserClick: (id: string) => void,
+	onUserClick: (muid: string) => void,
 ) => {
 	const usersRows = useMemo(() => {
 		// compute the rows for the grid component.
@@ -15,7 +15,7 @@ const useUsersGrid = (
 		for (const user of users) {
 			// copy the user to prevent changes in-place.
 			let userCopy = { ...user };
-			const isSelected = userCopy.id === selectedUser;
+			const isSelected = userCopy.muid === selectedUser;
 			const traits = userCopy.traits;
 
 			const cells: any[] = [];
@@ -40,7 +40,7 @@ const useUsersGrid = (
 			}
 
 			const row: GridRow = {
-				onClick: () => onUserClick(user.id),
+				onClick: () => onUserClick(user.muid),
 				cells: [userCopy.sourcesLastUpdate, ...cells],
 				selected: isSelected,
 			};

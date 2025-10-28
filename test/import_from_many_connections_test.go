@@ -197,7 +197,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var kBuessenMUID uuid.UUID
 	for _, user := range users {
 		if user.Traits["email"] == "kbuessen0@example.com" {
-			kBuessenMUID = user.ID
+			kBuessenMUID = user.MUID
 			break
 		}
 	}

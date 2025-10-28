@@ -94,10 +94,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every user now should have just one identity associated.
 	totalUsers := 0
 	for _, user := range users {
-		_, total := c.UserIdentities(user.ID, 0, 100)
+		_, total := c.UserIdentities(user.MUID, 0, 100)
 		const expectedTotal = 1
 		if expectedTotal != total {
-			t.Fatalf("expected %d identities for user %s, got %d", total, user.ID, total)
+			t.Fatalf("expected %d identities for user %s, got %d", total, user.MUID, total)
 		}
 		totalUsers++
 	}
@@ -119,10 +119,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Every user now should have two identities associated.
 	totalUsers = 0
 	for _, user := range users {
-		_, total := c.UserIdentities(user.ID, 0, 100)
+		_, total := c.UserIdentities(user.MUID, 0, 100)
 		const expectedTotal = 2
 		if expectedTotal != total {
-			t.Fatalf("expected %d identities for user %s, got %d", total, user.ID, total)
+			t.Fatalf("expected %d identities for user %s, got %d", total, user.MUID, total)
 		}
 		totalUsers++
 	}
