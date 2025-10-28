@@ -223,8 +223,10 @@ def main():
 	boundary = str(uuid4())
 	print(boundary + "\n")
 
+	function_globals = {}
+
 	try:
-		exec(_SOURCE, globals())
+		exec(_SOURCE, globals=function_globals)
 	except SyntaxError as ex:
 		error = f"SyntaxError: {ex.msg} (line {ex.lineno})"
 		print("\n----" + boundary + "\n")
@@ -236,6 +238,8 @@ def main():
 		print("\n----" + boundary + "\n")
 		print(json.dumps({"error": error}, separators=(",", ":"), default=str))
 		return
+
+	transform = function_globals["transform"]
 
 	records = []
 	for event in eval(sys.argv[1]):
