@@ -13,19 +13,12 @@ import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/core/connector';
-import {
-	ConnectionRole,
-	ConnectionToAdd,
-	SendingMode as SendingModeType,
-	Strategy,
-} from '../../../lib/api/types/connection';
+import { ConnectionRole, ConnectionToAdd, SendingMode as SendingModeType } from '../../../lib/api/types/connection';
 import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/responses';
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 import * as icons from '../../../constants/icons';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-
-const strategyOptions: Strategy[] = ['Conversion', 'Fusion', 'Isolation', 'Preservation'];
 
 const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): boolean => {
 	return connectionRole === 'Source' && c.strategies;
@@ -34,7 +27,6 @@ const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): b
 const ConnectorSettings = () => {
 	const [connector, setConnector] = useState<TransformedConnector | null>(null);
 	const [name, setName] = useState<string>('');
-	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [sendingMode, setSendingMode] = useState<SendingModeType | null>(null);
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
@@ -95,9 +87,6 @@ const ConnectorSettings = () => {
 				</Flex>,
 			);
 			setName(connector.label);
-			if (hasStrategy(connectionRole, connector)) {
-				setStrategy(strategyOptions[0]);
-			}
 			const supportedModes = connector.supportedSendingModes;
 			if (connectionRole !== 'Source' && supportedModes.length > 0) {
 				setSendingMode(supportedModes[0]);
@@ -170,7 +159,7 @@ const ConnectorSettings = () => {
 					name: name,
 					role: connectionRole,
 					connector: connectorCode,
-					strategy: strategy,
+					strategy: hasStrategy(connectionRole, connector) ? 'Conversion' : null,
 					sendingMode: sendingMode,
 					settings: settings,
 					linkedConnections: null,
@@ -286,12 +275,9 @@ const ConnectorSettings = () => {
 		return <NotFound />;
 	}
 
-	const c = connector;
 	if (connector == null) {
 		return null;
 	}
-
-	const showStrategy = hasStrategy(connectionRole, c);
 
 	return (
 		<div className='connector-settings'>
@@ -311,25 +297,6 @@ const ConnectorSettings = () => {
 								}}
 							/>
 						</div>
-						{showStrategy && (
-							<div className='connector-settings__input'>
-								<SlSelect
-									className='connector-settings__strategy-field'
-									name='strategy'
-									value={strategy || 'Conversion'}
-									label='Strategy'
-									onSlChange={(e) => {
-										const target = e.currentTarget as any;
-										const value = target.value as Strategy;
-										setStrategy(value);
-									}}
-								>
-									{strategyOptions.map((option) => (
-										<SlOption value={option}>{option}</SlOption>
-									))}
-								</SlSelect>
-							</div>
-						)}
 						{connectionRole !== 'Source' && connector.supportedSendingModes.length > 0 && (
 							<div className='connector-settings__input'>
 								<SlSelect
