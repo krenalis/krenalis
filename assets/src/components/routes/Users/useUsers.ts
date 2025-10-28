@@ -14,7 +14,7 @@ const useUsers = () => {
 	const [users, setUsers] = useState<ResponseUser[]>([]);
 	const [usersTotal, setUsersTotal] = useState<number>(0);
 	const [usersProperties, setUsersProperties] = useState<UserProperty[]>([]);
-	const [userIDList, setUserIDList] = useState<string[]>([]);
+	const [userIDList, setUserMUIDsList] = useState<string[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 
 	const { api, handleError, redirect, selectedWorkspace, warehouse } = useContext(AppContext);
@@ -153,18 +153,18 @@ const useUsers = () => {
 		setUsers(users);
 		setUsersTotal(total);
 
-		// compute the list of users ids needed for navigating between users.
-		const ids: string[] = [];
+		// compute the list of users MUIDs needed for navigating between users.
+		const muids: string[] = [];
 		for (const user of users) {
-			ids.push(user.id);
+			muids.push(user.muid);
 		}
-		setUserIDList(ids);
+		setUserMUIDsList(muids);
 
 		setTimeout(() => {
 			setIsLoading(false);
 		}, 300);
 
-		return ids;
+		return muids;
 	};
 
 	return {

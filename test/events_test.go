@@ -146,7 +146,7 @@ func TestEvents(t *testing.T) {
 	for _, user := range users {
 		email, _ := user.Traits["email"].(string)
 		if email == eventUserEmail {
-			userMUID = user.ID
+			userMUID = user.MUID
 			break
 		}
 	}

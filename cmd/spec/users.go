@@ -112,10 +112,10 @@ func init() {
 							Name: "users",
 							Type: types.Array(types.Object([]types.Property{
 								{
-									Name:        "id",
+									Name:        "muid",
 									Type:        types.UUID(),
 									Prefilled:   `"02bc2281-f801-4f59-9c56-b96ff81df84f"`,
-									Description: "The ID of the user.",
+									Description: "The Meergo user ID.",
 								},
 								{
 									Name:      "sourcesLastUpdate",

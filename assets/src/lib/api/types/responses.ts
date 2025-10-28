@@ -85,7 +85,7 @@ interface TransformDataResponse {
 }
 
 interface ResponseUser {
-	id: string;
+	muid: string;
 	sourcesLastUpdate: string;
 	traits: Record<string, any>;
 }

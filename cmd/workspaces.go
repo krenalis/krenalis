@@ -939,8 +939,8 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		if i > 0 {
 			b.writeByte(',')
 		}
-		b.writeString(`{"id":"`)
-		b.writeString(user.ID)
+		b.writeString(`{"muid":"`)
+		b.writeString(user.MUID)
 		b.writeString(`","sourcesLastUpdate":"`)
 		buf := b.availableBuffer()
 		b.write(user.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
