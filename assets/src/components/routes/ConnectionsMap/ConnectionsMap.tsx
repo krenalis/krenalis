@@ -25,28 +25,51 @@ const ConnectionsMap = () => {
 	useEffect(() => {
 		// Must wait for the map to be painted and styled before proceding with
 		// the render of the database's arrow.
-		let isUserDbRelated = false;
-		let isEventDbRelated = false;
 		let hovered: TransformedConnection = null;
 		if (hoveredConnection != null) {
 			hovered = connections.find((c) => c.id === hoveredConnection);
-			isUserDbRelated = hovered.relations(connections).includes('dwh-user');
-			isEventDbRelated = hovered.relations(connections).includes('dwh-event');
 		}
 
-		const isImportUserDbHighlighted =
-			(isUserDbRelated && hovered.isSource) ||
-			(isUserDbHovered &&
-				connections.findIndex((c) => c.isSource && c.relations(connections).includes('dwh-user')) !== -1);
+		let isImportUserDbConnectedToHover = false;
+		let isImportUserDbHighlighted = false;
+		if (hovered != null && hovered.isSource) {
+			isImportUserDbConnectedToHover = hovered.actionsInfo.findIndex((a) => a.target === 'User') != -1;
+			isImportUserDbHighlighted = hovered.relations(connections).includes('dwh-user');
+		} else if (isUserDbHovered) {
+			isImportUserDbConnectedToHover =
+				connections.findIndex((c) => c.isSource && c.actionsInfo.findIndex((a) => a.target === 'User') != -1) !=
+				-1;
+			isImportUserDbHighlighted =
+				connections.findIndex((c) => c.isSource && c.relations(connections).includes('dwh-user')) != -1;
+		}
 
-		const isExportUserDbHighlighted =
-			(isUserDbRelated && hovered.isDestination) ||
-			(isUserDbHovered &&
-				connections.findIndex((c) => c.isDestination && c.relations(connections).includes('dwh-user')) !== -1);
+		let isExportUserDbConnectedToHover = false;
+		let isExportUserDbHighlighted = false;
+		if (hovered != null && hovered.isDestination) {
+			isExportUserDbConnectedToHover = hovered.actionsInfo.findIndex((a) => a.target === 'User') != -1;
+			isExportUserDbHighlighted = hovered.relations(connections).includes('dwh-user');
+		} else if (isUserDbHovered) {
+			isExportUserDbConnectedToHover =
+				connections.findIndex(
+					(c) => c.isDestination && c.actionsInfo.findIndex((a) => a.target === 'User') != -1,
+				) != -1;
+			isExportUserDbHighlighted =
+				connections.findIndex((c) => c.isDestination && c.relations(connections).includes('dwh-user')) != -1;
+		}
 
-		const isEventDbHighlighted =
-			isEventDbRelated ||
-			(isEventDbHovered && connections.findIndex((c) => c.relations(connections).includes('dwh-event')) !== -1);
+		let isEventDbConnectedToHover = false;
+		let isEventDbHighlighted = false;
+		if (hovered != null && hovered.isSource) {
+			isEventDbConnectedToHover = hovered.actionsInfo.findIndex((a) => a.target === 'Event') != -1;
+			isEventDbHighlighted = hovered.relations(connections).includes('dwh-event');
+		} else if (isEventDbHovered) {
+			isEventDbConnectedToHover =
+				connections.findIndex(
+					(c) => c.isSource && c.actionsInfo.findIndex((a) => a.target === 'Event') != -1,
+				) != -1;
+			isEventDbHighlighted =
+				connections.findIndex((c) => c.isSource && c.relations(connections).includes('dwh-event')) != -1;
+		}
 
 		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
 
@@ -65,8 +88,7 @@ const ConnectionsMap = () => {
 								? { strokeLen: 5, nonStrokeLen: 5, animation: hovered?.isDestination ? -2 : 2 }
 								: false
 						}
-						data-is-hovered={isImportUserDbHighlighted}
-						isHidden={isSomethingHovered && !isImportUserDbHighlighted}
+						isHidden={isSomethingHovered && !isImportUserDbConnectedToHover}
 					/>
 					<Arrow
 						start='users-database'
@@ -80,8 +102,7 @@ const ConnectionsMap = () => {
 								? { strokeLen: 5, nonStrokeLen: 5, animation: hovered?.isSource ? -2 : 2 }
 								: false
 						}
-						data-is-hovered={isExportUserDbHighlighted}
-						isHidden={isSomethingHovered && !isExportUserDbHighlighted}
+						isHidden={isSomethingHovered && !isExportUserDbConnectedToHover}
 					/>
 					<Arrow
 						start='central-logo'
@@ -95,8 +116,7 @@ const ConnectionsMap = () => {
 								? { strokeLen: 5, nonStrokeLen: 5, animation: hovered?.isDestination ? -2 : 2 }
 								: false
 						}
-						data-is-hovered={isEventDbHighlighted}
-						isHidden={isSomethingHovered && !isEventDbHighlighted}
+						isHidden={isSomethingHovered && !isEventDbConnectedToHover}
 					/>
 				</>,
 			);
