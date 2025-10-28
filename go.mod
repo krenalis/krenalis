@@ -31,7 +31,7 @@ require (
 	github.com/mark3labs/mcp-go v0.39.0
 	github.com/meergo/analytics-go v0.0.6
 	github.com/oschwald/maxminddb-golang v1.13.1
-	github.com/pkg/sftp v1.13.9
+	github.com/pkg/sftp v1.13.10
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.7.0
