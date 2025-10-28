@@ -371,8 +371,17 @@ def _handler(event, context):
 
 	transform = function_globals["transform"]
 	
+	# Names needed to evaluate all expressions that Meergo can provide.
+	eval_globals = {
+		"date": date,
+		"datetime": datetime,
+		"Decimal": Decimal,
+		"time": time,
+		"UUID": UUID,
+	}
+
 	records = []
-	for e in eval(event):
+	for e in eval(event, globals=eval_globals):
 		try:
 			value = transform(e)
 			_Norm.normalize(value)
