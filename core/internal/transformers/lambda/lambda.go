@@ -366,6 +366,9 @@ def _handler(event, context):
 		error = f"{name}: {ex}"
 		return json.dumps({"error": error}, separators=(",", ":"), default=str)
 
+	if "transform" not in function_globals:
+		return json.dumps({"error": "Function 'transform' is not defined"}, separators=(",", ":"), default=str)
+
 	transform = function_globals["transform"]
 	
 	records = []
