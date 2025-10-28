@@ -239,6 +239,11 @@ def main():
 		print(json.dumps({"error": error}, separators=(",", ":"), default=str))
 		return
 
+	if "transform" not in function_globals:
+		print("\n----" + boundary + "\n")
+		print(json.dumps({"error": "Function 'transform' is not defined"}, separators=(",", ":"), default=str))
+		return
+
 	transform = function_globals["transform"]
 
 	records = []
