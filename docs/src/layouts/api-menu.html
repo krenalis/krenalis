@@ -25,7 +25,7 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
       <li>{{ item(`api/connections/event-write-keys`, `Event write keys`) }}</li>
     </ul>
   </li>
-  <li class="{{ expandable(`api/actions/`) }}"
+  <li class="{{ expandable(`api/actions/`) }}">
     {{ item(`api/actions`, `Actions`) }}
     <ul>
       <li>{{ item(`api/actions/import-users-from-apis`, `Import users from APIs`) }}</li>
