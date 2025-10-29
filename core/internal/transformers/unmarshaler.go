@@ -655,6 +655,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %s", max))
 				}
 				return n, nil
+			} else if err == decimal.ErrRange {
+				return nil, newRecordValidationError("", fmt.Sprintf("has a value which is not in range of «decimal(%d, %d)»", t.Precision(), t.Scale()))
 			}
 		}
 	case types.DateTimeKind:
