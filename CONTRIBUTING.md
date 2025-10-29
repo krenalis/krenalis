@@ -1,6 +1,6 @@
 # Contributing
 
-Meergo is an open-source project and contributions are greatly appreciated.
+Meergo is a source-available project, and contributions are greatly appreciated.
 
 <a href="https://github.com/meergo/meergo/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=meergo/meergo" width="50%"/>

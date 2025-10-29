@@ -1,9 +1,6 @@
-//
-// SPDX-License-Identifier: Elastic-2.0
-//
-//
-// Copyright (c) 2022 Open2b
-//
+// Copyright 2025 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
 
 // Package errors is a drop-in replacement for the errors package from the Go
 // standard library and provides additional error types to handle errors that

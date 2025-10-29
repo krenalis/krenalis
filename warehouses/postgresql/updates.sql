@@ -1,3 +1,7 @@
+-- Copyright 2025 Open2b. All rights reserved.
+-- Use of this source code is governed by the MIT license
+-- that can be found in the LICENSE file.
+
 ALTER TABLE "events" RENAME COLUMN "user" TO "muid";
 
 ALTER TABLE "_user_identities" RENAME COLUMN "__gid__" TO "__muid__";

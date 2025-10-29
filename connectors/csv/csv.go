@@ -1,9 +1,6 @@
-//
-// SPDX-License-Identifier: Elastic-2.0
-//
-//
-// Copyright (c) 2022 Open2b
-//
+// Copyright 2025 Open2b. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
 
 // Package csv provides a connector for CSV.
 // (https://www.ietf.org/rfc/rfc4180.txt)

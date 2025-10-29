@@ -61,7 +61,7 @@ Here you can find useful resources for Meergo:
 
 ## Contributors
 
-Meergo is an open-source project and contributions are greatly appreciated. See the file [CONTRIBUTING.md](CONTRIBUTING.md).
+Meergo is a source-available project, and contributions are greatly appreciated. See the file [CONTRIBUTING.md](CONTRIBUTING.md).
 
 <a href="https://github.com/meergo/meergo/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=meergo/meergo" width="50%"/>

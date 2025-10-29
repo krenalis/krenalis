@@ -1,3 +1,7 @@
+-- Copyright 2025 Open2b. All rights reserved.
+-- Use of this source code is governed by the MIT license
+-- that can be found in the LICENSE file.
+
 DROP TABLE IF EXISTS "_EDGES";
 CREATE TABLE "_EDGES" (
     "I1" int,

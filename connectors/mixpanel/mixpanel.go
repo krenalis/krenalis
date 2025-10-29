@@ -1,9 +1,6 @@
-//
-// SPDX-License-Identifier: Elastic-2.0
-//
-//
-// Copyright (c) 2023 Open2b
-//
+// Copyright 2025 Open2b. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
 
 // Package mixpanel provides a connector for Mixpanel.
 // (https://developer.mixpanel.com/reference/overview)
