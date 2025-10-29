@@ -1321,13 +1321,25 @@ const FullscreenTransformation = ({
 		};
 	}, [outputSchema]);
 
+	const normalizedFilter = useMemo(() => {
+		// Exclude empty conditions from the filter.
+		let f: Filter | null = null;
+		if (action.filter != null) {
+			let conditions = action.filter.conditions.filter((condition) => condition.property !== '');
+			if (conditions.length > 0) {
+				f = { logical: action.filter.logical, conditions: conditions };
+			}
+		}
+		return f;
+	}, [action.filter]);
+
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
 			setEvents((prevEvents) => [...prevEvents, ...newly]);
 		},
 		null,
 		connection.id,
-		action.filter,
+		normalizedFilter,
 	);
 
 	useEffect(() => {
@@ -1408,15 +1420,6 @@ const FullscreenTransformation = ({
 			}
 			setIsFetchingSamples(true);
 
-			// Exclude empty conditions from the filter.
-			let filter: Filter | null = null;
-			if (action.filter != null) {
-				let conditions = action.filter.conditions.filter((condition) => condition.property !== '');
-				if (conditions.length > 0) {
-					filter = { logical: action.filter.logical, conditions: conditions };
-				}
-			}
-
 			let samples: Sample[];
 			if (connection.isFileStorage && connection.isSource) {
 				let res: RecordsResponse;
@@ -1444,7 +1447,7 @@ const FullscreenTransformation = ({
 			} else if (connection.isAPI && connection.isSource) {
 				let res: APIUsersResponse;
 				try {
-					res = await api.workspaces.connections.apiUsers(connection.id, inputSchema, filter);
+					res = await api.workspaces.connections.apiUsers(connection.id, inputSchema, normalizedFilter);
 				} catch (err) {
 					setIsFetchingSamples(false);
 					handleError(err);
@@ -1458,13 +1461,13 @@ const FullscreenTransformation = ({
 				}
 				let res: FindUsersResponse;
 				try {
-					res = await api.workspaces.users.find(properties, filter, '', true, 0, 20);
+					res = await api.workspaces.users.find(properties, normalizedFilter, '', true, 0, 20);
 				} catch (err) {
 					setIsFetchingSamples(false);
 					handleError(err);
 					return;
 				}
-				if (res.users.length === 0 && filter == null) {
+				if (res.users.length === 0 && normalizedFilter == null) {
 					// No users have been imported in the warehouse yet.
 					setSamples(null);
 					setIsFetchingSamples(false);
