@@ -25,6 +25,8 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
+const functionsDir = "meergo-functions"
+
 type function struct {
 	settings Settings
 }
@@ -110,7 +112,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	cmd.Stdin = bytes.NewReader(source)
 	err = cmd.Run()
 	if err != nil {
-		const msg = "cannot execute local transformation"
+		const errPrefix = "cannot execute local transformation"
 		runtime := "Node"
 		if language == state.Python {
 			runtime = "Python"
@@ -120,18 +122,18 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 			if b := cmd.Stderr.(*prefixSuffixSaver).Bytes(); len(b) > 0 {
 				stderr = fmt.Sprintf("standard error: %s", string(b))
 			}
-			return fmt.Errorf("%s: %s process ('%s') is exited with error code %d and %s", msg, runtime, langExecutable, err.ExitCode(), stderr)
+			return fmt.Errorf("%s: %s process ('%s') is exited with error code %d and %s", errPrefix, runtime, langExecutable, err.ExitCode(), stderr)
 		}
 		if errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %s executable ('%s') does not exist", msg, runtime, langExecutable)
+			return fmt.Errorf("%s: %s executable ('%s') does not exist", errPrefix, runtime, langExecutable)
 		}
 		if errors.Is(err, fs.ErrPermission) {
-			return fmt.Errorf("%s: permission denied when starting the %s interpreter ('%s'): %w", msg, runtime, langExecutable, err)
+			return fmt.Errorf("%s: permission denied when starting the %s interpreter ('%s'): %w", errPrefix, runtime, langExecutable, err)
 		}
 		if ctx.Err() != nil {
-			return fmt.Errorf("%s: %s process ('%s') exceeded the maximum allowed time and was stopped", msg, runtime, langExecutable)
+			return fmt.Errorf("%s: %s process ('%s') exceeded the maximum allowed time and was stopped", errPrefix, runtime, langExecutable)
 		}
-		return fmt.Errorf("%s: failed to start the %s interpreter ('%s'): %w", msg, runtime, langExecutable, err)
+		return fmt.Errorf("%s: failed to start the %s interpreter ('%s'): %w", errPrefix, runtime, langExecutable, err)
 	}
 
 	// Discard the data written to the standard output by the transformation function.
@@ -274,31 +276,42 @@ if __name__ == "__main__":
 			_ = os.Remove(filename)
 		}
 	}()
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
-	if err != nil {
-		if errors.Is(err, os.ErrExist) {
-			return "", fmt.Errorf("function name %q already exist", name)
+	const errPrefix = "cannot create local transformation"
+	var f *os.File
+	var err error
+	for {
+		f, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0700)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			if errors.Is(err, fs.ErrExist) {
+				return "", fmt.Errorf("%s: function name %q already exist", errPrefix, name)
+			}
+			if errors.Is(err, fs.ErrPermission) {
+				return "", fmt.Errorf("%s: permission denied while creating function file %q: %w", errPrefix, filename, err)
+			}
+			return "", fmt.Errorf("%s: %w", errPrefix, err)
 		}
 		dir := filepath.Dir(filename)
-		st, err2 := os.Stat(dir)
-		if err2 != nil {
-			if errors.Is(err2, os.ErrNotExist) {
-				return "", fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
+		err = os.Mkdir(dir, 0700)
+		if err != nil && !errors.Is(err, fs.ErrExist) {
+			if errors.Is(err, fs.ErrNotExist) {
+				return "", fmt.Errorf("%s: functions storage directory %q does not exist", errPrefix, dir)
 			}
-		} else {
-			if !st.IsDir() {
-				return "", fmt.Errorf("path %q for storing local transformation functions is not a directory", dir)
+			if errors.Is(err, fs.ErrPermission) {
+				return "", fmt.Errorf("%s: unable to write to functions storage directory %q: %w", errPrefix, dir, err)
 			}
+			return "", fmt.Errorf("%s: cannot create function storage directory %q: %w", errPrefix, dir, err)
 		}
-		return "", fmt.Errorf("cannot create local transformation function: %v", err)
 	}
 	_, err = f.WriteString(fullSource)
 	if err != nil {
 		_ = f.Close()
-		return "", err
+		return "", fmt.Errorf("%s: error writing function to %q: %w", errPrefix, filename, err)
 	}
 	if err = f.Close(); err != nil {
-		return "", err
+		return "", fmt.Errorf("%s: error writing function to %q: %w", errPrefix, filename, err)
 	}
 	success = true
 	id := fmt.Sprintf("%s.%s", name, ext)
@@ -319,13 +332,17 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 	case state.Python:
 		ext = "py"
 	}
-	dir := fn.settings.FunctionsDir
+	const errPrefix = "cannot delete local transformation"
+	dir := filepath.Join(fn.settings.FunctionsDir, functionsDir)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: function storage directory %q does not exist", errPrefix, dir)
 		}
-		return fmt.Errorf("cannot read files in directory %q storing local transformation functions", dir)
+		if errors.Is(err, fs.ErrPermission) {
+			return fmt.Errorf("%s: permission denied when reading the files from the function storage directory %q: %w", errPrefix, dir, err)
+		}
+		return fmt.Errorf("%s: cannot read files from the function storage directory %q: %w", errPrefix, dir, err)
 	}
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -335,8 +352,11 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 		if ok {
 			filename := fn.filename(name, strconv.Itoa(version), language)
 			err := os.Remove(filename)
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("cannot remove file %q of local transformation function: %v", filename, err)
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				if errors.Is(err, fs.ErrPermission) {
+					return fmt.Errorf("%s: permission denied while deleting function file %q: %w", errPrefix, filename, err)
+				}
+				return fmt.Errorf("%s: error deleting function file %q: %w", errPrefix, filename, err)
 			}
 		}
 	}
@@ -370,13 +390,17 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 	case state.Python:
 		ext = "py"
 	}
-	dir := fn.settings.FunctionsDir
+	const errPrefix = "cannot update local transformation"
+	dir := filepath.Join(fn.settings.FunctionsDir, functionsDir)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
+		if errors.Is(err, fs.ErrNotExist) {
+			return "", fmt.Errorf("%s: function storage directory %q does not exist", errPrefix, dir)
 		}
-		return "", fmt.Errorf("cannot read files in directory %q storing local transformation functions", dir)
+		if errors.Is(err, fs.ErrPermission) {
+			return "", fmt.Errorf("%s: permission denied when reading the files from the function storage directory %q: %w", errPrefix, dir, err)
+		}
+		return "", fmt.Errorf("%s: cannot read files from the function storage directory %q: %w", errPrefix, dir, err)
 	}
 	// Filenames for functions should be like: "<name>_v<version>.<ext>"
 	var maxVersion int
@@ -393,7 +417,7 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 		return "", transformers.ErrFunctionNotExist
 	}
 	if maxVersion == math.MaxInt64 {
-		return "", errors.New("too many versions")
+		return "", fmt.Errorf("%s: function %q has reached the maximum allowed number of versions (%d)", errPrefix, name, maxVersion)
 	}
 	version := strconv.Itoa(maxVersion + 1)
 	_, err = fn.create(name, version, language, source)
@@ -457,7 +481,8 @@ func escapeJavaScriptSourceCode(src string) string {
 	return javaScriptEscaper.Replace(src)
 }
 
-// filename returns the absolute filename corresponding to the provided function's name, version, and language.
+// filename returns the absolute filename corresponding to the provided
+// function's name, version, and language.
 func (fn *function) filename(name, version string, language state.Language) string {
 	var ext string
 	switch language {
@@ -466,7 +491,7 @@ func (fn *function) filename(name, version string, language state.Language) stri
 	case state.Python:
 		ext = "py"
 	}
-	return filepath.Join(fn.settings.FunctionsDir, fmt.Sprintf("%s.v%s.%s", name, version, ext))
+	return filepath.Join(fn.settings.FunctionsDir, functionsDir, fmt.Sprintf("%s.v%s.%s", name, version, ext))
 }
 
 // parseID parses the provided function identifier and returns the function name
