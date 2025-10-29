@@ -1,9 +1,10 @@
 {% extends "/layouts/doc.html" %}
 {% import "/imports/image.html" %}
-{% macro Title string %}Create a workspace{% end %}
+{% macro Title string %}Connect workspace{% end %}
 {% Article %}
 
-# Connect a warehouse
+# Connect warehouse
+## Connect your data warehouse to Meergo
 
 When creating a new workspace, you will be prompted to provide the connection details for the data warehouse to be linked. This must be an **empty database**, with no existing tables.
 

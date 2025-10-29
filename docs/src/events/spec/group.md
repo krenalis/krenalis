@@ -29,7 +29,7 @@ meergo.group('group-890', {
     employeeCount: 100
 });
 ```
-Refer to the [JavaScript SDK](/integrations/sources/javascript-sdk) for more details.
+Refer to the [JavaScript SDK](/sources/javascript-sdk) for more details.
 
 ```python
 analytics.group(
@@ -42,7 +42,7 @@ analytics.group(
     },
 )
 ```
-Refer to the [Python SDK](/integrations/sources/python) for more details.
+Refer to the [Python SDK](/sources/python) for more details.
 
 ```go
 client.Enqueue(analytics.Group{
@@ -55,7 +55,7 @@ client.Enqueue(analytics.Group{
     },
 })
 ```
-Refer to the [Go SDK](/integrations/sources/go) for more details.
+Refer to the [Go SDK](/sources/go) for more details.
 
 ```nodejs
 analytics.group({
@@ -68,7 +68,7 @@ analytics.group({
     }
 });
 ```
-Refer to the [Node.js SDK](/integrations/sources/nodejs) for more details.
+Refer to the [Node.js SDK](/sources/nodejs) for more details.
 
 ```java
 analytics.enqueue(GroupMessage.builder("group-890")
@@ -79,7 +79,7 @@ analytics.enqueue(GroupMessage.builder("group-890")
         .putValue("employeeCount", 100))
 );
 ```
-Refer to the [Java SDK](/integrations/sources/java) for more details.
+Refer to the [Java SDK](/sources/java) for more details.
 
 ```csharp
 Analytics.Client.Group("user-123", "group-890", new Properties {
@@ -88,7 +88,7 @@ Analytics.Client.Group("user-123", "group-890", new Properties {
     { "employeeCount", 100 }
 });
 ```
-Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+Refer to the [.Net SDK](/sources/dotnet) for more details.
 
 ```kotlin
 analytics.group(
@@ -102,7 +102,7 @@ analytics.group(
 )
 ```
 
-Refer to the [Android SDK](/integrations/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
+Refer to the [Android SDK](/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
 
 <!-- end codeblocks -->
 

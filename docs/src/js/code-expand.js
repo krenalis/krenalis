@@ -1,11 +1,11 @@
 // code-expand.js wires expandable controls to Markdown code blocks that opt-in
-// using the <!-- collapse height:NNNpx --> directive. The module is idempotent
-// and runs once the DOM is ready.
+// using the <!-- code-expand height:NNNpx --> directive (and optional id=foo).
+// The module is idempotent and runs once the DOM is ready.
 
 const CODE_SELECTOR = 'pre > code';
 const DEFAULT_MAX_HEIGHT = 200;
 const DEFAULT_HEIGHT_VALUE = `${DEFAULT_MAX_HEIGHT}px`;
-const DIRECTIVE_PATTERN = /^collapse(?:\s+height:\s*([^\s]+))?$/i;
+const DIRECTIVE_PATTERN = /^code-expand(?:\s+(.*))?$/i;
 const DATA_ATTRIBUTE = 'codeExpandInitialized';
 const CLASS_NAME = 'code-expand';
 const TRANSITION_PROPERTY = 'max-height';
@@ -13,7 +13,7 @@ const TRANSITION_FALLBACK_TIMEOUT = 450;
 const FLOW_ROOT_DISPLAY = 'flow-root';
 
 // buildCodeExpand scans the supplied document for code blocks that request the
-// collapse behaviour. It returns the number of blocks that received expand UI.
+// code-expand behaviour. It returns the number of blocks that received expand UI.
 export function buildCodeExpand(doc = document) {
   if (!doc || !doc.querySelectorAll) {
     return 0;
@@ -52,7 +52,7 @@ function enhanceCodeBlock(preElement) {
     return false;
   }
 
-  const { comment, heightValue, heightPx } = directive;
+  const { comment, heightValue, heightPx, id } = directive;
   const naturalHeight = getNaturalHeight(preElement);
   const clampHeight = Number.isFinite(heightPx) ? heightPx : DEFAULT_MAX_HEIGHT;
 
@@ -61,42 +61,78 @@ function enhanceCodeBlock(preElement) {
     return false;
   }
 
-  wrapWithExpandUI(preElement, comment, heightValue);
+  wrapWithExpandUI(preElement, comment, heightValue, id);
   return true;
 }
 
-// findDirectiveComment walks the siblings of the code block to resolve the
-// collapse directive and its configured height, if present.
+// findDirectiveComment walks the nearby siblings (searching forward, then
+// backward) of the code block to resolve the code-expand directive and its
+// configured height, if present. The search tolerates intermediate whitespace
+// nodes and climbs ancestors so directives that end up outside nested wrappers
+// (e.g., list items) are still honoured.
 function findDirectiveComment(preElement) {
-  let sibling = preElement.nextSibling;
+  if (!preElement) {
+    return null;
+  }
 
-  while (sibling) {
-    if (sibling.nodeType === Node.TEXT_NODE) {
-      if (sibling.textContent.trim() === '') {
-        sibling = sibling.nextSibling;
+  const forwardMatch = findDirectiveCommentInDirection(preElement, 'nextSibling');
+
+  if (forwardMatch) {
+    return forwardMatch;
+  }
+
+  return findDirectiveCommentInDirection(preElement, 'previousSibling');
+}
+
+function findDirectiveCommentInDirection(preElement, siblingKey) {
+  let anchor = preElement;
+
+  while (anchor) {
+    let sibling = anchor[siblingKey];
+
+    while (sibling) {
+      if (sibling.nodeType === Node.TEXT_NODE) {
+        if (sibling.textContent.trim() === '') {
+          sibling = sibling[siblingKey];
+          continue;
+        }
+        break;
+      }
+
+      if (sibling.nodeType === Node.COMMENT_NODE) {
+        const commentValue = sibling.textContent.trim();
+        const match = DIRECTIVE_PATTERN.exec(commentValue);
+
+        if (match) {
+          const parsed = parseDirectiveOptions(match[1], preElement);
+          if (!parsed) {
+            sibling = sibling[siblingKey];
+            continue;
+          }
+          return {
+            comment: sibling,
+            heightValue: parsed.heightValue,
+            heightPx: parsed.heightPx,
+            id: parsed.id,
+          };
+        }
+
+        sibling = sibling[siblingKey];
         continue;
       }
+
+      break;
+    }
+
+    if (sibling) {
       return null;
     }
 
-    if (sibling.nodeType === Node.COMMENT_NODE) {
-      const match = DIRECTIVE_PATTERN.exec(sibling.textContent.trim());
+    anchor = anchor.parentNode;
 
-      if (!match) {
-        return null;
-      }
-
-      const heightValue = normalizeHeightValue(match[1]);
-      const heightPx = computeMaxHeightPixels(heightValue, preElement);
-
-      return {
-        comment: sibling,
-        heightValue,
-        heightPx,
-      };
+    if (!anchor || anchor.nodeType === Node.DOCUMENT_NODE) {
+      break;
     }
-
-    break;
   }
 
   return null;
@@ -174,6 +210,72 @@ function computeMaxHeightPixels(heightValue, preElement) {
   return DEFAULT_MAX_HEIGHT;
 }
 
+// parseDirectiveOptions extracts supported options from the comment payload.
+function parseDirectiveOptions(rawOptions, preElement) {
+  const source = typeof rawOptions === 'string' ? rawOptions.trim() : '';
+  const options = Object.create(null);
+
+  if (source) {
+    let cursor = source;
+    const optionPattern =
+      /^([a-z0-9_-]+)\s*(?::|=)\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s]+)\s*/i;
+
+    while (cursor.length) {
+      const match = optionPattern.exec(cursor);
+      if (!match) {
+        return null;
+      }
+
+      const key = match[1].toLowerCase();
+      const valueToken = match[2];
+      options[key] = stripOptionQuotes(valueToken);
+
+      cursor = cursor.slice(match[0].length);
+      cursor = cursor.replace(/^\s+/, '');
+    }
+  }
+
+  let heightValue = DEFAULT_HEIGHT_VALUE;
+  let heightPx = DEFAULT_MAX_HEIGHT;
+  if (typeof options.height === 'string' && options.height.trim()) {
+    heightValue = normalizeHeightValue(options.height);
+    heightPx = computeMaxHeightPixels(heightValue, preElement);
+  }
+
+  const rawId = typeof options.id === 'string' ? options.id.trim() : '';
+  const sanitizedId = rawId && !/\s/.test(rawId) ? rawId : null;
+
+  return {
+    heightValue,
+    heightPx,
+    id: sanitizedId,
+  };
+}
+
+// stripOptionQuotes removes surrounding single or double quotes from option values.
+function stripOptionQuotes(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const firstChar = trimmed.charAt(0);
+  const lastChar = trimmed.charAt(trimmed.length - 1);
+  if (
+    trimmed.length >= 2 &&
+    ((firstChar === '"' && lastChar === '"') || (firstChar === "'" && lastChar === "'"))
+  ) {
+    const inner = trimmed.slice(1, -1);
+    return inner.replace(/\\(['"\\])/g, '$1');
+  }
+
+  return trimmed;
+}
+
 // setMaxHeightWithAnimation applies a pixel height to the container, using
 // requestAnimationFrame when available to avoid skipping the CSS transition.
 function setMaxHeightWithAnimation(container, heightPx) {
@@ -191,13 +293,16 @@ function setMaxHeightWithAnimation(container, heightPx) {
 
 // wrapWithExpandUI constructs the wrapper, fade overlay, and expand button for
 // a target <pre> element.
-function wrapWithExpandUI(preElement, comment, maxHeightValue) {
+function wrapWithExpandUI(preElement, comment, maxHeightValue, containerId) {
   const contextDoc = preElement.ownerDocument || document;
   const container = contextDoc.createElement('div');
   container.className = CLASS_NAME;
   container.dataset[DATA_ATTRIBUTE] = 'true';
   container.style.maxHeight = maxHeightValue || DEFAULT_HEIGHT_VALUE;
   container.style.overflow = 'hidden';
+  if (containerId) {
+    container.id = containerId;
+  }
 
   const originalParent = preElement.parentNode;
 

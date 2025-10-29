@@ -1,4 +1,11 @@
+
+{% var baseURL = render "image-base-url.txt" default "https://cdn.jsdelivr.net/gh/meergo/external-assets@main" %}
+
 {% macro Image(alt, path string) %}
   {%% if hasPrefix(path, "/") { path = path[1:] } %%}
-  <img src="https://cdn.jsdelivr.net/gh/meergo/external-assets@main/{{path}}" alt="{{alt}}">&nbsp;&nbsp;
+  <img src="{{ baseURL }}/{{path}}" alt="{{alt}}">
+{% end macro %}
+
+{% macro Screenshot(alt, path, tabs string, width int) %}
+<div class="screenshot"><img src="{{ baseURL }}{{ path }}" alt="{{ alt }}" width="{{ float64(width)*0.75 }}"{% if tabs %} data-tabs="{{ tabs }}"{% end %}></div>
 {% end macro %}

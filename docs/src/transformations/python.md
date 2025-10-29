@@ -1,10 +1,10 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Python functions{% end %}
+{% macro Title string %}Python{% end %}
 {% Article %}
 
-# Python functions
+# Python
 
-This is how a Python transform function looks like:
+This is how a Python transformation looks like:
 
 ```python
 def transform(user: dict) -> dict:

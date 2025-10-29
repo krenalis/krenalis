@@ -2,9 +2,9 @@
 {% macro Title string %}Event schema{% end %}
 {% Article %}
 
-# Event schema
+# Schema
 
-The following example shows how an event appears in Meergo after being received and processed. It illustrates most fields defined in the event schema. In real scenarios, the actual set of fields varies depending on the event type, SDK, and user state (authenticated or anonymous).
+The following example shows how an event appears in Meergo after it has been received and processed. It illustrates most of the fields defined in the event schema. In real scenarios, the actual set of fields varies depending on the type of event sent, the SDK used, and the user's state (authenticated or anonymous).
 
 ```json
 {
@@ -121,8 +121,9 @@ The following example shows how an event appears in Meergo after being received 
   "userId": "user-982174"
 }
 ```
+<!-- code-expand -->
 
-## Schema
+## The event schema
 
 The event schema defines the structure of an event, similar to how the user schema (Customer Model Schema) defines the structure of a user.
 Unlike the user schema, which can be customized for each organization, the event schema is predefined.
@@ -136,7 +137,7 @@ The **Optional** column indicates whether a property may be missing from the eve
 | `anonymousId`         | `text`     |                    | Unique identifier assigned to a user before authentication, used to track anonymous actions across sessions. Set by the SDK or, if missing, by Meergo.                                                                                                                                               |
 | `channel`             | `text`     | <center>✔</center> | Source channel through which the event was received (e.g., web, mobile, server).                                                                                                                                                                                                                     |
 | `category`            | `text`     | <center>✔</center> | Used to group related pages or screens for analysis and reporting.                                                                                                                                                                                                                                   |
-| [`context`](#context) | `object`   | <center>✔</center> | Information about the environment where the event occurred (device, app/OS, page/screen, network, locale, campaign, library). Populated automatically when events are sent using the [JavaScript SDK](/integrations/sources/javascript-sdk) or the [Android SDK](/integrations/sources/android-sdk). |
+| [`context`](#context) | `object`   | <center>✔</center> | Information about the environment where the event occurred (device, app/OS, page/screen, network, locale, campaign, library). Populated automatically when events are sent using the [JavaScript SDK](/sources/javascript-sdk) or the [Android SDK](/sources/android-sdk). |
 | `event`               | `text`     | <center>✔</center> | Name of the user action in a [track](/integrations/events/specs/track) event. Examples: Product Viewed, Order Completed. Not to be confused with the `name` property used in [page](/integrations/events/specs/page) or [screen](/integrations/events/specs/screen) events.                          |
 | `groupId`             | `text`     | <center>✔</center> | Identifier of the group (e.g., account, company, organization) associated with the user.                                                                                                                                                                                                             |
 | `messageId`           | `text`     |                    | Unique, immutable identifier for the event. Set by the SDK; if omitted, Meergo automatically assigns one.                                                                                                                                                                                            |
@@ -153,26 +154,26 @@ The **Optional** column indicates whether a property may be missing from the eve
 
 ## Context
 
-Information about the environment where the event occurred. Populated automatically when events are sent using the [JavaScript SDK](/integrations/sources/javascript-sdk) or the [Android SDK](/integrations/sources/android-sdk).
+Information about the environment where the event occurred. Populated automatically when events are sent using the [JavaScript SDK](/sources/javascript-sdk) or the [Android SDK](/sources/android-sdk).
 
-| Property                        | Type     | <center>Optional</center> | Description                                                                                                                                                                                                                               |
-|---------------------------------|----------|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`context.app`](#app)           | `object` | <center>✔</center>        | Information about the current application, including name, version, and build.                                                                                                                                                            |
-| [`context.browser`](#browser)   | `object` | <center>✔</center>        | Information about the browser (name, version, type).                                                                                                                                                                                      |
-| [`context.campaign`](#campaign) | `object` | <center>✔</center>        | Details about the campaign that originated the event, including name, source, medium, term, content, and custom UTM parameters.                                                                                                           |
-| [`context.device`](#device)     | `object` | <center>✔</center>        | Information about the device, including ID, advertising ID, manufacturer, model, name, and type.                                                                                                                                          |
-| `context.ip`                    | `inet`   | <center>✔</center>        | User's current IP address. It is automatically set by the [JavaScript SDK](/integrations/sources/javascript-sdk) and the [Android SDK](/integrations/sources/android-sdk). For more details see [Handling event IPs](handling-event-ips). |
-| [`context.library`](#library)   | `object` | <center>✔</center>        | Information about the SDK library used to send the event, including name and version.                                                                                                                                                     |
-| `context.locale`                | `text`   | <center>✔</center>        | User's language and regional settings, such as `en-US`.                                                                                                                                                                                   |
-| [`context.location`](#location) | `object` | <center>✔</center>        | Device location from which the event originated (city, country, latitude, longitude, speed).                                                                                                                                              |
-| [`context.network`](#network)   | `object` | <center>✔</center>        | Network to which the device originating the event is connected. (Bluetooth, Wi-Fi, cellular, carrier). If both cellular and Wi-Fi are absent, the device is offline.                                                                      |
-| [`context.os`](#os)             | `object` | <center>✔</center>        | OS of the device from which the event originated (name, version).                                                                                                                                                                         |
-| [`context.page`](#page)         | `object` | <center>✔</center>        | Page information (path, referrer, title, URL).                                                                                                                                                                                            |
-| [`context.referrer`](#referrer) | `object` | <center>✔</center>        | Referrer information (ID, type).                                                                                                                                                                                                          |
-| [`context.screen`](#screen)     | `object` | <center>✔</center>        | Display details (width, height, pixel density).                                                                                                                                                                                           |
-| [`context.session`](#session)   | `object` | <center>✔</center>        | Session details (ID, start flag).                                                                                                                                                                                                         |
-| `context.timezone`              | `text`   | <center>✔</center>        | User's timezone as a tzdata string (e.g., `America/New_York`). May be unavailable due to privacy settings or lack of API support.                                                                                                         |
-| `context.userAgent`             | `text`   | <center>✔</center>        | User agent string identifying the device or application sending the event.                                                                                                                                                                |
+| Property                        | Type     | <center>Optional</center> | Description                                                                                                                                                                                                     |
+|---------------------------------|----------|---------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`context.app`](#app)           | `object` | <center>✔</center>        | Information about the current application, including name, version, and build.                                                                                                                                  |
+| [`context.browser`](#browser)   | `object` | <center>✔</center>        | Information about the browser (name, version, type).                                                                                                                                                            |
+| [`context.campaign`](#campaign) | `object` | <center>✔</center>        | Details about the campaign that originated the event, including name, source, medium, term, content, and custom UTM parameters.                                                                                 |
+| [`context.device`](#device)     | `object` | <center>✔</center>        | Information about the device, including ID, advertising ID, manufacturer, model, name, and type.                                                                                                                |
+| `context.ip`                    | `inet`   | <center>✔</center>        | User's current IP address. It is automatically set by the [JavaScript SDK](/sources/javascript-sdk) and the [Android SDK](/sources/android-sdk). For more details see [Handling event IPs](handling-event-ips). |
+| [`context.library`](#library)   | `object` | <center>✔</center>        | Information about the SDK library used to send the event, including name and version.                                                                                                                           |
+| `context.locale`                | `text`   | <center>✔</center>        | User's language and regional settings, such as `en-US`.                                                                                                                                                         |
+| [`context.location`](#location) | `object` | <center>✔</center>        | Device location from which the event originated (city, country, latitude, longitude, speed).                                                                                                                    |
+| [`context.network`](#network)   | `object` | <center>✔</center>        | Network to which the device originating the event is connected. (Bluetooth, Wi-Fi, cellular, carrier). If both cellular and Wi-Fi are absent, the device is offline.                                            |
+| [`context.os`](#os)             | `object` | <center>✔</center>        | OS of the device from which the event originated (name, version).                                                                                                                                               |
+| [`context.page`](#page)         | `object` | <center>✔</center>        | Page information (path, referrer, title, URL).                                                                                                                                                                  |
+| [`context.referrer`](#referrer) | `object` | <center>✔</center>        | Referrer information (ID, type).                                                                                                                                                                                |
+| [`context.screen`](#screen)     | `object` | <center>✔</center>        | Display details (width, height, pixel density).                                                                                                                                                                 |
+| [`context.session`](#session)   | `object` | <center>✔</center>        | Session details (ID, start flag).                                                                                                                                                                               |
+| `context.timezone`              | `text`   | <center>✔</center>        | User's timezone as a tzdata string (e.g., `America/New_York`). May be unavailable due to privacy settings or lack of API support.                                                                               |
+| `context.userAgent`             | `text`   | <center>✔</center>        | User agent string identifying the device or application sending the event.                                                                                                                                      |
 
 ### App
 

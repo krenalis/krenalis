@@ -38,11 +38,11 @@ Use the following SDKs to collect and send events to Meergo. Events can be store
 
 <ul class="grid-list connectors">
   <li><a href="sources/javascript-sdk">{{ Image("JavaScript", "javascript.svg") }} JavaScript SDK (Browser)</a></li>
-  <li><a href="sources/csharp-sdk">{{ Image(".NET", "dotnet.svg") }} C# SDK</a></li>
+  <li><a href="sources/dotnet-sdk">{{ Image(".NET", "dotnet.svg") }} .NET SDK</a></li>
   <li><a href="sources/android-sdk">{{ Image("Android", "android.svg") }} Android SDK</a></li>
   <li><a href="sources/go-sdk">{{ Image("Go", "go.svg") }} Go SDK</a></li>
   <li><a href="sources/java-sdk">{{ Image("Java", "java.svg") }} Java SDK</a></li>
-  <li><a href="sources/node-sdk">{{ Image("Node.js", "node.svg") }} Node SDK</a></li>
+  <li><a href="sources/node-sdk">{{ Image("Node.js", "nodejs.svg") }} Node SDK</a></li>
   <li><a href="sources/python-sdk">{{ Image("Python", "python.svg") }} Python SDK</a></li>
 </ul>
 

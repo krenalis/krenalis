@@ -1,8 +1,11 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}Warehouse destination{% end %}
+{% macro Title string %}Load into warehouse{% end %}
 {% Article %}
 
-# Warehouse destination
+# Load into warehouse
+## Store events into your data warehouse in real time.
+
+Received events can be stored in the workspace's data warehouse nearly in real time, ensuring that all customer interactions are available for analytics and activation within seconds of ingestion. 
 
 Meergo creates and manages a single central table called `events` in your data warehouse, which stores all event types from all sources. A separate `events` table is created for each workspace, since every workspace has its own dedicated data warehouse database.
 

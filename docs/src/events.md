@@ -4,65 +4,91 @@
 {% Article %}
 
 # Events
+## Track, validate, and route behavioral data.
 
-Meergo captures behavioral events from every customer touchpoint—websites, mobile apps, and more. It unifies event tracking by replacing complex configurations with a single customizable integration that sends data directly to your data warehouse.
+Meergo lets you collect, validate, and route behavioral events from all your digital touchpoints — including websites, mobile apps, server-side sources, and connected devices. It unifies event tracking across systems and ensures every event is structured, reliable, and ready for analytics or activation.
 
-#### Why it helps
+### How events work
 
-* Quick to implement and adapt to your schema
-* Consistent tracking across platforms
-* Warehouse-first design for analytics and activation
-* Real-time delivery: events are written to the warehouse in seconds
-* Dual routing: the same events can be fanned out to downstream apps (analytics, marketing, product, and ops)
-* Interoperable: fully compatible with Segment and RudderStack, so you can ingest existing events, mirror schemas, and run side-by-side without re-instrumentation
+1. **Collect events**\
+   Events from your apps and websites with a Segment-compatible typed schema.
 
-{{ Image("Event ingestion", "/docs/events-ingestion.png") }}
+2. **Validate and enrich**\
+   Validate incoming events to ensure they meets schema requirements and add relevant context.
 
-#### How it works
+3. **Load into your data warehouse**\
+   Events are streamed in real time to your connected data warehouse, ready for querying and AI modeling.
 
-1. **Collect** events from SDKs and server sources with a flexible, typed schema.
-2. **Validate** incoming data to ensure it meets schema requirements and add relevant context.
-3. **Stream to warehouse** in real time for immediate querying and modeling.
-4. **Send to apps** simultaneously via connection destinations.
+4. **Activate your data**\
+   Send validated events to your SaaS tools to trigger automations or personalization.
 
-#### Outcomes
+### Explore detailed guides
 
-Clean, centralized event data available instantly for BI, AI, and operational workflows—plus synchronized delivery to the apps your teams already use.
+Select where you want to collect events from:
 
-### Event ingestion
+<ul class="cards" data-columns="2">
+  <li>
+    <a href="/unification/collect-users/websites" title="Learn how to collect events from your websites and web apps">
+      <figure>{{ Image("Website", "/docs/images/website.svg") }}</figure>
+      <div>Websites</div>
+      <p>Capture browser and web app activity with the JavaScript SDK.</p>
+    </a>
+  </li>
+  <li>
+    <a href="/unification/collect-users/your-apps" title="Learn how to collect events from apps you developed">
+      <figure>{{ Image("App", "/docs/images/app.svg") }}</figure>
+      <div>Applications</div>
+      <p>Collect events from mobile, desktop, backend, or IoT devices using the appropriate SDK.</p>
+    </a>
+  </li>
+</ul>
 
-Meergo offers installable SDKs for your app or site to start collecting events. Pick the SDK that matches your stack. Available options include:
+### Learn more about events
 
-- [JavaScript SDK (Browser)](sources/javascript-sdk)
-- [Android SDK](sources/android-sdk)
-- [Go SDK](sources/go)
-- [Java SDK](sources/java)
-- [.NET SDK](sources/dotnet)
-- [Node.js SDK](sources/nodejs)
-- [Python SDK](sources/python)
+Explore the technical details behind event collection in Meergo.
 
-You can also use any Segment or RudderStack SDK, as they're compatible with Meergo. 
+<ul class="cards">
+  <li>
+    <a href="events/spec">
+      <div>Learn events spec</div>
+      <p>Understand event types, schema structure, and how Meergo enriches data.</p>
+    </a>
+  </li>
+  <li>
+    <a href="events/session-tracking">
+      <div>Session tracking</div>
+      <p>Learn how Meergo tracks user sessions to model behavior over time.</p>
+    </a>
+  </li>
+  <li>
+    <a href="events/session-tracking">
+      <div>Enrichment</div>
+      <p>Explore how additional context is added to each event automatically.</p>
+    </a>
+  </li>
+</ul>
 
-You can also ingest events server-to-server with the [Events API endpoint](/api/events#ingest-events). If you already use Segment or RudderStack, send the same payloads via webhooks through the [connector for Segment](sources/segment) or the [connector for RudderStack](sources/rudderstack), no re-instrumentation required (these connectors are not affiliated with, or endorsed by, Segment or RudderStack).
+### Process collected events
 
-### Events Spec
+Once collected, events can be loaded, transformed, and distributed for analytics or activation.
 
-The [Meergo Event Spec](events/specs) explains what to send when you track events with Meergo, including [Track](events/specs/track), [Identify](events/specs/identify), [Page](events/specs/page), [Screen](events/specs/screen), and [Group](events/specs/group)—their payloads, and examples.
-
-### Session tracking
-
-Meergo natively supports [session tracking](events/session-tracking). Events loaded into the warehouse include session identifiers, and destinations that handle sessions—currently **Mixpanel**—receive the same session context. If you use RudderStack SDKs or forward events via RudderStack webhooks, session data is preserved.
-
-### Load events and users into your warehouse
-
-Events and user profiles are loaded into your [data warehouse](events/warehouse-destination) in real time. You can choose which sources to include and apply filters to focus on what matters most. Meergo currently supports Snowflake and PostgreSQL, with more platforms available on request — [contact us](mailto:hello@meergo.com) to learn more.
-
-### Send events to apps
-
-In addition to loading data into your warehouse, Meergo can forward events to external apps in real time. No additional SDKs are required. For each destination you can map and transform fields, apply filters, and control delivery so each app receives only the events it needs in the expected format.
-
-* [Google Analytics](destinations/google-analytics)
-* [Klaviyo](destinations/klaviyo)
-* [Mixpanel](destinations/mixpanel)
-
-If you need additional destinations, [contact us](mailto:hello@meergo.com). You can also [create a custom connector](create-new-connector).
+<ul class="cards">
+  <li>
+    <a href="events/load-into-warehouse">
+      <div>Load into data warehouse</div>
+      <p>Stream enriched events in real time for analytics and AI workloads.</p>
+    </a>
+  </li>
+  <li>
+    <a href="unification/map-and-harmonize">
+      <div>Collect users</div>
+      <p>Build unified user profiles directly from event traits.</p>
+    </a>
+  </li>
+  <li>
+    <a href="events/send-to-apps">
+      <div>Send to SaaS applications</div>
+      <p>Deliver real-time events to external apps through destination connectors.</p>
+    </a>
+  </li>
+</ul>

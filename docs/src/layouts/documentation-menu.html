@@ -9,10 +9,10 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
 {% end %}
 
 <ul>
-  <li>{{ item(`index`, `Overview`) }}</li>
   <li>
-    <div>Getting Started</div>
+    <div>Getting started</div>
     <ul>
+      <li>{{ item(`index`, `Overview`) }}</li>
       <li class="{{ expandable(`installation/`) }}">
         {{ item(`installation`, `Installation`) }}
         <ul>
@@ -28,70 +28,71 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
           <li>{{ item(`configuration/the-env-file`, `The <i>.env</i> file`) }}</li>
         </ul>
       </li>
-      <li>{{ item(`create-workspace`, `Create a workspace`) }}</li>
-      <li>{{ item(`connect-warehouse`, `Connect a warehouse`) }}</li>
+      {#  <li>{{ item(`create-workspace`, `Create a workspace`) }}</li> #}
+      <li>{{ item(`connect-warehouse`, `Connect warehouse`) }}</li>
     </ul>
   </li>
   <li>
-    <div>Core Concepts</div>
+    <div>Using Meergo</div>
     <ul>
-      <li class="{{ expandable(`collect-users/`) }}">
-        {{ item(`collect-users`, `Collect users`) }}
+      <li class="{{ expandable(`unification/`) }}">
+        {{ item(`unification`, `Unification`) }}
         <ul>
-        <li>{{ item(`add-source-connection`, `Source connections`) }}</li>
-        <li>{{ item(`add-connection-action`, `Connection actions`) }}</li>
-        <li>{{ item(`map-and-harmonize`, `Map and Harmonize`) }}</li>
-      </ul></li>
-      <li>{{ item(`unify-users`, `Unify users`) }}</li>
-      <li>{{ item(`activate-users`, `Activate users`) }}</li>
-      
-    </ul>
-  </li>
-  <li>
-    <div>Connections</div>
-    <ul>
-      <li>{{ item(`connections/importing`, `Import`) }}</li>
-      <li>{{ item(`connections/exporting`, `Export`) }}</li>
-    </ul>
-  </li>
-  <li>
-    <div>Data Modeling & Transformations</div>
-    <ul>
-      <li>{{ item(`filters`, `Filters`) }}</li>
-      <li>{{ item(`customer-model`, `Customer Model`) }}</li>
-      <li class="{{ expandable(`identity-resolution/`) }}">
-        {{ item(`identity-resolution`, `Identity Resolution`) }}
-        <ul>
-          <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>
-          <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous users strategies`) }}</li>
+          <li class="{{ expandable(`unification/collect-users/`) }}">
+            {{ item(`unification/collect-users`, `Collect users`) }}
+            <ul>
+              <li>{{ item(`unification/collect-users/websites`, `Websites`) }}</li>
+              <li>{{ item(`unification/collect-users/your-apps`, `Your apps`) }}</li>
+              <li>{{ item(`unification/collect-users/saas-apps`, `SaaS apps`) }}</li>
+              <li>{{ item(`unification/collect-users/databases`, `Databases`) }}</li>
+              <li>{{ item(`unification/collect-users/files`, `Files`) }}</li>
+            </ul>
+          </li>
+          <li>{{ item(`unification/harmonization`, `Harmonization`) }}</li>
         </ul>
       </li>
-      <li>{{ item(`data-validation`, `Data validation`) }}</li>
-    </ul>
-  </li>
-  <li>
-    <div>Integrations</div>
-    <ul>
       <li class="{{ expandable(`events/`) }}">
         {{ item(`events`, `Events`) }}
         <ul>
-          <li class="{{ expandable(`events/specs/`) }}">
-            {{ item(`events/specs`, `Specs`) }}
+          <li>{{ item(`events/start-collecting`, `Start collecting`) }}</li>
+          <li class="{{ expandable(`events/spec/`) }}">
+            {{ item(`events/spec`, `Events spec`) }}
             <ul>
-              <li>{{ item(`events/specs/page`, `Page`) }}</li>
-              <li>{{ item(`events/specs/screen`, `Screen`) }}</li>
-              <li>{{ item(`events/specs/track`, `Track`) }}</li>
-              <li>{{ item(`events/specs/identify`, `Identify`) }}</li>
-              <li>{{ item(`events/specs/group`, `Group`) }}</li>
-              <li>{{ item(`events/specs/event-schema`, `Event schema`) }}</li>
-              <li>{{ item(`events/specs/collected-properties`, `Collected properties`) }}</li>
-              <li>{{ item(`events/specs/handling-event-ips`, `Handling event IPs`) }}</li>
+              <li>{{ item(`events/spec/page`, `Page`) }}</li>
+              <li>{{ item(`events/spec/screen`, `Screen`) }}</li>
+              <li>{{ item(`events/spec/track`, `Track`) }}</li>
+              <li>{{ item(`events/spec/identify`, `Identify`) }}</li>
+              <li>{{ item(`events/spec/group`, `Group`) }}</li>
+              <li>{{ item(`events/spec/schema`, `Schema`) }}</li>
+              <li>{{ item(`events/spec/enrichment`, `Enrichment`) }}</li>
             </ul>
           </li>
           <li>{{ item(`events/session-tracking`, `Session tracking`) }}</li>
-          <li>{{ item(`events/warehouse-destination`, `Warehouse destination`) }}</li>
+          <li>{{ item(`events/load-into-warehouse`, `Load into warehouse`) }}</li>
+          <li>{{ item(`events/send`, `Send to apps`) }}</li>
         </ul>
       </li>
+      <li class="{{ expandable(`transformations/`) }}">
+        {{ item(`transformations`, `Transformation`) }}
+        <ul>
+          <li class="{{ expandable(`mapping/`) }}">
+            {{ item(`transformations/visual-mapping`, `Visual mapping`) }}
+            <ul>
+              <li>{{ item(`transformations/mapping/builtin-functions`, `Builtin functions`) }}</li>
+            </ul>
+          </li>
+          <li>{{ item(`transformations/javascript`, `JavaScript`) }}</li>
+          <li>{{ item(`transformations/python`, `Python`) }}</li>
+        </ul>
+      </li>
+      <li>
+        {{ item(`activation`, `Activation`) }}
+      </li>
+    </ul>
+  </li>
+  <li>
+    <div>Connectors</div>
+    <ul>
       <li class="{{ expandable(`sources/`) }}">
         {{ item(`sources`, `Sources`) }}
         <ul>
@@ -169,6 +170,48 @@ sidebar-expandable{% if filepath == base or hasPrefix(filepath, path) %} expande
           <li>{{ item(`destinations/stripe`, `Stripe`) }}</li>
         </ul>
       </li>
+    </ul>
+  </li>
+  <li>
+    <div>Administration</div>
+    <ul>
+      <li class="{{ expandable(`collect-users/`) }}">
+        {{ item(`collect-users`, `Collect users`) }}
+        <ul>
+          <li>{{ item(`add-source-connection`, `Source connections`) }}</li>
+          <li>{{ item(`add-connection-action`, `Connection actions`) }}</li>
+          <li>{{ item(`map-and-harmonize`, `Map and Harmonize`) }}</li>
+        </ul>
+      </li>
+      <li>{{ item(`unify-users`, `Unify users`) }}</li>
+      <li>{{ item(`activate-users`, `Activate users`) }}</li>
+    </ul>
+  </li>
+  <li>
+    <div>Connections</div>
+    <ul>
+      <li>{{ item(`connections/importing`, `Import`) }}</li>
+      <li>{{ item(`connections/exporting`, `Export`) }}</li>
+    </ul>
+  </li>
+  <li>
+    <div>Data Modeling & Transformations</div>
+    <ul>
+      <li>{{ item(`filters`, `Filters`) }}</li>
+      <li>{{ item(`customer-model`, `Customer Model`) }}</li>
+      <li class="{{ expandable(`identity-resolution/`) }}">
+        {{ item(`identity-resolution`, `Identity Resolution`) }}
+        <ul>
+          <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed types for identifiers`) }}</li>
+          <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous users strategies`) }}</li>
+        </ul>
+      </li>
+      <li>{{ item(`data-validation`, `Data validation`) }}</li>
+    </ul>
+  </li>
+  <li>
+    <div>Integrations</div>
+    <ul>
       <li class="{{ expandable(`transformations/`) }}">
         {{ item(`transformations`, `Transformations`) }}
         <ul>

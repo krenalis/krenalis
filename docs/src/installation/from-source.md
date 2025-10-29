@@ -4,15 +4,24 @@
 
 # Install from source
 
-You can also compile Meergo directly from source. This is recommended for advanced users who want full control over the build and customization process.
+You can also compile Meergo directly from source. This is recommended for advanced users who want full control over the build and customization process. There are two options:
 
-There are two options:
+<ul class="cards" data-columns="2">
+  <li>
+    <a href="#build-with-go-tools">
+      <div>Build with Go tools</div>
+      <p>Use Go's command-line tools to compile Meergo. Does not require Git. Recommended if you only want to choose which connectors to include in the executable.</p>
+    </a>
+  </li>
+  <li>
+    <a href="#build-from-the-repository">
+      <div>Build from the repository</div>
+      <p>Clone and build the Meergo repository. Offers maximum flexibility and customization.</p>
+    </a>
+  </li>
+</ul>
 
-* [Building with Go tools](#building-with-go-tools). Uses Go’s command-line tools to compile Meergo. Does not require Git. Recommended if you only want to choose which connectors to include in the executable.
-
-* [Building from the repository](#building-from-the-repository). Clones and builds the full Meergo repository. Offers maximum flexibility and customization.
-
-## Building with Go tools
+## Build with Go tools
 
 This method uses Go’s command-line tools and does not require Git. It is the recommended approach if you only want to customize which connectors are included in the executable.
 
@@ -99,7 +108,7 @@ $ ./meergo --help
 
 Proceed with the [database setup](./database-setup).
 
-## Building from the repository
+## Build from the repository
 
 ### Before you begin
 

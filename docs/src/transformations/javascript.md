@@ -1,10 +1,10 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}JavaScript functions{% end %}
+{% macro Title string %}JavaScript{% end %}
 {% Article %}
 
-# JavaScript functions
+# JavaScript
 
-This is how a JavaScript transform function looks like:
+This is how a JavaScript transformation looks like:
 
 ```javascript
 const transform = (user) => {

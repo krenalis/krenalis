@@ -13,8 +13,11 @@ For more effective tracking of page and screen views, it's recommended to utiliz
 Here are some common scenarios when you might want to use a track call:
 
 * **Tracking Important Events:** Use track calls to record significant events like page views, button clicks, form submissions, or any other actions you want to monitor.
+
 * **Monitoring User Engagement:** Measure user engagement by recording time spent on an interaction, the number of actions performed, or other behaviors indicating interest or participation.
+
 * **Confirming Conversions:** When a user completes a desired action such as a purchase or registration, send a track call to confirm the conversion and track the success of your initiatives.
+
 * **User Segmentation:** Use track calls to record specific events and create user segments based on their behavior. This helps customize marketing strategies or provide personalized experiences based on user actions.
 
 ## How to make a track call
@@ -32,7 +35,7 @@ meergo.track('Workout Completed', {
 });
 ```
 
-Refer to the [JavaScript SDK](/integrations/sources/javascript-sdk) for more details.
+Refer to the [JavaScript SDK](/sources/javascript-sdk) for more details.
 
 ```python
 analytics.track(
@@ -47,7 +50,7 @@ analytics.track(
 )
 ```
 
-Refer to the [Python SDK](/integrations/sources/python) for more details.
+Refer to the [Python SDK](/sources/python) for more details.
 
 ```go
 client.Enqueue(analytics.Track{
@@ -62,7 +65,7 @@ client.Enqueue(analytics.Track{
 })
 ```
 
-Refer to the [Go SDK](/integrations/sources/go) for more details.
+Refer to the [Go SDK](/sources/go) for more details.
 
 ```nodejs
 analytics.track({
@@ -77,7 +80,7 @@ analytics.track({
 });
 ```
 
-Refer to the [Node.js SDK](/integrations/sources/nodejs) for more details.
+Refer to the [Node.js SDK](/sources/nodejs) for more details.
 
 ```java
 analytics.enqueue(TrackMessage.builder("Workout Completed")
@@ -90,7 +93,7 @@ analytics.enqueue(TrackMessage.builder("Workout Completed")
 );
 ```
 
-Refer to the [Java SDK](/integrations/sources/java) for more details.
+Refer to the [Java SDK](/sources/java) for more details.
 
 ```csharp
 Analytics.Client.Track("user-123", "Workout Completed", new Properties {
@@ -101,7 +104,7 @@ Analytics.Client.Track("user-123", "Workout Completed", new Properties {
 });
 ```
 
-Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+Refer to the [.Net SDK](/sources/dotnet) for more details.
 
 ```kotlin
 analytics.track(
@@ -114,7 +117,7 @@ analytics.track(
     }
 )
 ```
-Refer to the [Android SDK](/integrations/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
+Refer to the [Android SDK](/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
 
 <!-- end codeblocks -->
 

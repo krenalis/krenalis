@@ -379,6 +379,23 @@ export function buildTabs(doc = document, win = window) {
     section.className = 'tabs';
     section.setAttribute('aria-label', block.title);
 
+    const customSectionId =
+      block.options && typeof block.options.id === 'string'
+        ? block.options.id.trim()
+        : '';
+    if (customSectionId) {
+      if (usedIds.has(customSectionId)) {
+        console.warn(
+          'Skipping tabs set "%s" custom id "%s" because it is already in use.',
+          block.title || '(untitled)',
+          customSectionId
+        );
+      } else {
+        section.id = customSectionId;
+        usedIds.add(customSectionId);
+      }
+    }
+
     const panelBackground =
       block.options && typeof block.options.bg === 'string'
         ? block.options.bg

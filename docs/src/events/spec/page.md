@@ -26,7 +26,7 @@ meergo.page('Product Detail', {
     currency: 'USD'
 });
 ```
-Refer to the [JavaScript SDK](/integrations/sources/javascript-sdk) for more details.
+Refer to the [JavaScript SDK](/sources/javascript-sdk) for more details.
 
 ```python
 analytics.page(
@@ -40,7 +40,7 @@ analytics.page(
     },
 )
 ```
-Refer to the [Python SDK](/integrations/sources/python) for more details.
+Refer to the [Python SDK](/sources/python) for more details.
 
 ```go
 client.Enqueue(analytics.Page{
@@ -54,7 +54,7 @@ client.Enqueue(analytics.Page{
     },
 })
 ```
-Refer to the [Go SDK](/integrations/sources/go) for more details.
+Refer to the [Go SDK](/sources/go) for more details.
 
 ```nodejs
 analytics.page({
@@ -68,7 +68,7 @@ analytics.page({
     }
 });
 ```
-Refer to the [Node.js SDK](/integrations/sources/nodejs) for more details.
+Refer to the [Node.js SDK](/sources/nodejs) for more details.
 
 ```java
 analytics.enqueue(PageMessage.builder("Product Detail")
@@ -80,7 +80,7 @@ analytics.enqueue(PageMessage.builder("Product Detail")
         .putValue("currency", "USD"))
 );
 ```
-Refer to the [Java SDK](/integrations/sources/java) for more details.
+Refer to the [Java SDK](/sources/java) for more details.
 
 ```csharp
 Analytics.Client.Page("user-123", "Product Detail", new Properties {
@@ -90,7 +90,7 @@ Analytics.Client.Page("user-123", "Product Detail", new Properties {
     { "currency", "USD" }
 });
 ```
-Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+Refer to the [.Net SDK](/sources/dotnet) for more details.
 
 <!-- end codeblocks -->
 

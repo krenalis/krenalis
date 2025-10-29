@@ -14,7 +14,7 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 * [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 * [Do incremental imports in query](#do-incremental-imports-in-query)
 
-### Add source connection for Clickhouse
+### Add source connection for ClickHouse
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .

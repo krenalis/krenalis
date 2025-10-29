@@ -1,18 +1,18 @@
 {% extends "/layouts/doc.html" %}
-{% macro Title string %}C# SDK (Source){% end %}
+{% macro Title string %}.NET SDK (Source){% end %}
 {% Article %}
 
-# C# SDK (Source)
+# .NET SDK (Source)
 
-[![GitHub Repo](https://img.shields.io/badge/Github-Meergo_C%23_SDK-blue?logo=github)](https://github.com/open2b/analytics-csharp)
+[![GitHub Repo](https://img.shields.io/badge/Github-Meergo_C%23_SDK-blue?logo=github)](https://github.com/open2b/analytics-dotnet)
 
-The source connector for .NET allows you to send customer event data using the C# SDK from your .NET applications to Meergo.
+The source connector for .NET allows you to send customer event data using the .NET SDK from your .NET applications to Meergo.
 
 ## Using the SDK
 
-### 1. Add source connection for C#
+### 1. Add source connection for .NET
 
-First of all, you need a connection in Meergo that can receive events from the C# SDK. To do so:
+First of all, you need a connection in Meergo that can receive events from the .NET SDK. To do so:
 
 1. From the Meergo Admin console, go to **Connections > Sources**.
 2. On the **Sources** page, click **Add a new source ⊕** .
@@ -22,27 +22,29 @@ First of all, you need a connection in Meergo that can receive events from the C
 6. In the **Name** field, enter a name for the source to easily recognize it later.
 7. Click **Add**.
 
-### 2. Import the SDK in your C# application
+### 2. Import the SDK in your .NET application
 
 1. In the new created connection for .NET, navigate to **Settings**.
 2. Select **Event write keys**.
-3. Copy the Write Key and the Endpoint.
+3. Copy the _event write key_ and the _endpoint_.
 4. Install `Meergo.Analytics.CSharp` using NuGet:
     ```sh
     $ Install-Package Meergo.Analytics.CSharp -Version <version>
     ```
-5. Import and use the package, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
+5. Import and use the package, replacing `<event write key>` and `<endpoint>` respectively with the previously copied _event write key_ and _endpoint_:
     ```csharp
     using Meergo;
 
-    var config = new Config()
-        .SetEndpoint("<endpoint>");
+    var config = new Config().SetEndpoint("<endpoint>");
 
-    Analytics.Initialize("<write key>", config);
+    Analytics.Initialize("<event write key>", config);
 
     Analytics.Client.Track("Efg678Mnu", "Product added to cart", new Dictionary<string, object> {
         { "price", 32.17 },
     });
+
+    Analytics.Client.Flush();
+    Analytics.Client.Dispose();
     ```
 
 ### 3. Add an action
@@ -65,4 +67,4 @@ Refer to the [Meergo events documentation](../../events) for more information on
 
 ## SDK source code
 
-The source code of the Meergo C# SDK is [available on GitHub](https://github.com/open2b/analytics-csharp) and distributed under the **MIT license**.
+The source code of the Meergo .NET SDK is [available on GitHub](https://github.com/open2b/analytics-dotnet) and distributed under the **MIT license**.

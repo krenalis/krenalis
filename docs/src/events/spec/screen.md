@@ -25,7 +25,7 @@ meergo.screen('Workout Summary', {
     calories_burned: 380
 });
 ```
-Refer to the [JavaScript SDK](/integrations/sources/javascript-sdk) for more details.
+Refer to the [JavaScript SDK](/sources/javascript-sdk) for more details.
 
 ```python
 analytics.screen('user-123', 'Workout Summary', {
@@ -34,7 +34,7 @@ analytics.screen('user-123', 'Workout Summary', {
     'calories_burned': 380
 })
 ```
-Refer to the [Python SDK](/integrations/sources/python) for more details.
+Refer to the [Python SDK](/sources/python) for more details.
 
 ```go
 client.Enqueue(analytics.Screen{
@@ -47,7 +47,7 @@ client.Enqueue(analytics.Screen{
     },
 })
 ```
-Refer to the [Go SDK](/integrations/sources/go) for more details.
+Refer to the [Go SDK](/sources/go) for more details.
 
 ```nodejs
 analytics.screen({
@@ -60,7 +60,7 @@ analytics.screen({
     }
 });
 ```
-Refer to the [Node.js SDK](/integrations/sources/nodejs) for more details.
+Refer to the [Node.js SDK](/sources/nodejs) for more details.
 
 ```java
 analytics.enqueue(ScreenMessage.builder("Workout Summary")
@@ -71,7 +71,7 @@ analytics.enqueue(ScreenMessage.builder("Workout Summary")
         .putValue("calories_burned", 380))
 );
 ```
-Refer to the [Java SDK](/integrations/sources/java) for more details, or use Java with the [Android SDK](/integrations/sources/android-sdk).
+Refer to the [Java SDK](/sources/java) for more details, or use Java with the [Android SDK](/sources/android-sdk).
 
 ```csharp
 Analytics.Client.Screen("user-123", "Workout Summary", new Properties {
@@ -80,7 +80,7 @@ Analytics.Client.Screen("user-123", "Workout Summary", new Properties {
     { "calories_burned", 380 }
 });
 ```
-Refer to the [.Net SDK](/integrations/sources/dotnet) for more details.
+Refer to the [.Net SDK](/sources/dotnet) for more details.
 
 ```kotlin
 analytics.screen(
@@ -92,7 +92,7 @@ analytics.screen(
     }
 )
 ```
-Refer to the [Android SDK](/integrations/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
+Refer to the [Android SDK](/sources/android-sdk) for more details. You can also use the **Java** language with the Android SDK.
 
 <!-- end codeblocks -->
 

@@ -24,7 +24,7 @@ Customer and event data collected from various sources can be stored in real-tim
 ## All sources
 
 <ul class="grid-list connectors">
-  <li><a href="sources/mailchimp">{{ Image("Mailchimp", "mailchimp.svg")}} Mailchimp</a></li>
+  <li><a href="sources/mailchimp">{{ Image("Mailchimp", "mailchimp.svg") }} Mailchimp</a></li>
   <li><a href="sources/hubspot">{{ Image("HubSpot", "hubspot.svg") }} HubSpot</a></li>
   <li><a href="sources/klaviyo">{{ Image("Klaviyo", "klaviyo.svg") }} Klaviyo</a></li>
   <li><a href="sources/stripe">{{ Image("Stripe", "stripe.svg") }} Stripe</a></li>
@@ -47,7 +47,7 @@ Customer and event data collected from various sources can be stored in real-tim
   <li><a href="sources/android-sdk">{{ Image("Android", "android.svg") }} Android</a></li>
   <li><a href="sources/go">{{ Image("Go", "go.svg") }} Go</a></li>
   <li><a href="sources/java">{{ Image("Java", "java.svg") }} Java</a></li>
-  <li><a href="sources/nodejs">{{ Image("Node.js", "node.svg") }} Node.js</a></li>
+  <li><a href="sources/nodejs">{{ Image("Node.js", "nodejs.svg") }} Node.js</a></li>
   <li><a href="sources/python">{{ Image("Python", "python.svg") }} Python</a></li>
   <li><a href="sources/webhook">{{ Image("Webhook", "webhook.svg") }} Webhook</a></li>
 </ul>
