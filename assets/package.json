@@ -45,7 +45,7 @@
     ]
   },
   "devDependencies": {
-    "@playwright/test": "1.48.0",
+    "@playwright/test": "1.56.1",
     "@types/json-bigint": "1.0.4",
     "@types/node": "24.2.1",
     "prettier": "3.6.2",
