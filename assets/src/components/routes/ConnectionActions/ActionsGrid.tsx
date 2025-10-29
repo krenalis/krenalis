@@ -336,19 +336,18 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 					</>
 				}
 			>
-				<p>
-					If you continue
-					{connection.isSource && actionToDelete?.target.includes('User') && (
-						<>
-							{' '}
-							<span className='connection-actions__grid-alert-identities'>
-								you will permanently lose the identities
-							</span>
-						</>
-					)}{' '}
-					imported by the action. The user profiles will be updated accordingly at the next identity
-					resolution execution.
-				</p>
+				{connection.isSource && actionToDelete?.target === 'User' ? (
+					<p>
+						If you continue{' '}
+						<span className='connection-actions__grid-alert-identities'>
+							you will permanently lose the identities
+						</span>{' '}
+						imported by the action. The user profiles will be updated accordingly at the next identity
+						resolution execution.
+					</p>
+				) : (
+					<p>If you continue, you will permanently lose the action</p>
+				)}
 			</AlertDialog>
 		</>
 	);
