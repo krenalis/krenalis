@@ -560,14 +560,42 @@ func TestParseSettings(t *testing.T) {
 			t.Errorf("expected host 127.0.0.1, got %q", s.DB.Host)
 		}
 
-		// Username length.
+		// Missing username.
+		setBaseline(t)
+		// Remove the variable since it's part of the baseline.
+		err = os.Unsetenv("MEERGO_DB_USERNAME")
+		if err != nil {
+			t.Fatalf("expected error for unsetting MEERGO_DB_USERNAME")
+		}
+		_, err = parseEnvSettings()
+		if err == nil {
+			t.Fatalf("expected error for username length, got nil")
+		}
+		want := "environment variable MEERGO_DB_USERNAME is missing"
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+
+		// Empty username.
 		setBaseline(t)
 		t.Setenv("MEERGO_DB_USERNAME", "")
 		_, err = parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for username length, got nil")
 		}
-		want := "invalid MEERGO_DB_USERNAME: length must be 1..63 bytes"
+		want = "MEERGO_DB_USERNAME cannot be empty"
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+
+		// Username length.
+		setBaseline(t)
+		t.Setenv("MEERGO_DB_USERNAME", strings.Repeat("x", 64))
+		_, err = parseEnvSettings()
+		if err == nil {
+			t.Fatalf("expected error for username length, got nil")
+		}
+		want = "invalid MEERGO_DB_USERNAME: length must be 1..63 bytes"
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}

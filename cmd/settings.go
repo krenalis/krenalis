@@ -179,7 +179,11 @@ func parseEnvSettings() (*Settings, error) {
 		settings.DB.Port = port
 	}
 
-	if username := envVars.Get("MEERGO_DB_USERNAME"); len(username) < 1 || len(username) > 63 {
+	if username, ok := envVars.Lookup("MEERGO_DB_USERNAME"); !ok {
+		return nil, fmt.Errorf("environment variable MEERGO_DB_USERNAME is missing")
+	} else if username == "" {
+		return nil, fmt.Errorf("MEERGO_DB_USERNAME cannot be empty")
+	} else if len(username) > 63 {
 		return nil, fmt.Errorf("invalid MEERGO_DB_USERNAME: length must be 1..63 bytes")
 	} else {
 		settings.DB.Username = username

@@ -85,3 +85,15 @@ func (env *EnvVars) Get(key string) string {
 	}
 	return os.Getenv(key)
 }
+
+// Lookup returns the value of the Meergo environment variable with the given
+// key. If the variable is present, it returns its value and true; otherwise, it
+// returns an empty string and false. It is guaranteed that the returned value
+// contains only valid UTF-8 characters.
+// If key does not start with "MEERGO_", this method panics.
+func (env *EnvVars) Lookup(key string) (string, bool) {
+	if !strings.HasPrefix(key, "MEERGO_") {
+		panic("EnvVars.Lookup: key must start with MEERGO_")
+	}
+	return os.LookupEnv(key)
+}
