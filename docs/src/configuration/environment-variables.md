@@ -71,6 +71,8 @@ Settings for emails that are sent to members.
 
 The following settings let you choose how transformation functions are executed. Meergo can run them either using AWS Lambda or locally. In production, you must use AWS Lambda only. The local mode is meant for testing or evaluating Meergo when running with Docker.
 
+⚠️ Once you have configured a transformer and created actions with transformation functions, do not change the configuration from Lambda to local (or vice versa) as this will cause errors that will require deleting and recreating such actions.
+
 <!-- tabs Transformer variables -->
 
 ### AWS Lambda
@@ -86,6 +88,8 @@ The following settings let you choose how transformation functions are executed.
 | `MEERGO_TRANSFORMERS_LAMBDA_PYTHON_RUNTIME`    |         | Python runtime version for AWS Lambda. Example: `python3.13`.  |
 | `MEERGO_TRANSFORMERS_LAMBDA_PYTHON_LAYER`      |         | (Optional) ARN of a Lambda layer for Python functions.         |
 
+⚠️ Once you have configured access to AWS Lambda and created actions with transformation functions, those actions will stop working if you change your Lambda configuration by referencing another Lambda instance.
+
 ### Local
 
 > ⚠️ Configuring transformers for local execution allows the code in transformation functions defined in Meergo to execute arbitrary code on the local machine. Therefore, use with caution and only in trusted contexts.
@@ -96,6 +100,8 @@ The following settings let you choose how transformation functions are executed.
 | `MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE` |         | Path to the Python executable. Example: `/usr/bin/python`.                                                                                                                                                                                                    |
 | `MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR`     |         | Directory where local transformation functions are stored (a subdirectory named `meergo-functions` will be created inside the specified path). This directory should be writable by the user executing the Meergo executable. Example: `/var/meergo-project`. |
 | `MEERGO_TRANSFORMERS_LOCAL_SUDO_USER`         |         | System user under which to run local transformation function processes. Switching to this user is done in Meergo via `sudo`. If left blank, the current user is retained and `sudo` is not invoked.                                                           |
+
+If you want to change the filesystem location of the functions dir once you have already created actions with transformation functions, you need to (1) copy the `meergo-functions` directory within the new desired location and (2) update the `MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR` environment variable to refer to that new location.
 
 <!-- end tabs -->
 
