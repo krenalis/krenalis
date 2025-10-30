@@ -60,23 +60,17 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 			if enc.allowSpecialFloats {
 				return append(b, "NaN"...)
 			}
-			return append(b, '0')
+			return append(b, "null"...)
 		case math.IsInf(v, 1):
 			if enc.allowSpecialFloats {
 				return append(b, "Infinity"...)
 			}
-			v = math.MaxFloat64
-			if t.BitSize() == 32 {
-				v = math.MaxFloat32
-			}
+			return append(b, "null"...)
 		case math.IsInf(v, -1):
 			if enc.allowSpecialFloats {
 				return append(b, "-Infinity"...)
 			}
-			v = -math.MaxFloat64
-			if t.BitSize() == 32 {
-				v = -math.MaxFloat32
-			}
+			return append(b, "null"...)
 		}
 		return enc.appendFloat(b, v, t.BitSize())
 	case types.DecimalKind:
