@@ -25,7 +25,7 @@
 //
 // Note: Re-execute 'go generate' if you change Meergo module version.
 //
-// See also https://github.com/meergo/meergo/blob/main/doc/src/from-source.md#building-from-the-repository
+// TODO: insert URL which points to the page in the doc for compiling Meergo from sources.
 package main
 
 import (

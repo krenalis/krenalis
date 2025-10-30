@@ -104,9 +104,6 @@ func main() {
 	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run()
 	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run()
 
-	// Run "go generate" within cmd/spec.
-	NewCmd("go", "generate", "./...").InDir(repo, "cmd", "spec").Run()
-
 	// Validate the Docker Compose file 'compose.yaml'.
 	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()
 

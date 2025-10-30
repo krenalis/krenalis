@@ -20,7 +20,7 @@ const (
 
 	// Note: when categories are changed, the 'Categories.String' method
 	// (defined below) must also be changed accordingly, as well as the various
-	// references to the categories under 'doc'.
+	// references to the categories in the documentation.
 
 	CategoryWebsite Categories = 1 << iota
 	CategorySDK
