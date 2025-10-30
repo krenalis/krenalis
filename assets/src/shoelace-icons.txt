@@ -58,6 +58,7 @@ person.svg
 phone.svg
 play-circle.svg
 play.svg
+plug.svg
 plus-circle.svg
 plus.svg
 question-lg.svg
