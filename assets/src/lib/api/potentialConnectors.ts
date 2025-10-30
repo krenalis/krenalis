@@ -1,7 +1,7 @@
 import { PotentialConnector, ConnectorType, ConnectorImplementation } from './types/connector';
 
 const potentialConnectorsURL =
-	'https://cdn.jsdelivr.net/gh/meergo/external-assets@main/potential-connectors/catalog.json';
+	'https://cdn.jsdelivr.net/gh/meergo/external-assets-cdn@main/potential-connectors/catalog.json';
 const POTENTIAL_CONNECTORS_TIMEOUT_MS = 2000; // in milliseconds
 const CONNECTOR_CODE_REGEX = /^[a-z0-9-]+$/;
 const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
