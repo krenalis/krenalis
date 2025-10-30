@@ -637,6 +637,7 @@ const PropertyDialog = ({
 				<>
 					<div className='property-dialog__control property-dialog__control--name'>
 						<SlInput
+							className='property-dialog__name-input'
 							ref={nameInputRef}
 							size='small'
 							value={property.name}
