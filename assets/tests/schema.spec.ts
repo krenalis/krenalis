@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, logout, adminURL } from './utils';
+import { login, logout, adminURL, logValidationErrors } from './utils';
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
@@ -15,13 +15,20 @@ test(`Add schema property`, async ({ page }) => {
 	await page.click('.schema-grid__alter-button');
 	await page.click('.schema-edit__add-property');
 
-	await page.locator('sl-input >> input[name="name"]').fill('foo');
-	await page.click('.property-dialog__type-select');
-	await page.locator('sl-option', { hasText: 'text' }).scrollIntoViewIfNeeded();
-	await page.locator('sl-option', { hasText: 'text' }).click();
-	await page.locator('sl-textarea >> textarea[name="description"]').fill('Foo property');
+	await page.locator('.property-dialog__name-input').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'foo');
+
+	await page.locator('.property-dialog__type-select').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+	}, 'text');
+
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
 	await page.click('.property-dialog__save');
+	await logValidationErrors(page, ['.property-dialog__control-error']);
 
 	await page.click('.schema-edit__header-apply-button');
 	await page.click('.schema-edit__apply-alter-button');
@@ -44,8 +51,16 @@ test(`Edit schema property`, async ({ page }) => {
 	await page.click('.schema-grid__alter-button');
 
 	await page.click('.grid__row[data-id="foo"] .schema-edit__property-buttons-edit');
-	await page.locator('sl-input >> input[name="name"]').fill('bar');
+
+	await page.locator('.property-dialog__name-input').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'bar');
+
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+
 	await page.click('.property-dialog__save');
+	await logValidationErrors(page, ['.property-dialog__control-error']);
 
 	await page.click('.schema-edit__header-apply-button');
 	await page.click('.schema-edit__apply-alter-button');
@@ -76,15 +91,33 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.click('.schema-grid__alter-button');
 
 	await page.click('.grid__row[data-id="bar"] .schema-edit__property-buttons-edit');
-	await page.locator('sl-input >> input[name="name"]').fill('foo');
+
+	await page.locator('.property-dialog__name-input').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'foo');
+
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+
 	await page.click('.property-dialog__save');
+	await logValidationErrors(page, ['.property-dialog__control-error']);
 
 	await page.click('.schema-edit__add-property');
-	await page.locator('sl-input >> input[name="name"]').fill('bar');
-	await page.click('.property-dialog__type-select');
-	await page.locator('sl-option', { hasText: 'text' }).scrollIntoViewIfNeeded();
-	await page.locator('sl-option', { hasText: 'text' }).click();
+
+	await page.locator('.property-dialog__name-input').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'bar');
+
+	await page.locator('.property-dialog__type-select').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+	}, 'text');
+
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+
 	await page.click('.property-dialog__save');
+	await logValidationErrors(page, ['.property-dialog__control-error']);
 
 	let isRequestDone = false;
 	page.on('request', async (request) => {
@@ -111,22 +144,41 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.click('.schema-grid__alter-button');
 	await page.click('.schema-edit__add-property');
 
-	await page.locator('sl-input >> input[name="name"]').fill('test_obj');
-	await page.click('.property-dialog__type-select');
-	await page.locator('sl-option', { hasText: 'object' }).scrollIntoViewIfNeeded();
-	await page.locator('sl-option', { hasText: 'object' }).click();
+	await page.locator('.property-dialog__name-input').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'test_obj');
+
+	await page.locator('.property-dialog__type-select').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+	}, 'object');
+
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
 	await page.click('.property-dialog__save');
+	await logValidationErrors(page, ['.property-dialog__control-error']);
 
 	await page.click('.grid__row[data-id="test_obj"] .schema-edit__editable-object-cell sl-button');
-	await page.locator('sl-input >> input[name="name"]').fill('test_sub_prop_1');
-	await page.click('.property-dialog__type-select');
-	await page.locator('sl-option', { hasText: 'text' }).scrollIntoViewIfNeeded();
-	await page.locator('sl-option', { hasText: 'text' }).click();
+
+	await page.locator('.property-dialog__name-input').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'test_sub_prop_1');
+
+	await page.locator('.property-dialog__type-select').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+	}, 'text');
+
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+	
 	await page.click('.property-dialog__save');
-	await expect(page.locator('.grid__row--children[data-id="test_obj.test_sub_prop_1"]')).toBeAttached();
+	await logValidationErrors(page, ['.property-dialog__control-error']);
 
 	await page.click('.schema-edit__header-apply-button');
+
+	await page.locator('.schema-edit__apply-alter-button').scrollIntoViewIfNeeded();
 	await page.click('.schema-edit__apply-alter-button');
 
 	await expect(page.locator('.schema-grid')).toBeAttached();

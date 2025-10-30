@@ -294,6 +294,30 @@ const deepCompareActionSchema = (actual: object, expected: object) => {
 	expect(actualCopy).toEqual(expectedCopy);
 };
 
+const logValidationErrors = async (page: Page, selectors: string[]): Promise<void> => {
+	const errors = await page.evaluate((selectors: string) => {
+		const containers = document.querySelectorAll(selectors);
+		const e = [];
+		for (const el of Array.from(containers)) {
+			const message = el.textContent;
+			if (message !== '') {
+				const errorOn = (el as any).dataset['errorOn'];
+				e.push({
+					errorOn,
+					message,
+				});
+			}
+		}
+		return e;
+	}, selectors.join(','));
+
+	if (errors.length > 0) {
+		for (const error of errors) {
+			console.log(`Validation error on the "${error.errorOn}" field: ${error.message}`);
+		}
+	}
+};
+
 export {
 	config,
 	adminPath,
@@ -309,4 +333,5 @@ export {
 	addJavascriptSource,
 	fillUserActionFilters,
 	deepCompareActionSchema,
+	logValidationErrors,
 };

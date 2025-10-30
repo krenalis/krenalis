@@ -637,6 +637,7 @@ const PropertyDialog = ({
 				<>
 					<div className='property-dialog__control property-dialog__control--name'>
 						<SlInput
+							className='property-dialog__name-input'
 							ref={nameInputRef}
 							size='small'
 							value={property.name}
@@ -646,7 +647,7 @@ const PropertyDialog = ({
 							onSlInput={onInputName}
 						/>
 						{nameError !== '' && (
-							<div className='property-dialog__control-error'>
+							<div className='property-dialog__control-error' data-error-on='name'>
 								<SlIcon name='exclamation-circle' />
 								{nameError}
 							</div>
@@ -730,7 +731,7 @@ const PropertyDialog = ({
 								{property.type?.kind !== 'array' && property.type?.kind !== 'map' && lengthSection}
 							</div>
 							{typeError !== '' && (
-								<div className='property-dialog__control-error'>
+								<div className='property-dialog__control-error' data-error-on='type'>
 									<SlIcon name='exclamation-circle' />
 									{typeError}
 								</div>
