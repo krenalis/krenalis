@@ -15,7 +15,6 @@ interface ConnectionBlockProps {
 }
 
 const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
-	const [isHovered, setIsHovered] = useState<boolean>(false);
 	const [arrow, setArrow] = useState<ReactNode>();
 
 	const { connections } = useContext(appContext);
@@ -23,9 +22,6 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 		useContext(connectionMapContext);
 
 	useEffect(() => {
-		// Must wait for the block to be painted and styled before proceding
-		// with the render of the arrow.
-
 		let arrowStart: string,
 			arrowEnd: string,
 			arrowStartAnchor: ArrowAnchor,
@@ -46,17 +42,25 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 			showHead = true;
 		}
 
+		const isConnected = c.actionsCount > 0 || c.linkedConnections?.length > 0;
 		const hasRelations = c.relations(connections).length > 0;
 
-		const hovered =
-			isHovered ||
+		const isHovered =
+			c.id === hoveredConnection ||
 			c.relations(connections).includes(hoveredConnection) ||
 			(isUserDbHovered && c.relations(connections).includes('dwh-user')) ||
 			(isEventDbHovered && c.relations(connections).includes('dwh-event'));
-		const isHighlighted = hovered && hasRelations;
+
+		const isHighlighted = isHovered && hasRelations;
 
 		const isSomethingHovered = hoveredConnection != null || isUserDbHovered || isEventDbHovered;
-		const isHidden = !hasRelations || (isSomethingHovered && !isHighlighted);
+		const isHidden =
+			!isConnected ||
+			(isSomethingHovered &&
+				!(isHovered && isConnected) &&
+				!c.linkedConnections?.includes(hoveredConnection) &&
+				!(isUserDbHovered && c.actionsInfo.findIndex((a) => a.target === 'User') != -1) &&
+				!(isEventDbHovered && c.isSource && c.actionsInfo.findIndex((a) => a.target === 'Event') != -1));
 
 		const arrow = (
 			<Arrow
@@ -67,27 +71,26 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 				color={isHighlighted ? '#4f46e5' : undefined}
 				strokeWidth={1}
 				dashness={isHighlighted ? { strokeLen: 5, nonStrokeLen: 5, animation: c.isSource ? 2 : -2 } : false}
-				data-is-hovered={isHighlighted}
 				isNew={isNew}
 				isHidden={isHidden}
-				showTail={showTail && (hasRelations || isHighlighted)}
-				showHead={showHead && (hasRelations || isHighlighted)}
+				showTail={showTail && isConnected}
+				showHead={showHead && isConnected}
 				useCircleShape={true}
 			/>
 		);
 
+		// Must wait for the block to be painted and styled before proceding
+		// with the render of the arrow.
 		setTimeout(() => {
 			setArrow(arrow);
 		}, 0);
-	}, [c, isHovered, hoveredConnection, isUserDbHovered, isEventDbHovered]);
+	}, [c, hoveredConnection, isUserDbHovered, isEventDbHovered]);
 
 	const onMouseEnter = () => {
-		setIsHovered(true);
 		setHoveredConnection(c.id);
 	};
 
 	const onMouseLeave = () => {
-		setIsHovered(false);
 		setHoveredConnection(null);
 	};
 
@@ -99,7 +102,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 					id={`${c.id}`}
 					onMouseEnter={onMouseEnter}
 					onMouseLeave={onMouseLeave}
-					data-is-hovered={isHovered}
+					data-is-hovered={c.id === hoveredConnection}
 				>
 					<div className='connection-block__content'>
 						<Flex alignItems='center' gap={10}>
