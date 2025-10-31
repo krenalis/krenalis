@@ -816,6 +816,9 @@ const checkDecimalType = (type: DecimalType) => {
 	if (type.scale < 0 || type.scale > MAX_DECIMAL_SCALE) {
 		return `Scale must be in range [0, ${MAX_DECIMAL_SCALE}]`;
 	}
+	if (type.scale > type.precision) {
+		return `Scale cannot be greater than precision`;
+	}
 };
 
 const validatePropertyName = (name: string) => {
