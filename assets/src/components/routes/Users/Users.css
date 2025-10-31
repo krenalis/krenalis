@@ -208,7 +208,8 @@
 	font-weight: 600;
 }
 
-.user-drawer__information {
+.user-drawer__information,
+.user-drawer__muid {
 	font-size: 14px;
 }
 
@@ -221,6 +222,11 @@
 	color: var(--sl-color-primary-600);
 	text-decoration: underline;
 	cursor: pointer;
+}
+
+.user-drawer__muid-value {
+	color: #5c5c5c;
+	font-family: var(--monospace-fonts);
 }
 
 .user-drawer sl-spinner {

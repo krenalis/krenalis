@@ -163,6 +163,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 							</Link>
 						</div>
 					)}
+					<span className='user-drawer__muid'>
+						MUID: <span className='user-drawer__muid-value'>{selectedUser}</span>
+					</span>
 				</div>
 			</div>
 			<SlTabGroup onSlTabShow={onSelectTab}>
