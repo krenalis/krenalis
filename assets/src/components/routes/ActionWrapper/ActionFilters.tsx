@@ -315,7 +315,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					className='action__filters-property'
 					size='small'
 					name={`property-${i}`}
-					items={getFilterPropertyComboboxItems(actionType.inputSchema, connection.role, action.target)}
+					items={getFilterPropertyComboboxItems(actionType.inputSchema, connection, action.target)}
 					isExpression={false}
 					disabled={isDisabled}
 					placeholder={'Property'}

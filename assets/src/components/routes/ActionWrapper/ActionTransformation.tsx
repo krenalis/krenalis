@@ -121,6 +121,14 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		);
 	}, [connection, actionType]);
 
+	const { isEventImport, isEventBasedUserImport, isAppEventsExport } = useMemo(() => {
+		return {
+			isEventImport: connection.isSource && actionType.target === 'Event',
+			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.target === 'User',
+			isAppEventsExport: connection.isAPI && connection.isDestination && actionType.target === 'Event',
+		};
+	}, [connection, actionType]);
+
 	useEffect(() => {
 		// when a new file is confirmed the UI should behave as if it is
 		// the first the user is compiling the action's transformation.
@@ -293,7 +301,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		return {
 			identityColumnList: getIdentityColumnComboboxItems(actionType.inputSchema),
 			lastChangeTimeList: getLastChangeTimeComboboxItems(actionType.inputSchema),
-			mappingList: getSchemaComboboxItems(actionType.inputSchema),
+			mappingList: getSchemaComboboxItems(
+				actionType.inputSchema,
+				isEventImport || isEventBasedUserImport || isAppEventsExport ? ['muid'] : null,
+			),
 		};
 	}, [actionType]);
 
@@ -604,6 +615,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					flatInputSchema={flatInputSchema}
 					inputSchema={actionType.inputSchema}
 					outputSchema={actionType.outputSchema}
+					isEventImport={isEventImport}
+					isEventBasedUserImport={isEventBasedUserImport}
+					isAppEventsExport={isAppEventsExport}
 				/>
 			</Section>
 		</div>
@@ -1257,6 +1271,9 @@ interface FullscreenTransformationProps {
 	flatInputSchema: TransformedMapping;
 	inputSchema: ObjectType;
 	outputSchema: ObjectType;
+	isEventImport: boolean;
+	isEventBasedUserImport: boolean;
+	isAppEventsExport: boolean;
 }
 
 const FullscreenTransformation = ({
@@ -1266,6 +1283,9 @@ const FullscreenTransformation = ({
 	flatInputSchema,
 	inputSchema,
 	outputSchema,
+	isEventImport,
+	isEventBasedUserImport,
+	isAppEventsExport,
 }: FullscreenTransformationProps) => {
 	const [isInputSchemaSelected, setIsInputSchemaSelected] = useState<boolean>(true);
 	const [inSearchTerm, setInSearchTerm] = useState<string>('');
@@ -1307,13 +1327,6 @@ const FullscreenTransformation = ({
 	const hasAlreadyFetchedSamples = useRef<boolean>(false);
 	const selectedInProperties = useRef<string[]>();
 	const selectedOutProperties = useRef<string[]>();
-
-	const { isEventBasedUserImport, isAppEventsExport } = useMemo(() => {
-		return {
-			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.target === 'User',
-			isAppEventsExport: connection.isAPI && connection.isDestination && actionType.target === 'Event',
-		};
-	}, [connection, actionType]);
 
 	const { flatOutputSchema } = useMemo(() => {
 		return {
@@ -1948,6 +1961,11 @@ const FullscreenTransformation = ({
 							}
 						}
 					}
+					if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
+						if (p.name === 'muid') {
+							return null;
+						}
+					}
 					if (isRecursiveType(p.type)) {
 						return (
 							<TransformationNestedProperties
@@ -2367,6 +2385,11 @@ const FullscreenTransformation = ({
 												if (!isSelected) {
 													return null;
 												}
+											}
+										}
+										if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
+											if (p.name === 'muid') {
+												return null;
 											}
 										}
 										if (isRecursiveType(p.type)) {

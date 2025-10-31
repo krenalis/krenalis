@@ -1,11 +1,12 @@
 import React from 'react';
 import { TransformedMapping, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/action';
-import { DecimalType, ObjectType, Role } from '../../lib/api/types/types';
+import { DecimalType, ObjectType } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
 import { ActionTarget } from '../../lib/api/types/action';
+import TransformedConnection from '../../lib/core/connection';
 
-const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): ComboboxItem[] => {
+const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping, toHide?: string[]): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -13,7 +14,14 @@ const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): Combob
 	if (!isFlat) {
 		schema = flattenSchema(schema as ObjectType);
 	}
-	return computeItems(schema as TransformedMapping);
+	const filteredSchema: TransformedMapping = {};
+	for (const [k, v] of Object.entries(schema)) {
+		if (toHide?.includes(k)) {
+			continue;
+		}
+		filteredSchema[k] = v;
+	}
+	return computeItems(filteredSchema as TransformedMapping);
 };
 
 const getMatchingComboboxItems = (schema: TransformedMapping): ComboboxItem[] => {
@@ -45,20 +53,34 @@ const getUIPreferencesComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const getFilterPropertyComboboxItems = (schema: ObjectType, role: Role, target: ActionTarget): ComboboxItem[] => {
+const getFilterPropertyComboboxItems = (
+	schema: ObjectType,
+	connection: TransformedConnection,
+	target: ActionTarget,
+): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
 	const flatSchema = flattenSchema(schema);
 	const filteredSchema: TransformedMapping = {};
+
+	const isEventBasedUserImport = connection.isEventBased && connection.isSource && target === 'User';
+	const isAppEventsExport = connection.isAPI && connection.isDestination && target === 'Event';
+	const isEventImport = connection.isSource && target === 'Event';
+
 	for (const [k, v] of Object.entries(flatSchema)) {
 		const property = flatSchema[k];
+		if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
+			if (k === 'muid') {
+				continue;
+			}
+		}
 		if (property.type === 'object' || property.type === 'array') {
-			const compatibleOperators = getCompatibleFilterOperators(property, false, role, target);
+			const compatibleOperators = getCompatibleFilterOperators(property, false, connection.role, target);
 			if (compatibleOperators.length === 0) {
 				continue;
 			}
-		} else if (property.type === 'json' && role === 'Destination' && target === 'User') {
+		} else if (property.type === 'json' && connection.isDestination && target === 'User') {
 			continue;
 		}
 		filteredSchema[k] = v;
