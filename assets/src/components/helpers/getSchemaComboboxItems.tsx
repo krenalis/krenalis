@@ -131,7 +131,7 @@ const filterOrderingPropertySchema = (schema: ObjectType): TransformedMapping | 
 		const typ = flatSchema[k].type;
 		if (typ === 'decimal') {
 			const t = flatSchema[k].full.type as DecimalType;
-			if (t.scale === 0) {
+			if (t.scale == null || t.scale === 0) {
 				filteredSchema[k] = v;
 			}
 			continue;

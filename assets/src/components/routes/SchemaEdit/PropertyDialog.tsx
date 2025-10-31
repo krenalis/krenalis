@@ -24,9 +24,9 @@ import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
 import { PrimarySources } from '../../../lib/api/types/workspace';
-import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { toMeergoStringType } from '../../helpers/types';
 
 const TYPE_KINDS: TypeKind[] = [
 	'text',
@@ -740,7 +740,7 @@ const PropertyDialog = ({
 					) : (
 						<div className='property-dialog__type'>
 							<div className='property-dialog__type-label'>Type</div>
-							<div className='property-dialog__type-value'>{enrichPropertyType(property.type)}</div>
+							<div className='property-dialog__type-value'>{toMeergoStringType(property.type)}</div>
 						</div>
 					)}
 					<SlTextarea
