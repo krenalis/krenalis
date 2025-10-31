@@ -6,13 +6,13 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { EditableProperty, EditableSchema, transformSchema, normalizeSchema } from './SchemaEdit.helpers';
 import { PreviewAlterUserSchemaResponse, RePaths } from '../../../lib/api/types/responses';
 import AppContext from '../../../context/AppContext';
-import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { SortableGridRef } from '../../base/Grid/SortableGrid';
 import { isMetaProperty } from '../../../lib/core/schema';
 import TransformedConnection from '../../../lib/core/connection';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { toMeergoStringType } from '../../helpers/types';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -529,7 +529,7 @@ const buildRow = (
 			</div>
 		);
 	} else {
-		typeCell = enrichPropertyType(property.type);
+		typeCell = toMeergoStringType(property.type);
 	}
 	let primarySourceCell: ReactNode;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {

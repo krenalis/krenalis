@@ -1,12 +1,12 @@
 import React, { ReactNode, useMemo, useContext } from 'react';
 import { ObjectType } from '../../../lib/api/types/types';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
-import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
 import { TransformedMapping, TransformedProperty, flattenSchema } from '../../../lib/core/action';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { toMeergoStringType } from '../../helpers/types';
 
 const SCHEMA_COLUMNS: GridColumn[] = [{ name: 'Name' }, { name: 'Type' }, { name: 'Primary source' }];
 
@@ -68,7 +68,7 @@ const getRows = (
 };
 
 const buildRow = (property: TransformedProperty, primarySource?: TransformedConnection | null) => {
-	const typeCell = enrichPropertyType(property.full.type);
+	const typeCell = toMeergoStringType(property.full.type);
 	let primarySourceCell: ReactNode;
 	if (property.full.type.kind !== 'object' && property.full.type.kind !== 'array') {
 		if (primarySource) {
