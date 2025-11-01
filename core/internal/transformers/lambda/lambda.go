@@ -106,7 +106,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 				switch status {
 				case 404:
 					errorsMetric[errorTypeFunctionNotFound].Inc()
-					return transformers.ErrFunctionNotExist
+					return transformers.FunctionNotExistError{ID: id}
 				case 409:
 					// The function is pending.
 					// Set the base with a greater value and retry.
@@ -291,7 +291,7 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 	})
 	if err != nil {
 		if status, ok := httpStatusCode(err); ok && status == 404 {
-			return "", transformers.ErrFunctionNotExist
+			return "", transformers.FunctionNotExistError{ID: id}
 		}
 		return "", err
 	}

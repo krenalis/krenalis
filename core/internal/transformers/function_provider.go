@@ -6,13 +6,20 @@ package transformers
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/types"
 )
 
-var ErrFunctionNotExist = errors.New("function does not exist")
+// FunctionNotExistError is returned when a function does not exist.
+type FunctionNotExistError struct {
+	ID string
+}
+
+func (err FunctionNotExistError) Error() string {
+	return fmt.Sprintf("transformation function %q does not exist", err.ID)
+}
 
 // FunctionExecError represents an error resulting from the execution of a
 // transformation function such as a syntax error in the function.

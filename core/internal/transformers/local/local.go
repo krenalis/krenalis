@@ -80,7 +80,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	source, err := os.ReadFile(filename)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return transformers.ErrFunctionNotExist
+			return transformers.FunctionNotExistError{ID: id}
 		}
 		return err
 	}
@@ -414,7 +414,7 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 		}
 	}
 	if maxVersion == 0 {
-		return "", transformers.ErrFunctionNotExist
+		return "", transformers.FunctionNotExistError{ID: id}
 	}
 	if maxVersion == math.MaxInt64 {
 		return "", fmt.Errorf("%s: function %q has reached the maximum allowed number of versions (%d)", errPrefix, name, maxVersion)
