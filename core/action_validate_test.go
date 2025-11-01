@@ -358,11 +358,11 @@ func Test_validateAction(t *testing.T) {
 					Function: &TransformationFunction{
 						Language: "Python",
 						Source: strings.Join([]string{
-							`def transform(user: dict) -> dict:`,
+							`def transform(event: dict) -> dict:`,
 							`    return {`,
-							`        "email_out": user["email_in"],`,
+							`        "email_out": event["traits"]["email_in"],`,
 							`    }`}, "\n"),
-						InPaths:  []string{"muid"},
+						InPaths:  []string{"traits"},
 						OutPaths: []string{"email_out"},
 					},
 				},
@@ -1881,6 +1881,24 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.SDK,
 			err:                     "input schema must be invalid for actions that import user identities from events",
+		},
+		{
+			name: "BAD: Source/SDK/User - property 'muid' does not exist in the event schema",
+			action: ActionToSet{
+				Name: "Import users",
+				OutSchema: types.Object([]types.Property{
+					{Name: "userID", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"userID": "muid",
+					},
+				},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+			err:                     "invalid mapping: property \"muid\" does not exist",
 		},
 		{
 			name: "BAD: Source/Webhook/User - input schema must be invalid",
