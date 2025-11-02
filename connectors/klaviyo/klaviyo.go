@@ -60,8 +60,8 @@ func init() {
 			},
 		},
 		Terms: meergo.APITerms{
-			User:  "client",
-			Users: "clients",
+			User:  "profile",
+			Users: "profiles",
 		},
 		EndpointGroups: []meergo.EndpointGroup{
 			{
