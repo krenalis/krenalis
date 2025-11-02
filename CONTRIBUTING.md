@@ -1,6 +1,3 @@
-{% extends "/layout.html" %}
-{% Article %}
-
 # Contributing to Meergo
 
 If you're reading this, we would first like to thank you for taking the time to contribute.
