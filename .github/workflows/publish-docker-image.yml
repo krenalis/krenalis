@@ -25,7 +25,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: gianlucamondini/prova-meergo
+          images: meergocdp/meergo
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
