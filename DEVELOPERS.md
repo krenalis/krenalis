@@ -219,12 +219,7 @@ These steps document how to expose a locally running Meergo instance to the inte
 
 ### Building Meergo Image
 
-1. Cd the root of this repository
-2. Run:
-
-    ```bash
-    docker build -t gianlucamondini/prova-meergo:v0.8.1 . --progress=plain
-    ```
+The Meergo Docker image is built using [the GitHub Action](https://github.com/meergo/meergo/actions/workflows/publish-docker-image.yml).
 
 ### Running Meergo within a Container
 
