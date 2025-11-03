@@ -223,7 +223,7 @@ These steps document how to expose a locally running Meergo instance to the inte
 2. Run:
 
     ```bash
-    docker build -t gianlucamondini/prova-meergo:dev . --progress=plain
+    docker build -t gianlucamondini/prova-meergo:v0.8.1 . --progress=plain
     ```
 
 ### Running Meergo within a Container
@@ -239,7 +239,7 @@ These steps document how to expose a locally running Meergo instance to the inte
         -v ./cmd/meergo/cert.pem:/bin/cert.pem \
         -v ./cmd/meergo/key.pem:/bin/key.pem \
         --net host \
-        gianlucamondini/prova-meergo:dev
+        gianlucamondini/prova-meergo:v0.8.1
     ```
 
 3. Visit Meergo at the address shown on the console
