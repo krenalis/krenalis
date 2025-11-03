@@ -16,7 +16,6 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
-	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
@@ -32,15 +31,6 @@ const (
 	MaxQuerySize                = 1_000  // maximum allowed size for a database query.
 	MaxTableNameSize            = 1024   // maximum allowed length for a database table name.
 )
-
-// eventActionSchema defines the event schema for actions.
-// It excludes the muid property.
-var eventActionSchema types.Type
-
-func init() {
-	properties := schemas.Event.Properties().Slice()
-	eventActionSchema = types.Object(properties[1:])
-}
 
 // validationState is a state for the validation of an action.
 type validationState struct {

@@ -745,7 +745,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	dispatchEventsToAPIs := isDispatchingEventsToAPIs(connector.Type, c.Role, state.Target(target))
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(connector.Type, c.Role, state.Target(target))
 	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs {
-		inSchema = schemas.Event
+		inSchema = eventActionSchema
 	}
 
 	n := state.CreateAction{

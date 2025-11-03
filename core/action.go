@@ -31,6 +31,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// eventActionSchema defines the event schema for actions.
+// It excludes the muid property.
+var eventActionSchema types.Type
+
+func init() {
+	properties := schemas.Event.Properties().Slice()
+	eventActionSchema = types.Object(properties[1:])
+}
+
 // Action represents an action of a connection.
 type Action struct {
 	core                 *Core
@@ -658,7 +667,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(c.Connector().Type, c.Role, this.action.Target)
 	dispatchEventsToAPIs := isDispatchingEventsToAPIs(c.Connector().Type, c.Role, this.action.Target)
 	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAPIs {
-		inSchema = schemas.Event
+		inSchema = eventActionSchema
 	}
 
 	n := state.UpdateAction{
