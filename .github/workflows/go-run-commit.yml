@@ -1,3 +1,5 @@
+name: Run go run ./commit
+
 on:
   workflow_dispatch:
 

@@ -1,3 +1,5 @@
+name: Send sourcemaps to Sentry
+
 on:
   workflow_dispatch:
   push:
