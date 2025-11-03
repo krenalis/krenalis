@@ -121,8 +121,6 @@ Fixes #2031
 
 * **Main content.** Explain what the change does and why it was made. Use clear, complete sentences. Avoid HTML and complex Markdown. Basic Markdown (lists, code, quotes) is fine.
 
-* **Referencing issues.** When a commit addresses an issue, use "Fixes #12345", "Resolves", or "Closes". For partial work or related context, use "Updates", or "Refers".
-
 * **Line length.** Each line should be no longer than 72 characters.
 
 * **Names.** When referring to identifiers or code elements, enclose them in backticks (like this `).
