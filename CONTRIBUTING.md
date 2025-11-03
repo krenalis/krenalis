@@ -65,7 +65,7 @@ If you find a bug in Meergo, please do the following:
    For example, if you encounter an "Internal Server Error" in the Admin console, check Meergo's log file or standard error output first.
 
 2. **Check existing issues.**  
-   Look at the [open issues](https://github.com/search?q=+is%3Aissue+user%3Ameergo) to see if someone already reported it.
+   Look at the [open issues](https://github.com/meergo/meergo/issues) to see if someone already reported it.
     * If you find the same issue, add a comment if you have new or useful information.
     * Otherwise, adding a reaction (👍) is enough to show that it affects you too, but in this case subscribe to the issue to receive notifications.
 
