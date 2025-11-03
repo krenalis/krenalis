@@ -1,6 +1,6 @@
 services:
   meergo:
-    image: gianlucamondini/prova-meergo:v0.8.1
+    image: gianlucamondini/prova-meergo:v0.8.2
     ports:
       - 2022:2022
     environment:
