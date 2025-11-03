@@ -123,7 +123,7 @@ Fixes #2031
 
 * **Line length.** Each line should be no longer than 72 characters.
 
-* **Names.** When referring to identifiers or code elements, enclose them in backticks (like this `).
+* **Names.** When referring to identifiers or code elements, enclose them in backticks (like this `) in the commit title, and in single quotes (like this ') in the remaining lines.
 
 #### Before opening a pull request
 
