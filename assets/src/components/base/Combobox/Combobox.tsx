@@ -39,6 +39,7 @@ interface ComboboxProps {
 	indentation?: number;
 	children?: ReactNode;
 	syncOnChange?: any;
+	propertiesToHide?: string[] | null;
 	[key: string]: any;
 }
 
@@ -64,6 +65,7 @@ const Combobox = ({
 	indentation,
 	children,
 	syncOnChange,
+	propertiesToHide,
 	...rest
 }: ComboboxProps) => {
 	const [val, setVal] = useState<string>(value == null ? '' : value);
@@ -328,7 +330,10 @@ const Combobox = ({
 				return;
 			}
 		}
-		let doesNotExist = errorMessage.endsWith('does not exist');
+		if (errorMessage === '' && propertiesToHide != null && propertiesToHide.includes(value)) {
+			errorMessage = `Property "${value}" does not exist`;
+		}
+		const doesNotExist = errorMessage.endsWith('does not exist');
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.target === 'User';
 		const isAppEventsExport = connection.isAPI && connection.isDestination && actionType.target === 'Event';
 		if (doesNotExist) {

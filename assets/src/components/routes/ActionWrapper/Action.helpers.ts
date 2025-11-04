@@ -67,11 +67,11 @@ const updateMappingPropertyError = (action: TransformedAction, path: string, err
 	return a;
 };
 
-const checkIfPropertyExists = (property: string, schema: TransformedMapping): string => {
+const checkIfPropertyExists = (property: string, schema: TransformedMapping, toHide?: string[]): string => {
 	if (schema == null || property === '' || property == null) {
 		return '';
 	}
-	if (schema[property] == null) {
+	if (schema[property] == null || toHide?.includes(property)) {
 		return `Property "${property}" does not exist`;
 	}
 	return '';

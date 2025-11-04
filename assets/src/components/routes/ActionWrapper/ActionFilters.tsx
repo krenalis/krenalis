@@ -307,6 +307,15 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 				);
 			}
 
+			const isEventBasedUserImport = connection.isEventBased && connection.isSource && action.target === 'User';
+			const isAppEventsExport = connection.isAPI && connection.isDestination && action.target === 'Event';
+			const isEventImport = connection.isSource && action.target === 'Event';
+
+			let propertiesToHide = [];
+			if (isEventBasedUserImport || isAppEventsExport || isEventImport) {
+				propertiesToHide = ['muid'];
+			}
+
 			propertyInput = (
 				<Combobox
 					onInput={onInputPropertyFragment}
@@ -315,7 +324,12 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					className='action__filters-property'
 					size='small'
 					name={`property-${i}`}
-					items={getFilterPropertyComboboxItems(actionType.inputSchema, connection, action.target)}
+					items={getFilterPropertyComboboxItems(
+						actionType.inputSchema,
+						connection,
+						action.target,
+						propertiesToHide,
+					)}
 					isExpression={false}
 					disabled={isDisabled}
 					placeholder={'Property'}
@@ -324,7 +338,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					autoResize={true}
 					error={
 						condition.property !== '' &&
-						checkIfPropertyExists(isJSON ? base : condition.property, flatInputSchema)
+						checkIfPropertyExists(isJSON ? base : condition.property, flatInputSchema, propertiesToHide)
 					}
 				/>
 			);

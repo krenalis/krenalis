@@ -451,7 +451,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			flatInputSchema={flatInputSchema}
 			mapMappingPairs={mapMappingsPairs}
 			setMapMappingPairs={setMapMappingsPairs}
-			formatLabel={format?.label}
+			propertiesToHide={isEventBasedUserImport || isAppEventsExport || isEventImport ? ['muid'] : null}
 		/>
 	);
 
@@ -648,7 +648,7 @@ interface TransformationBoxProps {
 	flatInputSchema: TransformedMapping;
 	mapMappingPairs: Record<string, [string, string][]>;
 	setMapMappingPairs: React.Dispatch<React.SetStateAction<Record<string, [string, string][]>>>;
-	formatLabel?: string;
+	propertiesToHide: string[] | null;
 }
 
 const isMappingChanged = (oldMapping: TransformedMapping, newMapping: TransformedMapping): boolean => {
@@ -711,6 +711,7 @@ const TransformationBox = ({
 	flatInputSchema,
 	mapMappingPairs,
 	setMapMappingPairs,
+	propertiesToHide,
 }: TransformationBoxProps) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [isCompletelyOpen, setIsCompletelyOpen] = useState<boolean>(false);
@@ -982,6 +983,7 @@ const TransformationBox = ({
 						isDisabled={isDisabled}
 						indentation={action.transformation.mapping![path].indentation!}
 						showRequired={showRequired}
+						propertiesToHide={propertiesToHide}
 					/>,
 				);
 			} else {
@@ -1021,6 +1023,7 @@ const TransformationBox = ({
 								automaticMapping != null,
 								automaticMapping,
 							]}
+							propertiesToHide={propertiesToHide}
 						>
 							{isIdentifier && (
 								<div className='action__transformation-property-icon' slot='prefix'>
@@ -2489,6 +2492,7 @@ interface MapMappingProps {
 	isDisabled: boolean;
 	indentation: number;
 	showRequired: boolean;
+	propertiesToHide?: string[] | null;
 }
 
 const getPairsFromExpression = (expression: string): Array<[string, string]> => {
@@ -2516,6 +2520,7 @@ const MapMapping = ({
 	isDisabled,
 	indentation,
 	showRequired,
+	propertiesToHide,
 }: MapMappingProps) => {
 	const [pairs, setPairs] = useState<Array<[string, string]>>([['', '']]);
 	const [logicalErrors, setLogicalErrors] = useState<Record<number, string>>({});
@@ -2842,6 +2847,7 @@ const MapMapping = ({
 					automaticMapping,
 					syncPairCombobox,
 				]}
+				propertiesToHide={propertiesToHide}
 			/>
 			<div className='action__transformation-mapping-arrow'>
 				<SlIcon name='arrow-right' />
@@ -2904,6 +2910,7 @@ const MapMapping = ({
 								onSelectPairValue(i, value);
 							}}
 							syncOnChange={[syncPairCombobox]}
+							propertiesToHide={propertiesToHide}
 						/>
 						<div className='action__transformation-mapping-arrow'>
 							<SlIcon name='arrow-right' />

@@ -988,13 +988,23 @@ const transformInActionToSet = async (
 		// Exclude conditions that have empty properties.
 		let conditions = action.filter.conditions.filter((condition) => condition.property !== '');
 
+		const isEventImport = connection.isSource && actionType.target === 'Event';
+		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.target === 'User';
+		const isAppEventsExport = connection.isAPI && connection.isDestination && actionType.target === 'Event';
+
 		for (const condition of conditions) {
 			const propertyName = condition.property;
 			const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
 			const property = flattenedInputSchema[base];
 			let c: FilterCondition;
 			try {
-				c = validateAndNormalizeFilterCondition(condition, property, path, propertyName);
+				c = validateAndNormalizeFilterCondition(
+					condition,
+					property,
+					path,
+					propertyName,
+					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['muid'] : null,
+				);
 			} catch (err) {
 				throw err;
 			}
@@ -1511,8 +1521,9 @@ const validateAndNormalizeFilterCondition = (
 	property: TransformedProperty,
 	propertyPath: string,
 	propertyName: string,
+	propertiesToHide?: string[] | null,
 ): FilterCondition => {
-	if (property == null) {
+	if (property == null || propertiesToHide?.includes(propertyName)) {
 		throw new Error(`Property "${propertyName}" of filter condition does not exist`);
 	}
 

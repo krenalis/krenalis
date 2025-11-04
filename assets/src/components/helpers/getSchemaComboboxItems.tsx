@@ -57,6 +57,7 @@ const getFilterPropertyComboboxItems = (
 	schema: ObjectType,
 	connection: TransformedConnection,
 	target: ActionTarget,
+	toHide?: string[],
 ): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
@@ -64,17 +65,11 @@ const getFilterPropertyComboboxItems = (
 	const flatSchema = flattenSchema(schema);
 	const filteredSchema: TransformedMapping = {};
 
-	const isEventBasedUserImport = connection.isEventBased && connection.isSource && target === 'User';
-	const isAppEventsExport = connection.isAPI && connection.isDestination && target === 'Event';
-	const isEventImport = connection.isSource && target === 'Event';
-
 	for (const [k, v] of Object.entries(flatSchema)) {
-		const property = flatSchema[k];
-		if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
-			if (k === 'muid') {
-				continue;
-			}
+		if (toHide?.includes(k)) {
+			continue;
 		}
+		const property = flatSchema[k];
 		if (property.type === 'object' || property.type === 'array') {
 			const compatibleOperators = getCompatibleFilterOperators(property, false, connection.role, target);
 			if (compatibleOperators.length === 0) {
