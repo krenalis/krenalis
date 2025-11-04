@@ -1241,13 +1241,22 @@ inherit the disabled style */
 	gap: 9px;
 }
 
+.fullscreen-transformation__samples-reload > sl-button::part(label) {
+	font-weight: 400;
+}
+
 .fullscreen-transformation__samples-file-warning {
 	display: flex;
 	align-items: center;
 	gap: 5px;
 	font-size: 13px;
-	color: var(--sl-color-warning-600);
-	font-weight: 600;
+	font-weight: 400;
+	color: var(--sl-color-neutral-500);
+}
+
+.fullscreen-transformation__samples-file-warning sl-icon {
+	position: relative;
+	top: 1px;
 }
 
 .fullscreen-transformation__samples-reload {

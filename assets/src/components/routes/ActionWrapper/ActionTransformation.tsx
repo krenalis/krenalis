@@ -1945,10 +1945,10 @@ const FullscreenTransformation = ({
 
 	const samplesHead = (
 		<div className='fullscreen-transformation__samples-head'>
-			{connection.isFileStorage && connection.isSource && (
+			{connection.isFileStorage && connection.isSource && action.filter != null && (
 				<div className='fullscreen-transformation__samples-file-warning'>
 					<div className='fullscreen-transformation__samples-file-notice'>Samples are not filtered</div>
-					<SlTooltip content="This version of Meergo doesn't apply the action filter when fetching samples in file imports">
+					<SlTooltip content='No filtering is applied when fetching samples from files'>
 						<SlIcon name='info-circle' />
 					</SlTooltip>
 				</div>
@@ -1961,7 +1961,7 @@ const FullscreenTransformation = ({
 					loading={isReloadingSamples}
 					onClick={() => setIsReloadingSamples(true)}
 				>
-					Refresh
+					reload
 					<SlIcon name='arrow-clockwise' slot='suffix' />
 				</SlButton>
 			</div>
