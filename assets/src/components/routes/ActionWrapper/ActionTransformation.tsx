@@ -517,7 +517,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								<Combobox
 									onInput={onUpdateLastChangeTimeColumn}
 									onSelect={onUpdateLastChangeTimeColumn}
-									value={action.lastChangeTimeColumn!}
+									value={action.lastChangeTimeColumn == null ? '' : action.lastChangeTimeColumn}
 									name='lastChangeTimeColumn'
 									disabled={isTransformationDisabled}
 									className='action__transformation-input-property'
@@ -1298,7 +1298,9 @@ const FullscreenTransformation = ({
 	const [outSearchTerm, setOutSearchTerm] = useState<string>('');
 	const [showOnlyOutSelected, setShowOnlyOutSelected] = useState<boolean>();
 	const [samples, setSamples] = useState<Sample[]>(null);
+	const [lastSamplesFetchTime, setLastSamplesFetchTime] = useState<Date>();
 	const [isFetchingSamples, setIsFetchingSamples] = useState<boolean>(false);
+	const [isReloadingSamples, setIsReloadingSamples] = useState<boolean>(false);
 	const [selectedSample, setSelectedSample] = useState<Sample>(null);
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
 	const [selectedEvent, setSelectedEvent] = useState<EventListenerEvent>(null);
@@ -1329,6 +1331,7 @@ const FullscreenTransformation = ({
 	const lastExecutedEvent = useRef<EventListenerEvent>(null);
 	const eventSchema = useRef<ObjectType>(null);
 	const hasAlreadyFetchedSamples = useRef<boolean>(false);
+	const hasReloadedSamples = useRef<boolean>(false);
 	const selectedInProperties = useRef<string[]>();
 	const selectedOutProperties = useRef<string[]>();
 
@@ -1423,19 +1426,28 @@ const FullscreenTransformation = ({
 			if (actionType.target !== 'User') {
 				return;
 			}
-			if (!isFullscreenTransformationOpen) {
-				return;
+
+			if (!isReloadingSamples) {
+				if (hasReloadedSamples.current) {
+					// isReloadingSamples is changed to false only because the
+					// reload has just been done.
+					hasReloadedSamples.current = false;
+					return;
+				}
+				if (!isFullscreenTransformationOpen) {
+					return;
+				}
+				if (hasAlreadyFetchedSamples.current && !(connection.isAPI || connection.isDatabase)) {
+					// Return if the action is not API/database import or
+					// API/database export. Those are the cases where samples must
+					// be refetched every time the full mode is opened, to apply any
+					// updated filter.
+					return;
+				}
 			}
-			if (
-				!(connection.isAPI || (connection.isDatabase && connection.isDestination)) &&
-				hasAlreadyFetchedSamples.current
-			) {
-				// API import and API/database export are the only cases where
-				// samples must be refetched every time the full mode is opened,
-				// to apply any updated filter.
-				return;
-			}
-			setIsFetchingSamples(true);
+
+			const setIsLoading = isReloadingSamples ? setIsReloadingSamples : setIsFetchingSamples;
+			setIsLoading(true);
 
 			let samples: Sample[];
 			if (connection.isFileStorage && connection.isSource) {
@@ -1451,22 +1463,27 @@ const FullscreenTransformation = ({
 						20,
 					);
 				} catch (err) {
-					setIsFetchingSamples(false);
+					setIsLoading(false);
 					handleError(err);
 					return;
 				}
 				samples = res.records;
 			} else if (connection.isDatabase && connection.isSource) {
-				// Will show a button to execute the query and retrieve the
-				// samples (as the query can be potentially destructive).
-				setIsFetchingSamples(false);
-				return;
+				let res: ExecQueryResponse;
+				try {
+					res = await api.workspaces.connections.execQuery(connection.id, action.query, 20);
+				} catch (err) {
+					setIsLoading(false);
+					handleError(err);
+					return;
+				}
+				samples = res.rows;
 			} else if (connection.isAPI && connection.isSource) {
 				let res: APIUsersResponse;
 				try {
 					res = await api.workspaces.connections.apiUsers(connection.id, inputSchema, normalizedFilter);
 				} catch (err) {
-					setIsFetchingSamples(false);
+					setIsLoading(false);
 					handleError(err);
 					return;
 				}
@@ -1480,14 +1497,18 @@ const FullscreenTransformation = ({
 				try {
 					res = await api.workspaces.users.find(properties, normalizedFilter, '', true, 0, 20);
 				} catch (err) {
-					setIsFetchingSamples(false);
+					setIsLoading(false);
 					handleError(err);
 					return;
 				}
 				if (res.users.length === 0 && normalizedFilter == null) {
 					// No users have been imported in the warehouse yet.
+					if (isReloadingSamples) {
+						hasReloadedSamples.current = true;
+					}
+					setIsLoading(false);
+					setLastSamplesFetchTime(new Date());
 					setSamples(null);
-					setIsFetchingSamples(false);
 					return;
 				}
 				const s: Sample[] = [];
@@ -1496,10 +1517,9 @@ const FullscreenTransformation = ({
 				}
 				samples = s;
 			} else {
-				setIsFetchingSamples(false);
+				setIsLoading(false);
 				return;
 			}
-			setIsFetchingSamples(false);
 			hasAlreadyFetchedSamples.current = true;
 			const idents = getSampleIdentifiers(samples[0]);
 			if (idents != null) {
@@ -1508,10 +1528,21 @@ const FullscreenTransformation = ({
 				emailIdentifier.current = idents.emailIdentifier;
 				idIdentifier.current = idents.idIdentifier;
 			}
-			setSamples(samples);
+			if (isReloadingSamples) {
+				setTimeout(() => {
+					hasReloadedSamples.current = true;
+					setIsLoading(false);
+					setLastSamplesFetchTime(new Date());
+					setSamples(samples);
+				}, 300);
+			} else {
+				setIsLoading(false);
+				setLastSamplesFetchTime(new Date());
+				setSamples(samples);
+			}
 		};
 		fetchSamples();
-	}, [isFullscreenTransformationOpen]);
+	}, [isFullscreenTransformationOpen, isReloadingSamples]);
 
 	useEffect(() => {
 		let el: Element;
@@ -1908,30 +1939,37 @@ const FullscreenTransformation = ({
 		setTimeout(() => setIsExecuting(false), 300);
 	};
 
-	const onQuery = async () => {
-		let res: ExecQueryResponse;
-		try {
-			res = await api.workspaces.connections.execQuery(connection.id, action.query, 20);
-		} catch (err) {
-			handleError(err);
-			return;
-		}
-		const idents = getSampleIdentifiers(res.rows[0]);
-		if (idents != null) {
-			firstNameIdentifier.current = idents.firstNameIdentifier;
-			lastNameIdentifier.current = idents.lastNameIdentifier;
-			emailIdentifier.current = idents.emailIdentifier;
-			idIdentifier.current = idents.idIdentifier;
-		}
-		setSamples(res.rows);
-	};
-
 	const onClear = () => {
 		lastExecutedSample.current = null;
 		lastExecutedEvent.current = null;
 		setOutput('');
 		setOutputError('');
 	};
+
+	const samplesHead = (
+		<div className='fullscreen-transformation__samples-head'>
+			{connection.isFileStorage && connection.isSource && action.filter != null && (
+				<div className='fullscreen-transformation__samples-file-warning'>
+					<div className='fullscreen-transformation__samples-file-notice'>Samples are not filtered</div>
+					<SlTooltip content='No filtering is applied when fetching samples from files'>
+						<SlIcon name='info-circle' />
+					</SlTooltip>
+				</div>
+			)}
+			<div className='fullscreen-transformation__samples-reload'>
+				<SlRelativeTime date={lastSamplesFetchTime} sync lang='en-US' />
+				<SlButton
+					variant='default'
+					size='small'
+					loading={isReloadingSamples}
+					onClick={() => setIsReloadingSamples(true)}
+				>
+					reload
+					<SlIcon name='arrow-clockwise' slot='suffix' />
+				</SlButton>
+			</div>
+		</div>
+	);
 
 	let inputPanelContent: ReactNode = null;
 	if (isInputSchemaSelected) {
@@ -2023,6 +2061,7 @@ const FullscreenTransformation = ({
 		const entries = Array.from(samples.entries());
 		inputPanelContent = (
 			<div className='fullscreen-transformation__samples'>
+				{samplesHead}
 				{entries.length === 0 ? (
 					<div className='fullscreen-transformation__no-sample'>
 						<div className='fullscreen-transformation__no-sample-text'>
@@ -2153,22 +2192,6 @@ const FullscreenTransformation = ({
 				)}
 			</div>
 		);
-	} else if (connection.isDatabase && connection.isSource) {
-		inputPanelContent = (
-			<div className='fullscreen-transformation__query-execution'>
-				<SlIcon name='database-down' />
-				<p className='fullscreen-transformation__query-execution-text'>
-					Execute the query to retrieve the samples
-				</p>
-				<SlButton
-					className='fullscreen-transformation__query-execution-button'
-					variant='primary'
-					onClick={onQuery}
-				>
-					Execute the query
-				</SlButton>
-			</div>
-		);
 	} else if (isEventBasedUserImport || isAppEventsExport) {
 		if (isAppEventsExport && (connection.linkedConnections == null || connection.linkedConnections.length === 0)) {
 			inputPanelContent = (
@@ -2254,6 +2277,7 @@ const FullscreenTransformation = ({
 	} else if (connection.isDestination && actionType.target === 'User') {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
+				{samplesHead}
 				<div className='fullscreen-transformation__no-sample-text'>
 					<h3>There are no users</h3>
 					<div>No users have been imported into the warehouse yet.</div>
