@@ -15,15 +15,16 @@
 	top: 0;
 	left: 0;
 	width: 100%;
-	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 20px 40px;
+	padding: 0 40px;
 	background-color: var(--bg-primary);
 	border-bottom: 1px solid var(--border-primary);
 	z-index: 1000;
 	height: 90px;
 	gap: 20px;
+	display: grid;
+	grid-template-columns: 400px auto 400px;
 }
 
 .action__header-title {
@@ -34,7 +35,6 @@
 		'logo description';
 	column-gap: 25px;
 	align-items: center;
-	max-width: 400px;
 }
 
 .action__header-title .little-logo {
@@ -90,7 +90,8 @@
 	display: flex;
 	align-items: center;
 	gap: 20px;
-	width: 370px;
+	flex-flow: row wrap;
+	justify-content: end;
 }
 
 .action__header-buttons-save,
@@ -144,6 +145,26 @@
 .action__header-save--fullscreen-closing-disabled::part(base):hover {
 	background-color: var(--sl-color-primary-600);
 	opacity: 1;
+}
+
+@media (max-width: 1200px) {
+	.action__header {
+		grid-template-columns: 300px auto 300px;
+		height: 100px;
+	}
+
+	.action__header-buttons-save {
+		gap: 5px;
+	}
+
+	.action__header-buttons-save sl-button::part(base) {
+		min-height: unset !important;
+		min-width: 200px;
+	}
+
+	.fullscreen-transformation {
+		top: 100px !important;
+	}
 }
 
 .action__body {
