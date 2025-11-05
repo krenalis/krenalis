@@ -310,15 +310,17 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, [actionType]);
 
 	const onChangeTransformationFunction = (source: string) => {
-		const a = { ...action };
-		a.transformation.function = {
-			source: source,
-			language: selectedLanguage,
-			preserveJSON: a.transformation.function.preserveJSON,
-			inPaths: [],
-			outPaths: [],
-		};
-		setAction(a);
+		setAction((prev) => {
+			const a = { ...prev };
+			a.transformation.function = {
+				source: source,
+				language: selectedLanguage,
+				preserveJSON: a.transformation.function.preserveJSON,
+				inPaths: [],
+				outPaths: [],
+			};
+			return a;
+		});
 	};
 
 	const updateMapping = (path: string, value: string) => {
@@ -827,6 +829,7 @@ const TransformationBox = ({
 				return;
 			}
 		}
+		// Open full mode.
 		onOpenFullscreenTransformation();
 	};
 
