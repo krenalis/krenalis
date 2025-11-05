@@ -50,4 +50,5 @@ jobs:
           MEERGO_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.MEERGO_TEST_MIXPANEL_DATA_RESIDENCY }}
         run: go run ./commit
 
-      - uses: numtide/clean-git-action@30e3d6d6e2d6e77e73761cf5324467cb74386f87 # v2
+      - name: Check that the repository is clean
+        run: ./commit/repo_is_clean.bash
