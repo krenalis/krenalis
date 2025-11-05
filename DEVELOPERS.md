@@ -2,28 +2,6 @@
 
 This file contains information useful to Meergo developers.
 
-<h2>Table of contents</h2>
-
-- [Before Pushing Commits to `main`](#before-pushing-commits-to-main)
-- [How to run tests using GitHub Action](#how-to-run-tests-using-github-action)
-- [Telemetry](#telemetry)
-- [Expose and see Meergo metrics](#expose-and-see-meergo-metrics)
-- [Local Testing Cookbook](#local-testing-cookbook)
-  - [Testing Snowflake](#testing-snowflake)
-  - [Altering the tests configuration](#altering-the-tests-configuration)
-- [How to execute Meergo for development](#how-to-execute-meergo-for-development)
-  - [1. Install React and other dependencies](#1-install-react-and-other-dependencies)
-  - [2. Configure and add certificates](#2-configure-and-add-certificates)
-  - [3. Build the assets](#3-build-the-assets)
-  - [4. Compile the server command in dev mode](#4-compile-the-server-command-in-dev-mode)
-  - [5. Populate the database](#5-populate-the-database)
-  - [7. Run and open the browser](#7-run-and-open-the-browser)
-- [Expose on the Internet (optional)](#expose-on-the-internet-optional)
-- [Docker](#docker)
-  - [Building Meergo Image](#building-meergo-image)
-  - [Running Meergo within a Container](#running-meergo-within-a-container)
-
-
 ## Before Pushing Commits to `main`
 
 > Before proceeding, **make sure you have all the necessary dependencies** installed locally. For the complete list of them, please refer to the file [.github/workflows/go-run-commit.yml](.github/workflows/go-run-commit.yml).
