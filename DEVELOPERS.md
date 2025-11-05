@@ -37,6 +37,10 @@ go run ./commit --help
 
 ## Telemetry
 
+👨🏻‍💻 The telemetry documentation kept here relates only to the more technical/implementational aspects.
+
+### The MEERGO_TELEMETRY_LEVEL env variable
+
 Telemetry can be enabled at various levels, depending on the value of the environment variable `MEERGO_TELEMETRY_LEVEL`:
 
 | Value for `MEERGO_TELEMETRY_LEVEL` | Data sent to Sentry                    | Data sent to chichi.open2b.net |
@@ -48,7 +52,7 @@ Telemetry can be enabled at various levels, depending on the value of the enviro
 
 The `MEERGO_TELEMETRY_LEVEL` environment variable is the only thing that can enable or disable telemetry. Anything else (how Meergo is compiled, build flags, availability of Debug IDs, etc...) does not impact the sending of data to Sentry and/or chichi.open2b.net.
 
-Also, note that:
+### Principles and considerations
 
 * **Personal data is never sent**. All error and statistics data sent to Sentry and chichi.open2b.net contain no personal information. For example, this is why only panic errors are eventually sent to Sentry, and not slog errors—because panics have been verified not to include personal data, while this cannot currently be guaranteed for slog.
 
