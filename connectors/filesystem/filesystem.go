@@ -107,11 +107,11 @@ func (filesystem *FileSystem) Reader(ctx context.Context, name string) (io.ReadC
 	path, _ := filesystem.absolutePath(ctx, name, false)
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, time.Time{}, err
+		return nil, time.Time{}, rewritePathError(err)
 	}
 	fi, err := f.Stat()
 	if err != nil {
-		return nil, time.Time{}, err
+		return nil, time.Time{}, rewritePathError(err)
 	}
 	var rc io.ReadCloser = f
 	if filesystem.settings.SimulateHighIOLatency {
@@ -170,11 +170,12 @@ func (filesystem *FileSystem) Write(ctx context.Context, r io.Reader, name, cont
 	tmpPath := path + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return err
+		return rewritePathError(err)
 	}
 	defer func() {
 		err := os.Remove(tmpPath)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			err = rewritePathError(err)
 			slog.Warn("connectors/filesystem: cannot remove temporary file created by File System", "err", err)
 			return
 		}
@@ -188,16 +189,16 @@ func (filesystem *FileSystem) Write(ctx context.Context, r io.Reader, name, cont
 	}
 	err2 := f.Close()
 	if err != nil {
-		return err
+		return rewritePathError(err)
 	}
 	if err2 != nil {
-		return err2
+		return rewritePathError(err2)
 	}
 	if filesystem.settings.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
 	err = os.Rename(tmpPath, path)
-	return err
+	return rewritePathError(err)
 }
 
 // absolutePath returns the absolute representation of the given path name.
@@ -246,6 +247,33 @@ func (filesystem *FileSystem) saveSettings(ctx context.Context, settings json.Va
 	}
 	filesystem.settings = &s
 	return nil
+}
+
+// rewritePathError, if err is a *fs.PathError error, returns a new
+// *fs.PathError such that its path is consistent with the displayed root of the
+// connection.
+//
+// For all other error types, if the error is nil, or if the displayed root is
+// not set, the error is returned as it is.
+func rewritePathError(err error) error {
+	confMu.Lock()
+	defer confMu.Unlock()
+	if displayedRoot == "" {
+		return err
+	}
+	if pErr, ok := err.(*fs.PathError); ok {
+		// From the path of the fs.PathError, remove the prefix that refers to
+		// the root.
+		path := strings.TrimPrefix(pErr.Path, root)
+		// Prepend the displayed root as prefix.
+		path = filepath.Join(displayedRoot, path)
+		return &fs.PathError{
+			Op:   pErr.Op,
+			Path: path,
+			Err:  pErr.Err,
+		}
+	}
+	return err
 }
 
 func validateRoot(root string) error {
