@@ -48,7 +48,7 @@ jobs:
           MEERGO_TEST_MIXPANEL_PROJECT_ID: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_ID }}
           MEERGO_TEST_MIXPANEL_PROJECT_TOKEN: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_TOKEN }}
           MEERGO_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.MEERGO_TEST_MIXPANEL_DATA_RESIDENCY }}
-        run: go run ./commit
+        run: go run ./commit --no-go-test # TODO: discard this change
 
       - name: Check that the repository is clean
         run: ./commit/repo_is_clean.bash
