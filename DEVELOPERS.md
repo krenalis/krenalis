@@ -1,8 +1,8 @@
 # Developers 🛠️
 
-This file contains information useful to Meergo developers.
+This file contains information useful to **Meergo developers**.
 
-## Before Pushing Commits to `main`
+## Before pushing commits to `main`
 
 > Before proceeding, **make sure you have all the necessary dependencies** installed locally. For the complete list of them, please refer to the file [.github/workflows/go-run-commit.yml](.github/workflows/go-run-commit.yml).
 
@@ -12,9 +12,9 @@ Before pushing commits to the `main` branch of Meergo, from the root of this rep
 go run ./commit
 ```
 
-Note that this command does not print anything and may take 10 to 15 minutes to execute.
+⏱️ This may take 10 to 15 minutes to execute.
 
-To run the tests without testing the connectors, run:
+To run the tests **without testing the connectors**, run:
 
 ```
 go run commit/commit.go --no-connector-tests
@@ -26,14 +26,14 @@ For various options and other ways to test, see the command documentation by run
 go run ./commit --help
 ```
 
-## How to run tests using GitHub Action
+## Run tests on GitHub (using GitHub Action)
 
 1. Go to https://github.com/meergo/meergo/actions/workflows/go-run-commit.yml
-2. Click on the button "Run workflow"
+2. Click on the button **Run workflow**
 3. Choose the branch on which you want to run the tests
-4. Click on "Run workflow"
+4. Click on **Run workflow**
 
-> ⌛ Note that this may take some time, even something on the order of about ten minutes.
+⏱️ This may take 10 to 15 minutes to execute.
 
 ## Telemetry
 
