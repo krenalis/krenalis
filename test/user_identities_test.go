@@ -26,14 +26,14 @@ func Test_UserIdentities(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(storageDir)
+	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
 	c.UpdateIdentityResolution(true, []string{"email"})
 
-	fs1 := c.CreateSourceFilesystem()
-	fs2 := c.CreateSourceFilesystem()
+	fs1 := c.CreateSourceFileSystem()
+	fs2 := c.CreateSourceFileSystem()
 
 	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
 		Name:    "CSV 1",

@@ -113,41 +113,41 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 	).toBeAttached();
 });
 
-test(`Add Filesystem source`, async ({ page }) => {
+test(`Add File System source`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Source`);
 	await page.click(`[data-code="filesystem"]`);
 	await page.click('.connectors-list__documentation-add');
 	await page.click('.connector-settings__save-button');
-	await expect(page.locator('.connection-wrapper__name')).toContainText('Filesystem');
+	await expect(page.locator('.connection-wrapper__name')).toContainText('File System');
 	const url = page.url();
 	const fragments = url.split('/');
 	const id = fragments[fragments.length - 2];
 	await page.goto(`${adminURL}/connections/sources`);
 	await expect(
-		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
+		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'File System' }),
 	).toBeAttached();
 	await page.goto(`${adminURL}/connections`);
 	await expect(
-		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
+		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'File System' }),
 	).toBeAttached();
 });
 
-test(`Add Filesystem destination`, async ({ page }) => {
+test(`Add File System destination`, async ({ page }) => {
 	await page.goto(`${adminURL}/connectors?role=Destination`);
 	await page.click(`[data-code="filesystem"]`);
 	await page.click('.connectors-list__documentation-add');
 	await page.click('.connector-settings__save-button');
-	await expect(page.locator('.connection-wrapper__name')).toContainText('Filesystem');
+	await expect(page.locator('.connection-wrapper__name')).toContainText('File System');
 	const url = page.url();
 	const fragments = url.split('/');
 	const id = fragments[fragments.length - 2];
 	await page.goto(`${adminURL}/connections/destinations`);
 	await expect(
-		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'Filesystem' }),
+		page.locator(`.grid__row[data-id="${id}"] .connections-list__name-cell`, { hasText: 'File System' }),
 	).toBeAttached();
 	await page.goto(`${adminURL}/connections`);
 	await expect(
-		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'Filesystem' }),
+		page.locator(`.connection-block[id="${id}"] .connection-block__name`, { hasText: 'File System' }),
 	).toBeAttached();
 });
 

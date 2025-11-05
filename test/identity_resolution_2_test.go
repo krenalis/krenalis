@@ -29,7 +29,7 @@ func TestIdentityResolution2(t *testing.T) {
 	}
 	c := meergotester.NewMeergoInstance(t)
 	c.PopulateUserSchema(false)
-	c.SetFilesystemRoot(storage.Root())
+	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
 
@@ -50,9 +50,9 @@ func TestIdentityResolution2(t *testing.T) {
 	// will be explicitly executed later.
 	c.UpdateIdentityResolution(false, []string{"email"})
 
-	sourceA := c.CreateSourceFilesystem()
-	sourceB := c.CreateSourceFilesystem()
-	sourceC := c.CreateSourceFilesystem()
+	sourceA := c.CreateSourceFileSystem()
+	sourceB := c.CreateSourceFileSystem()
+	sourceC := c.CreateSourceFileSystem()
 
 	// Create three JSON files in storage, one for each connection. Each file
 	// will contain a single user, which will be the only identity imported for

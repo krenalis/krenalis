@@ -40,12 +40,12 @@ func TestActionsCreation(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(storageDir)
+	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
 	// Create some connections that will be used by the actions.
-	srcFsID := c.CreateSourceFilesystem()
+	srcFsID := c.CreateSourceFileSystem()
 	dstFsID := c.CreateDestinationFilesystem()
 	javaScriptConnection := c.CreateJavaScriptSource("JavaScript (source)", nil)
 	postgreSQLConnection := c.CreateSourcePostgreSQL()
@@ -58,7 +58,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: srcFsID,
 			action: meergotester.ActionToSet{
-				Name: "Import users from a CSV on Filesystem",
+				Name: "Import users from a CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "identity", Type: types.Text()},
@@ -88,7 +88,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: srcFsID,
 			action: meergotester.ActionToSet{
-				Name: "Import users from CSV on Filesystem",
+				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "identity", Type: types.Text()},
@@ -119,7 +119,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: dstFsID,
 			action: meergotester.ActionToSet{
-				Name: "Export users to a CSV on Filesystem",
+				Name: "Export users to a CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
@@ -136,7 +136,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: srcFsID,
 			action: meergotester.ActionToSet{
-				Name: "Import users from CSV on Filesystem",
+				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "identity", Type: types.Text()},
@@ -166,7 +166,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: srcFsID,
 			action: meergotester.ActionToSet{
-				Name: "Import users from CSV on Filesystem",
+				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -195,7 +195,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: srcFsID,
 			action: meergotester.ActionToSet{
-				Name: "Import users from CSV on Filesystem",
+				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -223,7 +223,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: srcFsID,
 			action: meergotester.ActionToSet{
-				Name: "Import users from CSV on Filesystem",
+				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -249,7 +249,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: srcFsID,
 			action: meergotester.ActionToSet{
-				Name:                 "Import users from CSV on Filesystem",
+				Name:                 "Import users from CSV on File System",
 				Path:                 "users.csv",
 				IdentityColumn:       "email",
 				LastChangeTimeColumn: "timestamp",
@@ -265,7 +265,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: srcFsID,
 			action: meergotester.ActionToSet{
-				Name: "Import users from CSV on Filesystem",
+				Name: "Import users from CSV on File System",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},

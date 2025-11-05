@@ -53,13 +53,13 @@ services:
       MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /bin/meergo-files/transformation-functions
       MEERGO_TRANSFORMERS_LOCAL_SUDO_USER: transformeruser
 
-      # This configures the Filesystem connector to access the mounted directory
+      # This configures the File System connector to access the mounted directory
       # via Docker. If you change these settings, also change the volumes
       # settings.
       MEERGO_CONNECTOR_FILESYSTEM_ROOT: /bin/meergo-files/sample-filesystem
       MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/docker-compose/sample-filesystem
 
-    # If you change the volumes settings, also change the Filesystem env vars
+    # If you change the volumes settings, also change the File System env vars
     # settings to point to the mount point.
     volumes:
       - ./docker-compose:/bin/meergo-files

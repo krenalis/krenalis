@@ -42,7 +42,7 @@ func TestAdmin(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(fsTempDir.Root())
+	c.SetFileSystemRoot(fsTempDir.Root())
 	c.Start()
 	defer c.Stop()
 
@@ -159,7 +159,7 @@ func TestAdmin(t *testing.T) {
 		run(t, "npx", []string{"playwright", "test"}, assetsDir, fsTempDir.Root())
 	}
 
-	// The tests have been run, so the temporary directory used by Filesystem
+	// The tests have been run, so the temporary directory used by File System
 	// can be deleted.
 	fsTempDir.Remove()
 }

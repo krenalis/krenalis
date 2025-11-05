@@ -16,7 +16,7 @@ func TestPathConvert(t *testing.T) {
 		// Mutex access to 'root' is not necessary as it is essential that these
 		// tests are run non-concurrently.
 		root = "C:\\"
-		fs := &Filesystem{settings: &innerSettings{}}
+		fs := &FileSystem{settings: &innerSettings{}}
 		tests := []testconnector.AbsolutePathTest{
 			{Name: "a", Expected: "C:\\a"},
 			{Name: "a.e", Expected: "C:\\a.e"},
@@ -32,7 +32,7 @@ func TestPathConvert(t *testing.T) {
 		}
 		err := testconnector.TestAbsolutePath(fs, tests)
 		if err != nil {
-			t.Errorf("Filesystem connector: %s", err)
+			t.Errorf("File System connector: %s", err)
 		}
 	})
 
@@ -40,14 +40,14 @@ func TestPathConvert(t *testing.T) {
 		// Mutex access to 'root' is not necessary as it is essential that these
 		// tests are run non-concurrently.
 		root = "C:\\root"
-		fs := &Filesystem{settings: &innerSettings{}}
+		fs := &FileSystem{settings: &innerSettings{}}
 		tests := []testconnector.AbsolutePathTest{
 			{Name: "a", Expected: "C:\\root\\a"},
 			{Name: "/a", Expected: "C:\\root\\a"},
 		}
 		err := testconnector.TestAbsolutePath(fs, tests)
 		if err != nil {
-			t.Errorf("Filesystem connector: %s", err)
+			t.Errorf("File System connector: %s", err)
 		}
 	})
 

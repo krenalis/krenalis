@@ -158,7 +158,7 @@ const addFileSystemSource = async (page: Page): Promise<number> => {
 			const api = new (window as any).API(url, workspace) as API;
 			return await api.workspaces.createConnection(
 				{
-					name: 'Filesystem',
+					name: 'File System',
 					role: 'Source',
 					connector: 'filesystem',
 					strategy: null,
@@ -180,7 +180,7 @@ const addFileSystemDestination = async (page: Page): Promise<number> => {
 			const api = new (window as any).API(url, workspace) as API;
 			return await api.workspaces.createConnection(
 				{
-					name: 'Filesystem',
+					name: 'File System',
 					role: 'Destination',
 					connector: 'filesystem',
 					strategy: null,

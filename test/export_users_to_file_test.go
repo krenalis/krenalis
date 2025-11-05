@@ -32,7 +32,7 @@ func TestExportUsersToFile(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(storage.Root())
+	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
 
@@ -68,9 +68,9 @@ func TestExportUsersToFile(t *testing.T) {
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
-	// Create the Filesystem connection.
+	// Create the File System connection.
 	fsID := c.CreateConnection(meergotester.ConnectionToCreate{
-		Name:      "Filesystem",
+		Name:      "File System",
 		Role:      meergotester.Destination,
 		Connector: "filesystem",
 		Settings: meergotester.JSONEncodeSettings(map[string]any{
@@ -83,7 +83,7 @@ func TestExportUsersToFile(t *testing.T) {
 
 	// Create an action for the CSV for exporting the users.
 	exportUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
-		Name:    "Export users to the CSV on Filesystem",
+		Name:    "Export users to the CSV on File System",
 		Enabled: true,
 		Path:    exportedFilename,
 		InSchema: types.Object([]types.Property{
@@ -121,7 +121,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}
 
 		c.MustCall("PUT", "/api/v1/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
-			Name:    "Export users to the CSV on Filesystem",
+			Name:    "Export users to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{

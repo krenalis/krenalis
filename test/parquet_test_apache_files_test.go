@@ -34,7 +34,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 	}
 	c := meergotester.NewMeergoInstance(t)
 	c.PopulateUserSchema(false)
-	c.SetFilesystemRoot(storageDir)
+	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
@@ -130,7 +130,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		},
 	}
 
-	fs := c.CreateSourceFilesystem()
+	fs := c.CreateSourceFileSystem()
 
 	for _, test := range tests {
 

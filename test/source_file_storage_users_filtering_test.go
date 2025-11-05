@@ -25,11 +25,11 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(storageDir)
+	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
-	fs1 := c.CreateSourceFilesystem()
+	fs1 := c.CreateSourceFileSystem()
 
 	action1 := c.CreateAction(fs1, "User", meergotester.ActionToSet{
 		Name:    "CSV",

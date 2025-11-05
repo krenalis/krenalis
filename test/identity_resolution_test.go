@@ -32,12 +32,12 @@ func TestIdentityResolution(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(storage.Root())
+	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
 
-	// Create the Filesystem connection.
-	fsID := c.CreateSourceFilesystem()
+	// Create the File System connection.
+	fsID := c.CreateSourceFileSystem()
 
 	properties := map[string]bool{
 		"dummyId":      true,

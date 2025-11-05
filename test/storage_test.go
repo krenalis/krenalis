@@ -36,12 +36,12 @@ func TestStorage(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(storageDir)
+	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
 	// Create a file storage connection.
-	storage := c.CreateSourceFilesystem()
+	storage := c.CreateSourceFileSystem()
 
 	// Test the "/files/sheets" endpoint.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}

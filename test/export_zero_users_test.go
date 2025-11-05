@@ -28,7 +28,7 @@ func TestExportZeroUsers(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(storage.Root())
+	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
 
@@ -67,9 +67,9 @@ func TestExportZeroUsers(t *testing.T) {
 	// Test the export of zero users to file (CSV).
 	func() {
 
-		// Create the Filesystem connection.
+		// Create the File System connection.
 		fsID := c.CreateConnection(meergotester.ConnectionToCreate{
-			Name:      "Filesystem",
+			Name:      "File System",
 			Role:      meergotester.Destination,
 			Connector: "filesystem",
 			Settings: meergotester.JSONEncodeSettings(map[string]any{
@@ -80,9 +80,9 @@ func TestExportZeroUsers(t *testing.T) {
 		exportedFilename := "exported-users.tmp.csv"
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
-		// Create an action for the Filesystem for exporting the users.
+		// Create an action for the File System for exporting the users.
 		exportUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
-			Name:    "Export users to the CSV on Filesystem",
+			Name:    "Export users to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{

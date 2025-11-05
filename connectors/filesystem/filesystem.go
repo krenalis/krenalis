@@ -38,7 +38,7 @@ var (
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageSpec{
 		Code:       "filesystem",
-		Label:      "Filesystem",
+		Label:      "File System",
 		Categories: meergo.CategoryFileStorage,
 		AsSource: &meergo.AsFileStorageSource{
 			Documentation: meergo.ConnectorRoleDocumentation{
@@ -53,8 +53,8 @@ func init() {
 	}, New)
 }
 
-// New returns a new connector instance for file system.
-func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
+// New returns a new connector instance for File System.
+func New(env *meergo.FileStorageEnv) (*FileSystem, error) {
 
 	confMu.Lock()
 	defer confMu.Unlock()
@@ -69,7 +69,7 @@ func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
 		}
 		root = strings.TrimSpace(envVars.Get("MEERGO_CONNECTOR_FILESYSTEM_ROOT"))
 		displayedRoot = strings.TrimSpace(envVars.Get("MEERGO_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT"))
-		const errMsgPrefix = "Filesystem connector is unavailable because the MEERGO_CONNECTOR_FILESYSTEM_ROOT environment variable"
+		const errMsgPrefix = "File System connector is unavailable because the MEERGO_CONNECTOR_FILESYSTEM_ROOT environment variable"
 		if root == "" {
 			return nil, fmt.Errorf("%s is not set; please define it with the root directory to enable the connector", errMsgPrefix)
 		}
@@ -78,7 +78,7 @@ func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
 		}
 	}
 
-	c := Filesystem{env: env}
+	c := FileSystem{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
 		if err != nil {
@@ -88,7 +88,7 @@ func New(env *meergo.FileStorageEnv) (*Filesystem, error) {
 	return &c, nil
 }
 
-type Filesystem struct {
+type FileSystem struct {
 	env      *meergo.FileStorageEnv
 	settings *innerSettings
 }
@@ -98,12 +98,12 @@ type innerSettings struct {
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
-func (filesystem *Filesystem) AbsolutePath(ctx context.Context, name string) (string, error) {
+func (filesystem *FileSystem) AbsolutePath(ctx context.Context, name string) (string, error) {
 	return filesystem.absolutePath(ctx, name, true)
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
-func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+func (filesystem *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	path, _ := filesystem.absolutePath(ctx, name, false)
 	f, err := os.Open(path)
 	if err != nil {
@@ -121,7 +121,7 @@ func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadC
 }
 
 // ServeUI serves the connector's user interface.
-func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -165,7 +165,7 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 }
 
 // Write writes the data read from r into the file with the given path name.
-func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
+func (filesystem *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
 	path, _ := filesystem.absolutePath(ctx, name, false)
 	tmpPath := path + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -175,7 +175,7 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 	defer func() {
 		err := os.Remove(tmpPath)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			slog.Warn("connectors/filesystem: cannot remove temporary file created by filesystem", "err", err)
+			slog.Warn("connectors/filesystem: cannot remove temporary file created by File System", "err", err)
 			return
 		}
 	}()
@@ -206,7 +206,7 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 // visual context, where it is necessary to use the displayed path, if
 // available, or otherwise whether the returned path must be a real path on the
 // filesystem (e.g. in cases where the connector needs to access files).
-func (filesystem *Filesystem) absolutePath(ctx context.Context, name string, forDisplaying bool) (string, error) {
+func (filesystem *FileSystem) absolutePath(ctx context.Context, name string, forDisplaying bool) (string, error) {
 	originalName := name
 	name = filepath.ToSlash(name)
 	if name[0] == '/' {
@@ -230,7 +230,7 @@ func (filesystem *Filesystem) absolutePath(ctx context.Context, name string, for
 }
 
 // saveSettings saves the settings.
-func (filesystem *Filesystem) saveSettings(ctx context.Context, settings json.Value) error {
+func (filesystem *FileSystem) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {

@@ -177,7 +177,7 @@ func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
 
 func (c *Meergo) CreateDestinationFilesystem() int {
 	return c.CreateConnection(ConnectionToCreate{
-		Name:      "Filesystem",
+		Name:      "File System",
 		Role:      Destination,
 		Connector: "filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
@@ -267,9 +267,9 @@ func (c *Meergo) CreateJavaScriptSource(name string, linkedConnections []int) in
 	})
 }
 
-func (c *Meergo) CreateSourceFilesystem() int {
+func (c *Meergo) CreateSourceFileSystem() int {
 	return c.CreateConnection(ConnectionToCreate{
-		Name:      "Filesystem",
+		Name:      "File System",
 		Role:      Source,
 		Connector: "filesystem",
 		Settings: JSONEncodeSettings(map[string]any{

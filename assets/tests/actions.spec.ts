@@ -701,7 +701,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
-test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => {
+test(`Add "Import users" action on CSV file on File System`, async ({ page }) => {
 	const connectionID = await addFileSystemSource(page);
 
 	const tempDir = process.env.MEERGO_TEST_FS_TEMP_DIR;
@@ -876,7 +876,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 	await expect(page.locator('.connection-actions__grid')).toBeAttached();
 });
 
-test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => {
+test(`Add "Export users" action on CSV file on File System`, async ({ page }) => {
 	const connectionID = await addFileSystemDestination(page);
 
 	const tempDir = process.env.MEERGO_TEST_FS_TEMP_DIR;

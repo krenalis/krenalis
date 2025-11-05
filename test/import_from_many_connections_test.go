@@ -39,7 +39,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.SetFilesystemRoot(storageDir)
+	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
@@ -86,9 +86,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var fs, csvAction int
 	t.Log("importing from CSV file...")
 	{
-		fs = c.CreateSourceFilesystem()
+		fs = c.CreateSourceFileSystem()
 		csvAction = c.CreateAction(fs, "User", meergotester.ActionToSet{
-			Name:    "Import users from CSV on Filesystem",
+			Name:    "Import users from CSV on File System",
 			Enabled: true,
 			Path:    "users_genders.csv",
 			InSchema: types.Object([]types.Property{

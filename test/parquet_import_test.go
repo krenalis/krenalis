@@ -33,7 +33,7 @@ func TestParquetImport(t *testing.T) {
 	}
 	c := meergotester.NewMeergoInstance(t)
 	c.PopulateUserSchema(false)
-	c.SetFilesystemRoot(storageDir)
+	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
@@ -51,8 +51,8 @@ func TestParquetImport(t *testing.T) {
 	})
 	c.AlterUserSchema(types.Object(userSchemaProperties), nil, nil)
 
-	// Create a Filesystem source connection, with an action that imports from the Parquet file.
-	fs := c.CreateSourceFilesystem()
+	// Create a File System source connection, with an action that imports from the Parquet file.
+	fs := c.CreateSourceFileSystem()
 	action1 := c.CreateAction(fs, "User", meergotester.ActionToSet{
 		Name:    "Parquet",
 		Enabled: true,
