@@ -139,7 +139,7 @@ Fixes #2031
   If you need to include third-party code, it must have been distributed by its author under an MIT, BSD, or Apache 2.0 license.
   * For a few lines of code, you may include them inline, but clearly mark them and cite the original author and license.
   * For larger portions, place the code in a separate file with the author and license explicitly stated in the file header.
-* Run `"go run commit/commit.go"` before opening the pull request.
+* Run `go run commit/commit.go` before opening the pull request.
 
 
 #### After opening a pull request
