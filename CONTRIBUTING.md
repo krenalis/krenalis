@@ -124,8 +124,6 @@ Fixes #2031
 #### Before opening a pull request
 
 * Open a pull request only if there's an issue and agreement, except for minor fixes.
-* AI-assisted code\
-  You must be the author of the code. If you used an AI tool to assist you, you are expected to have fully reviewed and deeply understood the code as if you had written it yourself. You must be able to personally address any feedback or requested changes from reviewers.
 * Licensing
 
   | Area                         | License             |
@@ -146,7 +144,5 @@ Fixes #2031
 
 #### After opening a pull request
 
-* An initial review may be performed by an AI system. You are free to accept, decline, or ignore any AI suggestion.
-* A human reviewer will usually start reviewing your pull request within two business days.
-* A reviewer will always perform a full review of the code, regardless of any prior AI review.
+* A reviewer will usually start reviewing your pull request within two business days.
 * Once all requested changes have been addressed, the reviewer will merge your pull request.
