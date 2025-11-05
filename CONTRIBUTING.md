@@ -22,10 +22,6 @@ The following is a set of guidelines for contributing to Meergo and its reposito
 
 By participating, you are expected to adhere to the [Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [conduct@meergo.com](mailto:conduct@meergo.com).
 
-## Asking questions
-
-If you have a question **about using or developing** Meergo, join our [Slack Community](https://www.meergo.com/slack).
-
 ## Meergo repositories and packages
 
 Meergo is an **open development project** and is **freely available**. Connectors, warehouse drivers, and SDKs are MIT-licensed (open source). These are the areas where we expect most community contributions.
