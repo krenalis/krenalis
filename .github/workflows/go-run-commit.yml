@@ -39,7 +39,7 @@ jobs:
           pip install pandas
           pip install pyarrow
 
-      - name: go run ./commit --no-go-test # TODO: discard this change
+      - name: go run ./commit
         env:
           MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET: ${{ secrets.MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET }}
           MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
@@ -48,12 +48,7 @@ jobs:
           MEERGO_TEST_MIXPANEL_PROJECT_ID: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_ID }}
           MEERGO_TEST_MIXPANEL_PROJECT_TOKEN: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_TOKEN }}
           MEERGO_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.MEERGO_TEST_MIXPANEL_DATA_RESIDENCY }}
-        run: go run ./commit --no-go-test # TODO: discard this change
-
-      - name: Create a file in the repository # TODO: discard this change
-        run: |
-          touch "file.txt"
-          git mv application_apis.go application_apis_moved.go
+        run: go run ./commit
 
       - name: Check that the repository is clean
         run: ./commit/repo_is_clean.bash
