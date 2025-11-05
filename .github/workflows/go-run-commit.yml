@@ -39,7 +39,7 @@ jobs:
           pip install pandas
           pip install pyarrow
 
-      - name: go run ./commit
+      - name: go run ./commit --no-go-test # TODO: discard this change
         env:
           MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET: ${{ secrets.MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET }}
           MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
