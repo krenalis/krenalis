@@ -164,6 +164,16 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 						</div>
 					)}
 					<span className='user-drawer__muid'>
+						<SlTooltip
+							content='Meergo User ID'
+							onSlHide={(e) => {
+								// Prevent the event from bubbling up and
+								// causing the drawer to close.
+								e.stopPropagation();
+							}}
+						>
+							<SlIcon name='info-circle-fill' />
+						</SlTooltip>
 						MUID: <span className='user-drawer__muid-value'>{selectedUser}</span>
 					</span>
 				</div>

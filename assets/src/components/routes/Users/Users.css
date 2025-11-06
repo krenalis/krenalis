@@ -213,6 +213,22 @@
 	font-size: 14px;
 }
 
+.user-drawer__muid sl-icon {
+	position: relative;
+	top: 1px;
+	color: var(--sl-color-neutral-500);
+}
+
+.user-drawer__muid sl-tooltip::part(body) {
+	background-color: var(--sl-color-primary-500);
+	padding: 12px;
+	font-size: 13px;
+}
+
+.user-drawer__muid sl-tooltip::part(base__arrow) {
+	background-color: var(--sl-color-primary-500);
+}
+
 .user-drawer__customize {
 	font-size: 13px;
 	font-weight: 600;
