@@ -120,8 +120,16 @@ const ActionHeader = () => {
 				</div>
 				{!isNameEditable && <div className='action__header-description'>{actionType.description}</div>}
 			</div>
-			<ActionIssues issues={issues} type={connection.connector.type} role={connection.role} show={showIssues} />
-
+			{issues != null && issues.length > 0 ? (
+				<ActionIssues
+					issues={issues}
+					type={connection.connector.type}
+					role={connection.role}
+					show={showIssues}
+				/>
+			) : (
+				<div className='action__header-issues-placeholder' /> // Render an empty div to maintain the grid layout
+			)}
 			<div className='action__header-buttons'>
 				<div
 					className={`action__header-buttons-save${isFullscreenTransformationOpen ? ' action__header-buttons-save--hidden' : ''}`}

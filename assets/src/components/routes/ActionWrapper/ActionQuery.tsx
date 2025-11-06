@@ -201,7 +201,7 @@ const ActionQuery = () => {
 			>
 				<div className='action__query-preview-drawer-label' slot='label'>
 					<span>Query Preview</span>
-					{showPreview && (
+					{showPreview && queryPreviewIssues != null && queryPreviewIssues.length > 0 && (
 						<ActionIssues
 							issues={queryPreviewIssues}
 							type={connection.connector.type}

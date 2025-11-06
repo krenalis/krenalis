@@ -13,10 +13,6 @@ interface ActionIssuesProps {
 }
 
 const ActionIssues = ({ issues, type, role, show = true, slot }: ActionIssuesProps) => {
-	if (issues == null) {
-		return null;
-	}
-
 	let count = issues.length;
 
 	let labelTarget = '';

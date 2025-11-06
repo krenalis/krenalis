@@ -878,7 +878,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			>
 				<div className='action__file-preview-drawer-label' slot='label'>
 					<span>File Preview</span>
-					{showFilePreviewContent && (
+					{showFilePreviewContent && filePreviewIssues != null && filePreviewIssues.length > 0 && (
 						<ActionIssues
 							issues={filePreviewIssues}
 							type={connection.connector.type}
