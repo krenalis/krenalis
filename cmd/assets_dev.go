@@ -50,7 +50,7 @@ func init() {
 	}
 }
 
-// assetsHandler implements a http.Handler to serve Admin assets.
+// assetsHandler implements an http.Handler to serve Admin assets.
 // It monitors the JavaScript and CSS files and creates a bundle for JavaScript
 // and a separate bundle for CSS. It also serves the bundled files compressed
 // with Brotli if the client supports it.
@@ -86,7 +86,7 @@ func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 	}
 
 	// Build the Admin.
-	entryPoint := filepath.Join(moduleRoot, "assets", "src", "index.jsx")
+	entryPoint := filepath.Join(moduleRoot, "admin", "src", "index.jsx")
 	external := []string{"monaco-editor"}
 	h.watchers.index, err = watchAndBuild(entryPoint, outDir, external)
 	if err != nil {
@@ -94,7 +94,7 @@ func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 	}
 
 	// Build Monaco editor and its workers.
-	entryPoint = filepath.Join(moduleRoot, "assets", "node_modules", "monaco-editor", "esm", "vs", "editor", "editor.main.js")
+	entryPoint = filepath.Join(moduleRoot, "admin", "node_modules", "monaco-editor", "esm", "vs", "editor", "editor.main.js")
 	monacoOutDir := filepath.Join(outDir, "monaco")
 	external = []string{
 		"vs/language/json/json.worker.js",
@@ -107,11 +107,11 @@ func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot bundle Monaco editor: %w", err)
 	}
-	h.watchers.monaco.tsWorker, err = watchAndBuild(filepath.Join(moduleRoot, "assets", "node_modules", "monaco-editor", "esm", "vs", "language", "typescript", "ts.worker.js"), monacoOutDir, nil)
+	h.watchers.monaco.tsWorker, err = watchAndBuild(filepath.Join(moduleRoot, "admin", "node_modules", "monaco-editor", "esm", "vs", "language", "typescript", "ts.worker.js"), monacoOutDir, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot bundle Monaco's `ts.worker.js` worker: %w", err)
 	}
-	h.watchers.monaco.editorWorker, err = watchAndBuild(filepath.Join(moduleRoot, "assets", "node_modules", "monaco-editor", "esm", "vs", "editor", "editor.worker.js"), monacoOutDir, nil)
+	h.watchers.monaco.editorWorker, err = watchAndBuild(filepath.Join(moduleRoot, "admin", "node_modules", "monaco-editor", "esm", "vs", "editor", "editor.worker.js"), monacoOutDir, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot bundle Monaco's `editor.worker.js` worker: %w", err)
 	}
@@ -160,7 +160,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Serve Shoelace icons.
 		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/shoelace/dist/assets/icons/"); ok {
 			w.Header().Set("Content-Type", "image/svg+xml")
-			http.ServeFile(w, r, filepath.Join(moduleRoot, "assets/node_modules", shoelaceIconsPath, icon))
+			http.ServeFile(w, r, filepath.Join(moduleRoot, "admin/node_modules", shoelaceIconsPath, icon))
 			return
 		}
 		// Serve Monaco editor.
@@ -241,7 +241,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// The hash refers to the inline import map in the index.html file.
 	w.Header().Set("Content-Security-Policy", "script-src 'self' 'sha256-Eggv/sxfau5R7DCyaPw6OwmcQOlrO9oX7GhT3aozILU='")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	index := filepath.Join(moduleRoot, "assets", "public", "index.html")
+	index := filepath.Join(moduleRoot, "admin", "public", "index.html")
 	http.ServeFile(w, r, index)
 }
 

@@ -1,4 +1,4 @@
-//go:generate go run github.com/meergo/meergo/assets
+//go:generate go run github.com/meergo/meergo/admin
 
 // To compile:
 //
@@ -16,7 +16,7 @@
 //     import _ "github.com/example/warehouse"
 //  5. Initialize a Go module: go mod init meergo
 //  6. Tidy the module: go mod tidy
-//  7. Generate the assets: go generate
+//  7. Generate the Admin console assets: go generate
 //  8. Build: go build
 //
 // Note: You can provide the '-trimpath' option to the 'go build' command to
