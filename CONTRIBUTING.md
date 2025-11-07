@@ -7,11 +7,12 @@ The following is a set of guidelines for contributing to Meergo and its reposito
 #### Table Of Contents
 
 - [Code of Conduct](#code-of-conduct)
-- [Asking questions](#asking-questions)
 - [Meergo repositories and packages](#meergo-repositories-and-packages)
   - [SDKs for event collection](#sdks-for-event-collection)
 - [Reporting bugs](#reporting-bugs)
+- [Report security issues](#report-security-issues)
 - [Contributing to the source code](#contributing-to-the-source-code)
+  - [Build a new connector](#build-a-new-connector)
   - [Development setup](#development-setup)
   - [Pull Requests](#pull-requests)
     - [Good commit messages](#good-commit-messages)
