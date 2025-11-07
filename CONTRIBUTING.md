@@ -48,7 +48,7 @@ Issues for the various SDKs are tracked in the main Meergo repository, using a s
 | Python     | [analytics-python](https://github.com/meergo/analytics-python)         | [python-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Apython-sdk)         |
 | .NET       | [analytics-dotnet](https://github.com/meergo/analytics-dotnet)         | [dotnet-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Adotnet-sdk)         |
 | Java       | [analytics-java](https://github.com/meergo/analytics-java)             | [java-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Ajava-sdk)             |
-| Node.js    | [analytics-node](https://github.com/meergo/analytics-java)             | [node-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Anode-sdk)             |
+| Node.js    | [analytics-nodejs](https://github.com/meergo/analytics-nodejs)         | [nodejs-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Anodejs-sdk)         |
 | Go         | [analytics-go](https://github.com/meergo/analytics-go)                 | [go-sdk](https://github.com/meergo/meergo/issues?q=state%3Aopen%20label%3Ago-sdk)                 |
 
 ## Reporting bugs
