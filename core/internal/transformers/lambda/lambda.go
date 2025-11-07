@@ -354,7 +354,7 @@ def _handler(event, context):
 	function_globals = {}
 
 	try:
-		exec(_SOURCE, globals=function_globals)
+		exec(_SOURCE, function_globals)
 	except SyntaxError as ex:
 		error = f"SyntaxError: {ex.msg} (line {ex.lineno})"
 		return json.dumps({"error": error}, separators=(",", ":"), default=str)
@@ -376,7 +376,7 @@ def _handler(event, context):
 	}
 
 	records = []
-	for e in eval(event, globals=eval_globals):
+	for e in eval(event, eval_globals):
 		try:
 			value = transform(e)
 			_Norm.normalize(value)

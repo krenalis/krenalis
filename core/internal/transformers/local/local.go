@@ -225,7 +225,7 @@ def main():
 	function_globals = {}
 
 	try:
-		exec(_SOURCE, globals=function_globals)
+		exec(_SOURCE, function_globals)
 	except SyntaxError as ex:
 		error = f"SyntaxError: {ex.msg} (line {ex.lineno})"
 		print("\n----" + boundary + "\n")
@@ -253,7 +253,7 @@ def main():
 	}
 
 	records = []
-	for event in eval(sys.argv[1], globals=eval_globals):
+	for event in eval(sys.argv[1], eval_globals):
 		try:
 			value = transform(event)
 			_Norm.normalize(value)
