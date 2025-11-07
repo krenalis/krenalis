@@ -364,7 +364,7 @@ const splitPropertyAndPath = (propertyName: string, flatSchema: TransformedMappi
 		} else {
 			b = `${base}.${s}`;
 		}
-		if (flatSchema[b] != null) {
+		if (flatSchema?.[b] != null) {
 			base = b;
 		} else {
 			break;
@@ -380,7 +380,7 @@ const splitPropertyAndPath = (propertyName: string, flatSchema: TransformedMappi
 		}
 	}
 
-	const property = flatSchema[base];
+	const property = flatSchema?.[base];
 	const isJSON = property?.type === 'json';
 	if (!isJSON && path !== '') {
 		// handle cases where the user has typed an invalid subproperty and for

@@ -258,7 +258,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		for (const [i, condition] of action.filter.conditions.entries()) {
 			const [base, path] = splitPropertyAndPath(condition.property, flatInputSchema);
 
-			let property = flatInputSchema[base];
+			let property = flatInputSchema?.[base];
 			const isUnary = isUnaryOperator(condition.operator);
 			const isJSON = property?.type === 'json';
 			const isBetween = isBetweenOperator(condition.operator);
