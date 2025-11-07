@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/meergo/meergo/bufferpool"
+	"github.com/meergo/meergo/core/bufferpool"
 	"github.com/meergo/meergo/core/json"
 )
 
