@@ -1159,7 +1159,7 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 	// returns with a *meergo.OperationError, or (3) the context is cancelled.
 	var alterSchemaErr *meergo.OperationError
 	bo := backoff.New(200)
-	bo.SetCap(time.Second)
+	bo.SetCap(5 * time.Minute)
 	for bo.Next(ctx) {
 		err := store.AlterUserSchema(ctx, opID, schema, operations)
 		// In case of success, go on and send an EndAlterUserSchema
@@ -1179,7 +1179,9 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 			break
 		}
 		// In case of unknown error, try again.
-		slog.Error("alter schema on warehouse returned an unknown error, trying again the operation", "err", err)
+		slog.Error("alter schema on warehouse returned an unknown error, "+
+			"so the operation will be retried after the indicated timeout or the next time you restart Meergo",
+			"err", err, "timeout", bo.WaitTime())
 		continue
 	}
 	nEnd := state.EndAlterUserSchema{
@@ -1294,7 +1296,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	// (2) returns with a *meergo.OperationError, or (3) the context is
 	// cancelled.
 	bo := backoff.New(200)
-	bo.SetCap(time.Second)
+	bo.SetCap(5 * time.Minute)
 	for bo.Next(ctx) {
 		err := store.ResolveIdentities(ctx, opID)
 		// In case of success, go on and send an EndIdentityResolution
@@ -1313,7 +1315,9 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 			break
 		}
 		// In case of unknown error, try again.
-		slog.Error("identity resolution on warehouse returned an unknown error, trying again the operation", "err", err)
+		slog.Error("identity resolution on warehouse returned an unknown error, "+
+			"so the operation will be retried after the indicated timeout or the next time you restart Meergo",
+			"err", err, "timeout", bo.WaitTime())
 		continue
 	}
 	nEnd := state.EndIdentityResolution{
