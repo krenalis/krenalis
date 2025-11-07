@@ -1,4 +1,4 @@
-export const INSTALL_COMMAND = 'pip3 install meergo-analytics-python';
+export const INSTALL_COMMAND = 'pip3 install git+https://github.com/meergo/analytics-python';
 
 export const SNIPPET = `import meergo.analytics as analytics
 
