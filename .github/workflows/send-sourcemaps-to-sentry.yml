@@ -12,7 +12,7 @@ on:
     # process.
     paths:
       - "go.mod"
-      - "assets/**"
+      - "admin/**"
       - ".github/workflows/**"
 
 jobs:

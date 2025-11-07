@@ -10,7 +10,7 @@ rules:
 4. Defaults to Elastic License 2.0 (ELv2)
 
 Directories containing third-party software, such as 'vendor/' and
-'assets/node_modules_vendor/', are excluded from these rules. Software in those
+'admin/node_modules_vendor/', are excluded from these rules. Software in those
 directories retains its original license terms as distributed by their
 respective authors.
 
