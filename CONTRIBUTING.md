@@ -29,7 +29,7 @@ Meergo is an **open development project** and is **freely available**. Connector
 Here's a list of Meergo components:
 
 - [meergo](https://github.com/meergo/meergo) - Meergo monorepo (Multiple licenses)
-- [meergo/assets](https://github.com/meergo/meergo/tree/main/assets) - Meergo Admin console (Elastic License v2)
+- [meergo/admin](https://github.com/meergo/meergo/tree/main/admin) - Meergo Admin console (Elastic License v2)
 - [meergo/core](https://github.com/meergo/meergo/tree/main/core) - Meergo Core (Elastic License v2)
 - [meergo/connectors](https://github.com/meergo/meergo/tree/main/connectors) - Meergo connectors (MIT)
 - [meergo/warehouses](https://github.com/meergo/meergo/tree/main/warehouses) - Meergo warehouse drivers (MIT)

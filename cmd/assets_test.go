@@ -23,7 +23,7 @@ func TestAssetsHandler_Index(t *testing.T) {
 	html := "<html>hello</html>"
 	fsys := newMapFS(map[string]string{"index.html.br": html})
 
-	a, err := newAssets(fsys)
+	a, err := newAdmin(fsys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestAssetsHandler_JS(t *testing.T) {
 
 	js := "console.log('x')"
 	fsys := newMapFS(map[string]string{"index.js.br": js})
-	a, err := newAssets(fsys)
+	a, err := newAdmin(fsys)
 	if err != nil {
 		t.Fatal(err)
 	}

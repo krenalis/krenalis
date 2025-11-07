@@ -26,7 +26,7 @@ import (
 const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
 
 // Path to the file containing the list of Shoelace icons used in the Admin.
-const shoelaceIconsListPath = "assets/src/shoelace-icons.txt"
+const shoelaceIconsListPath = "admin/src/shoelace-icons.txt"
 
 func main() {
 	err := makeVendor()
@@ -42,7 +42,7 @@ func makeVendor() error {
 		return err
 	}
 
-	nodeModulesDir := filepath.Join(root, "assets", "node_modules") + string(os.PathSeparator)
+	nodeModulesDir := filepath.Join(root, "admin", "node_modules") + string(os.PathSeparator)
 
 	// Create the out directory used by esbuild.
 	outDir, err := os.MkdirTemp("", "meergo-admin-make-vendor-*")
@@ -114,19 +114,19 @@ func makeVendor() error {
 	}
 
 	// Run esbuild for the Admin.
-	entryPoint := filepath.Join(root, "assets", "src", "index.jsx")
+	entryPoint := filepath.Join(root, "admin", "src", "index.jsx")
 	err = build(outDir, entryPoint, plugin)
 	if err != nil {
 		return err
 	}
 
 	// Run esbuild for Monaco workers.
-	tsWorker := filepath.Join(root, "assets", "node_modules", "monaco-editor", "esm", "vs", "language", "typescript", "ts.worker.js")
+	tsWorker := filepath.Join(root, "admin", "node_modules", "monaco-editor", "esm", "vs", "language", "typescript", "ts.worker.js")
 	err = build(outDir, tsWorker, plugin)
 	if err != nil {
 		return err
 	}
-	editorWorker := filepath.Join(root, "assets", "node_modules", "monaco-editor", "esm", "vs", "editor", "editor.worker.js")
+	editorWorker := filepath.Join(root, "admin", "node_modules", "monaco-editor", "esm", "vs", "editor", "editor.worker.js")
 	err = build(outDir, editorWorker, plugin)
 	if err != nil {
 		return err
@@ -134,14 +134,14 @@ func makeVendor() error {
 
 	// Copy the resolved files from the "node_modules" directory to "node_modules_vendor".
 	paths := resolve.ResolvedPaths()
-	err = os.RemoveAll("./assets/node_modules_vendor")
+	err = os.RemoveAll("./admin/node_modules_vendor")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("cannot remove the current 'assets/node_modules_vendor' directory: %s", err)
+		return fmt.Errorf("cannot remove the current 'admin/node_modules_vendor' directory: %s", err)
 	}
 	packages := map[string]struct{}{}
 	for _, name := range paths {
-		src := filepath.Join("assets/node_modules", name)
-		dst := filepath.Join("assets/node_modules_vendor", name)
+		src := filepath.Join("admin/node_modules", name)
+		dst := filepath.Join("admin/node_modules_vendor", name)
 		err := os.MkdirAll(filepath.Dir(dst), 0755)
 		if err != nil {
 			return err
@@ -168,11 +168,11 @@ func makeVendor() error {
 	}
 
 	// Copy the Monaco workers.
-	err = copyFile(filepath.Clean("assets/node_modules_vendor/monaco-editor/esm/vs/language/typescript/ts.worker.js"), tsWorker)
+	err = copyFile(filepath.Clean("admin/node_modules_vendor/monaco-editor/esm/vs/language/typescript/ts.worker.js"), tsWorker)
 	if err != nil {
 		return err
 	}
-	err = copyFile(filepath.Clean("assets/node_modules_vendor/monaco-editor/esm/vs/editor/editor.worker.js"), editorWorker)
+	err = copyFile(filepath.Clean("admin/node_modules_vendor/monaco-editor/esm/vs/editor/editor.worker.js"), editorWorker)
 	if err != nil {
 		return err
 	}
@@ -182,8 +182,8 @@ func makeVendor() error {
 	if err != nil {
 		return fmt.Errorf("cannot find Shoelace icons: %s", err)
 	}
-	shoelaceIconsSrc := filepath.Join("assets/node_modules", shoelaceIconsPath)
-	shoelaceIconsDst := filepath.Join("assets/node_modules_vendor", shoelaceIconsPath)
+	shoelaceIconsSrc := filepath.Join("admin/node_modules", shoelaceIconsPath)
+	shoelaceIconsDst := filepath.Join("admin/node_modules_vendor", shoelaceIconsPath)
 	err = os.MkdirAll(shoelaceIconsDst, 0755)
 	if err != nil {
 		return fmt.Errorf("cannot create directory %q: %s", shoelaceIconsDst, err)
@@ -197,15 +197,15 @@ func makeVendor() error {
 
 	// Copy 'package.json' and 'LICENSE' files.
 	for dir := range packages {
-		src := filepath.Join("assets/node_modules", dir, "package.json")
-		dst := filepath.Join("assets/node_modules_vendor", dir, "package.json")
+		src := filepath.Join("admin/node_modules", dir, "package.json")
+		dst := filepath.Join("admin/node_modules_vendor", dir, "package.json")
 		err = copyPackageFile(dst, src)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 		for _, license := range []string{"LICENSE", "license", "License"} {
-			src = filepath.Join("assets/node_modules", dir, license)
-			dst = filepath.Join("assets/node_modules_vendor", dir, strings.ToUpper(license))
+			src = filepath.Join("admin/node_modules", dir, license)
+			dst = filepath.Join("admin/node_modules_vendor", dir, strings.ToUpper(license))
 			err = copyFile(dst, src)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
@@ -215,7 +215,7 @@ func makeVendor() error {
 
 	// Save the 'resolve.json' file.
 	b, _ := resolve.MarshalJSON()
-	err = os.WriteFile("assets/node_modules_vendor/resolve.json", b, 0644)
+	err = os.WriteFile("admin/node_modules_vendor/resolve.json", b, 0644)
 	if err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func build(outDir, entryPoint string, plugin api.Plugin) error {
 		Write: true,
 	})
 	if result.Errors != nil {
-		msg := "cannot generate Admin console assets when making vendor:"
+		msg := "cannot generate Admin assets when making vendor:"
 		for _, err := range result.Errors {
 			if len(result.Errors) == 1 {
 				msg += " "
@@ -315,7 +315,7 @@ func build(outDir, entryPoint string, plugin api.Plugin) error {
 		return errors.New(msg)
 	}
 	if result.Warnings != nil {
-		msg := "cannot generate admin assets when making vendor:"
+		msg := "cannot generate Admin's assets when making vendor:"
 		for _, err := range result.Warnings {
 			if len(result.Warnings) == 1 {
 				msg += " "

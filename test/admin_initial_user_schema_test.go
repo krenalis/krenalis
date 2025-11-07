@@ -27,7 +27,7 @@ func TestAdminInitialUserSchema(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	f, err := os.Open(filepath.Join("..", "assets/src/components/routes/WorkspaceCreate/InitialSchema.json"))
+	f, err := os.Open(filepath.Join("..", "admin/src/components/routes/WorkspaceCreate/InitialSchema.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

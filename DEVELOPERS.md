@@ -151,7 +151,7 @@ The tests inside `/test/` are already configured by default when the repository 
 ### 1. Install React and other dependencies
 
 ```
-cd assets
+cd admin
 npm ci
 ```
 

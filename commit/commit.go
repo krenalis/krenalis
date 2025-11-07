@@ -96,13 +96,13 @@ func main() {
 	// Update the Go vendor.
 	NewCmd("go", "mod", "vendor").InDir(repo).Run()
 
-	// Run checks and do operations on the Admin assets.
-	fmt.Println("Run checks and do operations on the Admin assets")
-	NewCmd("npm", "ci").InDir(repo, "assets").Run()
-	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run()
-	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run()
-	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run()
-	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run()
+	// Run checks and do operations on the Admin.
+	fmt.Println("Run checks and do operations on the Admin")
+	NewCmd("npm", "ci").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "make-vendor").InDir(repo, "admin").Run()
 
 	// Validate the Docker Compose file 'compose.yaml'.
 	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()

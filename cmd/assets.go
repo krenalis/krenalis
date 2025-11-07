@@ -9,25 +9,25 @@ import (
 	"net/http"
 )
 
-type assets struct {
-	handler *assetsHandler
+type admin struct {
+	assets *assetsHandler
 }
 
-func newAssets(assetsFs fs.FS) (*assets, error) {
-	handler, err := newAssetsHandler(assetsFs)
+func newAdmin(assetsFs fs.FS) (*admin, error) {
+	assets, err := newAssetsHandler(assetsFs)
 	if err != nil {
 		return nil, err
 	}
-	a := &assets{
-		handler: handler,
+	admin := &admin{
+		assets: assets,
 	}
-	return a, nil
+	return admin, nil
 }
 
-func (a *assets) Close() {
-	a.handler.Close()
+func (a *admin) Close() {
+	a.assets.Close()
 }
 
-func (a *assets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.handler.ServeHTTP(w, r)
+func (a *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.assets.ServeHTTP(w, r)
 }

@@ -127,11 +127,11 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	apisServer := newAPIsServer(core, runsOnHTTPS, settings.JavaScriptSDKURL, settings.HTTP.ExternalURL, settings.HTTP.ExternalEventURL, settings.ExternalAssetsURLs,
 		settings.MemberEmailVerificationRequired, settings.SentryTelemetryLevel, sentryErrorTunnel)
 
-	assets, err := newAssets(assetsFS)
+	admin, err := newAdmin(assetsFS)
 	if err != nil {
 		return err
 	}
-	defer assets.Close()
+	defer admin.Close()
 
 	// Instantiate a new MCP (Model Context Protocol) server.
 	mcpServer := mcp.NewMCPServer(core)
@@ -189,7 +189,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		//	core.ServeWebhook(w, r)
 		//	return
 		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
-			assets.ServeHTTP(w, r)
+			admin.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/metrics":
 			promhttp.Handler().ServeHTTP(w, r)

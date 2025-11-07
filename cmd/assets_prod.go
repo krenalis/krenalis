@@ -17,7 +17,7 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
-// assetsHandler implements a http.Handler to serve the Admin assets. It serves
+// assetsHandler implements an http.Handler to serve the Admin assets. It serves
 // bundle files that are embedded in the executable, compressed with Brotli if
 // the client supports it.
 type assetsHandler struct {

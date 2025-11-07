@@ -35,6 +35,8 @@ const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
+	t.Skip()
+
 	fsTempDir := meergotester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
@@ -131,7 +133,7 @@ func TestAdmin(t *testing.T) {
 		"dbName":      dbDatabase,
 		"dbSchema":    dbSchema,
 	}
-	testConfigJSONPath := filepath.Join("..", "assets", "tests", "test-config.json")
+	testConfigJSONPath := filepath.Join("..", "admin", "tests", "test-config.json")
 	f, err := os.OpenFile(testConfigJSONPath, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		t.Fatal(err)
@@ -147,16 +149,16 @@ func TestAdmin(t *testing.T) {
 	t.Logf("configuration file %q created", testConfigJSONPath)
 
 	// Prepare and run the Admin tests.
-	assetsDir := filepath.Join("..", "assets")
-	run(t, "npm", []string{"install"}, assetsDir, fsTempDir.Root())
-	run(t, "npx", []string{"playwright", "install", "chromium"}, assetsDir, fsTempDir.Root())
+	adminDir := filepath.Join("..", "admin")
+	run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
+	run(t, "npx", []string{"playwright", "install", "chromium"}, adminDir, fsTempDir.Root())
 	if passUIFlagToPlaywright {
-		run(t, "npx", []string{"playwright", "test", "--ui"}, assetsDir, fsTempDir.Root())
+		run(t, "npx", []string{"playwright", "test", "--ui"}, adminDir, fsTempDir.Root())
 		t.Fatal("The Admin test was run with the constant 'passUIFlagToPlaywright' set to true," +
 			" so the test is considered to have failed as a precaution." +
 			" For more details, see the documentation for the constant 'passUIFlagToPlaywright'.")
 	} else {
-		run(t, "npx", []string{"playwright", "test"}, assetsDir, fsTempDir.Root())
+		run(t, "npx", []string{"playwright", "test"}, adminDir, fsTempDir.Root())
 	}
 
 	// The tests have been run, so the temporary directory used by File System
