@@ -35,8 +35,6 @@ const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
-	t.Skip()
-
 	fsTempDir := meergotester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
