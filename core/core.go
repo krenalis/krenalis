@@ -1162,23 +1162,25 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		err := store.AlterUserSchema(ctx, opID, schema, operations)
+		// In case of success, go on and send an EndAlterUserSchema
+		// notification.
 		if err == nil {
-			// Success.
 			break
-		} else if ctx.Err() != nil {
-			// The context has expired, so just return.
+		}
+		// If the context has expired, just return.
+		if ctx.Err() != nil {
 			return
-		} else if err2, ok := err.(*meergo.OperationError); ok {
+		}
+		// In case of OperationError log it, then go on and send an
+		// EndAlterUserSchema notification.
+		if err2, ok := err.(*meergo.OperationError); ok {
 			slog.Error("alter schema ended with an error", "err", err2)
 			alterSchemaErr = err2
-			// Break the loop and send the 'EndAlterUserSchema' notification
-			// with the error.
 			break
-		} else {
-			// Unknown error: try again.
-			slog.Error("alter schema on warehouse returned an unknown error, trying again the operation", "err", err)
-			continue
 		}
+		// In case of unknown error, try again.
+		slog.Error("alter schema on warehouse returned an unknown error, trying again the operation", "err", err)
+		continue
 	}
 	nEnd := state.EndAlterUserSchema{
 		Workspace: workspace,
@@ -1295,21 +1297,24 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		err := store.ResolveIdentities(ctx, opID)
+		// In case of success, go on and send an EndIdentityResolution
+		// notification.
 		if err == nil {
-			// Success.
 			break
-		} else if ctx.Err() != nil {
-			// The context has expired, so just return.
-			return
-		} else if err2, ok := err.(*meergo.OperationError); ok {
-			slog.Error("identity resolution ended with an error", "err", err2)
-			// Break the loop and send the 'EndIdentityResolution' notification.
-			break
-		} else {
-			// Unknown error: try again.
-			slog.Error("identity resolution on warehouse returned an unknown error, trying again the operation", "err", err)
-			continue
 		}
+		// If the context has expired, just return.
+		if ctx.Err() != nil {
+			return
+		}
+		// In case of OperationError log it, then go on and send an
+		// EndIdentityResolution notification.
+		if err2, ok := err.(*meergo.OperationError); ok {
+			slog.Error("identity resolution ended with an error", "err", err2)
+			break
+		}
+		// In case of unknown error, try again.
+		slog.Error("identity resolution on warehouse returned an unknown error, trying again the operation", "err", err)
+		continue
 	}
 	nEnd := state.EndIdentityResolution{
 		Workspace: workspace,
