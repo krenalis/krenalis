@@ -1,6 +1,6 @@
-# Assets tests
+# Admin tests
 
-This directory contains the tests on the Admin console assets.
+This directory contains the tests on the Admin console.
 
 ## How to run
 
