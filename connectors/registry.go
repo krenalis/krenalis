@@ -16,34 +16,31 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-var (
-	registryMu sync.RWMutex
-	registry   = struct {
-		apis           map[string]APISpec
-		databases      map[string]DatabaseSpec
-		files          map[string]FileSpec
-		messageBrokers map[string]MessageBrokerSpec
-		sdks           map[string]SDKSpec
-		storages       map[string]FileStorageSpec
-		webhooks       map[string]WebhookSpec
-		usedCodes      map[string]struct{} // used connector codes
-	}{
-		apis:           make(map[string]APISpec),
-		databases:      make(map[string]DatabaseSpec),
-		files:          make(map[string]FileSpec),
-		messageBrokers: make(map[string]MessageBrokerSpec),
-		sdks:           make(map[string]SDKSpec),
-		storages:       make(map[string]FileStorageSpec),
-		webhooks:       make(map[string]WebhookSpec),
-		usedCodes:      make(map[string]struct{}),
-	}
-)
+var registry = struct {
+	sync.RWMutex
+	apis           map[string]APISpec
+	databases      map[string]DatabaseSpec
+	files          map[string]FileSpec
+	messageBrokers map[string]MessageBrokerSpec
+	sdks           map[string]SDKSpec
+	storages       map[string]FileStorageSpec
+	webhooks       map[string]WebhookSpec
+	usedCodes      map[string]struct{} // used connector codes
+}{
+	apis:           make(map[string]APISpec),
+	databases:      make(map[string]DatabaseSpec),
+	files:          make(map[string]FileSpec),
+	messageBrokers: make(map[string]MessageBrokerSpec),
+	sdks:           make(map[string]SDKSpec),
+	storages:       make(map[string]FileStorageSpec),
+	webhooks:       make(map[string]WebhookSpec),
+	usedCodes:      make(map[string]struct{}),
+}
 
 // Connectors returns the registered connectors as a map from the code to its
 // ConnectorSpec.
 func Connectors() map[string]ConnectorSpec {
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
 	n := len(registry.apis) +
 		len(registry.databases) +
 		len(registry.files) +
@@ -73,6 +70,7 @@ func Connectors() map[string]ConnectorSpec {
 	for _, c := range registry.webhooks {
 		connectors[c.Code] = c
 	}
+	registry.Unlock()
 	return connectors
 }
 
@@ -85,8 +83,8 @@ func RegisterAPI[T any](api APISpec, new APINewFunc[T]) {
 	api.newFunc = reflect.ValueOf(new)
 	api.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateAPIConnector(api)
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
+	defer registry.Unlock()
 	if _, ok := registry.usedCodes[api.Code]; ok {
 		panic("meergo: RegisterAPI called with a connector code already registered: " + api.Code)
 	}
@@ -104,8 +102,8 @@ func RegisterDatabase[T any](database DatabaseSpec, new DatabaseNewFunc[T]) {
 	database.newFunc = reflect.ValueOf(new)
 	database.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateDatabaseConnector(database)
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
+	defer registry.Unlock()
 	if _, ok := registry.usedCodes[database.Code]; ok {
 		panic("meergo: RegisterDatabase called with a connector code already registered: " + database.Code)
 	}
@@ -122,8 +120,8 @@ func RegisterFile[T any](file FileSpec, new FileNewFunc[T]) {
 	file.newFunc = reflect.ValueOf(new)
 	file.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateFileConnector(file)
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
+	defer registry.Unlock()
 	if _, ok := registry.usedCodes[file.Code]; ok {
 		panic("meergo: RegisterFile called with a connector code already registered: " + file.Code)
 	}
@@ -141,8 +139,8 @@ func RegisterFileStorage[T any](storage FileStorageSpec, new FileStorageNewFunc[
 	storage.newFunc = reflect.ValueOf(new)
 	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateFileStorageConnector(storage)
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
+	defer registry.Unlock()
 	if _, ok := registry.usedCodes[storage.Code]; ok {
 		panic("meergo: RegisterFileStorage called with a connector code already registered: " + storage.Code)
 	}
@@ -160,8 +158,8 @@ func RegisterMessageBroker[T any](broker MessageBrokerSpec, new MessageBrokerNew
 	broker.newFunc = reflect.ValueOf(new)
 	broker.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateMessageBrokerConnector(broker)
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
+	defer registry.Unlock()
 	if _, ok := registry.usedCodes[broker.Code]; ok {
 		panic("meergo: RegisterMessageBroker called with a connector code already registered: " + broker.Code)
 	}
@@ -179,8 +177,8 @@ func RegisterSDK[T any](sdk SDKSpec, new SDKNewFunc[T]) {
 	sdk.newFunc = reflect.ValueOf(new)
 	sdk.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateSDKConnector(sdk)
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
+	defer registry.Unlock()
 	if _, ok := registry.usedCodes[sdk.Code]; ok {
 		panic("meergo: RegisterSDK called with a connector code already registered: " + sdk.Code)
 	}
@@ -198,8 +196,8 @@ func RegisterWebhook[T any](webhook WebhookSpec, new WebhookNewFunc[T]) {
 	webhook.newFunc = reflect.ValueOf(new)
 	webhook.ct = reflect.TypeOf((*T)(nil)).Elem()
 	validateWebhookConnector(webhook)
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
+	defer registry.Unlock()
 	if _, ok := registry.usedCodes[webhook.Code]; ok {
 		panic("meergo: RegisterWebhook called with a connector code already registered: " + webhook.Code)
 	}
@@ -210,9 +208,9 @@ func RegisterWebhook[T any](webhook WebhookSpec, new WebhookNewFunc[T]) {
 // RegisteredAPI returns the API registered with the given code. If an API with
 // this code is not registered, it panics.
 func RegisteredAPI(code string) APISpec {
-	registryMu.Lock()
+	registry.Lock()
 	api, ok := registry.apis[code]
-	registryMu.Unlock()
+	registry.Unlock()
 	if !ok {
 		panic(fmt.Errorf("meergo: unknown API connector %q (forgotten import?)", code))
 	}
@@ -222,9 +220,9 @@ func RegisteredAPI(code string) APISpec {
 // RegisteredDatabase returns the database registered with the given code.
 // If a database with this code is not registered, it panics.
 func RegisteredDatabase(code string) DatabaseSpec {
-	registryMu.Lock()
+	registry.Lock()
 	database, ok := registry.databases[code]
-	registryMu.Unlock()
+	registry.Unlock()
 	if !ok {
 		panic(fmt.Errorf("meergo: unknown database connector %q (forgotten import?)", code))
 	}
@@ -234,9 +232,9 @@ func RegisteredDatabase(code string) DatabaseSpec {
 // RegisteredFile returns the file registered with the given code.
 // If a file with this code is not registered, it panics.
 func RegisteredFile(code string) FileSpec {
-	registryMu.Lock()
+	registry.Lock()
 	file, ok := registry.files[code]
-	registryMu.Unlock()
+	registry.Unlock()
 	if !ok {
 		panic(fmt.Errorf("meergo: unknown file connector %q (forgotten import?)", code))
 	}
@@ -246,9 +244,9 @@ func RegisteredFile(code string) FileSpec {
 // RegisteredFileStorage returns the file storage registered with the given
 // code. If a file storage with this code is not registered, it panics.
 func RegisteredFileStorage(code string) FileStorageSpec {
-	registryMu.Lock()
+	registry.Lock()
 	storage, ok := registry.storages[code]
-	registryMu.Unlock()
+	registry.Unlock()
 	if !ok {
 		panic(fmt.Errorf("meergo: unknown file storage connector %q (forgotten import?)", code))
 	}
@@ -258,9 +256,9 @@ func RegisteredFileStorage(code string) FileStorageSpec {
 // RegisteredMessageBroker returns the message broker registered with the given
 // code. If a message broker with this code is not registered, it panics.
 func RegisteredMessageBroker(code string) MessageBrokerSpec {
-	registryMu.Lock()
+	registry.Lock()
 	broker, ok := registry.messageBrokers[code]
-	registryMu.Unlock()
+	registry.Unlock()
 	if !ok {
 		panic(fmt.Errorf("meergo: unknown message broker connector %q (forgotten import?)", code))
 	}
@@ -270,9 +268,9 @@ func RegisteredMessageBroker(code string) MessageBrokerSpec {
 // RegisteredSDK returns the SDK registered with the given code.
 // If an SDK with this code is not registered, it panics.
 func RegisteredSDK(code string) SDKSpec {
-	registryMu.Lock()
+	registry.Lock()
 	sdk, ok := registry.sdks[code]
-	registryMu.Unlock()
+	registry.Unlock()
 	if !ok {
 		panic(fmt.Errorf("meergo: unknown SDK connector %q (forgotten import?)", code))
 	}
@@ -282,9 +280,9 @@ func RegisteredSDK(code string) SDKSpec {
 // RegisteredWebhook returns the webhook registered with the given code.
 // If a webhook with this code is not registered, it panics.
 func RegisteredWebhook(code string) WebhookSpec {
-	registryMu.Lock()
+	registry.Lock()
 	webhook, ok := registry.webhooks[code]
-	registryMu.Unlock()
+	registry.Unlock()
 	if !ok {
 		panic(fmt.Errorf("meergo: unknown webhook connector %q (forgotten import?)", code))
 	}
