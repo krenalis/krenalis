@@ -2,9 +2,9 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package connectors provides the interface to interact with API, database,
-// file storage, and message broker connectors, and to file actions.
-package connectors
+// Package connections provides the interface to interact with API, database,
+// file storage, and message broker connections, and to file actions.
+package connections
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/internal/connectors/httpclient"
+	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/json"
@@ -151,17 +151,17 @@ type Writer interface {
 	Write(ctx context.Context, id string, properties map[string]any) bool
 }
 
-// Connectors provides access to api, database, file, file storage, SDK, and
-// message broker connectors.
-type Connectors struct {
+// Connections provides access to API, database, file, file storage, SDK, and
+// message broker connections.
+type Connections struct {
 	state *state.State
 	http  *httpclient.HTTP
 }
 
-// New returns a new *Connectors value.
-func New(state *state.State) *Connectors {
+// New returns a new *Connections value.
+func New(state *state.State) *Connections {
 	h := httpclient.New(state, http.DefaultTransport)
-	return &Connectors{state: state, http: h}
+	return &Connections{state: state, http: h}
 }
 
 // AuthorizationEndpoint returns the OAuth authorization endpoint URI for the
@@ -177,7 +177,7 @@ func New(state *state.State) *Connectors {
 // ClientSecret is empty), it returns an *UnavailableError.
 //
 // It panics if the connector does not support OAuth.
-func (c *Connectors) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
+func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
 	if oauth.ClientID == "" || oauth.ClientSecret == "" {
 		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Meergo", connector.Code)}
@@ -210,7 +210,7 @@ func (c *Connectors) AuthorizationEndpoint(connector *state.Connector, role stat
 // the provided authorization code and redirection URI.
 //
 // This method can only be called on a connector that implements OAuth.
-func (c *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
+func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
 	accessToken, refreshToken, expiresIn, err := c.http.GrantAuthorization(ctx, connector, code, redirectionURI)
 	if err != nil {
 		return nil, err
@@ -241,7 +241,7 @@ func (c *Connectors) GrantAuthorization(ctx context.Context, connector *state.Co
 //// If the connector of the account is not an API or does not support per account
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
-//func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]connectors.WebhookPayload, error) {
+//func (connectors *Connections) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]connectors.WebhookPayload, error) {
 //	connector := account.Connector()
 //	if connector.WebhooksPer != state.WebhooksPerAccount {
 //		return nil, ErrNoWebhooks
@@ -270,7 +270,7 @@ func (c *Connectors) GrantAuthorization(ctx context.Context, connector *state.Co
 //// if the connection is not an API, or it does not support per connection
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
-//func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]connectors.WebhookPayload, error) {
+//func (connectors *Connections) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]connectors.WebhookPayload, error) {
 //	connector := connection.Connector()
 //	if connector.WebhooksPer != state.WebhooksPerConnection {
 //		return nil, ErrNoWebhooks
@@ -305,7 +305,7 @@ func (c *Connectors) GrantAuthorization(ctx context.Context, connector *state.Co
 //// If the connector is not an API, or it does not support per connector
 //// webhooks, it returns the ErrNoWebhooks error. If the request was not
 //// authorized, it returns the connectors.ErrWebhookUnauthorized error.
-//func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]connectors.WebhookPayload, error) {
+//func (connectors *Connections) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]connectors.WebhookPayload, error) {
 //	if connector.WebhooksPer != state.WebhooksPerConnector {
 //		return nil, ErrNoWebhooks
 //	}

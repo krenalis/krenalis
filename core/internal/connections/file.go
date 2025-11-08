@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package connectors
+package connections
 
 import (
 	"archive/zip"
@@ -29,25 +29,25 @@ import (
 	"github.com/klauspost/compress/snappy"
 )
 
-type fileContentTypeConnector interface {
+type fileContentTypeConnection interface {
 	// ContentType returns the content type of the file.
 	ContentType(ctx context.Context) string
 }
 
-type fileReadConnector interface {
+type fileReadConnection interface {
 	// Read reads the records from r and writes them to records. If the connector
 	// has multiple sheets, sheet is the name of the sheet to be read.
 	// If the provided sheet does not exist, it returns the ErrSheetNotExist error.
 	Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error
 }
 
-type fileWriteConnector interface {
+type fileWriteConnection interface {
 	// Write writes to w the records read from records. If the connector has
 	// multiple sheets, sheet is the name of the sheet to be written to.
 	Write(ctx context.Context, w io.Writer, sheet string, records connectors.RecordReader) error
 }
 
-type fileSheetConnector interface {
+type fileSheetConnection interface {
 	// Sheets returns the sheets of the file read from r.
 	Sheets(ctx context.Context, r io.Reader) ([]string, error)
 }
@@ -67,7 +67,7 @@ type File struct {
 
 // File returns a file for the provided action.
 // Errors are deferred until a file's method is called.
-func (c *Connectors) File(action *state.Action) *File {
+func (c *Connections) File(action *state.Action) *File {
 	format := action.Format()
 	connection := action.Connection()
 	file := &File{
@@ -137,7 +137,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 		rw:    rw,
 		rc:    rc,
 		sheet: file.action.Sheet,
-		inner: file.inner.(fileReadConnector),
+		inner: file.inner.(fileReadConnection),
 	}
 	return records, nil
 }
@@ -171,7 +171,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 			return nil, err
 		}
 	}
-	sw, err := s.Writer(ctx, path, file.inner.(fileContentTypeConnector).ContentType(ctx), extension)
+	sw, err := s.Writer(ctx, path, file.inner.(fileContentTypeConnection).ContentType(ctx), extension)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -182,7 +182,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 	go func() {
 		columns := file.action.InSchema.Properties().Slice()
 		r := newRecordReader(columns, records)
-		err = file.inner.(fileWriteConnector).Write(writeCtx, sw, file.action.Sheet, r)
+		err = file.inner.(fileWriteConnection).Write(writeCtx, sw, file.action.Sheet, r)
 		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
 			err = err2
 		}
@@ -245,7 +245,7 @@ func newCompressedStorage(s any, c state.Compression) *compressorStorage {
 // It returns an *UnavailableError if the connector returns an error.
 // It is the caller's responsibility to close the returned reader.
 func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	r, t, err := cs.storage.(fileStorageReaderConnector).Reader(ctx, name)
+	r, t, err := cs.storage.(fileStorageReaderConnection).Reader(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, connectorError(err)
 	}
@@ -386,7 +386,7 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType, exten
 		ctx, cancel := context.WithCancel(ctx)
 		r := newTimeoutReader(pr, storageTimeout, cancel)
 		defer r.Close()
-		err := cs.storage.(fileStorageWriteConnector).Write(ctx, r, path, contentType)
+		err := cs.storage.(fileStorageWriteConnection).Write(ctx, r, path, contentType)
 		if err != nil {
 			_ = pr.CloseWithError(connectorError(err))
 		} else {
@@ -468,7 +468,7 @@ type fileRecords struct {
 	rw     *recordWriter
 	rc     io.ReadCloser
 	sheet  string
-	inner  fileReadConnector
+	inner  fileReadConnection
 	err    error
 	closed bool
 }

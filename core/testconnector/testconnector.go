@@ -14,8 +14,8 @@ import (
 	"net/http"
 
 	"github.com/meergo/meergo/connectors"
-	coreConnectors "github.com/meergo/meergo/core/internal/connectors"
-	"github.com/meergo/meergo/core/internal/connectors/httpclient"
+	coreConnectors "github.com/meergo/meergo/core/internal/connections"
+	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"

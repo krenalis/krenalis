@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package connectors
+package connections
 
 import (
 	"bytes"
@@ -17,8 +17,8 @@ import (
 
 	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
-	"github.com/meergo/meergo/core/internal/connectors/apiwriter"
-	"github.com/meergo/meergo/core/internal/connectors/httpclient"
+	"github.com/meergo/meergo/core/internal/connections/apiwriter"
+	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
@@ -39,8 +39,8 @@ func (err *InvalidEventError) Error() string {
 
 // API represents the API of an API connection.
 type API struct {
+	id          int
 	connector   string
-	connection  int
 	role        state.Role
 	timeLayouts *state.TimeLayouts
 	httpClient  *httpclient.Client
@@ -51,7 +51,7 @@ type API struct {
 }
 
 // TODO(marco): implement webhooks
-//type webhookConnector interface {
+//type webhookConnection interface {
 //	// ReceiveWebhook receives a webhook request and returns its payloads. If
 //	// webhooks are per connection, role is the connection's role, otherwise is
 //	// Both. It returns the ErrWebhookUnauthorized error is the request was not
@@ -67,7 +67,7 @@ type apiOAuthConnector interface {
 // API returns the API for the provided connection.
 // Errors are deferred until a method of the API is called.
 // It panics if the connection is not an API connection.
-func (c *Connectors) API(connection *state.Connection) *API {
+func (c *Connections) API(connection *state.Connection) *API {
 	connector := connection.Connector()
 	var targets state.ConnectorTargets
 	if connection.Role == state.Source {
@@ -76,8 +76,8 @@ func (c *Connectors) API(connection *state.Connection) *API {
 		targets = connector.DestinationTargets
 	}
 	api := &API{
+		id:          connection.ID,
 		connector:   connector.Code,
-		connection:  connection.ID,
 		role:        connection.Role,
 		timeLayouts: &connector.TimeLayouts,
 		httpClient:  c.http.ConnectionClient(connection),
@@ -101,9 +101,9 @@ func (c *Connectors) API(connection *state.Connection) *API {
 	return api
 }
 
-// Connection returns the ID of the API connection.
-func (api *API) Connection() int {
-	return api.connection
+// ID returns the ID of the API connection.
+func (api *API) ID() int {
+	return api.id
 }
 
 // Connector returns the name of the API connector.

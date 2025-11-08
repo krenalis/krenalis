@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package connectors
+package connections
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-type databaseConnector interface {
+type databaseConnection interface {
 
 	// Close closes the database. When Close is called, no other calls to
 	// connector's methods are in progress and no more will be made.
@@ -59,7 +59,7 @@ type Database struct {
 	connector   string
 	closed      bool
 	timeLayouts *state.TimeLayouts
-	inner       databaseConnector
+	inner       databaseConnection
 	err         error
 }
 
@@ -69,7 +69,7 @@ type Database struct {
 //
 // The caller must call the database's Close method when the database is no
 // longer needed.
-func (c *Connectors) Database(connection *state.Connection) *Database {
+func (c *Connections) Database(connection *state.Connection) *Database {
 	connector := connection.Connector()
 	database := &Database{
 		connector:   connector.Code,
@@ -79,7 +79,7 @@ func (c *Connectors) Database(connection *state.Connection) *Database {
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(c.state, connection),
 	})
-	database.inner = inner.(databaseConnector)
+	database.inner = inner.(databaseConnection)
 	database.err = connectorError(err)
 	return database
 }
@@ -428,7 +428,7 @@ type databaseWriter struct {
 	schema types.Type
 	rows   [][]any
 	ids    []string
-	inner  databaseConnector
+	inner  databaseConnection
 	closed bool
 }
 

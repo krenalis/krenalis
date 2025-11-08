@@ -24,7 +24,7 @@ import (
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/collector"
-	coreConnectors "github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
@@ -49,7 +49,7 @@ type Core struct {
 	dbPoolMetrics    *dbPoolMetrics
 	state            *state.State
 	datastore        *datastore.Datastore
-	connectors       *coreConnectors.Connectors
+	connections      *connections.Connections
 	metrics          *coremetrics.Collector
 	collector        *collector.Collector
 	functionProvider transformers.FunctionProvider
@@ -230,11 +230,11 @@ func New(conf *Config) (*Core, error) {
 	// Init the datastore.
 	core.datastore = datastore.New(core.state)
 
-	// Init the connectors.
-	core.connectors = coreConnectors.New(core.state)
+	// Init the connections.
+	core.connections = connections.New(core.state)
 
 	// Init the event collector.
-	core.collector, err = collector.New(db, core.state, core.datastore, core.connectors, core.functionProvider, core.metrics, conf.MaxMindDBPath)
+	core.collector, err = collector.New(db, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		core.datastore.Close()
 		core.state.Close()

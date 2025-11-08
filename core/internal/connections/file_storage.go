@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package connectors
+package connections
 
 import (
 	"context"
@@ -27,7 +27,7 @@ type FileStorage struct {
 	err       error
 }
 
-type fileStorageAbsolutePathConnector interface {
+type fileStorageAbsolutePathConnection interface {
 	// AbsolutePath returns the absolute representation of the given path name. It
 	// returns *InvalidPathError if name is not valid for use in calls to Reader and
 	// Write.
@@ -36,7 +36,7 @@ type fileStorageAbsolutePathConnector interface {
 	AbsolutePath(ctx context.Context, name string) (string, error)
 }
 
-type fileStorageReaderConnector interface {
+type fileStorageReaderConnection interface {
 	// Reader opens a file and returns a ReadCloser from which to read its content.
 	// name is the path name of the file to read and the returned time.Time is the
 	// last update time of the file.
@@ -47,7 +47,7 @@ type fileStorageReaderConnector interface {
 	Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 }
 
-type fileStorageWriteConnector interface {
+type fileStorageWriteConnection interface {
 	// Write writes the data read from r into the file with the given path name.
 	// contentType is the file's content type.
 	Write(ctx context.Context, r io.Reader, name, contentType string) error
@@ -55,7 +55,7 @@ type fileStorageWriteConnector interface {
 
 // FileStorage returns a file storage on the provided file storage connection.
 // Errors are deferred until a file storage's method is called.
-func (c *Connectors) FileStorage(storage *state.Connection) *FileStorage {
+func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 	s := &FileStorage{
 		connector: storage.Connector().Code,
 		state:     c.state,
@@ -89,7 +89,7 @@ func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameR
 			return "", err
 		}
 	}
-	path, err := storage.inner.(fileStorageAbsolutePathConnector).AbsolutePath(ctx, name)
+	path, err := storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
 	if err != nil {
 		return "", connectorError(err)
 	}
@@ -150,7 +150,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
 	}
 	if file.HasSourceSettings {
-		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, connectors.Role(storage.storage.Role))
+		_, err = _file.(uiHandlerConnection).ServeUI(ctx, "save", settings, connectors.Role(storage.storage.Role))
 		if err != nil {
 			return nil, nil, nil, connectorError(err)
 		}
@@ -167,7 +167,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		records = append(records, record.Properties)
 		return true
 	})
-	err = _file.(fileReadConnector).Read(ctx, r, sheet, rw)
+	err = _file.(fileReadConnection).Read(ctx, r, sheet, rw)
 	rw.close()
 	if err != nil && err != errRecordStop {
 		return nil, nil, nil, connectorError(err)
@@ -210,13 +210,13 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 		return nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
 	}
 	if file.HasSourceSettings {
-		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, connectors.Role(storage.storage.Role))
+		_, err = _file.(uiHandlerConnection).ServeUI(ctx, "save", settings, connectors.Role(storage.storage.Role))
 		if err != nil {
 			return nil, connectorError(err)
 		}
 	}
 
-	sheetsFile := _file.(fileSheetConnector)
+	sheetsFile := _file.(fileSheetConnection)
 	s := newCompressedStorage(storage.inner, compression)
 	r, _, err := s.Reader(ctx, name)
 	if err != nil {

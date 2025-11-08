@@ -27,7 +27,7 @@ import (
 // nopAPI is a no-op API that returns zero wait time and skips sending events.
 type nopAPI struct{}
 
-func (nopAPI) Connection() int { return 1 }
+func (nopAPI) ID() int { return 1 }
 
 func (nopAPI) Connector() string { return "nop" }
 
@@ -337,7 +337,7 @@ func (api *api) Acks() []ack {
 	return acks
 }
 
-func (api *api) Connection() int {
+func (api *api) ID() int {
 	return 1
 }
 

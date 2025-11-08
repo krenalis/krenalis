@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/connectors"
-	coreConnectors "github.com/meergo/meergo/core/internal/connectors"
-	"github.com/meergo/meergo/core/internal/connectors/httpclient"
+	"github.com/meergo/meergo/core/internal/connections"
+	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/types"
@@ -48,8 +48,8 @@ type AcksFunc func(acks []Ack, err error)
 
 type API interface {
 
-	// Connection returns the ID of the connection.
-	Connection() int
+	// ID returns the ID of the connection.
+	ID() int
 
 	// Connector returns the name of the connector.
 	Connector() string
@@ -187,7 +187,7 @@ func New(api API, acks AcksFunc) *Sender {
 		}
 	}()
 	// Set the metrics.
-	connection := strconv.Itoa(api.Connection())
+	connection := strconv.Itoa(api.ID())
 	s.metrics.queueAvailable = queueAvailableMetric.Register(func() float64 {
 		s.mu.Lock()
 		a := s.available
@@ -281,7 +281,7 @@ func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event ev
 	s.mu.Unlock()
 	ev := &Event{
 		Event: connectors.Event{
-			Received: coreConnectors.ReceivedEvent(event),
+			Received: connections.ReceivedEvent(event),
 			Type: connectors.EventTypeInfo{
 				ID:     typ,
 				Schema: schema,
@@ -314,7 +314,7 @@ func (s *Sender) QueueEvent(event *Event) {
 }
 
 // SetAPI replaces the API.
-func (s *Sender) SetAPI(api *coreConnectors.API) {
+func (s *Sender) SetAPI(api *connections.API) {
 	s.mu.Lock()
 	s.waitTime = api.WaitTime
 	s.sendEvents = api.SendEvents

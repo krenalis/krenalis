@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package connectors
+package connections
 
 import (
 	"context"
@@ -11,17 +11,17 @@ import (
 	"github.com/meergo/meergo/core/internal/state"
 )
 
-// messageBrokerConnector is the interface implemented by message broker
-// connectors. A messageBrokerConnector instance can be used for sending or
+// messageBrokerConnection is the interface implemented by message broker
+// connections. A messageBrokerConnection instance can be used for sending or
 // receiving but not both.
-type messageBrokerConnector interface {
+type messageBrokerConnection interface {
 
 	// Close closes the message broker. When Close is called, no other calls to the
-	// connector's methods are in progress and no more will be made.
+	// connection's methods are in progress and no more will be made.
 	Close() error
 
 	// Receive receives an event from the message broker. Callers call the ack
-	// function to notify that the event has been received. The connector resends
+	// function to notify that the event has been received. The connection resends
 	// the event if not acknowledged.
 	//
 	// Callers must not modify the event data, even temporarily, and the event is
@@ -30,8 +30,8 @@ type messageBrokerConnector interface {
 	// Receive can be used by multiple goroutines at the same time.
 	Receive(ctx context.Context) (event []byte, ack func(), err error)
 
-	// Send sends an event to the message broker. If ack is not nil, connector calls
-	// ack when the event has been stored or when an error occurred.
+	// Send sends an event to the message broker. If ack is not nil, connection
+	// calls ack when the event has been stored or when an error occurred.
 	//
 	// Send may modify the event data, but the event slice is not retained after the
 	// ack function has been called.
@@ -44,7 +44,7 @@ type messageBrokerConnector interface {
 type MessageBroker struct {
 	connector string
 	closed    bool
-	inner     messageBrokerConnector
+	inner     messageBrokerConnection
 }
 
 // MessageBroker returns a message broker for the provided connection. It panics
@@ -52,7 +52,7 @@ type MessageBroker struct {
 //
 // The caller must call the message broker's Close method when the broker is no
 // longer needed.
-func (c *Connectors) MessageBroker(connection *state.Connection) (*MessageBroker, error) {
+func (c *Connections) MessageBroker(connection *state.Connection) (*MessageBroker, error) {
 	broker := &MessageBroker{
 		connector: connection.Connector().Code,
 	}
@@ -63,7 +63,7 @@ func (c *Connectors) MessageBroker(connection *state.Connection) (*MessageBroker
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	broker.inner = inner.(messageBrokerConnector)
+	broker.inner = inner.(messageBrokerConnection)
 	return broker, nil
 }
 

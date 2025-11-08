@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 )
 
 func Test_newPathPlaceholderReplacer(t *testing.T) {
@@ -39,7 +39,7 @@ func Test_newPathPlaceholderReplacer(t *testing.T) {
 			// This test here tests the "newPathPlaceholderReplacer" function,
 			// and assumes that connectors.ReplacePlaceholders is correct and
 			// already tested elsewhere.
-			got, gotErr := connectors.ReplacePlaceholders(test.path, replacer)
+			got, gotErr := connections.ReplacePlaceholders(test.path, replacer)
 			var gotErrStr string
 			if gotErr != nil {
 				gotErrStr = gotErr.Error()

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package connectors
+package connections
 
 import (
 	"context"
@@ -16,13 +16,13 @@ import (
 	"github.com/meergo/meergo/core/json"
 )
 
-type uiHandlerConnector interface {
-	// ServeUI serves the connector's user interface. event is the event to be
-	// served, settings are the connector's settings, and role is the
+type uiHandlerConnection interface {
+	// ServeUI serves the connection's user interface. event is the event to be
+	// served, settings are the connection's settings, and role is the
 	// connection's role, it can be Source or Destination.
 	//
 	// The first time ServeUI is called to display the UI, event is "load" and
-	// settings is nil. The connector saves the settings only when serving the
+	// settings is nil. The connection saves the settings only when serving the
 	// "save" event; for other events, it returns an updated interface without
 	// saving the settings.
 	//
@@ -40,7 +40,7 @@ type uiHandlerConnector interface {
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (c *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, settings json.Value) (json.Value, error) {
+func (c *Connections) ServeActionUI(ctx context.Context, action *state.Action, event string, settings json.Value) (json.Value, error) {
 	role := connectors.Role(action.Connection().Role)
 	format := action.Format()
 	inner, err := connectors.RegisteredFile(format.Code).New(&connectors.FileEnv{
@@ -50,7 +50,7 @@ func (c *Connectors) ServeActionUI(ctx context.Context, action *state.Action, ev
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, role)
+	ui, err := inner.(uiHandlerConnection).ServeUI(ctx, event, settings, role)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -66,7 +66,7 @@ func (c *Connectors) ServeActionUI(ctx context.Context, action *state.Action, ev
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (c *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, settings json.Value) (json.Value, error) {
+func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, settings json.Value) (json.Value, error) {
 	// var accountID int TODO(marco): implement webhooks
 	var accountCode string
 	if r, ok := connection.Account(); ok {
@@ -90,7 +90,7 @@ func (c *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Co
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(c.state, connection),
 		})
-		defer database.(databaseConnector).Close()
+		defer database.(databaseConnection).Close()
 		inner = database
 	case state.FileStorage:
 		inner, err = connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
@@ -116,7 +116,7 @@ func (c *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Co
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, connectors.Role(connection.Role))
+	ui, err := inner.(uiHandlerConnection).ServeUI(ctx, event, settings, connectors.Role(connection.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -141,7 +141,7 @@ type ConnectorConfig struct {
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (c *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) (json.Value, error) {
+func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) (json.Value, error) {
 	var inner any
 	var err error
 	code := connector.Code
@@ -154,7 +154,7 @@ func (c *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Conn
 	case state.Database:
 		var database any
 		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{})
-		defer database.(databaseConnector).Close()
+		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{})
@@ -170,7 +170,7 @@ func (c *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Conn
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, connectors.Role(conf.Role))
+	ui, err := inner.(uiHandlerConnection).ServeUI(ctx, event, settings, connectors.Role(conf.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -184,7 +184,7 @@ func (c *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Conn
 // and an *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (c *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) ([]byte, error) {
+func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) ([]byte, error) {
 	var inner any
 	var err error
 	var updatedSettings []byte
@@ -209,7 +209,7 @@ func (c *Connectors) UpdatedSettings(ctx context.Context, connector *state.Conne
 	case state.Database:
 		var database any
 		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{SetSettings: setSettings})
-		defer database.(databaseConnector).Close()
+		defer database.(databaseConnection).Close()
 		inner = database
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{SetSettings: setSettings})
@@ -225,7 +225,7 @@ func (c *Connectors) UpdatedSettings(ctx context.Context, connector *state.Conne
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	_, err = inner.(uiHandlerConnector).ServeUI(ctx, "save", settings, connectors.Role(conf.Role))
+	_, err = inner.(uiHandlerConnection).ServeUI(ctx, "save", settings, connectors.Role(conf.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
