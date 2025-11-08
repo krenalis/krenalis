@@ -1,17 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:image/jpeg;base64,/9j/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/admin/src/index.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Meergo</title>
+    <link rel="stylesheet" href="/admin/src/index.css">
+    <!-- In order for the following import map to work, Meergo returns the exact hash of this block via the Content-Security-Policy header -->
+    <script type="importmap">{"imports":{"monaco-editor":"/admin/src/monaco/vs/editor/editor.main.js"}}</script>
+    <meta name="robots" content="noindex, noarchive, nofollow">
+    <link rel="dns-prefetch" href="/admin/src/monaco/vs/editor/editor.main.js">
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <!-- In order for the following import map to work, make sure to include the Content-Security-Policy header: script-src 'self' 'sha256-Eggv/sxfau5R7DCyaPw6OwmcQOlrO9oX7GhT3aozILU=' -->
-    <script type="importmap">{"imports":{"monaco-editor":"/admin/src/monaco/vs/editor/editor.main.js"}}</script>
+    <noscript>
+      <style>noscript { display: block; font-family: sans-serif; margin: 2em; text-align: center; }</style>
+      Please enable JavaScript to use the Meergo Admin console.
+    </noscript>
     <div id="root"></div>
-    <script src="/admin/src/index.js" type="module"></script>
+    <script type="module" src="/admin/src/index.js"></script>
   </body>
 </html>
