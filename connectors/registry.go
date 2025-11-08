@@ -78,7 +78,7 @@ func Connectors() map[string]ConnectorSpec {
 // RegisterAPI is called twice with the same code or if new is nil, it panics.
 func RegisterAPI[T any](api APISpec, new APINewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + api.Code)
+		panic("meergo/connectors: new function is nil for connector " + api.Code)
 	}
 	api.newFunc = reflect.ValueOf(new)
 	api.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -86,7 +86,7 @@ func RegisterAPI[T any](api APISpec, new APINewFunc[T]) {
 	registry.Lock()
 	defer registry.Unlock()
 	if _, ok := registry.usedCodes[api.Code]; ok {
-		panic("meergo: RegisterAPI called with a connector code already registered: " + api.Code)
+		panic("meergo/connectors: RegisterAPI called with a connector code already registered: " + api.Code)
 	}
 	registry.apis[api.Code] = api
 	registry.usedCodes[api.Code] = struct{}{}
@@ -97,7 +97,7 @@ func RegisterAPI[T any](api APISpec, new APINewFunc[T]) {
 // panics.
 func RegisterDatabase[T any](database DatabaseSpec, new DatabaseNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + database.Code)
+		panic("meergo/connectors: new function is nil for connector " + database.Code)
 	}
 	database.newFunc = reflect.ValueOf(new)
 	database.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -105,7 +105,7 @@ func RegisterDatabase[T any](database DatabaseSpec, new DatabaseNewFunc[T]) {
 	registry.Lock()
 	defer registry.Unlock()
 	if _, ok := registry.usedCodes[database.Code]; ok {
-		panic("meergo: RegisterDatabase called with a connector code already registered: " + database.Code)
+		panic("meergo/connectors: RegisterDatabase called with a connector code already registered: " + database.Code)
 	}
 	registry.databases[database.Code] = database
 	registry.usedCodes[database.Code] = struct{}{}
@@ -115,7 +115,7 @@ func RegisterDatabase[T any](database DatabaseSpec, new DatabaseNewFunc[T]) {
 // RegisterFile is called twice with the same code or if new is nil, it panics.
 func RegisterFile[T any](file FileSpec, new FileNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + file.Code)
+		panic("meergo/connectors: new function is nil for connector " + file.Code)
 	}
 	file.newFunc = reflect.ValueOf(new)
 	file.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -123,7 +123,7 @@ func RegisterFile[T any](file FileSpec, new FileNewFunc[T]) {
 	registry.Lock()
 	defer registry.Unlock()
 	if _, ok := registry.usedCodes[file.Code]; ok {
-		panic("meergo: RegisterFile called with a connector code already registered: " + file.Code)
+		panic("meergo/connectors: RegisterFile called with a connector code already registered: " + file.Code)
 	}
 	registry.files[file.Code] = file
 	registry.usedCodes[file.Code] = struct{}{}
@@ -134,7 +134,7 @@ func RegisterFile[T any](file FileSpec, new FileNewFunc[T]) {
 // nil, it panics.
 func RegisterFileStorage[T any](storage FileStorageSpec, new FileStorageNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + storage.Code)
+		panic("meergo/connectors: new function is nil for connector " + storage.Code)
 	}
 	storage.newFunc = reflect.ValueOf(new)
 	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -142,7 +142,7 @@ func RegisterFileStorage[T any](storage FileStorageSpec, new FileStorageNewFunc[
 	registry.Lock()
 	defer registry.Unlock()
 	if _, ok := registry.usedCodes[storage.Code]; ok {
-		panic("meergo: RegisterFileStorage called with a connector code already registered: " + storage.Code)
+		panic("meergo/connectors: RegisterFileStorage called with a connector code already registered: " + storage.Code)
 	}
 	registry.storages[storage.Code] = storage
 	registry.usedCodes[storage.Code] = struct{}{}
@@ -153,7 +153,7 @@ func RegisterFileStorage[T any](storage FileStorageSpec, new FileStorageNewFunc[
 // if new is nil, it panics.
 func RegisterMessageBroker[T any](broker MessageBrokerSpec, new MessageBrokerNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + broker.Code)
+		panic("meergo/connectors: new function is nil for connector " + broker.Code)
 	}
 	broker.newFunc = reflect.ValueOf(new)
 	broker.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -161,7 +161,7 @@ func RegisterMessageBroker[T any](broker MessageBrokerSpec, new MessageBrokerNew
 	registry.Lock()
 	defer registry.Unlock()
 	if _, ok := registry.usedCodes[broker.Code]; ok {
-		panic("meergo: RegisterMessageBroker called with a connector code already registered: " + broker.Code)
+		panic("meergo/connectors: RegisterMessageBroker called with a connector code already registered: " + broker.Code)
 	}
 	registry.messageBrokers[broker.Code] = broker
 	registry.usedCodes[broker.Code] = struct{}{}
@@ -172,7 +172,7 @@ func RegisterMessageBroker[T any](broker MessageBrokerSpec, new MessageBrokerNew
 // panics.
 func RegisterSDK[T any](sdk SDKSpec, new SDKNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + sdk.Code)
+		panic("meergo/connectors: new function is nil for connector " + sdk.Code)
 	}
 	sdk.newFunc = reflect.ValueOf(new)
 	sdk.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -180,7 +180,7 @@ func RegisterSDK[T any](sdk SDKSpec, new SDKNewFunc[T]) {
 	registry.Lock()
 	defer registry.Unlock()
 	if _, ok := registry.usedCodes[sdk.Code]; ok {
-		panic("meergo: RegisterSDK called with a connector code already registered: " + sdk.Code)
+		panic("meergo/connectors: RegisterSDK called with a connector code already registered: " + sdk.Code)
 	}
 	registry.sdks[sdk.Code] = sdk
 	registry.usedCodes[sdk.Code] = struct{}{}
@@ -191,7 +191,7 @@ func RegisterSDK[T any](sdk SDKSpec, new SDKNewFunc[T]) {
 // panics.
 func RegisterWebhook[T any](webhook WebhookSpec, new WebhookNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for connector " + webhook.Code)
+		panic("meergo/connectors: new function is nil for connector " + webhook.Code)
 	}
 	webhook.newFunc = reflect.ValueOf(new)
 	webhook.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -199,7 +199,7 @@ func RegisterWebhook[T any](webhook WebhookSpec, new WebhookNewFunc[T]) {
 	registry.Lock()
 	defer registry.Unlock()
 	if _, ok := registry.usedCodes[webhook.Code]; ok {
-		panic("meergo: RegisterWebhook called with a connector code already registered: " + webhook.Code)
+		panic("meergo/connectors: RegisterWebhook called with a connector code already registered: " + webhook.Code)
 	}
 	registry.webhooks[webhook.Code] = webhook
 	registry.usedCodes[webhook.Code] = struct{}{}
@@ -212,7 +212,7 @@ func RegisteredAPI(code string) APISpec {
 	api, ok := registry.apis[code]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown API connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo/connectors: unknown API connector %q (forgotten import?)", code))
 	}
 	return api
 }
@@ -224,7 +224,7 @@ func RegisteredDatabase(code string) DatabaseSpec {
 	database, ok := registry.databases[code]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown database connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo/connectors: unknown database connector %q (forgotten import?)", code))
 	}
 	return database
 }
@@ -236,7 +236,7 @@ func RegisteredFile(code string) FileSpec {
 	file, ok := registry.files[code]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown file connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo/connectors: unknown file connector %q (forgotten import?)", code))
 	}
 	return file
 }
@@ -248,7 +248,7 @@ func RegisteredFileStorage(code string) FileStorageSpec {
 	storage, ok := registry.storages[code]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown file storage connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo/connectors: unknown file storage connector %q (forgotten import?)", code))
 	}
 	return storage
 }
@@ -260,7 +260,7 @@ func RegisteredMessageBroker(code string) MessageBrokerSpec {
 	broker, ok := registry.messageBrokers[code]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown message broker connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo/connectors: unknown message broker connector %q (forgotten import?)", code))
 	}
 	return broker
 }
@@ -272,7 +272,7 @@ func RegisteredSDK(code string) SDKSpec {
 	sdk, ok := registry.sdks[code]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown SDK connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo/connectors: unknown SDK connector %q (forgotten import?)", code))
 	}
 	return sdk
 }
@@ -284,7 +284,7 @@ func RegisteredWebhook(code string) WebhookSpec {
 	webhook, ok := registry.webhooks[code]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown webhook connector %q (forgotten import?)", code))
+		panic(fmt.Errorf("meergo/connectors: unknown webhook connector %q (forgotten import?)", code))
 	}
 	return webhook
 }
@@ -292,7 +292,7 @@ func RegisteredWebhook(code string) WebhookSpec {
 // validateCategories validates the categories of a connector.
 func validateCategories(connectorName string, categories Categories) {
 	if categories == 0 {
-		panic(fmt.Sprintf("connector %s: at least one category must be specified", connectorName))
+		panic(fmt.Sprintf("meergo/connectors: connector %s: at least one category must be specified", connectorName))
 	}
 }
 
@@ -307,18 +307,18 @@ func validateAPIConnector(api APISpec) {
 	validateCategories(api.Code, api.Categories)
 
 	if api.AsSource == nil && api.AsDestination == nil {
-		panic(fmt.Sprintf("connector %s: APISpec must include at least the AsSource and AsDestination fields", api.Code))
+		panic(fmt.Sprintf("meergo/connectors: connector %s: APISpec must include at least the AsSource and AsDestination fields", api.Code))
 	}
 
 	if api.AsSource != nil {
 		targets := api.AsSource.Targets
 		//if targets == 0 || (targets&^(TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^TargetUser) != 0 {
-			panic(fmt.Sprintf("connector %s: APISpec.AsSource.Target is not valid; possible value is connectors.TargetUser", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: APISpec.AsSource.Target is not valid; possible value is connectors.TargetUser", api.Code))
 		}
 		if targets&TargetUser != 0 {
 			if !api.ct.Implements(reflect.TypeFor[RecordFetcher]()) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 			}
 		}
 	}
@@ -327,19 +327,19 @@ func validateAPIConnector(api APISpec) {
 		targets := api.AsDestination.Targets
 		//if targets == 0 || (targets&^(TargetEvent|TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^(TargetEvent|TargetUser)) != 0 {
-			panic(fmt.Sprintf("connector %s: APISpec.AsDestination.Target is not valid; possible values are connectors.TargetEvent, connectors.TargetUser, or a combination of them using the bitwise OR operator", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: APISpec.AsDestination.Target is not valid; possible values are connectors.TargetEvent, connectors.TargetUser, or a combination of them using the bitwise OR operator", api.Code))
 		}
 		if targets&TargetEvent != 0 {
 			if !api.ct.Implements(reflect.TypeFor[EventSender]()) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 			}
 			if api.AsDestination.SendingMode == None {
-				panic(fmt.Sprintf("connector %s is declared to support Event as destination, but it does not specify a sending mode", api.Code))
+				panic(fmt.Sprintf("meergo/connectors: connector %s is declared to support Event as destination, but it does not specify a sending mode", api.Code))
 			}
 		}
 		if targets&TargetUser != 0 {
 			if !api.ct.Implements(reflect.TypeFor[RecordUpserter]()) {
-				panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+				panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 			}
 		}
 	}
@@ -347,7 +347,7 @@ func validateAPIConnector(api APISpec) {
 	if api.Terms.User != "" || api.Terms.Users != "" {
 		if (api.AsSource == nil || api.AsSource.Targets&TargetUser == 0) &&
 			(api.AsDestination == nil || api.AsDestination.Targets&TargetUser == 0) {
-			panic(fmt.Sprintf("connector %s: cannot specify a term for user and/or users"+
+			panic(fmt.Sprintf("meergo/connectors: connector %s: cannot specify a term for user and/or users"+
 				" if it does not support the User target neither as source nor as destination", api.Code))
 		}
 	}
@@ -356,7 +356,7 @@ func validateAPIConnector(api APISpec) {
 	//if api.Terms.Group != "" || api.Terms.Groups != "" {
 	//	if (api.AsSource == nil || api.AsSource.Targets&GroupTarget == 0) &&
 	//		(api.AsDestination == nil || api.AsDestination.Targets&GroupTarget == 0) {
-	//		panic(fmt.Sprintf("connector %s: cannot specify a term for group and/or groups"+
+	//		panic(fmt.Sprintf("meergo/connectors: connector %s: cannot specify a term for group and/or groups"+
 	//			" if it does not support the Group target neither as source nor as destination", api.Name))
 	//	}
 	//}
@@ -368,14 +368,14 @@ func validateAPIConnector(api APISpec) {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if !api.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 		}
 	} else {
 		iface := reflect.TypeFor[interface {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if api.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: ServeUI is implemented, but neither APISpec.AsSource.HasSettings nor APISpec.AsDestination.HasSettings is set to true", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: ServeUI is implemented, but neither APISpec.AsSource.HasSettings nor APISpec.AsDestination.HasSettings is set to true", api.Code))
 		}
 	}
 
@@ -384,7 +384,7 @@ func validateAPIConnector(api APISpec) {
 			OAuthAccount(ctx context.Context) (string, error)
 		}]()
 		if !api.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", api.Code))
 		}
 	}
 
@@ -393,23 +393,23 @@ func validateAPIConnector(api APISpec) {
 	for _, group := range api.EndpointGroups {
 		requireOAuth = requireOAuth || group.RequireOAuth
 		if group.Patterns != nil && len(group.Patterns) == 0 {
-			panic(fmt.Sprintf("connector %s: Patterns must be nil or contain at least one pattern", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: Patterns must be nil or contain at least one pattern", api.Code))
 		}
 		if group.RateLimit.RequestsPerSecond <= 0 {
-			panic(fmt.Sprintf("connector %s: RequestsPerSecond must be > 0", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: RequestsPerSecond must be > 0", api.Code))
 		}
 		if group.RateLimit.Burst <= 0 {
-			panic(fmt.Sprintf("connector %s: Burst must be > 0", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: Burst must be > 0", api.Code))
 		}
 		if group.RateLimit.MaxConcurrentRequests < 0 {
-			panic(fmt.Sprintf("connector %s: MaxConcurrentRequests must be >= 0", api.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: MaxConcurrentRequests must be >= 0", api.Code))
 		}
 	}
 	if api.OAuth.AuthURL == "" && requireOAuth {
-		panic(fmt.Sprintf("connector %s: RequireOAuth cannot be true when OAuth is not supported", api.Code))
+		panic(fmt.Sprintf("meergo/connectors: connector %s: RequireOAuth cannot be true when OAuth is not supported", api.Code))
 	}
 	if api.OAuth.AuthURL != "" && !requireOAuth {
-		panic(fmt.Sprintf("connector %s: OAuth is supported, but there are no endpoint groups that require it", api.Code))
+		panic(fmt.Sprintf("meergo/connectors: connector %s: OAuth is supported, but there are no endpoint groups that require it", api.Code))
 	}
 
 }
@@ -431,7 +431,7 @@ func validateDatabaseConnector(database DatabaseSpec) {
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 	}]()
 	if !database.ct.Implements(iface) {
-		panic(fmt.Sprintf("connector %s: it does not implement the required methods", database.Code))
+		panic(fmt.Sprintf("meergo/connectors: connector %s: it does not implement the required methods", database.Code))
 	}
 }
 
@@ -450,7 +450,7 @@ func validateFileConnector(file FileSpec) {
 			Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: inconsistency between the declared functionalities and the methods it actually implements", file.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: inconsistency between the declared functionalities and the methods it actually implements", file.Code))
 		}
 	}
 
@@ -460,7 +460,7 @@ func validateFileConnector(file FileSpec) {
 			ContentType(ctx context.Context) string
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
 		}
 	}
 
@@ -469,7 +469,7 @@ func validateFileConnector(file FileSpec) {
 			Sheets(ctx context.Context, r io.Reader) ([]string, error)
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
 		}
 	}
 
@@ -479,7 +479,7 @@ func validateFileConnector(file FileSpec) {
 			ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 		}]()
 		if !file.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", file.Code))
 		}
 	}
 
@@ -500,7 +500,7 @@ func validateFileStorageConnector(fileStorage FileStorageSpec) {
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 	}]()
 	if !fileStorage.ct.Implements(iface) {
-		panic(fmt.Sprintf("connector %s: it does not implement the minimum required methods", fileStorage.Code))
+		panic(fmt.Sprintf("meergo/connectors: connector %s: it does not implement the minimum required methods", fileStorage.Code))
 	}
 
 	if fileStorage.AsSource != nil {
@@ -508,7 +508,7 @@ func validateFileStorageConnector(fileStorage FileStorageSpec) {
 			Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 		}]()
 		if !fileStorage.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Code))
 		}
 	}
 
@@ -517,7 +517,7 @@ func validateFileStorageConnector(fileStorage FileStorageSpec) {
 			Write(ctx context.Context, r io.Reader, name, contentType string) error
 		}]()
 		if !fileStorage.ct.Implements(iface) {
-			panic(fmt.Sprintf("connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Code))
+			panic(fmt.Sprintf("meergo/connectors: connector %s: there's a mismatch between the declared functionalities and the methods actually implemented", fileStorage.Code))
 		}
 	}
 
@@ -537,7 +537,7 @@ func validateMessageBrokerConnector(broker MessageBrokerSpec) {
 		Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error
 	}]()
 	if !broker.ct.Implements(iface) {
-		panic(fmt.Sprintf("connector %s: it does not implement the required methods", broker.Code))
+		panic(fmt.Sprintf("meergo/connectors: connector %s: it does not implement the required methods", broker.Code))
 	}
 }
 
@@ -565,13 +565,13 @@ func validateWebhookConnector(webhook WebhookSpec) {
 // [a-z0-9-].
 func validateConnectorCode(typ string, code string) {
 	if code == "" {
-		panic(fmt.Sprintf("code is missing for a connector of type %s", typ))
+		panic(fmt.Sprintf("meergo/connectors: code is missing for a connector of type %s", typ))
 	}
 	for i := 0; i < len(code); i++ {
 		c := code[i]
 		if 'a' <= c && c <= 'z' || '0' <= c && c <= '9' || c == '-' {
 			continue
 		}
-		panic(fmt.Sprintf("connector code %q is not valid; valid codes contain only [a-z0-9-]", code))
+		panic(fmt.Sprintf("meergo/connectors: connector code %q is not valid; valid codes contain only [a-z0-9-]", code))
 	}
 }

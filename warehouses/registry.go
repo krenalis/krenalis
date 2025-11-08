@@ -32,14 +32,14 @@ func Drivers() []Driver {
 // is called twice with the same name or if new is nil, it panics.
 func Register[T Warehouse](typ Driver, new NewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil for warehouse driver " + typ.Name)
+		panic("meergo/warehouses: new function is nil for warehouse driver " + typ.Name)
 	}
 	typ.newFunc = reflect.ValueOf(new)
 	typ.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registry.Lock()
 	defer registry.Unlock()
 	if _, dup := registry.warehouses[typ.Name]; dup {
-		panic("meergo: Register called twice for type " + typ.Name)
+		panic("meergo/warehouses: Register called twice for type " + typ.Name)
 	}
 	registry.warehouses[typ.Name] = typ
 }
@@ -51,7 +51,7 @@ func Registered(name string) Driver {
 	warehouse, ok := registry.warehouses[name]
 	registry.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown warehouse driver %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo/warehouses: unknown warehouse driver %q (forgotten import?)", name))
 	}
 	return warehouse
 }
