@@ -470,7 +470,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 	}
 
 	// Run the tests on PostgreSQL and Snowflake warehouse driver.
-	warehouseDrivers := warehouses.WarehouseDrivers()
+	warehouseDrivers := warehouses.Drivers()
 	if len(warehouseDrivers) == 0 {
 		t.Fatal("there are no warehouse drivers. Missing warehouse drivers import in test file?")
 	}
@@ -542,7 +542,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			}
 
 			// Open the warehouse.
-			wh, err := warehouseDriver.New(&warehouses.WarehouseConfig{
+			wh, err := warehouseDriver.New(&warehouses.Config{
 				Settings: settings,
 			})
 			if err != nil {

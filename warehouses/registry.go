@@ -10,52 +10,48 @@ import (
 	"sync"
 )
 
-var (
-	registryMu sync.RWMutex
-	registry   = struct {
-		warehouses map[string]WarehouseDriver
-	}{
-		warehouses: make(map[string]WarehouseDriver),
-	}
-)
+var registry = struct {
+	sync.RWMutex
+	warehouses map[string]Driver
+}{
+	warehouses: make(map[string]Driver),
+}
 
-// RegisterWarehouseDriver makes a warehouse driver available by the provided
-// name. If RegisterWarehouseDriver is called twice with the same name or if new
-// is nil, it panics.
-func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriverNewFunc[T]) {
+// Drivers returns the warehouse drivers.
+func Drivers() []Driver {
+	registry.Lock()
+	drivers := make([]Driver, 0, len(registry.warehouses))
+	for _, t := range registry.warehouses {
+		drivers = append(drivers, t)
+	}
+	registry.Unlock()
+	return drivers
+}
+
+// Register makes a warehouse driver available by the provided name. If Register
+// is called twice with the same name or if new is nil, it panics.
+func Register[T Warehouse](typ Driver, new NewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for warehouse driver " + typ.Name)
 	}
 	typ.newFunc = reflect.ValueOf(new)
 	typ.ct = reflect.TypeOf((*T)(nil)).Elem()
-	registryMu.Lock()
-	defer registryMu.Unlock()
+	registry.Lock()
+	defer registry.Unlock()
 	if _, dup := registry.warehouses[typ.Name]; dup {
-		panic("meergo: RegisterWarehouseDriver called twice for type " + typ.Name)
+		panic("meergo: Register called twice for type " + typ.Name)
 	}
 	registry.warehouses[typ.Name] = typ
 }
 
-// RegisteredWarehouseDriver returns the warehouse driver registered with the
-// given name. If a warehouse driver with this name is not registered, it
-// panics.
-func RegisteredWarehouseDriver(name string) WarehouseDriver {
-	registryMu.Lock()
+// Registered returns the warehouse driver registered with the given name.
+// If a warehouse driver with this name is not registered, it panics.
+func Registered(name string) Driver {
+	registry.Lock()
 	warehouse, ok := registry.warehouses[name]
-	registryMu.Unlock()
+	registry.Unlock()
 	if !ok {
 		panic(fmt.Errorf("meergo: unknown warehouse driver %q (forgotten import?)", name))
 	}
 	return warehouse
-}
-
-// WarehouseDrivers returns the warehouse drivers.
-func WarehouseDrivers() []WarehouseDriver {
-	registryMu.Lock()
-	drivers := make([]WarehouseDriver, 0, len(registry.warehouses))
-	for _, t := range registry.warehouses {
-		drivers = append(drivers, t)
-	}
-	registryMu.Unlock()
-	return drivers
 }

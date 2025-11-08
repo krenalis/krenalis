@@ -74,7 +74,7 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 	if errors != nil {
 		slices.Sort(errors)
 		err := fmt.Errorf("database is not empty (it contains %s)", strings.Join(errors, ", "))
-		return warehouses.NewWarehouseNonInitializableError(err)
+		return warehouses.NewNonInitializableError(err)
 	}
 	return nil
 }

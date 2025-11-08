@@ -42,7 +42,7 @@ var (
 var _ warehouses.Warehouse = &Snowflake{}
 
 func init() {
-	warehouses.RegisterWarehouseDriver(warehouses.WarehouseDriver{
+	warehouses.Register(warehouses.Driver{
 		Name: "Snowflake",
 	}, New)
 }
@@ -51,8 +51,8 @@ func init() {
 var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 
 // New returns a new Snowflake data warehouse driver instance.
-// It returns a *warehouses.WarehouseSettingsError if the settings are not valid.
-func New(conf *warehouses.WarehouseConfig) (*Snowflake, error) {
+// It returns a *warehouses.SettingsError if the settings are not valid.
+func New(conf *warehouses.Config) (*Snowflake, error) {
 	var s sfSettings
 	err := jsonstd.Unmarshal(conf.Settings, &s)
 	if err != nil {
@@ -60,34 +60,34 @@ func New(conf *warehouses.WarehouseConfig) (*Snowflake, error) {
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
-		return nil, warehouses.WarehouseSettingsErrorf("account identifier length must be in range [3,255]")
+		return nil, warehouses.SettingsErrorf("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return nil, warehouses.WarehouseSettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
+		return nil, warehouses.SettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, warehouses.WarehouseSettingsErrorf("user name length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("user name length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, warehouses.WarehouseSettingsErrorf("password length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("password length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, warehouses.WarehouseSettingsErrorf("role length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("role length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, warehouses.WarehouseSettingsErrorf("database length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, warehouses.WarehouseSettingsErrorf("schema length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("schema length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, warehouses.WarehouseSettingsErrorf("warehouse length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("warehouse length must be in range [1,255]")
 	}
 	return &Snowflake{conf: conf, settings: &s}, nil
 }
@@ -95,7 +95,7 @@ func New(conf *warehouses.WarehouseConfig) (*Snowflake, error) {
 type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
-	conf     *warehouses.WarehouseConfig
+	conf     *warehouses.Config
 	settings *sfSettings
 }
 
@@ -110,7 +110,7 @@ type sfSettings struct {
 }
 
 // CheckReadOnlyAccess checks that the warehouse access is read-only, returning
-// a *WarehouseSettingsNotReadOnly error in case it is not, which may contain
+// a *SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1693.

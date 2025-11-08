@@ -1635,7 +1635,7 @@ func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []str
 // typ is the type of the warehouse and settings are the settings for connecting
 // to it.
 func getMCPWarehouseInstance(typ string, settings []byte) (warehouses.Warehouse, error) {
-	wh, err := warehouses.RegisteredWarehouseDriver(typ).New(&warehouses.WarehouseConfig{Settings: settings})
+	wh, err := warehouses.Registered(typ).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return nil, err
 	}

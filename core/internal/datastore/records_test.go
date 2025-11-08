@@ -77,7 +77,7 @@ func Test_Records(t *testing.T) {
 	}
 
 	// Open the data warehouse.
-	wh, err := warehouses.RegisteredWarehouseDriver("PostgreSQL").New(&warehouses.WarehouseConfig{
+	wh, err := warehouses.Registered("PostgreSQL").New(&warehouses.Config{
 		Settings: settings,
 	})
 	if err != nil {

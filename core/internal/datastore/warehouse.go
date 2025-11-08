@@ -29,9 +29,9 @@ func unavailableError(err error) error {
 	switch err.(type) {
 	case
 		*warehouses.OperationError,
-		*warehouses.WarehouseNonInitializableError,
-		*warehouses.WarehouseSettingsError,
-		*warehouses.WarehouseSettingsNotReadOnly:
+		*warehouses.NonInitializableError,
+		*warehouses.SettingsError,
+		*warehouses.SettingsNotReadOnly:
 		return err
 	}
 	return &UnavailableError{Err: err}
@@ -42,9 +42,9 @@ func unavailableError(err error) error {
 // warehouse type.
 //
 // It panics if a warehouse driver with the given name does not exist.
-// It returns a *warehouses.WarehouseSettingsError if the settings are invalid.
+// It returns a *warehouses.SettingsError if the settings are invalid.
 func getWarehouseInstance(name string, settings []byte) (warehouse, error) {
-	inner, err := warehouses.RegisteredWarehouseDriver(name).New(&warehouses.WarehouseConfig{Settings: settings})
+	inner, err := warehouses.Registered(name).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return warehouse{}, err
 	}

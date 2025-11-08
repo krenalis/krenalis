@@ -41,14 +41,14 @@ var (
 var _ warehouses.Warehouse = &PostgreSQL{}
 
 func init() {
-	warehouses.RegisterWarehouseDriver(warehouses.WarehouseDriver{
+	warehouses.Register(warehouses.Driver{
 		Name: "PostgreSQL",
 	}, New)
 }
 
 // New returns a new PostgreSQL data warehouse driver instance.
-// It returns a *warehouses.WarehouseSettingsError if the settings are not valid.
-func New(conf *warehouses.WarehouseConfig) (*PostgreSQL, error) {
+// It returns a *warehouses.SettingsError if the settings are not valid.
+func New(conf *warehouses.Config) (*PostgreSQL, error) {
 	var s psSettings
 	err := jsonstd.Unmarshal(conf.Settings, &s)
 	if err != nil {
@@ -56,33 +56,33 @@ func New(conf *warehouses.WarehouseConfig) (*PostgreSQL, error) {
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, warehouses.WarehouseSettingsErrorf("host length in bytes must be in range [1,253]")
+		return nil, warehouses.SettingsErrorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65535 {
-		return nil, warehouses.WarehouseSettingsErrorf("port must be in range [1,65535]")
+		return nil, warehouses.SettingsErrorf("port must be in range [1,65535]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 63 {
-		return nil, warehouses.WarehouseSettingsErrorf("username length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, warehouses.WarehouseSettingsErrorf("password length must be in range [1,100]")
+		return nil, warehouses.SettingsErrorf("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
-		return nil, warehouses.WarehouseSettingsErrorf("database length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("database length in bytes must be in range [1,63]")
 	}
 	// Validate Schema.
 	if n := len(s.Schema); n < 1 || n > 63 {
-		return nil, warehouses.WarehouseSettingsErrorf("schema length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("schema length in bytes must be in range [1,63]")
 	}
 	if !warehouses.IsValidSchemaName(s.Schema) {
-		return nil, warehouses.WarehouseSettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
+		return nil, warehouses.SettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
 	}
 	if strings.HasPrefix(s.Schema, "pg_") {
-		return nil, warehouses.WarehouseSettingsErrorf("schema cannot start with 'pg_'")
+		return nil, warehouses.SettingsErrorf("schema cannot start with 'pg_'")
 	}
 	return &PostgreSQL{conf: conf, settings: &s}, nil
 }
@@ -90,7 +90,7 @@ func New(conf *warehouses.WarehouseConfig) (*PostgreSQL, error) {
 type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
 	pool     *pgxpool.Pool
-	conf     *warehouses.WarehouseConfig
+	conf     *warehouses.Config
 	settings *psSettings
 }
 
@@ -104,7 +104,7 @@ type psSettings struct {
 }
 
 // CheckReadOnlyAccess checks that the warehouse access is read-only, returning
-// a *WarehouseSettingsNotReadOnly error in case it is not, which may contain
+// a *SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 
@@ -159,7 +159,7 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 		}
 	}
 	if len(tooPrivilegedTableNames) > 0 {
-		return &warehouses.WarehouseSettingsNotReadOnly{
+		return &warehouses.SettingsNotReadOnly{
 			Err: fmt.Errorf(
 				"the credentials should be read-only, but they allow write operations on the following Meergo tables: %s",
 				strings.Join(tooPrivilegedTableNames, ", "),

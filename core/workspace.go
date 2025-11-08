@@ -1358,7 +1358,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	ws := this.workspace
 	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
 	if err != nil {
-		if err, ok := err.(*warehouses.WarehouseSettingsError); ok {
+		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
@@ -1370,7 +1370,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		}
 		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.WarehouseSettingsError); ok {
+			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return err
@@ -1380,7 +1380,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		}
 		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Type, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.WarehouseSettingsNotReadOnly); ok {
+			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
 			if err, ok := err.(*datastore.UnavailableError); ok {
@@ -1599,7 +1599,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
 	if err != nil {
-		if err, ok := err.(*warehouses.WarehouseSettingsError); ok {
+		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
@@ -1613,7 +1613,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		var err error
 		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.WarehouseSettingsError); ok {
+			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return err
@@ -1623,7 +1623,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		}
 		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Type, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.WarehouseSettingsNotReadOnly); ok {
+			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
 			if err, ok := err.(*datastore.UnavailableError); ok {

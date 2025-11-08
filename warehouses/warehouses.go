@@ -22,8 +22,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// WarehouseDriver represents a warehouse driver.
-type WarehouseDriver struct {
+// Driver represents a warehouse driver.
+type Driver struct {
 	Name string
 
 	newFunc reflect.Value
@@ -31,26 +31,25 @@ type WarehouseDriver struct {
 }
 
 // ReflectType returns the type of the value implementing the warehouse driver.
-func (info WarehouseDriver) ReflectType() reflect.Type {
-	return info.ct
+func (driver Driver) ReflectType() reflect.Type {
+	return driver.ct
 }
 
 // New returns a new data warehouse instance.
-func (info WarehouseDriver) New(conf *WarehouseConfig) (Warehouse, error) {
-	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+func (driver Driver) New(conf *Config) (Warehouse, error) {
+	out := driver.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	err, _ := reflect.TypeAssert[error](out[1])
 	return d, err
 }
 
-// WarehouseConfig represents the configuration of a data warehouse.
-type WarehouseConfig struct {
+// Config represents the configuration of a data warehouse.
+type Config struct {
 	Settings []byte
 }
 
-// WarehouseDriverNewFunc represents functions that create new warehouse driver
-// instance.
-type WarehouseDriverNewFunc[T Warehouse] func(*WarehouseConfig) (T, error)
+// NewFunc represents functions that create new warehouse driver instance.
+type NewFunc[T Warehouse] func(*Config) (T, error)
 
 // AlterOperation represents an operation that alters the columns of the user
 // tables.
@@ -145,12 +144,12 @@ type Warehouse interface {
 	AlterUserSchema(ctx context.Context, opID string, columns []Column, operations []AlterOperation) error
 
 	// CanInitialize checks whether the data warehouse can be initialized.
-	// It returns a *WarehouseNonInitializableError error if the data warehouse
+	// It returns a *NonInitializableError error if the data warehouse
 	// cannot be initialized.
 	CanInitialize(ctx context.Context) error
 
 	// CheckReadOnlyAccess checks that the warehouse access is read-only, returning
-	// a *WarehouseSettingsNotReadOnly error in case it is not, which may contain
+	// a *SettingsNotReadOnly error in case it is not, which may contain
 	// additional details.
 	CheckReadOnlyAccess(ctx context.Context) error
 
@@ -563,44 +562,42 @@ func ValidateText(name string, t types.Type, s string) (any, error) {
 	return s, nil
 }
 
-// WarehouseNonInitializableError indicates that the data warehouse is not
-// initializable.
-type WarehouseNonInitializableError struct {
+// NonInitializableError indicates that the data warehouse is not initializable.
+type NonInitializableError struct {
 	Err error
 }
 
-// NewWarehouseNonInitializableError returns a new
-// WarehouseNonInitializableError error.
-func NewWarehouseNonInitializableError(err error) error {
-	return &WarehouseNonInitializableError{Err: err}
+// NewNonInitializableError returns a new NonInitializableError error.
+func NewNonInitializableError(err error) error {
+	return &NonInitializableError{Err: err}
 }
 
-func (err *WarehouseNonInitializableError) Error() string {
+func (err *NonInitializableError) Error() string {
 	return fmt.Sprintf("data warehouse is not initializable: %s", err.Err)
 }
 
-// WarehouseSettingsError represents an error in the data warehouse settings.
-type WarehouseSettingsError struct {
+// SettingsError represents an error in the data warehouse settings.
+type SettingsError struct {
 	Err error
 }
 
-func (e *WarehouseSettingsError) Error() string {
+func (e *SettingsError) Error() string {
 	return fmt.Sprintf("settings error: %s", e.Err)
 }
 
-// WarehouseSettingsErrorf returns a new WarehouseSettingsError error with a
-// fmt.Errorf(format, a...) error.
-func WarehouseSettingsErrorf(format string, a ...any) error {
-	return &WarehouseSettingsError{Err: fmt.Errorf(format, a...)}
+// SettingsErrorf returns a new SettingsError error with a fmt.Errorf(format,
+// a...) error.
+func SettingsErrorf(format string, a ...any) error {
+	return &SettingsError{Err: fmt.Errorf(format, a...)}
 }
 
-// WarehouseSettingsNotReadOnly is an error that informs that the warehouse
-// settings that should be read only also have write access.
-type WarehouseSettingsNotReadOnly struct {
+// SettingsNotReadOnly is an error that informs that the warehouse settings that
+// should be read only also have write access.
+type SettingsNotReadOnly struct {
 	Err error
 }
 
-func (err *WarehouseSettingsNotReadOnly) Error() string {
+func (err *SettingsNotReadOnly) Error() string {
 	return err.Err.Error()
 }
 
