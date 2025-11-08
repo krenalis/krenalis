@@ -30,7 +30,7 @@ type registrySnapshot struct {
 func replaceRegistryForTest(t *testing.T) {
 	t.Helper()
 
-	registryMu.Lock()
+	registry.Lock()
 	snapshot := registrySnapshot{
 		apis:           maps.Clone(registry.apis),
 		databases:      maps.Clone(registry.databases),
@@ -49,10 +49,10 @@ func replaceRegistryForTest(t *testing.T) {
 	registry.sdks = make(map[string]SDKSpec)
 	registry.webhooks = make(map[string]WebhookSpec)
 	registry.usedCodes = make(map[string]struct{})
-	registryMu.Unlock()
+	registry.Unlock()
 
 	t.Cleanup(func() {
-		registryMu.Lock()
+		registry.Lock()
 		registry.apis = snapshot.apis
 		registry.databases = snapshot.databases
 		registry.files = snapshot.files
@@ -61,7 +61,7 @@ func replaceRegistryForTest(t *testing.T) {
 		registry.sdks = snapshot.sdks
 		registry.webhooks = snapshot.webhooks
 		registry.usedCodes = snapshot.usedCodes
-		registryMu.Unlock()
+		registry.Unlock()
 	})
 }
 
