@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 )
 
@@ -36,17 +36,17 @@ var (
 )
 
 func init() {
-	meergo.RegisterFileStorage(meergo.FileStorageSpec{
+	connectors.RegisterFileStorage(connectors.FileStorageSpec{
 		Code:       "filesystem",
 		Label:      "File System",
-		Categories: meergo.CategoryFileStorage,
-		AsSource: &meergo.AsFileStorageSource{
-			Documentation: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategoryFileStorage,
+		AsSource: &connectors.AsFileStorageSource{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsFileStorageDestination{
-			Documentation: meergo.ConnectorRoleDocumentation{
+		AsDestination: &connectors.AsFileStorageDestination{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -54,7 +54,7 @@ func init() {
 }
 
 // New returns a new connector instance for File System.
-func New(env *meergo.FileStorageEnv) (*FileSystem, error) {
+func New(env *connectors.FileStorageEnv) (*FileSystem, error) {
 
 	confMu.Lock()
 	defer confMu.Unlock()
@@ -63,7 +63,7 @@ func New(env *meergo.FileStorageEnv) (*FileSystem, error) {
 	// been read from the environment variables, and therefore needs to be read
 	// now.
 	if root == "" {
-		envVars, err := meergo.GetEnvVars()
+		envVars, err := connectors.GetEnvVars()
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +89,7 @@ func New(env *meergo.FileStorageEnv) (*FileSystem, error) {
 }
 
 type FileSystem struct {
-	env      *meergo.FileStorageEnv
+	env      *connectors.FileStorageEnv
 	settings *innerSettings
 }
 
@@ -121,7 +121,7 @@ func (filesystem *FileSystem) Reader(ctx context.Context, name string) (io.ReadC
 }
 
 // ServeUI serves the connector's user interface.
-func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -133,11 +133,11 @@ func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, setting
 	case "save":
 		return nil, filesystem.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
 	var intro string
-	if role == meergo.Source {
+	if role == connectors.Source {
 		intro = "This connector for file system allows Meergo to read files from this directory of your system:"
 	} else {
 		intro = "This connector for file system allows Meergo to write files into this directory of your system:"
@@ -151,12 +151,12 @@ func (filesystem *FileSystem) ServeUI(ctx context.Context, event string, setting
 		rootToShow = displayedRoot
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Text{Text: intro},
-			&meergo.Text{Text: rootToShow},
-			&meergo.Text{Label: "Testing options"},
-			&meergo.Checkbox{Name: "SimulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Text{Text: intro},
+			&connectors.Text{Text: rootToShow},
+			&connectors.Text{Label: "Testing options"},
+			&connectors.Checkbox{Name: "SimulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
 		},
 		Settings: settings,
 	}
@@ -212,15 +212,15 @@ func (filesystem *FileSystem) absolutePath(ctx context.Context, name string, for
 	name = filepath.ToSlash(name)
 	if name[0] == '/' {
 		if name == "/" {
-			return "", meergo.InvalidPathErrorf("path name cannot be “%s“", originalName)
+			return "", connectors.InvalidPathErrorf("path name cannot be “%s“", originalName)
 		}
 		name = name[1:]
 	}
 	if name[len(name)-1] == '/' {
-		return "", meergo.InvalidPathErrorf("path name cannot end with a slash")
+		return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
 	}
 	if name == "." || !fs.ValidPath(name) {
-		return "", meergo.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
+		return "", connectors.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
 	}
 	confMu.Lock()
 	defer confMu.Unlock()
@@ -278,17 +278,17 @@ func rewritePathError(err error) error {
 
 func validateRoot(root string) error {
 	if n := len(root); n == 0 || n > 253 {
-		return meergo.NewInvalidSettingsError("path length in bytes must be in range [1,253]")
+		return connectors.NewInvalidSettingsError("path length in bytes must be in range [1,253]")
 	}
 	if !filepath.IsAbs(root) {
-		return meergo.NewInvalidSettingsError("path must be absolute")
+		return connectors.NewInvalidSettingsError("path must be absolute")
 	}
 	st, err := os.Stat(root)
 	if os.IsNotExist(err) {
-		return meergo.NewInvalidSettingsError("path does not exist")
+		return connectors.NewInvalidSettingsError("path does not exist")
 	}
 	if !st.IsDir() {
-		return meergo.NewInvalidSettingsError("path is not a directory")
+		return connectors.NewInvalidSettingsError("path is not a directory")
 	}
 	return nil
 }

@@ -24,7 +24,7 @@ package sdk
 import (
 	_ "embed"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 //go:embed documentation/dotnet/overview.md
@@ -49,13 +49,13 @@ var nodeOverview string
 var pythonOverview string
 
 func init() {
-	sdks := []meergo.SDKSpec{
+	sdks := []connectors.SDKSpec{
 		{
 			Code:       "dotnet",
 			Label:      ".NET",
-			Categories: meergo.CategorySDK,
-			Documentation: meergo.ConnectorDocumentation{
-				Source: meergo.ConnectorRoleDocumentation{
+			Categories: connectors.CategorySDK,
+			Documentation: connectors.ConnectorDocumentation{
+				Source: connectors.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using .NET",
 					Overview: dotnetOverview,
 				},
@@ -64,11 +64,11 @@ func init() {
 		{
 			Code:                "android",
 			Label:               "Android",
-			Categories:          meergo.CategorySDK,
+			Categories:          connectors.CategorySDK,
 			Strategies:          true,
 			FallbackToRequestIP: true,
-			Documentation: meergo.ConnectorDocumentation{
-				Source: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.ConnectorDocumentation{
+				Source: connectors.ConnectorRoleDocumentation{
 					Summary:  "Import events and users from an Android mobile device",
 					Overview: androidOverview,
 				},
@@ -77,9 +77,9 @@ func init() {
 		{
 			Code:       "go",
 			Label:      "Go",
-			Categories: meergo.CategorySDK,
-			Documentation: meergo.ConnectorDocumentation{
-				Source: meergo.ConnectorRoleDocumentation{
+			Categories: connectors.CategorySDK,
+			Documentation: connectors.ConnectorDocumentation{
+				Source: connectors.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Go",
 					Overview: goOverview,
 				},
@@ -88,9 +88,9 @@ func init() {
 		{
 			Code:       "java",
 			Label:      "Java",
-			Categories: meergo.CategorySDK,
-			Documentation: meergo.ConnectorDocumentation{
-				Source: meergo.ConnectorRoleDocumentation{
+			Categories: connectors.CategorySDK,
+			Documentation: connectors.ConnectorDocumentation{
+				Source: connectors.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Java",
 					Overview: javaOverview,
 				},
@@ -99,11 +99,11 @@ func init() {
 		{
 			Code:                "javascript",
 			Label:               "JavaScript",
-			Categories:          meergo.CategorySDK | meergo.CategoryWebsite,
+			Categories:          connectors.CategorySDK | connectors.CategoryWebsite,
 			Strategies:          true,
 			FallbackToRequestIP: true,
-			Documentation: meergo.ConnectorDocumentation{
-				Source: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.ConnectorDocumentation{
+				Source: connectors.ConnectorRoleDocumentation{
 					Summary:  "Import events and users from a website using JavaScript",
 					Overview: javaScriptOverview,
 				},
@@ -112,9 +112,9 @@ func init() {
 		{
 			Code:       "nodejs",
 			Label:      "Node.js",
-			Categories: meergo.CategorySDK,
-			Documentation: meergo.ConnectorDocumentation{
-				Source: meergo.ConnectorRoleDocumentation{
+			Categories: connectors.CategorySDK,
+			Documentation: connectors.ConnectorDocumentation{
+				Source: connectors.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Node.js",
 					Overview: nodeOverview,
 				},
@@ -123,9 +123,9 @@ func init() {
 		{
 			Code:       "python",
 			Label:      "Python",
-			Categories: meergo.CategorySDK,
-			Documentation: meergo.ConnectorDocumentation{
-				Source: meergo.ConnectorRoleDocumentation{
+			Categories: connectors.CategorySDK,
+			Documentation: connectors.ConnectorDocumentation{
+				Source: connectors.ConnectorRoleDocumentation{
 					Summary:  "Import events and users using Python",
 					Overview: pythonOverview,
 				},
@@ -133,12 +133,12 @@ func init() {
 		},
 	}
 	for _, sdk := range sdks {
-		meergo.RegisterSDK(sdk, New)
+		connectors.RegisterSDK(sdk, New)
 	}
 }
 
 // New returns a new SDK connector instance.
-func New(env *meergo.SDKEnv) (*SDK, error) {
+func New(env *connectors.SDKEnv) (*SDK, error) {
 	return &SDK{}, nil
 }
 

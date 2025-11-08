@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/types"
 
@@ -35,7 +35,7 @@ func (nopAPI) WaitTime(string) (time.Duration, error) {
 	return 0, nil
 }
 
-func (nopAPI) SendEvents(context.Context, meergo.Events) error {
+func (nopAPI) SendEvents(context.Context, connectors.Events) error {
 	return nil
 }
 
@@ -359,7 +359,7 @@ func (api *api) N() int {
 	return n
 }
 
-func (api *api) SendEvents(ctx context.Context, events meergo.Events) error {
+func (api *api) SendEvents(ctx context.Context, events connectors.Events) error {
 
 	// Get the current iteration number.
 	var iteration uint64
@@ -403,7 +403,7 @@ func (api *api) SendEvents(ctx context.Context, events meergo.Events) error {
 		return errors.New("event is not valid")
 	}
 
-	var seq iter.Seq[*meergo.Event]
+	var seq iter.Seq[*connectors.Event]
 	if rng.Int()%3 == 0 {
 		seq = events.SameUser()
 	} else {
@@ -459,7 +459,7 @@ func (api *api) ack(acks []Ack, err error) {
 	api.mu.Unlock()
 }
 
-func (api *api) validateEvent(e *meergo.Event) {
+func (api *api) validateEvent(e *connectors.Event) {
 	api.t.Helper()
 	if e.Received.MessageId() == "" {
 		api.t.Fatal("SendEvents: expected non-empty message ID, got empty")

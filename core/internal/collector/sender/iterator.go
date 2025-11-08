@@ -8,7 +8,7 @@ import (
 	"iter"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 // iterator implements the meergo.Events interface to iterate over a sequence of events.
@@ -37,7 +37,7 @@ func newIterator(s *Sender) *iterator {
 	return &it
 }
 
-func (it *iterator) All() iter.Seq[*meergo.Event] {
+func (it *iterator) All() iter.Seq[*connectors.Event] {
 	if it.consumed {
 		panic(it.sender.connector + " connector: SendEvents method called Events.All after the events were consumed")
 	}
@@ -63,7 +63,7 @@ func (it *iterator) Discard(err error) {
 	it.sender.discard(err)
 }
 
-func (it *iterator) First() *meergo.Event {
+func (it *iterator) First() *connectors.Event {
 	if it.consumed {
 		panic(it.sender.connector + " connector: SendEvents method called Events.First after the events were consumed")
 	}
@@ -77,7 +77,7 @@ func (it *iterator) First() *meergo.Event {
 	return &event.Event
 }
 
-func (it *iterator) Peek() (*meergo.Event, bool) {
+func (it *iterator) Peek() (*connectors.Event, bool) {
 	if it.consumed && !it.iterating {
 		panic(it.sender.connector + " connector: SendEvents method called Events.Peek outside of an iteration")
 	}
@@ -107,7 +107,7 @@ func (it *iterator) Postpone() {
 	it.sender.postpone()
 }
 
-func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
+func (it *iterator) SameUser() iter.Seq[*connectors.Event] {
 	if it.consumed {
 		panic(it.sender.connector + " connector: SendEvents method called Events.SameUser after the events were consumed")
 	}
@@ -117,8 +117,8 @@ func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
 }
 
 // seq returns a sequence of events.
-func (it *iterator) seq() iter.Seq[*meergo.Event] {
-	return func(yield func(event *meergo.Event) bool) {
+func (it *iterator) seq() iter.Seq[*connectors.Event] {
+	return func(yield func(event *connectors.Event) bool) {
 		if it.sameUser.enabled {
 			trace("iterator.seq: iterator %p starting to read the events of a single user\n", it)
 		} else {

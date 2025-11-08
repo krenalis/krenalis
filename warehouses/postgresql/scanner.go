@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -24,10 +24,10 @@ import (
 
 var errInvalidData = errors.New("PostgreSQL has returned invalid data")
 
-// scanner implements the meergo.Rows interface to read and normalize the rows
+// scanner implements the warehouses.Rows interface to read and normalize the rows
 // read from PostgreSQL.
 type scanner struct {
-	columns []meergo.Column
+	columns []warehouses.Column
 	rows    pgx.Rows
 	values  []any
 	dest    []any
@@ -35,7 +35,7 @@ type scanner struct {
 }
 
 // newScanner returns a new scanner.
-func newScanner(columns []meergo.Column, rows pgx.Rows) *scanner {
+func newScanner(columns []warehouses.Column, rows pgx.Rows) *scanner {
 	s := &scanner{
 		columns: columns,
 		rows:    rows,
@@ -75,7 +75,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	switch typ.Kind() {
 	case types.TextKind:
 		if v, ok := v.(string); ok {
-			return meergo.ValidateText(name, typ, v)
+			return warehouses.ValidateText(name, typ, v)
 		}
 	case types.BooleanKind:
 		if _, ok := v.(bool); ok {
@@ -84,61 +84,61 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	case types.IntKind:
 		switch v := v.(type) {
 		case int:
-			return meergo.ValidateInt(name, typ, v)
+			return warehouses.ValidateInt(name, typ, v)
 		case int64:
-			return meergo.ValidateInt(name, typ, int(v))
+			return warehouses.ValidateInt(name, typ, int(v))
 		}
 	case types.UintKind:
 		switch v := v.(type) {
 		case int:
 			if v >= 0 {
-				return meergo.ValidateUint(name, typ, uint(v))
+				return warehouses.ValidateUint(name, typ, uint(v))
 			}
 		case int64:
 			if v >= 0 {
-				return meergo.ValidateUint(name, typ, uint(v))
+				return warehouses.ValidateUint(name, typ, uint(v))
 			}
 		case string:
 			if v, err := strconv.ParseUint(v, 10, 64); err == nil {
-				return meergo.ValidateUint(name, typ, uint(v))
+				return warehouses.ValidateUint(name, typ, uint(v))
 			}
 		}
 	case types.FloatKind:
 		if v, ok := v.(float64); ok {
-			return meergo.ValidateFloat(name, typ, v)
+			return warehouses.ValidateFloat(name, typ, v)
 		}
 	case types.DecimalKind:
 		if v, ok := v.(string); ok {
-			return meergo.ValidateDecimalString(name, typ, v)
+			return warehouses.ValidateDecimalString(name, typ, v)
 		}
 	case types.DateTimeKind:
 		if v, ok := v.(time.Time); ok {
-			return meergo.ValidateDateTime(name, v)
+			return warehouses.ValidateDateTime(name, v)
 		}
 	case types.DateKind:
 		if v, ok := v.(time.Time); ok {
-			return meergo.ValidateDate(name, v)
+			return warehouses.ValidateDate(name, v)
 		}
 	case types.TimeKind:
 		switch v := v.(type) {
 		case time.Time:
-			return meergo.ValidateTime(v)
+			return warehouses.ValidateTime(v)
 		case string:
-			return meergo.ValidateTimeString(name, "15:04:05.999999", v)
+			return warehouses.ValidateTimeString(name, "15:04:05.999999", v)
 		}
 	case types.YearKind:
 		switch v := v.(type) {
 		case int:
-			return meergo.ValidateYear(name, v)
+			return warehouses.ValidateYear(name, v)
 		case int64:
-			return meergo.ValidateYear(name, int(v))
+			return warehouses.ValidateYear(name, int(v))
 		}
 	case types.UUIDKind:
 		if v, ok := v.(string); ok {
-			return meergo.ValidateUUID(name, v)
+			return warehouses.ValidateUUID(name, v)
 		}
 	case types.JSONKind:
-		return meergo.ValidateJSON(name, v)
+		return warehouses.ValidateJSON(name, v)
 	case types.InetKind:
 		if v, ok := v.(string); ok {
 			// IP addresses are parsed directly here, without calling the

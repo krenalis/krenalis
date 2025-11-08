@@ -10,9 +10,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 func TestDiff(t *testing.T) {
@@ -22,7 +22,7 @@ func TestDiff(t *testing.T) {
 		fromSchema  types.Type
 		toSchema    types.Type
 		rePaths     map[string]any
-		expectedOps []meergo.AlterOperation
+		expectedOps []warehouses.AlterOperation
 		expectedErr string
 	}{
 		{
@@ -37,9 +37,9 @@ func TestDiff(t *testing.T) {
 			rePaths: map[string]any{
 				"lastName": "firstName",
 			},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "lastName"},
-				{Operation: meergo.OperationRenameColumn, Column: "firstName", NewColumn: "lastName"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "lastName"},
+				{Operation: warehouses.OperationRenameColumn, Column: "firstName", NewColumn: "lastName"},
 			},
 		},
 		{
@@ -58,9 +58,9 @@ func TestDiff(t *testing.T) {
 			rePaths: map[string]any{
 				"x.lastName": "x.firstName",
 			},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "x_lastName"},
-				{Operation: meergo.OperationRenameColumn, Column: "x_firstName", NewColumn: "x_lastName"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_lastName"},
+				{Operation: warehouses.OperationRenameColumn, Column: "x_firstName", NewColumn: "x_lastName"},
 			},
 		},
 		{
@@ -85,7 +85,7 @@ func TestDiff(t *testing.T) {
 			toSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{},
+			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
 			name: "Changes in descriptions are not influent",
@@ -95,7 +95,7 @@ func TestDiff(t *testing.T) {
 			toSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text(), Nullable: true, Description: "new description"},
 			}),
-			expectedOps: []meergo.AlterOperation{},
+			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
 			name: "One property added at first level (type text)",
@@ -106,8 +106,8 @@ func TestDiff(t *testing.T) {
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "b", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Text()},
 			},
 		},
 		{
@@ -119,8 +119,8 @@ func TestDiff(t *testing.T) {
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "b", Type: types.Int(32)},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
 		},
 		{
@@ -138,8 +138,8 @@ func TestDiff(t *testing.T) {
 					{Name: "c", Type: types.Text(), Nullable: true},
 				})},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "x_c", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "x_c", Type: types.Text()},
 			},
 		},
 		{
@@ -157,8 +157,8 @@ func TestDiff(t *testing.T) {
 					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "x_c"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_c"},
 			},
 		},
 		{
@@ -176,8 +176,8 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			rePaths: map[string]any{"x.c": "x.b"},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "x_b", NewColumn: "x_c"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "x_b", NewColumn: "x_c"},
 			},
 		},
 		{
@@ -194,9 +194,9 @@ func TestDiff(t *testing.T) {
 					{Name: "c", Type: types.Text(), Nullable: true},
 				})},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "x_c", Type: types.Text()},
-				{Operation: meergo.OperationDropColumn, Column: "x_b"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "x_c", Type: types.Text()},
+				{Operation: warehouses.OperationDropColumn, Column: "x_b"},
 			},
 		},
 		{
@@ -211,9 +211,9 @@ func TestDiff(t *testing.T) {
 				{Name: "c", Type: types.Text(), Nullable: true},
 				{Name: "d", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "c", Type: types.Text()},
-				{Operation: meergo.OperationAddColumn, Column: "d", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "c", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "d", Type: types.Text()},
 			},
 		},
 		{
@@ -227,8 +227,8 @@ func TestDiff(t *testing.T) {
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "c"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "c"},
 			},
 		},
 		{
@@ -241,9 +241,9 @@ func TestDiff(t *testing.T) {
 			toSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "b"},
-				{Operation: meergo.OperationDropColumn, Column: "c"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "b"},
+				{Operation: warehouses.OperationDropColumn, Column: "c"},
 			},
 		},
 		{
@@ -264,9 +264,9 @@ func TestDiff(t *testing.T) {
 			toSchema: types.Object([]types.Property{
 				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "b", Type: types.Text()},
-				{Operation: meergo.OperationDropColumn, Column: "a"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Text()},
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
 			},
 		},
 		{
@@ -278,8 +278,8 @@ func TestDiff(t *testing.T) {
 				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"b": "a"},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "a", NewColumn: "b"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "b"},
 			},
 		},
 		{
@@ -304,9 +304,9 @@ func TestDiff(t *testing.T) {
 				{Name: "d", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"c": "a", "d": "b"},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "a", NewColumn: "c"},
-				{Operation: meergo.OperationRenameColumn, Column: "b", NewColumn: "d"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "c"},
+				{Operation: warehouses.OperationRenameColumn, Column: "b", NewColumn: "d"},
 			},
 		},
 		{
@@ -318,9 +318,9 @@ func TestDiff(t *testing.T) {
 				{Name: "a", Type: types.Int(32), Nullable: true},
 			}),
 			rePaths: map[string]any{"a": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "a"},
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Int(32)},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Int(32)},
 			},
 		},
 		{
@@ -332,9 +332,9 @@ func TestDiff(t *testing.T) {
 				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"a": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "a"},
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 		},
 		{
@@ -350,9 +350,9 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			rePaths: map[string]any{"x.a": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "x_a"},
-				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
 			},
 		},
 		{
@@ -365,7 +365,7 @@ func TestDiff(t *testing.T) {
 				{Name: "b", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{},
+			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
 			name: "Property order is changed at first level (total of three properties), no renamings",
@@ -379,7 +379,7 @@ func TestDiff(t *testing.T) {
 				{Name: "c", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{},
+			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
 			name: "Property order is changed at first level, with renamings",
@@ -396,8 +396,8 @@ func TestDiff(t *testing.T) {
 				{Name: "c", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"b2": "b"},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "b", NewColumn: "b2"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "b", NewColumn: "b2"},
 			},
 		},
 		{
@@ -419,8 +419,8 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			rePaths: map[string]any{"x.b2": "x.b"},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "x_b", NewColumn: "x_b2"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "x_b", NewColumn: "x_b2"},
 			},
 		},
 		{
@@ -441,10 +441,10 @@ func TestDiff(t *testing.T) {
 				"x.a": nil,
 				"z2":  "z",
 			},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "z", NewColumn: "z2"},
-				{Operation: meergo.OperationDropColumn, Column: "x_a"},
-				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "z", NewColumn: "z2"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
 			},
 		},
 		{
@@ -468,11 +468,11 @@ func TestDiff(t *testing.T) {
 				"x.a": nil,
 				"z2":  "z",
 			},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "z", NewColumn: "z2"},
-				{Operation: meergo.OperationDropColumn, Column: "y_a"},
-				{Operation: meergo.OperationDropColumn, Column: "x_a"},
-				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "z", NewColumn: "z2"},
+				{Operation: warehouses.OperationDropColumn, Column: "y_a"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Int(32)},
 			},
 		},
 		{
@@ -491,11 +491,11 @@ func TestDiff(t *testing.T) {
 			toSchema: types.Object([]types.Property{
 				{Name: "v", Type: types.Text(), Nullable: true},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "x_a"},
-				{Operation: meergo.OperationDropColumn, Column: "x_b"},
-				{Operation: meergo.OperationDropColumn, Column: "y_c"},
-				{Operation: meergo.OperationDropColumn, Column: "y_d"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_a"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "y_c"},
+				{Operation: warehouses.OperationDropColumn, Column: "y_d"},
 			},
 		},
 		{
@@ -510,9 +510,9 @@ func TestDiff(t *testing.T) {
 					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Text()},
-				{Operation: meergo.OperationAddColumn, Column: "x_b", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Text()},
 			},
 		},
 		{
@@ -534,9 +534,9 @@ func TestDiff(t *testing.T) {
 				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"a": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "a"},
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 		},
 		{
@@ -550,9 +550,9 @@ func TestDiff(t *testing.T) {
 				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
 			rePaths: map[string]any{"a": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "a"},
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 		},
 		{
@@ -592,10 +592,10 @@ func TestDiff(t *testing.T) {
 			rePaths: map[string]any{
 				"b.e_new_name": "b.e",
 			},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "b_e_f", NewColumn: "b_e_new_name_f"},
-				{Operation: meergo.OperationRenameColumn, Column: "b_e_g_h", NewColumn: "b_e_new_name_g_h"},
-				{Operation: meergo.OperationRenameColumn, Column: "b_e_g_i", NewColumn: "b_e_new_name_g_i"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "b_e_f", NewColumn: "b_e_new_name_f"},
+				{Operation: warehouses.OperationRenameColumn, Column: "b_e_g_h", NewColumn: "b_e_new_name_g_h"},
+				{Operation: warehouses.OperationRenameColumn, Column: "b_e_g_i", NewColumn: "b_e_new_name_g_i"},
 			},
 		},
 		{
@@ -620,7 +620,7 @@ func TestDiff(t *testing.T) {
 					{Name: "b", Type: types.Text(), Nullable: true},
 				})},
 			}),
-			expectedOps: []meergo.AlterOperation{},
+			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
 			name: "Changing order of properties within objects",
@@ -636,7 +636,7 @@ func TestDiff(t *testing.T) {
 					{Name: "a", Type: types.Text(), Nullable: true},
 				})},
 			}),
-			expectedOps: []meergo.AlterOperation{},
+			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
 			name: "Property renamed and added again with the same name, but different type",
@@ -648,9 +648,9 @@ func TestDiff(t *testing.T) {
 				{Name: "a2", Type: types.Int(64), Nullable: true},
 			}),
 			rePaths: map[string]any{"a2": "a", "a": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "a", NewColumn: "a2"},
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "a2"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 		},
 		{
@@ -663,9 +663,9 @@ func TestDiff(t *testing.T) {
 				{Name: "a2", Type: types.Int(64), Nullable: true},
 			}),
 			rePaths: map[string]any{"a2": "a", "a": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "a", NewColumn: "a2"},
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Int(64)},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "a2"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Int(64)},
 			},
 		},
 		{
@@ -683,9 +683,9 @@ func TestDiff(t *testing.T) {
 					{Name: "a", Type: types.Int(64), Nullable: true},
 				})}}),
 			rePaths: map[string]any{"x2": "x", "x": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "x_a", NewColumn: "x2_a"},
-				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Int(64)},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "x_a", NewColumn: "x2_a"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Int(64)},
 			},
 		},
 		{
@@ -702,9 +702,9 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			rePaths: map[string]any{"x.a2": "x.a", "x.a": nil},
-			expectedOps: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "x_a", NewColumn: "x_a2"},
-				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Text()},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "x_a", NewColumn: "x_a2"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
 			},
 		},
 		{
@@ -721,7 +721,7 @@ func TestDiff(t *testing.T) {
 					{Name: "a", Type: types.Text(), Nullable: true},
 				})},
 			}),
-			expectedOps: []meergo.AlterOperation{},
+			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
 			name: "Rename an object property while adding a new property to it",

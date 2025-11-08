@@ -25,7 +25,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/core/validation"
@@ -38,57 +38,57 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterAPI(meergo.APISpec{
+	connectors.RegisterAPI(connectors.APISpec{
 		Code:       "klaviyo",
 		Label:      "Klaviyo",
-		Categories: meergo.CategorySaaS,
-		AsSource: &meergo.AsAPISource{
-			Targets:     meergo.TargetUser,
+		Categories: connectors.CategorySaaS,
+		AsSource: &connectors.AsAPISource{
+			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Summary:  "Import profiles as users from Klaviyo",
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAPIDestination{
-			Targets:     meergo.TargetEvent | meergo.TargetUser,
+		AsDestination: &connectors.AsAPIDestination{
+			Targets:     connectors.TargetEvent | connectors.TargetUser,
 			HasSettings: true,
-			SendingMode: meergo.Server,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			SendingMode: connectors.Server,
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Summary:  "Export users as profiles and send events to Klaviyo",
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.APITerms{
+		Terms: connectors.APITerms{
 			User:  "profile",
 			Users: "profiles",
 		},
-		EndpointGroups: []meergo.EndpointGroup{
+		EndpointGroups: []connectors.EndpointGroup{
 			{
 				Patterns:    []string{"/api/event-bulk-create-jobs"},
-				RateLimit:   meergo.RateLimit{RequestsPerSecond: 2.5, Burst: 10},
+				RateLimit:   connectors.RateLimit{RequestsPerSecond: 2.5, Burst: 10},
 				RetryPolicy: retryPolicy,
 			},
 			{
 				Patterns:    []string{"/api/profiles/"},
-				RateLimit:   meergo.RateLimit{RequestsPerSecond: 11.6, Burst: 75},
+				RateLimit:   connectors.RateLimit{RequestsPerSecond: 11.6, Burst: 75},
 				RetryPolicy: retryPolicy,
 			},
 		},
 	}, New)
 }
 
-var retryPolicy = meergo.RetryPolicy{
+var retryPolicy = connectors.RetryPolicy{
 	// https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling
-	"429":     meergo.RetryAfterStrategy(),
-	"500 503": meergo.ExponentialStrategy(meergo.NetFailure, 100*time.Millisecond),
+	"429":     connectors.RetryAfterStrategy(),
+	"500 503": connectors.ExponentialStrategy(connectors.NetFailure, 100*time.Millisecond),
 }
 
 // apiRevision is the API revision to use for calls to the Klaviyo API methods.
 const apiRevision = "2024-07-15"
 
 // New returns a new connector instance for Klaviyo.
-func New(env *meergo.APIEnv) (*Klaviyo, error) {
+func New(env *connectors.APIEnv) (*Klaviyo, error) {
 	c := Klaviyo{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -100,7 +100,7 @@ func New(env *meergo.APIEnv) (*Klaviyo, error) {
 }
 
 type Klaviyo struct {
-	env      *meergo.APIEnv
+	env      *connectors.APIEnv
 	settings *innerSettings
 }
 
@@ -119,12 +119,12 @@ func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types
 			{Name: "properties", Type: types.Map(types.JSON()), Description: "Properties"},
 		}), nil
 	}
-	return types.Type{}, meergo.ErrUIEventNotExist
+	return types.Type{}, connectors.ErrUIEventNotExist
 }
 
 // EventTypes returns the event types.
-func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
-	return []*meergo.EventType{
+func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
+	return []*connectors.EventType{
 		{
 			ID:          "create_event",
 			Name:        "Create event",
@@ -135,12 +135,12 @@ func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
 // events to the API, without actually sending it.
-func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
+func (ky *Klaviyo) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
 	return ky.sendEvents(ctx, events, true)
 }
 
 // Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	var hasID bool
 	var hasUpdated bool
@@ -209,9 +209,9 @@ func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 		return nil, "", io.EOF
 	}
 
-	users := make([]meergo.Record, len(response.Data))
+	users := make([]connectors.Record, len(response.Data))
 	for i, data := range response.Data {
-		users[i] = meergo.Record{
+		users[i] = connectors.Record{
 			ID: data.ID,
 		}
 		updated, _ := data.Attributes["updated"].(string)
@@ -243,7 +243,7 @@ func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 }
 
 // RecordSchema returns the schema of the specified target and role.
-func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+func (ky *Klaviyo) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
 	// The fields which are not marked as "required" in the documentation
 	// (available here:
 	// https://developers.klaviyo.com/en/reference/get_profiles) are declared as
@@ -400,7 +400,7 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role
 			Description: "Custom properties",
 		},
 	})
-	if role == meergo.Destination {
+	if role == connectors.Destination {
 		sourceOnlyProperties := []string{"id", "anonymous_id", "created", "updated", "last_event_date"}
 		schema = types.Filter(schema, func(p types.Property) bool {
 			return !slices.Contains(sourceOnlyProperties, p.Name)
@@ -410,13 +410,13 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target meergo.Targets, role
 }
 
 // SendEvents sends events to the API.
-func (ky *Klaviyo) SendEvents(ctx context.Context, events meergo.Events) error {
+func (ky *Klaviyo) SendEvents(ctx context.Context, events connectors.Events) error {
 	_, err := ky.sendEvents(ctx, events, false)
 	return err
 }
 
 // ServeUI serves the connector's user interface.
-func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -428,12 +428,12 @@ func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Valu
 	case "save":
 		return nil, ky.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
 		},
 		Settings: settings,
 	}
@@ -442,7 +442,7 @@ func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Valu
 }
 
 // Upsert updates or creates records in the API for the specified target.
-func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (ky *Klaviyo) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 
 	record := records.First()
 
@@ -450,7 +450,7 @@ func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records me
 	if ok {
 		delete(record.Properties, "properties")
 	}
-	bb := ky.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := ky.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
 	bb.WriteString(`{"data":{"type":"profile","attributes":`)
 	_ = bb.Encode(record.Properties)
@@ -484,15 +484,15 @@ func (ky *Klaviyo) saveSettings(ctx context.Context, settings json.Value) error 
 	// Klaviyo private key specs are documented here:
 	// https://help.klaviyo.com/hc/en-us/articles/360052448451.
 	if n := len(s.PrivateAPIKey); n < 37 {
-		return meergo.NewInvalidSettingsError("private API key must be at least 37 characters long")
+		return connectors.NewInvalidSettingsError("private API key must be at least 37 characters long")
 	}
 	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return meergo.NewInvalidSettingsError("private API key must begin with 'pk_'")
+		return connectors.NewInvalidSettingsError("private API key must begin with 'pk_'")
 	}
 	for i := 3; i < len(s.PrivateAPIKey); i++ {
 		c := s.PrivateAPIKey[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return meergo.NewInvalidSettingsError("private API key after 'pk_' must contain only alphanumeric characters")
+			return connectors.NewInvalidSettingsError("private API key after 'pk_' must contain only alphanumeric characters")
 		}
 	}
 	b, err := json.Marshal(s)
@@ -532,7 +532,7 @@ func (err *klaviyoError) Error() string {
 	return fmt.Sprintf("unexpected error from Klaviyo (%d): %s", err.statusCode, &msg)
 }
 
-func (ky *Klaviyo) call(ctx context.Context, method, url string, bb *meergo.BodyBuffer, expectedStatus int, response any) error {
+func (ky *Klaviyo) call(ctx context.Context, method, url string, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
 
 	req, err := bb.NewRequest(ctx, method, url)
 	if err != nil {
@@ -591,12 +591,12 @@ var emailRegex = regexp.MustCompile(`(?i)^(?:[a-z0-9!#$%&'*+/=?^_` + "`" + `{|}~
 //     values["properties"]).
 //   - A property cannot contain a string longer than 100K characters.
 //   - A property cannot contain an array with more than 4000 elements.
-func (ky *Klaviyo) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+func (ky *Klaviyo) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
 
 	now := time.Now().UTC()
 	maxTimestamp := time.Date(now.Year()+1, now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
 
-	bb := ky.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := ky.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
 
 	bb.WriteString(`{"data":{"type":"event-bulk-create-job","attributes":{"events-bulk-create":{"data":[`)

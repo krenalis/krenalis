@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 // Test the main state transitions and behaviors of the rate limiter.
@@ -38,7 +38,7 @@ func TestRateLimiter_BasicStates(t *testing.T) {
 	l.mu.Unlock()
 
 	// OnFailure with NetFailure and low error rate should not change state.
-	l.OnFailure(0, meergo.NetFailure, 0)
+	l.OnFailure(0, connectors.NetFailure, 0)
 	l.mu.Lock()
 	if l.state != normal {
 		t.Errorf("OnFailure at low errorRate: got %v, want normal", l.state)
@@ -46,7 +46,7 @@ func TestRateLimiter_BasicStates(t *testing.T) {
 	l.mu.Unlock()
 
 	// OnFailure with Slowdown should transition to slowdown state and set min error rate.
-	l.OnFailure(0, meergo.Slowdown, 0)
+	l.OnFailure(0, connectors.Slowdown, 0)
 	l.mu.Lock()
 	if l.state != slowdown {
 		t.Errorf("OnFailure with Slowdown: got %v, want slowdown", l.state)
@@ -74,7 +74,7 @@ func TestRateLimiter_RateLimitPause(t *testing.T) {
 	l := newRateLimiter(10, 3, 0)
 
 	// Pause for a long time to guarantee the pause is in effect during Wait
-	l.OnFailure(0, meergo.RateLimited, 1*time.Second)
+	l.OnFailure(0, connectors.RateLimited, 1*time.Second)
 	l.mu.Lock()
 	if l.state != rateLimited {
 		t.Errorf("RateLimit: got %v, want rateLimited", l.state)
@@ -282,7 +282,7 @@ func TestRateLimiter_StateTransitions(t *testing.T) {
 		if err := l.Wait(ctx); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		l.OnFailure(0, meergo.Slowdown, 0)
+		l.OnFailure(0, connectors.Slowdown, 0)
 	}
 	l.mu.Lock()
 	state := l.state
@@ -295,7 +295,7 @@ func TestRateLimiter_StateTransitions(t *testing.T) {
 	if err := l.Wait(ctx); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	l.OnFailure(0, meergo.RateLimited, time.Millisecond)
+	l.OnFailure(0, connectors.RateLimited, time.Millisecond)
 	l.mu.Lock()
 	state = l.state
 	l.mu.Unlock()
@@ -326,7 +326,7 @@ func TestRateLimiter_WaitTime(t *testing.T) {
 	}
 
 	// Enter rate limit state with a short pause.
-	l.OnFailure(0, meergo.RateLimited, 200*time.Millisecond)
+	l.OnFailure(0, connectors.RateLimited, 200*time.Millisecond)
 	if d := l.WaitTime(); d < 180*time.Millisecond {
 		t.Fatalf("waitTime during pause = %v, want >= 180ms", d)
 	}

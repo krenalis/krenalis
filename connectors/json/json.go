@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 )
@@ -26,19 +26,19 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFile(meergo.FileSpec{
+	connectors.RegisterFile(connectors.FileSpec{
 		Code:       "json",
 		Label:      "JSON",
-		Categories: meergo.CategoryFile,
-		AsSource: &meergo.AsSourceFile{
+		Categories: connectors.CategoryFile,
+		AsSource: &connectors.AsSourceFile{
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsDestinationFile{
+		AsDestination: &connectors.AsDestinationFile{
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -47,7 +47,7 @@ func init() {
 }
 
 // New returns a new connector instance for JSON.
-func New(env *meergo.FileEnv) (*JSON, error) {
+func New(env *connectors.FileEnv) (*JSON, error) {
 	c := JSON{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -59,12 +59,12 @@ func New(env *meergo.FileEnv) (*JSON, error) {
 }
 
 type JSON struct {
-	env      *meergo.FileEnv
+	env      *connectors.FileEnv
 	settings *innerSettings
 }
 
 type innerSettings struct {
-	Properties         []meergo.KV `json:",omitzero"`
+	Properties         []connectors.KV `json:",omitzero"`
 	Indent             bool
 	GenerateASCII      bool
 	AllowSpecialFloats bool
@@ -79,7 +79,7 @@ func (j *JSON) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.RecordWriter) error {
+func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records connectors.RecordWriter) error {
 
 	columns := make([]types.Property, 0, len(j.settings.Properties))
 	for _, property := range j.settings.Properties {
@@ -207,7 +207,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 }
 
 // ServeUI serves the connector's user interface.
-func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -219,23 +219,23 @@ func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, r
 	case "save":
 		return nil, j.saveSettings(ctx, settings, role)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.KeyValue{
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.KeyValue{
 				Name:           "Properties",
 				Label:          "Properties",
 				KeyLabel:       "Name",
 				ValueLabel:     "Required",
-				KeyComponent:   &meergo.Input{Name: "Name", Placeholder: "Name", Rows: 1},
-				ValueComponent: &meergo.Select{Name: "Required", Label: "Required", Options: []meergo.Option{{Text: "Required", Value: "t"}, {Text: "Optional", Value: "f"}}},
-				Role:           meergo.Source,
+				KeyComponent:   &connectors.Input{Name: "Name", Placeholder: "Name", Rows: 1},
+				ValueComponent: &connectors.Select{Name: "Required", Label: "Required", Options: []connectors.Option{{Text: "Required", Value: "t"}, {Text: "Optional", Value: "f"}}},
+				Role:           connectors.Source,
 			},
-			&meergo.Checkbox{Name: "Indent", Label: "Indent the generated output", Role: meergo.Destination},
-			&meergo.Checkbox{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: meergo.Destination},
-			&meergo.Checkbox{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: meergo.Destination},
+			&connectors.Checkbox{Name: "Indent", Label: "Indent the generated output", Role: connectors.Destination},
+			&connectors.Checkbox{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: connectors.Destination},
+			&connectors.Checkbox{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: connectors.Destination},
 		},
 		Settings: settings,
 	}
@@ -244,7 +244,7 @@ func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, r
 }
 
 // Write writes to w the records read from records.
-func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.RecordReader) error {
+func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records connectors.RecordReader) error {
 	s := j.settings
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error
@@ -293,31 +293,31 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.
 }
 
 // saveSettings saves the settings.
-func (j *JSON) saveSettings(ctx context.Context, settings json.Value, role meergo.Role) error {
+func (j *JSON) saveSettings(ctx context.Context, settings json.Value, role connectors.Role) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Properties.
-	if role == meergo.Source {
+	if role == connectors.Source {
 		if len(s.Properties) == 0 {
-			return meergo.NewInvalidSettingsError("must have at least one property")
+			return connectors.NewInvalidSettingsError("must have at least one property")
 		}
 		hasName := map[string]struct{}{}
 		for _, property := range s.Properties {
 			if _, ok := hasName[property.Key]; ok {
-				return meergo.NewInvalidSettingsError(fmt.Sprintf("property name %q is repeated", property.Key))
+				return connectors.NewInvalidSettingsError(fmt.Sprintf("property name %q is repeated", property.Key))
 			}
 			if property.Key == "" {
-				return meergo.NewInvalidSettingsError("a property name is empty")
+				return connectors.NewInvalidSettingsError("a property name is empty")
 			}
 			if !types.IsValidPropertyName(property.Key) {
-				return meergo.NewInvalidSettingsError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
+				return connectors.NewInvalidSettingsError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
 					" with a letter or underscore [A-Za-z_] and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", property.Key))
 			}
 			if property.Value != "f" && property.Value != "t" {
-				return meergo.NewInvalidSettingsError("required is not valid")
+				return connectors.NewInvalidSettingsError("required is not valid")
 			}
 			hasName[property.Key] = struct{}{}
 		}

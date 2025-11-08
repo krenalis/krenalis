@@ -19,7 +19,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/validation"
 )
@@ -31,22 +31,22 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFileStorage(meergo.FileStorageSpec{
+	connectors.RegisterFileStorage(connectors.FileStorageSpec{
 		Code:       "http-get",
 		Label:      "HTTP GET",
-		Categories: meergo.CategoryFileStorage,
-		AsSource: &meergo.AsFileStorageSource{
-			Documentation: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategoryFileStorage,
+		AsSource: &connectors.AsFileStorageSource{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
 	}, New)
-	meergo.RegisterFileStorage(meergo.FileStorageSpec{
+	connectors.RegisterFileStorage(connectors.FileStorageSpec{
 		Code:       "http-post",
 		Label:      "HTTP POST",
-		Categories: meergo.CategoryFileStorage,
-		AsDestination: &meergo.AsFileStorageDestination{
-			Documentation: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategoryFileStorage,
+		AsDestination: &connectors.AsFileStorageDestination{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -54,7 +54,7 @@ func init() {
 }
 
 // New returns a new connection instance for HTTP GET/HTTP POST requests.
-func New(env *meergo.FileStorageEnv) (*HTTP, error) {
+func New(env *connectors.FileStorageEnv) (*HTTP, error) {
 	c := HTTP{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -66,14 +66,14 @@ func New(env *meergo.FileStorageEnv) (*HTTP, error) {
 }
 
 type HTTP struct {
-	env      *meergo.FileStorageEnv
+	env      *connectors.FileStorageEnv
 	settings *innerSettings
 }
 
 type innerSettings struct {
 	Host    string
 	Port    int
-	Headers []meergo.KV
+	Headers []connectors.KV
 }
 
 // AbsolutePath returns the absolute representation of the given path name.
@@ -86,10 +86,10 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 	for i := 0; i < len(name); i++ {
 		c := name[i]
 		if c == '#' || (!parsingQuery && (c < ' ' || c == 0x7f)) {
-			return "", meergo.InvalidPathErrorf("path cannot contains “#“, and control characters")
+			return "", connectors.InvalidPathErrorf("path cannot contains “#“, and control characters")
 		}
 		if c == '%' && (i+2 < len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
-			return "", meergo.InvalidPathErrorf("path contains an invalid escape sequence")
+			return "", connectors.InvalidPathErrorf("path contains an invalid escape sequence")
 		}
 		if c == '?' && !parsingQuery {
 			path, query = name[:i], name[i+1:]
@@ -140,7 +140,7 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 }
 
 // ServeUI serves the connector's user interface.
-func (h *HTTP) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (h *HTTP) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -154,16 +154,16 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, settings json.Value, r
 	case "save":
 		return nil, h.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&meergo.KeyValue{Name: "Headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
-				KeyComponent:   &meergo.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
-				ValueComponent: &meergo.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&connectors.KeyValue{Name: "Headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
+				KeyComponent:   &connectors.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
+				ValueComponent: &connectors.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},
 		},
 		Settings: settings,
@@ -207,19 +207,19 @@ func (h *HTTP) saveSettings(ctx context.Context, settings json.Value) error {
 	}
 	// Validate Host.
 	if err = validation.ValidateHost(s.Host); err != nil {
-		return meergo.NewInvalidSettingsError(err.Error())
+		return connectors.NewInvalidSettingsError(err.Error())
 	}
 	// Validate Port.
 	if err := validation.ValidatePort(s.Port); err != nil {
-		return meergo.NewInvalidSettingsError(err.Error())
+		return connectors.NewInvalidSettingsError(err.Error())
 	}
 	// Validate Headers.
 	for _, header := range s.Headers {
 		if n := utf8.RuneCountInString(header.Key); n == 0 || n > 100 {
-			return meergo.NewInvalidSettingsError("header key length must be in range [1,100]")
+			return connectors.NewInvalidSettingsError("header key length must be in range [1,100]")
 		}
 		if n := utf8.RuneCountInString(header.Value); n == 0 || n > 10000 {
-			return meergo.NewInvalidSettingsError("header value length must be in range [1,10000]")
+			return connectors.NewInvalidSettingsError("header value length must be in range [1,10000]")
 		}
 	}
 	b, err := json.Marshal(s)

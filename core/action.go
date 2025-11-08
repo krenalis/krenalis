@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/internal/connectors"
+	coreConnectors "github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/metrics"
@@ -547,13 +547,13 @@ func (this *Action) ServeUI(ctx context.Context, event string, settings json.Val
 	}
 	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, settings)
 	if err != nil {
-		if err == meergo.ErrUIEventNotExist {
+		if err == connectors.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Code)
 		} else {
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *coreConnectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
 		}
@@ -727,15 +727,15 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 
 	// Format settings.
 	if format != nil && action.FormatSettings != nil {
-		conf := &connectors.ConnectorConfig{
+		conf := &coreConnectors.ConnectorConfig{
 			Role: this.action.Connection().Role,
 		}
 		n.FormatSettings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.FormatSettings)
 		if err != nil {
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *coreConnectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
 			return err
@@ -846,7 +846,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 }
 
 // api returns the API of the action.
-func (this *Action) api() *connectors.API {
+func (this *Action) api() *coreConnectors.API {
 	return this.core.connectors.API(this.action.Connection())
 }
 
@@ -913,7 +913,7 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 // database returns the database of the action.
 // The caller must call the database's Close method when the database is no
 // longer needed.
-func (this *Action) database() *connectors.Database {
+func (this *Action) database() *coreConnectors.Database {
 	a := this.action
 	return this.core.connectors.Database(a.Connection())
 }
@@ -1016,7 +1016,7 @@ func (this *Action) endExecution(err error) {
 }
 
 // file returns the file of the action.
-func (this *Action) file() *connectors.File {
+func (this *Action) file() *coreConnectors.File {
 	return this.core.connectors.File(this.action)
 }
 

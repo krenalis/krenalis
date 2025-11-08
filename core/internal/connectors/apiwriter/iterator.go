@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"iter"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 // iterator implements the meergo.Records interface to iterate over a sequence
@@ -27,7 +27,7 @@ func newIterator(w *Writer) *iterator {
 	return &it
 }
 
-func (it *iterator) All() iter.Seq[meergo.Record] {
+func (it *iterator) All() iter.Seq[connectors.Record] {
 	if it.consumed {
 		panic(it.writer.connector + " connector: Upsert method called Records.All after the records were consumed")
 	}
@@ -55,7 +55,7 @@ func (it *iterator) Discard(err error) {
 	it.writer.discard(err)
 }
 
-func (it *iterator) First() meergo.Record {
+func (it *iterator) First() connectors.Record {
 	if it.consumed {
 		panic(it.writer.connector + " connector: Upsert method called Records.First after the records were consumed")
 	}
@@ -71,7 +71,7 @@ func (it *iterator) First() meergo.Record {
 	return record
 }
 
-func (it *iterator) Peek() (meergo.Record, bool) {
+func (it *iterator) Peek() (connectors.Record, bool) {
 	if it.consumed && !it.iterating {
 		panic(it.writer.connector + " connector: Upsert method called Records.Peek outside of an iteration")
 	}
@@ -80,7 +80,7 @@ func (it *iterator) Peek() (meergo.Record, bool) {
 	}
 	record, ok := it.writer.read(opAll, false)
 	if !ok {
-		return meergo.Record{}, false
+		return connectors.Record{}, false
 	}
 	return record, true
 }
@@ -102,7 +102,7 @@ func (it *iterator) Postpone() {
 	it.writer.postpone()
 }
 
-func (it *iterator) Same() iter.Seq[meergo.Record] {
+func (it *iterator) Same() iter.Seq[connectors.Record] {
 	if it.consumed {
 		panic(it.writer.connector + " connector: Upsert method called Records.Some after the records were consumed")
 	}
@@ -116,8 +116,8 @@ func (it *iterator) Same() iter.Seq[meergo.Record] {
 
 // seq returns a sequence of records. If op is not opAll, it restricts the
 // sequence to records of type creation (opCreate) or update (opUpdate).
-func (it *iterator) seq(op op) iter.Seq[meergo.Record] {
-	return func(yield func(record meergo.Record) bool) {
+func (it *iterator) seq(op op) iter.Seq[connectors.Record] {
+	return func(yield func(record connectors.Record) bool) {
 		if trace {
 			fmt.Printf("iterator.seq: iterator %p starting to read %s records\n", it, op)
 		}

@@ -12,7 +12,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 )
@@ -21,22 +21,22 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterAPI(meergo.APISpec{
+	connectors.RegisterAPI(connectors.APISpec{
 		Code:       "ui-sample",
 		Label:      "UISample",
-		Categories: meergo.CategoryTesting,
-		AsSource: &meergo.AsAPISource{
-			Targets:     meergo.TargetUser,
+		Categories: connectors.CategoryTesting,
+		AsSource: &connectors.AsAPISource{
+			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Summary:  "Test the UI components",
 				Overview: overview,
 			},
 		},
-		AsDestination: &meergo.AsAPIDestination{
-			Targets:     meergo.TargetUser,
+		AsDestination: &connectors.AsAPIDestination{
+			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Summary:  "Test the UI components",
 				Overview: overview,
 			},
@@ -45,7 +45,7 @@ func init() {
 }
 
 // New returns a new connector instance for UI sample.
-func New(env *meergo.APIEnv) (*UISample, error) {
+func New(env *connectors.APIEnv) (*UISample, error) {
 	c := UISample{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -57,22 +57,22 @@ func New(env *meergo.APIEnv) (*UISample, error) {
 }
 
 type UISample struct {
-	env      *meergo.APIEnv
+	env      *connectors.APIEnv
 	settings *innerSettings
 }
 
 // RecordSchema returns the schema of the specified target and role.
-func (uiSample *UISample) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
-	return types.Type{}, meergo.ErrEventTypeNotExist
+func (uiSample *UISample) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
+	return types.Type{}, connectors.ErrEventTypeNotExist
 }
 
 // Records returns the records of the specified target.
-func (uiSample *UISample) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+func (uiSample *UISample) Records(ctx context.Context, target connectors.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 	return nil, "", io.EOF
 }
 
 // ServeUI serves the connector's user interface.
-func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -84,57 +84,57 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings js
 	case "save":
 		return nil, uiSample.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "MyInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
-			&meergo.Input{Name: "MyTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
-			&meergo.Select{Name: "MySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []meergo.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
-			&meergo.Checkbox{Name: "MyCheckbox", Label: "Checkbox"},
-			&meergo.ColorPicker{Name: "MyColorPicker", Label: "ColorPicker"},
-			&meergo.Radios{Name: "MyRadios", Label: "Radios", Options: []meergo.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
-			&meergo.Range{Name: "MyRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
-			&meergo.Switch{Name: "MySwitch", Label: "Switch"},
-			&meergo.KeyValue{
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "MyInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
+			&connectors.Input{Name: "MyTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
+			&connectors.Select{Name: "MySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []connectors.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
+			&connectors.Checkbox{Name: "MyCheckbox", Label: "Checkbox"},
+			&connectors.ColorPicker{Name: "MyColorPicker", Label: "ColorPicker"},
+			&connectors.Radios{Name: "MyRadios", Label: "Radios", Options: []connectors.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
+			&connectors.Range{Name: "MyRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
+			&connectors.Switch{Name: "MySwitch", Label: "Switch"},
+			&connectors.KeyValue{
 				Name:       "MyKeyValue",
 				Label:      "KeyValue",
 				KeyLabel:   "Key label",
 				ValueLabel: "Value label",
-				KeyComponent: &meergo.Input{
+				KeyComponent: &connectors.Input{
 					Name:        "MyKeyValueKey",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
-				ValueComponent: &meergo.Input{
+				ValueComponent: &connectors.Input{
 					Name:        "MyKeyValueValue",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
 			},
-			&meergo.Text{Text: "lorem ipsum dolor sit amet consecuctur", Label: "Text"},
-			&meergo.AlternativeFieldSets{
+			&connectors.Text{Text: "lorem ipsum dolor sit amet consecuctur", Label: "Text"},
+			&connectors.AlternativeFieldSets{
 				Label:    "AlternativeFieldSets",
 				HelpText: "Help text of the alternativeFieldSets component",
-				Sets: []meergo.FieldSet{
+				Sets: []connectors.FieldSet{
 					{
 						Name:  "FirstSet",
 						Label: "First Set",
-						Fields: []meergo.Component{
-							&meergo.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&meergo.Input{Name: "MyFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&meergo.Input{Name: "MyFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
+						Fields: []connectors.Component{
+							&connectors.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "MyFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "MyFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
 						},
 					},
 					{
 						Name:  "SecondSet",
 						Label: "Second Set",
-						Fields: []meergo.Component{
-							&meergo.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&meergo.Input{Name: "MySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&meergo.Input{Name: "MySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
-							&meergo.Checkbox{Name: "MySecondSetCheckbox", Label: "Set Checkbox"},
+						Fields: []connectors.Component{
+							&connectors.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "MySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "MySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
+							&connectors.Checkbox{Name: "MySecondSetCheckbox", Label: "Set Checkbox"},
 						},
 					},
 				},
@@ -147,7 +147,7 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings js
 }
 
 // Upsert updates or creates records in the API for the specified target.
-func (uiSample *UISample) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (uiSample *UISample) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 	return nil
 }
 
@@ -179,7 +179,7 @@ type innerSettings struct {
 	MyRadios      string
 	MyRange       int
 	MySwitch      bool
-	MyKeyValue    []meergo.KV
+	MyKeyValue    []connectors.KV
 	FirstSet      *struct {
 		MySharedInput      string
 		MyFirstSetInput    string

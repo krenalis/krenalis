@@ -12,9 +12,10 @@ import (
 	"time"
 
 	"github.com/meergo/analytics-go"
-	"github.com/meergo/meergo"
+
 	_json "github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"
 )
@@ -1144,7 +1145,7 @@ type StartAlterUserSchema struct {
 	ID             string
 	Schema         types.Type
 	PrimarySources map[string]int // always != nil.
-	Operations     []meergo.AlterOperation
+	Operations     []warehouses.AlterOperation
 	StartTime      time.Time
 }
 

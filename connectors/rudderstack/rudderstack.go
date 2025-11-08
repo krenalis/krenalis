@@ -12,19 +12,19 @@ package rudderstack
 import (
 	_ "embed"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 //go:embed documentation/overview.md
 var overview string
 
 func init() {
-	meergo.RegisterWebhook(meergo.WebhookSpec{
+	connectors.RegisterWebhook(connectors.WebhookSpec{
 		Code:       "rudderstack",
 		Label:      "RudderStack",
-		Categories: meergo.CategorySaaS,
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategorySaaS,
+		Documentation: connectors.ConnectorDocumentation{
+			Source: connectors.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from RudderStack",
 				Overview: overview,
 			},
@@ -33,7 +33,7 @@ func init() {
 }
 
 // New returns a new connector instance for RudderStack.
-func New(env *meergo.WebhookEnv) (*RudderStack, error) {
+func New(env *connectors.WebhookEnv) (*RudderStack, error) {
 	return &RudderStack{}, nil
 }
 

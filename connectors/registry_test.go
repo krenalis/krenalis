@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package meergo
+package connectors
 
 import (
 	"context"
@@ -25,7 +25,6 @@ type registrySnapshot struct {
 	sdks           map[string]SDKSpec
 	webhooks       map[string]WebhookSpec
 	usedCodes      map[string]struct{}
-	warehouses     map[string]WarehouseDriver
 }
 
 func replaceRegistryForTest(t *testing.T) {
@@ -41,7 +40,6 @@ func replaceRegistryForTest(t *testing.T) {
 		sdks:           maps.Clone(registry.sdks),
 		webhooks:       maps.Clone(registry.webhooks),
 		usedCodes:      maps.Clone(registry.usedCodes),
-		warehouses:     maps.Clone(registry.warehouses),
 	}
 	registry.apis = make(map[string]APISpec)
 	registry.databases = make(map[string]DatabaseSpec)
@@ -51,7 +49,6 @@ func replaceRegistryForTest(t *testing.T) {
 	registry.sdks = make(map[string]SDKSpec)
 	registry.webhooks = make(map[string]WebhookSpec)
 	registry.usedCodes = make(map[string]struct{})
-	registry.warehouses = make(map[string]WarehouseDriver)
 	registryMu.Unlock()
 
 	t.Cleanup(func() {
@@ -64,7 +61,6 @@ func replaceRegistryForTest(t *testing.T) {
 		registry.sdks = snapshot.sdks
 		registry.webhooks = snapshot.webhooks
 		registry.usedCodes = snapshot.usedCodes
-		registry.warehouses = snapshot.warehouses
 		registryMu.Unlock()
 	})
 }

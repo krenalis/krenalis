@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package meergo
+package connectors
 
 import (
 	"context"
@@ -27,8 +27,6 @@ var (
 		storages       map[string]FileStorageSpec
 		webhooks       map[string]WebhookSpec
 		usedCodes      map[string]struct{} // used connector codes
-
-		warehouses map[string]WarehouseDriver
 	}{
 		apis:           make(map[string]APISpec),
 		databases:      make(map[string]DatabaseSpec),
@@ -38,8 +36,6 @@ var (
 		storages:       make(map[string]FileStorageSpec),
 		webhooks:       make(map[string]WebhookSpec),
 		usedCodes:      make(map[string]struct{}),
-
-		warehouses: make(map[string]WarehouseDriver),
 	}
 )
 
@@ -211,23 +207,6 @@ func RegisterWebhook[T any](webhook WebhookSpec, new WebhookNewFunc[T]) {
 	registry.usedCodes[webhook.Code] = struct{}{}
 }
 
-// RegisterWarehouseDriver makes a warehouse driver available by the provided
-// name. If RegisterWarehouseDriver is called twice with the same name or if new
-// is nil, it panics.
-func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriverNewFunc[T]) {
-	if new == nil {
-		panic("meergo: new function is nil for warehouse driver " + typ.Name)
-	}
-	typ.newFunc = reflect.ValueOf(new)
-	typ.ct = reflect.TypeOf((*T)(nil)).Elem()
-	registryMu.Lock()
-	defer registryMu.Unlock()
-	if _, dup := registry.warehouses[typ.Name]; dup {
-		panic("meergo: RegisterWarehouseDriver called twice for type " + typ.Name)
-	}
-	registry.warehouses[typ.Name] = typ
-}
-
 // RegisteredAPI returns the API registered with the given code. If an API with
 // this code is not registered, it panics.
 func RegisteredAPI(code string) APISpec {
@@ -312,30 +291,6 @@ func RegisteredWebhook(code string) WebhookSpec {
 	return webhook
 }
 
-// RegisteredWarehouseDriver returns the warehouse driver registered with the
-// given name. If a warehouse driver with this name is not registered, it
-// panics.
-func RegisteredWarehouseDriver(name string) WarehouseDriver {
-	registryMu.Lock()
-	warehouse, ok := registry.warehouses[name]
-	registryMu.Unlock()
-	if !ok {
-		panic(fmt.Errorf("meergo: unknown warehouse driver %q (forgotten import?)", name))
-	}
-	return warehouse
-}
-
-// WarehouseDrivers returns the warehouse drivers.
-func WarehouseDrivers() []WarehouseDriver {
-	registryMu.Lock()
-	drivers := make([]WarehouseDriver, 0, len(registry.warehouses))
-	for _, t := range registry.warehouses {
-		drivers = append(drivers, t)
-	}
-	registryMu.Unlock()
-	return drivers
-}
-
 // validateCategories validates the categories of a connector.
 func validateCategories(connectorName string, categories Categories) {
 	if categories == 0 {
@@ -361,7 +316,7 @@ func validateAPIConnector(api APISpec) {
 		targets := api.AsSource.Targets
 		//if targets == 0 || (targets&^(TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^TargetUser) != 0 {
-			panic(fmt.Sprintf("connector %s: APISpec.AsSource.Target is not valid; possible value is meergo.TargetUser", api.Code))
+			panic(fmt.Sprintf("connector %s: APISpec.AsSource.Target is not valid; possible value is connectors.TargetUser", api.Code))
 		}
 		if targets&TargetUser != 0 {
 			if !api.ct.Implements(reflect.TypeFor[RecordFetcher]()) {
@@ -374,7 +329,7 @@ func validateAPIConnector(api APISpec) {
 		targets := api.AsDestination.Targets
 		//if targets == 0 || (targets&^(TargetEvent|TargetUser|GroupTarget)) != 0 { TODO(marco): Implement groups
 		if targets == 0 || (targets&^(TargetEvent|TargetUser)) != 0 {
-			panic(fmt.Sprintf("connector %s: APISpec.AsDestination.Target is not valid; possible values are meergo.TargetEvent, meergo.TargetUser, or a combination of them using the bitwise OR operator", api.Code))
+			panic(fmt.Sprintf("connector %s: APISpec.AsDestination.Target is not valid; possible values are connectors.TargetEvent, connectors.TargetUser, or a combination of them using the bitwise OR operator", api.Code))
 		}
 		if targets&TargetEvent != 0 {
 			if !api.ct.Implements(reflect.TypeFor[EventSender]()) {

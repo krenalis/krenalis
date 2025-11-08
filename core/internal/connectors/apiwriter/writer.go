@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
 )
 
@@ -21,7 +21,7 @@ const trace = false  // set to true to trace execution flow
 type AcksFunc func(ids []string, err error)
 
 // UpsertFunc updates or creates records via the API for the specified target.
-type UpsertFunc func(ctx context.Context, target meergo.Targets, records meergo.Records) error
+type UpsertFunc func(ctx context.Context, target connectors.Targets, records connectors.Records) error
 
 const minBatchSize = 1000
 const maxQueueDelay = 200 * time.Millisecond
@@ -34,10 +34,10 @@ const maxQueueDelay = 200 * time.Millisecond
 // confirmation. To ensure all records are successfully sent to the API, Close
 // must be called after all Write calls have completed.
 type Writer struct {
-	connector string         // API connector.
-	target    meergo.Targets // target, can be TargetUser or TargetGroup
-	upsert    UpsertFunc     // function that updates or creates records in the API.
-	acks      AcksFunc       // ack function
+	connector string             // API connector.
+	target    connectors.Targets // target, can be TargetUser or TargetGroup
+	upsert    UpsertFunc         // function that updates or creates records in the API.
+	acks      AcksFunc           // ack function
 
 	mu        sync.Mutex  // mutex for iterator, records, index, and available fields
 	iterator  *iterator   // current iterator, if any; protected by mu
@@ -67,7 +67,7 @@ type record struct {
 func New(connector string, target state.Target, upsert UpsertFunc, acks AcksFunc) *Writer {
 	w := &Writer{
 		connector: connector,
-		target:    meergo.Targets(target),
+		target:    connectors.Targets(target),
 		upsert:    upsert,
 		acks:      acks,
 		records:   make([]record, 0, 100),
@@ -269,9 +269,9 @@ func (w *Writer) postpone() {
 // available. If op is not opAll, it restricts the returned record to those of
 // type creation (opCreate) or update (opUpdate). consume indicates if the
 // record should be consumed.
-func (w *Writer) read(op op, consume bool) (meergo.Record, bool) {
+func (w *Writer) read(op op, consume bool) (connectors.Record, bool) {
 	var ok bool
-	var record meergo.Record
+	var record connectors.Record
 	w.mu.Lock()
 	var i int
 	for i = w.iterator.index; i < len(w.records); i++ {
@@ -327,7 +327,7 @@ func (w *Writer) consume(iter *iterator) {
 		fmt.Printf("Writer.consume: iterator %p started\n", iter)
 	}
 	err := w.upsert(w.close.ctx, w.target, iter)
-	errors, _ := err.(meergo.RecordsError)
+	errors, _ := err.(connectors.RecordsError)
 	var errorOf map[error][]string
 	w.mu.Lock()
 	if w.iterator == iter {

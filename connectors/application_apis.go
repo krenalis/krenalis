@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-package meergo
+package connectors
 
 import (
 	"context"
@@ -184,8 +184,8 @@ type RateLimit struct {
 // For example:
 //
 //	RetryPolicy{
-//	    "429":     meergo.RetryAfterStrategy(),
-//	    "500 503": meergo.ExponentialStrategy(meergo.NetFailure, time.Second),
+//	    "429":     connectors.RetryAfterStrategy(),
+//	    "500 503": connectors.ExponentialStrategy(connectors.NetFailure, time.Second),
 //	}
 type RetryPolicy map[string]RetryStrategy
 

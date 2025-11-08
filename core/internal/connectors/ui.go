@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/json"
 )
@@ -28,7 +28,7 @@ type uiHandlerConnector interface {
 	//
 	// If event does not exist, it returns an ErrUIEventNotExist.
 	// If the settings are invalid, it returns an InvalidSettingsError error.
-	ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error)
+	ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error)
 }
 
 // ServeActionUI serves the user interface of the specified file action and
@@ -40,12 +40,12 @@ type uiHandlerConnector interface {
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, settings json.Value) (json.Value, error) {
-	role := meergo.Role(action.Connection().Role)
+func (c *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, settings json.Value) (json.Value, error) {
+	role := connectors.Role(action.Connection().Role)
 	format := action.Format()
-	inner, err := meergo.RegisteredFile(format.Code).New(&meergo.FileEnv{
+	inner, err := connectors.RegisteredFile(format.Code).New(&connectors.FileEnv{
 		Settings:    action.FormatSettings,
-		SetSettings: setActionSettingsFunc(connectors.state, action),
+		SetSettings: setActionSettingsFunc(c.state, action),
 	})
 	if err != nil {
 		return nil, connectorError(err)
@@ -66,7 +66,7 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, settings json.Value) (json.Value, error) {
+func (c *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, settings json.Value) (json.Value, error) {
 	// var accountID int TODO(marco): implement webhooks
 	var accountCode string
 	if r, ok := connection.Account(); ok {
@@ -75,52 +75,52 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	}
 	var inner any
 	var err error
-	switch c := connection.Connector(); c.Type {
+	switch connector := connection.Connector(); connector.Type {
 	case state.API:
-		inner, err = meergo.RegisteredAPI(c.Code).New(&meergo.APIEnv{
+		inner, err = connectors.RegisteredAPI(connector.Code).New(&connectors.APIEnv{
 			Settings:     connection.Settings,
-			SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
+			SetSettings:  setConnectionSettingsFunc(c.state, connection),
 			OAuthAccount: accountCode,
-			HTTPClient:   connectors.http.ConnectionClient(connection),
+			HTTPClient:   c.http.ConnectionClient(connection),
 			// WebhookURL:   webhookURL(connection, accountID) // TODO(marco): implement webhooks
 		})
 	case state.Database:
 		var database any
-		database, err = meergo.RegisteredDatabase(c.Code).New(&meergo.DatabaseEnv{
+		database, err = connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+			SetSettings: setConnectionSettingsFunc(c.state, connection),
 		})
 		defer database.(databaseConnector).Close()
 		inner = database
 	case state.FileStorage:
-		inner, err = meergo.RegisteredFileStorage(c.Code).New(&meergo.FileStorageEnv{
+		inner, err = connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+			SetSettings: setConnectionSettingsFunc(c.state, connection),
 		})
 	case state.MessageBroker:
-		inner, err = meergo.RegisteredMessageBroker(c.Code).New(&meergo.MessageBrokerEnv{
+		inner, err = connectors.RegisteredMessageBroker(connector.Code).New(&connectors.MessageBrokerEnv{
 			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+			SetSettings: setConnectionSettingsFunc(c.state, connection),
 		})
 	case state.SDK:
-		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{
+		inner, err = connectors.RegisteredSDK(connector.Code).New(&connectors.SDKEnv{
 			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+			SetSettings: setConnectionSettingsFunc(c.state, connection),
 		})
 	case state.Webhook:
-		inner, err = meergo.RegisteredWebhook(c.Code).New(&meergo.WebhookEnv{
+		inner, err = connectors.RegisteredWebhook(connector.Code).New(&connectors.WebhookEnv{
 			Settings:    connection.Settings,
-			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+			SetSettings: setConnectionSettingsFunc(c.state, connection),
 		})
 	}
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, meergo.Role(connection.Role))
+	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, connectors.Role(connection.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	return marshalUI(ui, meergo.Role(connection.Role))
+	return marshalUI(ui, connectors.Role(connection.Role))
 }
 
 type ConnectorConfig struct {
@@ -141,39 +141,40 @@ type ConnectorConfig struct {
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) (json.Value, error) {
+func (c *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) (json.Value, error) {
 	var inner any
 	var err error
-	switch c := connector; c.Type {
+	code := connector.Code
+	switch connector.Type {
 	case state.API:
-		inner, err = meergo.RegisteredAPI(c.Code).New(&meergo.APIEnv{
+		inner, err = connectors.RegisteredAPI(code).New(&connectors.APIEnv{
 			OAuthAccount: conf.OAuth.Account,
-			HTTPClient:   connectors.http.ConnectorClient(c, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 		})
 	case state.Database:
 		var database any
-		database, err = meergo.RegisteredDatabase(c.Code).New(&meergo.DatabaseEnv{})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{})
 		defer database.(databaseConnector).Close()
 		inner = database
 	case state.File:
-		inner, err = meergo.RegisteredFile(c.Code).New(&meergo.FileEnv{})
+		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{})
 	case state.FileStorage:
-		inner, err = meergo.RegisteredFileStorage(c.Code).New(&meergo.FileStorageEnv{})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{})
 	case state.MessageBroker:
-		inner, err = meergo.RegisteredMessageBroker(c.Code).New(&meergo.MessageBrokerEnv{})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{})
 	case state.SDK:
-		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{})
+		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{})
 	case state.Webhook:
-		inner, err = meergo.RegisteredWebhook(c.Code).New(&meergo.WebhookEnv{})
+		inner, err = connectors.RegisteredWebhook(code).New(&connectors.WebhookEnv{})
 	}
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, meergo.Role(conf.Role))
+	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, connectors.Role(conf.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	return marshalUI(ui, meergo.Role(conf.Role))
+	return marshalUI(ui, connectors.Role(conf.Role))
 }
 
 // UpdatedSettings returns the inner settings, for the given connector, updated
@@ -183,7 +184,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 // and an *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no settings.
-func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) ([]byte, error) {
+func (c *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) ([]byte, error) {
 	var inner any
 	var err error
 	var updatedSettings []byte
@@ -197,33 +198,34 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 		updatedSettings = innerSettings
 		return nil
 	}
-	switch c := connector; c.Type {
+	code := connector.Code
+	switch connector.Type {
 	case state.API:
-		inner, err = meergo.RegisteredAPI(c.Code).New(&meergo.APIEnv{
+		inner, err = connectors.RegisteredAPI(code).New(&connectors.APIEnv{
 			OAuthAccount: conf.OAuth.Account,
-			HTTPClient:   connectors.http.ConnectorClient(c, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			HTTPClient:   c.http.ConnectorClient(connector, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			SetSettings:  setSettings,
 		})
 	case state.Database:
 		var database any
-		database, err = meergo.RegisteredDatabase(c.Code).New(&meergo.DatabaseEnv{SetSettings: setSettings})
+		database, err = connectors.RegisteredDatabase(code).New(&connectors.DatabaseEnv{SetSettings: setSettings})
 		defer database.(databaseConnector).Close()
 		inner = database
 	case state.File:
-		inner, err = meergo.RegisteredFile(c.Code).New(&meergo.FileEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{SetSettings: setSettings})
 	case state.FileStorage:
-		inner, err = meergo.RegisteredFileStorage(c.Code).New(&meergo.FileStorageEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{SetSettings: setSettings})
 	case state.MessageBroker:
-		inner, err = meergo.RegisteredMessageBroker(c.Code).New(&meergo.MessageBrokerEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{SetSettings: setSettings})
 	case state.SDK:
-		inner, err = meergo.RegisteredSDK(c.Code).New(&meergo.SDKEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredSDK(code).New(&connectors.SDKEnv{SetSettings: setSettings})
 	case state.Webhook:
-		inner, err = meergo.RegisteredWebhook(c.Code).New(&meergo.WebhookEnv{SetSettings: setSettings})
+		inner, err = connectors.RegisteredWebhook(code).New(&connectors.WebhookEnv{SetSettings: setSettings})
 	}
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	_, err = inner.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(conf.Role))
+	_, err = inner.(uiHandlerConnector).ServeUI(ctx, "save", settings, connectors.Role(conf.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -232,7 +234,7 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 
 // marshalUI marshals the provided UI, in the given role, into JSON format.
 // If ui is nil, it is serialized as "null".
-func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
+func marshalUI(ui *connectors.UI, role connectors.Role) (json.Value, error) {
 
 	if ui == nil {
 		return []byte("null"), nil
@@ -305,10 +307,10 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 
 // marshalUIComponent marshals component with the provided role in JSON format.
 // If comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.Role, settings map[string]any, comma bool) (bool, error) {
+func marshalUIComponent(b *json.Buffer, component connectors.Component, role connectors.Role, settings map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
-	if r := meergo.Role(rv.FieldByName("Role").Int()); r != meergo.Both && r != role {
+	if r := connectors.Role(rv.FieldByName("Role").Int()); r != connectors.Both && r != role {
 		return false, nil
 	}
 	if comma {
@@ -330,9 +332,9 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 		b.WriteString(`":`)
 		var err error
 		switch field := field.Interface().(type) {
-		case meergo.Component:
+		case connectors.Component:
 			_, err = marshalUIComponent(b, field, role, settings, false)
-		case []meergo.FieldSet:
+		case []connectors.FieldSet:
 			b.WriteByte('[')
 			comma = false
 			for _, set := range field {
@@ -343,7 +345,7 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 				}
 			}
 			b.WriteByte(']')
-		case []meergo.Option:
+		case []connectors.Option:
 			b.WriteByte('[')
 			for i, option := range field {
 				if i > 0 {
@@ -368,8 +370,8 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 
 // marshalUIFieldSet marshals fieldSet with the provided role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIFieldSet(b *json.Buffer, fieldSet meergo.FieldSet, role meergo.Role, settings map[string]any, comma bool) (bool, error) {
-	if fieldSet.Role != meergo.Both && fieldSet.Role != role {
+func marshalUIFieldSet(b *json.Buffer, fieldSet connectors.FieldSet, role connectors.Role, settings map[string]any, comma bool) (bool, error) {
+	if fieldSet.Role != connectors.Both && fieldSet.Role != role {
 		return false, nil
 	}
 	if comma {

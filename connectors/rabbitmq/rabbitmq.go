@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -27,12 +27,12 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterMessageBroker(meergo.MessageBrokerSpec{
+	connectors.RegisterMessageBroker(connectors.MessageBrokerSpec{
 		Code:       "rabbitmq",
 		Label:      "RabbitMQ",
-		Categories: meergo.CategoryMessageBroker,
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategoryMessageBroker,
+		Documentation: connectors.ConnectorDocumentation{
+			Source: connectors.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from RabbitMQ",
 				Overview: overview,
 			},
@@ -41,7 +41,7 @@ func init() {
 }
 
 // New returns a new connector instance for RabbitMQ.
-func New(env *meergo.MessageBrokerEnv) (*RabbitMQ, error) {
+func New(env *connectors.MessageBrokerEnv) (*RabbitMQ, error) {
 	c := RabbitMQ{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -53,7 +53,7 @@ func New(env *meergo.MessageBrokerEnv) (*RabbitMQ, error) {
 }
 
 type RabbitMQ struct {
-	env        *meergo.MessageBrokerEnv
+	env        *connectors.MessageBrokerEnv
 	settings   *innerSettings
 	conn       *amqp.Connection
 	ch         *amqp.Channel
@@ -94,7 +94,7 @@ func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
 }
 
 // Send sends an event to the message broker.
-func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
+func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options connectors.SendOptions, ack func(err error)) error {
 	err := rmq.connect(ctx, true)
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options meergo.Send
 }
 
 // ServeUI serves the connector's user interface.
-func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -131,16 +131,16 @@ func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, settings json.Va
 	case "test":
 		return nil, rmq.saveSettings(ctx, settings, true)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "URL", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
-			&meergo.Input{Name: "Queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "URL", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
+			&connectors.Input{Name: "Queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Settings: settings,
-		Buttons: []meergo.Button{
+		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
 	}
@@ -222,17 +222,17 @@ func (rmq *RabbitMQ) saveSettings(ctx context.Context, options json.Value, test 
 	}
 	// Validate URL.
 	if n := len(s.URL); n < 7 || n > 2048 {
-		return meergo.NewInvalidSettingsError("URL length in bytes must be in range [7,2048]")
+		return connectors.NewInvalidSettingsError("URL length in bytes must be in range [7,2048]")
 	}
 	if _, err := amqp.ParseURI(s.URL); err != nil {
-		return meergo.NewInvalidSettingsError("URL is not a valid RabbitMQ URI")
+		return connectors.NewInvalidSettingsError("URL is not a valid RabbitMQ URI")
 	}
 	// Validate Queue.
 	if n := len(s.Queue); n == 0 || n > 255 {
-		return meergo.NewInvalidSettingsError("queue length in bytes must be in range [1,255]")
+		return connectors.NewInvalidSettingsError("queue length in bytes must be in range [1,255]")
 	}
 	if strings.HasPrefix(s.Queue, "amq.") {
-		return meergo.NewInvalidSettingsError("queue names starting with 'amq.' are reserved for internal use by the broker")
+		return connectors.NewInvalidSettingsError("queue names starting with 'amq.' are reserved for internal use by the broker")
 	}
 	err = rmq.testConnection(ctx)
 	if err != nil || test {

@@ -21,7 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/types"
@@ -38,13 +38,13 @@ type fileReadConnector interface {
 	// Read reads the records from r and writes them to records. If the connector
 	// has multiple sheets, sheet is the name of the sheet to be read.
 	// If the provided sheet does not exist, it returns the ErrSheetNotExist error.
-	Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error
+	Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error
 }
 
 type fileWriteConnector interface {
 	// Write writes to w the records read from records. If the connector has
 	// multiple sheets, sheet is the name of the sheet to be written to.
-	Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error
+	Write(ctx context.Context, w io.Writer, sheet string, records connectors.RecordReader) error
 }
 
 type fileSheetConnector interface {
@@ -67,18 +67,18 @@ type File struct {
 
 // File returns a file for the provided action.
 // Errors are deferred until a file's method is called.
-func (connectors *Connectors) File(action *state.Action) *File {
+func (c *Connectors) File(action *state.Action) *File {
 	format := action.Format()
 	connection := action.Connection()
 	file := &File{
 		connector:   connection.Connector().Code,
-		state:       connectors.state,
+		state:       c.state,
 		action:      action,
 		timeLayouts: &format.TimeLayouts,
 	}
-	file.inner, file.err = meergo.RegisteredFile(format.Code).New(&meergo.FileEnv{
+	file.inner, file.err = connectors.RegisteredFile(format.Code).New(&connectors.FileEnv{
 		Settings:    action.FormatSettings,
-		SetSettings: setActionSettingsFunc(connectors.state, action),
+		SetSettings: setActionSettingsFunc(c.state, action),
 	})
 	file.err = connectorError(file.err)
 	return file
@@ -107,7 +107,7 @@ func (file *File) Connector() string {
 //
 // If the action's sheet is not found in the file, the All method of the
 // iterator returns immediately and a subsequent call to Err returns
-// meergo.ErrSheetNotExist. The same happens if the file has no columns; in that
+// connectors.ErrSheetNotExist. The same happens if the file has no columns; in that
 // case Err returns ErrNoColumnsFound.
 //
 // It returns an error if a non-zero starting time is provided and the action
@@ -200,7 +200,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 func (file *File) storage() (any, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
-	return meergo.RegisteredFileStorage(connector.Code).New(&meergo.FileStorageEnv{
+	return connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 		Settings:    conn.Settings,
 		SetSettings: setConnectionSettingsFunc(file.state, conn),
 	})

@@ -10,8 +10,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/state"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // Query represents a query on a table of a data warehouse.
@@ -49,52 +49,52 @@ type Query struct {
 	Limit int
 }
 
-// convertWhere converts a state.Where expression into a meergo.Expr.
+// convertWhere converts a state.Where expression into a warehouses.Expr.
 // "exists" and "does not exist" operators are mapped to OpIsNotNull and
 // OpIsNull, respectively.
-func convertWhere(where *state.Where, columnFromProperty map[string]meergo.Column) (meergo.Expr, error) {
-	exp := meergo.NewMultiExpr(meergo.LogicalOperator(where.Logical), make([]meergo.Expr, len(where.Conditions)))
+func convertWhere(where *state.Where, columnFromProperty map[string]warehouses.Column) (warehouses.Expr, error) {
+	exp := warehouses.NewMultiExpr(warehouses.LogicalOperator(where.Logical), make([]warehouses.Expr, len(where.Conditions)))
 	for i, cond := range where.Conditions {
 		path := strings.Join(cond.Property, ".") // TODO(marco): How can I avoid this allocation?
 		if column, ok := columnFromProperty[path]; ok {
-			var op meergo.Operator
+			var op warehouses.Operator
 			switch cond.Operator {
 			case state.OpExists:
-				op = meergo.OpIsNotNull
+				op = warehouses.OpIsNotNull
 			case state.OpDoesNotExist:
-				op = meergo.OpIsNull
+				op = warehouses.OpIsNull
 			default:
-				op = meergo.Operator(cond.Operator)
+				op = warehouses.Operator(cond.Operator)
 			}
-			exp.Operands[i] = meergo.NewBaseExpr(column, op, cond.Values...)
+			exp.Operands[i] = warehouses.NewBaseExpr(column, op, cond.Values...)
 			continue
 		}
 		// The property is an object; apply it to all sub-property columns.
-		var logical meergo.LogicalOperator
-		var op meergo.Operator
+		var logical warehouses.LogicalOperator
+		var op warehouses.Operator
 		switch cond.Operator {
 		case state.OpExists:
-			logical = meergo.OpOr
-			op = meergo.OpIsNotNull
+			logical = warehouses.OpOr
+			op = warehouses.OpIsNotNull
 		case state.OpDoesNotExist:
-			logical = meergo.OpAnd
-			op = meergo.OpIsNull
+			logical = warehouses.OpAnd
+			op = warehouses.OpIsNull
 		default:
 			return nil, fmt.Errorf("invalid operator %q for property %q in where expression", cond.Operator, path)
 		}
-		var operands []meergo.Expr
+		var operands []warehouses.Expr
 		for name, column := range columnFromProperty {
 			if strings.HasPrefix(name, path) && name[len(path)] == '.' {
-				operands = append(operands, meergo.NewBaseExpr(column, op))
+				operands = append(operands, warehouses.NewBaseExpr(column, op))
 			}
 		}
 		if operands == nil {
 			return nil, fmt.Errorf("property %q does not exist in where expression", path)
 		}
-		slices.SortFunc(operands, func(a, b meergo.Expr) int {
-			return cmp.Compare(a.(*meergo.BaseExpr).Column.Name, b.(*meergo.BaseExpr).Column.Name)
+		slices.SortFunc(operands, func(a, b warehouses.Expr) int {
+			return cmp.Compare(a.(*warehouses.BaseExpr).Column.Name, b.(*warehouses.BaseExpr).Column.Name)
 		})
-		exp.Operands[i] = meergo.NewMultiExpr(logical, operands)
+		exp.Operands[i] = warehouses.NewMultiExpr(logical, operands)
 	}
 	return exp, nil
 }

@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/state"
@@ -58,16 +58,16 @@ const backoffBase = 100 * time.Millisecond
 var backoffJitterEnabled = true
 
 // netBackoff is the retry strategy applied when a network error occurs.
-var netBackoff = meergo.ExponentialStrategy(meergo.NetFailure, 50*time.Millisecond)
+var netBackoff = connectors.ExponentialStrategy(connectors.NetFailure, 50*time.Millisecond)
 
 var errUnsupportedOAuth = errors.New("OAuth is not supported")
 
 // endpointGroup represents an endpoint group with its rate limiter and retry
 // policy.
 type endpointGroup struct {
-	requireOAuth bool               // require OAuth
-	rateLimiter  *rateLimiter       // rate limiter
-	retryPolicy  meergo.RetryPolicy // retry policy
+	requireOAuth bool                   // require OAuth
+	rateLimiter  *rateLimiter           // rate limiter
+	retryPolicy  connectors.RetryPolicy // retry policy
 }
 
 // Client implements the connector.HTTPClient interface.
@@ -181,8 +181,8 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 }
 
 // GetBodyBuffer returns a BodyBuffer, initialised for enc.
-func (c *Client) GetBodyBuffer(enc meergo.ContentEncoding) *meergo.BodyBuffer {
-	return meergo.GetBodyBuffer(enc, 1024) // TODO(marco): estimate the size of the buffer
+func (c *Client) GetBodyBuffer(enc connectors.ContentEncoding) *connectors.BodyBuffer {
+	return connectors.GetBodyBuffer(enc, 1024) // TODO(marco): estimate the size of the buffer
 }
 
 func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response, error) {
@@ -271,7 +271,7 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		res, err := c.http.transport.RoundTrip(req)
 		duration := time.Since(start)
 		if err != nil {
-			limiter.OnFailure(duration, meergo.NetFailure, 0)
+			limiter.OnFailure(duration, connectors.NetFailure, 0)
 			if !retriable {
 				return res, err
 			}
@@ -303,15 +303,15 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		}
 
 		switch reason {
-		case meergo.PermanentFailure:
+		case connectors.PermanentFailure:
 			return res, nil
-		case meergo.NetFailure:
+		case connectors.NetFailure:
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			case <-time.After(waitTime):
 			}
-		case meergo.Unauthorized:
+		case connectors.Unauthorized:
 			if isRetriveOAuthToken {
 				return res, nil
 			}
@@ -473,8 +473,8 @@ func (c *Client) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code
 // (Service Unavailable), it uses exponential backoff starting at 100ms.
 //
 // If the status code is not eligible for a retry, it returns PermanentFailure.
-func retryStrategy(policy meergo.RetryPolicy, res *http.Response, retries int) (meergo.FailureReason, time.Duration) {
-	var primaryStrategy, secondaryStrategy meergo.RetryStrategy
+func retryStrategy(policy connectors.RetryPolicy, res *http.Response, retries int) (connectors.FailureReason, time.Duration) {
+	var primaryStrategy, secondaryStrategy connectors.RetryStrategy
 	if policy != nil {
 		// Use the client's policy.
 		var status string
@@ -493,24 +493,24 @@ func retryStrategy(policy meergo.RetryPolicy, res *http.Response, retries int) (
 		// Use the default policy.
 		switch res.StatusCode {
 		case 429:
-			primaryStrategy = meergo.RetryAfterStrategy()
-			secondaryStrategy = meergo.ExponentialStrategy(meergo.Slowdown, backoffBase)
+			primaryStrategy = connectors.RetryAfterStrategy()
+			secondaryStrategy = connectors.ExponentialStrategy(connectors.Slowdown, backoffBase)
 		case 500, 503, 502, 504:
-			primaryStrategy = meergo.ExponentialStrategy(meergo.NetFailure, backoffBase)
+			primaryStrategy = connectors.ExponentialStrategy(connectors.NetFailure, backoffBase)
 		}
 	}
 	if primaryStrategy == nil {
 		if res.StatusCode == 401 {
-			return meergo.Unauthorized, 0
+			return connectors.Unauthorized, 0
 		}
-		return meergo.PermanentFailure, 0
+		return connectors.PermanentFailure, 0
 	}
 	reason, wt := primaryStrategy(res, retries)
-	if reason == meergo.PermanentFailure && secondaryStrategy != nil {
+	if reason == connectors.PermanentFailure && secondaryStrategy != nil {
 		reason, wt = secondaryStrategy(res, retries)
 	}
-	if reason == meergo.PermanentFailure {
-		return meergo.PermanentFailure, 0
+	if reason == connectors.PermanentFailure {
+		return connectors.PermanentFailure, 0
 	}
 	if wt <= 0 {
 		return reason, 0

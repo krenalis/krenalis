@@ -13,11 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/testimages"
+	"github.com/meergo/meergo/warehouses"
+
+	// Import PostgreSQL warehouse driver for Test_Records.
+	_ "github.com/meergo/meergo/warehouses/postgresql"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -74,7 +77,7 @@ func Test_Records(t *testing.T) {
 	}
 
 	// Open the data warehouse.
-	wh, err := meergo.RegisteredWarehouseDriver("PostgreSQL").New(&meergo.WarehouseConfig{
+	wh, err := warehouses.RegisteredWarehouseDriver("PostgreSQL").New(&warehouses.WarehouseConfig{
 		Settings: settings,
 	})
 	if err != nil {
@@ -82,9 +85,9 @@ func Test_Records(t *testing.T) {
 	}
 	defer wh.Close()
 
-	usersTable := meergo.Table{
+	usersTable := warehouses.Table{
 		Name: "_users_0",
-		Columns: []meergo.Column{
+		Columns: []warehouses.Column{
 			{Name: "__muid__", Type: types.UUID()},
 			{Name: "__last_change_time__", Type: types.DateTime()},
 			{Name: "id", Type: types.Text()},
@@ -95,9 +98,9 @@ func Test_Records(t *testing.T) {
 		Keys: []string{"__muid__"},
 	}
 
-	destinationsUsersTable := meergo.Table{
+	destinationsUsersTable := warehouses.Table{
 		Name: "_destinations_users",
-		Columns: []meergo.Column{
+		Columns: []warehouses.Column{
 			{Name: "__action__", Type: types.Int(32)},
 			{Name: "__external_id__", Type: types.Text()},
 			{Name: "__out_matching_value__", Type: types.Text()},
@@ -218,7 +221,7 @@ func Test_Records(t *testing.T) {
 		},
 	}
 
-	userColumnByProperty := map[string]meergo.Column{
+	userColumnByProperty := map[string]warehouses.Column{
 		"__muid__": {Name: "__muid__", Type: types.UUID()},
 		"id":       {Name: "id", Type: types.Text()},
 		"other.id": {Name: "other_id", Type: types.Text()},

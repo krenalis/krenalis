@@ -15,9 +15,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"
 )
@@ -584,7 +585,7 @@ type Workspace struct {
 		Err            *string    // pointer to empty string if no errors occurred during last execution of alter user schema.
 		Schema         types.Type
 		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
-		Operations     []meergo.AlterOperation
+		Operations     []warehouses.AlterOperation
 	}
 	actionsToPurge []int // never nil
 }
@@ -693,7 +694,7 @@ type Connector struct {
 	Code                   string
 	Label                  string
 	Type                   ConnectorType
-	Categories             meergo.Categories
+	Categories             connectors.Categories
 	SourceTargets          ConnectorTargets
 	DestinationTargets     ConnectorTargets
 	Terms                  ConnectorTerms
@@ -707,10 +708,10 @@ type Connector struct {
 	SampleQuery            string
 	WebhooksPer            WebhooksPer
 	OAuth                  *OAuth
-	EndpointGroups         []meergo.EndpointGroup
+	EndpointGroups         []connectors.EndpointGroup
 	Strategies             bool
 	FallbackToRequestIP    bool
-	Documentation          meergo.ConnectorDocumentation
+	Documentation          connectors.ConnectorDocumentation
 }
 
 // ConnectorTargets represents the targets of a connector.
@@ -878,7 +879,7 @@ func (per WebhooksPer) Value() (driver.Value, error) {
 
 // An OAuth represents OAuth data required to authenticate with a connector.
 type OAuth struct {
-	meergo.OAuth
+	connectors.OAuth
 	ClientID     string
 	ClientSecret string
 }

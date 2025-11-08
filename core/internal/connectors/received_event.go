@@ -7,23 +7,23 @@ package connectors
 import (
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/events"
 )
 
-// receivedEvent implements the meergo.ReceivedEvent interface. A ReceivedEvent
+// receivedEvent implements the connectors.ReceivedEvent interface. A ReceivedEvent
 // is passed to the SendEvents method of an API connector.
 type receivedEvent struct {
 	event events.Event
 }
 
 // ReceivedEvent wraps an Event and returns a value that implements the
-// meergo.ReceivedEvent interface.
+// connectors.ReceivedEvent interface.
 //
 // The provided event must conform to the event schema (Schema), otherwise
 // calling methods on the returned value may cause a panic.
-func ReceivedEvent(event events.Event) meergo.ReceivedEvent {
+func ReceivedEvent(event events.Event) connectors.ReceivedEvent {
 	return receivedEvent{event}
 }
 
@@ -41,7 +41,7 @@ func (e receivedEvent) Category() (string, bool) {
 	return category, ok
 }
 
-func (e receivedEvent) Context() (meergo.ReceivedEventContext, bool) {
+func (e receivedEvent) Context() (connectors.ReceivedEventContext, bool) {
 	if context, ok := e.event["context"].(map[string]any); ok {
 		return receivedEventContext{context}, true
 	}
@@ -97,28 +97,28 @@ type receivedEventContext struct {
 	context map[string]any
 }
 
-func (c receivedEventContext) App() (meergo.ReceivedEventContextApp, bool) {
+func (c receivedEventContext) App() (connectors.ReceivedEventContextApp, bool) {
 	if app, ok := c.context["app"].(map[string]any); ok {
 		return receivedEventContextApp{app}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) Browser() (meergo.ReceivedEventContextBrowser, bool) {
+func (c receivedEventContext) Browser() (connectors.ReceivedEventContextBrowser, bool) {
 	if browser, ok := c.context["browser"].(map[string]any); ok {
 		return receivedEventContextBrowser{browser}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) Campaign() (meergo.ReceivedEventContextCampaign, bool) {
+func (c receivedEventContext) Campaign() (connectors.ReceivedEventContextCampaign, bool) {
 	if campaign, ok := c.context["campaign"].(map[string]any); ok {
 		return receivedEventContextCampaign{campaign}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) Device() (meergo.ReceivedEventContextDevice, bool) {
+func (c receivedEventContext) Device() (connectors.ReceivedEventContextDevice, bool) {
 	if campaign, ok := c.context["device"].(map[string]any); ok {
 		return receivedEventContextDevice{campaign}, true
 	}
@@ -130,7 +130,7 @@ func (c receivedEventContext) IP() (string, bool) {
 	return ip, ok
 }
 
-func (c receivedEventContext) Library() (meergo.ReceivedEventContextLibrary, bool) {
+func (c receivedEventContext) Library() (connectors.ReceivedEventContextLibrary, bool) {
 	if library, ok := c.context["library"].(map[string]any); ok {
 		return receivedEventContextLibrary{library}, true
 	}
@@ -142,49 +142,49 @@ func (c receivedEventContext) Locale() (string, bool) {
 	return locale, ok
 }
 
-func (c receivedEventContext) Location() (meergo.ReceivedEventContextLocation, bool) {
+func (c receivedEventContext) Location() (connectors.ReceivedEventContextLocation, bool) {
 	if location, ok := c.context["location"].(map[string]any); ok {
 		return receivedEventContextLocation{location}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) Network() (meergo.ReceivedEventContextNetwork, bool) {
+func (c receivedEventContext) Network() (connectors.ReceivedEventContextNetwork, bool) {
 	if network, ok := c.context["network"].(map[string]any); ok {
 		return receivedEventContextNetwork{network}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) OS() (meergo.ReceivedEventContextOS, bool) {
+func (c receivedEventContext) OS() (connectors.ReceivedEventContextOS, bool) {
 	if os, ok := c.context["os"].(map[string]any); ok {
 		return receivedEventContextOS{os}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) Page() (meergo.ReceivedEventContextPage, bool) {
+func (c receivedEventContext) Page() (connectors.ReceivedEventContextPage, bool) {
 	if page, ok := c.context["page"].(map[string]any); ok {
 		return receivedEventContextPage{page}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) Referrer() (meergo.ReceivedEventContextReferrer, bool) {
+func (c receivedEventContext) Referrer() (connectors.ReceivedEventContextReferrer, bool) {
 	if referrer, ok := c.context["referrer"].(map[string]any); ok {
 		return receivedEventContextReferrer{referrer}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) Screen() (meergo.ReceivedEventContextScreen, bool) {
+func (c receivedEventContext) Screen() (connectors.ReceivedEventContextScreen, bool) {
 	if screen, ok := c.context["screen"].(map[string]any); ok {
 		return receivedEventContextScreen{screen}, true
 	}
 	return nil, false
 }
 
-func (c receivedEventContext) Session() (meergo.ReceivedEventContextSession, bool) {
+func (c receivedEventContext) Session() (connectors.ReceivedEventContextSession, bool) {
 	if session, ok := c.context["session"].(map[string]any); ok {
 		return receivedEventContextSession{session}, true
 	}

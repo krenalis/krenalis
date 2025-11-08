@@ -18,7 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/connectors/httpclient"
 	"github.com/meergo/meergo/core/internal/db"
@@ -110,7 +110,7 @@ type Records interface {
 	Last() bool
 }
 
-type EventType = meergo.EventType
+type EventType = connectors.EventType
 
 // Record represents a record. If an error occurs during the reading or
 // validation of the record, the Err field contains the specific error.
@@ -177,7 +177,7 @@ func New(state *state.State) *Connectors {
 // ClientSecret is empty), it returns an *UnavailableError.
 //
 // It panics if the connector does not support OAuth.
-func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
+func (c *Connectors) AuthorizationEndpoint(connector *state.Connector, role state.Role, redirectionURI string) (string, error) {
 	oauth := connector.OAuth
 	if oauth.ClientID == "" || oauth.ClientSecret == "" {
 		return "", &UnavailableError{Err: fmt.Errorf("%s OAuth authentication is not configured. Please check the environment variables passed to Meergo", connector.Code)}
@@ -210,13 +210,13 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 // the provided authorization code and redirection URI.
 //
 // This method can only be called on a connector that implements OAuth.
-func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
-	accessToken, refreshToken, expiresIn, err := connectors.http.GrantAuthorization(ctx, connector, code, redirectionURI)
+func (c *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
+	accessToken, refreshToken, expiresIn, err := c.http.GrantAuthorization(ctx, connector, code, redirectionURI)
 	if err != nil {
 		return nil, err
 	}
-	api, err := meergo.RegisteredAPI(connector.Code).New(&meergo.APIEnv{
-		HTTPClient: connectors.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
+	api, err := connectors.RegisteredAPI(connector.Code).New(&connectors.APIEnv{
+		HTTPClient: c.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
 		return nil, connectorError(err)
@@ -240,23 +240,23 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 ////
 //// If the connector of the account is not an API or does not support per account
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
-//// authorized, it returns the meergo.ErrWebhookUnauthorized error.
-//func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]meergo.WebhookPayload, error) {
+//// authorized, it returns the connectors.ErrWebhookUnauthorized error.
+//func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]connectors.WebhookPayload, error) {
 //	connector := account.Connector()
 //	if connector.WebhooksPer != state.WebhooksPerAccount {
 //		return nil, ErrNoWebhooks
 //	}
-//	config := &meergo.APIEnv{
+//	config := &connectors.APIEnv{
 //		OAuthAccount: account.Code,
 //	}
 //	if connector.OAuth != nil {
 //		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken, connector.RetryPolicy)
 //	}
-//	inner, err := meergo.RegisteredAPI(connector.Name).New(config)
+//	inner, err := connectors.RegisteredAPI(connector.Name).New(config)
 //	if err != nil {
 //		return nil, err
 //	}
-//	payload, err := inner.(webhookConnector).ReceiveWebhook(req, meergo.Both)
+//	payload, err := inner.(webhookConnector).ReceiveWebhook(req, connectors.Both)
 //	if err != nil {
 //		return nil, err
 //	}
@@ -269,8 +269,8 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 ////
 //// if the connection is not an API, or it does not support per connection
 //// webhooks, it returns the ErrNoWebhooks error. If the request is not
-//// authorized, it returns the meergo.ErrWebhookUnauthorized error.
-//func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]meergo.WebhookPayload, error) {
+//// authorized, it returns the connectors.ErrWebhookUnauthorized error.
+//func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]connectors.WebhookPayload, error) {
 //	connector := connection.Connector()
 //	if connector.WebhooksPer != state.WebhooksPerConnection {
 //		return nil, ErrNoWebhooks
@@ -281,7 +281,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //		accountID = a.ID
 //		accountCode = a.Code
 //	}
-//	inner, err := meergo.RegisteredAPI(connector.Name).New(&meergo.APIEnv{
+//	inner, err := connectors.RegisteredAPI(connector.Name).New(&connectors.APIEnv{
 //		Settings:     connection.Settings,
 //		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 //		OAuthAccount: accountCode,
@@ -291,7 +291,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 //	if err != nil {
 //		return nil, err
 //	}
-//	payload, err := inner.(webhookConnector).ReceiveWebhook(req, meergo.Role(connection.Role))
+//	payload, err := inner.(webhookConnector).ReceiveWebhook(req, connectors.Role(connection.Role))
 //	if err != nil {
 //		return nil, err
 //	}
@@ -304,16 +304,16 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 ////
 //// If the connector is not an API, or it does not support per connector
 //// webhooks, it returns the ErrNoWebhooks error. If the request was not
-//// authorized, it returns the meergo.ErrWebhookUnauthorized error.
-//func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]meergo.WebhookPayload, error) {
+//// authorized, it returns the connectors.ErrWebhookUnauthorized error.
+//func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]connectors.WebhookPayload, error) {
 //	if connector.WebhooksPer != state.WebhooksPerConnector {
 //		return nil, ErrNoWebhooks
 //	}
-//	inner, err := meergo.RegisteredAPI(connector.Name).New(&meergo.APIEnv{})
+//	inner, err := connectors.RegisteredAPI(connector.Name).New(&connectors.APIEnv{})
 //	if err != nil {
 //		return nil, err
 //	}
-//	payload, err := inner.(webhookConnector).ReceiveWebhook(req, meergo.Both)
+//	payload, err := inner.(webhookConnector).ReceiveWebhook(req, connectors.Both)
 //	if err != nil {
 //		return nil, err
 //	}
@@ -363,14 +363,14 @@ func ReplacePlaceholders(s string, f PlaceholderReplacer) (string, error) {
 func connectorError(err error) error {
 	switch err {
 	case nil:
-	case meergo.ErrEventTypeNotExist:
-	case meergo.ErrSheetNotExist:
-	case meergo.ErrUIEventNotExist:
-	//case meergo.ErrWebhookUnauthorized: // TODO(marco): implement webhooks
+	case connectors.ErrEventTypeNotExist:
+	case connectors.ErrSheetNotExist:
+	case connectors.ErrUIEventNotExist:
+	//case connectors.ErrWebhookUnauthorized: // TODO(marco): implement webhooks
 	default:
 		switch err.(type) {
-		case *meergo.InvalidPathError:
-		case *meergo.InvalidSettingsError:
+		case *connectors.InvalidPathError:
+		case *connectors.InvalidSettingsError:
 		case *UnavailableError:
 		default:
 			err = &UnavailableError{Err: err}
@@ -603,7 +603,7 @@ func setActionSettings(ctx context.Context, st *state.State, action int, setting
 
 // setActionSettingsFunc returns a connector.SetSettingsFunc function that sets
 // the settings for the action.
-func setActionSettingsFunc(st *state.State, a *state.Action) meergo.SetSettingsFunc {
+func setActionSettingsFunc(st *state.State, a *state.Action) connectors.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
 		return setActionSettings(ctx, st, a.ID, settings)
 	}
@@ -631,9 +631,9 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 	return err
 }
 
-// setConnectionSettingsFunc returns a meergo.SetSettingsFunc that sets the
+// setConnectionSettingsFunc returns a connectors.SetSettingsFunc that sets the
 // settings for the connection.
-func setConnectionSettingsFunc(st *state.State, c *state.Connection) meergo.SetSettingsFunc {
+func setConnectionSettingsFunc(st *state.State, c *state.Connection) connectors.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
 		return setConnectionSettings(ctx, st, c.ID, settings)
 	}

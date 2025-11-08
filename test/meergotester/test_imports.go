@@ -19,8 +19,8 @@ package meergotester
 // changing the test execution procedure.
 
 import (
-	_ "github.com/meergo/meergo/connectors"
 	_ "github.com/meergo/meergo/connectors/dummy"
 	_ "github.com/meergo/meergo/connectors/kafka"
-	_ "github.com/meergo/meergo/warehouses"
+
+	_ "github.com/meergo/meergo/warehouses/postgresql"
 )

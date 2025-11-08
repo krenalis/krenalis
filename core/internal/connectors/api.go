@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/internal/connectors/apiwriter"
 	"github.com/meergo/meergo/core/internal/connectors/httpclient"
@@ -56,7 +56,7 @@ type API struct {
 //	// webhooks are per connection, role is the connection's role, otherwise is
 //	// Both. It returns the ErrWebhookUnauthorized error is the request was not
 //	// authorized. The context is the request's context.
-//	ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error)
+//	ReceiveWebhook(r *http.Request, role connectors.Role) ([]connectors.WebhookPayload, error)
 //}
 
 type apiOAuthConnector interface {
@@ -67,7 +67,7 @@ type apiOAuthConnector interface {
 // API returns the API for the provided connection.
 // Errors are deferred until a method of the API is called.
 // It panics if the connection is not an API connection.
-func (connectors *Connectors) API(connection *state.Connection) *API {
+func (c *Connectors) API(connection *state.Connection) *API {
 	connector := connection.Connector()
 	var targets state.ConnectorTargets
 	if connection.Role == state.Source {
@@ -80,7 +80,7 @@ func (connectors *Connectors) API(connection *state.Connection) *API {
 		connection:  connection.ID,
 		role:        connection.Role,
 		timeLayouts: &connector.TimeLayouts,
-		httpClient:  connectors.http.ConnectionClient(connection),
+		httpClient:  c.http.ConnectionClient(connection),
 		users:       schema{lock: make(chan struct{}, 1)},
 		targets:     targets,
 	}
@@ -90,9 +90,9 @@ func (connectors *Connectors) API(connection *state.Connection) *API {
 		// accountID = a.ID // TODO(marco): implement webhooks
 		accountCode = a.Code
 	}
-	api.inner, api.err = meergo.RegisteredAPI(api.connector).New(&meergo.APIEnv{
+	api.inner, api.err = connectors.RegisteredAPI(api.connector).New(&connectors.APIEnv{
 		Settings:     connection.Settings,
-		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
+		SetSettings:  setConnectionSettingsFunc(c.state, connection),
 		OAuthAccount: accountCode,
 		HTTPClient:   api.httpClient,
 		// WebhookURL:   webhookURL(connection, accountID), // TODO(marco): implement webhooks
@@ -118,7 +118,7 @@ func (api *API) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if api.err != nil {
 		return nil, api.err
 	}
-	eventTypes, err := api.inner.(meergo.EventSender).EventTypes(ctx)
+	eventTypes, err := api.inner.(connectors.EventSender).EventTypes(ctx)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -136,7 +136,7 @@ func (api *API) EventTypes(ctx context.Context) ([]*EventType, error) {
 // It validates the event schema, which must align with the schema of the event
 // type, then passes that event type schema to the connector.
 //
-// If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
+// If the event type does not exist, it returns the connectors.ErrEventTypeNotExist
 // error. If the schema of the event is not aligned to the event type's schema,
 // it returns a *schemas.Error error. If the event is invalid, it returns a
 // *InvalidEventError error. If the connector returns an error, it returns a
@@ -144,13 +144,13 @@ func (api *API) EventTypes(ctx context.Context) ([]*EventType, error) {
 //
 // It panics if the API does not support the event target, or if schema is valid
 // but not an object.
-func (api *API) PreviewSendEvent(ctx context.Context, event meergo.Event) (*http.Request, error) {
+func (api *API) PreviewSendEvent(ctx context.Context, event connectors.Event) (*http.Request, error) {
 	if api.err != nil {
 		return nil, api.err
 	}
-	eventTypeSchema, err := api.inner.(meergo.EventSender).EventTypeSchema(ctx, event.Type.ID)
+	eventTypeSchema, err := api.inner.(connectors.EventSender).EventTypeSchema(ctx, event.Type.ID)
 	if err != nil {
-		if err == meergo.ErrEventTypeNotExist {
+		if err == connectors.ErrEventTypeNotExist {
 			return nil, err
 		}
 		return nil, connectorError(err)
@@ -165,9 +165,9 @@ func (api *API) PreviewSendEvent(ctx context.Context, event meergo.Event) (*http
 	event.Type.Schema = eventTypeSchema
 	// Return the request that represents the event preview.
 	iterator := newSingleEventIterator(&event, api.connector)
-	req, err := api.inner.(meergo.EventSender).PreviewSendEvents(ctx, iterator)
+	req, err := api.inner.(connectors.EventSender).PreviewSendEvents(ctx, iterator)
 	if err != nil {
-		if err == meergo.ErrEventTypeNotExist {
+		if err == connectors.ErrEventTypeNotExist {
 			return nil, err
 		}
 		return nil, connectorError(err)
@@ -189,7 +189,7 @@ func (api *API) PreviewSendEvent(ctx context.Context, event meergo.Event) (*http
 // properties compatible with the API's role. For the event target, the returned
 // schema can be the invalid schema.
 //
-// If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
+// If the event type does not exist, it returns the connectors.ErrEventTypeNotExist
 // error. If the connector returns an error, it returns a *UnavailableError.
 // It panics if the API does not support the provided target.
 func (api *API) Schema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
@@ -203,7 +203,7 @@ func (api *API) Schema(ctx context.Context, target state.Target, eventType strin
 // for which no schema is expected, this method returns an invalid type with no
 // error.
 //
-// If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
+// If the event type does not exist, it returns the connectors.ErrEventTypeNotExist
 // error. If the connector returns an error, it returns a *UnavailableError.
 // It panics if role is not Source or Destination.
 func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
@@ -218,9 +218,9 @@ func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := api.inner.(meergo.EventSender).EventTypeSchema(ctx, eventType)
+		schema, err := api.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
 		if err != nil {
-			if err == meergo.ErrEventTypeNotExist {
+			if err == connectors.ErrEventTypeNotExist {
 				return types.Type{}, err
 			}
 			return types.Type{}, connectorError(err)
@@ -237,7 +237,7 @@ func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		return schema, nil
 		// TODO(marco): Implement groups
 		//case state.Groups:
-		//	schema, err := api.inner.(apiSchemaConnector).Schema(ctx, meergo.GroupTarget, meergo.Role(role), "")
+		//	schema, err := api.inner.(apiSchemaConnector).Schema(ctx, connectors.GroupTarget, connectors.Role(role), "")
 		//	if err != nil {
 		//		return types.Type{}, connectorError(err)
 		//	}
@@ -254,12 +254,12 @@ func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.
 // If an event type does not exist, it returns the ErrEventTypeNotExist error.
 //
 // It panics if the API does not support the event target.
-func (api *API) SendEvents(ctx context.Context, events meergo.Events) error {
+func (api *API) SendEvents(ctx context.Context, events connectors.Events) error {
 	if api.err != nil {
 		return api.err
 	}
-	err := api.inner.(meergo.EventSender).SendEvents(ctx, events)
-	if err != nil && err != meergo.ErrEventTypeNotExist {
+	err := api.inner.(connectors.EventSender).SendEvents(ctx, events)
+	if err != nil && err != connectors.ErrEventTypeNotExist {
 		err = connectorError(err)
 	}
 	return err
@@ -352,7 +352,7 @@ func (api *API) Writer(ctx context.Context, outSchema types.Type, exportMode sta
 	if err != nil {
 		return nil, err
 	}
-	inner := api.inner.(meergo.RecordUpserter)
+	inner := api.inner.(connectors.RecordUpserter)
 	writer := apiwriter.New(api.connector, target, inner.Upsert, apiwriter.AcksFunc(ack))
 	return writer, nil
 }
@@ -375,7 +375,7 @@ func (api *API) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	if schema := api.users.schemas[role-1]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := api.inner.(meergo.RecordFetcher).RecordSchema(ctx, meergo.TargetUser, meergo.Role(role))
+	schema, err := api.inner.(connectors.RecordFetcher).RecordSchema(ctx, connectors.TargetUser, connectors.Role(role))
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
@@ -387,11 +387,11 @@ func (api *API) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	return schema, nil
 }
 
-// singleEventIterator implements the meergo.Events interface that iterates over
+// singleEventIterator implements the connectors.Events interface that iterates over
 // a single event.
 type singleEventIterator struct {
 	api       string
-	event     *meergo.Event
+	event     *connectors.Event
 	consumed  bool
 	iterating bool
 	postponed bool
@@ -401,16 +401,16 @@ type singleEventIterator struct {
 
 // newSingleEventIterator returns a singleEventIterator with the provided event.
 // api is the name of the API connector.
-func newSingleEventIterator(event *meergo.Event, api string) *singleEventIterator {
+func newSingleEventIterator(event *connectors.Event, api string) *singleEventIterator {
 	return &singleEventIterator{api: api, event: event}
 }
 
-func (iter *singleEventIterator) All() iter.Seq[*meergo.Event] {
+func (iter *singleEventIterator) All() iter.Seq[*connectors.Event] {
 	if iter.consumed {
 		panic(iter.api + " connector: SendEvents method called Events.All after the events were consumed")
 	}
 	iter.consumed = true
-	return func(yield func(event *meergo.Event) bool) {
+	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
 	}
@@ -439,7 +439,7 @@ func (iter *singleEventIterator) Err() error {
 	return iter.err
 }
 
-func (iter *singleEventIterator) First() *meergo.Event {
+func (iter *singleEventIterator) First() *connectors.Event {
 	if iter.consumed {
 		panic(iter.api + " connector: SendEvents method called Events.First after the events were consumed")
 	}
@@ -447,7 +447,7 @@ func (iter *singleEventIterator) First() *meergo.Event {
 	return iter.event
 }
 
-func (iter *singleEventIterator) Peek() (*meergo.Event, bool) {
+func (iter *singleEventIterator) Peek() (*connectors.Event, bool) {
 	if iter.consumed && !iter.iterating {
 		panic(iter.api + " connector: SendEvents method called Events.Peek outside of an iteration")
 	}
@@ -470,12 +470,12 @@ func (iter *singleEventIterator) Postpone() {
 	iter.postponed = true
 }
 
-func (iter *singleEventIterator) SameUser() iter.Seq[*meergo.Event] {
+func (iter *singleEventIterator) SameUser() iter.Seq[*connectors.Event] {
 	if iter.consumed {
 		panic(iter.api + " connector: SendEvents method called Events.Some after the events were consumed")
 	}
 	iter.consumed = true
-	return func(yield func(event *meergo.Event) bool) {
+	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
 	}
@@ -578,9 +578,9 @@ func (r *apiRecords) All(ctx context.Context) iter.Seq[Record] {
 		for {
 
 			// Retrieve the users.
-			var users []meergo.Record
+			var users []connectors.Record
 			var err error
-			users, cursor, err = r.inner.(meergo.RecordFetcher).Records(ctx, meergo.TargetUser, r.lastChangeTime, nil, cursor, r.apiSchema)
+			users, cursor, err = r.inner.(connectors.RecordFetcher).Records(ctx, connectors.TargetUser, r.lastChangeTime, nil, cursor, r.apiSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

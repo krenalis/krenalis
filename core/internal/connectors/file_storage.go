@@ -13,7 +13,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -55,15 +55,15 @@ type fileStorageWriteConnector interface {
 
 // FileStorage returns a file storage on the provided file storage connection.
 // Errors are deferred until a file storage's method is called.
-func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorage {
+func (c *Connectors) FileStorage(storage *state.Connection) *FileStorage {
 	s := &FileStorage{
 		connector: storage.Connector().Code,
-		state:     connectors.state,
+		state:     c.state,
 		storage:   storage,
 	}
-	s.inner, s.err = meergo.RegisteredFileStorage(storage.Connector().Code).New(&meergo.FileStorageEnv{
+	s.inner, s.err = connectors.RegisteredFileStorage(storage.Connector().Code).New(&connectors.FileStorageEnv{
 		Settings:    storage.Settings,
-		SetSettings: setConnectionSettingsFunc(connectors.state, storage),
+		SetSettings: setConnectionSettingsFunc(c.state, storage),
 	})
 	s.err = connectorError(s.err)
 	return s
@@ -122,9 +122,9 @@ func (storage *FileStorage) Connector() string {
 // did not prevent the file from being processed. These issues are reported as a
 // slice of strings. The slice will be nil if there are no issues.
 //
-// If the settings are invalid, it returns a *meergo.InvalidSettingsError. If
+// If the settings are invalid, it returns a *connectors.InvalidSettingsError. If
 // the file has no columns, it returns ErrNoColumnsFound. If the file does not
-// have the specified sheet, it returns meergo.ErrSheetNotExist. If the
+// have the specified sheet, it returns connectors.ErrSheetNotExist. If the
 // connector returns an error, it returns an *UnavailableError.
 func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings json.Value, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, issues []string, err error) {
 	if storage.err != nil {
@@ -143,14 +143,14 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 
-	_file, err := meergo.RegisteredFile(file.Code).New(&meergo.FileEnv{
+	_file, err := connectors.RegisteredFile(file.Code).New(&connectors.FileEnv{
 		SetSettings: func(ctx context.Context, innerSettings []byte) error { return nil },
 	})
 	if err != nil {
 		return nil, nil, nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
 	}
 	if file.HasSourceSettings {
-		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
+		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, connectors.Role(storage.storage.Role))
 		if err != nil {
 			return nil, nil, nil, connectorError(err)
 		}
@@ -195,7 +195,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // settings, if the file connector has settings, represents its settings.
 // compression indicates if the file is compressed and how.
 //
-// If the settings are invalid, it returns a *meergo.InvalidSettingsError. If
+// If the settings are invalid, it returns a *connectors.InvalidSettingsError. If
 // the connector returns an error, it returns an *UnavailableError. This method
 // panics if the file connector does not support sheets.
 func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, settings json.Value, compression state.Compression) ([]string, error) {
@@ -203,14 +203,14 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 		return nil, storage.err
 	}
 
-	_file, err := meergo.RegisteredFile(file.Code).New(&meergo.FileEnv{
+	_file, err := connectors.RegisteredFile(file.Code).New(&connectors.FileEnv{
 		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {
 		return nil, connectorError(fmt.Errorf("failed to register the file: %s", err))
 	}
 	if file.HasSourceSettings {
-		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
+		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, connectors.Role(storage.storage.Role))
 		if err != nil {
 			return nil, connectorError(err)
 		}

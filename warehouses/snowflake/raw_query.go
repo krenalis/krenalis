@@ -7,12 +7,12 @@ package snowflake
 import (
 	"context"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // RawQuery executes a query and returns the results and the number of columns
 // in each row.
-func (warehouse *Snowflake) RawQuery(ctx context.Context, query string) (meergo.Rows, int, error) {
+func (warehouse *Snowflake) RawQuery(ctx context.Context, query string) (warehouses.Rows, int, error) {
 	// TODO(Gianluca): this should be tested on a Snowflake warehouse. See
 	// https://github.com/meergo/meergo/issues/1665.
 	db := warehouse.openDB()

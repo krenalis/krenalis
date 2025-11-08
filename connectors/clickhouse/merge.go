@@ -8,13 +8,13 @@ import (
 	"context"
 	"strings"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 // merge performs a table merge operation.
-func merge(ctx context.Context, db driver.Conn, table meergo.Table, rows [][]any) error {
+func merge(ctx context.Context, db driver.Conn, table connectors.Table, rows [][]any) error {
 
 	name, err := quoteTable(table.Name)
 	if err != nil {

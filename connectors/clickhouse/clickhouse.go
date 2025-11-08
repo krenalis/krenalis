@@ -19,7 +19,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
@@ -34,16 +34,16 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterDatabase(meergo.DatabaseSpec{
+	connectors.RegisterDatabase(connectors.DatabaseSpec{
 		Code:        "clickhouse",
 		Label:       "ClickHouse",
-		Categories:  meergo.CategoryDatabase,
+		Categories:  connectors.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM users\n",
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Documentation: connectors.ConnectorDocumentation{
+			Source: connectors.ConnectorRoleDocumentation{
 				Overview: sourceOverview,
 			},
-			Destination: meergo.ConnectorRoleDocumentation{
+			Destination: connectors.ConnectorRoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -51,7 +51,7 @@ func init() {
 }
 
 // New returns a new connector instance for ClickHouse.
-func New(env *meergo.DatabaseEnv) (*ClickHouse, error) {
+func New(env *connectors.DatabaseEnv) (*ClickHouse, error) {
 	c := ClickHouse{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -63,7 +63,7 @@ func New(env *meergo.DatabaseEnv) (*ClickHouse, error) {
 }
 
 type ClickHouse struct {
-	env      *meergo.DatabaseEnv
+	env      *connectors.DatabaseEnv
 	settings *innerSettings
 	db       driver.Conn
 }
@@ -77,7 +77,7 @@ func (ch *ClickHouse) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
+func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]connectors.Column, error) {
 	var err error
 	table, err = quoteTable(table)
 	if err != nil {
@@ -98,7 +98,7 @@ func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]meergo.Colum
 
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
-func (ch *ClickHouse) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
+func (ch *ClickHouse) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
 	if err := ch.openDB(); err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (ch *ClickHouse) Merge(ctx context.Context, table meergo.Table, rows [][]an
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+func (ch *ClickHouse) Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error) {
 	return ch.query(ctx, query, false)
 }
 
@@ -123,7 +123,7 @@ func (ch *ClickHouse) QuoteTime(value any, typ types.Type) string {
 }
 
 // ServeUI serves the connector's user interface.
-func (ch *ClickHouse) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ch *ClickHouse) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -139,19 +139,19 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, settings json.V
 	case "test":
 		return nil, ch.saveSettings(ctx, settings, true)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
-			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&connectors.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
+			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
+			&connectors.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Settings: settings,
-		Buttons: []meergo.Button{
+		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
 	}
@@ -175,7 +175,7 @@ func (ch *ClickHouse) openDB() error {
 // query executes the given query and returns the resulting rows and columns.
 // writable indicates whether the resulting columns should be marked as
 // writable.
-func (ch *ClickHouse) query(ctx context.Context, query string, writable bool) (meergo.Rows, []meergo.Column, error) {
+func (ch *ClickHouse) query(ctx context.Context, query string, writable bool) (connectors.Rows, []connectors.Column, error) {
 	if err := ch.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -184,7 +184,7 @@ func (ch *ClickHouse) query(ctx context.Context, query string, writable bool) (m
 		return nil, nil, err
 	}
 	columnTypes := rows.ColumnTypes()
-	columns := make([]meergo.Column, len(columnTypes))
+	columns := make([]connectors.Column, len(columnTypes))
 	for i, c := range columnTypes {
 		typ, nullable, issue := propertyType(c)
 		if !typ.Valid() {
@@ -213,23 +213,23 @@ func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, tes
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
+		return connectors.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65535 {
-		return meergo.NewInvalidSettingsError("port must be in range [1,65535]")
+		return connectors.NewInvalidSettingsError("port must be in range [1,65535]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n > 64 {
-		return meergo.NewInvalidSettingsError("username length in bytes must be in range [0,64]")
+		return connectors.NewInvalidSettingsError("username length in bytes must be in range [0,64]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n > 100 {
-		return meergo.NewInvalidSettingsError("password length must be in range [0,100]")
+		return connectors.NewInvalidSettingsError("password length must be in range [0,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n > 64 {
-		return meergo.NewInvalidSettingsError("database length in bytes must be in range [0,64]")
+		return connectors.NewInvalidSettingsError("database length in bytes must be in range [0,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

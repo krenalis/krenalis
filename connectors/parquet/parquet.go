@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -41,18 +41,18 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFile(meergo.FileSpec{
+	connectors.RegisterFile(connectors.FileSpec{
 		Code:       "parquet",
 		Label:      "Parquet",
-		Categories: meergo.CategoryFile,
+		Categories: connectors.CategoryFile,
 		Extension:  "parquet",
-		AsSource: &meergo.AsSourceFile{
-			Documentation: meergo.ConnectorRoleDocumentation{
+		AsSource: &connectors.AsSourceFile{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsDestinationFile{
-			Documentation: meergo.ConnectorRoleDocumentation{
+		AsDestination: &connectors.AsDestinationFile{
+			Documentation: connectors.ConnectorRoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -60,7 +60,7 @@ func init() {
 }
 
 // New returns a new connector instance for Parquet.
-func New(env *meergo.FileEnv) (*Parquet, error) {
+func New(env *connectors.FileEnv) (*Parquet, error) {
 	return &Parquet{}, nil
 }
 
@@ -72,7 +72,7 @@ func (pq *Parquet) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
+func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -331,7 +331,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // Write writes to w the records read from records.
-func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
+func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records connectors.RecordReader) error {
 	columns := records.Columns()
 	schema := types.Object(columns)
 	schemaDef, err := schemaToParquetSchema(schema)

@@ -16,11 +16,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/testimages"
-	_ "github.com/meergo/meergo/warehouses" // for registering warehouses.
+	"github.com/meergo/meergo/warehouses"
+
+	// Import warehouse drivers for TestWarehousesIdentityResolution.
+	_ "github.com/meergo/meergo/warehouses/postgresql"
+	_ "github.com/meergo/meergo/warehouses/snowflake"
 
 	"github.com/google/uuid"
 	"github.com/testcontainers/testcontainers-go"
@@ -38,17 +41,17 @@ import (
 //
 // WARNING: the warehouses must be empty, as the tests will initialize them.
 
-var columns = []meergo.Column{
+var columns = []warehouses.Column{
 	{Name: "email", Type: types.Text(), Nullable: true},
 	{Name: "first_name", Type: types.Text(), Nullable: true},
 	{Name: "last_name", Type: types.Text(), Nullable: true},
 	{Name: "notes", Type: types.Array(types.Text()), Nullable: true},
 }
 
-var columnByName map[string]meergo.Column
+var columnByName map[string]warehouses.Column
 
 func init() {
-	columnByName = make(map[string]meergo.Column, len(columns))
+	columnByName = make(map[string]warehouses.Column, len(columns))
 	for _, c := range columns {
 		columnByName[c.Name] = c
 	}
@@ -466,8 +469,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		},
 	}
 
-	// Run the tests on every warehouse driver.
-	warehouseDrivers := meergo.WarehouseDrivers()
+	// Run the tests on PostgreSQL and Snowflake warehouse driver.
+	warehouseDrivers := warehouses.WarehouseDrivers()
 	if len(warehouseDrivers) == 0 {
 		t.Fatal("there are no warehouse drivers. Missing warehouse drivers import in test file?")
 	}
@@ -539,7 +542,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			}
 
 			// Open the warehouse.
-			wh, err := warehouseDriver.New(&meergo.WarehouseConfig{
+			wh, err := warehouseDriver.New(&warehouses.WarehouseConfig{
 				Settings: settings,
 			})
 			if err != nil {
@@ -607,7 +610,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					}
 
 					// Resolve the identities.
-					var identifiers []meergo.Column
+					var identifiers []warehouses.Column
 					for _, id := range test.identifiers {
 						identifiers = append(identifiers, columnByName[id])
 					}
@@ -628,10 +631,10 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// the expected ones.
 					var gotUsers []map[string]any
 					{
-						query := meergo.RowQuery{
+						query := warehouses.RowQuery{
 							Columns: columns,
 							Table:   "users",
-							OrderBy: []meergo.Column{columnByName["email"]},
+							OrderBy: []warehouses.Column{columnByName["email"]},
 						}
 						r, _, err := wh.Query(ctx, query, true)
 						if err != nil {
@@ -689,21 +692,21 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 // identitiesMergeColumns returns the columns to be used during the identities
 // merge operation, both when importing in batch.
-func identitiesMergeColumns(iwColumns map[string]meergo.Column) []meergo.Column {
-	columns := make([]meergo.Column, 7+len(iwColumns))
-	columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
-	columns[1] = meergo.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	columns[2] = meergo.Column{Name: "__identity_id__", Type: types.Text()}
-	columns[3] = meergo.Column{Name: "__connection__", Type: types.Int(32)}
-	columns[4] = meergo.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
-	columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses.Column {
+	columns := make([]warehouses.Column, 7+len(iwColumns))
+	columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
+	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
+	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
+	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
+	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
 	i := 7
 	for _, column := range iwColumns {
 		columns[i] = column
 		i++
 	}
-	slices.SortFunc(columns[7:], func(a, b meergo.Column) int {
+	slices.SortFunc(columns[7:], func(a, b warehouses.Column) int {
 		return cmp.Compare(a.Name, b.Name)
 	})
 	return columns

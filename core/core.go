@@ -20,11 +20,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/collector"
-	"github.com/meergo/meergo/core/internal/connectors"
+	coreConnectors "github.com/meergo/meergo/core/internal/connectors"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
 	coremetrics "github.com/meergo/meergo/core/internal/metrics"
@@ -37,6 +37,7 @@ import (
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
@@ -48,7 +49,7 @@ type Core struct {
 	dbPoolMetrics    *dbPoolMetrics
 	state            *state.State
 	datastore        *datastore.Datastore
-	connectors       *connectors.Connectors
+	connectors       *coreConnectors.Connectors
 	metrics          *coremetrics.Collector
 	collector        *collector.Collector
 	functionProvider transformers.FunctionProvider
@@ -68,7 +69,7 @@ type Core struct {
 	//
 	// If a workspace does not have MCP settings configured, the map has a key
 	// and the value is nil.
-	mcp   map[int]meergo.Warehouse
+	mcp   map[int]warehouses.Warehouse
 	mcpMu sync.Mutex
 }
 
@@ -230,7 +231,7 @@ func New(conf *Config) (*Core, error) {
 	core.datastore = datastore.New(core.state)
 
 	// Init the connectors.
-	core.connectors = connectors.New(core.state)
+	core.connectors = coreConnectors.New(core.state)
 
 	// Init the event collector.
 	core.collector, err = collector.New(db, core.state, core.datastore, core.connectors, core.functionProvider, core.metrics, conf.MaxMindDBPath)
@@ -250,9 +251,9 @@ func New(conf *Config) (*Core, error) {
 
 	// Instantiate a meergo.Warehouse, used by the MCP server, for every
 	// workspace.
-	core.mcp = map[int]meergo.Warehouse{}
+	core.mcp = map[int]warehouses.Warehouse{}
 	for _, ws := range core.state.Workspaces() {
-		var wh meergo.Warehouse
+		var wh warehouses.Warehouse
 		if ws.Warehouse.MCPSettings != nil {
 			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.MCPSettings)
 		}
@@ -1148,7 +1149,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 //
 // primarySources cannot be nil.
 func (core *Core) executeAlterUserSchema(workspace int, opID string, schema types.Type,
-	primarySources map[string]int, operations []meergo.AlterOperation) {
+	primarySources map[string]int, operations []warehouses.AlterOperation) {
 	ctx := core.close.ctx
 	store := core.datastore.Store(workspace)
 	ws, ok := core.state.Workspace(workspace)
@@ -1157,7 +1158,7 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 	}
 	// Keep calling 'AlterUserSchema' until it (1) returns successfully, (2)
 	// returns with a *meergo.OperationError, or (3) the context is cancelled.
-	var alterSchemaErr *meergo.OperationError
+	var alterSchemaErr *warehouses.OperationError
 	bo := backoff.New(200)
 	bo.SetCap(5 * time.Minute)
 	for bo.Next(ctx) {
@@ -1173,7 +1174,7 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 		}
 		// In case of OperationError log it, then go on and send an
 		// EndAlterUserSchema notification.
-		if err2, ok := err.(*meergo.OperationError); ok {
+		if err2, ok := err.(*warehouses.OperationError); ok {
 			slog.Error("alter schema ended with an error", "err", err2)
 			alterSchemaErr = err2
 			break
@@ -1218,13 +1219,13 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 Identifiers:
 	for _, identifier := range ws.Identifiers {
 		for _, operation := range operations {
-			if operation.Operation == meergo.OperationAddColumn {
+			if operation.Operation == warehouses.OperationAddColumn {
 				continue
 			}
 			if path := strings.ReplaceAll(operation.Column, "_", "."); path != identifier {
 				continue
 			}
-			if operation.Operation == meergo.OperationRenameColumn {
+			if operation.Operation == warehouses.OperationRenameColumn {
 				nEnd.Identifiers = append(nEnd.Identifiers, strings.ReplaceAll(operation.NewColumn, "_", "."))
 			}
 			continue Identifiers
@@ -1310,7 +1311,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 		}
 		// In case of OperationError log it, then go on and send an
 		// EndIdentityResolution notification.
-		if err2, ok := err.(*meergo.OperationError); ok {
+		if err2, ok := err.(*warehouses.OperationError); ok {
 			slog.Error("identity resolution ended with an error", "err", err2)
 			break
 		}
@@ -1358,7 +1359,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 // onCreateWorkspace is called when a workspace is created.
 func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
-	var wh meergo.Warehouse
+	var wh warehouses.Warehouse
 	if ws.Warehouse.MCPSettings != nil {
 		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.MCPSettings)
 	}
@@ -1490,7 +1491,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 //     user schema update) is already running.
 //   - ConnectionNotExist, if a connection referred in the primary sources does
 //     not exist.
-func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, operations []meergo.AlterOperation) error {
+func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
 	opID, err := uuid.NewUUID()
 	if err != nil {
@@ -1607,7 +1608,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 // EventColumnByPath returns the meergo.Column corresponding to the property of
 // the events schema with the specified path.
 // propertyPath must always refer to an existing property in the events schema.
-func EventColumnByPath(propertyPath string) meergo.Column {
+func EventColumnByPath(propertyPath string) warehouses.Column {
 	return datastore.EventColumnByPath(propertyPath)
 }
 
@@ -1618,11 +1619,11 @@ func EventSchema() types.Type {
 
 // categoryBitmaskToCategoryNames converts a bitmask representing a connector's
 // categories into a slice of strings containing the various category names.
-func categoryBitmaskToCategoryNames(categoryBitmask meergo.Categories) []string {
+func categoryBitmaskToCategoryNames(categoryBitmask connectors.Categories) []string {
 	categoryNames := []string{}
 	for i := range 64 {
 		if categoryBitmask&(1<<i) != 0 {
-			categoryName := meergo.Categories(1 << i).String()
+			categoryName := connectors.Categories(1 << i).String()
 			categoryNames = append(categoryNames, categoryName)
 		}
 	}
@@ -1633,8 +1634,8 @@ func categoryBitmaskToCategoryNames(categoryBitmask meergo.Categories) []string 
 // to implement features for the MCP server.
 // typ is the type of the warehouse and settings are the settings for connecting
 // to it.
-func getMCPWarehouseInstance(typ string, settings []byte) (meergo.Warehouse, error) {
-	wh, err := meergo.RegisteredWarehouseDriver(typ).New(&meergo.WarehouseConfig{Settings: settings})
+func getMCPWarehouseInstance(typ string, settings []byte) (warehouses.Warehouse, error) {
+	wh, err := warehouses.RegisteredWarehouseDriver(typ).New(&warehouses.WarehouseConfig{Settings: settings})
 	if err != nil {
 		return nil, err
 	}

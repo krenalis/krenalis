@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 // rateLimiterState represents the rate limiter's state.
@@ -75,7 +75,7 @@ func newRateLimiter(rate float64, capacity, maxConcurrency int) *rateLimiter {
 // OnFailure must be called after a request completes with an error or is
 // cancelled. For every call to Wait, either OnSuccess or OnFailure must be
 // called to avoid leaking concurrency slots.
-func (b *rateLimiter) OnFailure(duration time.Duration, reason meergo.FailureReason, waitTime time.Duration) {
+func (b *rateLimiter) OnFailure(duration time.Duration, reason connectors.FailureReason, waitTime time.Duration) {
 	if b.inFlight != nil {
 		<-b.inFlight
 	}
@@ -83,13 +83,13 @@ func (b *rateLimiter) OnFailure(duration time.Duration, reason meergo.FailureRea
 	defer b.mu.Unlock()
 	b.latencyAvg.Observe(duration)
 	switch reason {
-	case meergo.PermanentFailure:
-	case meergo.NetFailure:
+	case connectors.PermanentFailure:
+	case connectors.NetFailure:
 		b.onNetFailure()
-	case meergo.Unauthorized:
-	case meergo.Slowdown:
+	case connectors.Unauthorized:
+	case connectors.Slowdown:
 		b.onSlowdown()
-	case meergo.RateLimited:
+	case connectors.RateLimited:
 		b.onRateLimited(waitTime)
 	default:
 		panic(fmt.Errorf("core/connectors/httpclient: unexpected FailureReason %d", reason))

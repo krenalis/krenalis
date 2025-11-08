@@ -12,19 +12,19 @@ package segment
 import (
 	_ "embed"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 //go:embed documentation/overview.md
 var overview string
 
 func init() {
-	meergo.RegisterWebhook(meergo.WebhookSpec{
+	connectors.RegisterWebhook(connectors.WebhookSpec{
 		Code:       "segment",
 		Label:      "Segment",
-		Categories: meergo.CategorySaaS,
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategorySaaS,
+		Documentation: connectors.ConnectorDocumentation{
+			Source: connectors.ConnectorRoleDocumentation{
 				Summary:  "Import events and users from Segment",
 				Overview: overview,
 			},
@@ -33,7 +33,7 @@ func init() {
 }
 
 // New returns a new connector instance for Segment.
-func New(env *meergo.WebhookEnv) (*Segment, error) {
+func New(env *connectors.WebhookEnv) (*Segment, error) {
 	return &Segment{}, nil
 }
 

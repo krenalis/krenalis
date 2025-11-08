@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/testconnector"
 	"github.com/meergo/meergo/core/types"
 )
@@ -25,7 +25,7 @@ func TestBadRequest(t *testing.T) {
 
 	now := time.Now().UTC()
 
-	event := &meergo.Event{
+	event := &connectors.Event{
 		Received: testconnector.ReceivedEvent(map[string]any{
 			"anonymousId":  "17fba6ee-8673-4ebc-afd6-69e62124e017",
 			"connectionId": 1323607634,
@@ -51,7 +51,7 @@ func TestBadRequest(t *testing.T) {
 			"type":              "alias",
 			"userId":            nil,
 		}),
-		Type: meergo.EventTypeInfo{
+		Type: connectors.EventTypeInfo{
 			ID: "track",
 			Schema: types.Object([]types.Property{
 				{Name: "event", Prefilled: "event", Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
@@ -67,7 +67,7 @@ func TestBadRequest(t *testing.T) {
 	}
 
 	// Create an iterator over the test events.
-	iter := testconnector.NewEventsIterator([]*meergo.Event{event, event})
+	iter := testconnector.NewEventsIterator([]*connectors.Event{event, event})
 
 	// Actually sends the events.
 	t.Log("calling SendEvents")
@@ -75,12 +75,12 @@ func TestBadRequest(t *testing.T) {
 	if err == nil {
 		t.Fatal("test should fail, but it returned no errors")
 	}
-	gotMeergoError, ok := err.(meergo.EventsError)
+	gotMeergoError, ok := err.(connectors.EventsError)
 	if !ok {
-		t.Fatalf("expected a meergo.EventsError error, got %T instead", err)
+		t.Fatalf("expected a connectors.EventsError error, got %T instead", err)
 	}
 	if len(gotMeergoError) != 2 {
-		t.Fatalf("expected a meergo.EventsError with 2 event(s) inside, have %d instead", len(gotMeergoError))
+		t.Fatalf("expected a connectors.EventsError with 2 event(s) inside, have %d instead", len(gotMeergoError))
 	}
 	gotErr1 := gotMeergoError[0].Error()
 	gotErr2 := gotMeergoError[1].Error()

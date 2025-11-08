@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/testconnector"
 	"github.com/meergo/meergo/core/types"
@@ -58,11 +58,11 @@ func TestSendEvents(t *testing.T) {
 	now := time.Now().UTC()
 
 	tests := []struct {
-		events              []*meergo.Event
+		events              []*connectors.Event
 		expectedRequestBody map[string]any
 	}{
 		{
-			events: []*meergo.Event{
+			events: []*connectors.Event{
 				{
 					Received: testconnector.ReceivedEvent(map[string]any{
 						"anonymousId":  "17fba6ee-8673-4ebc-afd6-69e62124e017",
@@ -87,7 +87,7 @@ func TestSendEvents(t *testing.T) {
 						"type":              "alias",
 						"userId":            nil,
 					}),
-					Type: meergo.EventTypeInfo{
+					Type: connectors.EventTypeInfo{
 						ID: "ad_impression",
 						Schema: types.Object([]types.Property{
 							{Name: "ad_platform", Type: types.Text()},

@@ -12,7 +12,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/types"
@@ -25,7 +25,7 @@ type databaseConnector interface {
 	Close() error
 
 	// Columns returns the columns of the given table.
-	Columns(ctx context.Context, table string) ([]meergo.Column, error)
+	Columns(ctx context.Context, table string) ([]connectors.Column, error)
 
 	// Merge performs batch insert and update operations on the specified table,
 	// basing on the table keys. rows contains the rows to be inserted or updated;
@@ -36,12 +36,12 @@ type databaseConnector interface {
 	//
 	// Some connectors may check that the table keys actually match the primary keys
 	// of the table, returning an error if they do not.
-	Merge(ctx context.Context, table meergo.Table, rows [][]any) error
+	Merge(ctx context.Context, table connectors.Table, rows [][]any) error
 
 	// Query executes the given query and returns the resulting rows and columns.
 	// If a column is unsupported, its type will be the invalid type, and the Issue
 	// property will describe the problem.
-	Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error)
+	Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error)
 
 	// QuoteTime returns a quoted time value for the specified type or "NULL" if the
 	// value is nil.
@@ -69,15 +69,15 @@ type Database struct {
 //
 // The caller must call the database's Close method when the database is no
 // longer needed.
-func (connectors *Connectors) Database(connection *state.Connection) *Database {
+func (c *Connectors) Database(connection *state.Connection) *Database {
 	connector := connection.Connector()
 	database := &Database{
 		connector:   connector.Code,
 		timeLayouts: &connector.TimeLayouts,
 	}
-	inner, err := meergo.RegisteredDatabase(connector.Code).New(&meergo.DatabaseEnv{
+	inner, err := connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 		Settings:    connection.Settings,
-		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+		SetSettings: setConnectionSettingsFunc(c.state, connection),
 	})
 	database.inner = inner.(databaseConnector)
 	database.err = connectorError(err)
@@ -210,7 +210,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	}
 	for i, c := range columns {
 		if !c.Type.Valid() {
-			columns[i] = meergo.Column{}
+			columns[i] = connectors.Column{}
 		}
 	}
 	return newRows(rows, columns, database.timeLayouts), schema, issues, nil
@@ -259,7 +259,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	var identityColumn, lastChangeTimeColumn types.Property
 	for i, c := range columns {
 		if !c.Type.Valid() {
-			columns[i] = meergo.Column{}
+			columns[i] = connectors.Column{}
 			continue
 		}
 		p, ok := properties.ByName(c.Name)
@@ -267,7 +267,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			if !types.IsValidPropertyName(c.Name) {
 				return nil, connectorError(fmt.Errorf("connector %s has returned an invalid column name %q", database.connector, c.Name))
 			}
-			columns[i] = meergo.Column{}
+			columns[i] = connectors.Column{}
 			continue
 		}
 		if c.Name == action.IdentityColumn {
@@ -335,7 +335,7 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	}
 	w := databaseWriter{
 		ack: ack,
-		table: meergo.Table{
+		table: connectors.Table{
 			Name:    action.TableName,
 			Columns: columnsOfType(action.OutSchema),
 			Keys:    []string{action.TableKey},
@@ -349,7 +349,7 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 // columnsIssues returns the issues found in the provided columns. It returns a
 // nil slice if there are no issues. If a column has a valid type but an issue,
 // or an invalid type but no issue, it returns an error.
-func columnsIssues(columns []meergo.Column) ([]string, error) {
+func columnsIssues(columns []connectors.Column) ([]string, error) {
 	var n int
 	for i := 0; i < len(columns); i++ {
 		valid := columns[i].Type.Valid()
@@ -378,10 +378,10 @@ func columnsIssues(columns []meergo.Column) ([]string, error) {
 	return issues, nil
 }
 
-// columnsOfType returns the properties of a type as meergo.Column values.
-func columnsOfType(t types.Type) []meergo.Column {
+// columnsOfType returns the properties of a type as connectors.Column values.
+func columnsOfType(t types.Type) []connectors.Column {
 	properties := t.Properties()
-	columns := make([]meergo.Column, properties.Len())
+	columns := make([]connectors.Column, properties.Len())
 	for i, p := range properties.All() {
 		columns[i].Name = p.Name
 		columns[i].Type = p.Type
@@ -394,7 +394,7 @@ func columnsOfType(t types.Type) []meergo.Column {
 // It excludes columns with an invalid type and, if the role is Destination,
 // also excludes non-writable columns. If there are no properties to return,
 // it returns a nil slice.
-func columnsProperties(columns []meergo.Column, role state.Role) []types.Property {
+func columnsProperties(columns []connectors.Column, role state.Role) []types.Property {
 	var n int // number of valid columns to return
 	for i := 0; i < len(columns); i++ {
 		if columns[i].Type.Valid() && (role == state.Source || columns[i].Writable) {
@@ -424,7 +424,7 @@ func columnsProperties(columns []meergo.Column, role state.Role) []types.Propert
 // databaseWriter implements the Writer interface for databases.
 type databaseWriter struct {
 	ack    AckFunc
-	table  meergo.Table
+	table  connectors.Table
 	schema types.Type
 	rows   [][]any
 	ids    []string
@@ -472,14 +472,14 @@ func (w *databaseWriter) merge(ctx context.Context) {
 
 // Rows is the result of a query.
 type Rows struct {
-	rows        meergo.Rows
-	columns     []meergo.Column
+	rows        connectors.Rows
+	columns     []connectors.Column
 	timeLayouts *state.TimeLayouts
 	dst         []any
 	closed      bool
 }
 
-func newRows(rows meergo.Rows, columns []meergo.Column, layouts *state.TimeLayouts) *Rows {
+func newRows(rows connectors.Rows, columns []connectors.Column, layouts *state.TimeLayouts) *Rows {
 	rs := &Rows{
 		rows:        rows,
 		columns:     columns,
@@ -532,8 +532,8 @@ func (rs *Rows) Scan() (map[string]any, error) {
 
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
-	rows        meergo.Rows
-	columns     []meergo.Column
+	rows        connectors.Rows
+	columns     []connectors.Column
 	action      *state.Action
 	timeLayouts *state.TimeLayouts
 	last        bool
@@ -541,8 +541,8 @@ type databaseRecords struct {
 	closed      bool
 }
 
-func newDatabaseRecords(rows meergo.Rows, columns []meergo.Column, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
-	// Unused columns are represented by the zero value of meergo.Column in columns.
+func newDatabaseRecords(rows connectors.Rows, columns []connectors.Column, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
+	// Unused columns are represented by the zero value of connectors.Column in columns.
 	records := databaseRecords{
 		rows:        rows,
 		columns:     columns,
@@ -690,7 +690,7 @@ func (r *databaseRecords) Last() bool {
 // queryScanValue implements the sql.Scanner interface to read the database
 // values from a database connector.
 type queryScanValue struct {
-	column      meergo.Column
+	column      connectors.Column
 	row         map[string]any
 	timeLayouts *state.TimeLayouts
 }

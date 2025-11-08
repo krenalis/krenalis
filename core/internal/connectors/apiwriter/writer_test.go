@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
 )
 
@@ -115,7 +115,7 @@ type api struct {
 func newAPI(t *testing.T, seed int64) *api {
 	return &api{t: t, rng: rand.New(rand.NewSource(seed))}
 }
-func (api *api) validateRecord(r meergo.Record) {
+func (api *api) validateRecord(r connectors.Record) {
 	if r.Properties == nil {
 		api.t.Fatal("Upsert: expected properties, got nil")
 	}
@@ -124,7 +124,7 @@ func (api *api) validateRecord(r meergo.Record) {
 	}
 }
 
-func (api *api) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (api *api) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 
 	// Test Peek.
 	if api.rng.Int()%8 == 0 {
@@ -146,7 +146,7 @@ func (api *api) Upsert(ctx context.Context, target meergo.Targets, records meerg
 		return nil
 	}
 
-	var seq iter.Seq[meergo.Record]
+	var seq iter.Seq[connectors.Record]
 	if api.rng.Int()%3 == 0 {
 		seq = records.Same()
 	} else {

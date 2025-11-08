@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jackc/pgx/v5"
 )
 
 // AlterUserSchema alters the user schema.
-func (warehouse *PostgreSQL) AlterUserSchema(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *PostgreSQL) AlterUserSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
 	status, err := warehouse.executeOperation(ctx, opID, alterUserSchema)
 	if err != nil {
 		return err
@@ -38,14 +38,14 @@ func (warehouse *PostgreSQL) AlterUserSchema(ctx context.Context, opID string, c
 			continue
 		}
 		if err != nil {
-			return meergo.NewOperationError(err)
+			return warehouses.NewOperationError(err)
 		}
 		return nil
 	}
 	return ctx.Err()
 }
 
-func (warehouse *PostgreSQL) alterUserSchema(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
+func (warehouse *PostgreSQL) alterUserSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
 
 	// Retrieve the current version of the "users" table.
 	usersVersion, err := warehouse.usersVersion(ctx)
@@ -73,7 +73,7 @@ func (warehouse *PostgreSQL) alterUserSchema(ctx context.Context, columns []meer
 // PreviewAlterUserSchema provides a preview of an alter user schema operation
 // by returning the queries that would be executed on the warehouse to perform a
 // given alter schema.
-func (warehouse *PostgreSQL) PreviewAlterUserSchema(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
+func (warehouse *PostgreSQL) PreviewAlterUserSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) ([]string, error) {
 	usersVersion, err := warehouse.usersVersion(ctx)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (warehouse *PostgreSQL) PreviewAlterUserSchema(ctx context.Context, columns
 // alterUserSchemaQueries returns the queries that perform the given operations.
 // usersTableName is the current name of the users table, for example
 // "_users_42". operations must contain at least one operation.
-func alterUserSchemaQueries(usersTableName string, columns []meergo.Column, operations []meergo.AlterOperation) []string {
+func alterUserSchemaQueries(usersTableName string, columns []warehouses.Column, operations []warehouses.AlterOperation) []string {
 
 	// The operations are performed in this order:
 	//
@@ -113,7 +113,7 @@ func alterUserSchemaQueries(usersTableName string, columns []meergo.Column, oper
 	{
 		var toDrop []string
 		for _, op := range operations {
-			if op.Operation == meergo.OperationDropColumn {
+			if op.Operation == warehouses.OperationDropColumn {
 				toDrop = append(toDrop, op.Column)
 			}
 		}
@@ -134,7 +134,7 @@ func alterUserSchemaQueries(usersTableName string, columns []meergo.Column, oper
 
 	// ALTER TABLE ... RENAME COLUMN.
 	for _, op := range operations {
-		if op.Operation == meergo.OperationRenameColumn {
+		if op.Operation == warehouses.OperationRenameColumn {
 			queries = append(queries, `ALTER TABLE `+quoteIdent(usersTableName)+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
 			queries = append(queries, `ALTER TABLE "_user_identities"`+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
 		}
@@ -142,9 +142,9 @@ func alterUserSchemaQueries(usersTableName string, columns []meergo.Column, oper
 
 	// ALTER TABLE ... ADD COLUMN.
 	{
-		var toAdd []meergo.AlterOperation
+		var toAdd []warehouses.AlterOperation
 		for _, op := range operations {
-			if op.Operation == meergo.OperationAddColumn {
+			if op.Operation == warehouses.OperationAddColumn {
 				toAdd = append(toAdd, op)
 			}
 		}
@@ -178,7 +178,7 @@ func alterUserSchemaQueries(usersTableName string, columns []meergo.Column, oper
 // userColumns contains the columns of such table.
 // replace indicates if the query that creates the VIEW should have the "OR
 // REPLACE" clause to replace the view if it already exist.
-func createViewQuery(usersTableName string, userColumns []meergo.Column, replace bool) string {
+func createViewQuery(usersTableName string, userColumns []warehouses.Column, replace bool) string {
 	b := strings.Builder{}
 	b.WriteString(`CREATE `)
 	if replace {

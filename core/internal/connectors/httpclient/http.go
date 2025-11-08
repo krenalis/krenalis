@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
 )
 
@@ -118,7 +118,7 @@ func (h *HTTP) SetTrace(w io.Writer) {
 // connectorMux returns an http.ServeMux configured with the patterns of the
 // connector with the provided name and endpoint groups.
 // It panics if a connector's pattern is not valid.
-func (h *HTTP) connectorMux(name string, groups []meergo.EndpointGroup) *http.ServeMux {
+func (h *HTTP) connectorMux(name string, groups []connectors.EndpointGroup) *http.ServeMux {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if mux, ok := h.muxes[name]; ok {
@@ -153,7 +153,7 @@ func (h *HTTP) connectorMux(name string, groups []meergo.EndpointGroup) *http.Se
 // endpointGroupByPattern returns a map associating each pattern from the
 // provided endpoint groups to an endpointGroup initialized with the group's
 // rate limits and retry policy.
-func endpointGroupByPattern(groups []meergo.EndpointGroup) map[string]endpointGroup {
+func endpointGroupByPattern(groups []connectors.EndpointGroup) map[string]endpointGroup {
 	byPattern := map[string]endpointGroup{}
 	if groups == nil {
 		byPattern["/"] = endpointGroup{

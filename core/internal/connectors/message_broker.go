@@ -7,7 +7,7 @@ package connectors
 import (
 	"context"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/state"
 )
 
@@ -37,7 +37,7 @@ type messageBrokerConnector interface {
 	// ack function has been called.
 	//
 	// Send can be used by multiple goroutines at the same time.
-	Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error
+	Send(ctx context.Context, event []byte, options connectors.SendOptions, ack func(err error)) error
 }
 
 // MessageBroker represents the broker of a message broker connection.
@@ -52,13 +52,13 @@ type MessageBroker struct {
 //
 // The caller must call the message broker's Close method when the broker is no
 // longer needed.
-func (connectors *Connectors) MessageBroker(connection *state.Connection) (*MessageBroker, error) {
+func (c *Connectors) MessageBroker(connection *state.Connection) (*MessageBroker, error) {
 	broker := &MessageBroker{
 		connector: connection.Connector().Code,
 	}
-	inner, err := meergo.RegisteredMessageBroker(connection.Connector().Code).New(&meergo.MessageBrokerEnv{
+	inner, err := connectors.RegisteredMessageBroker(connection.Connector().Code).New(&connectors.MessageBrokerEnv{
 		Settings:    connection.Settings,
-		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
+		SetSettings: setConnectionSettingsFunc(c.state, connection),
 	})
 	if err != nil {
 		return nil, connectorError(err)
@@ -112,7 +112,7 @@ func (broker *MessageBroker) Receive(ctx context.Context) (event []byte, ack fun
 // If the connector returns an error, it returns a *UnavailableError error.
 //
 // Send can be used by multiple goroutines at the same time.
-func (broker *MessageBroker) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
+func (broker *MessageBroker) Send(ctx context.Context, event []byte, options connectors.SendOptions, ack func(err error)) error {
 	err := broker.inner.Send(ctx, event, options, ack)
 	return connectorError(err)
 }

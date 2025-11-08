@@ -16,7 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/validation"
 )
@@ -26,7 +26,7 @@ import (
 // It does not alter the environment variables.
 func parseEnvSettings() (*Settings, error) {
 
-	envVars, err := meergo.GetEnvVars()
+	envVars, err := connectors.GetEnvVars()
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ func boolEnvVar(v string, defaultValue bool) (bool, error) {
 // parseEnvHTTPDuration parses the value of an HTTP configuration setting into a
 // time.Duration.
 func parseEnvHTTPDuration(key string, defaultValue time.Duration) (time.Duration, error) {
-	envVars, err := meergo.GetEnvVars()
+	envVars, err := connectors.GetEnvVars()
 	if err != nil {
 		return 0, err
 	}
@@ -360,7 +360,7 @@ func hasURLValidationFlag(f, flag urlValidationFlag) bool {
 // parseEnvURL parses the value of a configuration setting into a normalized
 // URL. If the input string is empty, it returns an empty string.
 func parseEnvURL(key string, flags urlValidationFlag) (string, error) {
-	envVars, err := meergo.GetEnvVars()
+	envVars, err := connectors.GetEnvVars()
 	if err != nil {
 		return "", err
 	}
@@ -443,7 +443,7 @@ func parseURL(s string, flags urlValidationFlag) (string, error) {
 // resolveFilePath resolves a file configuration setting to its absolute path,
 // returning an error if it does not exist or is not a regular file.
 func resolveFilePath(key string) (string, error) {
-	envVars, err := meergo.GetEnvVars()
+	envVars, err := connectors.GetEnvVars()
 	if err != nil {
 		return "", err
 	}
