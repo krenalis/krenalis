@@ -1182,7 +1182,7 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 		slog.Error("alter schema on warehouse returned an unknown error, "+
 			"so the operation will be retried after the indicated timeout or the next time you restart Meergo",
 			"err", err, "timeout", bo.WaitTime())
-		continue
+
 	}
 	nEnd := state.EndAlterUserSchema{
 		Workspace: workspace,
@@ -1318,7 +1318,7 @@ func (core *Core) executeIdentityResolution(workspace int, opID string) {
 		slog.Error("identity resolution on warehouse returned an unknown error, "+
 			"so the operation will be retried after the indicated timeout or the next time you restart Meergo",
 			"err", err, "timeout", bo.WaitTime())
-		continue
+
 	}
 	nEnd := state.EndIdentityResolution{
 		Workspace: workspace,
