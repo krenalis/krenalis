@@ -117,7 +117,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 			for i := range columns {
 				if exel.settings.HasColumnNames {
 					header := record[i]
-					name, ok := connectors.SuggestPropertyName(header)
+					name, ok := types.PropertyName(header)
 					if !ok {
 						return fmt.Errorf("header %q, of column %s, cannot be converted to a valid property name", header, columnNumberToName(i+1))
 					}
