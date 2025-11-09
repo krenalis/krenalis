@@ -109,7 +109,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meerg
 			for i := range columns {
 				if c.settings.HasColumnNames {
 					header := record[i]
-					name, ok := meergo.SuggestPropertyName(header)
+					name, ok := types.PropertyName(header)
 					if !ok {
 						return fmt.Errorf("column name %q cannot be converted to a valid property name", header)
 					}

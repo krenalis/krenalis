@@ -9,8 +9,10 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/unicode/norm"
 )
 
 // PathNotExistError is returned by PropertyByPath when the path does not exist.
@@ -169,6 +171,48 @@ func ParseUUID(s string) (string, bool) {
 	return id.String(), true
 }
 
+// PropertyName returns a sanitized version of s that is safe to use as a
+// property name.
+// If a valid name cannot be produced, it returns an empty string and false.
+// The output of PropertyName is not guaranteed to be stable across versions.
+func PropertyName(s string) (string, bool) {
+	if IsValidPropertyName(s) {
+		return s, true
+	}
+	s = strings.TrimSpace(s)
+	var underscore bool
+	var b strings.Builder
+	for i, r := range s {
+		if 'a' <= r && r <= 'z' || r == '_' || 'A' <= r && r <= 'Z' || i > 0 && '0' <= r && r <= '9' {
+			b.WriteRune(r)
+			underscore = r == '_'
+			continue
+		}
+		if unicode.IsLetter(r) {
+			c := baseChar(r)
+			if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z') {
+				return "", false
+			}
+			b.WriteRune(c)
+			underscore = false
+			continue
+		}
+		if !underscore {
+			b.WriteRune('_')
+			underscore = true
+		}
+		continue
+	}
+	if b.Len() == 0 {
+		return "", false
+	}
+	s = b.String()
+	if s == "_" {
+		return "", false
+	}
+	return b.String(), true
+}
+
 // Prune removes from t all properties for which f returns false, keeping only
 // those for which f returns true. f is evaluated only on non-object properties.
 // An object property is removed if all of its subproperties are removed.
@@ -254,6 +298,17 @@ func asRole(t Type, role Role) (Type, bool) {
 		names[p.Name] = i
 	}
 	return Type{kind: ObjectKind, vl: Properties{properties: ppc, names: names}}, true
+}
+
+// baseChar returns the base character for a given accented character.
+func baseChar(r rune) rune {
+	decomposed := norm.NFD.String(string(r))
+	for _, dr := range decomposed {
+		if unicode.IsLetter(dr) && !unicode.Is(unicode.Mn, dr) {
+			return dr
+		}
+	}
+	return r
 }
 
 // prune is a recursive helper called by Prune. It returns the pruned
