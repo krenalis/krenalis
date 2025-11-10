@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/types"
 )
 
@@ -32,7 +32,7 @@ type pgTypeInfo struct {
 // columns returns the columns of the table in schema.
 //
 // If the table does not exist, this method returns an error.
-func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]meergo.Column, error) {
+func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]connectors.Column, error) {
 
 	if err := ps.openDB(ctx); err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]meer
 	}
 
 	// Read the columns.
-	var columns []meergo.Column
+	var columns []connectors.Column
 	{
 		query := "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.udt_name, c.character_maximum_length," +
 			" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable\n" +
@@ -157,7 +157,7 @@ func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]meer
 			if err != nil {
 				return nil, fmt.Errorf("database has returned an invalid type: %s", err)
 			}
-			var column meergo.Column
+			var column connectors.Column
 			if typ.Valid() {
 				column.Name = row.column
 				column.Type = typ

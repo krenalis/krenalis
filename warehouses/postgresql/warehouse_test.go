@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/testimages"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/testcontainers/testcontainers-go"
@@ -84,13 +84,13 @@ func Test_Merge(t *testing.T) {
 		{types.Map(types.Text()), map[string]any{"boo": "hello", "foo": "world"}},
 	}
 
-	table := meergo.Table{
+	table := warehouses.Table{
 		Name:    "test_meergo_merge",
-		Columns: make([]meergo.Column, len(cols)),
+		Columns: make([]warehouses.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
-		table.Columns[i] = meergo.Column{
+		table.Columns[i] = warehouses.Column{
 			Name:     fmt.Sprintf("c%d", i),
 			Type:     c.MeergoType,
 			Nullable: true,
@@ -139,7 +139,7 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Open the data warehouse.
-	wh, err := meergo.RegisteredWarehouseDriver("PostgreSQL").New(&meergo.WarehouseConfig{
+	wh, err := warehouses.Registered("PostgreSQL").New(&warehouses.Config{
 		Settings: settings,
 	})
 	if err != nil {
@@ -196,7 +196,7 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Execute the query.
-	query := meergo.RowQuery{
+	query := warehouses.RowQuery{
 		Table:   table.Name,
 		Columns: table.Columns,
 	}
@@ -299,49 +299,49 @@ func Test_Merge(t *testing.T) {
 // definitions and that non-encodable rows produce errors when expected.
 func Test_rowEncoder(t *testing.T) {
 	tests := []struct {
-		columns  []meergo.Column
+		columns  []warehouses.Column
 		rows     [][]any
 		expected [][]any
 		ok       bool
 	}{
 		{
-			columns:  []meergo.Column{{Name: "c", Type: types.Text()}},
+			columns:  []warehouses.Column{{Name: "c", Type: types.Text()}},
 			rows:     [][]any{{"boo"}, {"\x00foo"}},
 			expected: [][]any{{"boo"}, {"foo"}},
 			ok:       true,
 		},
 		{
-			columns:  []meergo.Column{{Name: "c", Type: types.Boolean()}},
+			columns:  []warehouses.Column{{Name: "c", Type: types.Boolean()}},
 			rows:     [][]any{{true}, {false}},
 			expected: [][]any{{true}, {false}},
 			ok:       false,
 		},
 		{
-			columns:  []meergo.Column{{Name: "c", Type: types.JSON()}},
+			columns:  []warehouses.Column{{Name: "c", Type: types.JSON()}},
 			rows:     [][]any{{json.Value(`"boo"`)}, {json.Value(`"\u0000foo"`)}},
 			expected: [][]any{{json.Value(`"boo"`)}, {json.Value(`"foo"`)}},
 			ok:       true,
 		},
 		{
-			columns:  []meergo.Column{{Name: "c", Type: types.Array(types.Text())}},
+			columns:  []warehouses.Column{{Name: "c", Type: types.Array(types.Text())}},
 			rows:     [][]any{{[]any{"boo", "foo"}}, {[]any{"\x00foo", "boo", "\x00"}}},
 			expected: [][]any{{[]any{"boo", "foo"}}, {[]any{"foo", "boo", ""}}},
 			ok:       true,
 		},
 		{
-			columns:  []meergo.Column{{Name: "c", Type: types.Map(types.Int(32))}},
+			columns:  []warehouses.Column{{Name: "c", Type: types.Map(types.Int(32))}},
 			rows:     [][]any{{map[string]any{"boo": 5}}, {map[string]any{"'boo\x00'": 7, "hello \x00world": 2}}},
 			expected: [][]any{{json.Value(`{"boo":5}`)}, {json.Value(`{"'boo'":7,"hello world":2}`)}},
 			ok:       true,
 		},
 		{
-			columns:  []meergo.Column{{Name: "c", Type: types.Map(types.JSON())}},
+			columns:  []warehouses.Column{{Name: "c", Type: types.Map(types.JSON())}},
 			rows:     [][]any{{map[string]any{"boo": json.Value(`{"a":5}`)}}, {map[string]any{"'boo\x00'": json.Value(`{"b":"\u0000foo\\u0000"}`)}}},
 			expected: [][]any{{json.Value(`{"boo":{"a":5}}`)}, {json.Value(`{"'boo'":{"b":"foo\\u0000"}}`)}},
 			ok:       true,
 		},
 		{
-			columns:  []meergo.Column{{Name: "a", Type: types.Text()}, {Name: "b", Type: types.Float(32)}, {Name: "c", Type: types.Map(types.Text())}},
+			columns:  []warehouses.Column{{Name: "a", Type: types.Text()}, {Name: "b", Type: types.Float(32)}, {Name: "c", Type: types.Map(types.Text())}},
 			rows:     [][]any{{"\x00boo", 1.234, map[string]any{"boo": ""}}, {"\x00", -73.55, map[string]any{"boo": "\x00foo", "hello\x00 world": "\x00"}}},
 			expected: [][]any{{"boo", 1.234, json.Value(`{"boo":""}`)}, {"", -73.55, json.Value(`{"boo":"foo","hello world":""}`)}},
 			ok:       true,
@@ -372,7 +372,7 @@ func Test_rowEncoder(t *testing.T) {
 // Test_newRowEncoder_noColumns ensures that newRowEncoder returns nil when the
 // column set does not require encoding.
 func Test_newRowEncoder_noColumns(t *testing.T) {
-	enc, ok := newRowEncoder([]meergo.Column{{Name: "a", Type: types.Int(32)}})
+	enc, ok := newRowEncoder([]warehouses.Column{{Name: "a", Type: types.Int(32)}})
 	if enc != nil || ok {
 		t.Fatalf("expected nil encoder and false, got %#v %t", enc, ok)
 	}
@@ -381,7 +381,7 @@ func Test_newRowEncoder_noColumns(t *testing.T) {
 // Test_rowEncoder_mapZeroBytes tests map encoding and ensures embedded zero
 // bytes are stripped from string values.
 func Test_rowEncoder_mapZeroBytes(t *testing.T) {
-	columns := []meergo.Column{{Name: "m", Type: types.Map(types.Text())}}
+	columns := []warehouses.Column{{Name: "m", Type: types.Map(types.Text())}}
 	enc, ok := newRowEncoder(columns)
 	if !ok {
 		t.Fatal("expected encoder")

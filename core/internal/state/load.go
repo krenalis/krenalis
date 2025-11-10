@@ -11,21 +11,22 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
 	_json "github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // load loads the state.
 func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all connectors.
-	connectors := meergo.Connectors()
-	state.connectors = make(map[string]*Connector, len(connectors))
-	for code, connector := range connectors {
+	conns := connectors.Connectors()
+	state.connectors = make(map[string]*Connector, len(conns))
+	for code, connector := range conns {
 		c := Connector{}
 		switch connector := connector.(type) {
-		case meergo.APISpec:
+		case connectors.APISpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = API
@@ -44,13 +45,13 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			}
 			c.Terms = ConnectorTerms(connector.Terms)
 			switch connector.AsDestination.SendingMode {
-			case meergo.Client:
+			case connectors.Client:
 				mode := Client
 				c.SendingMode = &mode
-			case meergo.Server:
+			case connectors.Server:
 				mode := Server
 				c.SendingMode = &mode
-			case meergo.ClientAndServer:
+			case connectors.ClientAndServer:
 				mode := ClientAndServer
 				c.SendingMode = &mode
 			}
@@ -69,7 +70,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					c.OAuth.ClientSecret = oAuth.ClientSecret
 				}
 			}
-		case meergo.DatabaseSpec:
+		case connectors.DatabaseSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = Database
@@ -91,7 +92,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			if summary := c.Documentation.Destination.Summary; summary == "" {
 				c.Documentation.Destination.Summary = "Exports users to " + article(c.Label) + " " + c.Label + " database"
 			}
-		case meergo.FileSpec:
+		case connectors.FileSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = File
@@ -115,7 +116,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.FileExtension = connector.Extension
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 			c.HasSheets = connector.HasSheets
-		case meergo.FileStorageSpec:
+		case connectors.FileStorageSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = FileStorage
@@ -141,7 +142,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					c.Documentation.Source.Summary = "Exports users to a file on " + c.Label
 				}
 			}
-		case meergo.MessageBrokerSpec:
+		case connectors.MessageBrokerSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = MessageBroker
@@ -151,7 +152,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.HasSourceSettings = true
 			c.HasDestinationSettings = true
 			c.Documentation = connector.Documentation
-		case meergo.SDKSpec:
+		case connectors.SDKSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = SDK
@@ -166,7 +167,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Strategies = connector.Strategies
 			c.FallbackToRequestIP = connector.FallbackToRequestIP
 			c.Documentation = connector.Documentation
-		case meergo.WebhookSpec:
+		case connectors.WebhookSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = Webhook
@@ -184,7 +185,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	}
 
 	// Read all warehouse drivers.
-	drivers := meergo.WarehouseDrivers()
+	drivers := warehouses.Drivers()
 	state.warehouseDrivers = make(map[string]WarehouseDriver, len(drivers))
 	for _, driver := range drivers {
 		state.warehouseDrivers[driver.Name] = WarehouseDriver{

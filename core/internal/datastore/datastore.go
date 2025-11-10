@@ -71,9 +71,9 @@ func New(st *state.State) *Datastore {
 // CanInitialize indicates whether the warehouse with the provided name and
 // settings can be initialized.
 //
-// It returns a *meergo.WarehouseSettingsError error if the settings are not
-// valid, a *meergo.WarehouseNonInitializableError if the data warehouse is not
-// initializable, and *UnavailableError if an error occurred with the data
+// It returns a *warehouses.WarehouseSettingsError error if the settings are not
+// valid, a *warehouses.WarehouseNonInitializableError if the data warehouse is
+// not initializable, and *UnavailableError if an error occurred with the data
 // warehouse.
 func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []byte) error {
 	ds.mustBeOpen()
@@ -91,7 +91,7 @@ func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []
 
 // CheckMCPSettings checks that the MCP settings are valid, that is it checks
 // that datastore's warehouse access with these settings is read-only (at least
-// on the Meergo tables), returning a *meergo.WarehouseSettingsNotReadOnly
+// on the Meergo tables), returning a *warehouses.WarehouseSettingsNotReadOnly
 // error in case it is not, explaining the reason.
 func (ds *Datastore) CheckMCPSettings(ctx context.Context, name string, settings []byte) error {
 	ds.mustBeOpen()

@@ -12,13 +12,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 // TestEncodeProperties exercises common and edge cases for encodeProperties.
 func TestEncodeProperties(t *testing.T) {
 	encode := func(p map[string]any) []string {
-		buf := meergo.GetBodyBuffer(meergo.NoEncoding, 1024)
+		buf := connectors.GetBodyBuffer(connectors.NoEncoding, 1024)
 		defer buf.Close()
 
 		encodeProperties(buf, p)
@@ -74,7 +74,7 @@ func TestEncodeProperties(t *testing.T) {
 
 	// Unsupported types trigger a panic during encoding.
 	t.Run("unsupported_type_panics", func(t *testing.T) {
-		buf := meergo.GetBodyBuffer(meergo.NoEncoding, 0)
+		buf := connectors.GetBodyBuffer(connectors.NoEncoding, 0)
 		defer buf.Close()
 
 		defer func() {
@@ -229,7 +229,7 @@ func TestEncodeProperties(t *testing.T) {
 
 	// Structures deeper than the schema allow must panic.
 	t.Run("too_deep_panics", func(t *testing.T) {
-		buf := meergo.GetBodyBuffer(meergo.NoEncoding, 0)
+		buf := connectors.GetBodyBuffer(connectors.NoEncoding, 0)
 		defer buf.Close()
 
 		defer func() {
@@ -362,7 +362,7 @@ func TestEncodePropertiesAllocations(t *testing.T) {
 		props := props
 		t.Run(name, func(t *testing.T) {
 			allocs := testing.AllocsPerRun(100, func() {
-				bb := meergo.GetBodyBuffer(meergo.NoEncoding, 1024)
+				bb := connectors.GetBodyBuffer(connectors.NoEncoding, 1024)
 				encodeProperties(bb, props)
 				bb.Close()
 			})

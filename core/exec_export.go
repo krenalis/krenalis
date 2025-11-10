@@ -13,7 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/schemas"
@@ -93,7 +93,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	}
 	defer records.Close()
 
-	var writer connectors.Writer
+	var writer connections.Writer
 
 	var ack func([]string, error)
 	if connector.Type != state.FileStorage {
@@ -134,12 +134,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	case state.FileStorage:
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
 		writer, err = this.file().Writer(ctx, replacer)
-		if err, ok := err.(*connectors.PlaceholderError); ok {
+		if err, ok := err.(*connections.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
 		}
 	}
 	if err != nil {
-		if err, ok := err.(*connectors.PlaceholderError); ok {
+		if err, ok := err.(*connections.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
 		}
 		if err, ok := err.(*schemas.Error); ok {

@@ -7,14 +7,14 @@ package datastore
 import (
 	"strings"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // appendColumnsFromProperties appends to columns the columns corresponding to
 // the provided properties paths, based on the mapping defined in
 // columnByProperty, and returns the extended slice.
-func appendColumnsFromProperties(columns []meergo.Column, properties []string, columnByProperty map[string]meergo.Column) []meergo.Column {
+func appendColumnsFromProperties(columns []warehouses.Column, properties []string, columnByProperty map[string]warehouses.Column) []warehouses.Column {
 	for _, path := range properties {
 		column, ok := columnByProperty[path]
 		if ok {
@@ -43,9 +43,9 @@ type unflatRowFunc func(row []any) map[string]any
 // map representation. omitNil, when set to true, specifies that properties with
 // a nil value should be omitted from each record during transformation using
 // unflatRowFunc.
-func columnsFromProperties(properties []string, columnByProperty map[string]meergo.Column, omitNil bool) ([]meergo.Column, unflatRowFunc) {
+func columnsFromProperties(properties []string, columnByProperty map[string]warehouses.Column, omitNil bool) ([]warehouses.Column, unflatRowFunc) {
 	pk := &propertyKey{}
-	columns := make([]meergo.Column, 0, len(properties))
+	columns := make([]warehouses.Column, 0, len(properties))
 	for _, path := range properties {
 		column, ok := columnByProperty[path]
 		if ok {
@@ -102,8 +102,8 @@ Path:
 //
 // This mapping is derived from the user's property-to-column mapping,
 // substituting meta properties with the meta properties of user identity.
-func identityColumnByProperty(userColumnByProperty map[string]meergo.Column) map[string]meergo.Column {
-	columns := map[string]meergo.Column{
+func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column) map[string]warehouses.Column {
+	columns := map[string]warehouses.Column{
 		"__pk__":               {Name: "__pk__", Type: types.Int(32)},
 		"__action__":           {Name: "__action__", Type: types.Int(32)},
 		"__is_anonymous__":     {Name: "__is_anonymous__", Type: types.Boolean()},
@@ -162,14 +162,14 @@ func unflatRowRec(pk *propertyKey, row []any, omitNil bool) any {
 // userColumnByProperty returns a mapping from properties of the user schema to
 // their respective columns. It assumes that for a property path like "a.b.c",
 // the corresponding column is named "a_b_c".
-func userColumnByProperty(schema types.Type) map[string]meergo.Column {
-	columnByProperty := map[string]meergo.Column{}
+func userColumnByProperty(schema types.Type) map[string]warehouses.Column {
+	columnByProperty := map[string]warehouses.Column{}
 	for path, p := range schema.Properties().WalkAll() {
 		if p.Type.Kind() == types.ObjectKind {
 			continue
 		}
 		name := strings.ReplaceAll(path, ".", "_")
-		columnByProperty[path] = meergo.Column{
+		columnByProperty[path] = warehouses.Column{
 			Name: name,
 			Type: p.Type,
 			// User schema properties are always non-nullable, while user

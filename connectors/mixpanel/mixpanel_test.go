@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/testconnector"
 
@@ -26,10 +26,10 @@ func TestSendEvents(t *testing.T) {
 	timestamp := time.Now().UTC().Truncate(time.Millisecond)
 	sessionID := int(timestamp.Add(-5 * time.Minute).UnixMilli())
 
-	sendAndTestEvent := func(t *testing.T, event *meergo.Event, expected []json.Value) {
+	sendAndTestEvent := func(t *testing.T, event *connectors.Event, expected []json.Value) {
 		req := new(http.Request)
 		ctx := context.WithValue(t.Context(), testconnector.CaptureRequestContextKey, req)
-		iter := testconnector.NewEventsIterator([]*meergo.Event{event})
+		iter := testconnector.NewEventsIterator([]*connectors.Event{event})
 		err := mixpanel.SendEvents(ctx, iter)
 		if err != nil {
 			t.Fatal(err)
@@ -108,10 +108,10 @@ func TestSendEvents(t *testing.T) {
 			t.Fatalf("cannot transform the 'order_completed' event: %s", err)
 		}
 
-		event := &meergo.Event{
+		event := &connectors.Event{
 			DestinationAction: 242809157,
 			Received:          testconnector.ReceivedEvent(received),
-			Type: meergo.EventTypeInfo{
+			Type: connectors.EventTypeInfo{
 				ID:     "order_completed",
 				Schema: schema,
 				Values: values,
@@ -208,10 +208,10 @@ func TestSendEvents(t *testing.T) {
 			t.Fatalf("cannot transform the 'product_purchased' event: %s", err)
 		}
 
-		event := &meergo.Event{
+		event := &connectors.Event{
 			DestinationAction: 148606728,
 			Received:          testconnector.ReceivedEvent(received),
-			Type: meergo.EventTypeInfo{
+			Type: connectors.EventTypeInfo{
 				ID:     "product_purchased",
 				Schema: schema,
 				Values: values,
@@ -310,10 +310,10 @@ func TestSendEvents(t *testing.T) {
 			t.Fatalf("cannot transform the 'track' event: %s", err)
 		}
 
-		event := &meergo.Event{
+		event := &connectors.Event{
 			DestinationAction: 140861001,
 			Received:          testconnector.ReceivedEvent(received),
-			Type: meergo.EventTypeInfo{
+			Type: connectors.EventTypeInfo{
 				ID:     "track",
 				Schema: schema,
 				Values: values,
@@ -403,10 +403,10 @@ func TestSendEvents(t *testing.T) {
 			t.Fatalf("cannot transform the 'page' event: %s", err)
 		}
 
-		event := &meergo.Event{
+		event := &connectors.Event{
 			DestinationAction: 2094515358,
 			Received:          testconnector.ReceivedEvent(received),
-			Type: meergo.EventTypeInfo{
+			Type: connectors.EventTypeInfo{
 				ID:     "page",
 				Schema: schema,
 				Values: values,
@@ -501,10 +501,10 @@ func TestSendEvents(t *testing.T) {
 			t.Fatalf("cannot transform the 'screen' event: %s", err)
 		}
 
-		event := &meergo.Event{
+		event := &connectors.Event{
 			DestinationAction: 2023196674,
 			Received:          testconnector.ReceivedEvent(received),
-			Type: meergo.EventTypeInfo{
+			Type: connectors.EventTypeInfo{
 				ID:     "screen",
 				Schema: schema,
 				Values: values,

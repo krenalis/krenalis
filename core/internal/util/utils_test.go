@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // Test_ParseTime ensures ParseTime correctly handles valid and invalid inputs.
@@ -121,7 +121,7 @@ func Test_PropertiesToColumns(t *testing.T) {
 	cases := []struct {
 		name string
 		typ  types.Type
-		want []meergo.Column
+		want []warehouses.Column
 	}{
 		{
 			name: "flat",
@@ -129,7 +129,7 @@ func Test_PropertiesToColumns(t *testing.T) {
 				{Name: "id", Type: int32Type},
 				{Name: "name", Type: types.Text(), Nullable: true},
 			}),
-			want: []meergo.Column{
+			want: []warehouses.Column{
 				{Name: "id", Type: int32Type},
 				{Name: "name", Type: types.Text(), Nullable: true},
 			},
@@ -143,7 +143,7 @@ func Test_PropertiesToColumns(t *testing.T) {
 				})},
 				{Name: "title", Type: types.Text()},
 			}),
-			want: []meergo.Column{
+			want: []warehouses.Column{
 				{Name: "info_age", Type: int32Type},
 				{Name: "info_email", Type: types.Text(), Nullable: true},
 				{Name: "title", Type: types.Text()},
@@ -157,7 +157,7 @@ func Test_PropertiesToColumns(t *testing.T) {
 				})},
 				{Name: "x", Type: types.Int(8), Nullable: true},
 			}),
-			want: []meergo.Column{
+			want: []warehouses.Column{
 				{Name: "outer__inner_value", Type: types.Boolean()},
 				{Name: "x", Type: types.Int(8), Nullable: true},
 			},
@@ -171,7 +171,7 @@ func Test_PropertiesToColumns(t *testing.T) {
 					})},
 				})},
 			}),
-			want: []meergo.Column{{Name: "a_b_c", Type: types.Int(16)}},
+			want: []warehouses.Column{{Name: "a_b_c", Type: types.Int(16)}},
 		},
 	}
 

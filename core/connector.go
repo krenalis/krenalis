@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/json"
 )
@@ -173,9 +173,9 @@ func (this *Connector) AuthCodeURL(role Role, redirectURI string) (string, error
 	if role != Source && role != Destination {
 		return "", errors.BadRequest("role %q is not valid", role)
 	}
-	authCodeURL, err := this.core.connectors.AuthorizationEndpoint(this.connector, state.Role(role), redirectURI)
+	authCodeURL, err := this.core.connections.AuthorizationEndpoint(this.connector, state.Role(role), redirectURI)
 	if err != nil {
-		if err, ok := err.(*connectors.UnavailableError); ok {
+		if err, ok := err.(*connections.UnavailableError); ok {
 			return "", errors.Unavailable("%s", err)
 		}
 		return "", err

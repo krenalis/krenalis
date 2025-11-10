@@ -9,12 +9,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // RawQuery executes a query and returns the results and the number of columns
 // in each row.
-func (warehouse *PostgreSQL) RawQuery(ctx context.Context, query string) (meergo.Rows, int, error) {
+func (warehouse *PostgreSQL) RawQuery(ctx context.Context, query string) (warehouses.Rows, int, error) {
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return nil, 0, err
@@ -29,7 +29,7 @@ func (warehouse *PostgreSQL) RawQuery(ctx context.Context, query string) (meergo
 
 // rawQueryRows is a minimal wrapper for 'pgx.Rows' to change the signature of
 // the 'Close' method (which must return an error) and make it compatible with
-// 'meergo.Rows'.
+// 'warehouses.Rows'.
 type rawQueryRows struct {
 	pgxRows pgx.Rows
 }

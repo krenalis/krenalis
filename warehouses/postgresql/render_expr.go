@@ -10,22 +10,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // renderExpr renders the expression expr returning a fragment of a query
 // representing a boolean expression.
-func renderExpr(b *strings.Builder, exp meergo.Expr) error {
+func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 
 	// Handle MultiExpr expression.
-	if multiExpr, ok := exp.(*meergo.MultiExpr); ok {
+	if multiExpr, ok := exp.(*warehouses.MultiExpr); ok {
 		var op string
 		switch multiExpr.Operator {
-		case meergo.OpAnd:
+		case warehouses.OpAnd:
 			op = " AND "
-		case meergo.OpOr:
+		case warehouses.OpOr:
 			op = " OR "
 		default:
 			return fmt.Errorf("invalid operator %q", multiExpr.Operator)
@@ -34,7 +34,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			if i > 0 {
 				b.WriteString(op)
 			}
-			_, isMultiExpr := operand.(*meergo.MultiExpr)
+			_, isMultiExpr := operand.(*warehouses.MultiExpr)
 			if isMultiExpr {
 				b.WriteByte('(')
 			}
@@ -50,11 +50,11 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 	}
 
 	// Handle BaseExpr expressions.
-	baseExpr := exp.(*meergo.BaseExpr)
+	baseExpr := exp.(*warehouses.BaseExpr)
 	c := baseExpr.Column
 
 	// Validate the column name.
-	if !meergo.IsValidIdentifier(c.Name) {
+	if !warehouses.IsValidIdentifier(c.Name) {
 		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
@@ -63,38 +63,38 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 	// Render the column identifier, the operator, and, if necessary, the values.
 	switch op := baseExpr.Operator; op {
 	case
-		meergo.OpIs,
-		meergo.OpIsNot,
-		meergo.OpIsLessThan,
-		meergo.OpIsLessThanOrEqualTo,
-		meergo.OpIsGreaterThan,
-		meergo.OpIsGreaterThanOrEqualTo,
-		meergo.OpIsBefore,
-		meergo.OpIsOnOrBefore,
-		meergo.OpIsAfter,
-		meergo.OpIsOnOrAfter:
+		warehouses.OpIs,
+		warehouses.OpIsNot,
+		warehouses.OpIsLessThan,
+		warehouses.OpIsLessThanOrEqualTo,
+		warehouses.OpIsGreaterThan,
+		warehouses.OpIsGreaterThanOrEqualTo,
+		warehouses.OpIsBefore,
+		warehouses.OpIsOnOrBefore,
+		warehouses.OpIsAfter,
+		warehouses.OpIsOnOrAfter:
 
 		b.WriteString(qname)
 
 		switch op {
-		case meergo.OpIs:
+		case warehouses.OpIs:
 			b.WriteString(" = ")
-		case meergo.OpIsNot:
+		case warehouses.OpIsNot:
 			b.WriteString(" <> ")
-		case meergo.OpIsLessThan, meergo.OpIsBefore:
+		case warehouses.OpIsLessThan, warehouses.OpIsBefore:
 			b.WriteString(" < ")
-		case meergo.OpIsLessThanOrEqualTo, meergo.OpIsOnOrBefore:
+		case warehouses.OpIsLessThanOrEqualTo, warehouses.OpIsOnOrBefore:
 			b.WriteString(" <= ")
-		case meergo.OpIsGreaterThan, meergo.OpIsAfter:
+		case warehouses.OpIsGreaterThan, warehouses.OpIsAfter:
 			b.WriteString(" > ")
-		case meergo.OpIsGreaterThanOrEqualTo, meergo.OpIsOnOrAfter:
+		case warehouses.OpIsGreaterThanOrEqualTo, warehouses.OpIsOnOrAfter:
 			b.WriteString(" >= ")
 		}
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
-	case meergo.OpIsBetween, meergo.OpIsNotBetween:
+	case warehouses.OpIsBetween, warehouses.OpIsNotBetween:
 		b.WriteString(qname)
-		if op == meergo.OpIsNotBetween {
+		if op == warehouses.OpIsNotBetween {
 			b.WriteString(" NOT")
 		}
 		b.WriteString(" BETWEEN ")
@@ -102,34 +102,34 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		b.WriteString(" AND ")
 		serializeValue(b, baseExpr.Values[1], c.Type)
 
-	case meergo.OpContains, meergo.OpDoesNotContain:
+	case warehouses.OpContains, warehouses.OpDoesNotContain:
 		switch c.Type.Kind() {
 		case types.TextKind:
 			b.WriteString("POSITION(")
 			serializeValue(b, baseExpr.Values[0], c.Type)
 			b.WriteString(" IN ")
 			b.WriteString(qname)
-			if op == meergo.OpContains {
+			if op == warehouses.OpContains {
 				b.WriteString(") > 0")
 			} else {
 				b.WriteString(") = 0")
 			}
 		case types.ArrayKind:
-			if op == meergo.OpDoesNotContain {
+			if op == warehouses.OpDoesNotContain {
 				b.WriteString("NOT (")
 			}
 			serializeValue(b, baseExpr.Values[0], c.Type.Elem())
 			b.WriteString(" = ANY(")
 			b.WriteString(qname)
 			b.WriteByte(')')
-			if op == meergo.OpDoesNotContain {
+			if op == warehouses.OpDoesNotContain {
 				b.WriteByte(')')
 			}
 		}
 
-	case meergo.OpIsOneOf, meergo.OpIsNotOneOf:
+	case warehouses.OpIsOneOf, warehouses.OpIsNotOneOf:
 		b.WriteString(qname)
-		if op == meergo.OpIsOneOf {
+		if op == warehouses.OpIsOneOf {
 			b.WriteString(" IN (")
 		} else {
 			b.WriteString(" NOT IN (")
@@ -142,8 +142,8 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		}
 		b.WriteString(")")
 
-	case meergo.OpStartsWith, meergo.OpEndsWith:
-		if op == meergo.OpStartsWith {
+	case warehouses.OpStartsWith, warehouses.OpEndsWith:
+		if op == warehouses.OpStartsWith {
 			b.WriteString("LEFT(")
 		} else {
 			b.WriteString("RIGHT(")
@@ -154,14 +154,14 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		b.WriteString(")) = ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
-	case meergo.OpIsTrue:
+	case warehouses.OpIsTrue:
 		b.WriteString(qname)
 
-	case meergo.OpIsFalse:
+	case warehouses.OpIsFalse:
 		b.WriteString("NOT ")
 		b.WriteString(qname)
 
-	case meergo.OpIsEmpty:
+	case warehouses.OpIsEmpty:
 		k := c.Type.Kind()
 		if k == types.ArrayKind {
 			b.WriteString("array_length(")
@@ -190,7 +190,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			}
 		}
 
-	case meergo.OpIsNotEmpty:
+	case warehouses.OpIsNotEmpty:
 		k := c.Type.Kind()
 		if k == types.ArrayKind {
 			b.WriteString("array_length(")
@@ -219,11 +219,11 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			}
 		}
 
-	case meergo.OpIsNull:
+	case warehouses.OpIsNull:
 		b.WriteString(qname)
 		b.WriteString(" IS NULL")
 
-	case meergo.OpIsNotNull:
+	case warehouses.OpIsNotNull:
 		b.WriteString(qname)
 		b.WriteString(" IS NOT NULL")
 
@@ -240,7 +240,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 	switch v := v.(type) {
 	case nil:
 		b.WriteString("NULL")
-	case meergo.Column:
+	case warehouses.Column:
 		b.WriteString(quoteIdent(v.Name))
 	case string:
 		quoteString(b, v)

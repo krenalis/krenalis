@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -66,13 +66,13 @@ func Test_Merge_Query(t *testing.T) {
 		{"jsonb", `{"foo": "boo"}`, types.JSON(), json.Value(`{"foo":"boo"}`)},
 	}
 
-	table := meergo.Table{
+	table := connectors.Table{
 		Name:    "test_meergo_query",
-		Columns: make([]meergo.Column, len(cols)),
+		Columns: make([]connectors.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
-		table.Columns[i] = meergo.Column{
+		table.Columns[i] = connectors.Column{
 			Name:     fmt.Sprintf("c%d", i),
 			Type:     c.MeergoType,
 			Nullable: true,
@@ -120,7 +120,7 @@ func Test_Merge_Query(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	env := meergo.DatabaseEnv{Settings: settings}
+	env := connectors.DatabaseEnv{Settings: settings}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)

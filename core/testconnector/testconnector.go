@@ -13,9 +13,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/internal/connectors"
-	"github.com/meergo/meergo/core/internal/connectors/httpclient"
+	"github.com/meergo/meergo/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
+	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers/mappings"
@@ -32,8 +32,8 @@ const CaptureRequestContextKey = httpclient.CaptureRequestContextKey
 // slice of normalized json.Value, or an error if the input is not valid NDJSON.
 //
 // If the input is empty, it returns an empty slice and a nil error.
-func DecodeNDJSON(r io.Reader, enc meergo.ContentEncoding) ([]json.Value, error) {
-	if enc == meergo.Gzip {
+func DecodeNDJSON(r io.Reader, enc connectors.ContentEncoding) ([]json.Value, error) {
+	if enc == connectors.Gzip {
 		gzr, err := gzip.NewReader(r)
 		if err != nil {
 			return nil, err
@@ -65,7 +65,7 @@ func DecodeNDJSON(r io.Reader, enc meergo.ContentEncoding) ([]json.Value, error)
 //
 // It panics if no connector with the specified code has been registered.
 func NewAPI(code string, settings any) (any, error) {
-	registeredAPI := meergo.RegisteredAPI(code)
+	registeredAPI := connectors.RegisteredAPI(code)
 	connector := &state.Connector{
 		Code:           code,
 		EndpointGroups: registeredAPI.EndpointGroups,
@@ -75,7 +75,7 @@ func NewAPI(code string, settings any) (any, error) {
 		return nil, fmt.Errorf("cannot marshal settings: %s", err)
 	}
 	httpClient := httpclient.New(nil, http.DefaultTransport).ConnectorClient(connector, "", "")
-	api, err := registeredAPI.New(&meergo.APIEnv{
+	api, err := registeredAPI.New(&connectors.APIEnv{
 		Settings:    s,
 		SetSettings: func(ctx context.Context, b []byte) error { return nil },
 		HTTPClient:  httpClient,
@@ -84,12 +84,12 @@ func NewAPI(code string, settings any) (any, error) {
 }
 
 // ReceivedEvent wraps a map[string]any and returns a value that implements the
-// meergo.ReceivedEvent interface.
+// connectors.ReceivedEvent interface.
 //
 // The provided event must conform to the event schema (Schema), otherwise
 // calling methods on the returned value may cause a panic.
-func ReceivedEvent(event map[string]any) meergo.ReceivedEvent {
-	return connectors.ReceivedEvent(event)
+func ReceivedEvent(event map[string]any) connectors.ReceivedEvent {
+	return connections.ReceivedEvent(event)
 }
 
 // TransformEvent transforms an event with a mapping and returned the

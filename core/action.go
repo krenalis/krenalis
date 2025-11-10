@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/metrics"
@@ -545,15 +545,15 @@ func (this *Action) ServeUI(ctx context.Context, event string, settings json.Val
 	if connection.Role == state.Destination && !formatConnector.HasDestinationSettings {
 		return nil, errors.BadRequest("connector %s does not have destination settings", formatConnector.Code)
 	}
-	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, settings)
+	ui, err := this.core.connections.ServeActionUI(ctx, this.action, event, settings)
 	if err != nil {
-		if err == meergo.ErrUIEventNotExist {
+		if err == connectors.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Code)
 		} else {
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
 		}
@@ -727,15 +727,15 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 
 	// Format settings.
 	if format != nil && action.FormatSettings != nil {
-		conf := &connectors.ConnectorConfig{
+		conf := &connections.ConnectorConfig{
 			Role: this.action.Connection().Role,
 		}
-		n.FormatSettings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.FormatSettings)
+		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, action.FormatSettings)
 		if err != nil {
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
 			return err
@@ -846,8 +846,8 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 }
 
 // api returns the API of the action.
-func (this *Action) api() *connectors.API {
-	return this.core.connectors.API(this.action.Connection())
+func (this *Action) api() *connections.API {
+	return this.core.connections.API(this.action.Connection())
 }
 
 // createExecution creates an execution for the action and returns its
@@ -913,9 +913,9 @@ func (this *Action) createExecution(ctx context.Context, incremental *bool) (int
 // database returns the database of the action.
 // The caller must call the database's Close method when the database is no
 // longer needed.
-func (this *Action) database() *connectors.Database {
+func (this *Action) database() *connections.Database {
 	a := this.action
-	return this.core.connectors.Database(a.Connection())
+	return this.core.connections.Database(a.Connection())
 }
 
 // endExecution marks an action execution as completed, setting the specified
@@ -1016,8 +1016,8 @@ func (this *Action) endExecution(err error) {
 }
 
 // file returns the file of the action.
-func (this *Action) file() *connectors.File {
-	return this.core.connectors.File(this.action)
+func (this *Action) file() *connections.File {
+	return this.core.connections.File(this.action)
 }
 
 // fromState serializes action into this.
