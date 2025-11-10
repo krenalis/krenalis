@@ -1,7 +1,7 @@
-export const INSTALL_COMMAND = 'npm install meergo-node-sdk --save';
+export const INSTALL_COMMAND = 'npm install meergo-analytics-nodejs --save';
 
-export const SNIPPET = `import Analytics from 'meergo-node-sdk';
+export const SNIPPET = `import Analytics from 'meergo-analytics-nodejs';
 
-const meergoAnalytics = new Analytics("writekey", "endpoint");`;
+const client = new Analytics("writekey", "endpoint");`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/connectors/sources/nodejs';
+export const DOCUMENTATION_LINK = 'http://localhost:8080/sources/nodejs';
