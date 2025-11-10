@@ -21,6 +21,7 @@ package meergotester
 import (
 	_ "github.com/meergo/meergo/connectors/csv"
 	_ "github.com/meergo/meergo/connectors/dummy"
+	_ "github.com/meergo/meergo/connectors/excel"
 	_ "github.com/meergo/meergo/connectors/filesystem"
 	_ "github.com/meergo/meergo/connectors/json"
 	_ "github.com/meergo/meergo/connectors/kafka"
