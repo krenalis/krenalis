@@ -37,8 +37,8 @@ func unavailableError(err error) error {
 	return &UnavailableError{Err: err}
 }
 
-// getWarehouseInstance returns a warehouse instance for the warehouse type with
-// the given name, initialized with the provided settings, and wrapped in a
+// getWarehouseInstance returns a warehouse instance for the driver with the
+// given name, initialized with the provided settings, and wrapped in a
 // warehouse type.
 //
 // It panics if a warehouse driver with the given name does not exist.

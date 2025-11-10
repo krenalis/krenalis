@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/meergo/analytics-go"
+
 	"github.com/meergo/meergo"
 	_json "github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -504,7 +505,7 @@ type CreateWorkspace struct {
 	UserSchema                     types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
-		Type        string
+		Name        string
 		Mode        WarehouseMode
 		Settings    json.RawMessage
 		MCPSettings json.RawMessage

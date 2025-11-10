@@ -254,7 +254,7 @@ func New(conf *Config) (*Core, error) {
 	for _, ws := range core.state.Workspaces() {
 		var wh meergo.Warehouse
 		if ws.Warehouse.MCPSettings != nil {
-			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.MCPSettings)
+			wh, _ = getMCPWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.MCPSettings)
 		}
 		core.mcp[ws.ID] = wh
 	}
@@ -949,18 +949,18 @@ func (core *Core) ValidateExpression(expression string, properties []types.Prope
 	return "", nil
 }
 
-// WarehouseType represents a warehouse type.
-type WarehouseType struct {
+// WarehouseDriver represents a warehouse driver.
+type WarehouseDriver struct {
 	Name string `json:"name"`
 }
 
-// WarehouseTypes returns the warehouse types.
-func (core *Core) WarehouseTypes() []WarehouseType {
+// WarehouseDrivers returns the warehouse drivers.
+func (core *Core) WarehouseDrivers() []WarehouseDriver {
 	core.mustBeOpen()
-	types := core.state.WarehouseTypes()
-	warehouseTypes := make([]WarehouseType, len(types))
+	types := core.state.WarehouseDrivers()
+	warehouseTypes := make([]WarehouseDriver, len(types))
 	for i, t := range types {
-		warehouseTypes[i] = WarehouseType{
+		warehouseTypes[i] = WarehouseDriver{
 			Name: t.Name,
 		}
 	}
@@ -1360,7 +1360,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var wh meergo.Warehouse
 	if ws.Warehouse.MCPSettings != nil {
-		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Type, ws.Warehouse.MCPSettings)
+		wh, _ = getMCPWarehouseInstance(ws.Warehouse.Name, ws.Warehouse.MCPSettings)
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = wh
@@ -1453,7 +1453,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 
 	// The MCP settings were unset (nil) and have now been set.
 	if prevWarehouse == nil && n.MCPSettings != nil {
-		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Type, n.MCPSettings)
+		nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Name, n.MCPSettings)
 		core.mcpMu.Lock()
 		core.mcp[n.Workspace] = nextWarehouse
 		core.mcpMu.Unlock()
@@ -1461,7 +1461,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	}
 
 	// The MCP settings were set and have been set again with the same value.
-	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Type, n.MCPSettings)
+	nextWarehouse, _ := getMCPWarehouseInstance(ws.Warehouse.Name, n.MCPSettings)
 	if bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
 		return
 	}
@@ -1631,10 +1631,10 @@ func categoryBitmaskToCategoryNames(categoryBitmask meergo.Categories) []string 
 
 // getMCPWarehouseInstance returns a meergo.Warehouse instance that can be used
 // to implement features for the MCP server.
-// typ is the type of the warehouse and settings are the settings for connecting
-// to it.
-func getMCPWarehouseInstance(typ string, settings []byte) (meergo.Warehouse, error) {
-	wh, err := meergo.RegisteredWarehouseDriver(typ).New(&meergo.WarehouseConfig{Settings: settings})
+// name is the name of the warehouse driver and settings are the settings for
+// connecting to it.
+func getMCPWarehouseInstance(name string, settings []byte) (meergo.Warehouse, error) {
+	wh, err := meergo.RegisteredWarehouseDriver(name).New(&meergo.WarehouseConfig{Settings: settings})
 	if err != nil {
 		return nil, err
 	}
