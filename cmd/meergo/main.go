@@ -11,8 +11,8 @@
 //  1. Create a new directory: mkdir meergo
 //  2. Change into it: cd meergo
 //  3. Copy this file into the new directory
-//  4. (optional) Edit the copied file to add your connectors,
-//     and warehouse drivers:
+//  4. (optional) Add a new file with your connectors and warehouse drivers:
+//     package meergo
 //     import _ "github.com/example/connector"
 //     import _ "github.com/example/warehouse"
 //  5. Initialize a Go module: go mod init meergo
