@@ -126,7 +126,6 @@ func getOrCreate(path string, typ expvarType) expvar.Var {
 			mapp := new(expvar.Map)
 			obj.(*expvar.Map).Set(name, mapp)
 			obj = mapp
-			continue
 		}
 	}
 	panic("unexpected")

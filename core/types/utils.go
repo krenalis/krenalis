@@ -201,7 +201,6 @@ func PropertyName(s string) (string, bool) {
 			b.WriteRune('_')
 			underscore = true
 		}
-		continue
 	}
 	if b.Len() == 0 {
 		return "", false
