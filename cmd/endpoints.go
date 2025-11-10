@@ -80,7 +80,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /users/{muid}/identities":                   workspace.Identities,
 		"GET    /users/{muid}/traits":                       workspace.Traits,
 		"GET    /warehouse":                                 workspace.Warehouse,
-		"GET    /warehouse/types":                           api.WarehouseTypes,
+		"GET    /warehouse/drivers":                         api.WarehouseDrivers,
 		"GET    /workspaces":                                organization.Workspaces,
 		"GET    /workspaces/current":                        organization.Workspace,
 		"POST   /actions":                                   connection.CreateAction,

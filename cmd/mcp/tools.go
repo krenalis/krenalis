@@ -33,8 +33,8 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			typ, _, _ := ws.Warehouse()
-			information := fmt.Sprintf("Connected to the workspace there is a %s data warehouse", typ)
+			name, _, _ := ws.Warehouse()
+			information := fmt.Sprintf("Connected to the workspace there is a %s data warehouse", name)
 			return mcp.NewToolResultText(string(information)), nil
 		},
 	},

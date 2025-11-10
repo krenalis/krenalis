@@ -186,9 +186,9 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all warehouse drivers.
 	drivers := warehouses.Drivers()
-	state.warehouseTypes = make(map[string]WarehouseType, len(drivers))
+	state.warehouseDrivers = make(map[string]WarehouseDriver, len(drivers))
 	for _, driver := range drivers {
-		state.warehouseTypes[driver.Name] = WarehouseType{
+		state.warehouseDrivers[driver.Name] = WarehouseDriver{
 			Name: driver.Name,
 		}
 	}
@@ -266,7 +266,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		"FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID int
-			var warehouseType string
+			var warehouseName string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
 			var alterUserSchemaSchema []byte
@@ -278,7 +278,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					executions:  map[int]*ActionExecution{},
 					accounts:    map[int]*Account{},
 				}
-				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
+				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
 					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterUserSchema.ID,
 					&alterUserSchemaSchema, &ws.AlterUserSchema.PrimarySources,
 					&ws.AlterUserSchema.Operations, &ws.AlterUserSchema.StartTime,
@@ -290,10 +290,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]
-				if _, ok := state.warehouseTypes[warehouseType]; !ok {
-					return fmt.Errorf("warehouse driver for type %q is required but not registered. (Possibly forgotten import?)", warehouseType)
+				if _, ok := state.warehouseDrivers[warehouseName]; !ok {
+					return fmt.Errorf("warehouse driver for %q is required but not registered. (Possibly forgotten import?)", warehouseName)
 				}
-				ws.Warehouse.Type = warehouseType
+				ws.Warehouse.Name = warehouseName
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.Settings = warehouseSettings
 				if _json.Value(warehouseMCPSettings).IsNull() {

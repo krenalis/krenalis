@@ -18,7 +18,7 @@ type TestsSettings struct {
 	HTTP             *HTTPSettings
 	Database         *DBSettings
 	PythonExecutable string
-	WarehouseType    string
+	WarehouseName    string
 	Warehouse        *DBSettings
 }
 
@@ -65,7 +65,7 @@ func init() {
 			Password: "test_postgres",
 			Schema:   "public",
 		},
-		WarehouseType: "PostgreSQL",
+		WarehouseName: "PostgreSQL",
 		Warehouse: &DBSettings{
 			// Host and Port will be set when warehouse container starts.
 			Database: "test_warehouse",
