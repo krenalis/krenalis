@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -30,7 +30,7 @@ func TestExportAndImportParquet(t *testing.T) {
 	ctx := context.Background()
 
 	// Instantiate the Parquet connector.
-	env := meergo.FileEnv{}
+	env := connectors.FileEnv{}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)
@@ -282,7 +282,7 @@ func TestExport(t *testing.T) {
 	ctx := context.Background()
 
 	// Instantiate the Parquet connector.
-	env := meergo.FileEnv{}
+	env := connectors.FileEnv{}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)
@@ -328,7 +328,7 @@ func TestExport(t *testing.T) {
 
 // Test RecordReader (used when exporting).
 
-var _ meergo.RecordReader = &testRecordReader{}
+var _ connectors.RecordReader = &testRecordReader{}
 
 type testRecordReader struct {
 	t       *testing.T
@@ -352,7 +352,7 @@ func (records *testRecordReader) Record(ctx context.Context) (map[string]any, er
 
 // Test RecordWriter (used when importing).
 
-var _ meergo.RecordWriter = &testRecordWriter{}
+var _ connectors.RecordWriter = &testRecordWriter{}
 
 type testRecordWriter struct {
 	t           *testing.T

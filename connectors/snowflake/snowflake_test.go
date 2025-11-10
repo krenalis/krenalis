@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -56,7 +56,7 @@ func Test_Columns(t *testing.T) {
 		}
 	}()
 
-	expected := []meergo.Column{
+	expected := []connectors.Column{
 		{Name: "a", Type: types.Boolean(), Writable: true},
 		{Name: "b", Type: types.Float(64), Nullable: true, Writable: true},
 		{Name: "c", Type: types.Decimal(10, 3), Writable: true},
@@ -126,13 +126,13 @@ func Test_Merge_Query(t *testing.T) {
 		{"ARRAY", "[\n  {\n    \"foo\": \"boo\"\n  },\n  [\n    1,\n    2,\n    3\n  ]\n]", types.Array(types.JSON()), []any{json.Value(`{"foo":"boo"}`), json.Value(`[1, 2, 3]`)}},
 	}
 
-	table := meergo.Table{
+	table := connectors.Table{
 		Name:    "test_meergo_query",
-		Columns: make([]meergo.Column, len(cols)),
+		Columns: make([]connectors.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
-		table.Columns[i] = meergo.Column{
+		table.Columns[i] = connectors.Column{
 			Name:     fmt.Sprintf("c%d", i),
 			Type:     c.MeergoType,
 			Nullable: true,
@@ -232,7 +232,7 @@ func newSnowflakeFromENV(t *testing.T) *Snowflake {
 	if err != nil {
 		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 	}
-	env := meergo.DatabaseEnv{Settings: settings}
+	env := connectors.DatabaseEnv{Settings: settings}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)

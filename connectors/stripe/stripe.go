@@ -22,7 +22,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 )
@@ -36,47 +36,47 @@ var destinationOverview string
 var baseURL = "https://api.stripe.com"
 
 func init() {
-	meergo.RegisterAPI(meergo.APISpec{
+	connectors.RegisterAPI(connectors.APISpec{
 		Code:       "stripe",
 		Label:      "Stripe",
-		Categories: meergo.CategorySaaS,
-		AsSource: &meergo.AsAPISource{
-			Targets:     meergo.TargetUser,
+		Categories: connectors.CategorySaaS,
+		AsSource: &connectors.AsAPISource{
+			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import customers as users",
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAPIDestination{
-			Targets:     meergo.TargetUser,
+		AsDestination: &connectors.AsAPIDestination{
+			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as customers",
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.APITerms{
+		Terms: connectors.APITerms{
 			User:  "customer",
 			Users: "customers",
 		},
-		EndpointGroups: []meergo.EndpointGroup{{
+		EndpointGroups: []connectors.EndpointGroup{{
 			// https://docs.stripe.com/rate-limits
-			RateLimit: meergo.RateLimit{RequestsPerSecond: 100, Burst: 200},
+			RateLimit: connectors.RateLimit{RequestsPerSecond: 100, Burst: 200},
 			// https://docs.stripe.com/api/errors
-			RetryPolicy: meergo.RetryPolicy{
-				"429":             meergo.ExponentialStrategy(meergo.Slowdown, 200*time.Millisecond),
-				"500 502 503 504": meergo.ExponentialStrategy(meergo.NetFailure, 200*time.Millisecond),
+			RetryPolicy: connectors.RetryPolicy{
+				"429":             connectors.ExponentialStrategy(connectors.Slowdown, 200*time.Millisecond),
+				"500 502 503 504": connectors.ExponentialStrategy(connectors.NetFailure, 200*time.Millisecond),
 			},
 		}},
-		TimeLayouts: meergo.TimeLayouts{
+		TimeLayouts: connectors.TimeLayouts{
 			DateTime: "unix",
 		},
 	}, New)
 }
 
 // New returns a new connector instance for Stripe.
-func New(env *meergo.APIEnv) (*Stripe, error) {
+func New(env *connectors.APIEnv) (*Stripe, error) {
 	c := Stripe{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -88,7 +88,7 @@ func New(env *meergo.APIEnv) (*Stripe, error) {
 }
 
 type Stripe struct {
-	env      *meergo.APIEnv
+	env      *connectors.APIEnv
 	settings *innerSettings
 }
 
@@ -97,15 +97,15 @@ type innerSettings struct {
 }
 
 // RecordSchema returns the schema of the specified target and role.
-func (stripe *Stripe) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
-	if role == meergo.Source {
+func (stripe *Stripe) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
+	if role == connectors.Source {
 		return sourceSchema, nil
 	}
 	return destinationSchema, nil
 }
 
 // Records returns the records of the specified target.
-func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _ []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
+func (stripe *Stripe) Records(ctx context.Context, _ connectors.Targets, _ time.Time, _ []string, cursor string, _ types.Type) ([]connectors.Record, string, error) {
 
 	path := "/v1/customers"
 	if cursor != "" {
@@ -125,13 +125,13 @@ func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time
 		return nil, "", io.EOF
 	}
 
-	users := make([]meergo.Record, len(response.Data))
+	users := make([]connectors.Record, len(response.Data))
 	for i, customer := range response.Data {
 		id, _ := customer["id"].(string)
 		if id == "" {
 			return nil, "", errors.New("unexpected customer identifier from Stripe")
 		}
-		users[i] = meergo.Record{
+		users[i] = connectors.Record{
 			ID:             id,
 			Properties:     customer,
 			LastChangeTime: time.Now().UTC(),
@@ -143,7 +143,7 @@ func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time
 }
 
 // ServeUI serves the connector's user interface.
-func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -155,12 +155,12 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.V
 	case "save":
 		return nil, stripe.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "APIKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "APIKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
 		},
 		Settings: settings,
 	}
@@ -172,7 +172,7 @@ var arrayIndex = regexp.MustCompile(`^\w+\[(\d+)\]`)
 var localeCode = regexp.MustCompile(`^[a-z]{2}(?:-[A-Z]{2})?$`)
 
 // Upsert updates or creates records in the API for the specified target.
-func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 
 	record := records.First()
 
@@ -243,7 +243,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records
 		}
 	}
 
-	bb := stripe.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := stripe.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
 	encodeProperties(bb, record.Properties)
 
@@ -299,7 +299,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records
 	return nil
 }
 
-func (stripe *Stripe) call(ctx context.Context, method, path string, bb *meergo.BodyBuffer, expectedStatus int, response any) error {
+func (stripe *Stripe) call(ctx context.Context, method, path string, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
 	req, err := bb.NewRequest(ctx, method, baseURL+path)
 	if err != nil {
 		return err
@@ -309,7 +309,7 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, bb *meergo.
 	req.Header.Set("Stripe-Version", "2025-08-27.basil")
 
 	if req.Method == "POST" {
-		req.Header.Set("Idempotency-Key", meergo.UUID()) // mark the request as idempotent
+		req.Header.Set("Idempotency-Key", connectors.UUID()) // mark the request as idempotent
 	}
 	res, err := stripe.env.HTTPClient.Do(req)
 	if err != nil {
@@ -343,7 +343,7 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 		return err
 	}
 	if n := len(s.APIKey); n < 1 || n > 200 {
-		return meergo.NewInvalidSettingsError("API key length must be in [1,200]")
+		return connectors.NewInvalidSettingsError("API key length must be in [1,200]")
 	}
 	for i := 0; i < len(s.APIKey); i++ {
 		c := s.APIKey[i]
@@ -352,7 +352,7 @@ func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) err
 		// decimal code 32, is therefore excluded from the range of accepted
 		// characters, and this is intentional.
 		if c < 33 || c > 126 {
-			return meergo.NewInvalidSettingsError("API key must contain only valid characters")
+			return connectors.NewInvalidSettingsError("API key must contain only valid characters")
 		}
 	}
 	b, err := json.Marshal(s)
@@ -391,7 +391,7 @@ const maxDestinationSchemaDepth = 4 // maximum nesting depth of the destination 
 // Only destination-schema types are serialized: text, bool, array, object, and
 // map. Accordingly, property values must be nil or one of: string, int,
 // map[string]any, or []any. Map keys must be non-empty.
-func encodeProperties(dst *meergo.BodyBuffer, properties map[string]any) {
+func encodeProperties(dst *connectors.BodyBuffer, properties map[string]any) {
 
 	type seg struct {
 		name  string

@@ -19,9 +19,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -38,17 +38,17 @@ var (
 	createUserSchemaVersionTable string
 )
 
-var _ meergo.Warehouse = &PostgreSQL{}
+var _ warehouses.Warehouse = &PostgreSQL{}
 
 func init() {
-	meergo.RegisterWarehouseDriver(meergo.WarehouseDriver{
+	warehouses.Register(warehouses.Driver{
 		Name: "PostgreSQL",
 	}, New)
 }
 
 // New returns a new PostgreSQL data warehouse driver instance.
-// It returns a *meergo.WarehouseSettingsError if the settings are not valid.
-func New(conf *meergo.WarehouseConfig) (*PostgreSQL, error) {
+// It returns a *warehouses.SettingsError if the settings are not valid.
+func New(conf *warehouses.Config) (*PostgreSQL, error) {
 	var s psSettings
 	err := jsonstd.Unmarshal(conf.Settings, &s)
 	if err != nil {
@@ -56,33 +56,33 @@ func New(conf *meergo.WarehouseConfig) (*PostgreSQL, error) {
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, meergo.WarehouseSettingsErrorf("host length in bytes must be in range [1,253]")
+		return nil, warehouses.SettingsErrorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65535 {
-		return nil, meergo.WarehouseSettingsErrorf("port must be in range [1,65535]")
+		return nil, warehouses.SettingsErrorf("port must be in range [1,65535]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 63 {
-		return nil, meergo.WarehouseSettingsErrorf("username length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, meergo.WarehouseSettingsErrorf("password length must be in range [1,100]")
+		return nil, warehouses.SettingsErrorf("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
-		return nil, meergo.WarehouseSettingsErrorf("database length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("database length in bytes must be in range [1,63]")
 	}
 	// Validate Schema.
 	if n := len(s.Schema); n < 1 || n > 63 {
-		return nil, meergo.WarehouseSettingsErrorf("schema length in bytes must be in range [1,63]")
+		return nil, warehouses.SettingsErrorf("schema length in bytes must be in range [1,63]")
 	}
-	if !meergo.IsValidSchemaName(s.Schema) {
-		return nil, meergo.WarehouseSettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
+	if !warehouses.IsValidSchemaName(s.Schema) {
+		return nil, warehouses.SettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
 	}
 	if strings.HasPrefix(s.Schema, "pg_") {
-		return nil, meergo.WarehouseSettingsErrorf("schema cannot start with 'pg_'")
+		return nil, warehouses.SettingsErrorf("schema cannot start with 'pg_'")
 	}
 	return &PostgreSQL{conf: conf, settings: &s}, nil
 }
@@ -90,7 +90,7 @@ func New(conf *meergo.WarehouseConfig) (*PostgreSQL, error) {
 type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
 	pool     *pgxpool.Pool
-	conf     *meergo.WarehouseConfig
+	conf     *warehouses.Config
 	settings *psSettings
 }
 
@@ -104,7 +104,7 @@ type psSettings struct {
 }
 
 // CheckReadOnlyAccess checks that the warehouse access is read-only, returning
-// a *WarehouseSettingsNotReadOnly error in case it is not, which may contain
+// a *warehouses.SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 
@@ -159,7 +159,7 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 		}
 	}
 	if len(tooPrivilegedTableNames) > 0 {
-		return &meergo.WarehouseSettingsNotReadOnly{
+		return &warehouses.SettingsNotReadOnly{
 			Err: fmt.Errorf(
 				"the credentials should be read-only, but they allow write operations on the following Meergo tables: %s",
 				strings.Join(tooPrivilegedTableNames, ", "),
@@ -187,7 +187,7 @@ func (warehouse *PostgreSQL) ColumnTypeDescription(t types.Type) (string, error)
 
 // Delete deletes rows from the specified table that match the provided where
 // expression.
-func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where meergo.Expr) error {
+func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where warehouses.Expr) error {
 	if where == nil {
 		return errors.New("where is nil")
 	}
@@ -209,7 +209,7 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where mee
 }
 
 // Merge performs a table merge operation.
-func (warehouse *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
 	metrics.Increment("warehouses.PostgreSQL.Merge.calls", 1)
 	metrics.Increment("warehouses.PostgreSQL.Merge.passed_rows", len(rows))
 	pool, err := warehouse.connectionPool(ctx)
@@ -237,7 +237,7 @@ var immutableMergeIdentitiesColumns = []string{
 
 // MergeIdentities merges existing identities, deletes them, and inserts new
 // ones.
-func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
+func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
 
 	metrics.Increment("warehouses.PostgreSQL.MergeIdentities.calls", 1)
 	metrics.Increment("warehouses.PostgreSQL.MergeIdentities.passed_rows", len(rows))
@@ -364,7 +364,7 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 
 // UnsetIdentityColumns unsets values for the specified identity columns for the
 // given action.
-func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, action int, columns []meergo.Column) error {
+func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, action int, columns []warehouses.Column) error {
 	var b strings.Builder
 	b.WriteString("UPDATE \"_user_identities\" SET ")
 	for i, column := range columns {
@@ -452,7 +452,7 @@ func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
 
 // copyForIdentities implements the pgx.CopyFromSource interface.
 type copyForIdentities struct {
-	columns []meergo.Column
+	columns []warehouses.Column
 	encoder *rowEncoder
 	rows    []map[string]any
 	row     []any
@@ -460,7 +460,7 @@ type copyForIdentities struct {
 
 // newCopyForIdentities returns a pgx.CopyFromSource implementation used to copy
 // identities to add and delete to a temporary identity table.
-func newCopyForIdentities(columns []meergo.Column, rows []map[string]any) pgx.CopyFromSource {
+func newCopyForIdentities(columns []warehouses.Column, rows []map[string]any) pgx.CopyFromSource {
 	c := &copyForIdentities{
 		columns: columns,
 		rows:    rows,

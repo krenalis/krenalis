@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/filters"
 	"github.com/meergo/meergo/core/internal/metrics"
@@ -42,7 +42,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		return err
 	}
 
-	var records connectors.Records
+	var records connections.Records
 
 	switch connector.Type {
 	case state.API:
@@ -107,7 +107,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	// Cancel the writer, or does nothing if it is already closed.
 	defer iw.Cancel(ctx)
 
-	users := make([]connectors.Record, 0, 100)
+	users := make([]connections.Record, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
 
 	var cursor time.Time
@@ -117,7 +117,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 		if user.Err != nil {
 			iw.Keep(user.ID)
-			if err, ok := user.Err.(connectors.InputValidationError); ok {
+			if err, ok := user.Err.(connections.InputValidationError); ok {
 				this.core.metrics.ReceivePassed(action.ID, 1)
 				this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
 			} else {
@@ -203,7 +203,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
 			return newActionError(metrics.InputValidationStep, err)
 		}
-		if err == meergo.ErrSheetNotExist {
+		if err == connectors.ErrSheetNotExist {
 			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
 		}
 		return newActionError(metrics.ReceiveStep, err)

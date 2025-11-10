@@ -20,7 +20,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
@@ -34,16 +34,16 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterDatabase(meergo.DatabaseSpec{
+	connectors.RegisterDatabase(connectors.DatabaseSpec{
 		Code:        "snowflake",
 		Label:       "Snowflake",
-		Categories:  meergo.CategoryDatabase,
+		Categories:  connectors.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM \"USERS\"\n",
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
-			Destination: meergo.ConnectorRoleDocumentation{
+			Destination: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -51,7 +51,7 @@ func init() {
 }
 
 // New returns a new connector instance for Snowflake.
-func New(env *meergo.DatabaseEnv) (*Snowflake, error) {
+func New(env *connectors.DatabaseEnv) (*Snowflake, error) {
 	c := Snowflake{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -63,7 +63,7 @@ func New(env *meergo.DatabaseEnv) (*Snowflake, error) {
 }
 
 type Snowflake struct {
-	env      *meergo.DatabaseEnv
+	env      *connectors.DatabaseEnv
 	settings *innerSettings
 	db       *sql.DB
 }
@@ -77,7 +77,7 @@ func (sf *Snowflake) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (sf *Snowflake) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
+func (sf *Snowflake) Columns(ctx context.Context, table string) ([]connectors.Column, error) {
 	rows, columns, err := sf.query(ctx, "SELECT * FROM "+quoteTable(table)+" LIMIT 0", true)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (sf *Snowflake) Columns(ctx context.Context, table string) ([]meergo.Column
 
 // Merge performs batch insert, update, and delete operations on the specified
 // table.
-func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
+func (sf *Snowflake) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
 	if err := sf.openDB(); err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+func (sf *Snowflake) Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error) {
 	return sf.query(ctx, query, false)
 }
 
@@ -122,7 +122,7 @@ func (sf *Snowflake) QuoteTime(value any, typ types.Type) string {
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *Snowflake) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (sf *Snowflake) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -136,21 +136,21 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, settings json.Va
 	case "test":
 		return nil, sf.saveSettings(ctx, settings, true)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "Account", Label: "Account Identifier", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 3, MaxLength: 255},
-			&meergo.Input{Name: "Username", Label: "User Name", Placeholder: "USERNAME", Type: "text", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Role", Label: "Role", Placeholder: "CUSTOM_ROLE", Type: "text", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Database", Label: "Database", Placeholder: "MY_DATABASE", Type: "text", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Schema", Label: "Schema", Placeholder: "PUBLIC", Type: "text", MinLength: 1, MaxLength: 255},
-			&meergo.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "COMPUTE_WH", Type: "text", MinLength: 1, MaxLength: 255},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "Account", Label: "Account Identifier", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 3, MaxLength: 255},
+			&connectors.Input{Name: "Username", Label: "User Name", Placeholder: "USERNAME", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "Role", Label: "Role", Placeholder: "CUSTOM_ROLE", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "Database", Label: "Database", Placeholder: "MY_DATABASE", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "Schema", Label: "Schema", Placeholder: "PUBLIC", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "COMPUTE_WH", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Settings: settings,
-		Buttons: []meergo.Button{
+		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
 	}
@@ -201,7 +201,7 @@ func (sf *Snowflake) openDB() error {
 // query executes the given query and returns the resulting rows and columns.
 // writable indicates whether the resulting columns should be marked as
 // writable.
-func (sf *Snowflake) query(ctx context.Context, query string, writable bool) (meergo.Rows, []meergo.Column, error) {
+func (sf *Snowflake) query(ctx context.Context, query string, writable bool) (connectors.Rows, []connectors.Column, error) {
 	if err := sf.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -214,7 +214,7 @@ func (sf *Snowflake) query(ctx context.Context, query string, writable bool) (me
 		_ = rows.Close()
 		return nil, nil, err
 	}
-	columns := make([]meergo.Column, len(columnTypes))
+	columns := make([]connectors.Column, len(columnTypes))
 	for i, c := range columnTypes {
 		typ, issue, err := propertyType(c)
 		if err != nil {
@@ -251,34 +251,34 @@ func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test 
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
-		return meergo.NewInvalidSettingsError("account identifier length must be in range [3,255]")
+		return connectors.NewInvalidSettingsError("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return meergo.NewInvalidSettingsError("account identifier must be in the <organization>.<account> or <organization>-<account> format")
+		return connectors.NewInvalidSettingsError("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return meergo.NewInvalidSettingsError("username length must be in range [1,255]")
+		return connectors.NewInvalidSettingsError("username length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return meergo.NewInvalidSettingsError("password length must be in range [1,255]")
+		return connectors.NewInvalidSettingsError("password length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return meergo.NewInvalidSettingsError("role length must be in range [1,255]")
+		return connectors.NewInvalidSettingsError("role length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return meergo.NewInvalidSettingsError("database length must be in range [1,255]")
+		return connectors.NewInvalidSettingsError("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return meergo.NewInvalidSettingsError("schema length must be in range [1,255]")
+		return connectors.NewInvalidSettingsError("schema length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return meergo.NewInvalidSettingsError("warehouse length must be in range [1,255]")
+		return connectors.NewInvalidSettingsError("warehouse length must be in range [1,255]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

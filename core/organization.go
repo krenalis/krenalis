@@ -24,7 +24,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
@@ -32,6 +31,7 @@ import (
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
@@ -881,7 +881,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		if err == datastore.ErrWarehouseTypeNotExist {
 			return nil, nil, errors.Unprocessable(WarehouseTypeNotExist, "warehouse type %q does not exist", whType)
 		}
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+		if err, ok := err.(*warehouses.SettingsError); ok {
 			return nil, nil, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return nil, nil, err
@@ -896,7 +896,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		var err error
 		whMCPSettings, err = this.core.datastore.NormalizeWarehouseSettings(whType, whMCPSettings)
 		if err != nil {
-			if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+			if err, ok := err.(*warehouses.SettingsError); ok {
 				return nil, nil, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return nil, nil, err
@@ -906,7 +906,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		}
 		err = this.core.datastore.CheckMCPSettings(ctx, whType, whMCPSettings)
 		if err != nil {
-			if err, ok := err.(*meergo.WarehouseSettingsNotReadOnly); ok {
+			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return nil, nil, errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
 			if err, ok := err.(*datastore.UnavailableError); ok {
@@ -919,7 +919,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	// Check if the warehouse is initializable.
 	err = this.core.datastore.CanInitialize(ctx, whType, settings)
 	if err != nil {
-		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
+		if err, ok := err.(*warehouses.NonInitializableError); ok {
 			return nil, nil, errors.Unprocessable(WarehouseNonInitializable, "data warehouse is not initializable: %w", err.Err)
 		}
 		if err, ok := err.(*datastore.UnavailableError); ok {

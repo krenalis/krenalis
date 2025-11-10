@@ -20,7 +20,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -31,12 +31,12 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterMessageBroker(meergo.MessageBrokerSpec{
+	connectors.RegisterMessageBroker(connectors.MessageBrokerSpec{
 		Code:       "kafka",
 		Label:      "Kafka",
-		Categories: meergo.CategoryMessageBroker,
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategoryMessageBroker,
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Summary:  "Import events and users from Kafka",
 				Overview: overview,
 			},
@@ -45,7 +45,7 @@ func init() {
 }
 
 // New returns a new connector instance for Kafka.
-func New(env *meergo.MessageBrokerEnv) (*Kafka, error) {
+func New(env *connectors.MessageBrokerEnv) (*Kafka, error) {
 	c := Kafka{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -57,7 +57,7 @@ func New(env *meergo.MessageBrokerEnv) (*Kafka, error) {
 }
 
 type Kafka struct {
-	env      *meergo.MessageBrokerEnv
+	env      *connectors.MessageBrokerEnv
 	settings *innerSettings
 	client   *kgo.Client
 	iter     *fetchesRecordIter
@@ -97,7 +97,7 @@ func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
 }
 
 // Send sends an event to the message broker.
-func (kafka *Kafka) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
+func (kafka *Kafka) Send(ctx context.Context, event []byte, options connectors.SendOptions, ack func(err error)) error {
 	err := kafka.connect()
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (kafka *Kafka) Send(ctx context.Context, event []byte, options meergo.SendO
 }
 
 // ServeUI serves the connector's user interface.
-func (kafka *Kafka) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (kafka *Kafka) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -137,38 +137,38 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, settings json.Val
 	case "test":
 		return nil, kafka.saveSettings(ctx, settings, true)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.AlternativeFieldSets{
-				Sets: []meergo.FieldSet{
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.AlternativeFieldSets{
+				Sets: []connectors.FieldSet{
 					{
 						Name:  "Kafka",
 						Label: "Kafka",
-						Fields: []meergo.Component{
-							&meergo.Input{Name: "Host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&meergo.Input{Name: "Port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-							&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
-							&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
+						Fields: []connectors.Component{
+							&connectors.Input{Name: "Host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&connectors.Input{Name: "Port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+							&connectors.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
+							&connectors.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
 						},
 					},
 					{
 						Name:  "Confluent",
 						Label: "Confluent",
-						Fields: []meergo.Component{
-							&meergo.Input{Name: "Server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
-							&meergo.Input{Name: "Key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
-							&meergo.Input{Name: "Secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
+						Fields: []connectors.Component{
+							&connectors.Input{Name: "Server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
+							&connectors.Input{Name: "Key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
+							&connectors.Input{Name: "Secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
 						},
 					},
 				},
 			},
-			&meergo.Input{Name: "Topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
+			&connectors.Input{Name: "Topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Settings: settings,
-		Buttons: []meergo.Button{
+		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
 	}
@@ -188,35 +188,35 @@ func (kafka *Kafka) saveSettings(ctx context.Context, settings json.Value, test 
 	case s.Kafka != nil:
 		// Validate Host.
 		if n := len(s.Kafka.Host); n == 0 || n > 253 {
-			return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
+			return connectors.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
 		if s.Kafka.Port < 1 || s.Kafka.Port > 65535 {
-			return meergo.NewInvalidSettingsError("port must be in range [1,65535]")
+			return connectors.NewInvalidSettingsError("port must be in range [1,65535]")
 		}
 	case s.Confluent != nil:
 		// Validate Server.
 		host, port, err := net.SplitHostPort(s.Confluent.Server)
 		if err != nil {
-			return meergo.NewInvalidSettingsError("server is not a valid host:port")
+			return connectors.NewInvalidSettingsError("server is not a valid host:port")
 		}
 		if n := len(host); n == 0 || n > 253 {
-			return meergo.NewInvalidSettingsError("server host length in bytes must be in range [1,253]")
+			return connectors.NewInvalidSettingsError("server host length in bytes must be in range [1,253]")
 		}
 		if p, _ := strconv.Atoi(port); p < 1 || p > 65535 {
-			return meergo.NewInvalidSettingsError("server port must be in range [1,65535]")
+			return connectors.NewInvalidSettingsError("server port must be in range [1,65535]")
 		}
 		// Validate Key.
 		if utf8.RuneCountInString(s.Confluent.Key) != 16 {
-			return meergo.NewInvalidSettingsError("key must be long 16 characters")
+			return connectors.NewInvalidSettingsError("key must be long 16 characters")
 		}
 	}
 	// Validate Topic.
 	if n := len(s.Topic); n == 0 || n > 255 {
-		return meergo.NewInvalidSettingsError("topic length must be in range [1,255]")
+		return connectors.NewInvalidSettingsError("topic length must be in range [1,255]")
 	}
 	if !validTopicName(s.Topic) {
-		return meergo.NewInvalidSettingsError("topic name can contain only [A-Za-z0-9_.-]")
+		return connectors.NewInvalidSettingsError("topic name can contain only [A-Za-z0-9_.-]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

@@ -19,8 +19,15 @@ package meergotester
 // changing the test execution procedure.
 
 import (
-	_ "github.com/meergo/meergo/connectors"
+	_ "github.com/meergo/meergo/connectors/csv"
 	_ "github.com/meergo/meergo/connectors/dummy"
+	_ "github.com/meergo/meergo/connectors/excel"
+	_ "github.com/meergo/meergo/connectors/filesystem"
+	_ "github.com/meergo/meergo/connectors/json"
 	_ "github.com/meergo/meergo/connectors/kafka"
-	_ "github.com/meergo/meergo/warehouses"
+	_ "github.com/meergo/meergo/connectors/parquet"
+	_ "github.com/meergo/meergo/connectors/sdk"
+	_ "github.com/meergo/meergo/connectors/webhook"
+
+	_ "github.com/meergo/meergo/warehouses/postgresql"
 )

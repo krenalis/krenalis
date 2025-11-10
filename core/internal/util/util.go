@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // ParseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as
@@ -51,8 +51,8 @@ func ParseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 }
 
 // PropertiesToColumns returns the columns of properties.
-func PropertiesToColumns(properties types.Properties) []meergo.Column {
-	columns := make([]meergo.Column, 0, properties.Len())
+func PropertiesToColumns(properties types.Properties) []warehouses.Column {
+	columns := make([]warehouses.Column, 0, properties.Len())
 	for _, p := range properties.All() {
 		if p.Type.Kind() == types.ObjectKind {
 			for _, column := range PropertiesToColumns(p.Type.Properties()) {
@@ -61,7 +61,7 @@ func PropertiesToColumns(properties types.Properties) []meergo.Column {
 			}
 			continue
 		}
-		columns = append(columns, meergo.Column{
+		columns = append(columns, warehouses.Column{
 			Name:     p.Name,
 			Type:     p.Type,
 			Nullable: p.Nullable,

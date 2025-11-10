@@ -8,8 +8,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // UnavailableError represents an error with the data warehouse.
@@ -28,10 +28,10 @@ func unavailableError(err error) error {
 	}
 	switch err.(type) {
 	case
-		*meergo.OperationError,
-		*meergo.WarehouseNonInitializableError,
-		*meergo.WarehouseSettingsError,
-		*meergo.WarehouseSettingsNotReadOnly:
+		*warehouses.OperationError,
+		*warehouses.NonInitializableError,
+		*warehouses.SettingsError,
+		*warehouses.SettingsNotReadOnly:
 		return err
 	}
 	return &UnavailableError{Err: err}
@@ -42,22 +42,22 @@ func unavailableError(err error) error {
 // warehouse type.
 //
 // It panics if a warehouse driver with the given name does not exist.
-// It returns a *meergo.WarehouseSettingsError if the settings are invalid.
+// It returns a *warehouses.SettingsError if the settings are invalid.
 func getWarehouseInstance(name string, settings []byte) (warehouse, error) {
-	inner, err := meergo.RegisteredWarehouseDriver(name).New(&meergo.WarehouseConfig{Settings: settings})
+	inner, err := warehouses.Registered(name).New(&warehouses.Config{Settings: settings})
 	if err != nil {
 		return warehouse{}, err
 	}
 	return warehouse{inner}, nil
 }
 
-// warehouse wraps a meergo.Warehouse and returns any internal errors from its
-// methods as an UnavailableError.
+// warehouse wraps a warehouses.Warehouse and returns any internal errors from
+// its methods as an UnavailableError.
 type warehouse struct {
-	inner meergo.Warehouse
+	inner warehouses.Warehouse
 }
 
-func (dw warehouse) AlterUserSchema(ctx context.Context, opID string, columns []meergo.Column, operations []meergo.AlterOperation) error {
+func (dw warehouse) AlterUserSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
 	return unavailableError(dw.inner.AlterUserSchema(ctx, opID, columns, operations))
 }
 
@@ -79,45 +79,45 @@ func (dw warehouse) ColumnTypeDescription(t types.Type) (string, error) {
 	return description, err
 }
 
-func (dw warehouse) Delete(ctx context.Context, table string, where meergo.Expr) error {
+func (dw warehouse) Delete(ctx context.Context, table string, where warehouses.Expr) error {
 	return unavailableError(dw.inner.Delete(ctx, table, where))
 }
 
-func (dw warehouse) Initialize(ctx context.Context, userColumns []meergo.Column) error {
+func (dw warehouse) Initialize(ctx context.Context, userColumns []warehouses.Column) error {
 	return unavailableError(dw.inner.Initialize(ctx, userColumns))
 }
 
-func (dw warehouse) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+func (dw warehouse) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
 	return unavailableError(dw.inner.Merge(ctx, table, rows, deleted))
 }
 
-func (dw warehouse) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
+func (dw warehouse) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
 	return unavailableError(dw.inner.MergeIdentities(ctx, columns, rows))
 }
 
-func (dw warehouse) PreviewAlterUserSchema(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
+func (dw warehouse) PreviewAlterUserSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) ([]string, error) {
 	queries, err := dw.inner.PreviewAlterUserSchema(ctx, columns, operations)
 	err = unavailableError(err)
 	return queries, err
 }
 
-func (dw warehouse) Query(ctx context.Context, query meergo.RowQuery, withTotal bool) (meergo.Rows, int, error) {
+func (dw warehouse) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 	rows, total, err := dw.inner.Query(ctx, query, withTotal)
 	err = unavailableError(err)
 	return rows, total, err
 }
 
-func (dw warehouse) RawQuery(ctx context.Context, query string) (meergo.Rows, int, error) {
+func (dw warehouse) RawQuery(ctx context.Context, query string) (warehouses.Rows, int, error) {
 	rows, columnCount, err := dw.inner.RawQuery(ctx, query)
 	err = unavailableError(err)
 	return rows, columnCount, err
 }
 
-func (dw warehouse) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+func (dw warehouse) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 	return unavailableError(dw.inner.ResolveIdentities(ctx, opID, identifiers, userColumns, userPrimarySources))
 }
 
-func (dw warehouse) Repair(ctx context.Context, userColumns []meergo.Column) error {
+func (dw warehouse) Repair(ctx context.Context, userColumns []warehouses.Column) error {
 	return unavailableError(dw.inner.Repair(ctx, userColumns))
 }
 
@@ -129,6 +129,6 @@ func (dw warehouse) Truncate(ctx context.Context, table string) error {
 	return unavailableError(dw.inner.Truncate(ctx, table))
 }
 
-func (dw warehouse) UnsetIdentityColumns(ctx context.Context, action int, columns []meergo.Column) error {
+func (dw warehouse) UnsetIdentityColumns(ctx context.Context, action int, columns []warehouses.Column) error {
 	return unavailableError(dw.inner.UnsetIdentityColumns(ctx, action, columns))
 }

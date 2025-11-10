@@ -17,7 +17,7 @@ import (
 	"sync/atomic"
 
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/filters"
@@ -69,7 +69,7 @@ type Collector struct {
 // events with geolocation information; if not provided, the database file is
 // not opened and the geolocation information are not automatically added by
 // Meergo.
-func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connectors.Connectors,
+func New(db *db.DB, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
 	provider transformers.FunctionProvider, metrics *metrics.Collector, maxMindDBPath string) (*Collector, error) {
 	var c = &Collector{
 		db:               db,
@@ -77,7 +77,7 @@ func New(db *db.DB, st *state.State, ds *datastore.Datastore, connectors *connec
 		datastore:        ds,
 		metrics:          metrics,
 		functionProvider: provider,
-		destinations:     newDestinations(st, connectors, provider, metrics),
+		destinations:     newDestinations(st, connections, provider, metrics),
 	}
 	st.Freeze()
 	st.AddListener(c.onCreateAction)

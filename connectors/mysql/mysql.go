@@ -19,7 +19,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
@@ -33,16 +33,16 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterDatabase(meergo.DatabaseSpec{
+	connectors.RegisterDatabase(connectors.DatabaseSpec{
 		Code:        "mysql",
 		Label:       "MySQL",
-		Categories:  meergo.CategoryDatabase,
+		Categories:  connectors.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM users\n",
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
-			Destination: meergo.ConnectorRoleDocumentation{
+			Destination: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -50,7 +50,7 @@ func init() {
 }
 
 // New returns a new connector instance for MySQL.
-func New(env *meergo.DatabaseEnv) (*MySQL, error) {
+func New(env *connectors.DatabaseEnv) (*MySQL, error) {
 	c := MySQL{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -62,7 +62,7 @@ func New(env *meergo.DatabaseEnv) (*MySQL, error) {
 }
 
 type MySQL struct {
-	env      *meergo.DatabaseEnv
+	env      *connectors.DatabaseEnv
 	settings *innerSettings
 	db       *sql.DB
 }
@@ -76,7 +76,7 @@ func (my *MySQL) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (my *MySQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
+func (my *MySQL) Columns(ctx context.Context, table string) ([]connectors.Column, error) {
 	var err error
 	table, err = quoteTable(table)
 	if err != nil {
@@ -95,7 +95,7 @@ func (my *MySQL) Columns(ctx context.Context, table string) ([]meergo.Column, er
 
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
-func (my *MySQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
+func (my *MySQL) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
 	if err := my.openDB(); err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (my *MySQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) er
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (my *MySQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+func (my *MySQL) Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error) {
 	return my.query(ctx, query, false)
 }
 
@@ -126,7 +126,7 @@ func (my *MySQL) QuoteTime(value any, typ types.Type) string {
 }
 
 // ServeUI serves the connector's user interface.
-func (my *MySQL) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (my *MySQL) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -142,19 +142,19 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, settings json.Value,
 	case "test":
 		return nil, my.saveSettings(ctx, settings, true)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "3306", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
-			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
-			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "3306", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&connectors.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
+			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&connectors.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Settings: settings,
-		Buttons: []meergo.Button{
+		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
 	}
@@ -180,7 +180,7 @@ func (my *MySQL) openDB() error {
 // query executes the given query and returns the resulting rows and columns.
 // writable indicates whether the resulting columns should be marked as
 // writable.
-func (my *MySQL) query(ctx context.Context, query string, writable bool) (meergo.Rows, []meergo.Column, error) {
+func (my *MySQL) query(ctx context.Context, query string, writable bool) (connectors.Rows, []connectors.Column, error) {
 	if err := my.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -193,7 +193,7 @@ func (my *MySQL) query(ctx context.Context, query string, writable bool) (meergo
 		_ = rows.Close()
 		return nil, nil, err
 	}
-	columns := make([]meergo.Column, len(columnTypes))
+	columns := make([]connectors.Column, len(columnTypes))
 	for i, c := range columnTypes {
 		typ, issue, err := propertyType(c)
 		if err != nil {
@@ -229,23 +229,23 @@ func (my *MySQL) saveSettings(ctx context.Context, settings json.Value, test boo
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
+		return connectors.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65535 {
-		return meergo.NewInvalidSettingsError("port must be in range [1,65535]")
+		return connectors.NewInvalidSettingsError("port must be in range [1,65535]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
-		return meergo.NewInvalidSettingsError("username length must be in range [1,16]")
+		return connectors.NewInvalidSettingsError("username length must be in range [1,16]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return meergo.NewInvalidSettingsError("password length must be in range [1,200]")
+		return connectors.NewInvalidSettingsError("password length must be in range [1,200]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-		return meergo.NewInvalidSettingsError("database length must be in range [1,64]")
+		return connectors.NewInvalidSettingsError("database length must be in range [1,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

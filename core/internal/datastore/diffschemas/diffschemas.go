@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // Diff returns the differences between oldSchema and newSchema.
@@ -31,7 +31,7 @@ import (
 //
 // In case the difference between old schema and new schema cannot be computed,
 // an error is returned.
-func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) ([]meergo.AlterOperation, error) {
+func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) ([]warehouses.AlterOperation, error) {
 
 	if oldSchema.Kind() != types.ObjectKind {
 		panic("not an object")
@@ -43,7 +43,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	oldProperties := oldSchema.Properties()
 	newProperties := newSchema.Properties()
 
-	operations := []meergo.AlterOperation{}
+	operations := []warehouses.AlterOperation{}
 
 	// Given two schemas, OldSchema and NewSchema, we define OldNames and
 	// NewNames as the sets of property names in the two schemas.
@@ -115,8 +115,8 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 
 				}
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
-					operations = append(operations, meergo.AlterOperation{
-						Operation: meergo.OperationRenameColumn,
+					operations = append(operations, warehouses.AlterOperation{
+						Operation: warehouses.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
 						NewColumn: pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
 					})
@@ -125,8 +125,8 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				if !types.Equal(oldProp.Type, newProp.Type) {
 					return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), appendPath(path, addedName))
 				}
-				operations = append(operations, meergo.AlterOperation{
-					Operation: meergo.OperationRenameColumn,
+				operations = append(operations, warehouses.AlterOperation{
+					Operation: warehouses.OperationRenameColumn,
 					Column:    pathToColumn(oldPath),
 					NewColumn: pathToColumn(appendPath(path, addedName)),
 				})
@@ -139,15 +139,15 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		p, _ := newProperties.ByName(addedName)
 		if p.Type.Kind() == types.ObjectKind {
 			for _, c := range util.PropertiesToColumns(p.Type.Properties()) {
-				operations = append(operations, meergo.AlterOperation{
-					Operation: meergo.OperationAddColumn,
+				operations = append(operations, warehouses.AlterOperation{
+					Operation: warehouses.OperationAddColumn,
 					Column:    pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
 					Type:      c.Type,
 				})
 			}
 		} else {
-			operations = append(operations, meergo.AlterOperation{
-				Operation: meergo.OperationAddColumn,
+			operations = append(operations, warehouses.AlterOperation{
+				Operation: warehouses.OperationAddColumn,
 				Column:    pathToColumn(appendPath(path, addedName)),
 				Type:      p.Type,
 			})
@@ -178,14 +178,14 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		droppedProp, _ := oldProperties.ByName(droppedName)
 		if droppedProp.Type.Kind() == types.ObjectKind {
 			for _, p := range propertyPaths(droppedProp.Type) {
-				operations = append(operations, meergo.AlterOperation{
-					Operation: meergo.OperationDropColumn,
+				operations = append(operations, warehouses.AlterOperation{
+					Operation: warehouses.OperationDropColumn,
 					Column:    pathToColumn(appendPath(path, appendPath(droppedName, p))),
 				})
 			}
 		} else {
-			operations = append(operations, meergo.AlterOperation{
-				Operation: meergo.OperationDropColumn,
+			operations = append(operations, warehouses.AlterOperation{
+				Operation: warehouses.OperationDropColumn,
 				Column:    pathToColumn(appendPath(path, droppedName)),
 			})
 		}
@@ -222,23 +222,23 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				// appear in "rePaths" (the key is the name of the created
 				// property, the value is nil).
 				operations = append(operations,
-					meergo.AlterOperation{
-						Operation: meergo.OperationDropColumn,
+					warehouses.AlterOperation{
+						Operation: warehouses.OperationDropColumn,
 						Column:    pathToColumn(keptPath),
 					})
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
-					operations = append(operations, meergo.AlterOperation{
-						Operation: meergo.OperationAddColumn,
+					operations = append(operations, warehouses.AlterOperation{
+						Operation: warehouses.OperationAddColumn,
 						Column:    pathToColumn(appendPath(path, keptPath)) + "_" + c.Name,
 						Type:      c.Type,
 					})
 				}
 			} else {
 				operations = append(operations,
-					meergo.AlterOperation{
-						Operation: meergo.OperationAddColumn,
+					warehouses.AlterOperation{
+						Operation: warehouses.OperationAddColumn,
 						Column:    pathToColumn(keptPath),
 						Type:      newProp.Type,
 					})
@@ -250,8 +250,8 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// They appear in "rePaths" (the key is the name of the property that
 		// "occupied the name", the value is the name of the deleted property).
 		if oldPath, ok := rePaths[keptPath].(string); ok {
-			operations = append(operations, meergo.AlterOperation{
-				Operation: meergo.OperationDropColumn,
+			operations = append(operations, warehouses.AlterOperation{
+				Operation: warehouses.OperationDropColumn,
 				Column:    pathToColumn(keptPath),
 			})
 			if !types.Equal(oldProp.Type, newProp.Type) {
@@ -260,15 +260,15 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			newNameOf[propPathToName(oldPath)] = keptName
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
-					operations = append(operations, meergo.AlterOperation{
-						Operation: meergo.OperationRenameColumn,
+					operations = append(operations, warehouses.AlterOperation{
+						Operation: warehouses.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
 						NewColumn: pathToColumn(keptPath) + "_" + c.Name,
 					})
 				}
 			} else {
-				operations = append(operations, meergo.AlterOperation{
-					Operation: meergo.OperationRenameColumn,
+				operations = append(operations, warehouses.AlterOperation{
+					Operation: warehouses.OperationRenameColumn,
 					Column:    pathToColumn(oldPath),
 					NewColumn: pathToColumn(keptPath),
 				})

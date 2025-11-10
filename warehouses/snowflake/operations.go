@@ -10,8 +10,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/backoff"
+	"github.com/meergo/meergo/warehouses"
 )
 
 type warehouseOp string
@@ -25,7 +25,7 @@ type opStatus struct {
 	canBeStarted     bool
 	alreadyCompleted bool
 	// executionError is significant only if 'alreadyCompleted' is true.
-	// If executionError is not nil, it has type meergo.OperationError.
+	// If executionError is not nil, it has type warehouses.OperationError.
 	executionError error
 }
 
@@ -79,7 +79,7 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 		}
 		// Operation is completed with an error.
 		if opError != "" {
-			return &opStatus{alreadyCompleted: true, executionError: meergo.NewOperationError(errors.New(opError))}, nil
+			return &opStatus{alreadyCompleted: true, executionError: warehouses.NewOperationError(errors.New(opError))}, nil
 		}
 		// Operations is completed without errors.
 		return &opStatus{alreadyCompleted: true}, nil

@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -41,37 +41,37 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterAPI(meergo.APISpec{
+	connectors.RegisterAPI(connectors.APISpec{
 		Code:       "mailchimp",
 		Label:      "Mailchimp",
-		Categories: meergo.CategorySaaS,
-		AsSource: &meergo.AsAPISource{
-			Targets:     meergo.TargetUser,
+		Categories: connectors.CategorySaaS,
+		AsSource: &connectors.AsAPISource{
+			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import contacts as users from Mailchimp",
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAPIDestination{
-			Targets:     meergo.TargetUser,
+		AsDestination: &connectors.AsAPIDestination{
+			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as contacts to Mailchimp",
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.APITerms{
+		Terms: connectors.APITerms{
 			User:  "contact",
 			Users: "contacts",
 		},
-		OAuth: meergo.OAuth{
+		OAuth: connectors.OAuth{
 			AuthURL:           "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			TokenURL:          "https://login.mailchimp.com/oauth2/token",
 			ExpiresIn:         math.MaxInt32,
 			DisallowLocalhost: true,
 		},
-		EndpointGroups: []meergo.EndpointGroup{
+		EndpointGroups: []connectors.EndpointGroup{
 			// Endpoint group used for the Mailchimp API.
 			{
 				Patterns: []string{
@@ -84,25 +84,25 @@ func init() {
 				},
 				RequireOAuth: true,
 				// https://mailchimp.com/developer/marketing/docs/fundamentals/#throttling
-				RateLimit: meergo.RateLimit{RequestsPerSecond: 20, Burst: 20, MaxConcurrentRequests: 10},
+				RateLimit: connectors.RateLimit{RequestsPerSecond: 20, Burst: 20, MaxConcurrentRequests: 10},
 				// https://mailchimp.com/developer/marketing/docs/fundamentals/#api-limits
-				RetryPolicy: meergo.RetryPolicy{
-					"403 429": meergo.ExponentialStrategy(meergo.Slowdown, 50*time.Millisecond),
-					"500":     meergo.ExponentialStrategy(meergo.NetFailure, 50*time.Millisecond),
+				RetryPolicy: connectors.RetryPolicy{
+					"403 429": connectors.ExponentialStrategy(connectors.Slowdown, 50*time.Millisecond),
+					"500":     connectors.ExponentialStrategy(connectors.NetFailure, 50*time.Millisecond),
 				},
 			},
 			// Generic endpoint group used by Upsert to retrieve results,
 			// where the request domains and paths are not known in advance.
 			{
 				Patterns:  []string{"GET /"},
-				RateLimit: meergo.RateLimit{RequestsPerSecond: 1, Burst: 1},
+				RateLimit: connectors.RateLimit{RequestsPerSecond: 1, Burst: 1},
 			},
 		},
 	}, New)
 }
 
 // New returns a new connector instance for Mailchimp.
-func New(env *meergo.APIEnv) (*MailChimp, error) {
+func New(env *connectors.APIEnv) (*MailChimp, error) {
 	c := MailChimp{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -119,7 +119,7 @@ func New(env *meergo.APIEnv) (*MailChimp, error) {
 }
 
 type MailChimp struct {
-	env      *meergo.APIEnv
+	env      *connectors.APIEnv
 	settings *innerSettings
 }
 
@@ -137,7 +137,7 @@ func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
 }
 
 // RecordSchema returns the schema of the specified target and role.
-func (mc *MailChimp) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+func (mc *MailChimp) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
 
 	// Fetch the contact fields, also known as audience fields or merge fields.
 	// Mailchimp allows for more than 1,000 fields per audience, but the connector reasonably reads only the first 1,000.
@@ -233,7 +233,7 @@ func (mc *MailChimp) RecordSchema(ctx context.Context, target meergo.Targets, ro
 }
 
 // Records returns the records of the specified target.
-func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, _ []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, lastChangeTime time.Time, _ []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
@@ -290,7 +290,7 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTi
 		return nil, "", io.EOF
 	}
 
-	records := make([]meergo.Record, len(response.Members))
+	records := make([]connectors.Record, len(response.Members))
 
 	for i, properties := range response.Members {
 		id, _ := properties["id"].(string)
@@ -314,7 +314,7 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTi
 				fields["ADDRESS"] = nil
 			}
 		}
-		records[i] = meergo.Record{
+		records[i] = connectors.Record{
 			ID:             id,
 			Properties:     properties,
 			LastChangeTime: lastChangeTime.UTC(),
@@ -346,7 +346,7 @@ var addressType = types.Object([]types.Property{
 })
 
 // ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -358,7 +358,7 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Va
 	case "save":
 		return nil, mc.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
 	// Get the audiences.
@@ -366,17 +366,17 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Va
 	if err != nil {
 		return nil, err
 	}
-	options := make([]meergo.Option, len(audiences))
+	options := make([]connectors.Option, len(audiences))
 	for i, audience := range audiences {
-		options[i] = meergo.Option{
+		options[i] = connectors.Option{
 			Text:  audience.Name,
 			Value: audience.ID,
 		}
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Select{Name: "Audience", Label: "Audience", Options: options},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Select{Name: "Audience", Label: "Audience", Options: options},
 		},
 		Settings: settings,
 	}
@@ -388,11 +388,11 @@ const maxBodyRecordsBytes = 100 * 1024 * 1024
 const maxBodyRecords = 5000
 
 // Upsert updates or creates records in the API for the specified target.
-func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (mc *MailChimp) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 
 	basePath := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
-	bb := mc.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := mc.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
 
 	bb.WriteString(`{"operations":[`)
@@ -494,7 +494,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 	}
 
 	// recordsErr is the error that will be returned containing all the operation errors.
-	recordsErr := meergo.RecordsError{}
+	recordsErr := connectors.RecordsError{}
 
 	// The 'tar.gz' JSON file, returned from Mailchimp, will be deserialized into the 'result' struct.
 	var result struct {
@@ -576,7 +576,7 @@ func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) erro
 		return err
 	}
 	if audience.Audience == "" || len(audience.Audience) > 100 {
-		return meergo.NewInvalidSettingsError("audience length must be in range [1, 100]")
+		return connectors.NewInvalidSettingsError("audience length must be in range [1, 100]")
 	}
 	// Check if the audience exists.
 	audiences, err := mc.audiences(ctx)
@@ -591,7 +591,7 @@ func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) erro
 		}
 	}
 	if !found {
-		return meergo.NewInvalidSettingsError("audience does not exist")
+		return connectors.NewInvalidSettingsError("audience does not exist")
 	}
 	dataCenter, _, err := mc.metadata(ctx)
 	if err != nil {
@@ -638,7 +638,7 @@ func (err *mailchimpError) Error() string {
 }
 
 // call calls the Mailchimp API.
-func (mc *MailChimp) call(ctx context.Context, method, path string, params url.Values, bb *meergo.BodyBuffer, expectedStatus int, response any) error {
+func (mc *MailChimp) call(ctx context.Context, method, path string, params url.Values, bb *connectors.BodyBuffer, expectedStatus int, response any) error {
 
 	var dataCenter string
 	if mc.settings == nil {

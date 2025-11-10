@@ -18,7 +18,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
@@ -35,16 +35,16 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterDatabase(meergo.DatabaseSpec{
+	connectors.RegisterDatabase(connectors.DatabaseSpec{
 		Code:        "postgresql",
 		Label:       "PostgreSQL",
-		Categories:  meergo.CategoryDatabase,
+		Categories:  connectors.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM users\n",
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
-			Destination: meergo.ConnectorRoleDocumentation{
+			Destination: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -52,7 +52,7 @@ func init() {
 }
 
 // New returns a new connector instance for PostgreSQL.
-func New(env *meergo.DatabaseEnv) (*PostgreSQL, error) {
+func New(env *connectors.DatabaseEnv) (*PostgreSQL, error) {
 	c := PostgreSQL{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -64,7 +64,7 @@ func New(env *meergo.DatabaseEnv) (*PostgreSQL, error) {
 }
 
 type PostgreSQL struct {
-	env      *meergo.DatabaseEnv
+	env      *connectors.DatabaseEnv
 	settings *innerSettings
 	pool     *pgxpool.Pool
 }
@@ -79,7 +79,7 @@ func (ps *PostgreSQL) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
+func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]connectors.Column, error) {
 	columns, err := ps.columns(ctx, ps.settings.Schema, table)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Colum
 
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
-func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
+func (ps *PostgreSQL) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
 	if err := ps.openDB(ctx); err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]an
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+func (ps *PostgreSQL) Query(ctx context.Context, query string) (connectors.Rows, []connectors.Column, error) {
 	if err := ps.openDB(ctx); err != nil {
 		return nil, nil, err
 	}
@@ -113,7 +113,7 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []m
 		return nil, nil, err
 	}
 	fieldDescriptions := rows.FieldDescriptions()
-	columns := make([]meergo.Column, len(fieldDescriptions))
+	columns := make([]connectors.Column, len(fieldDescriptions))
 	for i, c := range fieldDescriptions {
 		typ, issue, err := ps.propertyType(ctx, c)
 		if err != nil {
@@ -158,7 +158,7 @@ func (rows withCloseError) Close() error {
 }
 
 // ServeUI serves the connector's user interface.
-func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -175,20 +175,20 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.V
 	case "test":
 		return nil, ps.saveSettings(ctx, settings, true)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "5432", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
-			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
-			&meergo.Input{Name: "Schema", Label: "Schema name", Placeholder: "public", Type: "text", MinLength: 1, MaxLength: 63},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&connectors.Input{Name: "Port", Label: "Port", Placeholder: "5432", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&connectors.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
+			&connectors.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
+			&connectors.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
+			&connectors.Input{Name: "Schema", Label: "Schema name", Placeholder: "public", Type: "text", MinLength: 1, MaxLength: 63},
 		},
 		Settings: settings,
-		Buttons: []meergo.Button{
+		Buttons: []connectors.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
 	}
@@ -244,27 +244,27 @@ func (ps *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
+		return connectors.NewInvalidSettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65535 {
-		return meergo.NewInvalidSettingsError("port must be in range [1,65535]")
+		return connectors.NewInvalidSettingsError("port must be in range [1,65535]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 63 {
-		return meergo.NewInvalidSettingsError("username length in bytes must be in range [1,63]")
+		return connectors.NewInvalidSettingsError("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return meergo.NewInvalidSettingsError("password length must be in range [1,100]")
+		return connectors.NewInvalidSettingsError("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
-		return meergo.NewInvalidSettingsError("database length in bytes must be in range [1,63]")
+		return connectors.NewInvalidSettingsError("database length in bytes must be in range [1,63]")
 	}
 	// Validate Schema.
 	if n := len(s.Schema); n < 1 || n > 63 {
-		return meergo.NewInvalidSettingsError("schema length in bytes must be in range [1,63]")
+		return connectors.NewInvalidSettingsError("schema length in bytes must be in range [1,63]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

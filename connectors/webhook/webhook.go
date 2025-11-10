@@ -8,19 +8,19 @@ package webhook
 import (
 	_ "embed"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 //go:embed documentation/overview.md
 var overview string
 
 func init() {
-	meergo.RegisterWebhook(meergo.WebhookSpec{
+	connectors.RegisterWebhook(connectors.WebhookSpec{
 		Code:       "webhook",
 		Label:      "Webhook",
-		Categories: meergo.CategoryWebhook,
-		Documentation: meergo.ConnectorDocumentation{
-			Source: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategoryWebhook,
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Summary:  "Import events and users from your application with a webhook",
 				Overview: overview,
 			},
@@ -29,7 +29,7 @@ func init() {
 }
 
 // New returns a new connector instance for webhook.
-func New(env *meergo.WebhookEnv) (*Webhook, error) {
+func New(env *connectors.WebhookEnv) (*Webhook, error) {
 	return &Webhook{}, nil
 }
 

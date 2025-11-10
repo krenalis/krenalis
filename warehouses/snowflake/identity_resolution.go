@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -25,7 +25,7 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
 		return err
@@ -43,14 +43,14 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 			continue
 		}
 		if err != nil {
-			return meergo.NewOperationError(err)
+			return warehouses.NewOperationError(err)
 		}
 		return nil
 	}
 	return ctx.Err()
 }
 
-func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 
 	// Determine the current version of the "users" table and create a copy of
 	// it with the incremented version.

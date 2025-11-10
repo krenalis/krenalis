@@ -36,7 +36,7 @@ func main() {
 			fatal("module %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", mod)
 		}
 	}
-	for _, pkg := range []string{".", "core", "connectors", "warehouses"} { // just some random top-level packages in the repository.
+	for _, pkg := range []string{"core", "connectors", "warehouses"} { // just some random top-level packages in the repository.
 		if !slices.Contains(packages, pkg) {
 			fatal("package %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", pkg)
 		}

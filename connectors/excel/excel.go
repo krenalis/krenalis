@@ -17,7 +17,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 
@@ -31,18 +31,18 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFile(meergo.FileSpec{
+	connectors.RegisterFile(connectors.FileSpec{
 		Code:       "excel",
 		Label:      "Excel",
-		Categories: meergo.CategoryFile,
-		AsSource: &meergo.AsSourceFile{
+		Categories: connectors.CategoryFile,
+		AsSource: &connectors.AsSourceFile{
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsDestinationFile{
-			Documentation: meergo.ConnectorRoleDocumentation{
+		AsDestination: &connectors.AsDestinationFile{
+			Documentation: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -52,7 +52,7 @@ func init() {
 }
 
 // New returns a new connector instance for Excel.
-func New(env *meergo.FileEnv) (*Excel, error) {
+func New(env *connectors.FileEnv) (*Excel, error) {
 	c := Excel{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -64,7 +64,7 @@ func New(env *meergo.FileEnv) (*Excel, error) {
 }
 
 type Excel struct {
-	env      *meergo.FileEnv
+	env      *connectors.FileEnv
 	settings *innerSettings
 }
 
@@ -80,7 +80,7 @@ func (exel *Excel) ContentType(ctx context.Context) string {
 var errReadFile = errors.New("document is not a valid Excel (.xlsx) file or may be corrupted")
 
 // Read reads the records from r and writes them to records.
-func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
+func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
@@ -96,7 +96,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 	rows, err := f.Rows(sheet)
 	if err != nil {
 		if _, ok := err.(excelize.ErrSheetNotExist); ok {
-			return meergo.ErrSheetNotExist
+			return connectors.ErrSheetNotExist
 		}
 		return err
 	}
@@ -163,7 +163,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // ServeUI serves the connector's user interface.
-func (exel *Excel) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (exel *Excel) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -175,12 +175,12 @@ func (exel *Excel) ServeUI(ctx context.Context, event string, settings json.Valu
 	case "save":
 		return nil, exel.saveSettings(ctx, settings, role)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: connectors.Source},
 		},
 		Settings: settings,
 	}
@@ -203,7 +203,7 @@ func (exel *Excel) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 }
 
 // Write writes to w the records read from records.
-func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
+func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records connectors.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -259,13 +259,13 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 }
 
 // saveSettings saves the settings.
-func (exel *Excel) saveSettings(ctx context.Context, settings json.Value, role meergo.Role) error {
+func (exel *Excel) saveSettings(ctx context.Context, settings json.Value, role connectors.Role) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
-	if role != meergo.Source {
+	if role != connectors.Source {
 		s.HasColumnNames = false
 	}
 	b, err := json.Marshal(s)

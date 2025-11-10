@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // CanInitialize checks whether the data warehouse can be initialized.
@@ -54,25 +54,25 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	if errors != nil {
 		slices.Sort(errors)
 		err := fmt.Errorf("database is not empty (it contains %s)", strings.Join(errors, ", "))
-		return meergo.NewWarehouseNonInitializableError(err)
+		return warehouses.NewNonInitializableError(err)
 	}
 	return nil
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
 // make it work with Meergo.
-func (warehouse *Snowflake) Initialize(ctx context.Context, userColumns []meergo.Column) error {
+func (warehouse *Snowflake) Initialize(ctx context.Context, userColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, userColumns, false)
 }
 
-// Repair repairs the database objects on the data warehouse needed by Meergo.
-func (warehouse *Snowflake) Repair(ctx context.Context, userColumns []meergo.Column) error {
+// Repair repairs the database objects on the data warehouse needed by warehouses.
+func (warehouse *Snowflake) Repair(ctx context.Context, userColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, userColumns, true)
 }
 
 // initRepairDatabaseObjects initializes (or repairs) the database objects (as
 // tables, types, etc...) on the data warehouse.
-func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, userColumns []meergo.Column, repair bool) error {
+func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, userColumns []warehouses.Column, repair bool) error {
 	queries := []string{
 		createDestinationUsersTable,
 		createEventsTable,
@@ -97,7 +97,7 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, userC
 // userIdentitiesSQLSchema returns the SQL schema (in the form "CREATE TABLE
 // ...") of the user identities table, which includes, in addition to the
 // columns used internally by the driver, the given user columns.
-func userIdentitiesSQLSchema(userColumns []meergo.Column) string {
+func userIdentitiesSQLSchema(userColumns []warehouses.Column) string {
 	var b strings.Builder
 	b.WriteString(`CREATE TABLE IF NOT EXISTS "_USER_IDENTITIES" (
 		"__PK__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
@@ -123,7 +123,7 @@ func userIdentitiesSQLSchema(userColumns []meergo.Column) string {
 // usersSQLSchema returns the SQL schema (in the form "CREATE TABLE ...") of the
 // users table with the given name, which includes, in addition to the columns
 // used internally by the driver, the given user columns.
-func usersSQLSchema(name string, userColumns []meergo.Column) string {
+func usersSQLSchema(name string, userColumns []warehouses.Column) string {
 	var b strings.Builder
 	b.WriteString(`CREATE TABLE IF NOT EXISTS `)
 	b.WriteString(quoteIdent(name))
@@ -143,7 +143,7 @@ func usersSQLSchema(name string, userColumns []meergo.Column) string {
 
 // usersViewSQLSchema returns the SQL schema (in the form "CREATE ... VIEW ...")
 // of the users view which is based on the users table with the given name.
-func usersViewSQLSchema(userColumns []meergo.Column, fromUsersTable string) string {
+func usersViewSQLSchema(userColumns []warehouses.Column, fromUsersTable string) string {
 	var b strings.Builder
 	b.WriteString(`CREATE OR REPLACE VIEW "USERS" AS
 		SELECT

@@ -7,21 +7,21 @@ package datastore
 import (
 	"strings"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // flatter allows flattening a map[string]any containing user schema properties
 // into a map[string]any representing user table columns.
 type flatter struct {
 	name       string
-	column     meergo.Column
+	column     warehouses.Column
 	properties []*flatter
 }
 
 // newFlattener returns a new flattener that flattens properties according to
 // the given schema and mapping from properties to the respective columns.
-func newFlatter(schema types.Type, columnByProperty map[string]meergo.Column) *flatter {
+func newFlatter(schema types.Type, columnByProperty map[string]warehouses.Column) *flatter {
 	flatters := map[string]*flatter{
 		"": {properties: []*flatter{}},
 	}

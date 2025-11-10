@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/backoff"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -24,7 +24,7 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
 		return err
@@ -42,14 +42,14 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 			continue
 		}
 		if err != nil {
-			return meergo.NewOperationError(err)
+			return warehouses.NewOperationError(err)
 		}
 		return nil
 	}
 	return ctx.Err()
 }
 
-func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
