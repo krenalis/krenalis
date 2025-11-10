@@ -60,7 +60,7 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with warehouses.
+// make it work with Meergo.
 func (warehouse *Snowflake) Initialize(ctx context.Context, userColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, userColumns, false)
 }

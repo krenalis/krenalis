@@ -37,7 +37,7 @@ func Test_newPathPlaceholderReplacer(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			// This test here tests the "newPathPlaceholderReplacer" function,
-			// and assumes that connectors.ReplacePlaceholders is correct and
+			// and assumes that connections.ReplacePlaceholders is correct and
 			// already tested elsewhere.
 			got, gotErr := connections.ReplacePlaceholders(test.path, replacer)
 			var gotErrStr string

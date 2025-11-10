@@ -51,8 +51,8 @@ func getWarehouseInstance(name string, settings []byte) (warehouse, error) {
 	return warehouse{inner}, nil
 }
 
-// warehouse wraps a warehouses.Warehouse and returns any internal errors from its
-// methods as an UnavailableError.
+// warehouse wraps a warehouses.Warehouse and returns any internal errors from
+// its methods as an UnavailableError.
 type warehouse struct {
 	inner warehouses.Warehouse
 }

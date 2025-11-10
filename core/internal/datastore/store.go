@@ -108,8 +108,8 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 //
 // opID is an identifier that uniquely identifies a specific alter columns
 // operation; if the method is called again passing the same identifier, whether
-// the operation ended successfully or with a *warehouses.OperationError error, that
-// result is returned again.
+// the operation ended successfully or with a *warehouses.OperationError error,
+// that result is returned again.
 //
 // schema is the user schema without meta properties (this parameter is useful
 // for obtaining type information and for creating views), while operations is
@@ -127,9 +127,9 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 //
 // (2) the context was cancelled;
 //
-// (3) the operation ended with an error of type *warehouses.OperationError, and this
-// means that even if the method is called again with the same ID, this error is
-// still returned;
+// (3) the operation ended with an error of type *warehouses.OperationError, and
+// this means that even if the method is called again with the same ID, this
+// error is still returned;
 //
 // (4) the operation ended with an unexpected and unknown error, and it is
 // therefore up to the caller to try calling this method again by providing the
@@ -384,8 +384,8 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 //
 // opID is an identifier that uniquely identifies a specific resolve identities
 // operation; if the method is called again passing the same identifier, whether
-// the operation ended successfully or with a *warehouses.OperationError error, that
-// result is returned again.
+// the operation ended successfully or with a *warehouses.OperationError error,
+// that result is returned again.
 //
 // This method, once called, can then return in four distinct cases:
 //
@@ -393,9 +393,9 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 //
 // (2) the context was cancelled;
 //
-// (3) the operation ended with an error of type *warehouses.OperationError, and this
-// means that even if the method is called again with the same ID, this error is
-// still returned;
+// (3) the operation ended with an error of type *warehouses.OperationError, and
+// this means that even if the method is called again with the same ID, this
+// error is still returned;
 //
 // (4) the operation ended with an unexpected and unknown error, and it is
 // therefore up to the caller to try calling this method again by providing the

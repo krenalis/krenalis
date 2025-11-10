@@ -126,7 +126,7 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 //		if !ok {
 //			return errNotFound
 //		}
-//		events, err = core.connectors.ReceivePerAccountWebhook(account, req)
+//		events, err = core.connections.ReceivePerAccountWebhook(account, req)
 //	case "s":
 //		id, _ := strconv.Atoi(m[2])
 //		if id < 1 || id > maxInt32 {
@@ -136,14 +136,14 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 //		if !ok {
 //			return errNotFound
 //		}
-//		events, err = core.connectors.ReceivePerConnectionWebhook(connection, req)
+//		events, err = core.connections.ReceivePerConnectionWebhook(connection, req)
 //	case "c":
 //		name := url.PathEscape(m[2])
 //		connector, ok := core.state.Connector(name)
 //		if !ok || connector.WebhooksPer != state.WebhooksPerConnector {
 //			return errNotFound
 //		}
-//		events, err = core.connectors.ReceivePerConnectorWebhook(connector, req)
+//		events, err = core.connections.ReceivePerConnectorWebhook(connector, req)
 //	}
 //	if err != nil {
 //		return err

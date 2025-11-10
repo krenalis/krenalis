@@ -12,8 +12,8 @@ import (
 	"github.com/meergo/meergo/core/internal/events"
 )
 
-// receivedEvent implements the connectors.ReceivedEvent interface. A ReceivedEvent
-// is passed to the SendEvents method of an API connector.
+// receivedEvent implements the connectors.ReceivedEvent interface.
+// A ReceivedEvent is passed to the SendEvents method of an API connector.
 type receivedEvent struct {
 	event events.Event
 }

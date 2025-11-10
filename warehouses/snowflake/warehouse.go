@@ -110,7 +110,7 @@ type sfSettings struct {
 }
 
 // CheckReadOnlyAccess checks that the warehouse access is read-only, returning
-// a *SettingsNotReadOnly error in case it is not, which may contain
+// a *warehouses.SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1693.

@@ -98,7 +98,7 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into a warehouses.AlterOperationType value", v)
+		return fmt.Errorf("meergo/warehouses: cannot scan a %T value into a warehouses.AlterOperationType value", v)
 	}
 	switch s {
 	case "AddColumn":
@@ -108,7 +108,7 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	case "RenameColumn":
 		*op = OperationRenameColumn
 	default:
-		return fmt.Errorf("json: invalid warehouses.AlterOperationType: %s", s)
+		return fmt.Errorf("meergo/warehouses: invalid warehouses.AlterOperationType: %s", s)
 	}
 	return nil
 }
@@ -120,10 +120,10 @@ type Warehouse interface {
 	//
 	// opID is an identifier that uniquely identifies a specific alter schema
 	// operation; if the method is called again passing the same identifier, whether
-	// the operation ended successfully or with a *warehouses.OperationError error, that
-	// result is returned again.
+	// the operation ended successfully or with a *OperationError error, that result
+	// is returned again.
 	//
-	// columns contains the columns of the "users" table to obtain (this parameters
+	// columns contains the columns of the "users" table to obtain (this parameter
 	// is useful for obtaining type information and for creating views), while
 	// operations is the set of operations to apply in order to migrate the current
 	// columns to the given columns.
@@ -134,9 +134,9 @@ type Warehouse interface {
 	//
 	// (2) the context was cancelled;
 	//
-	// (3) the operation ended with an error of type *warehouses.OperationError, and this
-	// means that even if the method is called again with the same ID, this error is
-	// still returned;
+	// (3) the operation ended with an error of type *OperationError, and this means
+	// that even if the method is called again with the same ID, this error is still
+	// returned;
 	//
 	// (4) the operation ended with an unexpected and unknown error, and it is
 	// therefore up to the caller to try calling this method again by providing the
@@ -229,8 +229,8 @@ type Warehouse interface {
 	//
 	// opID is an identifier that uniquely identifies a specific resolve identities
 	// operation; if the method is called again passing the same identifier, whether
-	// the operation ended successfully or with a *warehouses.OperationError error, that
-	// result is returned again.
+	// the operation ended successfully or with a *OperationError error, that result
+	// is returned again.
 	//
 	// identifiers are the columns corresponding to the Identity Resolution
 	// identifiers, ordered by priority.
@@ -248,9 +248,9 @@ type Warehouse interface {
 	//
 	// (2) the context was cancelled;
 	//
-	// (3) the operation ended with an error of type *warehouses.OperationError, and this
-	// means that even if the method is called again with the same ID, this error is
-	// still returned;
+	// (3) the operation ended with an error of type *OperationError, and this means
+	// that even if the method is called again with the same ID, this error is still
+	// returned;
 	//
 	// (4) the operation ended with an unexpected and unknown error, and it is
 	// therefore up to the caller to try calling this method again by providing the

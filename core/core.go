@@ -249,8 +249,7 @@ func New(conf *Config) (*Core, error) {
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 
-	// Instantiate a warehouses.Warehouse, used by the MCP server, for every
-	// workspace.
+	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.
 	core.mcp = map[int]warehouses.Warehouse{}
 	for _, ws := range core.state.Workspaces() {
 		var wh warehouses.Warehouse

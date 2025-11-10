@@ -136,11 +136,11 @@ func (api *API) EventTypes(ctx context.Context) ([]*EventType, error) {
 // It validates the event schema, which must align with the schema of the event
 // type, then passes that event type schema to the connector.
 //
-// If the event type does not exist, it returns the connectors.ErrEventTypeNotExist
-// error. If the schema of the event is not aligned to the event type's schema,
-// it returns a *schemas.Error error. If the event is invalid, it returns a
-// *InvalidEventError error. If the connector returns an error, it returns a
-// *UnavailableError error.
+// If the event type does not exist, it returns the
+// connectors.ErrEventTypeNotExist error. If the schema of the event is not
+// aligned to the event type's schema, it returns a *schemas.Error error. If the
+// event is invalid, it returns a *InvalidEventError error. If the connector
+// returns an error, it returns a *UnavailableError error.
 //
 // It panics if the API does not support the event target, or if schema is valid
 // but not an object.
@@ -189,8 +189,9 @@ func (api *API) PreviewSendEvent(ctx context.Context, event connectors.Event) (*
 // properties compatible with the API's role. For the event target, the returned
 // schema can be the invalid schema.
 //
-// If the event type does not exist, it returns the connectors.ErrEventTypeNotExist
-// error. If the connector returns an error, it returns a *UnavailableError.
+// If the event type does not exist, it returns the
+// connectors.ErrEventTypeNotExist error. If the connector returns an error, it
+// returns a *UnavailableError.
 // It panics if the API does not support the provided target.
 func (api *API) Schema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
 	return api.SchemaAsRole(ctx, api.role, target, eventType)
@@ -203,8 +204,9 @@ func (api *API) Schema(ctx context.Context, target state.Target, eventType strin
 // for which no schema is expected, this method returns an invalid type with no
 // error.
 //
-// If the event type does not exist, it returns the connectors.ErrEventTypeNotExist
-// error. If the connector returns an error, it returns a *UnavailableError.
+// If the event type does not exist, it returns the
+// connectors.ErrEventTypeNotExist error. If the connector returns an error, it
+// returns a *UnavailableError.
 // It panics if role is not Source or Destination.
 func (api *API) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
 	if api.err != nil {
@@ -387,8 +389,8 @@ func (api *API) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	return schema, nil
 }
 
-// singleEventIterator implements the connectors.Events interface that iterates over
-// a single event.
+// singleEventIterator implements the connectors.Events interface that iterates
+// over a single event.
 type singleEventIterator struct {
 	api       string
 	event     *connectors.Event

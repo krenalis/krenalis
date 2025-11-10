@@ -34,7 +34,7 @@ BEGIN
                 AND "I1"."__IDENTITY_ID__" = "I2"."__IDENTITY_ID__"
                 AND "I1"."__IS_ANONYMOUS__" = "I2"."__IS_ANONYMOUS__"
             )
-            OR {{ same_user }} -- This placeholder will be replaced by warehouses.
+            OR {{ same_user }} -- This placeholder will be replaced by Meergo.
         )';
 
     -- Reset the user identity clusters, as they may have been modified by a

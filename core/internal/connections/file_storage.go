@@ -195,9 +195,9 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // settings, if the file connector has settings, represents its settings.
 // compression indicates if the file is compressed and how.
 //
-// If the settings are invalid, it returns a *connectors.InvalidSettingsError. If
-// the connector returns an error, it returns an *UnavailableError. This method
-// panics if the file connector does not support sheets.
+// If the settings are invalid, it returns a *connectors.InvalidSettingsError.
+// If the connector returns an error, it returns an *UnavailableError. This
+// method panics if the file connector does not support sheets.
 func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, settings json.Value, compression state.Compression) ([]string, error) {
 	if storage.err != nil {
 		return nil, storage.err

@@ -11,13 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/analytics-go"
-
 	_json "github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"
+	"github.com/meergo/analytics-go"
 )
 
 const logNotifications = false // Set to true to enable logging of received notifications.

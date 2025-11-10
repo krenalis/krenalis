@@ -10,9 +10,9 @@ import (
 	"github.com/meergo/meergo/warehouses"
 )
 
-// EventColumnByPath returns the warehouses.Column corresponding to the property of
-// the events schema with the specified path.
-// propertyPath must always refer to an existing property in the events schema.
+// EventColumnByPath returns the warehouses.Column corresponding to the property
+// of the events schema with the specified path.
+// propertyPath must always refer to an existing property in the event schema.
 func EventColumnByPath(propertyPath string) warehouses.Column {
 	return eventColumnByProperty[propertyPath]
 }

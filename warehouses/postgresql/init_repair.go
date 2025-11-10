@@ -80,12 +80,12 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with warehouses.
+// make it work with Meergo.
 func (warehouse *PostgreSQL) Initialize(ctx context.Context, userColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, userColumns, false)
 }
 
-// Repair repairs the database objects on the data warehouse needed by warehouses.
+// Repair repairs the database objects on the data warehouse needed by Meergo.
 func (warehouse *PostgreSQL) Repair(ctx context.Context, userColumns []warehouses.Column) error {
 	return warehouse.initRepairDatabaseObjects(ctx, userColumns, true)
 }

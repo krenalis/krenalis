@@ -24,8 +24,8 @@ import (
 
 var errInvalidData = errors.New("PostgreSQL has returned invalid data")
 
-// scanner implements the warehouses.Rows interface to read and normalize the rows
-// read from PostgreSQL.
+// scanner implements the warehouses.Rows interface to read and normalize the
+// rows read from PostgreSQL.
 type scanner struct {
 	columns []warehouses.Column
 	rows    pgx.Rows

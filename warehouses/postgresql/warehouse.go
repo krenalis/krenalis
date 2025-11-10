@@ -104,7 +104,7 @@ type psSettings struct {
 }
 
 // CheckReadOnlyAccess checks that the warehouse access is read-only, returning
-// a *SettingsNotReadOnly error in case it is not, which may contain
+// a *warehouses.SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 

@@ -107,8 +107,8 @@ func (file *File) Connector() string {
 //
 // If the action's sheet is not found in the file, the All method of the
 // iterator returns immediately and a subsequent call to Err returns
-// connectors.ErrSheetNotExist. The same happens if the file has no columns; in that
-// case Err returns ErrNoColumnsFound.
+// connectors.ErrSheetNotExist. The same happens if the file has no columns; in
+// that case Err returns ErrNoColumnsFound.
 //
 // It returns an error if a non-zero starting time is provided and the action
 // has no last change property.

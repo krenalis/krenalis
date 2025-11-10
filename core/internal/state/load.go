@@ -184,7 +184,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		state.connectors[code] = &c
 	}
 
-	// Read all warehouse types.
+	// Read all warehouse drivers.
 	drivers := warehouses.Drivers()
 	state.warehouseTypes = make(map[string]WarehouseType, len(drivers))
 	for _, driver := range drivers {
