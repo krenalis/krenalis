@@ -84,7 +84,7 @@ func NewAPI(code string, settings any) (any, error) {
 }
 
 // ReceivedEvent wraps a map[string]any and returns a value that implements the
-// meergo.ReceivedEvent interface.
+// connectors.ReceivedEvent interface.
 //
 // The provided event must conform to the event schema (Schema), otherwise
 // calling methods on the returned value may cause a panic.

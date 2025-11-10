@@ -11,8 +11,8 @@ import (
 	"github.com/meergo/meergo/connectors"
 )
 
-// iterator implements the meergo.Events interface to iterate over a sequence of events.
-// Only one iterator reads from the queue at a time.
+// iterator implements the connectors.Events interface to iterate over a
+// sequence of events. Only one iterator reads from the queue at a time.
 type iterator struct {
 	sender *Sender
 	index  int // read index in sender.events, set by the sender

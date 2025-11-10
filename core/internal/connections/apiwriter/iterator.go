@@ -11,8 +11,8 @@ import (
 	"github.com/meergo/meergo/connectors"
 )
 
-// iterator implements the meergo.Records interface to iterate over a sequence
-// of records.
+// iterator implements the connectors.Records interface to iterate over a
+// sequence of records.
 type iterator struct {
 	writer    *Writer
 	index     int // read index in writer.records, set by the writer.

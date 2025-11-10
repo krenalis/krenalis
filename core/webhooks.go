@@ -95,7 +95,7 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 //		case connectors.ErrNoWebhooks:
 //			http.Error(w, "Not Found", http.StatusNotFound)
 //			return
-//		case meergo.ErrWebhookUnauthorized:
+//		case connectors.ErrWebhookUnauthorized:
 //			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 //			return
 //		}
@@ -114,7 +114,7 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 //	if m == nil {
 //		return errNotFound
 //	}
-//	var events []meergo.WebhookPayload
+//	var events []connectors.WebhookPayload
 //	var err error
 //	switch m[1] {
 //	case "a":
