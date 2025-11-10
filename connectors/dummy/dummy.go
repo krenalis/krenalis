@@ -40,7 +40,7 @@ func init() {
 		AsSource: &connectors.AsAPISource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import customers as users from Dummy",
 				Overview: sourceOverview,
 			},
@@ -49,7 +49,7 @@ func init() {
 			Targets:     connectors.TargetEvent | connectors.TargetUser,
 			SendingMode: connectors.Server,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as customers and send events to Dummy",
 				Overview: destinationOverview,
 			},

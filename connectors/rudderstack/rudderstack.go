@@ -23,8 +23,8 @@ func init() {
 		Code:       "rudderstack",
 		Label:      "RudderStack",
 		Categories: connectors.CategorySaaS,
-		Documentation: connectors.ConnectorDocumentation{
-			Source: connectors.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Summary:  "Import events and users from RudderStack",
 				Overview: overview,
 			},

@@ -34,14 +34,14 @@ type FileSpec struct {
 // a source.
 type AsSourceFile struct {
 	HasSettings   bool
-	Documentation ConnectorRoleDocumentation
+	Documentation RoleDocumentation
 }
 
 // AsDestinationFile represents the specific information of a file connector
 // used as a destination.
 type AsDestinationFile struct {
 	HasSettings   bool
-	Documentation ConnectorRoleDocumentation
+	Documentation RoleDocumentation
 }
 
 // ReflectType returns the type of the value implementing the file connector

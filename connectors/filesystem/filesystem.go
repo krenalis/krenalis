@@ -41,12 +41,12 @@ func init() {
 		Label:      "File System",
 		Categories: connectors.CategoryFileStorage,
 		AsSource: &connectors.AsFileStorageSource{
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
 		AsDestination: &connectors.AsFileStorageDestination{
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},

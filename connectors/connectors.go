@@ -59,12 +59,12 @@ func (c Categories) String() string {
 	}
 }
 
-type ConnectorDocumentation struct {
-	Source      ConnectorRoleDocumentation
-	Destination ConnectorRoleDocumentation
+type Documentation struct {
+	Source      RoleDocumentation
+	Destination RoleDocumentation
 }
 
-type ConnectorRoleDocumentation struct {
+type RoleDocumentation struct {
 	Summary  string
 	Overview string
 }

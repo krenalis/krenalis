@@ -43,7 +43,7 @@ func init() {
 		AsSource: &connectors.AsAPISource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import customers as users",
 				Overview: sourceOverview,
 			},
@@ -51,7 +51,7 @@ func init() {
 		AsDestination: &connectors.AsAPIDestination{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as customers",
 				Overview: destinationOverview,
 			},

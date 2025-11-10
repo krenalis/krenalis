@@ -36,7 +36,7 @@ func init() {
 		Label:      "HTTP GET",
 		Categories: connectors.CategoryFileStorage,
 		AsSource: &connectors.AsFileStorageSource{
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
@@ -46,7 +46,7 @@ func init() {
 		Label:      "HTTP POST",
 		Categories: connectors.CategoryFileStorage,
 		AsDestination: &connectors.AsFileStorageDestination{
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},

@@ -54,8 +54,8 @@ func init() {
 			Code:       "dotnet",
 			Label:      ".NET",
 			Categories: connectors.CategorySDK,
-			Documentation: connectors.ConnectorDocumentation{
-				Source: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.Documentation{
+				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users using .NET",
 					Overview: dotnetOverview,
 				},
@@ -67,8 +67,8 @@ func init() {
 			Categories:          connectors.CategorySDK,
 			Strategies:          true,
 			FallbackToRequestIP: true,
-			Documentation: connectors.ConnectorDocumentation{
-				Source: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.Documentation{
+				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users from an Android mobile device",
 					Overview: androidOverview,
 				},
@@ -78,8 +78,8 @@ func init() {
 			Code:       "go",
 			Label:      "Go",
 			Categories: connectors.CategorySDK,
-			Documentation: connectors.ConnectorDocumentation{
-				Source: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.Documentation{
+				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users using Go",
 					Overview: goOverview,
 				},
@@ -89,8 +89,8 @@ func init() {
 			Code:       "java",
 			Label:      "Java",
 			Categories: connectors.CategorySDK,
-			Documentation: connectors.ConnectorDocumentation{
-				Source: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.Documentation{
+				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users using Java",
 					Overview: javaOverview,
 				},
@@ -102,8 +102,8 @@ func init() {
 			Categories:          connectors.CategorySDK | connectors.CategoryWebsite,
 			Strategies:          true,
 			FallbackToRequestIP: true,
-			Documentation: connectors.ConnectorDocumentation{
-				Source: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.Documentation{
+				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users from a website using JavaScript",
 					Overview: javaScriptOverview,
 				},
@@ -113,8 +113,8 @@ func init() {
 			Code:       "nodejs",
 			Label:      "Node.js",
 			Categories: connectors.CategorySDK,
-			Documentation: connectors.ConnectorDocumentation{
-				Source: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.Documentation{
+				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users using Node.js",
 					Overview: nodeOverview,
 				},
@@ -124,8 +124,8 @@ func init() {
 			Code:       "python",
 			Label:      "Python",
 			Categories: connectors.CategorySDK,
-			Documentation: connectors.ConnectorDocumentation{
-				Source: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.Documentation{
+				Source: connectors.RoleDocumentation{
 					Summary:  "Import events and users using Python",
 					Overview: pythonOverview,
 				},

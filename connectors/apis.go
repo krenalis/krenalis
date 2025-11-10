@@ -70,7 +70,7 @@ type APITerms struct {
 type AsAPISource struct {
 	Targets       Targets
 	HasSettings   bool
-	Documentation ConnectorRoleDocumentation
+	Documentation RoleDocumentation
 }
 
 // AsAPIDestination represents the specific information of an API connector used
@@ -79,7 +79,7 @@ type AsAPIDestination struct {
 	Targets       Targets
 	HasSettings   bool
 	SendingMode   SendingMode // mode of event sending. 'None' for sources and non-supporting event APIs.
-	Documentation ConnectorRoleDocumentation
+	Documentation RoleDocumentation
 }
 
 // OAuth represents the OAuth 2.0 connector information.

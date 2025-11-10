@@ -31,8 +31,8 @@ func init() {
 		Code:       "rabbitmq",
 		Label:      "RabbitMQ",
 		Categories: connectors.CategoryMessageBroker,
-		Documentation: connectors.ConnectorDocumentation{
-			Source: connectors.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Summary:  "Import events and users from RabbitMQ",
 				Overview: overview,
 			},

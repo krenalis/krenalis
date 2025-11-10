@@ -17,7 +17,7 @@ type DatabaseSpec struct {
 	Categories    Categories  // categories
 	SampleQuery   string      // sample query
 	TimeLayouts   TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
-	Documentation ConnectorDocumentation
+	Documentation Documentation
 
 	newFunc reflect.Value
 	ct      reflect.Type

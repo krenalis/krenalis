@@ -13,7 +13,7 @@ type WebhookSpec struct {
 	Code          string
 	Label         string
 	Categories    Categories // categories
-	Documentation ConnectorDocumentation
+	Documentation Documentation
 
 	newFunc reflect.Value
 	ct      reflect.Type

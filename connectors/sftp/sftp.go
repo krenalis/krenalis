@@ -40,12 +40,12 @@ func init() {
 		Label:      "SFTP",
 		Categories: connectors.CategoryFileStorage,
 		AsSource: &connectors.AsFileStorageSource{
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
 		AsDestination: &connectors.AsFileStorageDestination{
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},

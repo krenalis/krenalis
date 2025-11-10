@@ -23,8 +23,8 @@ func init() {
 		Code:       "segment",
 		Label:      "Segment",
 		Categories: connectors.CategorySaaS,
-		Documentation: connectors.ConnectorDocumentation{
-			Source: connectors.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Summary:  "Import events and users from Segment",
 				Overview: overview,
 			},

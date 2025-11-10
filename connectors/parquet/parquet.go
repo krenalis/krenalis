@@ -47,12 +47,12 @@ func init() {
 		Categories: connectors.CategoryFile,
 		Extension:  "parquet",
 		AsSource: &connectors.AsSourceFile{
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
 		AsDestination: &connectors.AsDestinationFile{
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},

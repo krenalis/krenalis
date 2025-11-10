@@ -41,7 +41,7 @@ func init() {
 			Targets:     connectors.TargetEvent,
 			HasSettings: true,
 			SendingMode: connectors.Server,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Send events to Mixpanel",
 				Overview: overview,
 			},

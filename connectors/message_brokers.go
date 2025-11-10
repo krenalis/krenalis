@@ -13,7 +13,7 @@ type MessageBrokerSpec struct {
 	Code          string
 	Label         string
 	Categories    Categories
-	Documentation ConnectorDocumentation
+	Documentation Documentation
 
 	newFunc reflect.Value
 	ct      reflect.Type

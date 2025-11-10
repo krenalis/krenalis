@@ -45,7 +45,7 @@ func init() {
 		AsSource: &connectors.AsAPISource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import profiles as users from Klaviyo",
 				Overview: sourceOverview,
 			},
@@ -54,7 +54,7 @@ func init() {
 			Targets:     connectors.TargetEvent | connectors.TargetUser,
 			HasSettings: true,
 			SendingMode: connectors.Server,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as profiles and send events to Klaviyo",
 				Overview: destinationOverview,
 			},

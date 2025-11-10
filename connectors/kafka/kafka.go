@@ -35,8 +35,8 @@ func init() {
 		Code:       "kafka",
 		Label:      "Kafka",
 		Categories: connectors.CategoryMessageBroker,
-		Documentation: connectors.ConnectorDocumentation{
-			Source: connectors.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Summary:  "Import events and users from Kafka",
 				Overview: overview,
 			},

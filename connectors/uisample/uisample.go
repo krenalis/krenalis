@@ -28,7 +28,7 @@ func init() {
 		AsSource: &connectors.AsAPISource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Test the UI components",
 				Overview: overview,
 			},
@@ -36,7 +36,7 @@ func init() {
 		AsDestination: &connectors.AsAPIDestination{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Test the UI components",
 				Overview: overview,
 			},

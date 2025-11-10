@@ -40,13 +40,13 @@ type FileStorageSpec struct {
 // AsFileStorageSource represents the specific information of a file storage
 // connector used as a source.
 type AsFileStorageSource struct {
-	Documentation ConnectorRoleDocumentation
+	Documentation RoleDocumentation
 }
 
 // AsFileStorageDestination represents the specific information of a file storage
 // connector used as a destination.
 type AsFileStorageDestination struct {
-	Documentation ConnectorRoleDocumentation
+	Documentation RoleDocumentation
 }
 
 // ReflectType returns the type of the value implementing the file storage

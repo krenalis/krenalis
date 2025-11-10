@@ -48,7 +48,7 @@ func init() {
 		AsSource: &connectors.AsAPISource{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import contacts as users from Mailchimp",
 				Overview: sourceOverview,
 			},
@@ -56,7 +56,7 @@ func init() {
 		AsDestination: &connectors.AsAPIDestination{
 			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as contacts to Mailchimp",
 				Overview: destinationOverview,
 			},

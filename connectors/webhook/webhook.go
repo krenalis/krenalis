@@ -19,8 +19,8 @@ func init() {
 		Code:       "webhook",
 		Label:      "Webhook",
 		Categories: connectors.CategoryWebhook,
-		Documentation: connectors.ConnectorDocumentation{
-			Source: connectors.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Summary:  "Import events and users from your application with a webhook",
 				Overview: overview,
 			},

@@ -711,7 +711,7 @@ type Connector struct {
 	EndpointGroups         []connectors.EndpointGroup
 	Strategies             bool
 	FallbackToRequestIP    bool
-	Documentation          connectors.ConnectorDocumentation
+	Documentation          connectors.Documentation
 }
 
 // ConnectorTargets represents the targets of a connector.

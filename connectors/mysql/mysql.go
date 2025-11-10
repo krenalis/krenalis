@@ -38,11 +38,11 @@ func init() {
 		Label:       "MySQL",
 		Categories:  connectors.CategoryDatabase,
 		SampleQuery: "SELECT *\nFROM users\n",
-		Documentation: connectors.ConnectorDocumentation{
-			Source: connectors.ConnectorRoleDocumentation{
+		Documentation: connectors.Documentation{
+			Source: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
-			Destination: connectors.ConnectorRoleDocumentation{
+			Destination: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},

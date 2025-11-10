@@ -42,14 +42,14 @@ func init() {
 		Categories: connectors.CategorySaaS,
 		AsSource: &connectors.AsAPISource{
 			Targets: connectors.TargetUser,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import contacts as users from HubSpot",
 				Overview: sourceOverview,
 			},
 		},
 		AsDestination: &connectors.AsAPIDestination{
 			Targets: connectors.TargetUser,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as contacts to HubSpot",
 				Overview: destinationOverview,
 			},

@@ -15,7 +15,7 @@ type SDKSpec struct {
 	Categories          Categories // categories
 	Strategies          bool       // whether this connector supports user strategies
 	FallbackToRequestIP bool       // whether to use the request IP as the event IP if context.ip was not provided
-	Documentation       ConnectorDocumentation
+	Documentation       Documentation
 
 	newFunc reflect.Value
 	ct      reflect.Type

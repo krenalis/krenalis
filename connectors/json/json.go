@@ -32,13 +32,13 @@ func init() {
 		Categories: connectors.CategoryFile,
 		AsSource: &connectors.AsSourceFile{
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
 		AsDestination: &connectors.AsDestinationFile{
 			HasSettings: true,
-			Documentation: connectors.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
