@@ -142,6 +142,11 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
 	}()
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		origin = "*"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", origin)
 	var serveSettings = strings.HasPrefix(r.URL.Path, "/events/settings/")
 	var err error
 	if serveSettings {
@@ -231,12 +236,7 @@ func (c *Collector) importEventsAction(connection *state.Connection) (*state.Act
 
 // serveSettings is called by the ServeHTTP method to serve a settings request.
 func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		origin = "*"
-	}
 	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET")
 		w.Header().Set("Access-Control-Max-Age", "900")
 		w.Header().Set("Cache-Control", "public, max-age=900, immutable")
@@ -263,7 +263,6 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	strategy := string(*connection.Strategy)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
-	w.Header().Set("Access-Control-Allow-Origin", origin)
 	_ = json.Encode(w, map[string]any{
 		"strategy": strategy,
 		"integrations": map[string]any{
@@ -278,13 +277,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 // serveEvents is called by the ServeHTTP method to serve an events request.
 func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		origin = "*"
-	}
-
 	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "POST")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
@@ -486,7 +479,10 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Send a successful response to the client.
-	writeOK(w, origin)
+	meergoMetrics.Increment("Collector.writeOK.calls", 1)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", "21")
+	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
 
 	return nil
 }
@@ -593,13 +589,4 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	}
 	w.(*identityWriter).SetTransformer(transformer)
 	// TODO(marco): il cambio del warehouse mode come influisce sulla source action?
-}
-
-// Send a successful response to the client.
-func writeOK(w http.ResponseWriter, origin string) {
-	meergoMetrics.Increment("Collector.writeOK.calls", 1)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Length", "21")
-	w.Header().Set("Access-Control-Allow-Origin", origin)
-	_, _ = io.WriteString(w, "{\n  \"success\": true\n}")
 }
