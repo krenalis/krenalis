@@ -216,7 +216,7 @@ The Meergo Docker image is built using [the GitHub Action](https://github.com/me
         -v ./cmd/meergo/cert.pem:/bin/cert.pem \
         -v ./cmd/meergo/key.pem:/bin/key.pem \
         --net host \
-        meergocdp/meergo:v0.8.3
+        meergocdp/meergo:v0.8.5
     ```
 
 3. Visit Meergo at the address shown on the console
