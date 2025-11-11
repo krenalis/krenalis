@@ -20,7 +20,7 @@ func TestJavaScriptSDKEventURL(t *testing.T) {
 	c.Start()
 	defer c.Stop()
 
-	const expectedJavaScriptSDKURL = "https://cdn.jsdelivr.net/npm/@meergo/javascript-sdk/dist/meergo.min.js"
+	const expectedJavaScriptSDKURL = "https://cdn.meergo.com/meergo.min.js"
 	gotJavaScriptSDKURL := c.JavaScriptSDKURL()
 	if gotJavaScriptSDKURL != expectedJavaScriptSDKURL {
 		t.Fatalf("expected JavaScript SDK URL: %q, got: %q", expectedJavaScriptSDKURL, gotJavaScriptSDKURL)
