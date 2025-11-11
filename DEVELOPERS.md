@@ -118,27 +118,3 @@ The tests inside `/test/` are already configured by default when the repository 
 |----------------------------|----------------------------------------------------------------------------|--------------------------|
 | `MEERGO_TESTS_ADDR`        | The host and port on which Meergo is started                               | `127.0.0.1:2023`         |
 | `MEERGO_TESTS_PYTHON_PATH` | The path to the Python executable for running the transformation functions | It depends on the system |
-
-## Docker
-
-### Building Meergo Image
-
-The Meergo Docker image is built using [the GitHub Action](https://github.com/meergo/meergo/actions/workflows/publish-docker-image.yml).
-
-### Running Meergo within a Container
-
-**🌐 Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the Admin console.
-
-1. Cd the root of this repository
-2. Run this command, replacing the paths for `--env-file` and on the left of `:` as needed (and leaving the paths on the right, `./cmd/meergo/cert.pem`, etc... as they are):
-
-    ```bash
-    docker run -it \
-        --env-file ./cmd/meergo/.env \
-        -v ./cmd/meergo/cert.pem:/bin/cert.pem \
-        -v ./cmd/meergo/key.pem:/bin/key.pem \
-        --net host \
-        meergocdp/meergo:v0.8.5
-    ```
-
-3. Visit Meergo at the address shown on the console
