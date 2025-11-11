@@ -15,14 +15,20 @@ on:
       - "admin/**"
       - ".github/workflows/**"
 
+permissions: {}
+
 jobs:
   upload-sourcemaps-to-sentry:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup Go (needed for building assets)
         uses: actions/setup-go@v5
