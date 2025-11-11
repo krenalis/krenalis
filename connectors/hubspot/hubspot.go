@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 )
@@ -36,58 +36,58 @@ var destinationOverview string
 // needed.
 
 func init() {
-	meergo.RegisterAPI(meergo.APISpec{
+	connectors.RegisterAPI(connectors.APISpec{
 		Code:       "hubspot",
 		Label:      "HubSpot",
-		Categories: meergo.CategorySaaS,
-		AsSource: &meergo.AsAPISource{
-			Targets: meergo.TargetUser,
-			Documentation: meergo.ConnectorRoleDocumentation{
+		Categories: connectors.CategorySaaS,
+		AsSource: &connectors.AsAPISource{
+			Targets: connectors.TargetUser,
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import contacts as users from HubSpot",
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAPIDestination{
-			Targets: meergo.TargetUser,
-			Documentation: meergo.ConnectorRoleDocumentation{
+		AsDestination: &connectors.AsAPIDestination{
+			Targets: connectors.TargetUser,
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as contacts to HubSpot",
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.APITerms{
+		Terms: connectors.APITerms{
 			User:  "contact",
 			Users: "contacts",
 		},
 		IdentityIDLabel: "HubSpot ID",
-		OAuth: meergo.OAuth{
+		OAuth: connectors.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL:          "https://api.hubapi.com/oauth/v1/token",
 			SourceScopes:      []string{"oauth", "crm.objects.contacts.read", "crm.schemas.contacts.read"},
 			DestinationScopes: []string{"oauth", "crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 			Disallow127_0_0_1: true,
 		},
-		EndpointGroups: []meergo.EndpointGroup{{
+		EndpointGroups: []connectors.EndpointGroup{{
 			RequireOAuth: true,
 			// https://developers.hubspot.com/docs/developer-tooling/platform/usage-guidelines
-			RateLimit: meergo.RateLimit{RequestsPerSecond: 11, Burst: 110},
+			RateLimit: connectors.RateLimit{RequestsPerSecond: 11, Burst: 110},
 			// https://developers.hubspot.com/docs/api-reference/error-handling
-			RetryPolicy: meergo.RetryPolicy{
-				"429":                         meergo.HeaderStrategy(meergo.RateLimited, "X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
-				"477":                         meergo.RetryAfterStrategy(),
-				"500 502 503 504 521 523 524": meergo.ExponentialStrategy(meergo.NetFailure, time.Second),
+			RetryPolicy: connectors.RetryPolicy{
+				"429":                         connectors.HeaderStrategy(connectors.RateLimited, "X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
+				"477":                         connectors.RetryAfterStrategy(),
+				"500 502 503 504 521 523 524": connectors.ExponentialStrategy(connectors.NetFailure, time.Second),
 			},
 		}},
 	}, New)
 }
 
 // New returns a new connector instance for HubSpot.
-func New(env *meergo.APIEnv) (*HubSpot, error) {
+func New(env *connectors.APIEnv) (*HubSpot, error) {
 	c := HubSpot{env: env}
 	return &c, nil
 }
 
 type HubSpot struct {
-	env *meergo.APIEnv
+	env *connectors.APIEnv
 }
 
 // OAuthAccount returns the API's account associated with the OAuth
@@ -128,7 +128,7 @@ var propertyGroups = []struct {
 }
 
 // RecordSchema returns the schema of the specified target and role.
-func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
 
 	var response struct {
 		Results []struct {
@@ -160,7 +160,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role
 		if !typ.Valid() {
 			continue
 		}
-		if role == meergo.Destination && r.ModificationMetadata.ReadOnlyValue {
+		if role == connectors.Destination && r.ModificationMetadata.ReadOnlyValue {
 			continue
 		}
 		property := types.Property{
@@ -249,7 +249,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target meergo.Targets, role
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]meergo.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastChangeTime time.Time, ids []string, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 
 	path := "/crm/v3/objects/contacts/"
 
@@ -266,7 +266,7 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		} `json:"paging"`
 	}
 
-	bb := hs.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding) // It also supports Gzip.
+	bb := hs.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding) // It also supports Gzip.
 	defer bb.Close()
 
 	bb.WriteByte('{')
@@ -321,9 +321,9 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		return nil, "", io.EOF
 	}
 
-	records := make([]meergo.Record, len(response.Results))
+	records := make([]connectors.Record, len(response.Results))
 	for i, result := range response.Results {
-		records[i] = meergo.Record{
+		records[i] = connectors.Record{
 			ID:         result.ID,
 			Properties: map[string]any{},
 		}
@@ -355,7 +355,7 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 }
 
 // Upsert updates or creates records in the API for the specified target.
-func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (hs *HubSpot) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 
 	// Note that records.All() cannot be used because the HubSpot API's "upsert" method does not allow updating contacts using "hs_object_id".
 	// See https://community.hubspot.com/t5/APIs-Integrations/Create-or-update-a-batch-of-contacts-by-unique-property-values/m-p/1047925.
@@ -365,7 +365,7 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		method = "create"
 	}
 
-	bb := hs.env.HTTPClient.GetBodyBuffer(meergo.Gzip) // It also supports NoEncoding.
+	bb := hs.env.HTTPClient.GetBodyBuffer(connectors.Gzip) // It also supports NoEncoding.
 	defer bb.Close()
 
 	bb.WriteString(`{"inputs":[`)
@@ -404,7 +404,7 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/"+method, bb, nil)
 }
 
-func (hs *HubSpot) call(ctx context.Context, method, path string, bb *meergo.BodyBuffer, response any) error {
+func (hs *HubSpot) call(ctx context.Context, method, path string, bb *connectors.BodyBuffer, response any) error {
 	req, err := bb.NewRequest(ctx, method, "https://api.hubapi.com/"+path[1:])
 	if err != nil {
 		return err

@@ -11,9 +11,9 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // Record represents a record.
@@ -49,11 +49,11 @@ type Matching struct {
 //
 // If matching is not nil and a matching API user exists for a record, the
 // record's ExternalID will be set to the external ID of the matched API user.
-func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idProperty string, columnByProperty map[string]meergo.Column, omitNil bool, matching *Matching) (*Records, error) {
+func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 
-	var where meergo.Expr
+	var where warehouses.Expr
 	if query.Where != nil {
 		var err error
 		where, err = convertWhere(query.Where, columnByProperty)
@@ -62,8 +62,8 @@ func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idPro
 		}
 	}
 
-	var joins []meergo.Join
-	var orderBy []meergo.Column
+	var joins []warehouses.Join
+	var orderBy []warehouses.Column
 	var orderDesc bool
 	var matchingIndex int // index of matching column in columns slice; 0 if matching is nil
 
@@ -74,51 +74,51 @@ func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idPro
 			if !ok {
 				return nil, fmt.Errorf("property path %s does not exist", query.OrderBy)
 			}
-			orderBy = []meergo.Column{c}
+			orderBy = []warehouses.Column{c}
 			orderDesc = query.OrderDesc
 		}
 
 	} else {
 
 		// Also select the __external_id__ column.
-		externalIDColumn := meergo.Column{Name: "__external_id__", Type: types.Text(), Nullable: true}
+		externalIDColumn := warehouses.Column{Name: "__external_id__", Type: types.Text(), Nullable: true}
 		columns = append(columns, externalIDColumn)
 		// Update the WHERE condition and join the _destinations_users table.
 		inPropertyColumn, ok := columnByProperty[matching.InProperty]
 		if !ok {
 			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.InProperty)
 		}
-		matchingIndex = slices.IndexFunc(columns, func(c meergo.Column) bool {
+		matchingIndex = slices.IndexFunc(columns, func(c warehouses.Column) bool {
 			return c.Name == inPropertyColumn.Name
 		})
 		if matchingIndex == -1 {
 			return nil, fmt.Errorf("matching property %s does not exist in the query properties", matching.InProperty)
 		}
-		joins = []meergo.Join{
+		joins = []warehouses.Join{
 			{
 				Table: "_destinations_users",
-				Condition: meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
-					meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, matching.Action),
-					meergo.NewBaseExpr(inPropertyColumn, meergo.OpIs, meergo.Column{Name: "__out_matching_value__", Type: types.Text()}),
+				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, matching.Action),
+					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "__out_matching_value__", Type: types.Text()}),
 				}),
 			},
 		}
 		switch matching.ExportMode {
 		case state.UpdateOnly:
 			// Perform an INNER JOIN to return only users with a matching destination user.
-			joins[0].Type = meergo.InnerJoin
+			joins[0].Type = warehouses.InnerJoin
 		case state.CreateOnly:
 			// Include only users without a corresponding match.
-			where = andExpressions(where, meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIsNull))
+			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsNull))
 			fallthrough
 		case state.CreateOrUpdate:
 			// Perform a LEFT JOIN to also return users without a matching destination user.
-			joins[0].Type = meergo.LeftJoin
+			joins[0].Type = warehouses.LeftJoin
 			// Include only users with a value for the input matching property.
-			where = andExpressions(where, meergo.NewBaseExpr(inPropertyColumn, meergo.OpIsNotNull))
+			where = andExpressions(where, warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIsNotNull))
 		}
 		// Sort the results by the input matching property, user ID, and external ID.
-		orderBy = []meergo.Column{
+		orderBy = []warehouses.Column{
 			inPropertyColumn,
 			columnByProperty[idProperty],
 			externalIDColumn,
@@ -130,7 +130,7 @@ func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idPro
 	// Also select the property to be used as the record's ID.
 	columns = append(columns, columnByProperty[idProperty])
 
-	rows, _, err := warehouse.Query(ctx, meergo.RowQuery{
+	rows, _, err := warehouse.Query(ctx, warehouses.RowQuery{
 		Columns:   columns,
 		Table:     query.table,
 		Joins:     joins,
@@ -157,22 +157,22 @@ func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idPro
 
 // andExpressions returns an expression resulting from the AND of expr with
 // base.
-func andExpressions(expr meergo.Expr, base *meergo.BaseExpr) meergo.Expr {
+func andExpressions(expr warehouses.Expr, base *warehouses.BaseExpr) warehouses.Expr {
 	if expr == nil {
 		return base
 	}
-	if e, ok := expr.(*meergo.MultiExpr); ok && e.Operator == meergo.OpAnd {
+	if e, ok := expr.(*warehouses.MultiExpr); ok && e.Operator == warehouses.OpAnd {
 		e.Operands = append(e.Operands, base)
 		return e
 	}
-	return meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{expr, base})
+	return warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, base})
 }
 
 // Records represents records read from the data warehouse.
 type Records struct {
-	columns       []meergo.Column
+	columns       []warehouses.Column
 	unflat        unflatRowFunc
-	rows          meergo.Rows
+	rows          warehouses.Rows
 	matching      *Matching
 	matchingIndex int
 	last          bool

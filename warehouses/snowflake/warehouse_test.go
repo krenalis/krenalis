@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -76,13 +76,13 @@ func Test_Merge(t *testing.T) {
 		{types.Map(types.Text()), map[string]any{"boo": "hello", "foo": "world"}},
 	}
 
-	table := meergo.Table{
+	table := warehouses.Table{
 		Name:    "test_meergo_merge",
-		Columns: make([]meergo.Column, len(cols)),
+		Columns: make([]warehouses.Column, len(cols)),
 		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
-		table.Columns[i] = meergo.Column{
+		table.Columns[i] = warehouses.Column{
 			Name:     fmt.Sprintf("c%d", i),
 			Type:     c.MeergoType,
 			Nullable: true,
@@ -99,7 +99,7 @@ func Test_Merge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 	}
-	wh, err := meergo.RegisteredWarehouseDriver("Snowflake").New(&meergo.WarehouseConfig{
+	wh, err := warehouses.Registered("Snowflake").New(&warehouses.Config{
 		Settings: settings,
 	})
 	if err != nil {
@@ -146,7 +146,7 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Execute the query.
-	query := meergo.RowQuery{
+	query := warehouses.RowQuery{
 		Table:   table.Name,
 		Columns: table.Columns,
 	}

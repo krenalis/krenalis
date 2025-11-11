@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 func Test_Flatter(t *testing.T) {
@@ -56,7 +56,7 @@ func Test_Flatter(t *testing.T) {
 		},
 	})
 
-	columnByProperty := map[string]meergo.Column{
+	columnByProperty := map[string]warehouses.Column{
 		"name": {
 			Name: "name",
 			Type: types.Text(),

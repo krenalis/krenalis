@@ -17,7 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -30,20 +30,20 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterFile(meergo.FileSpec{
+	connectors.RegisterFile(connectors.FileSpec{
 		Code:       "csv",
 		Label:      "CSV",
-		Categories: meergo.CategoryFile,
+		Categories: connectors.CategoryFile,
 		Extension:  "csv",
-		AsSource: &meergo.AsSourceFile{
+		AsSource: &connectors.AsSourceFile{
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsDestinationFile{
+		AsDestination: &connectors.AsDestinationFile{
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Overview: destinationOverview,
 			},
 		},
@@ -51,7 +51,7 @@ func init() {
 }
 
 // New returns a new connector instance for CSV.
-func New(env *meergo.FileEnv) (*CSV, error) {
+func New(env *connectors.FileEnv) (*CSV, error) {
 	c := CSV{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -63,7 +63,7 @@ func New(env *meergo.FileEnv) (*CSV, error) {
 }
 
 type CSV struct {
-	env      *meergo.FileEnv
+	env      *connectors.FileEnv
 	settings *innerSettings
 }
 
@@ -82,7 +82,7 @@ func (c *CSV) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
+func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records connectors.RecordWriter) error {
 
 	// Create a CSV reader.
 	v := csv.NewReader(r)
@@ -152,7 +152,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meerg
 }
 
 // ServeUI serves the connector's user interface.
-func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -166,16 +166,16 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 	case "save":
 		return nil, c.saveSettings(ctx, settings, role)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "Separator", Label: "Separator", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&meergo.Input{Name: "NumberOfColumns", Label: "Number of columns", Placeholder: "", HelpText: "When 0, it is determined from the first record.", Type: "number", OnlyIntegerPart: true, Role: meergo.Source},
-			&meergo.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space in fields", Role: meergo.Source},
-			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: meergo.Destination},
-			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "Separator", Label: "Separator", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
+			&connectors.Input{Name: "NumberOfColumns", Label: "Number of columns", Placeholder: "", HelpText: "When 0, it is determined from the first record.", Type: "number", OnlyIntegerPart: true, Role: connectors.Source},
+			&connectors.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space in fields", Role: connectors.Source},
+			&connectors.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: connectors.Destination},
+			&connectors.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: connectors.Source},
 		},
 		Settings: settings,
 	}
@@ -184,7 +184,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, ro
 }
 
 // Write writes to w the records read from records.
-func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.RecordReader) error {
+func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records connectors.RecordReader) error {
 
 	v := csv.NewWriter(w)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Separator)
@@ -226,7 +226,7 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.R
 }
 
 // saveSettings saves the settings.
-func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role meergo.Role) error {
+func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role connectors.Role) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
@@ -234,15 +234,15 @@ func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role meergo
 	}
 	// Validate Separator.
 	if utf8.RuneCountInString(s.Separator) != 1 {
-		return meergo.NewInvalidSettingsError("separator must be a single character")
+		return connectors.NewInvalidSettingsError("separator must be a single character")
 	}
 	if c := s.Separator; c == "\n" || c == "\r" || c == "\uFFFD" {
-		return meergo.NewInvalidSettingsError("separator cannot be \\r, \\n, or the Unicode replacement character")
+		return connectors.NewInvalidSettingsError("separator cannot be \\r, \\n, or the Unicode replacement character")
 	}
-	if role == meergo.Source {
+	if role == connectors.Source {
 		// Validate NumberOfColumns.
 		if f := s.NumberOfColumns; f < 0 || f > 1000 {
-			return meergo.NewInvalidSettingsError("number of columns, if provided, must be in range [0,1000]")
+			return connectors.NewInvalidSettingsError("number of columns, if provided, must be in range [0,1000]")
 		}
 	} else {
 		s.NumberOfColumns = 0

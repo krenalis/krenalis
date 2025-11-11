@@ -253,12 +253,12 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	return api.core.ValidateExpression(body.Expression, body.Properties, body.Type)
 }
 
-// WarehouseTypes returns the supported data warehouse types.
-func (api api) WarehouseTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
+// WarehouseDrivers returns the supported data warehouse drivers.
+func (api api) WarehouseDrivers(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.authenticateRequest(r); err != nil {
 		return nil, err
 	}
-	return map[string]any{"types": api.core.WarehouseTypes()}, nil
+	return map[string]any{"drivers": api.core.WarehouseDrivers()}, nil
 }
 
 func (api api) code(r *http.Request) string {

@@ -83,3 +83,7 @@ WHERE connector = 'google-analytics';
 ---
 
 UPDATE connections SET connector = 'webhook' WHERE connector = 'meergo-api';
+
+---
+
+ALTER TABLE workspaces RENAME COLUMN warehouse_type TO warehouse_name;

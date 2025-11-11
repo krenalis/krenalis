@@ -18,7 +18,7 @@ CREATE TABLE workspaces (
     id integer NOT NULL,
     organization integer NOT NULL REFERENCES organizations ON DELETE CASCADE,
     name varchar(100) NOT NULL,
-    warehouse_type varchar NOT NULL,
+    warehouse_name varchar NOT NULL,
     warehouse_mode warehouse_mode NOT NULL,
     warehouse_settings varchar(65535) NOT NULL,
     warehouse_mcp_settings varchar(65535) NOT NULL DEFAULT 'null'::jsonb,

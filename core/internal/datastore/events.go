@@ -5,15 +5,15 @@
 package datastore
 
 import (
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
-// EventColumnByPath returns the meergo.Column corresponding to the property of
-// the events schema with the specified path.
-// propertyPath must always refer to an existing property in the events schema.
-func EventColumnByPath(propertyPath string) meergo.Column {
+// EventColumnByPath returns the warehouses.Column corresponding to the property
+// of the events schema with the specified path.
+// propertyPath must always refer to an existing property in the event schema.
+func EventColumnByPath(propertyPath string) warehouses.Column {
 	return eventColumnByProperty[propertyPath]
 }
 
@@ -93,21 +93,21 @@ var eventColumnNameFromPropertyPath = map[string]string{
 }
 
 // eventColumnByProperty maps each event property to the corresponding column.
-var eventColumnByProperty map[string]meergo.Column
+var eventColumnByProperty map[string]warehouses.Column
 
 // eventsColumnsForMerge holds the events columns for the merge of events.
 // It does not contain the "user" column, which is not written during the merge.
-var eventsColumnsForMerge []meergo.Column
+var eventsColumnsForMerge []warehouses.Column
 
 // eventsMergeTable is the table used to merge the events.
-var eventsMergeTable meergo.Table
+var eventsMergeTable warehouses.Table
 
 // init initializes eventColumnByProperty, eventsColumnsForMerge, and
 // eventsMergeTable.
 func init() {
 
-	eventColumnByProperty = make(map[string]meergo.Column, len(eventColumnNameFromPropertyPath))
-	eventsColumnsForMerge = make([]meergo.Column, len(eventColumnNameFromPropertyPath)-1)
+	eventColumnByProperty = make(map[string]warehouses.Column, len(eventColumnNameFromPropertyPath))
+	eventsColumnsForMerge = make([]warehouses.Column, len(eventColumnNameFromPropertyPath)-1)
 
 	i := 0
 	for path, p := range schemas.Event.Properties().WalkAll() {
@@ -115,7 +115,7 @@ func init() {
 			continue
 		}
 		name := eventColumnNameFromPropertyPath[path]
-		c := meergo.Column{
+		c := warehouses.Column{
 			Name: name,
 			Type: p.Type,
 			// In the database, nullable properties are those marked as read
@@ -132,7 +132,7 @@ func init() {
 		}
 	}
 
-	eventsMergeTable = meergo.Table{
+	eventsMergeTable = warehouses.Table{
 		Name:    "events",
 		Columns: eventsColumnsForMerge,
 		Keys:    []string{"message_id"},

@@ -10,14 +10,14 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
 // merge performs a table merge operation.
 //
 // It is necessary for the table keys to match the primary keys of the table in
 // order to make this method operate correctly.
-func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any) error {
+func merge(ctx context.Context, conn *sql.Conn, table connectors.Table, rows [][]any) error {
 
 	name, err := quoteTable(table.Name)
 	if err != nil {

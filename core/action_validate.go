@@ -14,7 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/internal/transformers"
@@ -239,14 +239,14 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		}
 		switch v.connection.role {
 		case state.Source:
-			_, err := connectors.ReplacePlaceholders(action.Path, func(_ string) (string, bool) {
+			_, err := connections.ReplacePlaceholders(action.Path, func(_ string) (string, bool) {
 				return "", false
 			})
 			if err != nil {
 				return errors.BadRequest("placeholders syntax is not supported by source actions")
 			}
 		case state.Destination:
-			_, err := connectors.ReplacePlaceholders(action.Path, func(name string) (string, bool) {
+			_, err := connections.ReplacePlaceholders(action.Path, func(name string) (string, bool) {
 				name = strings.ToLower(name)
 				return "", name == "today" || name == "now" || name == "unix"
 			})
@@ -262,7 +262,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		}
 	}
 	// Validate the sheet.
-	if action.Sheet != "" && !connectors.IsValidSheetName(action.Sheet) {
+	if action.Sheet != "" && !connections.IsValidSheetName(action.Sheet) {
 		return errors.BadRequest("sheet name is not valid")
 	}
 	// Validate the export mode.

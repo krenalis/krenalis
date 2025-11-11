@@ -4,7 +4,8 @@
 
 package snowflake
 
-// Keep this file synchronized between the warehouse driver and the connector.
+// Keep this file in sync between the warehouse driver and the connector,
+// except for the "warehouses" and "connectors" import lines.
 
 import (
 	"bytes"
@@ -18,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
@@ -27,7 +28,7 @@ import (
 )
 
 // merge performs a table merge operation.
-func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any, deleted []any) error {
+func merge(ctx context.Context, conn *sql.Conn, table connectors.Table, rows [][]any, deleted []any) error {
 
 	quotedColumn := make(map[string]string, len(table.Columns))
 	for _, column := range table.Columns {
@@ -125,7 +126,7 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 		for i := 0; i < len(deleted); i += n {
 			rows = append(rows, deleted[i:i+n])
 		}
-		keys := make([]meergo.Column, len(table.Keys))
+		keys := make([]connectors.Column, len(table.Keys))
 		for i, key := range table.Keys {
 			for _, c := range table.Columns {
 				if c.Name == key {
@@ -206,7 +207,7 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 // serializeRowsToCSV serializes rows as CSV, using columns as header, and
 // returns it as an io.Reader. It also appends a boolean column called $PURGE
 // with the value of the 'deleted' argument as value for each row.
-func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io.Reader, error) {
+func serializeRowsToCSV(columns []connectors.Column, rows [][]any, deleted bool) (io.Reader, error) {
 	var err error
 	var b bytes.Buffer
 	for i, c := range columns {

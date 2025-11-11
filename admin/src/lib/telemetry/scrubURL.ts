@@ -138,7 +138,7 @@ const REQUEST_PATTERNS = [
 	'/warehouse/mode',
 	'/warehouse/repair',
 	'/warehouse/test',
-	'/warehouse/types',
+	'/warehouse/drivers',
 	'/workspaces',
 	'/workspaces/current',
 	'/workspaces/test',

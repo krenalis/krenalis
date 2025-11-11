@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/internal/collector"
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/metrics"
@@ -27,6 +27,7 @@ import (
 	"github.com/meergo/meergo/core/internal/util"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jxskiss/base62"
 )
@@ -393,7 +394,7 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 		return "", errors.BadRequest("connector %s does not support authorization", connector)
 	}
 
-	auth, err := this.core.connectors.GrantAuthorization(ctx, c, code, redirectionURI)
+	auth, err := this.core.connections.GrantAuthorization(ctx, c, code, redirectionURI)
 	if err != nil {
 		return "", err
 	}
@@ -680,18 +681,18 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		if c.OAuth != nil {
 			clientSecret = c.OAuth.ClientSecret
 		}
-		conf := &connectors.ConnectorConfig{
+		conf := &connections.ConnectorConfig{
 			Role: n.Role,
 		}
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
 		conf.OAuth.AccessToken = n.Account.AccessToken
-		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, c, conf, settings)
+		n.Settings, err = this.core.connections.UpdatedSettings(ctx, c, conf, settings)
 		if err != nil {
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
 			return 0, err
@@ -1297,7 +1298,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	if authToken != "" {
 		clientSecret = c.OAuth.ClientSecret
 	}
-	conf := &connectors.ConnectorConfig{
+	conf := &connections.ConnectorConfig{
 		Role: state.Role(role),
 	}
 	conf.OAuth.Account = a.Code
@@ -1306,15 +1307,15 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	ui, err := this.core.connectors.ServeConnectorUI(ctx, c, conf, event, settings)
+	ui, err := this.core.connections.ServeConnectorUI(ctx, c, conf, event, settings)
 	if err != nil {
-		if err == meergo.ErrUIEventNotExist {
+		if err == connectors.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Code)
 		} else {
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
 		}
@@ -1355,21 +1356,21 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings []byte) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
 	if err != nil {
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
 	}
 	if mcpSettings != nil {
 		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
-		if this.workspace.Warehouse.Type == "Snowflake" {
+		if this.workspace.Warehouse.Name == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
-		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return err
@@ -1377,9 +1378,9 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Type, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Name, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*meergo.WarehouseSettingsNotReadOnly); ok {
+			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
 			if err, ok := err.(*datastore.UnavailableError); ok {
@@ -1582,9 +1583,9 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 //
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
+//   - InvalidWarehouseSettings, if the settings are not valid.
 //   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
 //     read-only user on the data warehouse.
-//   - InvalidWarehouseSettings, if the settings are not valid.
 func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings, mcpSettings []byte, cancelIncompatibleOperations bool) error {
 	this.core.mustBeOpen()
 
@@ -1596,9 +1597,9 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	ws := this.workspace
 
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
 	if err != nil {
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
@@ -1606,13 +1607,13 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	if mcpSettings != nil {
 		// TODO(Gianluca): for https://github.com/meergo/meergo/issues/1833.
-		if this.workspace.Warehouse.Type == "Snowflake" {
+		if this.workspace.Warehouse.Name == "Snowflake" {
 			return errors.BadRequest("MCP feature data is currently not supported for workspaces connected to a Snowflake warehouse")
 		}
 		var err error
-		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, mcpSettings)
+		mcpSettings, err = this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return err
@@ -1620,9 +1621,9 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Type, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Name, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*meergo.WarehouseSettingsNotReadOnly); ok {
+			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
 			if err, ok := err.(*datastore.UnavailableError); ok {
@@ -1665,7 +1666,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		}
 		if result.RowsAffected() == 0 {
 			var warehouseName string
-			err = tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
+			err = tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -1852,8 +1853,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	return users, schema, total, nil
 }
 
-// Warehouse returns type, settings and MCP settings of the data warehouse for
-// the workspace.
+// Warehouse returns driver name, settings and MCP settings of the data
+// warehouse for the workspace.
 func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
@@ -1864,7 +1865,7 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	} else {
 		mcpSettings = json.Value("null")
 	}
-	return ws.Warehouse.Type, settings, mcpSettings
+	return ws.Warehouse.Name, settings, mcpSettings
 }
 
 // userIdentities returns the user identities matching the provided where

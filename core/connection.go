@@ -21,9 +21,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/datastore"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/internal/schemas"
@@ -133,10 +133,10 @@ func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, 
 	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	var replacer connectors.PlaceholderReplacer
+	var replacer connections.PlaceholderReplacer
 	switch c.Role {
 	case state.Source:
-		_, err := connectors.ReplacePlaceholders(path, func(_ string) (string, bool) {
+		_, err := connections.ReplacePlaceholders(path, func(_ string) (string, bool) {
 			return "", false
 		})
 		if err != nil {
@@ -148,11 +148,11 @@ func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, 
 	path, err := this.storage().AbsolutePath(ctx, path, replacer)
 	if err != nil {
 		switch err.(type) {
-		case *meergo.InvalidPathError:
+		case *connectors.InvalidPathError:
 			err = errors.Unprocessable(InvalidPath, "%s", err)
-		case *connectors.PlaceholderError:
+		case *connections.PlaceholderError:
 			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
-		case *connectors.UnavailableError:
+		case *connections.UnavailableError:
 			err = errors.Unavailable("%w", err)
 		}
 		return "", err
@@ -192,7 +192,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			// Retrieve the API's source or target schema, depending on the connection's role.
 			schema, err := this.api().Schema(ctx, state.TargetUser, "")
 			if err != nil {
-				if _, ok := err.(*connectors.UnavailableError); ok {
+				if _, ok := err.(*connections.UnavailableError); ok {
 					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 				}
 				return nil, err
@@ -208,7 +208,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				// matching properties.
 				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetUser, "")
 				if err != nil {
-					if _, ok := err.(*connectors.UnavailableError); ok {
+					if _, ok := err.(*connections.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 					}
 					return nil, err
@@ -224,7 +224,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			var err error
 			schema, err := this.api().Schema(ctx, state.TargetGroup, "")
 			if err != nil {
-				if _, ok := err.(*connectors.UnavailableError); ok {
+				if _, ok := err.(*connections.UnavailableError); ok {
 					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 				}
 				return nil, err
@@ -236,7 +236,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				// Destination/API/Group.
 				sourceSchema, err := this.api().SchemaAsRole(ctx, state.Source, state.TargetGroup, "")
 				if err != nil {
-					if _, ok := err.(*connectors.UnavailableError); ok {
+					if _, ok := err.(*connections.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 					}
 					return nil, err
@@ -485,7 +485,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			if c.Role == state.Destination {
 				eventTypes, err := this.api().EventTypes(ctx)
 				if err != nil {
-					if _, ok := err.(*connectors.UnavailableError); ok {
+					if _, ok := err.(*connections.UnavailableError); ok {
 						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 					}
 					return nil, err
@@ -533,10 +533,10 @@ func (this *Connection) APIEventSchema(ctx context.Context, eventType string) (t
 	}
 	schema, err := this.api().SchemaAsRole(ctx, state.Destination, state.TargetEvent, eventType)
 	if err != nil {
-		if _, ok := err.(*connectors.UnavailableError); ok {
+		if _, ok := err.(*connections.UnavailableError); ok {
 			err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 		}
-		if err == meergo.ErrEventTypeNotExist {
+		if err == connectors.ErrEventTypeNotExist {
 			err = errors.NotFound("event type %q does not exist", eventType)
 		}
 		return types.Type{}, err
@@ -613,7 +613,7 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 	records, err := this.api().Users(ctx, schema, where, lastChangeTime)
 	if err != nil {
 		switch err.(type) {
-		case *connectors.UnavailableError:
+		case *connections.UnavailableError:
 			err = errors.Unavailable("%s", err)
 		case *schemas.Error:
 			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the API's source schema: %w", err)
@@ -622,7 +622,7 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 	}
 	defer records.Close()
 
-	var last connectors.Record
+	var last connections.Record
 	users := make([]any, 0, 100)
 
 	for user := range records.All(ctx) {
@@ -638,7 +638,7 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 		}
 	}
 	if err = records.Err(); err != nil {
-		if _, ok := err.(*connectors.UnavailableError); ok {
+		if _, ok := err.(*connections.UnavailableError); ok {
 			err = errors.Unavailable("%s", err)
 		}
 		return nil, "", err
@@ -829,15 +829,15 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 
 	// Format settings.
 	if format != nil && action.FormatSettings != nil {
-		conf := &connectors.ConnectorConfig{
+		conf := &connections.ConnectorConfig{
 			Role: this.connection.Role,
 		}
-		n.FormatSettings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.FormatSettings)
+		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, action.FormatSettings)
 		if err != nil {
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
 			return 0, err
@@ -1158,9 +1158,9 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	rows, schema, issues, err := database.Query(ctx, query, replacer)
 	if err != nil {
 		switch err.(type) {
-		case *connectors.PlaceholderError:
+		case *connections.PlaceholderError:
 			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
-		case *connectors.UnavailableError:
+		case *connections.UnavailableError:
 			err = errors.Unavailable("%s", err)
 		}
 		return nil, types.Type{}, nil, err
@@ -1178,7 +1178,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 		}
 		row, err := rows.Scan()
 		if err != nil {
-			if _, ok := err.(*connectors.UnavailableError); ok {
+			if _, ok := err.(*connections.UnavailableError); ok {
 				err = errors.Unavailable("%s", err)
 			}
 			return nil, types.Type{}, nil, err
@@ -1187,7 +1187,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	}
 	err = rows.Err()
 	if err != nil {
-		if _, ok := err.(*connectors.UnavailableError); ok {
+		if _, ok := err.(*connections.UnavailableError); ok {
 			err = errors.Unavailable("%s", err)
 		}
 		return nil, types.Type{}, nil, err
@@ -1278,7 +1278,7 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 		if sheet == "" {
 			return nil, types.Type{}, nil, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
 		}
-		if !connectors.IsValidSheetName(sheet) {
+		if !connections.IsValidSheetName(sheet) {
 			return nil, types.Type{}, nil, errors.BadRequest("sheet is not valid")
 		}
 	} else {
@@ -1307,15 +1307,15 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	columns, records, issues, err := this.storage().Read(ctx, formatConnector, path, sheet, settings, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
-		case connectors.ErrNoColumnsFound:
+		case connections.ErrNoColumnsFound:
 			err = errors.Unprocessable(NoColumnsFound, "file does not have columns")
-		case meergo.ErrSheetNotExist:
+		case connectors.ErrSheetNotExist:
 			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *connections.UnavailableError:
 				err = errors.Unavailable("cannot read records: %w", err)
 			}
 		}
@@ -1475,9 +1475,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
-	ev := meergo.Event{
-		Received: connectors.ReceivedEvent(properties),
-		Type: meergo.EventTypeInfo{
+	ev := connectors.Event{
+		Received: connections.ReceivedEvent(properties),
+		Type: connectors.EventTypeInfo{
 			ID:     typ,
 			Schema: outSchema,
 		},
@@ -1583,15 +1583,15 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	// Create a preview before sending the event.
 	req, err := this.api().PreviewSendEvent(ctx, ev)
 	if err != nil {
-		if err == meergo.ErrEventTypeNotExist {
+		if err == connectors.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
 		} else {
 			switch err.(type) {
 			case *schemas.Error:
 				err = errors.Unprocessable(SchemaNotAligned, "output schema is not compatible with the event type's schema: %w", err)
-			case *connectors.InvalidEventError:
+			case *connections.InvalidEventError:
 				err = errors.Unprocessable(InvalidEvent, "event is invalid: %w", err)
-			case *connectors.UnavailableError:
+			case *connections.UnavailableError:
 				err = errors.Unavailable("connector returned an error preparing the preview: %w", err)
 			}
 		}
@@ -1718,15 +1718,15 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 	if c.Role == state.Destination && !connector.HasDestinationSettings {
 		return nil, errors.BadRequest("connector %s does not have destination settings", connector.Code)
 	}
-	ui, err := this.core.connectors.ServeConnectionUI(ctx, c, event, settings)
+	ui, err := this.core.connections.ServeConnectionUI(ctx, c, event, settings)
 	if err != nil {
-		if err == meergo.ErrUIEventNotExist {
+		if err == connectors.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Code)
 		} else {
 			switch err.(type) {
-			case *meergo.InvalidSettingsError:
+			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
+			case *connections.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
 		}
@@ -1790,9 +1790,9 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	sheets, err := this.storage().Sheets(ctx, formatConnector, path, settings, state.Compression(compression))
 	if err != nil {
 		switch err.(type) {
-		case *meergo.InvalidSettingsError:
+		case *connectors.InvalidSettingsError:
 			err = errors.Unprocessable(InvalidSettings, "%s", err)
-		case *connectors.UnavailableError:
+		case *connections.UnavailableError:
 			err = errors.Unavailable("%w", err)
 		}
 		return nil, err
@@ -1828,7 +1828,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	schema, issues, err := database.Schema(ctx, table, state.Destination)
 	if err != nil {
 		switch err.(type) {
-		case *connectors.UnavailableError:
+		case *connections.UnavailableError:
 			err = errors.Unavailable("an error occurred fetching the columns: %w", err)
 		}
 	}
@@ -1983,8 +1983,8 @@ func (this *Connection) EventWriteKeys() ([]string, error) {
 }
 
 // api returns the API of the connection.
-func (this *Connection) api() *connectors.API {
-	return this.core.connectors.API(this.connection)
+func (this *Connection) api() *connections.API {
+	return this.core.connections.API(this.connection)
 }
 
 // appSchemas returns the user or group schemas, based on target, for an API
@@ -2007,7 +2007,7 @@ func (this *Connection) appSchemas(ctx context.Context, target state.Target) (sr
 	api := this.api()
 	src, err = api.SchemaAsRole(ctx, state.Source, target, "")
 	if err != nil {
-		if _, ok := err.(*connectors.UnavailableError); ok {
+		if _, ok := err.(*connections.UnavailableError); ok {
 			err = errors.Unavailable("an error occurred fetching the source schema: %w", err)
 		}
 		return
@@ -2015,7 +2015,7 @@ func (this *Connection) appSchemas(ctx context.Context, target state.Target) (sr
 	if c.Role == state.Destination {
 		dst, err = api.SchemaAsRole(ctx, state.Destination, target, "")
 		if err != nil {
-			if _, ok := err.(*connectors.UnavailableError); ok {
+			if _, ok := err.(*connections.UnavailableError); ok {
 				err = errors.Unavailable("an error occurred fetching the destination schema: %w", err)
 			}
 			return
@@ -2027,13 +2027,13 @@ func (this *Connection) appSchemas(ctx context.Context, target state.Target) (sr
 // database returns the database of the connection.
 // The caller must call the database's Close method when the database is no
 // longer needed.
-func (this *Connection) database() *connectors.Database {
-	return this.core.connectors.Database(this.connection)
+func (this *Connection) database() *connections.Database {
+	return this.core.connections.Database(this.connection)
 }
 
 // storage returns the storage of the connection.
-func (this *Connection) storage() *connectors.FileStorage {
-	return this.core.connectors.FileStorage(this.connection)
+func (this *Connection) storage() *connections.FileStorage {
+	return this.core.connections.FileStorage(this.connection)
 }
 
 // validateTargetAndEventType validates a target and an event type and, if the
@@ -2081,9 +2081,9 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	if eventType != "" {
 		schema, err := this.api().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
-			if err == meergo.ErrEventTypeNotExist {
+			if err == connectors.ErrEventTypeNotExist {
 				err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
-			} else if _, ok := err.(*connectors.UnavailableError); ok {
+			} else if _, ok := err.(*connections.UnavailableError); ok {
 				err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 			}
 			return types.Type{}, err

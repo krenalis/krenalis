@@ -12,11 +12,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/internal/schemas"
 	"github.com/meergo/meergo/core/internal/state"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 var ErrActionNotExist = errors.New("action does not exist")
@@ -54,7 +54,7 @@ type BatchIdentityWriter struct {
 	execution  int
 	ack        IdentityWriterAckFunc
 	flatter    *flatter
-	columns    []meergo.Column
+	columns    []warehouses.Column
 	purge      bool
 	skipPurge  bool
 
@@ -112,14 +112,14 @@ func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack 
 	}
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
-	iw.columns = make([]meergo.Column, 7, 7+len(action.Transformation.OutPaths))
-	iw.columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
-	iw.columns[1] = meergo.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	iw.columns[2] = meergo.Column{Name: "__identity_id__", Type: types.Text()}
-	iw.columns[3] = meergo.Column{Name: "__connection__", Type: types.Int(32)}
-	iw.columns[4] = meergo.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
-	iw.columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	iw.columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+	iw.columns = make([]warehouses.Column, 7, 7+len(action.Transformation.OutPaths))
+	iw.columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
+	iw.columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
+	iw.columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
+	iw.columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
+	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	iw.columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	iw.columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
 	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.userColumnByProperty())
 
 	return &iw, nil
@@ -192,9 +192,9 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 		if iw.skipPurge {
 			return ErrPurgeSkipped
 		}
-		where := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
-			meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, iw.action),
-			meergo.NewBaseExpr(meergo.Column{Name: "__execution__", Type: types.Int(32)}, meergo.OpIsNot, iw.execution),
+		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+			warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, iw.action),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "__execution__", Type: types.Int(32)}, warehouses.OpIsNot, iw.execution),
 		})
 		err := iw.store.warehouse().Delete(ctx, "_user_identities", where)
 		if err != nil {

@@ -14,9 +14,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/internal/connectors"
-	"github.com/meergo/meergo/core/internal/connectors/httpclient"
+	"github.com/meergo/meergo/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
+	"github.com/meergo/meergo/core/internal/connections/httpclient"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/types"
@@ -48,8 +48,8 @@ type AcksFunc func(acks []Ack, err error)
 
 type API interface {
 
-	// Connection returns the ID of the connection.
-	Connection() int
+	// ID returns the ID of the connection.
+	ID() int
 
 	// Connector returns the name of the connector.
 	Connector() string
@@ -63,7 +63,7 @@ type API interface {
 	WaitTime(pattern string) (time.Duration, error)
 
 	// SendEvents is a function that sends events to apps.
-	SendEvents(ctx context.Context, events meergo.Events) error
+	SendEvents(ctx context.Context, events connectors.Events) error
 }
 
 // maxQueueDelay is the maximum time an event can stay in the queue before being
@@ -72,13 +72,13 @@ const maxQueueDelay = 200 * time.Millisecond
 
 // Event represents a message to be delivered to an API.
 type Event struct {
-	meergo.Event           // original event.
-	CreatedAt    time.Time // time at which the event was created.
-	EnqueuedAt   time.Time // time at which the event was enqueued.
-	action       int       // action ID.
-	user         *user     // associated user; nil if the event was discarded.
-	sequence     int       // sequence number; access is synchronized via Sender.mu.
-	iterator     *iterator // iterator that consumed the event; nil if it hasn't been consumed.
+	connectors.Event           // original event.
+	CreatedAt        time.Time // time at which the event was created.
+	EnqueuedAt       time.Time // time at which the event was enqueued.
+	action           int       // action ID.
+	user             *user     // associated user; nil if the event was discarded.
+	sequence         int       // sequence number; access is synchronized via Sender.mu.
+	iterator         *iterator // iterator that consumed the event; nil if it hasn't been consumed.
 }
 
 // user represents the state of a user related to event processing.
@@ -110,17 +110,17 @@ type Sender struct {
 	}
 
 	mu                 sync.Mutex
-	waitTime           func(pattern string) (time.Duration, error)           // function that returns an estimate of how long to wait before calling sendEvents.
-	sendEvents         func(ctx context.Context, events meergo.Events) error // function that sends the events to the API.
-	events             []*Event                                              // events in the queue; protected by mu.
-	users              map[string]*user                                      // users by anonymous id; protected by mu.
-	releasableUsers    map[*user]struct{}                                    // users that have been iterated and are now ready to be released.
-	iterator           *iterator                                             // current iterator; protected by mu.
-	available          int                                                   // number of available (non-read) records; protected by mu.
-	index              int                                                   // index of the oldest available event; 0 if no event is available; protected by mu.
-	timer              *time.Timer                                           // timer to trigger an iterator every maxQueueDelay; protected by mu.
-	minBatchSize       int                                                   // minimum number of events in the queue required to trigger a new iteration.
-	rateLimiterPattern string                                                // pattern of the rate limiter that defines how requests are throttled over time.
+	waitTime           func(pattern string) (time.Duration, error)               // function that returns an estimate of how long to wait before calling sendEvents.
+	sendEvents         func(ctx context.Context, events connectors.Events) error // function that sends the events to the API.
+	events             []*Event                                                  // events in the queue; protected by mu.
+	users              map[string]*user                                          // users by anonymous id; protected by mu.
+	releasableUsers    map[*user]struct{}                                        // users that have been iterated and are now ready to be released.
+	iterator           *iterator                                                 // current iterator; protected by mu.
+	available          int                                                       // number of available (non-read) records; protected by mu.
+	index              int                                                       // index of the oldest available event; 0 if no event is available; protected by mu.
+	timer              *time.Timer                                               // timer to trigger an iterator every maxQueueDelay; protected by mu.
+	minBatchSize       int                                                       // minimum number of events in the queue required to trigger a new iteration.
+	rateLimiterPattern string                                                    // pattern of the rate limiter that defines how requests are throttled over time.
 
 	close struct {
 		closed    atomic.Bool        // indicates if the writer has been closed.
@@ -187,7 +187,7 @@ func New(api API, acks AcksFunc) *Sender {
 		}
 	}()
 	// Set the metrics.
-	connection := strconv.Itoa(api.Connection())
+	connection := strconv.Itoa(api.ID())
 	s.metrics.queueAvailable = queueAvailableMetric.Register(func() float64 {
 		s.mu.Lock()
 		a := s.available
@@ -280,9 +280,9 @@ func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event ev
 	u.nextSeq++
 	s.mu.Unlock()
 	ev := &Event{
-		Event: meergo.Event{
-			Received: connectors.ReceivedEvent(event),
-			Type: meergo.EventTypeInfo{
+		Event: connectors.Event{
+			Received: connections.ReceivedEvent(event),
+			Type: connectors.EventTypeInfo{
 				ID:     typ,
 				Schema: schema,
 			},
@@ -314,7 +314,7 @@ func (s *Sender) QueueEvent(event *Event) {
 }
 
 // SetAPI replaces the API.
-func (s *Sender) SetAPI(api *connectors.API) {
+func (s *Sender) SetAPI(api *connections.API) {
 	s.mu.Lock()
 	s.waitTime = api.WaitTime
 	s.sendEvents = api.SendEvents
@@ -646,7 +646,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 		s.mu.Unlock()
 	}
 
-	var errEvents meergo.EventsError
+	var errEvents connectors.EventsError
 	var errRequest error
 
 	// Adds a "RateLimiterPattern" value to the context to receive updates about
@@ -664,7 +664,7 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 
 	err := sendEvents(ctx, iter)
 	if err != nil {
-		if ee, ok := err.(meergo.EventsError); ok {
+		if ee, ok := err.(connectors.EventsError); ok {
 			errEvents = ee
 		} else {
 			errRequest = err

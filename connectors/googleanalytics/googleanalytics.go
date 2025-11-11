@@ -20,7 +20,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 )
@@ -29,28 +29,28 @@ import (
 var overview string
 
 func init() {
-	meergo.RegisterAPI(meergo.APISpec{
+	connectors.RegisterAPI(connectors.APISpec{
 		Code:       "google-analytics",
 		Label:      "Google Analytics",
-		Categories: meergo.CategorySaaS,
-		AsDestination: &meergo.AsAPIDestination{
-			Targets:     meergo.TargetEvent,
+		Categories: connectors.CategorySaaS,
+		AsDestination: &connectors.AsAPIDestination{
+			Targets:     connectors.TargetEvent,
 			HasSettings: true,
-			SendingMode: meergo.Server,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			SendingMode: connectors.Server,
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Send events to Google Analytics",
 				Overview: overview,
 			},
 		},
-		EndpointGroups: []meergo.EndpointGroup{{
+		EndpointGroups: []connectors.EndpointGroup{{
 			// https://developers.google.com/analytics/devguides/limits-and-quotas
-			RateLimit: meergo.RateLimit{RequestsPerSecond: 11, Burst: 110},
+			RateLimit: connectors.RateLimit{RequestsPerSecond: 11, Burst: 110},
 		}},
 	}, New)
 }
 
 // New returns a new connector instance for Google Analytics.
-func New(env *meergo.APIEnv) (*Analytics, error) {
+func New(env *connectors.APIEnv) (*Analytics, error) {
 	c := Analytics{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -62,7 +62,7 @@ func New(env *meergo.APIEnv) (*Analytics, error) {
 }
 
 type Analytics struct {
-	env      *meergo.APIEnv
+	env      *connectors.APIEnv
 	settings *innerSettings
 }
 
@@ -73,7 +73,7 @@ type innerSettings struct {
 }
 
 // EventTypes returns the event types.
-func (ga *Analytics) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+func (ga *Analytics) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
 	return meergoEventTypes, nil
 }
 
@@ -83,23 +83,23 @@ func (ga *Analytics) EventTypeSchema(ctx context.Context, eventType string) (typ
 	if ok {
 		return event.Schema, nil
 	}
-	return types.Type{}, meergo.ErrEventTypeNotExist
+	return types.Type{}, connectors.ErrEventTypeNotExist
 }
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
 // events to the API, without actually sending it.
-func (ga *Analytics) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
+func (ga *Analytics) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
 	return ga.sendEvents(ctx, events, true)
 }
 
 // SendEvents sends events to the API.
-func (ga *Analytics) SendEvents(ctx context.Context, events meergo.Events) error {
+func (ga *Analytics) SendEvents(ctx context.Context, events connectors.Events) error {
 	_, err := ga.sendEvents(ctx, events, false)
 	return err
 }
 
 // ServeUI serves the connector's user interface.
-func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -113,14 +113,14 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Va
 	case "save":
 		return nil, ga.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
-			&meergo.Input{Name: "APISecret", Label: "API secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
-			&meergo.Select{Name: "CollectionEndpoint", Label: "Collection endpoint", Options: []meergo.Option{{Text: "Global", Value: "Global"}, {Text: "European Union", Value: "EU"}}},
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
+			&connectors.Input{Name: "APISecret", Label: "API secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
+			&connectors.Select{Name: "CollectionEndpoint", Label: "Collection endpoint", Options: []connectors.Option{{Text: "Global", Value: "Global"}, {Text: "European Union", Value: "EU"}}},
 		},
 		Settings: settings,
 	}
@@ -138,14 +138,14 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 	}
 	// Validate MeasurementID.
 	if n := len(s.MeasurementID); n < 2 || n > 20 {
-		return meergo.NewInvalidSettingsError("Measurement ID length must be in [2,20]")
+		return connectors.NewInvalidSettingsError("Measurement ID length must be in [2,20]")
 	}
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
-		return meergo.NewInvalidSettingsError("Measurement ID must begin with 'G-' or 'AW-'")
+		return connectors.NewInvalidSettingsError("Measurement ID must begin with 'G-' or 'AW-'")
 	}
 	// Validate APISecret.
 	if n := len(s.APISecret); n < 1 || n > 100 {
-		return meergo.NewInvalidSettingsError("API secret length must be in [1,100]")
+		return connectors.NewInvalidSettingsError("API secret length must be in [1,100]")
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
@@ -154,14 +154,14 @@ func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) erro
 		// decimal code 32, is therefore excluded from the range of accepted
 		// characters, and this is intentional.
 		if c < 33 || c > 126 {
-			return meergo.NewInvalidSettingsError("API secret must contain only valid characters")
+			return connectors.NewInvalidSettingsError("API secret must contain only valid characters")
 		}
 	}
 	// Validate CollectionEndpoint.
 	switch s.CollectionEndpoint {
 	case "Global", "EU":
 	default:
-		return meergo.NewInvalidSettingsError("collection endpoint must be set to Global or EU")
+		return connectors.NewInvalidSettingsError("collection endpoint must be set to Global or EU")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -184,9 +184,9 @@ const maxEventRequestSize = 130 * 1024 // from https://developers.google.com/ana
 //
 // If an error occurs while sending the events to the API, a nil *http.Request
 // and the error are returned.
-func (ga *Analytics) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+func (ga *Analytics) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
 
-	bb := ga.env.HTTPClient.GetBodyBuffer(meergo.NoEncoding)
+	bb := ga.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
 
 	var userID string

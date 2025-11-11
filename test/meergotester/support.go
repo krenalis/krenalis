@@ -520,12 +520,12 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 }
 
 func (c *Meergo) TestWorkspaceCreation(name string, userSchema types.Type,
-	uiPreferences UIPreferences, whType string, whSettings []byte, mode WarehouseMode) error {
+	uiPreferences UIPreferences, whName string, whSettings []byte, mode WarehouseMode) error {
 	body := map[string]any{
 		"name":       name,
 		"userSchema": userSchema,
 		"warehouse": map[string]any{
-			"type":     whType,
+			"name":     whName,
 			"mode":     mode,
 			"settings": json.RawMessage(whSettings),
 		},

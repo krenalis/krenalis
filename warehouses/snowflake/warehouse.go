@@ -22,8 +22,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -39,10 +39,10 @@ var (
 	createUserSchemaVersionTable string
 )
 
-var _ meergo.Warehouse = &Snowflake{}
+var _ warehouses.Warehouse = &Snowflake{}
 
 func init() {
-	meergo.RegisterWarehouseDriver(meergo.WarehouseDriver{
+	warehouses.Register(warehouses.Driver{
 		Name: "Snowflake",
 	}, New)
 }
@@ -51,8 +51,8 @@ func init() {
 var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 
 // New returns a new Snowflake data warehouse driver instance.
-// It returns a *meergo.WarehouseSettingsError if the settings are not valid.
-func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
+// It returns a *warehouses.SettingsError if the settings are not valid.
+func New(conf *warehouses.Config) (*Snowflake, error) {
 	var s sfSettings
 	err := jsonstd.Unmarshal(conf.Settings, &s)
 	if err != nil {
@@ -60,34 +60,34 @@ func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("account identifier length must be in range [3,255]")
+		return nil, warehouses.SettingsErrorf("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return nil, meergo.WarehouseSettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
+		return nil, warehouses.SettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("user name length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("user name length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("password length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("password length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("role length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("role length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("database length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("schema length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("schema length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, meergo.WarehouseSettingsErrorf("warehouse length must be in range [1,255]")
+		return nil, warehouses.SettingsErrorf("warehouse length must be in range [1,255]")
 	}
 	return &Snowflake{conf: conf, settings: &s}, nil
 }
@@ -95,7 +95,7 @@ func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
-	conf     *meergo.WarehouseConfig
+	conf     *warehouses.Config
 	settings *sfSettings
 }
 
@@ -110,7 +110,7 @@ type sfSettings struct {
 }
 
 // CheckReadOnlyAccess checks that the warehouse access is read-only, returning
-// a *WarehouseSettingsNotReadOnly error in case it is not, which may contain
+// a *warehouses.SettingsNotReadOnly error in case it is not, which may contain
 // additional details.
 func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1693.
@@ -138,7 +138,7 @@ func (warehouse *Snowflake) ColumnTypeDescription(t types.Type) (string, error) 
 
 // Delete deletes rows from the specified table that match the provided where
 // expression.
-func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meergo.Expr) error {
+func (warehouse *Snowflake) Delete(ctx context.Context, table string, where warehouses.Expr) error {
 	if where == nil {
 		return errors.New("where is nil")
 	}
@@ -157,7 +157,7 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 }
 
 // Merge performs a table merge operation.
-func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
 	// Acquire a connection.
 	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
@@ -184,7 +184,7 @@ var immutableMergeIdentitiesColumns = []string{
 
 // MergeIdentities merges existing identities, deletes them, and inserts new
 // ones.
-func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
+func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
 
 	quotedColumn := make(map[string]string, len(columns))
 	for _, column := range columns {
@@ -323,7 +323,7 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 
 // UnsetIdentityColumns unsets values for the specified identity columns for the
 // given action.
-func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, action int, columns []meergo.Column) error {
+func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, action int, columns []warehouses.Column) error {
 	var b strings.Builder
 	b.WriteString("UPDATE \"_USER_IDENTITIES\" SET ")
 	for i, column := range columns {
@@ -409,7 +409,7 @@ func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx)
 // serializeIdentitiesToCSV serializes identities as CSV, using columns as
 // header, and returns it as an io.Reader. It also appends a boolean column
 // called $PURGE with the value of the 'deleted' argument as value for each row.
-func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (io.Reader, error) {
+func serializeIdentitiesToCSV(columns []warehouses.Column, rows []map[string]any) (io.Reader, error) {
 	var err error
 	var b bytes.Buffer
 	for i, c := range columns {

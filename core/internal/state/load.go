@@ -11,21 +11,22 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
 	_json "github.com/meergo/meergo/core/json"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // load loads the state.
 func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all connectors.
-	connectors := meergo.Connectors()
-	state.connectors = make(map[string]*Connector, len(connectors))
-	for code, connector := range connectors {
+	conns := connectors.Connectors()
+	state.connectors = make(map[string]*Connector, len(conns))
+	for code, connector := range conns {
 		c := Connector{}
 		switch connector := connector.(type) {
-		case meergo.APISpec:
+		case connectors.APISpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = API
@@ -44,13 +45,13 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			}
 			c.Terms = ConnectorTerms(connector.Terms)
 			switch connector.AsDestination.SendingMode {
-			case meergo.Client:
+			case connectors.Client:
 				mode := Client
 				c.SendingMode = &mode
-			case meergo.Server:
+			case connectors.Server:
 				mode := Server
 				c.SendingMode = &mode
-			case meergo.ClientAndServer:
+			case connectors.ClientAndServer:
 				mode := ClientAndServer
 				c.SendingMode = &mode
 			}
@@ -69,7 +70,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					c.OAuth.ClientSecret = oAuth.ClientSecret
 				}
 			}
-		case meergo.DatabaseSpec:
+		case connectors.DatabaseSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = Database
@@ -91,7 +92,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			if summary := c.Documentation.Destination.Summary; summary == "" {
 				c.Documentation.Destination.Summary = "Exports users to " + article(c.Label) + " " + c.Label + " database"
 			}
-		case meergo.FileSpec:
+		case connectors.FileSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = File
@@ -115,7 +116,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.FileExtension = connector.Extension
 			c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 			c.HasSheets = connector.HasSheets
-		case meergo.FileStorageSpec:
+		case connectors.FileStorageSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = FileStorage
@@ -141,7 +142,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					c.Documentation.Source.Summary = "Exports users to a file on " + c.Label
 				}
 			}
-		case meergo.MessageBrokerSpec:
+		case connectors.MessageBrokerSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = MessageBroker
@@ -151,7 +152,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.HasSourceSettings = true
 			c.HasDestinationSettings = true
 			c.Documentation = connector.Documentation
-		case meergo.SDKSpec:
+		case connectors.SDKSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = SDK
@@ -166,7 +167,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 			c.Strategies = connector.Strategies
 			c.FallbackToRequestIP = connector.FallbackToRequestIP
 			c.Documentation = connector.Documentation
-		case meergo.WebhookSpec:
+		case connectors.WebhookSpec:
 			c.Code = connector.Code
 			c.Label = connector.Label
 			c.Type = Webhook
@@ -183,11 +184,11 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		state.connectors[code] = &c
 	}
 
-	// Read all warehouse types.
-	drivers := meergo.WarehouseDrivers()
-	state.warehouseTypes = make(map[string]WarehouseType, len(drivers))
+	// Read all warehouse drivers.
+	drivers := warehouses.Drivers()
+	state.warehouseDrivers = make(map[string]WarehouseDriver, len(drivers))
 	for _, driver := range drivers {
-		state.warehouseTypes[driver.Name] = WarehouseType{
+		state.warehouseDrivers[driver.Name] = WarehouseDriver{
 			Name: driver.Name,
 		}
 	}
@@ -255,7 +256,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all workspaces.
 	state.workspaces = map[int]*Workspace{}
-	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_type,"+
+	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_name,"+
 		" warehouse_mode, warehouse_settings, warehouse_mcp_settings, alter_user_schema_id,"+
 		" alter_user_schema_schema, alter_user_schema_primary_sources, alter_user_schema_operations,"+
 		" alter_user_schema_start_time, alter_user_schema_end_time,"+
@@ -265,7 +266,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		"FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID int
-			var warehouseType string
+			var warehouseName string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
 			var alterUserSchemaSchema []byte
@@ -277,7 +278,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					executions:  map[int]*ActionExecution{},
 					accounts:    map[int]*Account{},
 				}
-				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
+				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
 					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterUserSchema.ID,
 					&alterUserSchemaSchema, &ws.AlterUserSchema.PrimarySources,
 					&ws.AlterUserSchema.Operations, &ws.AlterUserSchema.StartTime,
@@ -289,10 +290,10 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]
-				if _, ok := state.warehouseTypes[warehouseType]; !ok {
-					return fmt.Errorf("warehouse driver for type %q is required but not registered. (Possibly forgotten import?)", warehouseType)
+				if _, ok := state.warehouseDrivers[warehouseName]; !ok {
+					return fmt.Errorf("warehouse driver for %q is required but not registered. (Possibly forgotten import?)", warehouseName)
 				}
-				ws.Warehouse.Type = warehouseType
+				ws.Warehouse.Name = warehouseName
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.Settings = warehouseSettings
 				if _json.Value(warehouseMCPSettings).IsNull() {

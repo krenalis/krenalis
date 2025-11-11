@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 
 	"github.com/meergo/meergo/core/internal/collector/sender"
-	"github.com/meergo/meergo/core/internal/connectors"
+	"github.com/meergo/meergo/core/internal/connections"
 	"github.com/meergo/meergo/core/internal/events"
 	"github.com/meergo/meergo/core/internal/metrics"
 	"github.com/meergo/meergo/core/internal/state"
@@ -23,10 +23,10 @@ import (
 // destinations is responsible for dispatching events to destination apps.
 // Use the QueueEvent method to enqueue events for delivery.
 type destinations struct {
-	state      *state.State
-	connectors *connectors.Connectors
-	provider   transformers.FunctionProvider
-	metrics    *metrics.Collector
+	state       *state.State
+	connections *connections.Connections
+	provider    transformers.FunctionProvider
+	metrics     *metrics.Collector
 
 	// senders maps a connection ID to its sender.
 	// No mutex is needed since all accesses occur while the state is frozen.
@@ -45,15 +45,15 @@ type destinations struct {
 }
 
 // newDestinations returns a new destinations instance.
-func newDestinations(st *state.State, connectors *connectors.Connectors, provider transformers.FunctionProvider, metrics *metrics.Collector) *destinations {
+func newDestinations(st *state.State, connections *connections.Connections, provider transformers.FunctionProvider, metrics *metrics.Collector) *destinations {
 
 	d := destinations{
-		state:      st,
-		connectors: connectors,
-		provider:   provider,
-		metrics:    metrics,
-		senders:    map[int]*sender.Sender{},
-		actions:    map[int][]*destinationAction{},
+		state:       st,
+		connections: connections,
+		provider:    provider,
+		metrics:     metrics,
+		senders:     map[int]*sender.Sender{},
+		actions:     map[int][]*destinationAction{},
 	}
 	d.close.ctx, d.close.cancel = context.WithCancelCause(context.Background())
 
@@ -74,7 +74,7 @@ func newDestinations(st *state.State, connectors *connectors.Connectors, provide
 		if !c.Connector().DestinationTargets.Contains(state.TargetEvent) {
 			continue
 		}
-		app := connectors.API(c)
+		app := connections.API(c)
 		sender := sender.New(app, d.sentAcks)
 		actions := make([]*destinationAction, 0, 1)
 		// Keeps all actions active on the connection's events.
@@ -111,7 +111,7 @@ func (d *destinations) createDestinationAction(action *state.Action, sender *sen
 	ctx, cancel := context.WithCancelCause(d.close.ctx)
 
 	connection := action.Connection()
-	api := d.connectors.API(connection)
+	api := d.connections.API(connection)
 	schema, err := api.Schema(ctx, state.TargetEvent, action.EventType)
 	if err != nil {
 		panic("TODO")
@@ -185,7 +185,7 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 	if !connector.DestinationTargets.Contains(state.TargetEvent) {
 		return
 	}
-	api := d.connectors.API(c)
+	api := d.connections.API(c)
 	d.senders[n.ID] = sender.New(api, d.sentAcks)
 	actions := make([]*destinationAction, 0, 1)
 	d.mu.Lock()
@@ -314,7 +314,7 @@ func (d *destinations) onSetConnectionSettings(n state.SetConnectionSettings) {
 		return
 	}
 	connection, _ := d.state.Connection(n.Connection)
-	api := d.connectors.API(connection)
+	api := d.connections.API(connection)
 	sender.SetAPI(api)
 }
 

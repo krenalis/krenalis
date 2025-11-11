@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // Test_alterUserSchemaQueries checks that alterUserSchema generates the
@@ -22,18 +22,18 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		columns         []meergo.Column // without "__muid__" and "__last_change_time__", which are added by the test
-		ops             []meergo.AlterOperation
+		columns         []warehouses.Column // without "__muid__" and "__last_change_time__", which are added by the test
+		ops             []warehouses.AlterOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     error
 	}{
 		{
 			name: "Add a first level text property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying",
@@ -42,11 +42,11 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Float64 property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "f", Type: types.Float(64), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "f", Type: types.Float(64)},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"f\" double precision",
@@ -55,11 +55,11 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level Float64 (non-real) property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "f", Type: types.Float(64), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "f", Type: types.Float(64)},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"f\" double precision",
@@ -68,15 +68,15 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a second level property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Text()},
-				{Operation: meergo.OperationAddColumn, Column: "x_b", Type: types.Text()},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Text()},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
@@ -85,12 +85,12 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level array property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Array(types.Text()), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Array(types.Text())},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Array(types.Text())},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying[]",
@@ -99,12 +99,12 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level text property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying",
@@ -113,14 +113,14 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add a first level object property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 				{Name: "x_b", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Text()},
-				{Operation: meergo.OperationAddColumn, Column: "x_b", Type: types.Int(32)},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
@@ -129,14 +129,14 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Add two first level text properties",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
-				{Operation: meergo.OperationAddColumn, Column: "b", Type: types.Int(32)},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
@@ -145,11 +145,11 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Drop a first level property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "a"},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tDROP COLUMN \"a\"",
@@ -158,12 +158,12 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Drop two first level properties",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "z", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationDropColumn, Column: "a"},
-				{Operation: meergo.OperationDropColumn, Column: "b"},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "a"},
+				{Operation: warehouses.OperationDropColumn, Column: "b"},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
@@ -172,11 +172,11 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 		},
 		{
 			name: "Rename a first level property",
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationRenameColumn, Column: "a", NewColumn: "b"},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "b"},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"\n\tRENAME COLUMN \"a\" TO \"b\"",
@@ -184,7 +184,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 			},
 		},
 		{
-			columns: []meergo.Column{
+			columns: []warehouses.Column{
 				{Name: "b", Type: types.Boolean(), Nullable: true},
 				{Name: "i16", Type: types.Int(16), Nullable: true},
 				{Name: "i32", Type: types.Int(32), Nullable: true},
@@ -202,22 +202,22 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Name: "ai32", Type: types.Array(types.Int(32)), Nullable: true},
 			},
 			name: "Test many types",
-			ops: []meergo.AlterOperation{
-				{Operation: meergo.OperationAddColumn, Column: "b", Type: types.Boolean()},
-				{Operation: meergo.OperationAddColumn, Column: "i16", Type: types.Int(16)},
-				{Operation: meergo.OperationAddColumn, Column: "i32", Type: types.Int(32)},
-				{Operation: meergo.OperationAddColumn, Column: "i64", Type: types.Int(64)},
-				{Operation: meergo.OperationAddColumn, Column: "f32", Type: types.Float(32)},
-				{Operation: meergo.OperationAddColumn, Column: "f64", Type: types.Float(64)},
-				{Operation: meergo.OperationAddColumn, Column: "dec", Type: types.Decimal(3, 1)},
-				{Operation: meergo.OperationAddColumn, Column: "dt", Type: types.DateTime()},
-				{Operation: meergo.OperationAddColumn, Column: "d", Type: types.Date()},
-				{Operation: meergo.OperationAddColumn, Column: "t", Type: types.Time()},
-				{Operation: meergo.OperationAddColumn, Column: "u", Type: types.UUID()},
-				{Operation: meergo.OperationAddColumn, Column: "j", Type: types.JSON()},
-				{Operation: meergo.OperationAddColumn, Column: "t", Type: types.Text()},
-				{Operation: meergo.OperationAddColumn, Column: "at", Type: types.Array(types.Text())},
-				{Operation: meergo.OperationAddColumn, Column: "ai32", Type: types.Array(types.Int(32))},
+			ops: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Boolean()},
+				{Operation: warehouses.OperationAddColumn, Column: "i16", Type: types.Int(16)},
+				{Operation: warehouses.OperationAddColumn, Column: "i32", Type: types.Int(32)},
+				{Operation: warehouses.OperationAddColumn, Column: "i64", Type: types.Int(64)},
+				{Operation: warehouses.OperationAddColumn, Column: "f32", Type: types.Float(32)},
+				{Operation: warehouses.OperationAddColumn, Column: "f64", Type: types.Float(64)},
+				{Operation: warehouses.OperationAddColumn, Column: "dec", Type: types.Decimal(3, 1)},
+				{Operation: warehouses.OperationAddColumn, Column: "dt", Type: types.DateTime()},
+				{Operation: warehouses.OperationAddColumn, Column: "d", Type: types.Date()},
+				{Operation: warehouses.OperationAddColumn, Column: "t", Type: types.Time()},
+				{Operation: warehouses.OperationAddColumn, Column: "u", Type: types.UUID()},
+				{Operation: warehouses.OperationAddColumn, Column: "j", Type: types.JSON()},
+				{Operation: warehouses.OperationAddColumn, Column: "t", Type: types.Text()},
+				{Operation: warehouses.OperationAddColumn, Column: "at", Type: types.Array(types.Text())},
+				{Operation: warehouses.OperationAddColumn, Column: "ai32", Type: types.Array(types.Int(32))},
 			},
 			expectedQueries: []string{
 				"ALTER TABLE \"_users_0\"" +
@@ -264,7 +264,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 					t.Fatalf("test %q is wrong: every column within 'columns' must be nullable, but column %q is not nullable", test.name, c.Name)
 				}
 			}
-			columns = append([]meergo.Column{
+			columns = append([]warehouses.Column{
 				{Name: "__muid__", Type: types.Int(32)},
 				{Name: "__last_change_time__", Type: types.DateTime()},
 			}, columns...)

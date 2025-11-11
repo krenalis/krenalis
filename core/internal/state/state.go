@@ -15,9 +15,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/internal/db"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/uuid"
 )
@@ -45,11 +46,11 @@ type State struct {
 	id uuid.UUID
 	db *db.DB
 
-	changing       *sync.RWMutex
-	connectors     map[string]*Connector
-	warehouseTypes map[string]WarehouseType
-	metadata       metadata
-	sendStats      bool
+	changing         *sync.RWMutex
+	connectors       map[string]*Connector
+	warehouseDrivers map[string]WarehouseDriver
+	metadata         metadata
+	sendStats        bool
 
 	mu               *sync.Mutex            // for the 'actions', ..., and 'workspaces' fields
 	actions          map[int]*Action        // protected by mu
@@ -350,29 +351,29 @@ func (state *State) Unfreeze() {
 	state.changing.RUnlock()
 }
 
-// WarehouseType returns the warehouse type with the provided name.
-// The boolean return value reports whether the warehouse type exists.
-func (state *State) WarehouseType(name string) (WarehouseType, bool) {
+// WarehouseDriver returns the warehouse driver with the provided name.
+// The boolean return value reports whether the warehouse driver exists.
+func (state *State) WarehouseDriver(name string) (WarehouseDriver, bool) {
 	state.mu.Lock()
-	wh, ok := state.warehouseTypes[name]
+	driver, ok := state.warehouseDrivers[name]
 	state.mu.Unlock()
-	return wh, ok
+	return driver, ok
 }
 
-// WarehouseTypes returns all warehouse types.
-func (state *State) WarehouseTypes() []WarehouseType {
+// WarehouseDrivers returns all warehouse drivers.
+func (state *State) WarehouseDrivers() []WarehouseDriver {
 	state.mu.Lock()
-	types := make([]WarehouseType, len(state.warehouseTypes))
+	drivers := make([]WarehouseDriver, len(state.warehouseDrivers))
 	i := 0
-	for _, t := range state.warehouseTypes {
-		types[i] = t
+	for _, t := range state.warehouseDrivers {
+		drivers[i] = t
 		i++
 	}
 	state.mu.Unlock()
-	sort.Slice(types, func(i, j int) bool {
-		return types[i].Name < types[j].Name
+	sort.Slice(drivers, func(i, j int) bool {
+		return drivers[i].Name < drivers[j].Name
 	})
-	return types
+	return drivers
 }
 
 // Workspace returns the workspace with identifier id.
@@ -493,8 +494,8 @@ func (organization *Organization) Workspaces() []*Workspace {
 	return workspaces
 }
 
-// WarehouseType represents a warehouse type.
-type WarehouseType struct {
+// WarehouseDriver represents a warehouse driver.
+type WarehouseDriver struct {
 	Name string
 }
 
@@ -556,7 +557,7 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 type Workspace struct {
 	mu        *sync.Mutex
 	Warehouse struct {
-		Type        string
+		Name        string
 		Mode        WarehouseMode
 		Settings    json.RawMessage
 		MCPSettings json.RawMessage // it can be a JSON object or json.RawMessage(nil).
@@ -584,7 +585,7 @@ type Workspace struct {
 		Err            *string    // pointer to empty string if no errors occurred during last execution of alter user schema.
 		Schema         types.Type
 		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
-		Operations     []meergo.AlterOperation
+		Operations     []warehouses.AlterOperation
 	}
 	actionsToPurge []int // never nil
 }
@@ -693,7 +694,7 @@ type Connector struct {
 	Code                   string
 	Label                  string
 	Type                   ConnectorType
-	Categories             meergo.Categories
+	Categories             connectors.Categories
 	SourceTargets          ConnectorTargets
 	DestinationTargets     ConnectorTargets
 	Terms                  ConnectorTerms
@@ -707,10 +708,10 @@ type Connector struct {
 	SampleQuery            string
 	WebhooksPer            WebhooksPer
 	OAuth                  *OAuth
-	EndpointGroups         []meergo.EndpointGroup
+	EndpointGroups         []connectors.EndpointGroup
 	Strategies             bool
 	FallbackToRequestIP    bool
-	Documentation          meergo.ConnectorDocumentation
+	Documentation          connectors.Documentation
 }
 
 // ConnectorTargets represents the targets of a connector.
@@ -878,7 +879,7 @@ func (per WebhooksPer) Value() (driver.Value, error) {
 
 // An OAuth represents OAuth data required to authenticate with a connector.
 type OAuth struct {
-	meergo.OAuth
+	connectors.OAuth
 	ClientID     string
 	ClientSecret string
 }

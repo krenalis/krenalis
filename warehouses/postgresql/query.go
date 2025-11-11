@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/warehouses"
 )
 
 // Query executes a query and returns the results as Rows.
-func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, withTotal bool) (meergo.Rows, int, error) {
+func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -107,16 +107,16 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 }
 
 // appendJoins appends the string serialization of the provided joins to b.
-func appendJoins(b *strings.Builder, joins []meergo.Join) error {
+func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
 	for _, join := range joins {
 		switch join.Type {
-		case meergo.InnerJoin:
+		case warehouses.InnerJoin:
 			b.WriteString(` JOIN `)
-		case meergo.LeftJoin:
+		case warehouses.LeftJoin:
 			b.WriteString(` LEFT JOIN `)
-		case meergo.RightJoin:
+		case warehouses.RightJoin:
 			b.WriteString(` RIGHT JOIN `)
-		case meergo.FullJoin:
+		case warehouses.FullJoin:
 			b.WriteString(` FULL JOIN `)
 		}
 		b.WriteString(quoteIdent(join.Table))

@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/types"
@@ -33,43 +33,43 @@ var sourceOverview string
 var destinationOverview string
 
 func init() {
-	meergo.RegisterAPI(meergo.APISpec{
+	connectors.RegisterAPI(connectors.APISpec{
 		Code:       "dummy",
 		Label:      "Dummy",
-		Categories: meergo.CategoryTesting,
-		AsSource: &meergo.AsAPISource{
-			Targets:     meergo.TargetUser,
+		Categories: connectors.CategoryTesting,
+		AsSource: &connectors.AsAPISource{
+			Targets:     connectors.TargetUser,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Import customers as users from Dummy",
 				Overview: sourceOverview,
 			},
 		},
-		AsDestination: &meergo.AsAPIDestination{
-			Targets:     meergo.TargetEvent | meergo.TargetUser,
-			SendingMode: meergo.Server,
+		AsDestination: &connectors.AsAPIDestination{
+			Targets:     connectors.TargetEvent | connectors.TargetUser,
+			SendingMode: connectors.Server,
 			HasSettings: true,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Export users as customers and send events to Dummy",
 				Overview: destinationOverview,
 			},
 		},
-		Terms: meergo.APITerms{
+		Terms: connectors.APITerms{
 			User:  "customer",
 			Users: "customers",
 		},
 		IdentityIDLabel: "Dummy Unique ID",
-		EndpointGroups: []meergo.EndpointGroup{
+		EndpointGroups: []connectors.EndpointGroup{
 			{
 				Patterns:  []string{"/"},
-				RateLimit: meergo.RateLimit{RequestsPerSecond: 100, Burst: 100},
+				RateLimit: connectors.RateLimit{RequestsPerSecond: 100, Burst: 100},
 			},
 		},
 	}, New)
 }
 
 // New returns a new connector instance for testing.
-func New(env *meergo.APIEnv) (*Dummy, error) {
+func New(env *connectors.APIEnv) (*Dummy, error) {
 	c := Dummy{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -81,7 +81,7 @@ func New(env *meergo.APIEnv) (*Dummy, error) {
 }
 
 type Dummy struct {
-	env      *meergo.APIEnv
+	env      *connectors.APIEnv
 	settings *innerSettings
 }
 
@@ -133,13 +133,13 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 	case "send_event_with_no_schema":
 		return types.Type{}, nil
 	}
-	return types.Type{}, meergo.ErrEventTypeNotExist
+	return types.Type{}, connectors.ErrEventTypeNotExist
 }
 
 // EventTypes returns the event types.
-func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+func (dummy *Dummy) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
 	dummy.simulateHTTPDelay()
-	return []*meergo.EventType{
+	return []*connectors.EventType{
 		{
 			ID:          "send_add_to_cart",
 			Name:        "Send Add to Cart",
@@ -170,15 +170,15 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
 // events to the API, without actually sending it.
-func (dummy *Dummy) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
+func (dummy *Dummy) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
 	return dummy.sendEvents(ctx, events, true)
 }
 
 // RecordSchema returns the schema of the specified target and role.
-func (dummy *Dummy) RecordSchema(ctx context.Context, target meergo.Targets, role meergo.Role) (types.Type, error) {
+func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
 	dummy.simulateHTTPDelay()
 	var properties []types.Property
-	if role == meergo.Source {
+	if role == connectors.Source {
 		properties = append(properties, types.Property{Name: "dummyId", Type: types.Text(), Description: "Dummy ID"})
 	}
 	properties = append(properties, []types.Property{
@@ -189,7 +189,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target meergo.Targets, rol
 		{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Nullable: true, Description: "Favourite drink"},
 		{Name: "favourite_movie", Type: types.Text(), ReadOptional: true, Description: "Favourite movie"},
 	}...)
-	if role == meergo.Destination {
+	if role == connectors.Destination {
 		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.Text()), Description: "Additional properties"})
 	}
 	properties = append(properties, []types.Property{
@@ -203,7 +203,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target meergo.Targets, rol
 }
 
 // Records returns the records of the specified target.
-func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids []string, _ string, _ types.Type) ([]meergo.Record, string, error) {
+func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, lastChangeTime time.Time, ids []string, _ string, _ types.Type) ([]connectors.Record, string, error) {
 	metrics.Increment("Dummy.Records.calls", 1)
 	dummy.simulateHTTPDelay()
 	select {
@@ -213,7 +213,7 @@ func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTim
 	}
 	customersLock.Lock()
 	defer customersLock.Unlock()
-	customers := make([]meergo.Record, 0, len(allCustomers))
+	customers := make([]connectors.Record, 0, len(allCustomers))
 	for id, props := range allCustomers {
 		if customersLastChangeTimes[id].Before(lastChangeTime) {
 			continue
@@ -221,7 +221,7 @@ func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTim
 		if ids != nil && !slices.Contains(ids, id) {
 			continue
 		}
-		customers = append(customers, meergo.Record{
+		customers = append(customers, connectors.Record{
 			ID:             id,
 			Properties:     deepClone(props),
 			LastChangeTime: customersLastChangeTimes[id],
@@ -273,13 +273,13 @@ type innerSettings struct {
 }
 
 // SendEvents sends events to the API.
-func (dummy *Dummy) SendEvents(ctx context.Context, events meergo.Events) error {
+func (dummy *Dummy) SendEvents(ctx context.Context, events connectors.Events) error {
 	_, err := dummy.sendEvents(ctx, events, false)
 	return err
 }
 
 // ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -291,30 +291,30 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 	case "save":
 		return nil, dummy.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{
 				Name:            "CustomerExportFailPercentage",
 				Type:            "number",
 				Label:           "Percentage that the export of every single customer may fail",
 				Placeholder:     "10",
 				HelpText:        "0 does not fail any customer exports. 100 fails them all.",
 				OnlyIntegerPart: true,
-				Role:            meergo.Destination,
+				Role:            connectors.Destination,
 			},
-			&meergo.Input{
+			&connectors.Input{
 				Name:        "URLForDispatchingEvents",
 				Label:       "URL for dispatching events",
 				Placeholder: "https://example.com",
-				Role:        meergo.Destination,
+				Role:        connectors.Destination,
 			},
-			&meergo.Checkbox{
+			&connectors.Checkbox{
 				Name:  "SimulateHTTPDelay",
 				Label: "Pretend that Dummy operates via HTTP calls, introducing fictitious delays",
-				Role:  meergo.Both,
+				Role:  connectors.Both,
 			},
 		},
 		Settings: settings,
@@ -328,11 +328,11 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName", "favouriteDrink", "address"}
 
 // Upsert updates or creates records in the API for the specified target.
-func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records) error {
 
 	dummy.simulateHTTPDelay()
 
-	recordsError := make(meergo.RecordsError)
+	recordsError := make(connectors.RecordsError)
 
 	customersLock.Lock()
 	defer customersLock.Unlock()
@@ -420,7 +420,7 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 		return err
 	}
 	if s.CustomerExportFailPercentage < 0 || s.CustomerExportFailPercentage > 100 {
-		return meergo.NewInvalidSettingsError("percentage must be in range [0, 100]")
+		return connectors.NewInvalidSettingsError("percentage must be in range [0, 100]")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -451,7 +451,7 @@ func (dummy *Dummy) simulateHTTPDelay() {
 //
 // If an error occurs while sending the events to the API, a nil *http.Request
 // and the error are returned.
-func (dummy *Dummy) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+func (dummy *Dummy) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
 	event := events.First()
 	var body []byte
 	if event.Type.Values != nil {

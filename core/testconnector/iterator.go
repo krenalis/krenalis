@@ -9,13 +9,13 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 )
 
-// iterator implements the meergo.Events interface to iterate over a sequence of events.
-// Only one iterator reads from the queue at a time.
+// iterator implements the connectors.Events interface to iterate over a
+// sequence of events. Only one iterator reads from the queue at a time.
 type iterator struct {
-	events []*meergo.Event
+	events []*connectors.Event
 
 	index int
 
@@ -33,12 +33,12 @@ type iterator struct {
 
 // NewEventsIterator returns a new iterator over events that can be used in
 // tests.
-func NewEventsIterator(events []*meergo.Event) meergo.Events {
+func NewEventsIterator(events []*connectors.Event) connectors.Events {
 	it := iterator{events: events}
 	return &it
 }
 
-func (it *iterator) All() iter.Seq[*meergo.Event] {
+func (it *iterator) All() iter.Seq[*connectors.Event] {
 	if it.consumed {
 		panic("SendEvents method called Events.All after the events were consumed")
 	}
@@ -63,7 +63,7 @@ func (it *iterator) Discard(err error) {
 	it.discarded = true
 }
 
-func (it *iterator) First() *meergo.Event {
+func (it *iterator) First() *connectors.Event {
 	if it.consumed {
 		panic("SendEvents method called Events.First after the events were consumed")
 	}
@@ -76,7 +76,7 @@ func (it *iterator) First() *meergo.Event {
 	return event
 }
 
-func (it *iterator) Peek() (*meergo.Event, bool) {
+func (it *iterator) Peek() (*connectors.Event, bool) {
 	if it.consumed && !it.iterating {
 		panic("SendEvents method called Events.Peek outside of an iteration")
 	}
@@ -105,7 +105,7 @@ func (it *iterator) Postpone() {
 	it.postponed = true
 }
 
-func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
+func (it *iterator) SameUser() iter.Seq[*connectors.Event] {
 	if it.consumed {
 		panic("SendEvents method called Events.SameUser after the events were consumed")
 	}
@@ -116,8 +116,8 @@ func (it *iterator) SameUser() iter.Seq[*meergo.Event] {
 }
 
 // seq returns a sequence of events.
-func (it *iterator) seq() iter.Seq[*meergo.Event] {
-	return func(yield func(event *meergo.Event) bool) {
+func (it *iterator) seq() iter.Seq[*connectors.Event] {
+	return func(yield func(event *connectors.Event) bool) {
 		if it.sameUser.on {
 			trace("iterator.seq: iterator %p starting to read the events of a single user\n", it)
 		} else {
@@ -148,7 +148,7 @@ func (it *iterator) seq() iter.Seq[*meergo.Event] {
 	}
 }
 
-func (it *iterator) read(consume bool) (*meergo.Event, bool) {
+func (it *iterator) read(consume bool) (*connectors.Event, bool) {
 	for {
 		if it.index >= len(it.events) {
 			return nil, false

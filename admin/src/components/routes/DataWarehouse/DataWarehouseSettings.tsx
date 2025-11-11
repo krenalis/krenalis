@@ -9,7 +9,6 @@ import appContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
 import { WarehouseMode, WarehouseSettings } from '../../../lib/api/types/warehouse';
 import objectKeysToLower from '../../../utils/objectKeysToLower';
-import { UnprocessableError } from '../../../lib/api/errors';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import Section from '../../base/Section/Section';
@@ -105,15 +104,6 @@ const DataWarehouseSettings = ({
 			);
 		} catch (err) {
 			setTimeout(() => {
-				if (err instanceof UnprocessableError) {
-					if (err.code === 'InvalidWarehouseType') {
-						handleError(
-							'The workspace has already been connected to a different type of data warehouse. Please reload to see the connected data warehouse.',
-						);
-						setIsActionButtonLoading(false);
-						return;
-					}
-				}
 				handleError(err);
 				setIsActionButtonLoading(false);
 			}, 300);

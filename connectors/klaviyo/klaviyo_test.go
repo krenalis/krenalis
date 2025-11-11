@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/testconnector"
 )
@@ -54,11 +54,11 @@ func TestSendEvents(t *testing.T) {
 	}
 
 	tests := []struct {
-		events              []*meergo.Event
+		events              []*connectors.Event
 		expectedRequestBody map[string]any
 	}{
 		{
-			events: []*meergo.Event{
+			events: []*connectors.Event{
 				{
 					DestinationAction: 927579274,
 					Received: testconnector.ReceivedEvent(map[string]any{
@@ -84,7 +84,7 @@ func TestSendEvents(t *testing.T) {
 						"type":              "alias",
 						"userId":            nil,
 					}),
-					Type: meergo.EventTypeInfo{
+					Type: connectors.EventTypeInfo{
 						ID:     "create_event",
 						Schema: schema,
 						Values: map[string]any{
@@ -155,7 +155,7 @@ func TestSendEvents(t *testing.T) {
 		},
 		// Event without properties.
 		{
-			events: []*meergo.Event{
+			events: []*connectors.Event{
 				{
 					DestinationAction: 2023196674,
 					Received: testconnector.ReceivedEvent(map[string]any{
@@ -181,7 +181,7 @@ func TestSendEvents(t *testing.T) {
 						"type":              "alias",
 						"userId":            nil,
 					}),
-					Type: meergo.EventTypeInfo{
+					Type: connectors.EventTypeInfo{
 						ID:     "create_event",
 						Schema: schema,
 						Values: map[string]any{

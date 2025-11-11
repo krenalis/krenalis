@@ -21,45 +21,45 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/connectors"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
 )
 
 // Mixpanel supports NoEncoding and Gzip for request bodies.
-const contentEncoding = meergo.Gzip
+const contentEncoding = connectors.Gzip
 
 //go:embed documentation/overview.md
 var overview string
 
 func init() {
-	meergo.RegisterAPI(meergo.APISpec{
+	connectors.RegisterAPI(connectors.APISpec{
 		Code:       "mixpanel",
 		Label:      "Mixpanel",
-		Categories: meergo.CategorySaaS,
-		AsDestination: &meergo.AsAPIDestination{
-			Targets:     meergo.TargetEvent,
+		Categories: connectors.CategorySaaS,
+		AsDestination: &connectors.AsAPIDestination{
+			Targets:     connectors.TargetEvent,
 			HasSettings: true,
-			SendingMode: meergo.Server,
-			Documentation: meergo.ConnectorRoleDocumentation{
+			SendingMode: connectors.Server,
+			Documentation: connectors.RoleDocumentation{
 				Summary:  "Send events to Mixpanel",
 				Overview: overview,
 			},
 		},
-		EndpointGroups: []meergo.EndpointGroup{{
+		EndpointGroups: []connectors.EndpointGroup{{
 			// https://developer.mixpanel.com/reference/import-events
-			RateLimit: meergo.RateLimit{RequestsPerSecond: 15, Burst: 20, MaxConcurrentRequests: 20},
+			RateLimit: connectors.RateLimit{RequestsPerSecond: 15, Burst: 20, MaxConcurrentRequests: 20},
 			// https://developer.mixpanel.com/reference/import-events#rate-limits
-			RetryPolicy: meergo.RetryPolicy{
-				"429":     meergo.ExponentialStrategy(meergo.Slowdown, 2*time.Second),
-				"502 503": meergo.ExponentialStrategy(meergo.NetFailure, 2*time.Second),
+			RetryPolicy: connectors.RetryPolicy{
+				"429":     connectors.ExponentialStrategy(connectors.Slowdown, 2*time.Second),
+				"502 503": connectors.ExponentialStrategy(connectors.NetFailure, 2*time.Second),
 			}},
 		},
 	}, New)
 }
 
 type Mixpanel struct {
-	env      *meergo.APIEnv
+	env      *connectors.APIEnv
 	settings *innerSettings
 }
 
@@ -70,7 +70,7 @@ type innerSettings struct {
 }
 
 // New returns a new connector instance for Mixpanel.
-func New(env *meergo.APIEnv) (*Mixpanel, error) {
+func New(env *connectors.APIEnv) (*Mixpanel, error) {
 	c := Mixpanel{env: env}
 	if len(env.Settings) > 0 {
 		err := json.Value(env.Settings).Unmarshal(&c.settings)
@@ -82,8 +82,8 @@ func New(env *meergo.APIEnv) (*Mixpanel, error) {
 }
 
 // EventTypes returns the event types.
-func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
-	return []*meergo.EventType{
+func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
+	return []*connectors.EventType{
 		{
 			ID:          "order_completed",
 			Name:        "Send order completed events",
@@ -119,12 +119,12 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 
 // PreviewSendEvents returns the HTTP request that would be used to send the
 // events to the API, without actually sending it.
-func (mp *Mixpanel) PreviewSendEvents(ctx context.Context, events meergo.Events) (*http.Request, error) {
+func (mp *Mixpanel) PreviewSendEvents(ctx context.Context, events connectors.Events) (*http.Request, error) {
 	return mp.sendEvents(ctx, events, true)
 }
 
 // SendEvents sends events to the API.
-func (mp *Mixpanel) SendEvents(ctx context.Context, events meergo.Events) error {
+func (mp *Mixpanel) SendEvents(ctx context.Context, events connectors.Events) error {
 	_, err := mp.sendEvents(ctx, events, false)
 	return err
 }
@@ -181,7 +181,7 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 		case "track":
 			event = "event"
 		default:
-			return types.Type{}, meergo.ErrEventTypeNotExist
+			return types.Type{}, connectors.ErrEventTypeNotExist
 		}
 		schema = types.Object([]types.Property{
 			{Name: "event", Prefilled: event, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event name"},
@@ -197,7 +197,7 @@ func (mp *Mixpanel) EventTypeSchema(ctx context.Context, eventType string) (type
 }
 
 // ServeUI serves the connector's user interface.
-func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
 
 	switch event {
 	case "load":
@@ -209,14 +209,14 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Val
 	case "save":
 		return nil, mp.saveSettings(ctx, settings)
 	default:
-		return nil, meergo.ErrUIEventNotExist
+		return nil, connectors.ErrUIEventNotExist
 	}
 
-	ui := &meergo.UI{
-		Fields: []meergo.Component{
-			&meergo.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
-			&meergo.Input{Name: "ProjectToken", Label: "Project Token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
-			&meergo.Select{Name: "DataResidency", Label: "Data Residency", Options: []meergo.Option{
+	ui := &connectors.UI{
+		Fields: []connectors.Component{
+			&connectors.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
+			&connectors.Input{Name: "ProjectToken", Label: "Project Token", Placeholder: "d8e8fca2dc0f896fd7cb4cb0031ba249", Type: "text", MinLength: 32, MaxLength: 32},
+			&connectors.Select{Name: "DataResidency", Label: "Data Residency", Options: []connectors.Option{
 				{Text: "United States", Value: "US"},
 				{Text: "European Union", Value: "EU"},
 				{Text: "India", Value: "IN"},
@@ -237,11 +237,11 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 	}
 	// Validate ProjectID.
 	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
-		return meergo.NewInvalidSettingsError("Project ID must be a positive number")
+		return connectors.NewInvalidSettingsError("Project ID must be a positive number")
 	}
 	// Validate ProjectToken.
 	if n := len(s.ProjectToken); n < 1 || n > 100 {
-		return meergo.NewInvalidSettingsError("Project Token length must be in range [1,100]")
+		return connectors.NewInvalidSettingsError("Project Token length must be in range [1,100]")
 	}
 	for i := 0; i < len(s.ProjectToken); i++ {
 		c := s.ProjectToken[i]
@@ -250,14 +250,14 @@ func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error
 		// decimal code 32, is therefore excluded from the range of accepted
 		// characters, and this is intentional.
 		if c < 33 || c > 126 {
-			return meergo.NewInvalidSettingsError("Project Token must contain only valid characters")
+			return connectors.NewInvalidSettingsError("Project Token must contain only valid characters")
 		}
 	}
 	// Validate DataResidency.
 	switch s.DataResidency {
 	case "US", "EU", "IN":
 	default:
-		return meergo.NewInvalidSettingsError("Data Residency must be set to US, EU, or IN")
+		return connectors.NewInvalidSettingsError("Data Residency must be set to US, EU, or IN")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -292,7 +292,7 @@ const sendBadRequestContextKey contextKey = 0
 //
 // If an error occurs while sending the events to the API, a nil *http.Request
 // and the error are returned.
-func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, preview bool) (*http.Request, error) {
+func (mp *Mixpanel) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
 
 	sendBadRequest, _ := ctx.Value(sendBadRequestContextKey).(bool)
 
@@ -611,7 +611,7 @@ func (mp *Mixpanel) sendEvents(ctx context.Context, events meergo.Events, previe
 	if len(out.FailedRecords) == 0 {
 		return nil, errors.New("Mixpanel responded with status 400, but 'failed_records' was empty")
 	}
-	eventErrors := make(meergo.EventsError, len(out.FailedRecords))
+	eventErrors := make(connectors.EventsError, len(out.FailedRecords))
 	for _, record := range out.FailedRecords {
 		eventErrors[record.Index] = fmt.Errorf("%s: %s", record.Field, record.Message)
 	}

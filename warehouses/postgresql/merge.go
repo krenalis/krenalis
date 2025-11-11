@@ -4,7 +4,8 @@
 
 package postgresql
 
-// Keep this file synchronized between the warehouse driver and the connector.
+// Keep this file in sync between the warehouse driver and the connector,
+// except for the "warehouses" and "connectors" import lines.
 
 import (
 	"context"
@@ -14,16 +15,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
+	"github.com/meergo/meergo/warehouses"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // merge performs a table merge operation.
-func merge(ctx context.Context, conn *pgxpool.Conn, table meergo.Table, rows [][]any, deleted []any) error {
+func merge(ctx context.Context, conn *pgxpool.Conn, table warehouses.Table, rows [][]any, deleted []any) error {
 
 	quotedColumn := make(map[string]string, len(table.Columns))
 	for _, column := range table.Columns {
@@ -220,7 +221,7 @@ type rowEncoder struct {
 // newRowEncoder returns a new row encoder that encodes rows with the provided
 // columns. If there are no columns to encode, it returns nil and false;
 // otherwise, it returns the new encoder and true.
-func newRowEncoder(columns []meergo.Column) (*rowEncoder, bool) {
+func newRowEncoder(columns []warehouses.Column) (*rowEncoder, bool) {
 	var ct map[int]types.Type
 	for i, c := range columns {
 		switch c.Type.Kind() {

@@ -51,6 +51,6 @@ const (
 	TypeNotAllowed                errors.Code = "TypeNotAllowed"
 	UnsupportedLanguage           errors.Code = "UnsupportedLanguage"
 	WarehouseNonInitializable     errors.Code = "WarehouseNonInitializable"
-	WarehouseTypeNotExist         errors.Code = "WarehouseTypeNotExist"
+	WarehouseDriverNotExist       errors.Code = "WarehouseDriverNotExist"
 	WorkspaceNotExist             errors.Code = "WorkspaceNotExist"
 )
