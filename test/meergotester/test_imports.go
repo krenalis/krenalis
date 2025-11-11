@@ -11,12 +11,16 @@ package meergotester
 // executable. In this first case, this file acts as any other source file in
 // Go.
 //
-// (2) to define the connectors and warehouses needed by the tests, so that this
-// file is then copied to the temporary directory where the Meergo executable
-// used in the tests will be compiled, in those cases where the tests are run by
-// running Meergo in a separate process (which is the default case). For this
-// reason, it is IMPORTANT that this file is not moved or renamed without
-// changing the test execution procedure.
+// (2) to define the connectors and warehouses needed by the tests IN ADDITION
+// to the ones already imported in 'cmd/meergo/main.go', so that this file is
+// then copied to the temporary directory where the Meergo executable used in
+// the tests will be compiled, in those cases where the tests are run by running
+// Meergo in a separate process (which is the default case). So, it is IMPORTANT
+// that this file is not moved or renamed without changing the test execution
+// procedure.
+//
+// For these reasons, the connectors and warehouses imported here must be the
+// UNION of the two use cases above.
 
 import (
 	_ "github.com/meergo/meergo/connectors/csv"
