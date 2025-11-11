@@ -958,13 +958,13 @@ type WarehouseDriver struct {
 func (core *Core) WarehouseDrivers() []WarehouseDriver {
 	core.mustBeOpen()
 	types := core.state.WarehouseDrivers()
-	warehouseTypes := make([]WarehouseDriver, len(types))
+	warehouseDrivers := make([]WarehouseDriver, len(types))
 	for i, t := range types {
-		warehouseTypes[i] = WarehouseDriver{
+		warehouseDrivers[i] = WarehouseDriver{
 			Name: t.Name,
 		}
 	}
-	return warehouseTypes
+	return warehouseDrivers
 }
 
 // mustBeOpen panics if core has been closed.

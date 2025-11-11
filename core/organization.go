@@ -418,7 +418,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 			" user_schema, resolve_identities_on_batch_import, ui_user_profile_image, ui_user_profile_first_name, "+
-			" ui_user_profile_last_name, ui_user_profile_extra, warehouse_type, "+
+			" ui_user_profile_last_name, ui_user_profile_extra, warehouse_name, "+
 			"warehouse_mode, warehouse_settings, warehouse_mcp_settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
 			n.ID, n.Organization, n.Name, encodedUserSchema, n.ResolveIdentitiesOnBatchImport,

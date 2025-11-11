@@ -256,7 +256,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all workspaces.
 	state.workspaces = map[int]*Workspace{}
-	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_type,"+
+	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_name,"+
 		" warehouse_mode, warehouse_settings, warehouse_mcp_settings, alter_user_schema_id,"+
 		" alter_user_schema_schema, alter_user_schema_primary_sources, alter_user_schema_operations,"+
 		" alter_user_schema_start_time, alter_user_schema_end_time,"+

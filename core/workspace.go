@@ -1666,7 +1666,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		}
 		if result.RowsAffected() == 0 {
 			var warehouseName string
-			err = tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
+			err = tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
