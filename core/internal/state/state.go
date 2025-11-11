@@ -5,6 +5,7 @@
 package state
 
 import (
+	"bytes"
 	"context"
 	"database/sql/driver"
 	"encoding/json"
@@ -52,14 +53,14 @@ type State struct {
 	metadata         metadata
 	sendStats        bool
 
-	mu               *sync.Mutex            // for the 'actions', ..., and 'workspaces' fields
-	actions          map[int]*Action        // protected by mu
-	connections      map[int]*Connection    // protected by mu
-	connectionsByKey map[string]*Connection // protected by mu
-	accessKeyByToken map[string]*AccessKey  // protected by mu
-	election         election               // protected by mu
-	organizations    map[int]*Organization  // protected by mu
-	workspaces       map[int]*Workspace     // protected by mu
+	mu               *sync.Mutex                 // for the 'actions', ..., and 'workspaces' fields
+	actions          map[int]*Action             // protected by mu
+	connections      map[int]*Connection         // protected by mu
+	connectionsByKey map[string]*Connection      // protected by mu
+	accessKeyByToken map[string]*AccessKey       // protected by mu
+	election         election                    // protected by mu
+	organizations    map[uuid.UUID]*Organization // protected by mu
+	workspaces       map[int]*Workspace          // protected by mu
 
 	notifications struct {
 		*notifier
@@ -95,7 +96,7 @@ func New(db *db.DB, credentials map[string]*OAuthCredentials, sendStats bool) (*
 		db:               db,
 		mu:               new(sync.Mutex),
 		changing:         new(sync.RWMutex),
-		organizations:    map[int]*Organization{},
+		organizations:    map[uuid.UUID]*Organization{},
 		connectors:       map[string]*Connector{},
 		workspaces:       map[int]*Workspace{},
 		connections:      map[int]*Connection{},
@@ -271,11 +272,11 @@ func (state *State) IsLeader() bool {
 
 // Organization returns the organization with identifier id.
 // The boolean return value reports whether the organization exists.
-func (state *State) Organization(id int) (*Organization, bool) {
+func (state *State) Organization(id uuid.UUID) (*Organization, bool) {
 	state.mu.Lock()
-	a, ok := state.organizations[id]
+	org, ok := state.organizations[id]
 	state.mu.Unlock()
-	return a, ok
+	return org, ok
 }
 
 // Organizations returns all organizations.
@@ -289,7 +290,7 @@ func (state *State) Organizations() []*Organization {
 	}
 	state.mu.Unlock()
 	sort.Slice(organizations, func(i, j int) bool {
-		return organizations[i].ID < organizations[j].ID
+		return bytes.Compare(organizations[i].ID[:], organizations[j].ID[:]) < 0
 	})
 	return organizations
 }
@@ -450,7 +451,7 @@ func (typ AccessKeyType) Value() (driver.Value, error) {
 // AccessKey represents an access key.
 type AccessKey struct {
 	ID           int
-	Organization int
+	Organization uuid.UUID
 	Workspace    int
 	Type         AccessKeyType
 }
@@ -460,7 +461,7 @@ type Organization struct {
 	mu         *sync.Mutex
 	workspaces map[int]*Workspace
 	members    map[int]struct{}
-	ID         int
+	ID         uuid.UUID
 	Name       string
 }
 

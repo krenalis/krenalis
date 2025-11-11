@@ -5,6 +5,7 @@
 package state
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -15,6 +16,8 @@ import (
 	"github.com/meergo/meergo/core/internal/db"
 	_json "github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/warehouses"
+
+	"github.com/google/uuid"
 )
 
 // load loads the state.
@@ -212,9 +215,9 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	}
 
 	// Read all organizations.
-	state.organizations = map[int]*Organization{}
+	state.organizations = map[uuid.UUID]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *db.Rows) error {
-		var id int
+		var id uuid.UUID
 		var name string
 		for rows.Next() {
 			if err := rows.Scan(&id, &name); err != nil {
@@ -237,13 +240,14 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 
 	// Read all members.
 	err = tx.QueryScan(ctx, "SELECT id, organization FROM members ORDER BY organization", func(rows *db.Rows) error {
-		var id, organization int
+		var id int
+		var organization uuid.UUID
 		var org *Organization
 		for rows.Next() {
 			if err := rows.Scan(&id, &organization); err != nil {
 				return err
 			}
-			if org == nil || org.ID != organization {
+			if org == nil || !bytes.Equal(org.ID[:], organization[:]) {
 				org = state.organizations[organization]
 			}
 			org.members[id] = struct{}{}
@@ -265,7 +269,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 		" ui_user_profile_first_name, ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
 		"FROM workspaces",
 		func(rows *db.Rows) error {
-			var organizationID int
+			var organizationID uuid.UUID
 			var warehouseName string
 			var warehouseMode WarehouseMode
 			var userSchema []byte

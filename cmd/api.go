@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"fmt"
 	"html"
 	"net/http"
 	"strings"
@@ -186,10 +185,11 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	org, err := api.core.Organization(1)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read organization: %s", err)
+	organizations, _ := api.core.Organizations(core.SortByName, 0, 1)
+	if len(organizations) == 0 {
+		return nil, errors.New("there are no organizations")
 	}
+	org := organizations[0]
 	emailTemplate := strings.ReplaceAll(resetPasswordEmail, "${externalURL}", html.EscapeString(api.externalURL))
 	err = org.SendMemberPasswordReset(r.Context(), body.Email, emailTemplate)
 	return nil, err
