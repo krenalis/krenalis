@@ -15,7 +15,6 @@ The following is a set of guidelines for contributing to Meergo and its reposito
   - [Build a new connector](#build-a-new-connector)
   - [Development setup](#development-setup)
   - [Pull Requests](#pull-requests)
-    - [Good commit messages](#good-commit-messages)
     - [Before opening a pull request](#before-opening-a-pull-request)
     - [After opening a pull request](#after-opening-a-pull-request)
 
@@ -98,50 +97,9 @@ To build and test Meergo locally see [DEVELOPERS.md](DEVELOPERS.md).
 
 ### Pull Requests
 
-#### Good commit messages
-
-The following is an example of a good commit message:
-
-```
-core/http: normalize `Accept-Language` header
-
-Align the header parser with RFC 9110, removing superfluous spaces and
-sorting locales by quality. This prevents cache misses when the browser
-sends duplicate values.
-
-Fixes #2031
-```
-
-* **First line.** Write a concise, one-line summary of the change, starting with the relevant package path as a prefix.
-  If multiple packages are affected, separate them with commas or use a common ancestor.
-  After the prefix, use the present tense imperative form (e.g., `"fix ..."`, not `"fixed ..."`).
-
-* **Main content.** Explain what the change does and why it was made. Use clear, complete sentences. Avoid HTML and complex Markdown. Basic Markdown (lists, code, quotes) is fine.
-
-* **Line length.** Each line should be no longer than 72 characters.
-
-* **Names.** When referring to identifiers or code elements, enclose them in backticks (like this `) in the commit title, and in single quotes (like this ') in the remaining lines.
-
 #### Before opening a pull request
 
 * Open a pull request only if there's an issue and agreement, except for minor fixes.
-* Licensing
-
-  | Area                         | License             |
-  |------------------------------|---------------------|
-  | Core, Admin console          | Elastic License 2.0 |
-  | Connectors, Warehouses, SDKs | MIT (open source)   |
-
-  * Code that introduces a connector or driver for a data warehouse must be released under the MIT License.
-  * Code that contributes to the Core or any other area covered by the Elastic License v2 must comply with that license and include acceptance of the Contributor License Agreement (CLA).
-* Dependencies\
-  In general, pull requests should not add new external dependencies. Exceptions apply to new connectors for databases, files, or file storages, which may require dependencies to connect, read, or write specific formats. Dependencies must use MIT, BSD, or Apache 2.0 licenses. Any other license requires prior approval.
-* Third-party code\
-  If you need to include third-party code, it must have been distributed by its author under an MIT, BSD, or Apache 2.0 license.
-  * For a few lines of code, you may include them inline, but clearly mark them and cite the original author and license.
-  * For larger portions, place the code in a separate file with the author and license explicitly stated in the file header.
-* Run `go run commit/commit.go` before opening the pull request.
-
 
 #### After opening a pull request
 
