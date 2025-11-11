@@ -146,57 +146,6 @@ The tests inside `/test/` are already configured by default when the repository 
 | `MEERGO_TESTS_ADDR`        | The host and port on which Meergo is started                               | `127.0.0.1:2023`         |
 | `MEERGO_TESTS_PYTHON_PATH` | The path to the Python executable for running the transformation functions | It depends on the system |
 
-## How to execute Meergo for development
-
-### 1. Install React and other dependencies
-
-```
-cd admin
-npm ci
-```
-
-### 2. Configure and add certificates
-
-Set environment variables necessary to run Meergo (you can add a configuration file `.env` (see `meergo.example.env`) in the same directory of the `meergo` executable), as well as a `cert.pem` and `key.pem` certificate files.
-
-### 3. Build the assets
-
-Within the root of this repository execute:
-
-```bash
-go generate ./cmd/meergo
-```
-
-Note that the assets will be embedded into the executable; however, in development mode (i.e. when using the `dev` flag compiling Meergo, see the section below), the assets are rebuilt for each invocation of the Admin console.
-
-### 4. Compile the server command in dev mode
-
-Within the root of this repository execute:
-
-```bash
-go build -tags dev,osusergo,netgo -trimpath ./cmd/meergo
-```
-
-(please note the `dev` flag, which is specific to Meergo)
-
-### 5. Populate the database
-
-Populate the Meergo's database with the queries in [database/initialization/1 - postgres.sql](database/initialization/1%20-%20postgres.sql).
-
-### 7. Run and open the browser
-
-Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) and visit https://localhost:2022/admin/.
-
-## Expose on the Internet (optional)
-
-These steps document how to expose a locally running Meergo instance to the internet.
-
-1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
-2. Check that it is installed correctly: `cloudflared --version`
-3. Run cloudflared: `cloudflared tunnel --url https://localhost:2022`
-4. Make a note of the URL listed in the standard output (example: https://xxxxxxx.trycloudflare.com)
-5. Open the URL in a browser
-
 ## Docker
 
 ### Building Meergo Image
