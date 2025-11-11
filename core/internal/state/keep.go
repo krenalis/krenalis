@@ -266,7 +266,7 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 // AddMember is the event sent when a member is added.
 type AddMember struct {
 	ID           int
-	Organization int
+	Organization uuid.UUID
 }
 
 // addMember adds a member.

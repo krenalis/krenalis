@@ -684,7 +684,7 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 func (core *Core) Organization(id uuid.UUID) (*Organization, error) {
 	core.mustBeOpen()
 	if id == uuid.Nil {
-		return nil, errors.BadRequest("identifier is not a valid organization identifier", id)
+		return nil, errors.BadRequest("identifier is not a valid organization identifier")
 	}
 	org, ok := core.state.Organization(id)
 	if !ok {

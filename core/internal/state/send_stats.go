@@ -8,15 +8,19 @@ import (
 	"log/slog"
 	"runtime"
 
-	"github.com/google/uuid"
 	"github.com/meergo/analytics-go"
 )
 
 // sendNotificationStats sends information about notification n to Meergo.
-func (state *State) sendNotificationStats(client analytics.Client, organization uuid.UUID, n notification) {
+func (state *State) sendNotificationStats(client analytics.Client, n notification) {
+	if n.Name == "SeeLeader" {
+		// Many "SeeLeader" notifications are received, and they're mostly
+		// irrelevant. That's why they're not sent.
+		return
+	}
 	go func() {
 		err := client.Enqueue(analytics.Track{
-			UserId: organization.String(),
+			UserId: state.metadata.installationID,
 			Event:  "State Changed",
 			Context: &analytics.Context{
 				OS: analytics.OSInfo{
