@@ -733,8 +733,10 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 	orgs := make([]*Organization, len(organizations))
 	for i, organization := range organizations {
 		orgs[i] = &Organization{
-			ID:   organization.ID,
-			Name: organization.Name,
+			core:         core,
+			organization: organization,
+			ID:           organization.ID,
+			Name:         organization.Name,
 		}
 	}
 	return orgs, nil
