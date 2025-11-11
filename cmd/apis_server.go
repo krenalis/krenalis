@@ -7,7 +7,6 @@ package cmd
 import (
 	"bufio"
 	_ "embed"
-	"fmt"
 	"io"
 	"log/slog"
 	"math"
@@ -20,6 +19,7 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/json"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/text/unicode/norm"
 )
@@ -45,7 +45,7 @@ var resetPasswordEmail string
 const sessionMaxAge = 6 * 60 * 60
 
 type sessionCookie struct {
-	Organization int
+	Organization uuid.UUID
 	Member       int
 }
 
@@ -270,10 +270,11 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	// Retrieve the organization and the member.
-	org, err := s.core.Organization(1)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read organization: %s", err)
+	organizations, _ := s.core.Organizations(core.SortByName, 0, 1)
+	if len(organizations) == 0 {
+		return nil, errors.New("there are no organizations")
 	}
+	org := organizations[0]
 	memberID, err := org.AuthenticateMember(r.Context(), body.Email, body.Password)
 	if err != nil {
 		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == core.AuthenticationFailed {
@@ -354,9 +355,6 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 		return nil, nil, 0, errInvalidSessionCookie
 	}
 	if id := session.Member; id < 1 || id > math.MaxInt32 {
-		return nil, nil, 0, errInvalidSessionCookie
-	}
-	if id := session.Organization; id < 1 || id > math.MaxInt32 {
 		return nil, nil, 0, errInvalidSessionCookie
 	}
 

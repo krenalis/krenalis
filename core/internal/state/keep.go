@@ -286,7 +286,7 @@ func (state *State) addMember(n notification) {
 // CreateAccessKey is the event sent when an access key is created.
 type CreateAccessKey struct {
 	ID           int
-	Organization int
+	Organization uuid.UUID
 	Workspace    int
 	Type         AccessKeyType
 	Token        string
@@ -499,7 +499,7 @@ func (state *State) createConnection(n notification) {
 // CreateWorkspace is the event sent when a workspace is created.
 type CreateWorkspace struct {
 	ID                             int
-	Organization                   int
+	Organization                   uuid.UUID
 	Name                           string
 	UserSchema                     types.Type
 	ResolveIdentitiesOnBatchImport bool
@@ -760,7 +760,7 @@ func (state *State) deleteEventWriteKey(n notification) {
 // DeleteMember is the event sent when a member is deleted.
 type DeleteMember struct {
 	ID           int
-	Organization int
+	Organization uuid.UUID
 }
 
 // deleteMember deletes a member.

@@ -33,6 +33,7 @@ import (
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/warehouses"
 
+	"github.com/google/uuid"
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -51,8 +52,8 @@ var errResetPasswordTokenNotExist = errors.New("The reset password token doesn't
 type Organization struct {
 	core         *Core
 	organization *state.Organization
-	ID           int    `json:"id"`
-	Name         string `json:"name"`
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
 }
 
 // Member represents a member of an organization.
