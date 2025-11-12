@@ -56,7 +56,6 @@ Here you can find useful resources for Meergo:
 * **[User manual](http://localhost:8080/)**. User manual to use Meergo and learn about its features.
 * **[Integrate and extend Meergo](http://localhost:8080/developers/)**. For those who want to integrate Meergo into their infrastructure or want to extend Meergo.
 * **[API Reference](http://localhost:8080/api/)**. For those who want to interact with Meergo through its APIs.
-* **[Developing Meergo](DEVELOPERS.md)**. For the Meergo developers.
 * **[JavaScript SDK](http://localhost:8080/developers/javascript-sdk)**. The Meergo JavaScript SDK, to collect user and event data from your application and ingest them into Meergo.
 
 ## Contributors
