@@ -2,19 +2,6 @@
 
 This file contains information useful to **Meergo developers**.
 
-## Expose and see Meergo metrics
-
-> ⚠️ Note that this type of metric is deprecated in favor of Prometheus metrics. See https://github.com/meergo/meergo/issues/1840.
-
-> Note that the concept of "Meergo metrics" is completely different from telemetry. "Meergo metrics" simply refers to an endpoint exposed by Meergo (disabled by default) to monitor certain internal software values.
-
-1. **Enable metrics** by setting to `true` the `Enabled` constant in file `metrics/metrics.go`
-2. Build and run Meergo
-
-Now metrics are exposed at:
-
-https://localhost:2022/debug/vars
-
 ## Local Testing Cookbook
 
 Here are some guides to run various local tests and handle various situations that may arise. These are not mandatory but may be useful in some situations.
