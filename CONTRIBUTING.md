@@ -93,7 +93,7 @@ To build a new connector for Meergo see the [Create new connector](https://www.m
 
 ### Development setup
 
-To build and test Meergo locally see [DEVELOPERS.md](DEVELOPERS.md). 
+To build and test Meergo locally see the [contributing guidelines](https://www.meergo.com/docs/contributing-guidelines). 
 
 ### Pull Requests
 
