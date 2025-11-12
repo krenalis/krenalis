@@ -67,6 +67,20 @@ func main() {
 		NewCmd("go", "vet", "./...").InDir(repo, module).Run()
 	}
 
+	// Update the Go vendor.
+	NewCmd("go", "mod", "vendor").InDir(repo).Run()
+
+	// Run checks and do operations on the Admin.
+	fmt.Println("Run checks and do operations on the Admin")
+	NewCmd("npm", "ci").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "make-vendor").InDir(repo, "admin").Run()
+
+	// Validate the Docker Compose file 'compose.yaml'.
+	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()
+
 	// Run Go tests.
 	if runGoTests := !cliOptions.noGoTest; runGoTests {
 		fmt.Println("Run Go tests")
@@ -92,20 +106,6 @@ func main() {
 			NewCmd("go", args...).InDir(repo, pkg).Run()
 		}
 	}
-
-	// Update the Go vendor.
-	NewCmd("go", "mod", "vendor").InDir(repo).Run()
-
-	// Run checks and do operations on the Admin.
-	fmt.Println("Run checks and do operations on the Admin")
-	NewCmd("npm", "ci").InDir(repo, "admin").Run()
-	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
-	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
-	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
-	NewCmd("npm", "run", "make-vendor").InDir(repo, "admin").Run()
-
-	// Validate the Docker Compose file 'compose.yaml'.
-	NewCmd("docker", "compose", "config", "--quiet").InDir(repo).Run()
 
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }
