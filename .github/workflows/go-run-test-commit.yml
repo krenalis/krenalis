@@ -1,4 +1,4 @@
-name: Run go run ./commit
+name: Run go run ./test/commit
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions: {}
 jobs:
   tests:
     # Note that 'ubuntu-latest' includes the Docker server, which is required to
-    # run './commit'.
+    # run './test/commit'.
     runs-on: ubuntu-latest
 
     timeout-minutes: 40
@@ -46,7 +46,7 @@ jobs:
           pip install pandas
           pip install pyarrow
 
-      - name: go run ./commit
+      - name: go run ./test/commit
         env:
           MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET: ${{ secrets.MEERGO_TEST_GOOGLE_ANALYTICS_API_SECRET }}
           MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.MEERGO_TEST_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
@@ -55,7 +55,7 @@ jobs:
           MEERGO_TEST_MIXPANEL_PROJECT_ID: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_ID }}
           MEERGO_TEST_MIXPANEL_PROJECT_TOKEN: ${{ secrets.MEERGO_TEST_MIXPANEL_PROJECT_TOKEN }}
           MEERGO_TEST_MIXPANEL_DATA_RESIDENCY: ${{ secrets.MEERGO_TEST_MIXPANEL_DATA_RESIDENCY }}
-        run: go run ./commit
+        run: go run ./test/commit
 
       - name: Check that the repository is clean
-        run: ./commit/repo_is_clean.bash
+        run: ./test/commit/repo_is_clean.bash
