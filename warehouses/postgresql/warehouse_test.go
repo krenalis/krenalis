@@ -15,7 +15,7 @@ import (
 	"github.com/meergo/meergo/core/decimal"
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
-	"github.com/meergo/meergo/testimages"
+	"github.com/meergo/meergo/test/testimages"
 	"github.com/meergo/meergo/warehouses"
 
 	"github.com/google/go-cmp/cmp"

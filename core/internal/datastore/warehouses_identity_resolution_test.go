@@ -18,7 +18,7 @@ import (
 
 	"github.com/meergo/meergo/core/json"
 	"github.com/meergo/meergo/core/types"
-	"github.com/meergo/meergo/testimages"
+	"github.com/meergo/meergo/test/testimages"
 	"github.com/meergo/meergo/warehouses"
 
 	// Import warehouse drivers for TestWarehousesIdentityResolution.

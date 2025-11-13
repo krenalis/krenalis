@@ -30,7 +30,7 @@ import (
 	"github.com/meergo/meergo/cmd"
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/types"
-	"github.com/meergo/meergo/testimages"
+	"github.com/meergo/meergo/test/testimages"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
