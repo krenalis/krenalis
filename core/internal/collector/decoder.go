@@ -525,8 +525,13 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 		}
 	}
 
-	// IP.
+	// IP address used to set context.location. It is determined as follows:
+	//   - If context.ip is 255.255.255.255, 255.255.255.0, or 255.255.0.0, use the remote address.
+	//   - If context.ip is missing and fallbackToRequestIP is true, use the remote address.
+	//   - Otherwise, if context.ip is present and not 0.0.0.0, use context.ip.
 	var locationIP net.IP
+
+	// IP.
 	if ip, ok := context["ip"].(string); ok {
 		addr, err := netip.ParseAddr(ip)
 		if err != nil {
@@ -575,7 +580,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 				Longitude float64 `maxminddb:"longitude"`
 			} `maxminddb:"location"`
 		}
-		if err := d.maxmind.Lookup(d.remoteAddr.ip, &record); err == nil {
+		if err := d.maxmind.Lookup(locationIP, &record); err == nil {
 			loc := map[string]any{}
 			if city := record.City.Names.EN; city != "" {
 				loc["city"] = city
