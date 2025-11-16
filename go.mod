@@ -35,7 +35,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.7.0
-	github.com/snowflakedb/gosnowflake v1.17.0
+	github.com/snowflakedb/gosnowflake v1.17.1
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.38.0

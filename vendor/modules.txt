@@ -681,7 +681,7 @@ github.com/shopspring/decimal
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/snowflakedb/gosnowflake v1.17.0
+# github.com/snowflakedb/gosnowflake v1.17.1
 ## explicit; go 1.23.0
 github.com/snowflakedb/gosnowflake
 # github.com/spf13/cast v1.7.1

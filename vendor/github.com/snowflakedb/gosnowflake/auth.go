@@ -180,14 +180,15 @@ var userAgent = fmt.Sprintf("%v/%v (%v-%v) %v/%v",
 	runtime.Version())
 
 type authRequestClientEnvironment struct {
-	Application             string `json:"APPLICATION"`
-	ApplicationPath         string `json:"APPLICATION_PATH"`
-	Os                      string `json:"OS"`
-	OsVersion               string `json:"OS_VERSION"`
-	OCSPMode                string `json:"OCSP_MODE"`
-	GoVersion               string `json:"GO_VERSION"`
-	OAuthType               string `json:"OAUTH_TYPE,omitempty"`
-	CertRevocationCheckMode string `json:"CERT_REVOCATION_CHECK_MODE,omitempty"`
+	Application             string   `json:"APPLICATION"`
+	ApplicationPath         string   `json:"APPLICATION_PATH"`
+	Os                      string   `json:"OS"`
+	OsVersion               string   `json:"OS_VERSION"`
+	OCSPMode                string   `json:"OCSP_MODE"`
+	GoVersion               string   `json:"GO_VERSION"`
+	OAuthType               string   `json:"OAUTH_TYPE,omitempty"`
+	CertRevocationCheckMode string   `json:"CERT_REVOCATION_CHECK_MODE,omitempty"`
+	Platform                []string `json:"PLATFORM,omitempty"`
 }
 
 type authRequestData struct {
@@ -360,6 +361,7 @@ func authenticate(
 	// Get the current application path
 	applicationPath, err := os.Executable()
 	if err != nil {
+		logger.WithContext(ctx).Warnf("Failed to get executable path: %v", err)
 		applicationPath = "unknown"
 	}
 
@@ -380,6 +382,7 @@ func authenticate(
 		GoVersion:               runtime.Version(),
 		OAuthType:               oauthType,
 		CertRevocationCheckMode: sc.cfg.CertRevocationCheckMode.String(),
+		Platform:                getDetectedPlatforms(),
 	}
 
 	sessionParameters := make(map[string]interface{})
@@ -415,8 +418,8 @@ func authenticate(
 		params.Add("roleName", sc.cfg.Role)
 	}
 
-	logger.WithContext(ctx).Infof("PARAMS for Auth: %v, %v, %v, %v, %v, %v",
-		params, sc.rest.Protocol, sc.rest.Host, sc.rest.Port, sc.rest.LoginTimeout, sc.cfg.Authenticator.String())
+	logger.WithContext(ctx).Infof("Information for Auth: Host: %v, User: %v, Authenticator: %v, Params: %v, Protocol: %v, Port: %v, LoginTimeout: %v",
+		sc.rest.Host, sc.cfg.User, sc.cfg.Authenticator.String(), params, sc.rest.Protocol, sc.rest.Port, sc.rest.LoginTimeout)
 
 	respd, err := sc.rest.FuncPostAuth(ctx, sc.rest, sc.rest.getClientFor(sc.cfg.Authenticator), params, headers, bodyCreator, sc.rest.LoginTimeout)
 	if err != nil {
@@ -570,11 +573,14 @@ func createRequestBody(sc *snowflakeConn, sessionParameters map[string]interface
 		requestMain.Provider = wifAttestation.ProviderType
 	}
 
+	logger.WithContext(sc.ctx).Debugf("Request body is created for the authentication. Authenticator: %s, User: %s, Account: %s", sc.cfg.Authenticator.String(), sc.cfg.User, sc.cfg.Account)
+
 	authRequest := authRequest{
 		Data: requestMain,
 	}
 	jsonBody, err := json.Marshal(authRequest)
 	if err != nil {
+		logger.WithContext(sc.ctx).Errorf("Failed to marshal JSON. err: %v", err)
 		return nil, err
 	}
 	return jsonBody, nil
