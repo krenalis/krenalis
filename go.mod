@@ -5,6 +5,9 @@ module github.com/meergo/meergo
 // Keep in sync with the version within "Dockerfile".
 go 1.25
 
+// See https://github.com/meergo/meergo/security/dependabot/6
+replace github.com/dvsekhvalnov/jose2go => github.com/dvsekhvalnov/jose2go v1.7.0
+
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.40.3
 	github.com/andybalholm/brotli v1.2.0

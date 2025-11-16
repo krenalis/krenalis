@@ -336,7 +336,7 @@ github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
-# github.com/dvsekhvalnov/jose2go v1.6.0
+# github.com/dvsekhvalnov/jose2go v1.6.0 => github.com/dvsekhvalnov/jose2go v1.7.0
 ## explicit; go 1.15
 github.com/dvsekhvalnov/jose2go
 github.com/dvsekhvalnov/jose2go/aes
@@ -950,3 +950,4 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
+# github.com/dvsekhvalnov/jose2go => github.com/dvsekhvalnov/jose2go v1.7.0
