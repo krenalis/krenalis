@@ -42,7 +42,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.38.0
-	github.com/twmb/franz-go v1.20.2
+	github.com/twmb/franz-go v1.20.4
 	github.com/xuri/excelize/v2 v2.10.0
 	golang.org/x/crypto v0.44.0
 	golang.org/x/net v0.47.0

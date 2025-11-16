@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kbin"
@@ -98,7 +99,7 @@ type cursor struct {
 	topicID   [16]byte
 	partition int32
 
-	unknownIDFails atomicI32
+	unknownIDFails atomic.Int32
 
 	keepControl bool // whether to keep control records
 
@@ -133,7 +134,7 @@ type cursor struct {
 	//
 	// The used state is exclusively updated by either building a fetch
 	// request or when the source is stopped.
-	useState atomicBool
+	useState atomic.Bool
 
 	topicPartitionData // updated in metadata when session is stopped
 
@@ -245,11 +246,21 @@ type cursorOffsetPreferred struct {
 	recheck          bool
 }
 
-// Moves a cursor from one source to another. This is done while handling
-// a fetch response, which means within the context of a live session.
+// Moves a cursor from one source to another. This is done while handling a
+// fetch response or creating a fetch request, which means within the context
+// of a live session.
+//
+// NOTE: We cannot add the cursor to the new source until AFTER we are done
+// modifying everything on the cursor. FURTHER, we cannot add the cursor to the
+// new source until we are done accessing *any* field on the cursor.  As soon
+// as we add the cursor to the new source, it is eligible for use in a new
+// fetch request -- and, pathologically, the cursor could move again and the
+// source can be changed again (and at that point, all bets are off and there
+// can be some weird access patterns and modifying of fields that leads to
+// races or crashes). Point is: remove, modify, add. Do not modify after add.
+// See #1167.
 func (p *cursorOffsetPreferred) move() {
 	c := p.from
-	defer c.allowUsable()
 
 	// Before we migrate the cursor, we check if the destination source
 	// exists. If not, we do not migrate and instead force a metadata.
@@ -263,13 +274,11 @@ func (p *cursorOffsetPreferred) move() {
 		return
 	}
 
-	// This remove clears the source's session and buffered fetch, although
-	// we will not have a buffered fetch since moving replicas is called
-	// before buffering a fetch.
 	c.source.removeCursor(c)
 	c.source = sns.source
-	c.source.addCursor(c)
 	c.moveAt = time.Now().UnixNano()
+	c.useState.Swap(true)
+	c.source.addCursor(c)
 }
 
 type cursorPreferreds []cursorOffsetPreferred
@@ -316,19 +325,19 @@ func (cs cursorPreferreds) String() string {
 		for j, p := range ps {
 			if j < len(ps)-1 {
 				if p.ooor {
-					fmt.Fprintf(sb, "%d=>%d[ooor], ", p.p, p.next)
+					fmt.Fprintf(sb, "p%d=>b%d[ooor], ", p.p, p.next)
 				} else if p.recheck {
-					fmt.Fprintf(sb, "%d=>%d[recheck], ", p.p, p.next)
+					fmt.Fprintf(sb, "p%d=>b%d[recheck], ", p.p, p.next)
 				} else {
-					fmt.Fprintf(sb, "%d=>%d, ", p.p, p.next)
+					fmt.Fprintf(sb, "p%d=>b%d, ", p.p, p.next)
 				}
 			} else {
 				if p.ooor {
-					fmt.Fprintf(sb, "%d=>%d[ooor]", p.p, p.next)
+					fmt.Fprintf(sb, "p%d=>b%d[ooor]", p.p, p.next)
 				} else if p.recheck {
-					fmt.Fprintf(sb, "%d=>%d[recheck]", p.p, p.next)
+					fmt.Fprintf(sb, "p%d=>b%d[recheck]", p.p, p.next)
 				} else {
-					fmt.Fprintf(sb, "%d=>%d", p.p, p.next)
+					fmt.Fprintf(sb, "p%d=>b%d", p.p, p.next)
 				}
 			}
 		}
@@ -655,6 +664,25 @@ func (s *source) createReq() *fetchRequest {
 
 	paused := s.cl.consumer.loadPaused()
 
+	// While building this request, if any cursor is follow fetching and it
+	// has been more than the recheck-if-we-should-still-follow interval,
+	// we skip the cursor and move it back to the leader.
+	//
+	// This is safe w.r.t. metadata updates because `createReq` is running
+	// in the context of a live consumer session.
+	var rechecks cursorPreferreds
+	defer func() {
+		if len(rechecks) > 0 {
+			s.cl.cfg.logger.Log(LogLevelInfo, "redirecting follower fetchers back to their leader to re-check if a new follower should be chosen",
+				"from_broker", s.nodeID,
+				"moves", rechecks.String(),
+			)
+			for _, c := range rechecks {
+				c.move()
+			}
+		}
+	}()
+
 	s.cursorsMu.Lock()
 	defer s.cursorsMu.Unlock()
 
@@ -662,7 +690,18 @@ func (s *source) createReq() *fetchRequest {
 	for range s.cursors {
 		c := s.cursors[cursorIdx]
 		cursorIdx = (cursorIdx + 1) % len(s.cursors)
-		if !c.usable() || paused.has(c.topic, c.partition) {
+		if !c.usable() {
+			continue
+		}
+		if s.nodeID != c.leader && c.moveAt > 0 && time.Since(time.Unix(0, c.moveAt)) > s.cl.cfg.recheckPreferredReplicaInterval {
+			rechecks = append(rechecks, cursorOffsetPreferred{
+				cursorOffsetNext: *c.use(),
+				preferredReplica: c.leader,
+				recheck:          true,
+			})
+			continue
+		}
+		if paused.has(c.topic, c.partition) {
 			continue
 		}
 		req.addCursor(c)
@@ -840,6 +879,11 @@ func (s *source) fetch(consumerSession *consumerSession, doneFetch chan<- struct
 
 	select {
 	case <-requested:
+		// As `select` is pseudo-random when both cases are ready,
+		// check for context error in this branch to avoid retrying immediately with a failed context.
+		if isContextErr(err) && ctx.Err() != nil {
+			return fetched
+		}
 		fetched = true
 	case <-ctx.Done():
 		return fetched
@@ -897,22 +941,22 @@ func (s *source) fetch(consumerSession *consumerSession, doneFetch chan<- struct
 	}
 
 	// Before updating the source, we move all cursors that have new
-	// preferred replicas and remove them from being tracked in our req
-	// offsets. We also remove the reload offsets from our req offsets.
+	// preferred replicas and remove them (and any reload offsets) from
+	// being tracked in our req offsets.
 	//
-	// These two removals transition responsibility for finishing using the
-	// cursor from the request's used offsets to the new source or the
-	// reloading.
+	// Polling uses usedOffsets to update cursors; we need to remove moved
+	// or reloading cursors from being modified when the records that were
+	// fetched are finally polled.
 	if len(preferreds) > 0 {
 		s.cl.cfg.logger.Log(LogLevelInfo, "fetch partitions returned preferred replicas",
 			"from_broker", s.nodeID,
 			"moves", preferreds.String(),
 		)
+		preferreds.eachPreferred(func(c cursorOffsetPreferred) {
+			c.move()
+			deleteReqUsedOffset(c.from.topic, c.from.partition)
+		})
 	}
-	preferreds.eachPreferred(func(c cursorOffsetPreferred) {
-		c.move()
-		deleteReqUsedOffset(c.from.topic, c.from.partition)
-	})
 	reloadOffsets.each(deleteReqUsedOffset)
 
 	// The session on the request was updated; we keep those updates.
@@ -1261,16 +1305,6 @@ func (s *source) handleReqResp(br *broker, req *fetchRequest, resp *kmsg.FetchRe
 
 			if keep {
 				fetchTopic.Partitions = append(fetchTopic.Partitions, fp)
-			}
-
-			if s.nodeID != c.leader && c.moveAt > 0 && time.Since(time.Unix(0, c.moveAt)) > s.cl.cfg.recheckPreferredReplicaInterval {
-				if len(preferreds) == 0 || preferreds[len(preferreds)-1].cursorOffsetNext != *partOffset {
-					preferreds = append(preferreds, cursorOffsetPreferred{
-						cursorOffsetNext: *partOffset,
-						preferredReplica: c.leader,
-						recheck:          true,
-					})
-				}
 			}
 		}
 
