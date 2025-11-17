@@ -16,7 +16,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -142,25 +141,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		defer func() {
 			if r := recover(); r != nil {
 
-				// Log the panic to panics.log.
-				panicsFilename, err := filepath.Abs("panics.log")
-				if err != nil {
-					slog.Error("cmd: cannot get absolute filepath of 'panics.log'", "err", err)
-					return
-				}
-				slog.Error("cmd: a panic occurred, Meergo will exit with status code 1. See the file 'panics.log' for the panic details", "panic reason", r, "panics.log filename", panicsFilename)
-				f, err := os.OpenFile(panicsFilename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-				if err != nil {
-					slog.Error("cmd: cannot open panic file", "err", err)
-					return
-				}
-				defer f.Close()
-				_, err = fmt.Fprintf(f, "\n----- %s -----\nPanic reason: %v\nStack trace:\n%s",
-					time.Now().Format("2006-01-02 15:04:05.000"), r, debug.Stack())
-				if err != nil {
-					slog.Error("cmd: cannot write on panic file", "err", err)
-					return
-				}
+				// Log the panic (and the stack trace) using slog.Error.
+				slog.Error("cmd: a panic occurred, Meergo will exit with status code 1", "panic reason", r, "stacktrace", string(debug.Stack()))
 
 				// Send the panic to Sentry.
 				if settings.SentryTelemetryLevel == telemetryLevelErrors || settings.SentryTelemetryLevel == telemetryLevelAll {

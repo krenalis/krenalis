@@ -8,12 +8,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -47,21 +45,6 @@ func Main(assets fs.FS) {
 			fatal(1, `directory "meergo-assets" not found in assets (did you forget to generate and embed them?)`)
 		}
 	}
-
-	// Configure the logger.
-	logFile, err := os.OpenFile("error.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-	if err != nil {
-		p, err2 := filepath.Abs("error.log")
-		if err2 != nil {
-			p = "error.log"
-		}
-		fatalf(1, "cannot open log file %q: %s", p, err)
-	}
-	defer logFile.Close()
-
-	// Set slog to write to stderr and to the 'error.log' file.
-	fileLogger := slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stderr), nil))
-	slog.SetDefault(fileLogger)
 
 	// Parse the settings from the environment variables.
 	settings, err := parseEnvSettings()
