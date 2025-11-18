@@ -29,7 +29,7 @@ func (state *State) keep() {
 	var client analytics.Client
 	if state.sendStats {
 		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{
-			Endpoint: "https://chichi.open2b.net/api/v1/events",
+			Endpoint: "https://telemetry.meergo.com/events",
 			Logger:   discardLogger{},
 		})
 		defer func() {
