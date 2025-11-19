@@ -7,6 +7,7 @@ import { TransformedMapping, TransformedProperty, flattenSchema } from '../../..
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toMeergoStringType } from '../../helpers/types';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const SCHEMA_COLUMNS: GridColumn[] = [{ name: 'Name' }, { name: 'Type' }, { name: 'Primary source' }];
 
@@ -74,7 +75,7 @@ const buildRow = (property: TransformedProperty, primarySource?: TransformedConn
 		if (primarySource) {
 			primarySourceCell = (
 				<div className='schema-grid__primary-source'>
-					<LittleLogo code={primarySource.connector.code} />
+					<LittleLogo code={primarySource.connector.code} path={CONNECTORS_ASSETS_PATH} />
 					{primarySource.name}
 				</div>
 			);

@@ -5,12 +5,13 @@ import UnknownLogo from '../../base/UnknownLogo/UnknownLogo';
 
 interface ExternalLogoProps {
 	code: string | null;
+	path: string;
 	slot?: string;
 }
 
 const okSrcCache = new Map<string, string | null>();
 
-const ExternalLogo = ({ code, slot }: ExternalLogoProps) => {
+const ExternalLogo = ({ code, path, slot }: ExternalLogoProps) => {
 	const [src, setSrc] = useState<string | null>(null);
 
 	const { publicMetadata } = useContext(AppContext);
@@ -20,7 +21,14 @@ const ExternalLogo = ({ code, slot }: ExternalLogoProps) => {
 
 		let sources = [];
 		if (code != null) {
-			sources = publicMetadata.externalAssetsURLs.map((url: string) => `${url}${code}.svg`);
+			sources = publicMetadata.externalAssetsURLs.map((url: string) => {
+				let source = url + 'admin/';
+				if (path !== '') {
+					source += `${path}/`;
+				}
+				source += `${code}.svg`;
+				return source;
+			});
 		}
 
 		if (!code || sources.length === 0) {

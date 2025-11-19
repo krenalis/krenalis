@@ -14,5 +14,14 @@ const FULLSCREEN_PATHS = [
 	`${UI_BASE_PATH}connections/:id/actions/add/:actionTarget`,
 	`${UI_BASE_PATH}schema/edit`,
 ];
+const CONNECTORS_ASSETS_PATH = 'connectors';
+const WAREHOUSES_ASSETS_PATH = 'warehouses';
 
-export { UI_BASE_PATH, SIGN_UP_PATH, RESET_PASSWORD_PATH, FULLSCREEN_PATHS };
+export {
+	UI_BASE_PATH,
+	SIGN_UP_PATH,
+	RESET_PASSWORD_PATH,
+	FULLSCREEN_PATHS,
+	CONNECTORS_ASSETS_PATH,
+	WAREHOUSES_ASSETS_PATH,
+};

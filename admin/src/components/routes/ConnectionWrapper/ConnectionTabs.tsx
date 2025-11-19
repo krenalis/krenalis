@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 interface ConnectionTabsProps {
 	connection: TransformedConnection;
@@ -14,7 +15,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 	const fragments = location.pathname.split('/');
 	const tab = fragments[fragments.length - 1];
 
-	const connectorLogo = <LittleLogo code={connection.connector.code} />;
+	const connectorLogo = <LittleLogo code={connection.connector.code} path={CONNECTORS_ASSETS_PATH} />;
 
 	return (
 		<div className='connection-wrapper__tabs'>

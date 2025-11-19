@@ -4,6 +4,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const LINKED_CONNECTIONS_COLUMNS: GridColumn[] = [
 	{
@@ -76,7 +77,7 @@ const useLinkedConnectionsGrid = (
 		for (const fc of fullLinkedConnections) {
 			const nameCell = (
 				<div className='linked-connection-grid__name'>
-					<LittleLogo code={fc.connector.code} />
+					<LittleLogo code={fc.connector.code} path={CONNECTORS_ASSETS_PATH} />
 					{fc.name}
 				</div>
 			);

@@ -8,6 +8,7 @@ import { Link } from '../../base/Link/Link';
 import connectionMapContext from '../../../context/ConnectionMapContext';
 import appContext from '../../../context/AppContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 interface ConnectionBlockProps {
 	connection: TransformedConnection;
@@ -106,7 +107,7 @@ const ConnectionBlock = ({ connection: c, isNew }: ConnectionBlockProps) => {
 				>
 					<div className='connection-block__content'>
 						<Flex alignItems='center' gap={10}>
-							<LittleLogo code={c.connector.code} />
+							<LittleLogo code={c.connector.code} path={CONNECTORS_ASSETS_PATH} />
 							<div className='connection-block__name'>{c.name}</div>
 						</Flex>
 						<StatusDot status={c.status} />

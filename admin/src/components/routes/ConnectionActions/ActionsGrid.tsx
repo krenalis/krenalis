@@ -18,6 +18,7 @@ import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Variant } from '../App/App.types';
 import { serializeFilter } from '../../../utils/filters';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 
@@ -178,7 +179,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			logo = (
 				<div className='connection-actions__action-logo'>
 					<span style={{ position: 'relative', top: '3px' }}>
-						<LittleLogo code={formatConnector.code} />{' '}
+						<LittleLogo code={formatConnector.code} path={CONNECTORS_ASSETS_PATH} />{' '}
 					</span>
 				</div>
 			);

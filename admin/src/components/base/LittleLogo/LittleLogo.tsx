@@ -4,12 +4,13 @@ import { ExternalLogo } from '../../routes/ExternalLogo/ExternalLogo';
 
 interface LittleLogoProps {
 	code: string;
+	path: string;
 }
 
-const LittleLogo = ({ code }: LittleLogoProps) => {
+const LittleLogo = ({ code, path }: LittleLogoProps) => {
 	return (
 		<div className='little-logo'>
-			<ExternalLogo code={code} />
+			<ExternalLogo code={code} path={path} />
 		</div>
 	);
 };

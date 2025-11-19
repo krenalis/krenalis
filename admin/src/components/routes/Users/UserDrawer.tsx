@@ -17,6 +17,7 @@ import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
 import { USERS_EXPANDED_TRAITS_KEY, USERS_TAB_KEY } from '../../../constants/storage';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 interface UserDrawerProps {
 	selectedUser: string;
@@ -216,7 +217,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 						) : events && events.length > 0 ? (
 							events.map((event) => {
 								const source = connections.find((c) => c.id === event.connectionId);
-								const logo = <LittleLogo code={source?.connector.code} />;
+								const logo = <LittleLogo code={source?.connector.code} path={CONNECTORS_ASSETS_PATH} />;
 								return (
 									<div className='user-drawer__event' key={event.sentAt}>
 										<div className='user-drawer__event-head'>
@@ -245,7 +246,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 						) : identities && identities.length > 0 ? (
 							identities.map((identity) => {
 								const connection = connections.find((c) => c.id === identity.connection);
-								const logo = <LittleLogo code={connection?.connector.code} />;
+								const logo = (
+									<LittleLogo code={connection?.connector.code} path={CONNECTORS_ASSETS_PATH} />
+								);
 								return (
 									<div className='user-drawer__identity' key={identity.lastChangeTime}>
 										<div className='user-drawer__identity-head'>
