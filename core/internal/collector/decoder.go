@@ -28,7 +28,7 @@ import (
 
 	"github.com/avct/uasurfer"
 	"github.com/google/uuid"
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/relvacode/iso8601"
 	"golang.org/x/text/unicode/norm"
 )
@@ -51,7 +51,7 @@ type decoder struct {
 
 	receivedAt time.Time
 	remoteAddr struct {
-		ip   net.IP
+		ip   netip.Addr
 		ip32 string // es. 192.168.1.42
 		ip24 string // es. 192.168.1.0
 		ip16 string // es. 192.168.0.0
@@ -167,12 +167,7 @@ func (d *decoder) Reset(r *http.Request) error {
 
 	d.batch = nil
 	d.receivedAt = time.Now().UTC()
-
-	if d.remoteAddr.ip == nil {
-		d.remoteAddr.ip = make(net.IP, 4)
-	} else {
-		clear(d.remoteAddr.ip)
-	}
+	d.remoteAddr.ip = netip.Addr{}
 
 	// If an 'X-Forwarded-For' header was provided, get the request address from
 	// there.
@@ -529,7 +524,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 	//   - If context.ip is 255.255.255.255, 255.255.255.0, or 255.255.0.0, use the remote address.
 	//   - If context.ip is missing and fallbackToRequestIP is true, use the remote address.
 	//   - Otherwise, if context.ip is present and not 0.0.0.0, use context.ip.
-	var locationIP net.IP
+	var locationIP netip.Addr
 
 	// IP.
 	if ip, ok := context["ip"].(string); ok {
@@ -556,8 +551,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
 			}
-			b := addr.As4()
-			locationIP = b[:]
+			locationIP = addr
 		}
 	} else if fallbackToRequestIP {
 		context["ip"] = d.remoteAddr.ip32
@@ -565,7 +559,7 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 	}
 
 	// Location.
-	if _, ok := context["location"]; !ok && d.maxmind != nil && locationIP != nil {
+	if _, ok := context["location"]; !ok && d.maxmind != nil && locationIP.IsValid() {
 		var record struct {
 			City struct {
 				Names struct {
@@ -580,7 +574,8 @@ func (d *decoder) decodeEvent(connectionId int, fallbackToRequestIP bool) (event
 				Longitude float64 `maxminddb:"longitude"`
 			} `maxminddb:"location"`
 		}
-		if err := d.maxmind.Lookup(locationIP, &record); err == nil {
+		err := d.maxmind.Lookup(locationIP).Decode(&record)
+		if err == nil {
 			loc := map[string]any{}
 			if city := record.City.Names.EN; city != "" {
 				loc["city"] = city
@@ -1090,9 +1085,8 @@ func (d *decoder) parseRemoteAddr(s string) error {
 	if !addr.Is4() {
 		return errors.New("not an IPv4 address")
 	}
-	a := addr.As4()
-	copy(d.remoteAddr.ip, a[:])
-	d.remoteAddr.ip32 = addr.String()
+	d.remoteAddr.ip = addr.Unmap()
+	d.remoteAddr.ip32 = d.remoteAddr.ip.String()
 	d.remoteAddr.ip24 = netip.PrefixFrom(addr, 24).Masked().Addr().String()
 	d.remoteAddr.ip16 = netip.PrefixFrom(addr, 16).Masked().Addr().String()
 	return nil

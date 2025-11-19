@@ -5,11 +5,9 @@
 package collector
 
 import (
-	"bytes"
-	"fmt"
 	"io"
-	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"reflect"
 	"strings"
@@ -1117,7 +1115,6 @@ func TestParseRemoteAddr(t *testing.T) {
 			t.Parallel()
 
 			var dec decoder
-			dec.remoteAddr.ip = make(net.IP, 4)
 			err := dec.parseRemoteAddr(test.in)
 			if err != nil {
 				t.Fatalf("parseRemoteAddr(%q) returned error: %v", test.in, err)
@@ -1134,11 +1131,8 @@ func TestParseRemoteAddr(t *testing.T) {
 				t.Fatalf("ip16: expected %q, got %q", test.want16, ra.ip16)
 			}
 
-			wantIP := net.ParseIP(test.want32)
-			if wantIP == nil {
-				t.Fatal(fmt.Errorf("invalid IP address: %s", test.want32))
-			}
-			if !wantIP.Equal(ra.ip) {
+			wantIP := netip.MustParseAddr(test.want32)
+			if wantIP != ra.ip {
 				t.Fatalf("ip: expected %v, got %v", wantIP, ra.ip)
 			}
 		})
@@ -1150,21 +1144,18 @@ func TestParseRemoteAddr(t *testing.T) {
 		"abc.def.ghi.jkl", "::1", "2001:db8::1", "1.2.3.4 ", " 1.2.3.4",
 	}
 
-	zeroIP := []byte{0, 0, 0, 0}
-
 	for _, in := range invalid {
 		in := in
 		t.Run("invalid/"+in, func(t *testing.T) {
 			t.Parallel()
 
 			var dec decoder
-			dec.remoteAddr.ip = make(net.IP, 4)
 			err := dec.parseRemoteAddr(in)
 			if err == nil {
 				t.Fatalf("parseRemoteAddr(%q): expected error, got nil", in)
 			}
 			ra := dec.remoteAddr
-			if ra.ip32 != "" || ra.ip24 != "" || ra.ip16 != "" || !bytes.Equal(ra.ip, zeroIP) {
+			if ra.ip32 != "" || ra.ip24 != "" || ra.ip16 != "" || ra.ip.IsValid() {
 				t.Fatalf("parseRemoteAddr(%q): expected zero-value remoteAddr on error, got %+v", in, ra)
 			}
 		})
@@ -1175,7 +1166,6 @@ func TestParseRemoteAddr(t *testing.T) {
 		t.Parallel()
 
 		var dec decoder
-		dec.remoteAddr.ip = make(net.IP, 4)
 		err := dec.parseRemoteAddr("192.168.001.042")
 		if err == nil {
 			ra := dec.remoteAddr

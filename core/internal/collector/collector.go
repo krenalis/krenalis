@@ -27,7 +27,7 @@ import (
 	"github.com/meergo/meergo/core/json"
 	meergoMetrics "github.com/meergo/meergo/core/metrics"
 
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 )
 
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.

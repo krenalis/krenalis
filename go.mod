@@ -33,7 +33,7 @@ require (
 	github.com/klauspost/compress v1.18.1
 	github.com/mark3labs/mcp-go v0.39.0
 	github.com/meergo/analytics-go v0.0.6
-	github.com/oschwald/maxminddb-golang v1.13.1
+	github.com/oschwald/maxminddb-golang/v2 v2.1.0
 	github.com/pkg/sftp v1.13.10
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rabbitmq/amqp091-go v1.10.0
