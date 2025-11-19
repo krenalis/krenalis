@@ -4,4 +4,4 @@ export const SNIPPET = `import "github.com/meergo/analytics-go"
 
 client := analytics.New("writekey", "endpoint")`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/connectors/sources/go';
+export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/integrations/go-sdk';

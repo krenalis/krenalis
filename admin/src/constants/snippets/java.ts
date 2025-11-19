@@ -8,4 +8,4 @@ final Analytics analytics =
         .endpoint("endpoint")
         .build();`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/connectors/sources/java';
+export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/integrations/java-sdk';

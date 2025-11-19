@@ -7,4 +7,4 @@ var config = new Config()
 
 Analytics.Initialize("writekey", config);`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/sources/dotnet';
+export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/integrations/dotnet-sdk';

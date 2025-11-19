@@ -10,4 +10,4 @@ val client = Analytics("writekey", applicationContext) {
   // ...other config options
 }`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/sources/android-sdk';
+export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/integrations/android-sdk';

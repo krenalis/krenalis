@@ -5,4 +5,4 @@ export const SNIPPET = `import meergo.analytics as analytics
 analytics.write_key = "writekey"
 analytics.endpoint = "endpoint"`;
 
-export const DOCUMENTATION_LINK = 'http://localhost:8080/connectors/sources/python';
+export const DOCUMENTATION_LINK = 'https://www.meergo.com/docs/integrations/python-sdk';
