@@ -15,7 +15,7 @@ import * as marked from 'marked';
 import { potentialConnectors } from '../../../lib/api/potentialConnectors';
 import { PotentialConnector } from '../../../lib/api/types/connector';
 import { ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_CODE_KEY } from '../../../constants/storage';
-import { UI_BASE_PATH } from '../../../constants/paths';
+import { CONNECTORS_ASSETS_PATH, UI_BASE_PATH } from '../../../constants/paths';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 
 const ConnectorsList = () => {
@@ -320,7 +320,7 @@ const ConnectorCard = ({ connector, potentialConnector, onClick, role }: Connect
 				<div className='connectors-list__card-beta-label'>Beta</div>
 				<div className='connectors-list__card-top'>
 					<div className='connectors-list__card-logo'>
-						<ExternalLogo code={connector.code} />
+						<ExternalLogo code={connector.code} path={CONNECTORS_ASSETS_PATH} />
 					</div>
 					<div className='connectors-list__card-label'>{connector.label}</div>
 					{connector.categories.map((category, index) => (
@@ -360,7 +360,7 @@ const ConnectorCard = ({ connector, potentialConnector, onClick, role }: Connect
 				) : null}
 				<div className='connectors-list__card-top'>
 					<div className='connectors-list__card-logo'>
-						<ExternalLogo code={potentialConnector.code} />
+						<ExternalLogo code={potentialConnector.code} path={CONNECTORS_ASSETS_PATH} />
 					</div>
 					<div className='connectors-list__card-label'>{potentialConnector.label}</div>
 					{potentialConnector.categories.map((category, index) => (

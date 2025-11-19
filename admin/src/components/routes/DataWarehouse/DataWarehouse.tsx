@@ -11,6 +11,7 @@ import Section from '../../base/Section/Section';
 import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
 
 const DataWarehouse = () => {
 	const [connectedWarehouse, setConnectedWarehouse] = useState<string>();
@@ -171,7 +172,7 @@ const WarehouseInfo = ({
 			<div className='warehouse-info__info'>
 				<div className='warehouse-info__title'>
 					<div className='warehouse-info__icon'>
-						<LittleLogo code={warehouse.code} />
+						<LittleLogo code={warehouse.code} path={WAREHOUSES_ASSETS_PATH} />
 					</div>
 					<div className='warehouse-info__name'>{warehouse.name}</div>
 				</div>

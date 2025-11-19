@@ -16,6 +16,7 @@ import { isEventConnection } from '../../../lib/core/connection';
 import Section from '../../base/Section/Section';
 import { Snippet } from '../../base/Snippet/Snippet';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const ConnectionActions = () => {
 	const [isActionTypesDialogOpen, setIsActionTypesDialogOpen] = useState<boolean>(false);
@@ -136,7 +137,7 @@ const ConnectionActions = () => {
 							{connection.actionTypes.map((actionType) => (
 								<ListTile
 									key={actionType.name}
-									icon={<LittleLogo code={connection.connector.code} />}
+									icon={<LittleLogo code={connection.connector.code} path={CONNECTORS_ASSETS_PATH} />}
 									name={actionType.name}
 									description={actionType.description}
 									className={`connection-actions__action-type connection-actions__action-type--${actionType.target.toLowerCase()}`}
@@ -187,7 +188,7 @@ const ConnectionActions = () => {
 				setIsOpen={setIsActionTypesDialogOpen}
 				actionTypes={connection.actionTypes!}
 				connection={connection}
-				connectionLogo={<LittleLogo code={connection.connector.code} />}
+				connectionLogo={<LittleLogo code={connection.connector.code} path={CONNECTORS_ASSETS_PATH} />}
 				onSelectActionType={onSelectActionType}
 			/>
 			<Outlet context={{ setIsActionOpen }} />

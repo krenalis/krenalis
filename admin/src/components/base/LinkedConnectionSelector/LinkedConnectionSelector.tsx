@@ -10,6 +10,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import Grid from '../Grid/Grid';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 interface ConnectionSelectorProps {
 	linkedConnections: Number[] | null;
@@ -109,7 +110,10 @@ const LinkedConnectionSelector = ({
 											if (!isAlreadySelected) {
 												return (
 													<SlMenuItem key={c.id} value={String(c.id)}>
-														<LittleLogo code={c.connector.code} />
+														<LittleLogo
+															code={c.connector.code}
+															path={CONNECTORS_ASSETS_PATH}
+														/>
 														{c.name}
 													</SlMenuItem>
 												);

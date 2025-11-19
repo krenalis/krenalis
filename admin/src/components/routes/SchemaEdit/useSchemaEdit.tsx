@@ -13,6 +13,7 @@ import { PrimarySources } from '../../../lib/api/types/workspace';
 import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toMeergoStringType } from '../../helpers/types';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -536,7 +537,7 @@ const buildRow = (
 		if (primarySourceConnection) {
 			primarySourceCell = (
 				<div className='schema-edit__primary-source'>
-					<LittleLogo code={primarySourceConnection.connector.code} />
+					<LittleLogo code={primarySourceConnection.connector.code} path={CONNECTORS_ASSETS_PATH} />
 					{primarySourceConnection.name}
 				</div>
 			);

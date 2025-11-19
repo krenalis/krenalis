@@ -19,6 +19,7 @@ import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 import * as icons from '../../../constants/icons';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): boolean => {
 	return connectionRole === 'Source' && c.strategies;
@@ -79,7 +80,7 @@ const ConnectorSettings = () => {
 			setTitle(
 				<Flex alignItems='baseline' gap={10}>
 					<span style={{ position: 'relative', top: '3px' }}>
-						<LittleLogo code={connector.code} />
+						<LittleLogo code={connector.code} path={CONNECTORS_ASSETS_PATH} />
 					</span>
 					<span>
 						Add {connectionRole.toLowerCase()} connection for {connector.label}

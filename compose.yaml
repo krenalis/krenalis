@@ -11,7 +11,7 @@ services:
 
       # List of base URLs (comma-separated) from which Meergo retrieves external
       # assets (as icons) related to connector and data warehouse brands.
-      MEERGO_EXTERNAL_ASSETS_URLS: https://cdn.jsdelivr.net/gh/meergo/external-assets-cdn@main/
+      MEERGO_EXTERNAL_ASSETS_URLS: https://assets.meergo.com/
 
       # HubSpot.
       # Set these environment variables to connect to your HubSpot app when

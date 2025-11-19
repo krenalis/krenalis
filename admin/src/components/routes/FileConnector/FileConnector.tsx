@@ -10,6 +10,7 @@ import TransformedConnection from '../../../lib/core/connection';
 import ListTile from '../../base/ListTile/ListTile';
 import { Link } from '../../base/Link/Link';
 import { startsWithVowelSound } from '../../../utils/startsWithVowelSound';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const FileConnector = () => {
 	const [selectedStorage, setSelectedStorage] = useState<number>();
@@ -78,13 +79,14 @@ const FileConnector = () => {
 									<div className='file-connector__storage-logo' slot='prefix'>
 										<LittleLogo
 											code={storages.find((s) => s.id === selectedStorage).connector.code}
+											path={CONNECTORS_ASSETS_PATH}
 										/>
 									</div>
 								)}
 								{storages.map((s) => (
 									<SlOption key={s.id} value={String(s.id)}>
 										<div slot='prefix'>
-											<LittleLogo code={s.connector.code} />
+											<LittleLogo code={s.connector.code} path={CONNECTORS_ASSETS_PATH} />
 										</div>
 										{s.name}
 									</SlOption>
@@ -107,7 +109,7 @@ const FileConnector = () => {
 						<div className='file-connector__action-types'>
 							<ListTile
 								key={'users-action-type'}
-								icon={<LittleLogo code={file.code} />}
+								icon={<LittleLogo code={file.code} path={CONNECTORS_ASSETS_PATH} />}
 								name={`${role === 'Source' ? 'Import' : 'Export'} users`}
 								description={
 									role === 'Source'

@@ -27,6 +27,7 @@ import { PrimarySources } from '../../../lib/api/types/workspace';
 import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toMeergoStringType } from '../../helpers/types';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const TYPE_KINDS: TypeKind[] = [
 	'text',
@@ -771,6 +772,7 @@ const PropertyDialog = ({
 									{primarySource && (
 										<LittleLogo
 											code={sourceConnections.find((c) => c.id === primarySource).connector.code}
+											path={CONNECTORS_ASSETS_PATH}
 										/>
 									)}
 								</div>
@@ -778,7 +780,7 @@ const PropertyDialog = ({
 								{sourceConnections.map((c) => (
 									<SlOption key={c.id} value={String(c.id)}>
 										<div slot='prefix'>
-											<LittleLogo code={c.connector.code} />
+											<LittleLogo code={c.connector.code} path={CONNECTORS_ASSETS_PATH} />
 										</div>
 										{c.name}
 									</SlOption>

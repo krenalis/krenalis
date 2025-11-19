@@ -13,6 +13,7 @@ import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSett
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import Section from '../../base/Section/Section';
 import { warehouseSectionTexts } from './DataWarehouse';
+import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
 
 interface DataWarehouseSettingsProps {
 	selectedWarehouse: Warehouse;
@@ -120,7 +121,7 @@ const DataWarehouseSettings = ({
 		<div className='warehouse-settings'>
 			<div className='warehouse-settings__info'>
 				<div className='warehouse-settings__icon'>
-					<LittleLogo code={selectedWarehouse.code} />
+					<LittleLogo code={selectedWarehouse.code} path={WAREHOUSES_ASSETS_PATH} />
 				</div>
 				<p className='warehouse-settings__name'>{selectedWarehouse.name}</p>
 			</div>

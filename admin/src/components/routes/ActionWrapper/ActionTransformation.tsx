@@ -84,6 +84,7 @@ import { mapExpressionArguments, buildMapExpression } from '../../../utils/mapEx
 import { isPlainObject } from '../../../utils/isPlainObject';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 import { toJavascriptType, toMeergoStringType, toPythonType } from '../../helpers/types';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -1131,7 +1132,10 @@ const TransformationBox = ({
 									{transformationType === 'mappings' ? (
 										<SlIcon name='shuffle' />
 									) : (
-										<ExternalLogo code={selectedLanguage.toLowerCase()} />
+										<ExternalLogo
+											code={selectedLanguage.toLowerCase()}
+											path={CONNECTORS_ASSETS_PATH}
+										/>
 									)}
 								</span>
 								<div className='transformation-box__header-text'>

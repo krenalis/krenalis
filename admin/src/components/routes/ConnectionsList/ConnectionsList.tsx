@@ -10,6 +10,7 @@ import { ConnectionRole } from '../../../lib/api/types/connection';
 import TransformedConnection from '../../../lib/core/connection';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Link } from '../../base/Link/Link';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const ConnectionsList = () => {
 	const [connectionsRows, setConnectionsRows] = useState<GridRow[]>();
@@ -77,7 +78,7 @@ const ConnectionsList = () => {
 		for (const c of roleConnections) {
 			const cells = [
 				<div className='connections-list__name-cell'>
-					<LittleLogo code={c.connector.code} /> {c.name}
+					<LittleLogo code={c.connector.code} path={CONNECTORS_ASSETS_PATH} /> {c.name}
 				</div>,
 				c.connector.type,
 				c.connector.label,
@@ -106,7 +107,9 @@ const ConnectionsList = () => {
 					});
 					const connectionLogos: ReactNode[] = [];
 					for (const ec of fullEventConnections) {
-						connectionLogos.push(<LittleLogo key={String(ec.id)} code={ec.connector.code} />);
+						connectionLogos.push(
+							<LittleLogo key={String(ec.id)} code={ec.connector.code} path={CONNECTORS_ASSETS_PATH} />,
+						);
 					}
 					cells.push(<div className='connections-list__event-connections-cell'>{connectionLogos}</div>);
 				} else {

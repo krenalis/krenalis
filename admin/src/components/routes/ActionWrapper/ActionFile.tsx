@@ -37,6 +37,7 @@ import {
 } from '../../helpers/getSchemaComboboxItems';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ActionIssues } from './ActionIssues';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const ActionFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
@@ -202,7 +203,7 @@ const ActionFile = () => {
 			>
 				{action.format !== '' && (
 					<div className='action__file-format-logo' slot='prefix'>
-						<LittleLogo code={formatCode} />
+						<LittleLogo code={formatCode} path={CONNECTORS_ASSETS_PATH} />
 					</div>
 				)}
 				{formats.map((f) => {
@@ -216,7 +217,7 @@ const ActionFile = () => {
 					return (
 						<SlOption key={f.code} value={f.code}>
 							<div slot='prefix'>
-								<LittleLogo code={f.code} />
+								<LittleLogo code={f.code} path={CONNECTORS_ASSETS_PATH} />
 							</div>
 							{f.label}
 						</SlOption>

@@ -6,6 +6,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import { ActionIssues } from './ActionIssues';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
 const ActionHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
@@ -100,7 +101,7 @@ const ActionHeader = () => {
 	return (
 		<div className='action__header'>
 			<div className='action__header-title'>
-				<LittleLogo code={connection.connector.code} />
+				<LittleLogo code={connection.connector.code} path={CONNECTORS_ASSETS_PATH} />
 				<div className='action__header-name'>
 					{isNameEditable ? (
 						<span>
