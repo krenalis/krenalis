@@ -170,7 +170,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		//case strings.HasPrefix(r.URL.Path, "/webhook/"): TODO(marco): implement webhooks
 		//	core.ServeWebhook(w, r)
 		//	return
-		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
+		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/"):
 			admin.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/metrics":

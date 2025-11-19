@@ -146,16 +146,6 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer bw.Close()
 		w = brotliResponseWriter{bw, w}
 	}
-	if r.URL.Path == "/javascript-sdk/dist/meergo.min.js" {
-		w.Header().Set("Content-Type", "text/javascript")
-		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "meergo.min.js"))
-		return
-	}
-	if r.URL.Path == "/javascript-sdk/dist/meergo.min.js.map" {
-		w.Header().Set("Content-Type", "application/json")
-		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "meergo.min.js.map"))
-		return
-	}
 	if strings.HasPrefix(r.URL.Path, "/admin/src/") {
 		// Serve Shoelace icons.
 		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/shoelace/dist/assets/icons/"); ok {
