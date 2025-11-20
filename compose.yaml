@@ -1,6 +1,6 @@
 services:
   meergo:
-    image: meergocdp/meergo:v0.8.5
+    image: meergocdp/meergo:v0.8.6
     ports:
       - 2022:2022
     environment:
