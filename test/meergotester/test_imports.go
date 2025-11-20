@@ -30,6 +30,7 @@ import (
 	_ "github.com/meergo/meergo/connectors/json"
 	_ "github.com/meergo/meergo/connectors/kafka"
 	_ "github.com/meergo/meergo/connectors/parquet"
+	_ "github.com/meergo/meergo/connectors/postgresql"
 	_ "github.com/meergo/meergo/connectors/sdk"
 	_ "github.com/meergo/meergo/connectors/webhook"
 
