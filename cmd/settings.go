@@ -250,14 +250,14 @@ func parseEnvSettings() (*Settings, error) {
 		settings.MaxMindDBPath = path
 	}
 
-	settings.Transformers.Lambda.AccessKeyID = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_ACCESS_KEY_ID")
-	settings.Transformers.Lambda.SecretAccessKey = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_SECRET_ACCESS_KEY")
-	settings.Transformers.Lambda.Region = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_REGION")
-	settings.Transformers.Lambda.Role = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_ROLE")
-	settings.Transformers.Lambda.Node.Runtime = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME")
-	settings.Transformers.Lambda.Node.Layer = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_NODE_LAYER")
-	settings.Transformers.Lambda.Python.Runtime = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_PYTHON_RUNTIME")
-	settings.Transformers.Lambda.Python.Layer = envVars.Get("MEERGO_TRANSFORMERS_LAMBDA_PYTHON_LAYER")
+	settings.Transformers.Lambda.AccessKeyID = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ACCESS_KEY_ID")
+	settings.Transformers.Lambda.SecretAccessKey = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY")
+	settings.Transformers.Lambda.Region = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_REGION")
+	settings.Transformers.Lambda.Role = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ROLE")
+	settings.Transformers.Lambda.Node.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODE_RUNTIME")
+	settings.Transformers.Lambda.Node.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODE_LAYER")
+	settings.Transformers.Lambda.Python.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME")
+	settings.Transformers.Lambda.Python.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER")
 
 	settings.Transformers.Local.NodeExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE")
 	settings.Transformers.Local.PythonExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE")

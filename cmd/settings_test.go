@@ -860,7 +860,7 @@ func TestParseSettings(t *testing.T) {
 	t.Run("transformers conflict between local and Lambda", func(t *testing.T) {
 		setBaseline(t)
 		t.Setenv("MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE", "/usr/bin/node")
-		t.Setenv("MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
+		t.Setenv("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
 		_, err := parseEnvSettings()
 		if err == nil {
 			t.Fatalf("expected error for conflicting transformers, got nil")
@@ -881,7 +881,7 @@ func TestParseSettings(t *testing.T) {
 
 	t.Run("transformers Lambda-only accepted", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("MEERGO_TRANSFORMERS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
+		t.Setenv("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODE_RUNTIME", "nodejs18.x")
 		if _, err := parseEnvSettings(); err != nil {
 			t.Fatalf("expected no error for Lambda-only transformers, got %v", err)
 		}
