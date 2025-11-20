@@ -44,7 +44,7 @@ Meergo can interface and exchange data with services such as:
 If you have Docker and Git installed, try Meergo locally by simply running:
 
 ```
-git clone https://github.com/meergo/meergo.git && cd meergo && docker compose up
+# TODO: insert command here when refactoring this README and publishing the repository
 ```
 
 Otherwise, you can checkout the documentation page about [how to install Meergo](http://localhost:8080/installation).
