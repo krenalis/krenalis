@@ -128,9 +128,3 @@ func fatal(code int, msg string) {
 	}
 	os.Exit(code)
 }
-
-// fatalf formats according to a format specifier and writes (if not empty) to
-// stderr, and exits with the given code.
-func fatalf(code int, format string, a ...any) {
-	fatal(code, fmt.Sprintf(format, a...))
-}
