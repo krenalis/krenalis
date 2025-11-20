@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,6 +30,18 @@ func (m customJSONMarshaller) MarshalJSON() ([]byte, error) {
 		return []byte(`null`), nil
 	}
 	return m, nil
+}
+
+type failingJSONMarshaller struct{}
+
+func (f failingJSONMarshaller) MarshalJSON() ([]byte, error) {
+	return nil, fmt.Errorf("marshal error")
+}
+
+type nilJSONMarshaller struct{}
+
+func (f nilJSONMarshaller) MarshalJSON() ([]byte, error) {
+	return nil, nil
 }
 
 func Test_normalize(t *testing.T) {
@@ -188,6 +201,107 @@ func Test_normalize(t *testing.T) {
 					}
 				}
 				t.Fatalf("expected %#v, got %#v", expected, got)
+			}
+		})
+	}
+}
+
+func Test_normalize_errors(t *testing.T) {
+	timeLayout := &state.TimeLayouts{Time: "15:04"}
+
+	tests := []struct {
+		name         string
+		typ          types.Type
+		value        any
+		nullable     bool
+		layout       *state.TimeLayouts
+		wantContains string
+	}{
+		{name: "nilNotNullable", typ: types.Text(), value: nil, wantContains: "has value null but it is not nullable"},
+		{name: "textInvalidType", typ: types.Text(), value: 5, wantContains: "has type int"},
+		{name: "textInvalidUTF8", typ: types.Text(), value: string([]byte{0xff}), wantContains: "does not contain valid UTF-8 characters"},
+		{name: "textRegexpMismatch", typ: types.Text().WithRegexp(regexp.MustCompile(`^foo$`)), value: "bar", wantContains: "contains an unsupported value"},
+		{name: "textUnsupportedValue", typ: types.Text().WithValues("foo", "bar"), value: "baz", wantContains: "contains an unsupported value"},
+		{name: "textTooLong", typ: types.Text().WithByteLen(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
+		{name: "textTooManyChars", typ: types.Text().WithCharLen(2), value: "bòò", wantContains: "has a value longer than 2 characters"},
+		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
+		{name: "booleanInvalidType", typ: types.Boolean(), value: 1, wantContains: "has type int that is not allowed for type boolean"},
+		{name: "intFractionalFloat", typ: types.Int(32), value: 1.5, wantContains: "float64 value that cannot represent an int(32) value"},
+		{name: "intOutOfRange", typ: types.Int(8), value: 200, wantContains: "has value which is not in the range"},
+		{name: "intStringParseError", typ: types.Int(32), value: "abc", wantContains: "string value that does not represent an int value"},
+		{name: "intBytesParseError", typ: types.Int(32), value: []byte("abc"), wantContains: "has a []byte value that cannot represent an int value"},
+		{name: "intInvalidType", typ: types.Int(32), value: true, wantContains: "has type bool that is not allowed for type int(32)"},
+		{name: "intDecimalTooLarge", typ: types.Int(32), value: decimal.MustParse("1e20"), wantContains: "has a decimal.decimal value that cannot represent an int value"},
+		{name: "uintNegativeInt", typ: types.Uint(8), value: -3, wantContains: "has a negative int value that cannot represent an uint(8) value"},
+		{name: "uintAboveRange", typ: types.Uint(8), value: uint16(math.MaxUint16), wantContains: "has value which is not in the range [0, 255]"},
+		{name: "uintStringParseError", typ: types.Uint(16), value: "bad", wantContains: "has a string value that cannot represent an uint value"},
+		{name: "uintBytesParseError", typ: types.Uint(16), value: []byte("bad"), wantContains: "has a []byte value that cannot represent an uint value"},
+		{name: "uintNegativeFloat", typ: types.Uint(16), value: -2.5, wantContains: "has a float64 value that cannot represent an uint(16) value"},
+		{name: "uintDecimalNegative", typ: types.Uint(16), value: decimal.MustInt(-1), wantContains: "has a decimal.decimal value that cannot represent an uint value"},
+		{name: "uintInvalidType", typ: types.Uint(16), value: true, wantContains: "has type bool that is not allowed for type uint(16)"},
+		{name: "floatIntNotRepresentable", typ: types.Float(32), value: 1 << 26, wantContains: "has an int value that cannot represent a float(32) value"},
+		{name: "float64TooPreciseFor32", typ: types.Float(32), value: 1e40, wantContains: "has a float64 value that cannot represent a float(32) value"},
+		{name: "floatDecimalNotRepresentable", typ: types.Float(64), value: decimal.MustParse("1e500"), wantContains: "has a decimal.Decimal value that cannot represent a float(64) value"},
+		{name: "floatStringParseError", typ: types.Float(64), value: "abc", wantContains: "has a string value that cannot represent a float(64) value"},
+		{name: "floatRange", typ: types.Float(32).WithFloatRange(0, 1), value: 2.0, wantContains: "has a value 2.000000 that is not in the range [0.000000, 1.000000]"},
+		{name: "floatInvalidType", typ: types.Float(32), value: true, wantContains: "has type bool that is not allowed for type float(32)"},
+		{name: "floatRealNaN", typ: types.Float(64).AsReal(), value: math.NaN(), wantContains: "has a value of NaN, which is not allowed"},
+		{name: "decimalOutOfRange", typ: types.Decimal(3, 2), value: "100", wantContains: "cannot represent a decimal(3,2) value"},
+		{name: "decimalInvalidType", typ: types.Decimal(3, 2), value: true, wantContains: "has type bool that is not allowed for type decimal(3,2)"},
+		{name: "decimalIntTooLarge", typ: types.Decimal(3, 2), value: 123, wantContains: "cannot represent a decimal(3,2) value"},
+		{name: "decimalUintTooLarge", typ: types.Decimal(3, 0), value: uint(1000), wantContains: "cannot represent a decimal(3,0) value"},
+		{name: "decimalFloatOutOfRange", typ: types.Decimal(4, 2), value: 123.45, wantContains: "cannot represent a decimal(4,2) value"},
+		{name: "decimalInvalidString", typ: types.Decimal(3, 2), value: "bad", wantContains: "syntax error"},
+		{name: "dateTimeInvalidString", typ: types.DateTime(), value: "bad-date", layout: &state.TimeLayouts{}, wantContains: "has a string value that cannot represent a datetime value"},
+		{name: "dateTimeYearOutOfRange", typ: types.DateTime(), value: time.Date(10000, 1, 1, 0, 0, 0, 0, time.UTC), layout: &state.TimeLayouts{}, wantContains: "has date and time with a year not in range"},
+		{name: "dateTimeInvalidType", typ: types.DateTime(), value: 5, layout: &state.TimeLayouts{}, wantContains: "has type int that is not allowed for type datetime"},
+		{name: "dateTimeFloatInvalidLayout", typ: types.DateTime(), value: float64(10), layout: &state.TimeLayouts{DateTime: "bad"}, wantContains: "has a float64 value that cannot represent a datetime value"},
+		{name: "dateTimeUnixStringParse", typ: types.DateTime(), value: "abc", layout: &state.TimeLayouts{DateTime: "unix"}, wantContains: "has a string value that cannot represent a datetime value"},
+		{name: "dateInvalidString", typ: types.Date(), value: "not-a-date", layout: &state.TimeLayouts{Date: time.DateOnly}, wantContains: "has a string value that cannot represent a date value"},
+		{name: "dateYearOutOfRange", typ: types.Date(), value: time.Date(0, 6, 1, 0, 0, 0, 0, time.UTC), layout: &state.TimeLayouts{}, wantContains: "has date with a year not in range"},
+		{name: "dateInvalidType", typ: types.Date(), value: 5, layout: &state.TimeLayouts{}, wantContains: "has type int that is not allowed for type date"},
+		{name: "timeInvalidString", typ: types.Time(), value: "25:61", layout: timeLayout, wantContains: "has a string value that does not represent a time value"},
+		{name: "timeInvalidType", typ: types.Time(), value: 12, layout: &state.TimeLayouts{}, wantContains: "has type int that is not allowed for type time"},
+		{name: "timeInvalidBytes", typ: types.Time(), value: []byte("bad"), layout: &state.TimeLayouts{}, wantContains: "has a []byte value that cannot represent a time value"},
+		{name: "yearFractional", typ: types.Year(), value: 2024.5, wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearOutOfRange", typ: types.Year(), value: 0, wantContains: "has value which is not in the range [1, 9999]"},
+		{name: "yearStringParse", typ: types.Year(), value: "bad", wantContains: "has a string value that cannot represent a year value"},
+		{name: "yearInvalidType", typ: types.Year(), value: true, wantContains: "has type bool that is not allowed for type year"},
+		{name: "uuidInvalidString", typ: types.UUID(), value: "not-a-uuid", wantContains: "has a string value that cannot represent a uuid value"},
+		{name: "uuidInvalidBytes", typ: types.UUID(), value: []byte{1, 2, 3}, wantContains: "has a []byte value that cannot represent a uuid value"},
+		{name: "uuidInvalidType", typ: types.UUID(), value: 5, wantContains: "has type int that is not allowed for type uuid"},
+		{name: "jsonInvalid", typ: types.JSON(), value: []byte("not json"), wantContains: "is not valid JSON"},
+		{name: "jsonMarshalError", typ: types.JSON(), value: failingJSONMarshaller{}, wantContains: "MarshalJSON returned an error"},
+		{name: "jsonMarshalNil", typ: types.JSON(), value: nilJSONMarshaller{}, wantContains: "MarshalJSON returned nil"},
+		{name: "jsonInvalidType", typ: types.JSON(), value: true, wantContains: "has type bool that is not allowed for type json"},
+		{name: "inetInvalidString", typ: types.Inet(), value: "999.999.1.1", wantContains: "has a string value that cannot represent a valid inet value"},
+		{name: "inetInvalidIP", typ: types.Inet(), value: net.IP{}, wantContains: "has a net.IP value that cannot represent a valid inet value"},
+		{name: "inetInvalidType", typ: types.Inet(), value: 5, wantContains: "has type int that is not allowed for type inet"},
+		{name: "arrayInvalidType", typ: types.Array(types.Int(32)), value: 5, wantContains: "has type int that is not allowed"},
+		{name: "arrayElementError", typ: types.Array(types.Int(16)), value: []any{1, "bad"}, wantContains: "has a string value that does not represent an int value"},
+		{name: "arrayTooFewElements", typ: types.Array(types.Text()).WithMinElements(2), value: []any{"ok"}, wantContains: "is an array with 1 elements"},
+		{name: "arrayStringNotJSON", typ: types.Array(types.JSON()), value: "notjson", wantContains: "has a string value but does not contain a JSON array"},
+		{name: "arrayStringInvalidJSON", typ: types.Array(types.JSON()), value: "[bad", wantContains: "has a string value but is not valid JSON"},
+		{name: "arrayStringTooManyElements", typ: types.Array(types.JSON()).WithMaxElements(1), value: "[1,2]", wantContains: "is an array with more than 1 elements"},
+		{name: "arrayStringTooFewElements", typ: types.Array(types.JSON()).WithMinElements(2), value: "[1]", wantContains: "is an array with less than 2 elements"},
+		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, wantContains: "contains the duplicated value 1"},
+		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.Text()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
+		{name: "objectPropertyError", typ: types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), value: map[string]any{"foo": "bad"}, wantContains: "property 'k.foo' has a string value that does not represent an int value"},
+		{name: "objectInvalidType", typ: types.Object([]types.Property{{Name: "foo", Type: types.Text()}}), value: 5, wantContains: "has type int that is not allowed for type object"},
+		{name: "mapStringNotJSONObject", typ: types.Map(types.Text()), value: "not json", wantContains: "has a string value but does not contain a JSON object"},
+		{name: "mapStringInvalidJSON", typ: types.Map(types.JSON()), value: "{bad", wantContains: "has a string value but is not valid JSON"},
+		{name: "mapValueTypeError", typ: types.Map(types.Int(32)), value: map[string]any{"ok": 1, "bad": "nope"}, wantContains: "property 'k[\"bad\"]' has a string value that does not represent an int value"},
+		{name: "mapInvalidType", typ: types.Map(types.Text()), value: 5, wantContains: "has type int that is not allowed for type map"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := normalize("k", tt.typ, tt.value, tt.nullable, tt.layout)
+			if err == nil {
+				t.Fatalf("expected error, got value %#v", got)
+			}
+			if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
+				t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)
 			}
 		})
 	}
