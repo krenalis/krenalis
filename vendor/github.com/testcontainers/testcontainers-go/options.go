@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"net/url"
+	"path"
 	"time"
 
 	"dario.cat/mergo"
@@ -196,12 +196,7 @@ func (c CustomHubSubstitutor) Substitute(image string) (string, error) {
 		}
 	}
 
-	result, err := url.JoinPath(c.hub, image)
-	if err != nil {
-		return "", err
-	}
-
-	return result, nil
+	return path.Join(c.hub, image), nil
 }
 
 // prependHubRegistry represents a way to prepend a custom Hub registry to the image name,
@@ -244,12 +239,7 @@ func (p prependHubRegistry) Substitute(image string) (string, error) {
 		}
 	}
 
-	result, err := url.JoinPath(p.prefix, image)
-	if err != nil {
-		return "", err
-	}
-
-	return result, nil
+	return path.Join(p.prefix, image), nil
 }
 
 // WithImageSubstitutors sets the image substitutors for a container
@@ -534,6 +524,15 @@ func WithTmpfs(tmpfs map[string]string) CustomizeRequestOption {
 func WithFiles(files ...ContainerFile) CustomizeRequestOption {
 	return func(req *GenericContainerRequest) error {
 		req.Files = append(req.Files, files...)
+		return nil
+	}
+}
+
+// WithProvider sets the provider type for a container
+func WithProvider(provider ProviderType) CustomizeRequestOption {
+	return func(req *GenericContainerRequest) error {
+		req.ProviderType = provider
+
 		return nil
 	}
 }
