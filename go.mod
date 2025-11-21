@@ -3,7 +3,7 @@ module github.com/meergo/meergo
 // Keep in sync with the version within ".github/workflows/go-run-test-commit.yml".
 // Keep in sync with the version within ".github/workflows/send-sourcemaps-to-sentry.yml".
 // Keep in sync with the version within "Dockerfile".
-go 1.25.3
+go 1.25.4
 
 // See https://github.com/meergo/meergo/security/dependabot/6
 replace github.com/dvsekhvalnov/jose2go => github.com/dvsekhvalnov/jose2go v1.7.0
