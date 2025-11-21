@@ -5,9 +5,6 @@ module github.com/meergo/meergo
 // Keep in sync with the version within "Dockerfile".
 go 1.25.4
 
-// See https://github.com/meergo/meergo/security/dependabot/6
-replace github.com/dvsekhvalnov/jose2go => github.com/dvsekhvalnov/jose2go v1.7.0
-
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.41.0
 	github.com/andybalholm/brotli v1.2.0
@@ -38,7 +35,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.7.0
-	github.com/snowflakedb/gosnowflake v1.17.1
+	github.com/snowflakedb/gosnowflake v1.18.0
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
@@ -94,7 +91,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
+	github.com/dvsekhvalnov/jose2go v1.7.0 // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect

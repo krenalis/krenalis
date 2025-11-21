@@ -342,7 +342,7 @@ github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
-# github.com/dvsekhvalnov/jose2go v1.6.0 => github.com/dvsekhvalnov/jose2go v1.7.0
+# github.com/dvsekhvalnov/jose2go v1.7.0
 ## explicit; go 1.15
 github.com/dvsekhvalnov/jose2go
 github.com/dvsekhvalnov/jose2go/aes
@@ -690,7 +690,7 @@ github.com/shopspring/decimal
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/snowflakedb/gosnowflake v1.17.1
+# github.com/snowflakedb/gosnowflake v1.18.0
 ## explicit; go 1.23.0
 github.com/snowflakedb/gosnowflake
 # github.com/spf13/cast v1.7.1
@@ -850,6 +850,7 @@ golang.org/x/sys/execabs
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+golang.org/x/sys/windows/registry
 # golang.org/x/telemetry v0.0.0-20251008203120-078029d740a8
 ## explicit; go 1.24.0
 golang.org/x/telemetry/counter
@@ -959,4 +960,3 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# github.com/dvsekhvalnov/jose2go => github.com/dvsekhvalnov/jose2go v1.7.0
