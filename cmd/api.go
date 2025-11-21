@@ -157,7 +157,7 @@ type publicMetadata struct {
 //   - externalURL: canonical external URL - https://example.com/
 //   - externalEventURL: external event URL - https://example.com/api/v1/events
 //   - externalAssetsURLs: external assets URLs.
-//   - potentialConnectorsJSONUrl: TODO...
+//   - potentialConnectorsURL: URL of JSON with potential connectors, or empty string.
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //
