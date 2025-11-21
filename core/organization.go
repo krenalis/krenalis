@@ -511,12 +511,12 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	if err != nil {
 		return errors.BadRequest("%s", err)
 	}
+	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
+		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
+	}
 	invitationToken, err := generateMemberToken()
 	if err != nil {
 		return err
-	}
-	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
-		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
 	now := time.Now().UTC()
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
@@ -525,7 +525,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 			return nil, err
 		}
 		if exists {
-			return nil, errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+			return nil, errors.Unprocessable(MemberEmailExists, "member with this email already exists")
 		}
 		_, err = tx.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
 			"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $6, created_at = $7",
@@ -627,12 +627,12 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 	if err != nil {
 		return errors.BadRequest("%s", err)
 	}
+	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
+		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
+	}
 	resetToken, err := generateMemberToken()
 	if err != nil {
 		return err
-	}
-	if this.core.smtp == nil || this.core.memberEmailFrom == "" {
-		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
 	now := time.Now().UTC()
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
@@ -643,14 +643,8 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 		if !exists {
 			return nil, errResetPasswordTokenNotExist
 		}
-		_, err = tx.Exec(
-			ctx,
-			`UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2 WHERE organization = $3 AND email = $4`,
-			resetToken,
-			now,
-			this.organization.ID,
-			email,
-		)
+		_, err = tx.Exec(ctx, `UPDATE members SET reset_password_token = $1, reset_password_token_created_at = $2 WHERE organization = $3 AND email = $4`,
+			resetToken, now, this.organization.ID, email)
 		return nil, err
 	})
 	if err != nil {
@@ -966,8 +960,8 @@ func generateRandomID() (int, error) {
 	return int(n.Int64()) + 1, nil
 }
 
-// isInvitationTokenExpired checks if the invitation token of a member is expired, given
-// the member's creation time.
+// isInvitationTokenExpired checks if the invitation token of a member is
+// expired, given the member's creation time.
 func isInvitationTokenExpired(createdAt time.Time) bool {
 	tokenExpiration := createdAt.Add(time.Duration(invitationTokenMaxAge) * time.Second)
 	now := time.Now()
