@@ -529,7 +529,7 @@ func (c *Meergo) createWorkspace(name string, userSchema types.Type, uiPreferenc
 func (c *Meergo) login() error {
 	body := map[string]any{
 		"email":    "acme@meergo.com",
-		"password": "foopass2",
+		"password": "meergo-password",
 	}
 	return c.call("POST", "/api/v1/members/login", body, nil)
 }

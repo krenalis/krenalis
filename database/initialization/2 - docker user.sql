@@ -11,5 +11,5 @@
 TRUNCATE members;
 
 INSERT INTO members (organization, name, avatar, email, password, created_at)
-    SELECT id, 'User', NULL, 'docker@meergo.com', '$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC', now() at time zone 'utc' -- Password: foopass2
+    SELECT id, 'User', NULL, 'docker@meergo.com', '$2a$10$dGlVroo3N23Vn99edSPe..xo1hhKzGLYafIjFQjazu3faeFizvW7m', now() at time zone 'utc' -- Password: meergo-password
     FROM organizations;

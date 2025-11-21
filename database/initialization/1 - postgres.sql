@@ -43,7 +43,7 @@ WITH org AS (
     RETURNING id
 )
 INSERT INTO members (organization, name, avatar, email, password, created_at)
-SELECT id, 'ACME inc', NULL, 'acme@meergo.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC', now() at time zone 'utc'
+SELECT id, 'ACME inc', NULL, 'acme@meergo.com','$2a$10$dGlVroo3N23Vn99edSPe..xo1hhKzGLYafIjFQjazu3faeFizvW7m', now() at time zone 'utc'
 FROM org;
 
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
