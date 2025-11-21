@@ -668,6 +668,8 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 		}
 		return "", "", err
 	}
+	// At this point an invited member with the given token exists,
+	// and createdAt is the timestamp when the invitation was sent.
 	if isInvitationTokenExpired(createdAt) {
 		return "", "", errors.Unprocessable(InvitationTokenExpired, "invitation token is expired")
 	}
