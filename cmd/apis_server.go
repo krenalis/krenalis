@@ -63,7 +63,7 @@ type apisServer struct {
 	externalURL                     string
 	externalEventURL                string
 	externalAssetsURLs              []string
-	potentialConnectorsURL          string
+	potentialConnectorsURL          string // must be a valid URL or empty string (which means: do not load the JSON file).
 	memberEmailVerificationRequired bool
 	sentryTelemetry                 struct {
 		level       core.TelemetryLevel

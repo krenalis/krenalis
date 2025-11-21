@@ -76,9 +76,16 @@ func parseEnvSettings() (*Settings, error) {
 		}
 	}
 
-	settings.PotentialConnectorsURL, err = parseEnvURL("MEERGO_POTENTIAL_CONNECTORS_JSON_URL", 0)
-	if err != nil {
-		return nil, err
+	switch potentialsURL := envVars.Get("MEERGO_POTENTIAL_CONNECTORS_JSON_URL"); potentialsURL {
+	case "":
+		settings.PotentialConnectorsURL = "https://assets.meergo.com/admin/connectors/potentials.json"
+	case "none":
+		settings.PotentialConnectorsURL = ""
+	default:
+		settings.PotentialConnectorsURL, err = parseURL(potentialsURL, 0)
+		if err != nil {
+			return nil, fmt.Errorf("invalid URL specified in environment variable MEERGO_POTENTIAL_CONNECTORS_JSON_URL: %s", err)
+		}
 	}
 
 	if host := envVars.Get("MEERGO_HTTP_HOST"); host == "" {

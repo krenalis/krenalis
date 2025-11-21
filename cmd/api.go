@@ -144,7 +144,7 @@ type publicMetadata struct {
 	ExternalURL                     string   `json:"externalURL"`
 	ExternalEventURL                string   `json:"externalEventURL"`
 	ExternalAssetsURLs              []string `json:"externalAssetsURLs"`
-	PotentialConnectorsURL          string   `json:"potentialConnectorsURL"`
+	PotentialConnectorsURL          *string  `json:"potentialConnectorsURL"`
 	JavaScriptSDKURL                string   `json:"javascriptSDKURL"`
 	MemberEmailVerificationRequired bool     `json:"memberEmailVerificationRequired"`
 	CanSendMemberPasswordReset      bool     `json:"canSendMemberPasswordReset"`
@@ -168,11 +168,13 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		ExternalURL:                     api.externalURL,
 		ExternalEventURL:                api.externalEventURL,
 		ExternalAssetsURLs:              api.externalAssetsURLs,
-		PotentialConnectorsURL:          api.potentialConnectorsURL,
 		JavaScriptSDKURL:                api.javaScriptSDKURL,
 		MemberEmailVerificationRequired: api.memberEmailVerificationRequired,
 		CanSendMemberPasswordReset:      api.core.CanSendMemberPasswordReset(),
 		TelemetryLevel:                  string(api.sentryTelemetry.level),
+	}
+	if api.potentialConnectorsURL != "" {
+
 	}
 	return metadata, nil
 }
