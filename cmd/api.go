@@ -174,7 +174,7 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		TelemetryLevel:                  string(api.sentryTelemetry.level),
 	}
 	if api.potentialConnectorsURL != "" {
-
+		metadata.PotentialConnectorsURL = &api.potentialConnectorsURL
 	}
 	return metadata, nil
 }
