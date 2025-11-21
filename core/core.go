@@ -106,7 +106,7 @@ type LambdaConfig struct {
 	SecretAccessKey string
 	Region          string
 	Role            string
-	Node            struct {
+	NodeJS          struct {
 		Runtime string
 		Layer   string
 	}
@@ -117,7 +117,7 @@ type LambdaConfig struct {
 }
 
 type LocalConfig struct {
-	NodeExecutable   string
+	NodeJSExecutable string
 	PythonExecutable string
 	FunctionsDir     string
 	SudoUser         string
