@@ -76,6 +76,11 @@ func parseEnvSettings() (*Settings, error) {
 		}
 	}
 
+	settings.PotentialConnectorsURL, err = parseEnvURL("MEERGO_POTENTIAL_CONNECTORS_JSON_URL", 0)
+	if err != nil {
+		return nil, err
+	}
+
 	if host := envVars.Get("MEERGO_HTTP_HOST"); host == "" {
 		settings.HTTP.Host = "127.0.0.1"
 	} else if err := validation.ValidateHost(host); err != nil {
