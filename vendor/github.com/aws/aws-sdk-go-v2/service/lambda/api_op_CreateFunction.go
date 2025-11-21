@@ -231,6 +231,11 @@ type CreateFunctionInput struct {
 	// [tags]: https://docs.aws.amazon.com/lambda/latest/dg/tagging.html
 	Tags map[string]string
 
+	// Configuration for multi-tenant applications that use Lambda functions. Defines
+	// tenant isolation settings and resource allocations. Required for functions
+	// supporting multiple tenants.
+	TenancyConfig *types.TenancyConfig
+
 	// The amount of time (in seconds) that Lambda allows a function to run before
 	// stopping it. The default is 3 seconds. The maximum allowed value is 900 seconds.
 	// For more information, see [Lambda execution environment].
@@ -409,6 +414,10 @@ type CreateFunctionOutput struct {
 	// you can't invoke or modify the function.
 	StateReasonCode types.StateReasonCode
 
+	// The function's tenant isolation configuration settings. Determines whether the
+	// Lambda function runs on a shared or dedicated infrastructure per unique tenant.
+	TenancyConfig *types.TenancyConfig
+
 	// The amount of time in seconds that Lambda allows a function to run before
 	// stopping it.
 	Timeout *int32
@@ -522,40 +531,7 @@ func (c *Client) addOperationCreateFunctionMiddlewares(stack *middleware.Stack, 
 	if err = addInterceptAttempt(stack, options); err != nil {
 		return err
 	}
-	if err = addInterceptExecution(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptBeforeSerialization(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptAfterSerialization(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptBeforeSigning(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptAfterSigning(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptTransmit(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptBeforeDeserialization(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptAfterDeserialization(stack, options); err != nil {
-		return err
-	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
+	if err = addInterceptors(stack, options); err != nil {
 		return err
 	}
 	return nil

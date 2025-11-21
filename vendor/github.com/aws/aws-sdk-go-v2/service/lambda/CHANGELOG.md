@@ -1,3 +1,68 @@
+# v1.82.1 (2025-11-19.2)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.82.0 (2025-11-19)
+
+* **Feature**: Added support for creating and invoking Tenant Isolated functions in AWS Lambda APIs.
+
+# v1.81.3 (2025-11-12)
+
+* **Bug Fix**: Further reduce allocation overhead when the metrics system isn't in-use.
+* **Bug Fix**: Reduce allocation overhead when the client doesn't have any HTTP interceptors configured.
+* **Bug Fix**: Remove blank trace spans towards the beginning of the request that added no additional information. This conveys a slight reduction in overall allocations.
+
+# v1.81.2 (2025-11-11)
+
+* **Bug Fix**: Return validation error if input region is not a valid host label.
+
+# v1.81.1 (2025-11-04)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+* **Dependency Update**: Upgrade to smithy-go v1.23.2 which should convey some passive reduction of overall allocations, especially when not using the metrics system.
+
+# v1.81.0 (2025-10-31)
+
+* **Feature**: Add Python3.14 (python3.14) and Java 25 (java25) support to AWS Lambda
+
+# v1.80.1 (2025-10-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.80.0 (2025-10-28)
+
+* **Feature**: Added SerializedRequestEntityTooLargeException to Lambda Invoke API
+
+# v1.79.0 (2025-10-23)
+
+* **Feature**: Add NodeJs 24 (nodejs24.x) support to AWS Lambda.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.78.2 (2025-10-22)
+
+* No change notes available for this release.
+
+# v1.78.1 (2025-10-16)
+
+* **Dependency Update**: Bump minimum Go version to 1.23.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.78.0 (2025-10-10)
+
+* **Feature**: Add InvokedViaFunctionUrl context key to limit invocations to only FURL invokes.
+
+# v1.77.6 (2025-09-26)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.77.5 (2025-09-23)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.77.4 (2025-09-10)
+
+* No change notes available for this release.
+
 # v1.77.3 (2025-09-08)
 
 * **Dependency Update**: Updated to the latest SDK module versions

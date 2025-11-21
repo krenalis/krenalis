@@ -1592,6 +1592,11 @@ func awsRestjson1_deserializeOpDocumentCreateFunctionOutput(v **CreateFunctionOu
 				sv.StateReasonCode = types.StateReasonCode(jtv)
 			}
 
+		case "TenancyConfig":
+			if err := awsRestjson1_deserializeDocumentTenancyConfig(&sv.TenancyConfig, value); err != nil {
+				return err
+			}
+
 		case "Timeout":
 			if value != nil {
 				jtv, ok := value.(json.Number)
@@ -5084,6 +5089,11 @@ func awsRestjson1_deserializeOpDocumentGetFunctionConfigurationOutput(v **GetFun
 				sv.StateReasonCode = types.StateReasonCode(jtv)
 			}
 
+		case "TenancyConfig":
+			if err := awsRestjson1_deserializeDocumentTenancyConfig(&sv.TenancyConfig, value); err != nil {
+				return err
+			}
+
 		case "Timeout":
 			if value != nil {
 				jtv, ok := value.(json.Number)
@@ -7085,6 +7095,9 @@ func awsRestjson1_deserializeOpErrorInvoke(response *smithyhttp.Response, metada
 	case strings.EqualFold("ResourceNotReadyException", errorCode):
 		return awsRestjson1_deserializeErrorResourceNotReadyException(response, errorBody)
 
+	case strings.EqualFold("SerializedRequestEntityTooLargeException", errorCode):
+		return awsRestjson1_deserializeErrorSerializedRequestEntityTooLargeException(response, errorBody)
+
 	case strings.EqualFold("ServiceException", errorCode):
 		return awsRestjson1_deserializeErrorServiceException(response, errorBody)
 
@@ -7425,6 +7438,9 @@ func awsRestjson1_deserializeOpErrorInvokeWithResponseStream(response *smithyhtt
 
 	case strings.EqualFold("ResourceNotReadyException", errorCode):
 		return awsRestjson1_deserializeErrorResourceNotReadyException(response, errorBody)
+
+	case strings.EqualFold("SerializedRequestEntityTooLargeException", errorCode):
+		return awsRestjson1_deserializeErrorSerializedRequestEntityTooLargeException(response, errorBody)
 
 	case strings.EqualFold("ServiceException", errorCode):
 		return awsRestjson1_deserializeErrorServiceException(response, errorBody)
@@ -10135,6 +10151,11 @@ func awsRestjson1_deserializeOpDocumentPublishVersionOutput(v **PublishVersionOu
 					return fmt.Errorf("expected StateReasonCode to be of type string, got %T instead", value)
 				}
 				sv.StateReasonCode = types.StateReasonCode(jtv)
+			}
+
+		case "TenancyConfig":
+			if err := awsRestjson1_deserializeDocumentTenancyConfig(&sv.TenancyConfig, value); err != nil {
+				return err
 			}
 
 		case "Timeout":
@@ -12971,6 +12992,11 @@ func awsRestjson1_deserializeOpDocumentUpdateFunctionCodeOutput(v **UpdateFuncti
 				sv.StateReasonCode = types.StateReasonCode(jtv)
 			}
 
+		case "TenancyConfig":
+			if err := awsRestjson1_deserializeDocumentTenancyConfig(&sv.TenancyConfig, value); err != nil {
+				return err
+			}
+
 		case "Timeout":
 			if value != nil {
 				jtv, ok := value.(json.Number)
@@ -13428,6 +13454,11 @@ func awsRestjson1_deserializeOpDocumentUpdateFunctionConfigurationOutput(v **Upd
 					return fmt.Errorf("expected StateReasonCode to be of type string, got %T instead", value)
 				}
 				sv.StateReasonCode = types.StateReasonCode(jtv)
+			}
+
+		case "TenancyConfig":
+			if err := awsRestjson1_deserializeDocumentTenancyConfig(&sv.TenancyConfig, value); err != nil {
+				return err
 			}
 
 		case "Timeout":
@@ -15202,6 +15233,42 @@ func awsRestjson1_deserializeErrorResourceNotReadyException(response *smithyhttp
 	}
 
 	err := awsRestjson1_deserializeDocumentResourceNotReadyException(&output, shape)
+
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return err
+	}
+
+	errorBody.Seek(0, io.SeekStart)
+
+	return output
+}
+
+func awsRestjson1_deserializeErrorSerializedRequestEntityTooLargeException(response *smithyhttp.Response, errorBody *bytes.Reader) error {
+	output := &types.SerializedRequestEntityTooLargeException{}
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+
+	body := io.TeeReader(errorBody, ringBuffer)
+	decoder := json.NewDecoder(body)
+	decoder.UseNumber()
+	var shape interface{}
+	if err := decoder.Decode(&shape); err != nil && err != io.EOF {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return err
+	}
+
+	err := awsRestjson1_deserializeDocumentSerializedRequestEntityTooLargeException(&output, shape)
 
 	if err != nil {
 		var snapshot bytes.Buffer
@@ -18334,6 +18401,11 @@ func awsRestjson1_deserializeDocumentFunctionConfiguration(v **types.FunctionCon
 				sv.StateReasonCode = types.StateReasonCode(jtv)
 			}
 
+		case "TenancyConfig":
+			if err := awsRestjson1_deserializeDocumentTenancyConfig(&sv.TenancyConfig, value); err != nil {
+				return err
+			}
+
 		case "Timeout":
 			if value != nil {
 				jtv, ok := value.(json.Number)
@@ -21094,6 +21166,55 @@ func awsRestjson1_deserializeDocumentSelfManagedKafkaEventSourceConfig(v **types
 	return nil
 }
 
+func awsRestjson1_deserializeDocumentSerializedRequestEntityTooLargeException(v **types.SerializedRequestEntityTooLargeException, value interface{}) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	if value == nil {
+		return nil
+	}
+
+	shape, ok := value.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected JSON type %v", value)
+	}
+
+	var sv *types.SerializedRequestEntityTooLargeException
+	if *v == nil {
+		sv = &types.SerializedRequestEntityTooLargeException{}
+	} else {
+		sv = *v
+	}
+
+	for key, value := range shape {
+		switch key {
+		case "message", "Message":
+			if value != nil {
+				jtv, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("expected String to be of type string, got %T instead", value)
+				}
+				sv.Message = ptr.String(jtv)
+			}
+
+		case "Type":
+			if value != nil {
+				jtv, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("expected String to be of type string, got %T instead", value)
+				}
+				sv.Type = ptr.String(jtv)
+			}
+
+		default:
+			_, _ = key, value
+
+		}
+	}
+	*v = sv
+	return nil
+}
+
 func awsRestjson1_deserializeDocumentServiceException(v **types.ServiceException, value interface{}) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -21653,6 +21774,46 @@ func awsRestjson1_deserializeDocumentTagsError(v **types.TagsError, value interf
 					return fmt.Errorf("expected TagsErrorMessage to be of type string, got %T instead", value)
 				}
 				sv.Message = ptr.String(jtv)
+			}
+
+		default:
+			_, _ = key, value
+
+		}
+	}
+	*v = sv
+	return nil
+}
+
+func awsRestjson1_deserializeDocumentTenancyConfig(v **types.TenancyConfig, value interface{}) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	if value == nil {
+		return nil
+	}
+
+	shape, ok := value.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected JSON type %v", value)
+	}
+
+	var sv *types.TenancyConfig
+	if *v == nil {
+		sv = &types.TenancyConfig{}
+	} else {
+		sv = *v
+	}
+
+	for key, value := range shape {
+		switch key {
+		case "TenantIsolationMode":
+			if value != nil {
+				jtv, ok := value.(string)
+				if !ok {
+					return fmt.Errorf("expected TenantIsolationMode to be of type string, got %T instead", value)
+				}
+				sv.TenantIsolationMode = types.TenantIsolationMode(jtv)
 			}
 
 		default:

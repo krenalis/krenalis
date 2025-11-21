@@ -17,6 +17,9 @@ import (
 // function asynchronously, set InvocationType to Event . Lambda passes the
 // ClientContext object to your function for synchronous invocations only.
 //
+// For synchronous invocations, the maximum payload size is 6 MB. For asynchronous
+// invocations, the maximum payload size is 1 MB.
+//
 // For [synchronous invocation], details about the function response, including errors, are included in
 // the response body and headers. For either invocation type, you can find more
 // information in the [execution log]and [trace].
@@ -114,7 +117,9 @@ type InvokeInput struct {
 	// synchronously invoked functions only.
 	LogType types.LogType
 
-	// The JSON that you want to provide to your Lambda function as input.
+	// The JSON that you want to provide to your Lambda function as input. The maximum
+	// payload size is 6 MB for synchronous invocations and 1 MB for asynchronous
+	// invocations.
 	//
 	// You can enter the JSON directly. For example, --payload '{ "key": "value" }' .
 	// You can also specify a file path. For example, --payload file://payload.json .
@@ -122,6 +127,9 @@ type InvokeInput struct {
 
 	// Specify a version or alias to invoke a published version of the function.
 	Qualifier *string
+
+	// The identifier of the tenant in a multi-tenant Lambda function.
+	TenantId *string
 
 	noSmithyDocumentSerde
 }
@@ -248,40 +256,7 @@ func (c *Client) addOperationInvokeMiddlewares(stack *middleware.Stack, options 
 	if err = addInterceptAttempt(stack, options); err != nil {
 		return err
 	}
-	if err = addInterceptExecution(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptBeforeSerialization(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptAfterSerialization(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptBeforeSigning(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptAfterSigning(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptTransmit(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptBeforeDeserialization(stack, options); err != nil {
-		return err
-	}
-	if err = addInterceptAfterDeserialization(stack, options); err != nil {
-		return err
-	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
+	if err = addInterceptors(stack, options); err != nil {
 		return err
 	}
 	return nil
