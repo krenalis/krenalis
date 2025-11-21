@@ -182,8 +182,8 @@ test(`Add "Export customers" action on Dummy`, async ({ page }) => {
 					"property": "email",
 					"operator": "is one of",
 					"values": [
-						"acme@open2b.com",
-						"test@open2b.com"
+						"acme@meergo.com",
+						"test@meergo.com"
 					]
 				},
 				{
@@ -576,8 +576,8 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 					"property": "email",
 					"operator": "is one of",
 					"values": [
-						"acme@open2b.com",
-						"test@open2b.com"
+						"acme@meergo.com",
+						"test@meergo.com"
 					]
 				},
 				{
@@ -712,7 +712,7 @@ test(`Add "Import users" action on CSV file on File System`, async ({ page }) =>
 	// Create a temporary file.
 	const fileName = 'test.csv';
 	const tempFilePath = join(tempDir, fileName);
-	writeFile(tempFilePath, 'first_name, last_name, email\nJohn, Doe, example@open2b.com', (err) => {
+	writeFile(tempFilePath, 'first_name, last_name, email\nJohn, Doe, example@meergo.com', (err) => {
 		if (err) throw err;
 	});
 
@@ -931,8 +931,8 @@ test(`Add "Export users" action on CSV file on File System`, async ({ page }) =>
 						"property": "email",
 						"operator": "is one of",
 						"values": [
-							"acme@open2b.com",
-							"test@open2b.com"
+							"acme@meergo.com",
+							"test@meergo.com"
 						]
 					},
 					{

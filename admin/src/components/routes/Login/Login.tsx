@@ -32,7 +32,7 @@ const Login = () => {
 		const tryPasswordlessLogin = async () => {
 			let authError: string;
 			try {
-				[, authError] = await api.login('docker@open2b.com', 'foopass2', true);
+				[, authError] = await api.login('docker@meergo.com', 'foopass2', true);
 			} catch (err) {
 				// Do nothing.
 				setIsTryingPasswordlessLogin(false);
@@ -56,7 +56,7 @@ const Login = () => {
 				localStorage.removeItem(IS_DOCKER_KEY);
 			}
 			try {
-				[, authError] = await api.login('acme@open2b.com', 'foopass2', true);
+				[, authError] = await api.login('acme@meergo.com', 'foopass2', true);
 			} catch (err) {
 				// Do nothing.
 				setIsTryingPasswordlessLogin(false);

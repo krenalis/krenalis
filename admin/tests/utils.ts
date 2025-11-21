@@ -26,7 +26,7 @@ const login = async (page: Page) => {
 		async ({ url, workspace, workspaceIDKey }) => {
 			localStorage.setItem(workspaceIDKey, String(workspace));
 			const api = new (window as any).API(url, workspace) as API;
-			await api.login('test@open2b.com', 'foopass2');
+			await api.login('test@meergo.com', 'foopass2');
 		},
 		{ url: config.baseURL, workspace: config.workspaceID, workspaceIDKey: WORKSPACE_ID_KEY },
 	);
@@ -238,15 +238,15 @@ const fillUserActionFilters = async (page: Page): Promise<void> => {
 	await filters
 		.nth(0)
 		.locator('.action__filters-is-one-of-values > .action__filters-value-input:nth-child(1) >> input')
-		.fill('acme@open2b.com');
+		.fill('acme@meergo.com');
 	await filters
 		.nth(0)
 		.locator('.action__filters-is-one-of-values > .action__filters-value:nth-child(2) >> input')
-		.fill('test@open2b.com');
+		.fill('test@meergo.com');
 	await filters
 		.nth(0)
 		.locator('.action__filters-is-one-of-values > .action__filters-value:nth-child(3) >> input')
-		.fill('foo@open2b.com');
+		.fill('foo@meergo.com');
 	await filters
 		.nth(0)
 		.locator(

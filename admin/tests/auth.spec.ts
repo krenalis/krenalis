@@ -13,7 +13,7 @@ test('Update the member email to disable passwordless login', async ({ page }) =
 	await page.goto(`${adminURL}/`);
 	await page.click('.header__passwordless-create-account');
 	await page.click('.members__member-edit');
-	await page.getByRole('textbox', { name: 'email' }).fill('test@open2b.com');
+	await page.getByRole('textbox', { name: 'email' }).fill('test@meergo.com');
 	await page.click('.member__save-button');
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await logout(page);
@@ -33,7 +33,7 @@ test('Try to access a page that requires authentication and check that it redire
 
 test('Login', async ({ page }) => {
 	await page.goto(`${adminURL}/`);
-	await page.getByRole('textbox', { name: 'email' }).fill('test@open2b.com');
+	await page.getByRole('textbox', { name: 'email' }).fill('test@meergo.com');
 	await page.getByRole('textbox', { name: 'password' }).fill('foopass2');
 	await page.click('sl-button');
 	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeAttached();

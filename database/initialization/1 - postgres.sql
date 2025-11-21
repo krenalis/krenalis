@@ -43,7 +43,7 @@ WITH org AS (
     RETURNING id
 )
 INSERT INTO members (organization, name, avatar, email, password, created_at)
-SELECT id, 'ACME inc', NULL, 'acme@open2b.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC','2024-01-01 00:00:00.000000'
+SELECT id, 'ACME inc', NULL, 'acme@meergo.com','$2a$10$iMuokZyvwdAQOJJmJvG83eSGGWTV3DOjI2DRU6SjuLEuK.vknUJVC','2024-01-01 00:00:00.000000'
 FROM org;
 
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
