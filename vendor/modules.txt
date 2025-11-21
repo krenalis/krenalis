@@ -124,7 +124,7 @@ github.com/apache/arrow-go/v18/parquet/variant
 # github.com/apache/thrift v0.22.0
 ## explicit; go 1.23
 github.com/apache/thrift/lib/go/thrift
-# github.com/avct/uasurfer v0.0.0-20250506104815-f2613aa2d406
+# github.com/avct/uasurfer v0.0.0-20251103211900-a0b2b1af2b48
 ## explicit; go 1.19
 github.com/avct/uasurfer
 # github.com/aws/aws-sdk-go-v2 v1.40.0

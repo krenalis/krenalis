@@ -8,7 +8,7 @@ go 1.25.4
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.41.0
 	github.com/andybalholm/brotli v1.2.0
-	github.com/avct/uasurfer v0.0.0-20250506104815-f2613aa2d406
+	github.com/avct/uasurfer v0.0.0-20251103211900-a0b2b1af2b48
 	github.com/aws/aws-sdk-go-v2 v1.40.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.0
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.10
