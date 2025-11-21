@@ -63,6 +63,7 @@ type apisServer struct {
 	externalURL                     string
 	externalEventURL                string
 	externalAssetsURLs              []string
+	potentialConnectorsURL          string
 	memberEmailVerificationRequired bool
 	sentryTelemetry                 struct {
 		level       core.TelemetryLevel
@@ -74,8 +75,9 @@ type apisServer struct {
 // Core.
 // runsOnHTTPs indicates if the server runs on HTTPS.
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
-	externalEventURL string, externalAssetsURLs []string, memberEmailVerificationRequired bool,
-	sentryTelemetryLevel core.TelemetryLevel, sentryErrorTunnel *sentryErrorTunnel,
+	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
+	memberEmailVerificationRequired bool, sentryTelemetryLevel core.TelemetryLevel,
+	sentryErrorTunnel *sentryErrorTunnel,
 ) *apisServer {
 
 	s := &apisServer{
@@ -85,6 +87,7 @@ func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, external
 		externalURL:                     externalURL,
 		externalEventURL:                externalEventURL,
 		externalAssetsURLs:              externalAssetsURLs,
+		potentialConnectorsURL:          potentialConnectorsURL,
 		memberEmailVerificationRequired: memberEmailVerificationRequired,
 	}
 	s.sentryTelemetry.level = sentryTelemetryLevel

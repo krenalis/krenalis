@@ -115,7 +115,10 @@ const ConnectorsList = () => {
 		const fetchPotentialConnectors = async () => {
 			let connectors: PotentialConnector[];
 			try {
-				connectors = await potentialConnectors(existingConnectorCodes);
+				connectors = await potentialConnectors(
+					existingConnectorCodes,
+					'https://assets.meergo.com/admin/connectors/potentials.json', // TODO(Gianluca): use the URL provided by the server.
+				);
 			} catch (err) {
 				console.error(err);
 				return;
