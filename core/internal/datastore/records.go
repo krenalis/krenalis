@@ -20,13 +20,13 @@ import (
 type Record struct {
 	ID         any            // Identifier.
 	ExternalID string         // API external ID.
-	Properties map[string]any // Properties.
+	Attributes map[string]any // Attributes.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
 	Err error
 }
 
-// Matching specifies criteria for the UserRecords method when exporting users
+// Matching specifies criteria for the ProfileRecords method when exporting users
 // to an API. It filters users based on whether they have or do not have a match
 // with the API users.
 type Matching struct {
@@ -39,7 +39,7 @@ type Matching struct {
 // records executes a query on the provided warehouse and returns an iterator to
 // iterate on the resulting records. idProperty specifies the property whose
 // value is returned as ID, columnByProperty is the mapping from the path of a
-// property to the relative column, and omitNil indicates whether properties
+// property to the relative column, and omitNil indicates whether attributes
 // with a nil value should be omitted from each record.
 //
 // action and appExport parameters (if specified) represent the action
@@ -83,10 +83,10 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		// Also select the __external_id__ column.
 		externalIDColumn := warehouses.Column{Name: "__external_id__", Type: types.Text(), Nullable: true}
 		columns = append(columns, externalIDColumn)
-		// Update the WHERE condition and join the _destinations_users table.
+		// Update the WHERE condition and join the _destinations_profiles table.
 		inPropertyColumn, ok := columnByProperty[matching.InProperty]
 		if !ok {
-			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.InProperty)
+			return nil, fmt.Errorf("matching property %s does not exist in profile schema", matching.InProperty)
 		}
 		matchingIndex = slices.IndexFunc(columns, func(c warehouses.Column) bool {
 			return c.Name == inPropertyColumn.Name
@@ -96,7 +96,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		}
 		joins = []warehouses.Join{
 			{
-				Table: "_destinations_users",
+				Table: "_destinations_profiles",
 				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
 					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, matching.Action),
 					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "__out_matching_value__", Type: types.Text()}),
@@ -204,18 +204,18 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 					r.err = err
 					return
 				}
-				if previous.Properties != nil {
+				if previous.Attributes != nil {
 					if !yield(previous) {
 						return
 					}
 				}
 				previous = Record{
 					ID:         row[last],
-					Properties: r.unflat(row[:last]),
+					Attributes: r.unflat(row[:last]),
 				}
 			}
 			r.last = true
-			if previous.Properties != nil {
+			if previous.Attributes != nil {
 				yield(previous)
 			}
 			if err := r.rows.Err(); err != nil {
@@ -263,7 +263,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				// otherwise, return all the previous records.
 				if !r.matching.UpdateOnDuplicates {
 					previous.records = previous.records[:1]
-					previous.records[0].Err = fmt.Errorf("duplicates found for the matching property %s in the app users", r.matching.InProperty)
+					previous.records[0].Err = fmt.Errorf("duplicates found for the matching property %s in the app profiles", r.matching.InProperty)
 				}
 				for i, record := range previous.records {
 					r.last = last && i == len(previous.records)-1
@@ -280,7 +280,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			})
 			for i, record := range previous.records {
 				r.last = last && i == len(previous.records)-1
-				record.Err = fmt.Errorf("user has the same «%s» (the matching property) as other users selected for export", r.matching.InProperty)
+				record.Err = fmt.Errorf("profile has the same «%s» (the matching property) as other profiles selected for export", r.matching.InProperty)
 				if !yield(record) {
 					return false
 				}
@@ -306,7 +306,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			}
 			record := Record{
 				ID:         row[last],              // the User ID is the last column.
-				Properties: r.unflat(row[:last-1]), // skip the last 2 columns: the External ID and the User ID.
+				Attributes: r.unflat(row[:last-1]), // skip the last 2 columns: the External ID and the User ID.
 			}
 			// If there is no matching API user and the external ID is nil, assign an empty string.
 			record.ExternalID, _ = row[last-1].(string)

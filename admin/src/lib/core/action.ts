@@ -1003,7 +1003,7 @@ const transformInActionToSet = async (
 					property,
 					path,
 					propertyName,
-					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['muid'] : null,
+					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['mpid'] : null,
 				);
 			} catch (err) {
 				throw err;
@@ -1043,7 +1043,7 @@ const transformInActionToSet = async (
 		const filteredSchema = filterOrderingPropertySchema(actionType.inputSchema);
 		if (filteredSchema != null) {
 			if (filteredSchema[p] == null) {
-				throw new Error(`File ordering property "${p}" does not exist in the user schema`);
+				throw new Error(`File ordering property "${p}" does not exist in schema`);
 			}
 		}
 	}
@@ -1106,7 +1106,7 @@ const transformInActionToSet = async (
 
 	// In cases where the input schema refers to events, that is when:
 	//
-	//  - user identities are imported from events
+	//  - identities are imported from events
 	//  - events are imported into the data warehouse
 	//  - events are dispatched to apps
 	//

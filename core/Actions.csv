@@ -4,7 +4,7 @@ Filters,,,,,,,,,,
 Schemas,,,,,,,,,,
 ,Input schema in UI,API user (source),Query,File,Event,(none),User,Event,User,User
 ,Output schema in UI,User,User,User,User,(none),API user (destination),"Event Type (none, if Event Type hasn’t one)",Table,(none)
-,Input schema properties in state,Filter properties + transformed properties,Transformed properties + identity column + last change time column,Filter properties + transformed properties + identity column + last change time column,Event schema properties,Event schema properties,Filter properties + Transformed properties + internal matching property,Event schema properties,Filter properties + Transformed properties,User schema properties
+,Input schema properties in state,Filter properties + transformed properties,Transformed properties + identity column + last change time column,Filter properties + transformed properties + identity column + last change time column,Event schema properties,Event schema properties,Filter properties + Transformed properties + internal matching property,Event schema properties,Filter properties + Transformed properties,Profile schema properties
 ,Output schema properties in state,Transformed properties,Transformed properties,Transformed properties,Transformed properties,(none),Transformed properties + external matching property,Transformed properties,Transformed properties + table key,(none)
 Input schema property fields,,,,,,,,,,
 ,Placeholder,Must be empty,Must be empty,Must be empty,"(event schema, not relevant)","(event schema, not relevant)",Must be empty,"(event schema, not relevant)",Must be empty,Must be empty

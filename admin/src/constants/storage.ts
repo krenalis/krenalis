@@ -4,9 +4,9 @@ const ADD_CONNECTION_ROLE_KEY = 'meergo_admin_add_connection_role';
 const ADD_CONNECTION_ID_KEY = 'meergo_admin_add_connection_id';
 const IS_PASSWORDLESS_KEY = 'meergo_admin_is_passwordless';
 const IS_DOCKER_KEY = 'meergo_admin_is_docker';
-const USERS_TAB_KEY = 'meergo_admin_users_tab';
-const USERS_EXPANDED_TRAITS_KEY = 'meergo_admin_users_expanded_traits';
-const USERS_PROPERTIES_KEY = 'meergo_admin_users_properties';
+const PROFILES_TAB_KEY = 'meergo_admin_profiles_tab';
+const PROFILES_EXPANDED_ATTRIBUTES_KEY = 'meergo_admin_PROFILES_expanded_attributes';
+const PROFILES_PROPERTIES_KEY = 'meergo_admin_profiles_properties';
 
 // storageKeysToBeRemoved contains the list of keys in browser localStorage that
 // can be cleared when resetting the client state, for example to attempt fixing
@@ -17,9 +17,9 @@ const storageKeysToBeRemoved = [
 	ADD_CONNECTION_ID_KEY,
 	IS_PASSWORDLESS_KEY,
 	IS_DOCKER_KEY,
-	USERS_TAB_KEY,
-	USERS_EXPANDED_TRAITS_KEY,
-	USERS_PROPERTIES_KEY,
+	PROFILES_TAB_KEY,
+	PROFILES_EXPANDED_ATTRIBUTES_KEY,
+	PROFILES_PROPERTIES_KEY,
 ];
 
 export {
@@ -29,8 +29,8 @@ export {
 	ADD_CONNECTION_ID_KEY,
 	IS_PASSWORDLESS_KEY,
 	IS_DOCKER_KEY,
-	USERS_TAB_KEY,
-	USERS_EXPANDED_TRAITS_KEY,
-	USERS_PROPERTIES_KEY,
+	PROFILES_TAB_KEY,
+	PROFILES_EXPANDED_ATTRIBUTES_KEY,
+	PROFILES_PROPERTIES_KEY,
 	storageKeysToBeRemoved,
 };

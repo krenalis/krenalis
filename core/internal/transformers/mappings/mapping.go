@@ -25,7 +25,7 @@ const (
 )
 
 // TransformationError represents an error that occurs when transforming
-// properties.
+// attributes.
 type TransformationError struct {
 	msg string
 }
@@ -34,7 +34,7 @@ func (err TransformationError) Error() string {
 	return err.msg
 }
 
-// ValidationError represents an error that occurs when validating properties.
+// ValidationError represents an error that occurs when validating attributes.
 type ValidationError struct {
 	msg string
 }
@@ -153,7 +153,7 @@ func (mapping *Mapping) OutPaths() []string {
 	return paths
 }
 
-// Transform transforms properties, that must conform to the expression's source
+// Transform transforms attributes, that must conform to the expression's source
 // schema, and returns the result that conforms to the expression's output
 // schema.
 //
@@ -165,12 +165,12 @@ func (mapping *Mapping) OutPaths() []string {
 // null, that property will be omitted from the returned result, provided this
 // is allowed by the purpose.
 //
-// If an error occurs during property transformation or final validation, a
+// If an error occurs during attribute transformation or final validation, a
 // TransformationError or ValidationError is returned.
-func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (map[string]any, error) {
+func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
 	for _, e := range mapping.expressions {
-		v, vt, err := e.expr.Eval(properties)
+		v, vt, err := e.expr.Eval(attributes)
 		if err != nil {
 			switch err := err.(type) {
 			case TransformationError:

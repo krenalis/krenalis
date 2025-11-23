@@ -123,7 +123,7 @@ func Test_digitCountUint(t *testing.T) {
 
 func Test_eval(t *testing.T) {
 
-	properties := map[string]any{
+	attributes := map[string]any{
 		"a": 165,
 		"b": map[string]any{
 			"c": "foo",
@@ -161,7 +161,7 @@ func Test_eval(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		got, typ, err := eval(test.expr, "", properties)
+		got, typ, err := eval(test.expr, "", attributes)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%d. unexpected error: %s", i+1, err)
@@ -233,7 +233,7 @@ func Test_substring(t *testing.T) {
 
 func Test_valueOf(t *testing.T) {
 
-	properties := map[string]any{
+	attributes := map[string]any{
 		"a": 5, // int
 		"b": map[string]any{ // object
 			"c": "foo", // text
@@ -286,7 +286,7 @@ func Test_valueOf(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := valueOf(test.path, properties)
+		got, err := valueOf(test.path, attributes)
 		if !reflect.DeepEqual(test.err, err) {
 			t.Fatalf("%s. expected error %v (type %T), got error %v (%T)", test.path, test.err, test.err, err, err)
 		}

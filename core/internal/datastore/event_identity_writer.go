@@ -17,10 +17,10 @@ import (
 	"github.com/meergo/meergo/warehouses"
 )
 
-// EventIdentityWriter writes user identities into the data warehouse, in case
-// when identities are imported from events. It deletes the anonymous identities
-// when a non-anonymous identity with the same Anonymous ID on the same
-// connection is written.
+// EventIdentityWriter writes identities into the data warehouse, in case when
+// identities are imported from events. It deletes the anonymous identities when
+// a non-anonymous identity with the same Anonymous ID on the same connection is
+// written.
 type EventIdentityWriter struct {
 	store      *Store
 	action     int
@@ -30,7 +30,7 @@ type EventIdentityWriter struct {
 
 	mu      sync.Mutex
 	actions map[int]struct{} // actions of the action's connection. Access using 'mu'. If nil, it means that the action does not exist anymore.
-	aligned bool             // indicates if the action's output schema is aligned with the user schema. access using 'mu'.
+	aligned bool             // indicates if the action's output schema is aligned with the profile schema. access using 'mu'.
 	flatter *flatter         // access using 'mu'. nil for actions that import identities from events with no transformations.
 	index   map[identityKey]int
 	rows    []map[string]any
@@ -66,7 +66,7 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 	iw.connection = connection.ID
 	if action.OutSchema.Valid() {
 		workspace := connection.Workspace()
-		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+		err := schemas.CheckAlignment(action.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
 			iw.aligned = true
 			iw.flatter = newFlatter(action.OutSchema, store.identityColumnByProperty())
@@ -91,7 +91,7 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
 	iw.columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	iw.columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
-	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.userColumnByProperty())
+	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.profileColumnByProperty())
 
 	iw.close.ctx, iw.close.cancel = context.WithCancel(context.Background())
 
@@ -142,16 +142,16 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-// Write writes a user identity. If a valid user schema has been provided, the
-// properties must comply with it. It returns immediately, deferring the
-// validation of the properties and the actual write operation to a later time.
+// Write writes an identity. If a valid profile schema has been provided, the
+// attributes must comply with it. It returns immediately, deferring the
+// validation of the attributes and the actual write operation to a later time.
 //
 // On error, it calls the ack function with:
 //   - the ErrInspectionMode error if the data warehouse is in inspection mode.
 //   - the ErrMaintenanceMode error if the data warehouse is in maintenance
 //     mode.
 //   - a *schemas.Error value, if the action output schema is not aligned with
-//     the user schema.
+//     the profile schema.
 //
 // If the action of iw does not exist anymore, returns an error.
 //
@@ -181,7 +181,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 		return ErrActionNotExist
 	}
 	if !aligned {
-		return &schemas.Error{Msg: "action output schema is no aligned with the user schema"}
+		return &schemas.Error{Msg: "action output schema is no aligned with the profile schema"}
 	}
 
 	if !key.isAnonymous {
@@ -211,7 +211,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	if flatter == nil {
 		row = map[string]any{}
 	} else {
-		row = identity.Properties
+		row = identity.Attributes
 		flatter.flat(row)
 	}
 	row["__action__"] = key.action
@@ -316,11 +316,11 @@ func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
 	iw.mu.Unlock()
 }
 
-// onEndAlterUserSchema is called when the alter of the user schema of a
+// onEndAlterProfileSchema is called when the alter of the profile schema of a
 // workspace ends.
 //
-// This notification is propagated by the Store.onEndAlterUserSchema method.
-func (iw *EventIdentityWriter) onEndAlterUserSchema(_ state.EndAlterUserSchema) {
+// This notification is propagated by the Store.onEndAlterProfileSchema method.
+func (iw *EventIdentityWriter) onEndAlterProfileSchema(_ state.EndAlterProfileSchema) {
 	action, ok := iw.store.ds.state.Action(iw.action)
 	if !ok {
 		return
@@ -329,7 +329,7 @@ func (iw *EventIdentityWriter) onEndAlterUserSchema(_ state.EndAlterUserSchema) 
 	var flatter *flatter
 	if action.OutSchema.Valid() {
 		workspace := action.Connection().Workspace()
-		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+		err := schemas.CheckAlignment(action.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
 			aligned = true
 			flatter = newFlatter(action.OutSchema, iw.store.identityColumnByProperty())
@@ -357,7 +357,7 @@ func (iw *EventIdentityWriter) onUpdateAction(n state.UpdateAction) {
 		if !ok {
 			return
 		}
-		err := schemas.CheckAlignment(n.OutSchema, workspace.UserSchema, nil)
+		err := schemas.CheckAlignment(n.OutSchema, workspace.ProfileSchema, nil)
 		if err == nil {
 			aligned = true
 			flatter = newFlatter(n.OutSchema, iw.store.identityColumnByProperty())

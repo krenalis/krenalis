@@ -18,7 +18,7 @@ import (
 	"github.com/meergo/meergo/test/meergotester"
 )
 
-func TestExportZeroUsers(t *testing.T) {
+func TestExportZeroProfiles(t *testing.T) {
 
 	// Create the temporary storage.
 	storage := meergotester.NewTempStorage(t)
@@ -34,11 +34,11 @@ func TestExportZeroUsers(t *testing.T) {
 
 	c.UpdateIdentityResolution(true, []string{"email"})
 
-	// Test the export of zero users to an API (Dummy).
+	// Test the export of zero profiles to an API (Dummy).
 	func() {
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
-		exportUsersActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{
-			Name:    "Export users to Dummy",
+		exportProfilesActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{
+			Name:    "Export profiles to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
@@ -60,11 +60,11 @@ func TestExportZeroUsers(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		exec := c.ExecuteAction(exportUsersActionID)
+		exec := c.ExecuteAction(exportProfilesActionID)
 		c.WaitForExecutionsCompletion(dummyDest, exec)
 	}()
 
-	// Test the export of zero users to file (CSV).
+	// Test the export of zero profiles to file (CSV).
 	func() {
 
 		// Create the File System connection.
@@ -77,12 +77,12 @@ func TestExportZeroUsers(t *testing.T) {
 			}),
 		})
 
-		exportedFilename := "exported-users.tmp.csv"
+		exportedFilename := "exported-profiles.tmp.csv"
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
-		// Create an action for the File System for exporting the users.
-		exportUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
-			Name:    "Export users to the CSV on File System",
+		// Create an action for the File System for exporting the profiles.
+		exportProfilesActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
+			Name:    "Export profiles to the CSV on File System",
 			Enabled: true,
 			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{
@@ -109,10 +109,10 @@ func TestExportZeroUsers(t *testing.T) {
 			"compression": core.NoCompression,
 		}, nil)
 
-		// Execute the action that export users.
-		exec := c.ExecuteAction(exportUsersActionID)
+		// Execute the action that export profiles.
+		exec := c.ExecuteAction(exportProfilesActionID)
 
-		// Wait for the import to finish.
+		// Wait for the export to finish.
 		c.WaitForExecutionsCompletion(fsID, exec)
 
 		// Check if the file has been created successfully.

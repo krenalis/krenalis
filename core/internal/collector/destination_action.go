@@ -171,7 +171,7 @@ func (da *destinationAction) transform() {
 	records := make([]transformers.Record, n)
 	for i := 0; i < n; i++ {
 		records[i].Purpose = transformers.Create
-		records[i].Properties = events[i].eventsEvent
+		records[i].Attributes = events[i].eventsEvent
 	}
 
 	// Transform the events.
@@ -204,7 +204,7 @@ func (da *destinationAction) transform() {
 		}
 		da.queue.metrics.TransformationPassed(da.id, 1)
 		da.queue.metrics.OutputValidationPassed(da.id, 1)
-		events[i].senderEvent.Type.Values = record.Properties
+		events[i].senderEvent.Type.Values = record.Attributes
 		da.queue.sender.QueueEvent(events[i].senderEvent)
 	}
 

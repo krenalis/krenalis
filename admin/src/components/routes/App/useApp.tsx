@@ -472,8 +472,8 @@ const useApp = (
 			filteredItem = <li>{formatNumber(filtered)} filtered out</li>;
 		}
 
-		const user = connection.isSource ? 'user identity' : 'user';
-		const users = connection.isSource ? 'user identities' : 'users';
+		const user = connection.isSource ? 'identity' : 'profile';
+		const users = connection.isSource ? 'identities' : 'profiles';
 		const executed = connection.isSource ? 'imported' : 'exported';
 
 		const infoMessage = (

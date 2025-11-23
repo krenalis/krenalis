@@ -97,11 +97,11 @@ Path:
 	}
 }
 
-// identityColumnByProperty returns a mapping from user identity properties to
-// their corresponding columns.
+// identityColumnByProperty returns a mapping from identity properties to their
+// corresponding columns.
 //
-// This mapping is derived from the user's property-to-column mapping,
-// substituting meta properties with the meta properties of user identity.
+// This mapping is derived from the profile's property-to-column mapping,
+// substituting meta properties with the meta properties of identity.
 func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column) map[string]warehouses.Column {
 	columns := map[string]warehouses.Column{
 		"__pk__":               {Name: "__pk__", Type: types.Int(32)},
@@ -111,7 +111,7 @@ func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column)
 		"__connection__":       {Name: "__connection__", Type: types.Int(32)},
 		"__anonymous_ids__":    {Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true},
 		"__last_change_time__": {Name: "__last_change_time__", Type: types.DateTime()},
-		"__muid__":             {Name: "__muid__", Type: types.UUID(), Nullable: true},
+		"__mpid__":             {Name: "__mpid__", Type: types.UUID(), Nullable: true},
 	}
 	for property, column := range userColumnByProperty {
 		if !isMetaProperty(property) {
@@ -159,10 +159,10 @@ func unflatRowRec(pk *propertyKey, row []any, omitNil bool) any {
 	return v
 }
 
-// userColumnByProperty returns a mapping from properties of the user schema to
-// their respective columns. It assumes that for a property path like "a.b.c",
-// the corresponding column is named "a_b_c".
-func userColumnByProperty(schema types.Type) map[string]warehouses.Column {
+// profileColumnByProperty returns a mapping from properties of the profile
+// schema to their respective columns. It assumes that for a property path like
+// "a.b.c", the corresponding column is named "a_b_c".
+func profileColumnByProperty(schema types.Type) map[string]warehouses.Column {
 	columnByProperty := map[string]warehouses.Column{}
 	for path, p := range schema.Properties().WalkAll() {
 		if p.Type.Kind() == types.ObjectKind {
@@ -172,7 +172,7 @@ func userColumnByProperty(schema types.Type) map[string]warehouses.Column {
 		columnByProperty[path] = warehouses.Column{
 			Name: name,
 			Type: p.Type,
-			// User schema properties are always non-nullable, while user
+			// Profile schema properties are always non-nullable, while profile
 			// columns are always nullable.
 			Nullable: true,
 		}

@@ -443,7 +443,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 
-		// Import the user identities into the data warehouse.
+		// Import the identities into the data warehouse.
 		for _, action := range connection.Actions() {
 			if action.Target != state.TargetUser || !action.Enabled {
 				continue

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/meergo/analytics-go"
+
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
 
@@ -76,10 +77,10 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		c.WaitForExecutionsCompletion(dummy, exec)
 	}
 
-	// Ensure that there are 10 users.
-	_, _, total := c.Users([]string{"email"}, "", false, 0, 1000)
+	// Ensure that there are 10 profiles.
+	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 10 {
-		t.Fatalf("expected 10 users, got %d", total)
+		t.Fatalf("expected 10 profiles, got %d", total)
 	}
 
 	// Imports users from CSV.
@@ -120,10 +121,10 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		c.WaitForExecutionsCompletion(fs, exec)
 	}
 
-	// Ensure that there are 13 users (10 from Dummy + 3 from CSV).
-	_, _, total = c.Users([]string{"email"}, "", false, 0, 1000)
+	// Ensure that there are 13 profiles (10 from Dummy + 3 from CSV).
+	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 13 {
-		t.Fatalf("expected 13 users, got %d", total)
+		t.Fatalf("expected 13 profiles, got %d", total)
 	}
 
 	// Import users and events from a JavaScript connection.
@@ -131,7 +132,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	t.Log("importing users and events...")
 	{
 		// Create a JavaScript connection with two actions (one for importing
-		// events, one for importing user identities) and retrieve its key.
+		// events, one for importing identities) and retrieve its key.
 		var javaScriptKey string
 		{
 			javaScript = c.CreateJavaScriptSource("JavaScript (source)", nil)
@@ -160,8 +161,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			})
 		}
 
-		// Send an identity event. More than importing an event, this should create
-		// a user identity.
+		// Send an identity event. More than importing an event, this should create an identity.
 		c.SendEvent(javaScriptKey, analytics.Identify{
 			UserId:      "f4ca124298",
 			AnonymousId: "5ce0fd49-199a-47e7-b0c8-498f5144f0ee",
@@ -174,46 +174,46 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		c.WaitEventsStoredIntoWarehouse(ctx, 1)
 	}
 
-	// Ensure that there are 14 users (10 from Dummy + 3 from CSV + 1 from event).
-	_, _, total = c.Users([]string{"email"}, "", false, 0, 1000)
+	// Ensure that there are 14 profiles (10 from Dummy + 3 from CSV + 1 from event).
+	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 14 {
-		t.Fatalf("expected 14 users, got %d", total)
+		t.Fatalf("expected 14 profiles, got %d", total)
 	}
 
 	// Set the "email" as identifier and run the Identity Resolution.
 	c.UpdateIdentityResolution(true, []string{"email"})
 	c.RunIdentityResolution()
 
-	// Ensure that there are 10 users.
-	users, _, total := c.Users([]string{"email"}, "", false, 0, 1000)
+	// Ensure that there are 10 profiles.
+	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 10 {
 		t.Fatalf("expected 10 users, got %d", total)
 	}
 
-	// Retrieve the MUID of "kbuessen0@example.com".
-	var kBuessenMUID uuid.UUID
-	for _, user := range users {
-		if user.Traits["email"] == "kbuessen0@example.com" {
-			kBuessenMUID = user.MUID
+	// Retrieve the MPID of "kbuessen0@example.com".
+	var kBuessenMPID uuid.UUID
+	for _, profile := range profiles {
+		if profile.Attributes["email"] == "kbuessen0@example.com" {
+			kBuessenMPID = profile.MPID
 			break
 		}
 	}
-	if kBuessenMUID == (uuid.UUID{}) {
-		t.Fatalf("user with email %q not found", "kbuessen0@example.com")
+	if kBuessenMPID == (uuid.UUID{}) {
+		t.Fatalf("profile with email %q not found", "kbuessen0@example.com")
 	}
 
 	// Ensure that "kbuessen0@example.com" has one event associated.
-	events := c.UserEvents(kBuessenMUID, []string{"timestamp"})
+	events := c.ProfileEvents(kBuessenMPID, []string{"timestamp"})
 	if len(events) != 1 {
 		t.Fatalf("expected %q to have one event associated, got %d", "kbuessen0@example.com", len(events))
 	}
 
 	// Validate the identities.
-	identities, total := c.UserIdentities(kBuessenMUID, 0, 1000)
+	identities, total := c.Identities(kBuessenMPID, 0, 1000)
 	if total != 3 {
-		t.Fatalf("expected user %s to have 3 identities associated, got %d", kBuessenMUID, total)
+		t.Fatalf("expected profile %s to have 3 identities associated, got %d", kBuessenMPID, total)
 	}
-	assertEqualIdentity := func(got, expected meergotester.UserIdentity) {
+	assertEqualIdentity := func(got, expected meergotester.Identity) {
 		if !reflect.DeepEqual(got, expected) {
 			t.Fatalf("expected identity %#v, got %#v", expected, got)
 		}
@@ -221,8 +221,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		eventIdentity := getIdentityByConnection(t, identities, javaScript)
 		eventIdentity.LastChangeTime = time.Time{}
-		assertEqualIdentity(eventIdentity, meergotester.UserIdentity{
-			Connection:     javaScript, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
+		assertEqualIdentity(eventIdentity, meergotester.Identity{
+			Connection:     javaScript, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
 			Action:         javascriptUsersAction,
 			ID:             "f4ca124298",
 			AnonymousIds:   []string{"5ce0fd49-199a-47e7-b0c8-498f5144f0ee"},
@@ -232,8 +232,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	t.Log("identity imported from JavaScript is ok")
 	{
 		csvIdentity := getIdentityByConnection(t, identities, fs)
-		assertEqualIdentity(csvIdentity, meergotester.UserIdentity{
-			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
+		assertEqualIdentity(csvIdentity, meergotester.Identity{
+			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
 			Action:         csvAction,
 			ID:             "1",
 			AnonymousIds:   nil,
@@ -244,8 +244,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		dummyIdentity := getIdentityByConnection(t, identities, dummy)
 		dummyIdentity.LastChangeTime = time.Time{}
-		assertEqualIdentity(dummyIdentity, meergotester.UserIdentity{
-			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
+		assertEqualIdentity(dummyIdentity, meergotester.Identity{
+			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the Identity.
 			Action:         dummyAction,
 			ID:             "dummy1",
 			AnonymousIds:   nil,
@@ -256,12 +256,12 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 }
 
-func getIdentityByConnection(t *testing.T, identities []meergotester.UserIdentity, connection int) meergotester.UserIdentity {
+func getIdentityByConnection(t *testing.T, identities []meergotester.Identity, connection int) meergotester.Identity {
 	for _, identity := range identities {
 		if identity.Connection == connection {
 			return identity
 		}
 	}
 	t.Fatalf("identity with connection %d not found among provided identities", connection)
-	return meergotester.UserIdentity{}
+	return meergotester.Identity{}
 }

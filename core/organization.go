@@ -348,7 +348,7 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 	return n.ID, n.Token, nil
 }
 
-// CreateWorkspace creates a workspace with the given name, user schema and
+// CreateWorkspace creates a workspace with the given name, profile schema and
 // displayed properties, and connects to a data warehouse of the provided driver
 // name, settings and MCP settings (which can be nil, meaning that they are not
 // configured for the workspace).
@@ -366,19 +366,19 @@ func (this *Organization) CreateAccessKey(ctx context.Context, name string, work
 //   - WarehouseDriverNotExist, if a warehouse driver does not exist.
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
 func (this *Organization) CreateWorkspace(ctx context.Context, name string,
-	userSchema types.Type, uiPreferences UIPreferences,
+	profileSchema types.Type, uiPreferences UIPreferences,
 	whName string, whSettings, whMCPSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.core.mustBeOpen()
 
 	whSettings, whMCPSettings, err := this.validateWorkspaceCreation(ctx, name,
-		userSchema, uiPreferences, whName, whSettings, whMCPSettings, whMode)
+		profileSchema, uiPreferences, whName, whSettings, whMCPSettings, whMode)
 	if err != nil {
 		return 0, err
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, whName, whSettings, userSchema)
+	err = this.core.datastore.Initialize(ctx, whName, whSettings, profileSchema)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return 0, errors.Unavailable("%s", err)
@@ -389,7 +389,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 	n := state.CreateWorkspace{
 		Organization:                   this.organization.ID,
 		Name:                           name,
-		UserSchema:                     userSchema,
+		ProfileSchema:                  profileSchema,
 		ResolveIdentitiesOnBatchImport: true,
 		UIPreferences:                  state.UIPreferences(uiPreferences),
 	}
@@ -404,8 +404,8 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		return 0, err
 	}
 
-	// Encode the user schema to JSON.
-	encodedUserSchema, err := json.Marshal(n.UserSchema)
+	// Encode the profile schema to JSON.
+	encodedProfileSchema, err := json.Marshal(n.ProfileSchema)
 	if err != nil {
 		return 0, err
 	}
@@ -418,13 +418,13 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 	}
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-			" user_schema, resolve_identities_on_batch_import, ui_user_profile_image, ui_user_profile_first_name, "+
-			" ui_user_profile_last_name, ui_user_profile_extra, warehouse_name, "+
+			" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name, "+
+			" ui_profile_last_name, ui_profile_extra, warehouse_name, "+
 			"warehouse_mode, warehouse_settings, warehouse_mcp_settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
-			n.ID, n.Organization, n.Name, encodedUserSchema, n.ResolveIdentitiesOnBatchImport,
-			n.UIPreferences.UserProfile.Image, n.UIPreferences.UserProfile.FirstName,
-			n.UIPreferences.UserProfile.LastName, n.UIPreferences.UserProfile.Extra,
+			n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
+			n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
+			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra,
 			n.Warehouse.Name, n.Warehouse.Mode, n.Warehouse.Settings, mcp)
 		if err != nil {
 			if db.IsForeignKeyViolation(err) {
@@ -679,10 +679,10 @@ func (this *Organization) SendMemberPasswordReset(ctx context.Context, email str
 //   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
 func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string,
-	userSchema types.Type, uiPreferences UIPreferences, whName string,
+	profileSchema types.Type, uiPreferences UIPreferences, whName string,
 	whSettings, whMCPSettings []byte, mode WarehouseMode) error {
 	this.core.mustBeOpen()
-	_, _, err := this.validateWorkspaceCreation(ctx, name, userSchema, uiPreferences,
+	_, _, err := this.validateWorkspaceCreation(ctx, name, profileSchema, uiPreferences,
 		whName, whSettings, whMCPSettings, mode)
 
 	return err
@@ -791,8 +791,8 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		workspace:                      ws,
 		ID:                             ws.ID,
 		Name:                           ws.Name,
-		UserSchema:                     ws.UserSchema,
-		UserPrimarySources:             maps.Clone(ws.UserPrimarySources),
+		ProfileSchema:                  ws.ProfileSchema,
+		PrimarySources:                 maps.Clone(ws.PrimarySources),
 		ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    ws.Identifiers,
 		WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
@@ -814,8 +814,8 @@ func (this *Organization) Workspaces() []*Workspace {
 			workspace:                      ws,
 			ID:                             ws.ID,
 			Name:                           ws.Name,
-			UserSchema:                     ws.UserSchema,
-			UserPrimarySources:             maps.Clone(ws.UserPrimarySources),
+			ProfileSchema:                  ws.ProfileSchema,
+			PrimarySources:                 maps.Clone(ws.PrimarySources),
 			ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 			Identifiers:                    ws.Identifiers,
 			WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
@@ -840,15 +840,15 @@ func (this *Organization) Workspaces() []*Workspace {
 //   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
 func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string,
-	userSchema types.Type, uiPreferences UIPreferences,
+	profileSchema types.Type, uiPreferences UIPreferences,
 	whName string, whSettings []byte, whMCPSettings []byte, whMode WarehouseMode) ([]byte, []byte, error) {
 
 	// Validate the parameters.
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return nil, nil, errors.BadRequest("%s", err)
 	}
-	if !userSchema.Valid() {
-		return nil, nil, errors.BadRequest("user schema is invalid")
+	if !profileSchema.Valid() {
+		return nil, nil, errors.BadRequest("profile schema is invalid")
 	}
 	if err := validateUIPreferences(uiPreferences); err != nil {
 		return nil, nil, errors.BadRequest("%s", err)
@@ -862,11 +862,11 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		return nil, nil, errors.BadRequest("warehouse mode is not valid")
 	}
 
-	// Perform additional checks on the compliance of the user schema.
-	if err := checkAllowedPropertyUserSchema(userSchema); err != nil {
+	// Perform additional checks on the compliance of the profile schema.
+	if err := checkAllowedPropertyProfileSchema(profileSchema); err != nil {
 		return nil, nil, errors.BadRequest("%s", err)
 	}
-	if err := datastore.CheckConflictingProperties("users", userSchema); err != nil {
+	if err := datastore.CheckConflictingProperties("profile", profileSchema); err != nil {
 		return nil, nil, errors.BadRequest("%s", err)
 	}
 

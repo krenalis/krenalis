@@ -268,7 +268,7 @@ func (api *API) SendEvents(ctx context.Context, events connectors.Events) error 
 }
 
 // Users returns an iterator to iterate over the API's users. Each returned
-// record will contain, in the Properties field, the properties in schema, with
+// record will contain, in the Attributes field, the properties in schema, with
 // the same types. If where is not nil, only users matching its conditions will
 // be returned.
 //
@@ -635,10 +635,10 @@ func (r *apiRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 
 				if record.Err == nil {
-					// Read the properties.
-					record.Properties = make(map[string]any, properties.Len())
+					// Read the attributes.
+					record.Attributes = make(map[string]any, properties.Len())
 					for _, p := range properties.All() {
-						v, ok := user.Properties[p.Name]
+						v, ok := user.Attributes[p.Name]
 						if !ok {
 							if !p.ReadOptional {
 								record.Err = inputValidationErrorf(p.Name, "(returned by %s connector) does not have a value, but the property is not optional for reading", r.connector)
@@ -651,10 +651,10 @@ func (r *apiRecords) All(ctx context.Context) iter.Seq[Record] {
 							record.Err = err
 							break
 						}
-						record.Properties[p.Name] = v
+						record.Attributes[p.Name] = v
 					}
 					if record.Err == nil && r.where != nil {
-						if !filters.Applies(r.where, record.Properties) {
+						if !filters.Applies(r.where, record.Attributes) {
 							continue
 						}
 					}

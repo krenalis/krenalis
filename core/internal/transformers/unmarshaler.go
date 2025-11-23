@@ -259,7 +259,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 		}
 		switch tok.String() {
 		case "value":
-			properties, err := d.unmarshal(schema, preserveJSON, records[i].Purpose)
+			attributes, err := d.unmarshal(schema, preserveJSON, records[i].Purpose)
 			if err != nil {
 				if err == errInvalidResponseFormat {
 					return err
@@ -268,10 +268,10 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 					e.msg = `property «` + e.path + `» ` + e.msg
 					err = e
 				}
-				records[i].Properties = nil
+				records[i].Attributes = nil
 				records[i].Err = err
 			} else {
-				records[i].Properties = properties.(map[string]any)
+				records[i].Attributes = attributes.(map[string]any)
 			}
 		case "error":
 			tok, err := d.readToken()
@@ -281,7 +281,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 			if tok.Kind() != '"' {
 				return errInvalidResponseFormat
 			}
-			records[i].Properties = nil
+			records[i].Attributes = nil
 			records[i].Err = RecordTransformationError{msg: fmt.Sprintf("%s: %s", language, tok.String())}
 		default:
 			return errInvalidResponseFormat

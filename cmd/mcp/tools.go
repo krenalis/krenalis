@@ -42,7 +42,7 @@ var tools = []server.ServerTool{
 	// Tool that queries the data warehouse.
 	{
 		Tool: mcp.NewTool("query-data-warehouse",
-			mcp.WithDescription("Run a query on the data warehouse connected to the workspace (to retrieve events, users, or other relevant data) and returns the results for analysis."),
+			mcp.WithDescription("Run a query on the data warehouse connected to the workspace (to retrieve events, profiles, or other relevant data) and returns the results for analysis."),
 			mcp.WithString("query", mcp.Required(), mcp.Description("Query to execute on the workspace's data warehouse to retrieve data")),
 			mcp.WithTitleAnnotation("Query the data warehouse of the workspace"),
 			mcp.WithReadOnlyHintAnnotation(false),
@@ -70,17 +70,17 @@ var tools = []server.ServerTool{
 		},
 	},
 
-	// Tool that exposes the user schema.
+	// Tool that exposes the profile schema.
 	{
-		Tool: mcp.NewTool("user-schema",
+		Tool: mcp.NewTool("profile-schema",
 			mcp.WithDescription(
-				"Return the user schema (with details of all its properties and the corresponding data warehouse columns) related to the Meergo workspace."+
-					" Information is returned about the properties of the user schema in Meergo (with their types),"+
-					" and about the corresponding column of the 'users' view in the data warehouse (along with its column type), where the user information is actually stored."+
-					" All user schema properties in Meergo are always nullable, as any of them can be omitted."+
-					" Unlike the event schema, which is fixed for each workspace, the user schema can be modified and thus change over time.",
+				"Return the profile schema (with details of all its properties and the corresponding data warehouse columns) related to the Meergo workspace."+
+					" Information is returned about the properties of the profile schema in Meergo (with their types),"+
+					" and about the corresponding column of the 'profiles' view in the data warehouse (along with its column type), where the user information is actually stored."+
+					" All profile schema properties in Meergo are always nullable, as any of them can be omitted."+
+					" Unlike the event schema, which is fixed for each workspace, the profile schema can be modified and thus change over time.",
 			),
-			mcp.WithTitleAnnotation("User schema of the workspace"),
+			mcp.WithTitleAnnotation("Profile schema of the workspace"),
 			mcp.WithReadOnlyHintAnnotation(true),
 			mcp.WithDestructiveHintAnnotation(false),
 			mcp.WithIdempotentHintAnnotation(false),
@@ -90,7 +90,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			schemaInfo := userSchemaInfoForMCPClient(ws.UserSchema, ws.ColumnTypeDescription)
+			schemaInfo := profileSchemaInfoForMCPClient(ws.ProfileSchema, ws.ColumnTypeDescription)
 			encoded, err := json.Marshal(schemaInfo)
 			if err != nil {
 				return nil, err
@@ -105,8 +105,8 @@ var tools = []server.ServerTool{
 			mcp.WithDescription(
 				"Return the event schema (with details of all its properties and the corresponding data warehouse columns)."+
 					" Information is returned about the properties of the event schema in Meergo (with their types),"+
-					" and about the corresponding column of the 'events' table in the data warehouse (along with its column type), where the user information is actually stored."+
-					" Unlike the workspace user schema, which can be modified, the event schema is the same for every workspace and is never modified.",
+					" and about the corresponding column of the 'events' table in the data warehouse (along with its column type), where the profile information is actually stored."+
+					" Unlike the workspace profile schema, which can be modified, the event schema is the same for every workspace and is never modified.",
 			),
 			mcp.WithTitleAnnotation("Event schema"),
 			mcp.WithReadOnlyHintAnnotation(true),
@@ -122,22 +122,22 @@ var tools = []server.ServerTool{
 		},
 	},
 
-	// Tool that exposes information about the user identities.
+	// Tool that exposes information about the profile identities.
 	{
-		Tool: mcp.NewTool("user-identities-doc",
+		Tool: mcp.NewTool("profile-identities-doc",
 			mcp.WithDescription(
-				"Return information about the user identities in Meergo.",
+				"Return information about the profile identities in Meergo.",
 			),
-			mcp.WithTitleAnnotation("Documentation about user identities"),
+			mcp.WithTitleAnnotation("Documentation about profile identities"),
 			mcp.WithReadOnlyHintAnnotation(true),
 			mcp.WithDestructiveHintAnnotation(false),
 			mcp.WithIdempotentHintAnnotation(true),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			return mcp.NewToolResultText(strings.Join([]string{
-				"The '_user_identities' table contains user identities before they are unified through Identity Resolution and made available in the 'users' view.",
-				"The '_user_identities.__connection__' column references the ID (integer) of the connection from which the user identity was imported.",
-				"If there's no match between the contents of '_user_identities' and the 'users' view, it might be because the Identity Resolution process hasn't been run recently.",
+				"The '_identities' table contains profile identities before they are unified through Identity Resolution and made available in the 'users' view.",
+				"The '_identities.__connection__' column references the ID (integer) of the connection from which the identity was imported.",
+				"If there's no match between the contents of '_identities' and the 'profiles' view, it might be because the Identity Resolution process hasn't been run recently.",
 			}, " ")), nil
 		},
 	},
@@ -182,16 +182,16 @@ var tools = []server.ServerTool{
 			mcp.WithDescription(
 				"Return information about the workspace connections."+
 					" A workspace can have zero, one or multiple connections."+
-					" A connection with role 'source', depending on its type and the external service it's connected to, can import users and events into the data warehouse, and send events to a destination connection."+
-					" A connection with role 'destination', depending on its type and the external service it's connected to, can export users read from the data warehouse, and send events received from a source connection to an app."+
+					" A connection with role 'source', depending on its type and the external service it's connected to, can import user data and events into the data warehouse, and send events to a destination connection."+
+					" A connection with role 'destination', depending on its type and the external service it's connected to, can export user data read from the data warehouse, and send events received from a source connection to an app."+
 					" Once events are imported into the data warehouse by a source connection, they can no longer be re-read or forwarded via a destination connection."+
 					" A connection performs its operations (importing, sending, and exporting data) through 'actions'."+
 					" Each connection can have zero, one, or multiple 'actions'."+
 					" API connections interface with external applications outside Meergo."+
 					" Database connections interface with external databases outside Meergo."+
 					" File connections work in conjunction with file storage connections to interact with files for reading and writing data."+
-					" SDK connections receive data (events and users) from SDKs, browsers, and server-side applications."+
-					" Webhook connections receive data (events and users) from applications via a webhook."+
+					" SDK connections receive data (events and user data) from SDKs, browsers, and server-side applications."+
+					" Webhook connections receive data (events and user data) from applications via a webhook."+
 					" Regardless of the language, use the English terms Connection, Source, Destination and Action without translating them, as they are key concepts in the software.",
 			),
 			mcp.WithTitleAnnotation("Information about workspace connections."),

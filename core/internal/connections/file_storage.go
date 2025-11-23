@@ -164,7 +164,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 			recordErr = record.Err
 			return false
 		}
-		records = append(records, record.Properties)
+		records = append(records, record.Attributes)
 		return true
 	})
 	err = _file.(fileReadConnection).Read(ctx, r, sheet, rw)

@@ -552,7 +552,7 @@ const ConnectionMetrics = () => {
 								size='small'
 								disabled={!supportedTargets.current.includes('User')}
 							>
-								Users
+								Profiles
 							</SlButton>
 						</SlButtonGroup>
 						{c.actions?.length > 1 &&
@@ -576,7 +576,7 @@ const ConnectionMetrics = () => {
 					</div>
 					<div className='connection-metrics__chart'>
 						<div className='connection-metrics__chart-heading'>
-							{chartTitle} {isUsersSelected ? 'users' : 'events'} <span>{titleRange}</span>
+							{chartTitle} {isUsersSelected ? 'profiles' : 'events'} <span>{titleRange}</span>
 						</div>
 						<ResponsiveContainer width='100%' height='100%'>
 							<ComposedChart

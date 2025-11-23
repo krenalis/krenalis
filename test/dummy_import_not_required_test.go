@@ -49,12 +49,12 @@ func TestDummyImportNotRequired(t *testing.T) {
 
 	// Test that the "favorite_movie.title" property, which has been imported
 	// from a not required property in Dummy, has been imported just for some
-	// users.
-	users, _, total := c.Users([]string{"email", "favorite_movie"}, "email", false, 0, 100)
+	// profiles.
+	profiles, _, total := c.Profiles([]string{"email", "favorite_movie"}, "email", false, 0, 100)
 	if total != 10 {
-		t.Fatalf("expected 10 users, got %d instead", total)
+		t.Fatalf("expected 10 profiles, got %d instead", total)
 	}
-	expectedUserTraits := []map[string]any{
+	expectedAttributes := []map[string]any{
 		{"email": "abenois2@example.com", "favorite_movie": map[string]any{"title": "Eclipse Protocol"}},
 		{"email": "bdroghan5@example.com"},
 		{"email": "ctroy7@example.com", "favorite_movie": map[string]any{"title": "Phantom Avenue"}},
@@ -67,10 +67,10 @@ func TestDummyImportNotRequired(t *testing.T) {
 		{"email": "kfellon6@example.com"},
 	}
 	for i := range 10 {
-		got := users[i].Traits
-		expected := expectedUserTraits[i]
+		got := profiles[i].Attributes
+		expected := expectedAttributes[i]
 		if !reflect.DeepEqual(got, expected) {
-			t.Fatalf("user n. %d: expected traits %#v, got %#v", i+1, expected, got)
+			t.Fatalf("profile n. %d: expected attributes %#v, got %#v", i+1, expected, got)
 		}
 	}
 

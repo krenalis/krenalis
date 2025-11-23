@@ -1880,10 +1880,10 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.SDK,
-			err:                     "input schema must be invalid for actions that import user identities from events",
+			err:                     "input schema must be invalid for actions that import identities from events",
 		},
 		{
-			name: "BAD: Source/SDK/User - property 'muid' does not exist in the event schema",
+			name: "BAD: Source/SDK/User - property 'mpid' does not exist in the event schema",
 			action: ActionToSet{
 				Name: "Import users",
 				OutSchema: types.Object([]types.Property{
@@ -1891,14 +1891,14 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
-						"userID": "muid",
+						"userID": "mpid",
 					},
 				},
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.SDK,
-			err:                     "invalid mapping: property \"muid\" does not exist",
+			err:                     "invalid mapping: property \"mpid\" does not exist",
 		},
 		{
 			name: "BAD: Source/Webhook/User - input schema must be invalid",
@@ -1919,7 +1919,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Webhook,
-			err:                     "input schema must be invalid for actions that import user identities from events",
+			err:                     "input schema must be invalid for actions that import identities from events",
 		},
 		{
 			name: "BAD: Destination/Database/User - missing database table key",
@@ -2545,7 +2545,7 @@ func Test_validateAction(t *testing.T) {
 			formatTargets:           state.UsersFlag,
 			formatHasSettings:       false,
 			formatHasSheets:         false,
-			err:                     "input schema must be valid when exporting users to file",
+			err:                     "input schema must be valid when exporting profiles to file",
 		},
 		{
 			name: "BAD: Destination/API/User - output matching property transformed using mapping",

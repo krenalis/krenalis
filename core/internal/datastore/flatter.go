@@ -11,8 +11,8 @@ import (
 	"github.com/meergo/meergo/warehouses"
 )
 
-// flatter allows flattening a map[string]any containing user schema properties
-// into a map[string]any representing user table columns.
+// flatter allows flattening a map[string]any containing profile schema
+// attributes into a map[string]any representing profile table columns.
 type flatter struct {
 	name       string
 	column     warehouses.Column

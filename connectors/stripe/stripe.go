@@ -126,14 +126,14 @@ func (stripe *Stripe) Records(ctx context.Context, _ connectors.Targets, _ time.
 	}
 
 	users := make([]connectors.Record, len(response.Data))
-	for i, customer := range response.Data {
-		id, _ := customer["id"].(string)
+	for i, attributes := range response.Data {
+		id, _ := attributes["id"].(string)
 		if id == "" {
 			return nil, "", errors.New("unexpected customer identifier from Stripe")
 		}
 		users[i] = connectors.Record{
 			ID:             id,
-			Properties:     customer,
+			Attributes:     attributes,
 			LastChangeTime: time.Now().UTC(),
 		}
 	}
@@ -177,7 +177,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 	record := records.First()
 
 	// Validate 'metadata' property.
-	if metadata, ok := record.Properties["metadata"].(map[string]any); ok {
+	if metadata, ok := record.Attributes["metadata"].(map[string]any); ok {
 		if len(metadata) > 50 {
 			return errors.New("«metadata» contains more than 50 keys")
 		}
@@ -194,7 +194,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 		}
 	}
 	// Validate 'invoice_prefix'.
-	if prefix, ok := record.Properties["invoice_prefix"].(string); ok {
+	if prefix, ok := record.Attributes["invoice_prefix"].(string); ok {
 		for i := 0; i < len(prefix); i++ {
 			if c := prefix[i]; '0' <= c && c <= '9' || 'A' <= c && c <= 'Z' {
 				continue
@@ -206,7 +206,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 		}
 	}
 	// Validate 'preferred_locales'.
-	if locales, ok := record.Properties["preferred_locales"].([]any); ok {
+	if locales, ok := record.Attributes["preferred_locales"].([]any); ok {
 		for _, lc := range locales {
 			if !localeCode.MatchString(lc.(string)) {
 				return errors.New("«preferred_locales» contains an invalid locale identifier")
@@ -216,36 +216,36 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 
 	// Drop create/update-only fields.
 	if record.ID == "" {
-		delete(record.Properties, "default_source")
-		if tax, ok := record.Properties["tax"].(map[string]any); ok {
+		delete(record.Attributes, "default_source")
+		if tax, ok := record.Attributes["tax"].(map[string]any); ok {
 			if validate, ok := tax["validate_location"]; ok && validate == "auto" {
 				delete(tax, "validate_location")
 			}
 		}
 	} else {
-		delete(record.Properties, "payment_method")
-		delete(record.Properties, "tax_id_data")
+		delete(record.Attributes, "payment_method")
+		delete(record.Attributes, "tax_id_data")
 	}
 
 	// Stripe requires empty arrays and maps to be serialized as empty strings.
 	// Apply this only when updating a customer.
 	if record.ID != "" {
-		if metadata, ok := record.Properties["metadata"].(map[string]any); ok && len(metadata) == 0 {
-			record.Properties["metadata"] = nil
+		if metadata, ok := record.Attributes["metadata"].(map[string]any); ok && len(metadata) == 0 {
+			record.Attributes["metadata"] = nil
 		}
-		if settings, ok := record.Properties["invoice_settings"].(map[string]any); ok {
+		if settings, ok := record.Attributes["invoice_settings"].(map[string]any); ok {
 			if fields, ok := settings["custom_fields"].([]any); ok && len(fields) == 0 {
 				settings["custom_fields"] = nil
 			}
 		}
-		if locales, ok := record.Properties["preferred_locales"].([]any); ok && len(locales) == 0 {
-			record.Properties["preferred_locales"] = nil
+		if locales, ok := record.Attributes["preferred_locales"].([]any); ok && len(locales) == 0 {
+			record.Attributes["preferred_locales"] = nil
 		}
 	}
 
 	bb := stripe.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
-	encodeProperties(bb, record.Properties)
+	encodeAttributes(bb, record.Attributes)
 
 	u := "/v1/customers"
 	if record.ID != "" {
@@ -282,7 +282,7 @@ func (stripe *Stripe) Upsert(ctx context.Context, target connectors.Targets, rec
 					var typ string
 					if matches := arrayIndex.FindStringSubmatch(sErr.Param); matches != nil {
 						if i, err := strconv.Atoi(matches[1]); err == nil && i >= 0 {
-							if data, ok := record.Properties["tax_id_data"].([]any); ok && i < len(data) {
+							if data, ok := record.Attributes["tax_id_data"].([]any); ok && i < len(data) {
 								typ, _ = data[i].(map[string]any)["type"].(string)
 							}
 						}
@@ -385,13 +385,13 @@ func (err *stripeError) Error() string {
 
 const maxDestinationSchemaDepth = 4 // maximum nesting depth of the destination schema
 
-// encodeProperties encodes properties as application/x-www-form-urlencoded,
+// encodeAttributes encodes attributes as application/x-www-form-urlencoded,
 // compatible with Stripe, and writes the result to dst.
 //
 // Only destination-schema types are serialized: text, bool, array, object, and
-// map. Accordingly, property values must be nil or one of: string, int,
+// map. Accordingly, attributes must be nil or one of: string, int,
 // map[string]any, or []any. Map keys must be non-empty.
-func encodeProperties(dst *connectors.BodyBuffer, properties map[string]any) {
+func encodeAttributes(dst *connectors.BodyBuffer, attributes map[string]any) {
 
 	type seg struct {
 		name  string
@@ -472,7 +472,7 @@ func encodeProperties(dst *connectors.BodyBuffer, properties map[string]any) {
 		}
 	}
 
-	for name, value := range properties {
+	for name, value := range attributes {
 		path[0] = seg{name: name}
 		depth = 1
 		walkValue(value)

@@ -51,7 +51,7 @@ type Config struct {
 // NewFunc represents functions that create new warehouse driver instance.
 type NewFunc[T Warehouse] func(*Config) (T, error)
 
-// AlterOperation represents an operation that alters the columns of the user
+// AlterOperation represents an operation that alters the columns of the profile
 // tables.
 //
 // Every column is always nullable.
@@ -63,7 +63,7 @@ type AlterOperation struct {
 }
 
 // AlterOperationType represents the type of an operation on the data warehouse
-// that alters the columns of the user tables.
+// that alters the columns of the profile tables.
 type AlterOperationType int
 
 const (
@@ -116,17 +116,17 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 // Warehouse is the interface implemented by warehouse drivers.
 type Warehouse interface {
 
-	// AlterUserSchema alters the user schema.
+	// AlterProfileSchema alters the profile schema.
 	//
 	// opID is an identifier that uniquely identifies a specific alter schema
 	// operation; if the method is called again passing the same identifier, whether
 	// the operation ended successfully or with a *OperationError error, that result
 	// is returned again.
 	//
-	// columns contains the columns of the "users" table to obtain (this parameter
-	// is useful for obtaining type information and for creating views), while
-	// operations is the set of operations to apply in order to migrate the current
-	// columns to the given columns.
+	// columns contains the columns of the "profiles" table to obtain (this
+	// parameter is useful for obtaining type information and for creating views),
+	// while operations is the set of operations to apply in order to migrate the
+	// current columns to the given columns.
 	//
 	// This method, once called, can then return in four distinct cases:
 	//
@@ -141,7 +141,7 @@ type Warehouse interface {
 	// (4) the operation ended with an unexpected and unknown error, and it is
 	// therefore up to the caller to try calling this method again by providing the
 	// same ID.
-	AlterUserSchema(ctx context.Context, opID string, columns []Column, operations []AlterOperation) error
+	AlterProfileSchema(ctx context.Context, opID string, columns []Column, operations []AlterOperation) error
 
 	// CanInitialize checks whether the data warehouse can be initialized.
 	// It returns a *NonInitializableError error if the data warehouse
@@ -169,9 +169,9 @@ type Warehouse interface {
 	Delete(ctx context.Context, table string, where Expr) error
 
 	// Initialize initializes the data warehouse.
-	// The given user schema will be used by the initialization to build the user
-	// tables on the warehouse with the corresponding columns.
-	Initialize(ctx context.Context, userColumns []Column) error
+	// The given profile schema will be used by the initialization to build the
+	// profile tables on the warehouse with the corresponding columns.
+	Initialize(ctx context.Context, profileColumns []Column) error
 
 	// Merge performs a table merge operation.
 	// If handles row updates, inserts, and deletions. table specifies the target
@@ -202,15 +202,15 @@ type Warehouse interface {
 	// that the row should not be purged.
 	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
 
-	// PreviewAlterUserSchema provides a preview of an alter user schema operation
-	// by returning the queries that would be executed on the warehouse to perform a
-	// given alter schema.
+	// PreviewAlterProfileSchema provides a preview of an alter profile schema
+	// operation by returning the queries that would be executed on the warehouse to
+	// perform a given alter schema.
 	//
-	// columns contains the columns of the users tables to obtain (this parameters
-	// is useful for obtaining type information and for creating views), while
-	// operations is the set of operations to apply in order to migrate the current
-	// columns to the given columns.
-	PreviewAlterUserSchema(ctx context.Context, columns []Column, operations []AlterOperation) ([]string, error)
+	// columns contains the columns of the profiles tables to obtain (this
+	// parameters is useful for obtaining type information and for creating views),
+	// while operations is the set of operations to apply in order to migrate the
+	// current columns to the given columns.
+	PreviewAlterProfileSchema(ctx context.Context, columns []Column, operations []AlterOperation) ([]string, error)
 
 	// Query executes a query and returns the results as Rows. If withTotal is true,
 	// it also returns an estimated total number of the records that would be
@@ -235,10 +235,10 @@ type Warehouse interface {
 	// identifiers are the columns corresponding to the Identity Resolution
 	// identifiers, ordered by priority.
 	//
-	// userColumns holds the columns of the user schema, without the meta
+	// profileColumns holds the columns of the profile schema, without the meta
 	// properties.
 	//
-	// userPrimarySources is a mapping between user column names (for which a
+	// profilePrimarySources is a mapping between profile column names (for which a
 	// primary source connection have been set) and IDs of primary source
 	// connections.
 	//
@@ -255,17 +255,17 @@ type Warehouse interface {
 	// (4) the operation ended with an unexpected and unknown error, and it is
 	// therefore up to the caller to try calling this method again by providing the
 	// same ID.
-	ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []Column, userPrimarySources map[string]int) error
+	ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []Column, profilePrimarySources map[string]int) error
 
 	// Repair repairs the database objects on the data warehouse needed by warehouses.
 	// It also takes care of correcting other inconsistent data (such as any tables
 	// that store ongoing operations).
-	// The given user schema will be used to repair the user tables.
+	// The given profile schema will be used to repair the profiles tables.
 	//
 	// This method should only be called on warehouses that have already been
 	// initialized, with the aim of correcting any extraordinary issues (such as
 	// accidental table deletions) in an attempt to make Meergo functional again.
-	Repair(ctx context.Context, userColumns []Column) error
+	Repair(ctx context.Context, profileColumns []Column) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte
@@ -381,7 +381,7 @@ func IsValidSchemaName(name string) bool {
 }
 
 // OperationError represents an error that occurred in the data warehouse during
-// an Identity Resolution or user schema update operation.
+// an Identity Resolution or profile schema update operation.
 type OperationError struct{ err error }
 
 // NewOperationError returns a new *OperationError.

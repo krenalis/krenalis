@@ -84,11 +84,11 @@ func Test_Flatter(t *testing.T) {
 	}
 
 	tests := []struct {
-		properties map[string]any
+		attributes map[string]any
 		expected   map[string]any
 	}{
 		{
-			properties: map[string]any{
+			attributes: map[string]any{
 				"name": "Bob",
 				"address": map[string]any{
 					"street": "Via Alberata 5",
@@ -116,9 +116,9 @@ func Test_Flatter(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			flatter := newFlatter(schema, columnByProperty)
-			flatter.flat(test.properties)
-			if !reflect.DeepEqual(test.properties, test.expected) {
-				t.Fatalf("expected %v, got %v", test.expected, test.properties)
+			flatter.flat(test.attributes)
+			if !reflect.DeepEqual(test.attributes, test.expected) {
+				t.Fatalf("expected %v, got %v", test.expected, test.attributes)
 			}
 		})
 	}

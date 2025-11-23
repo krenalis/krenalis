@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, useMemo } from 'react';
-import UsersContext from '../../../context/UsersContext';
+import ProfilesContext from '../../../context/ProfilesContext';
 import Toolbar from '../../base/Toolbar/Toolbar';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
@@ -10,26 +10,29 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
-import { UserDrawer } from './UserDrawer';
-import { useUsersGrid } from './useUsersGrid';
-import { UserProperty } from './Users.types';
+import { ProfileDrawer } from './ProfileDrawer';
+import { useProfilesGrid } from './useProfilesGrid';
+import { ProfileProperty } from './Profiles.types';
 import AppContext from '../../../context/AppContext';
 import { LatestIdentityResolution } from '../../../lib/api/types/workspace';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { formatNumber } from '../../../utils/formatNumber';
-import { USERS_PROPERTIES_KEY } from '../../../constants/storage';
+import { PROFILES_PROPERTIES_KEY } from '../../../constants/storage';
 
-const UsersList = () => {
-	const [selectedUser, setSelectedUser] = useState<string>('');
+const ProfilesList = () => {
+	const [selectedProfile, setSelectedProfile] = useState<string>('');
 	const [isLoadingIdentityResolution, setIsLoadingIdentityResolution] = useState<boolean>(false);
 	const [askRunIRConfirmation, setAskResolveIdentitiesConfirmation] = useState<boolean>(false);
 	const [secondsSinceIRStart, setSecondsSinceIRStart] = useState<number>();
 	const [latestIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
 
 	const { api, handleError } = useContext(AppContext);
-	const { users, usersTotal, usersProperties, isLoading, fetchUsers } = useContext(UsersContext);
-	const { usersRows, userColumns } = useUsersGrid(users, usersProperties, selectedUser, (id: string) =>
-		setSelectedUser(id),
+	const { profiles, profilesTotal, profilesProperties, isLoading, fetchProfiles } = useContext(ProfilesContext);
+	const { profilesRows, profileColumns } = useProfilesGrid(
+		profiles,
+		profilesProperties,
+		selectedProfile,
+		(id: string) => setSelectedProfile(id),
 	);
 
 	useEffect(() => {
@@ -45,14 +48,14 @@ const UsersList = () => {
 	}, []);
 
 	const usedProperties = useMemo(() => {
-		const used: UserProperty[] = [];
-		for (const p of usersProperties) {
+		const used: ProfileProperty[] = [];
+		for (const p of profilesProperties) {
 			if (p.isUsed) {
 				used.push(p);
 			}
 		}
 		return used;
-	}, [usersProperties]);
+	}, [profilesProperties]);
 
 	const handleIdentityResolutionExecution = async () => {
 		let res: LatestIdentityResolution;
@@ -76,8 +79,8 @@ const UsersList = () => {
 		}
 
 		if (secondsSinceIRStart != null && sinceStart == null) {
-			// identity resolution is concluded. Reload the users list.
-			fetchUsers();
+			// identity resolution is concluded. Reload the profiles list.
+			fetchProfiles();
 		}
 
 		setSecondsSinceIRStart(sinceStart);
@@ -87,19 +90,19 @@ const UsersList = () => {
 	const onToggleColumn = (name: string) => {
 		const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === name;
 		if (isLastUsed) {
-			// Prevent the user from hiding all the columns.
+			// Prevent the profile from hiding all the columns.
 			return;
 		}
-		const updatedProps: UserProperty[] = [];
-		for (const p of usersProperties) {
+		const updatedProps: ProfileProperty[] = [];
+		for (const p of profilesProperties) {
 			const cp = { ...p };
 			if (cp.name === name) {
 				cp.isUsed = !cp.isUsed;
 			}
 			updatedProps.push(cp);
 		}
-		localStorage.setItem(USERS_PROPERTIES_KEY, JSON.stringify(updatedProps));
-		fetchUsers();
+		localStorage.setItem(PROFILES_PROPERTIES_KEY, JSON.stringify(updatedProps));
+		fetchProfiles();
 	};
 
 	const onStartIdentityResolution = async () => {
@@ -119,21 +122,21 @@ const UsersList = () => {
 		setTimeout(() => {
 			setIsLoadingIdentityResolution(false);
 			handleIdentityResolutionExecution();
-			fetchUsers();
+			fetchProfiles();
 		}, 300);
 	};
 
 	return (
-		<div className='users-list'>
+		<div className='profiles-list'>
 			<div className='route-content'>
 				<Toolbar>
-					<SlDropdown stayOpenOnSelect={true} className='users-list__toggle-columns'>
+					<SlDropdown stayOpenOnSelect={true} className='profiles-list__toggle-columns'>
 						<SlButton slot='trigger' variant='default'>
 							<SlIcon slot='prefix' name='layout-three-columns' />
 							Toggle columns
 						</SlButton>
 						<SlMenu>
-							{usersProperties.map((p) => {
+							{profilesProperties.map((p) => {
 								const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === p.name;
 								return (
 									<SlOption key={p.name}>
@@ -151,26 +154,26 @@ const UsersList = () => {
 						</SlMenu>
 					</SlDropdown>
 					<div
-						className={`users-list__identity-resolution${!secondsSinceIRStart && !latestIRExecutionEnd && !isLoadingIdentityResolution ? ' users-list__identity-resolution--is-first-execution' : ''}`}
+						className={`profiles-list__identity-resolution${!secondsSinceIRStart && !latestIRExecutionEnd && !isLoadingIdentityResolution ? ' profiles-list__identity-resolution--is-first-execution' : ''}`}
 					>
 						<SlButton
 							onClick={() => setAskResolveIdentitiesConfirmation(true)}
 							variant='primary'
 							disabled={isLoadingIdentityResolution || secondsSinceIRStart != null}
-							className='users-list__identity-resolution-button'
+							className='profiles-list__identity-resolution-button'
 						>
 							{isLoadingIdentityResolution || secondsSinceIRStart ? (
-								<SlSpinner className='users-list__identity-resolution-spinner' slot='prefix' />
+								<SlSpinner className='profiles-list__identity-resolution-spinner' slot='prefix' />
 							) : (
 								<SlIcon slot='prefix' name='play' />
 							)}
 							{secondsSinceIRStart ? 'Identity Resolution' : 'Resolve identities'}
 						</SlButton>
-						<span className='users-list__identity-resolution-progress'>
+						<span className='profiles-list__identity-resolution-progress'>
 							{secondsSinceIRStart ? (
-								<div className='users-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
+								<div className='profiles-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 							) : latestIRExecutionEnd ? (
-								<div className='users-list__identity-resolution-end-time'>
+								<div className='profiles-list__identity-resolution-end-time'>
 									<span>Latest Identity Resolution:</span>
 									<RelativeTime date={latestIRExecutionEnd} />
 								</div>
@@ -198,18 +201,20 @@ const UsersList = () => {
 						</p>
 					</AlertDialog>
 				</Toolbar>
-				<div className='users-list__content'>
-					<div className='users-list__grid-container'>
+				<div className='profiles-list__content'>
+					<div className='profiles-list__grid-container'>
 						<Grid
-							columns={userColumns}
-							rows={usersRows}
+							columns={profileColumns}
+							rows={profilesRows}
 							isLoading={isLoading}
-							noRowsMessage={'No users to show'}
+							noRowsMessage={'No profiles to show'}
 						/>
-						<UserDrawer selectedUser={selectedUser} setSelectedUser={setSelectedUser} />
-						<div className='users-list__footer'>
-							<div className='users-list__footer-total'>
-								<div className='users-list__footer-found'>Found {formatNumber(usersTotal)} users</div>
+						<ProfileDrawer selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} />
+						<div className='profiles-list__footer'>
+							<div className='profiles-list__footer-total'>
+								<div className='profiles-list__footer-found'>
+									Found {formatNumber(profilesTotal)} profiles
+								</div>
 							</div>
 						</div>
 					</div>
@@ -219,4 +224,4 @@ const UsersList = () => {
 	);
 };
 
-export { UsersList };
+export { ProfilesList };

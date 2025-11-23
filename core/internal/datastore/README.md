@@ -1,18 +1,18 @@
 # Datastore
 
-## Supported types in User Schema and Warehouse
+## Supported types in profile schema and data warehouse
 
 ### Principles
 
 This table is based on the following principles:
 
-* **Warehouse type support**. We need to support any type that is supported in the Meergo user schema, so that there are no warehouses that support one type while others do not. If there is a warehouse type $W$ that logically corresponds to the type $T$ in Meergo, then we use $W$; otherwise, we look for a type whose set of values allows us to represent all the values of type $T$.
-* **User schema type support**. The choice to allow or disallow a type in the User Schema depends on criteria related to Meergo, such as utility, efficiency, and any complications that the type may bring. It does not directly depend on what the warehouses support, as each warehouse must support every type, even at the cost of altering its representation before serializing it and after reading it.
+* **Warehouse type support**. We need to support any type that is supported in the Meergo profile schema, so that there are no warehouses that support one type while others do not. If there is a warehouse type $W$ that logically corresponds to the type $T$ in Meergo, then we use $W$; otherwise, we look for a type whose set of values allows us to represent all the values of type $T$.
+* **Profile schema type support**. The choice to allow or disallow a type in the profile schema depends on criteria related to Meergo, such as utility, efficiency, and any complications that the type may bring. It does not directly depend on what the warehouses support, as each warehouse must support every type, even at the cost of altering its representation before serializing it and after reading it.
 * **Multiple warehouse types choice**. If there is more than one data warehouse type that could support a certain *types.Type* $T$, the type is chosen based on criteria such as efficiency and implementation and usage issues.
 
 ### Table with Types Support
 
-| *types.Type*                      | Allowed in User Schema                                                     | PostgreSQL                                                                                         | Snowflake                                                                                                                                            |
+| *types.Type*                      | Allowed in profile schema                                                  | PostgreSQL                                                                                         | Snowflake                                                                                                                                            |
 |-----------------------------------|----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `text`                            | Yes                                                                        | [`varchar`](https://www.postgresql.org/docs/current/datatype-character.html)                       | [`VARCHAR`](https://docs.snowflake.com/en/sql-reference/data-types-text#varchar)                                                                     |
 | `text` with values                | *No*                                                                       | -                                                                                                  | -                                                                                                                                                    |
@@ -53,4 +53,4 @@ This table is based on the following principles:
 
 [^arraymapcomposite]: Supporting `array(T)` or `map(T)`, where `T` is of type `array`, `object` or `map`, would open up major implementation issues, especially in the Admin console, which would need to expose a way to handle the creation and mapping to these types. However, it should be noted that it is not yet clear whether such types could actually be supported and used in data warehouses, and so it might not be worth the effort anyway.
 
-[^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for user schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/meergo/meergo/issues/956) for more details.
+[^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for profile schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/meergo/meergo/issues/956) for more details.

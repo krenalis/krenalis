@@ -313,7 +313,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 
 			let propertiesToHide = [];
 			if (isEventBasedUserImport || isAppEventsExport || isEventImport) {
-				propertiesToHide = ['muid'];
+				propertiesToHide = ['mpid'];
 			}
 
 			propertyInput = (

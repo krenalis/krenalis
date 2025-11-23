@@ -26,10 +26,10 @@ func TestWarehouse(t *testing.T) {
 	// Call the TestWorkspaceCreation method, checking that it returns the
 	// error that the data warehouse cannot be initialized (because it already
 	// contains database objects).
-	userSchema := types.Object([]types.Property{
+	profileSchema := types.Object([]types.Property{
 		{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 	})
-	err := c.TestWorkspaceCreation("PostgreSQL", userSchema, meergotester.UIPreferences{},
+	err := c.TestWorkspaceCreation("PostgreSQL", profileSchema, meergotester.UIPreferences{},
 		"PostgreSQL", settings, meergotester.Normal)
 	var gotErr string
 	if err != nil {

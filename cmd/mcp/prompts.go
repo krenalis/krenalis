@@ -13,11 +13,11 @@ import (
 
 var prompts = []server.ServerPrompt{
 	simplePrompt(
-		"describe-user-schema",
-		"Get a better understanding of the user schema",
-		"Retrieve the current user schema associated with the workspace and provide a high-level description of it,"+
+		"describe-profile-schema",
+		"Get a better understanding of the profile schema",
+		"Retrieve the current profile schema associated with the workspace and provide a high-level description of it,"+
 			" indicating which parts of it could be improved."+
-			" Also explain the relationship between the properties of the user schema and the columns of the corresponding 'users' view on the data warehouse.",
+			" Also explain the relationship between the properties of the profile schema and the columns of the corresponding 'profiles' view on the data warehouse.",
 	),
 	simplePrompt(
 		"describe-event-schema",

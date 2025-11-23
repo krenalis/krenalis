@@ -184,7 +184,7 @@ func Test_Unmarshal(t *testing.T) {
 
 	records := []Record{
 		{
-			Properties: map[string]any{
+			Attributes: map[string]any{
 				"Text":                "some text",
 				"Text_nil":            nil,
 				"Boolean":             true,
@@ -266,14 +266,14 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			data:         `{"records":[{"value":{"JSON_nil":null}}]}`,
-			records:      []Record{{Properties: map[string]any{"JSON_nil": nil}}},
+			records:      []Record{{Attributes: map[string]any{"JSON_nil": nil}}},
 		},
 		{
 			language:     state.Python,
 			schema:       schema,
 			preserveJSON: true,
 			data:         `{"records":[{"value":{"JSON_nil":null}}]}`,
-			records:      []Record{{Properties: map[string]any{"JSON_nil": nil}}},
+			records:      []Record{{Attributes: map[string]any{"JSON_nil": nil}}},
 		},
 		{
 			language: state.JavaScript,
@@ -406,7 +406,7 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Text_values":"c"}}]}`,
-			records:  []Record{{Properties: map[string]any{"Text_values": "c"}}},
+			records:  []Record{{Attributes: map[string]any{"Text_values": "c"}}},
 		},
 		{
 			language: state.Python,
@@ -418,7 +418,7 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Text_regexp":"fo/o"}}]}`,
-			records:  []Record{{Properties: map[string]any{"Text_regexp": "fo/o"}}},
+			records:  []Record{{Attributes: map[string]any{"Text_regexp": "fo/o"}}},
 		},
 		{
 			language: state.Python,
@@ -430,31 +430,31 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{}},{"value":{}}]}`,
-			records:  []Record{{Properties: map[string]any{}}, {Properties: map[string]any{}}},
+			records:  []Record{{Attributes: map[string]any{}}, {Attributes: map[string]any{}}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Boolean":true}},{"value":{"Int32":547}}]}`,
-			records:  []Record{{Properties: map[string]any{"Boolean": true}}, {Properties: map[string]any{"Int32": 547}}},
+			records:  []Record{{Attributes: map[string]any{"Boolean": true}}, {Attributes: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"foo":"boo"}},{"value":{"Int32":547}}]}`,
-			records:  []Record{{Err: newRecordValidationError("foo", `property «foo» is not part of output schema; rename or remove it in the transformation function`)}, {Properties: map[string]any{"Int32": 547}}},
+			records:  []Record{{Err: newRecordValidationError("foo", `property «foo» is not part of output schema; rename or remove it in the transformation function`)}, {Attributes: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.Python,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Object":{}}},{"value":{"Int32":547}}]}`,
-			records:  []Record{{Purpose: Update, Err: newRecordValidationError("Object.c", `property «Object.c» is missing but it is required for update`)}, {Properties: map[string]any{"Int32": 547}}},
+			records:  []Record{{Purpose: Update, Err: newRecordValidationError("Object.c", `property «Object.c» is missing but it is required for update`)}, {Attributes: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.JavaScript,
 			schema:   schema,
 			data:     `{"records":[{"value":{"Boolean":3}},{"value":{"Int32":547}}]}`,
-			records:  []Record{{Err: newRecordValidationError("Boolean", `property «Boolean» has a value that is not of type «boolean»`)}, {Properties: map[string]any{"Int32": 547}}},
+			records:  []Record{{Err: newRecordValidationError("Boolean", `property «Boolean» has a value that is not of type «boolean»`)}, {Attributes: map[string]any{"Int32": 547}}},
 		},
 		{
 			language: state.Python,
@@ -469,7 +469,7 @@ func Test_Unmarshal(t *testing.T) {
 			language: state.JavaScript,
 			schema:   types.Type{},
 			data:     `{"records":[{"value":{}},{"value":{"foo":5}}]}`,
-			records:  []Record{{Properties: map[string]any{}}, {Err: newRecordValidationError("foo", `property «foo» is not part of output schema; rename or remove it in the transformation function`)}},
+			records:  []Record{{Attributes: map[string]any{}}, {Err: newRecordValidationError("foo", `property «foo» is not part of output schema; rename or remove it in the transformation function`)}},
 		},
 		{
 			language: state.JavaScript,
@@ -549,11 +549,11 @@ func Test_Unmarshal(t *testing.T) {
 				if want.Err != nil {
 					t.Fatalf("Unmarshal:\n\texpected error %q\n\tgot no error", want.Err)
 				}
-				if got.Properties == nil {
-					t.Fatalf("Unmarshal:\n\texpected properties\n\tgot no properties")
+				if got.Attributes == nil {
+					t.Fatalf("Unmarshal:\n\texpected attributes\n\tgot no attributes")
 				}
-				if err := equalValues(schema, test.timeTruncate, want.Properties, got.Properties); err != nil {
-					t.Fatalf("Unmarshal:\n\texpected properties %#v\n\tgot properties      %#v\n\terror:   %s", want.Properties, got.Properties, err)
+				if err := equalValues(schema, test.timeTruncate, want.Attributes, got.Attributes); err != nil {
+					t.Fatalf("Unmarshal:\n\texpected attributes %#v\n\tgot attributes      %#v\n\terror:   %s", want.Attributes, got.Attributes, err)
 				}
 			}
 		})
@@ -630,7 +630,7 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 			t.Fatalf("unexpected error for less elements: %v", rec[0].Err)
 		}
 		rec[0].Err = nil
-		rec[0].Properties = nil
+		rec[0].Attributes = nil
 		more := strings.NewReader(`{"records":[{"value":{"a":[1,2,3,4]}}]}`)
 		err = Unmarshal(more, rec, sch, state.JavaScript, false)
 		if err != nil {
@@ -639,7 +639,7 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		if rec[0].Err != nil {
 			t.Fatalf("did not expect record error for more elements: %v", rec[0].Err)
 		}
-		if got := rec[0].Properties["a"]; got == nil || len(got.([]any)) != 4 {
+		if got := rec[0].Attributes["a"]; got == nil || len(got.([]any)) != 4 {
 			t.Fatalf("expected 4 elements, got %v", got)
 		}
 	})

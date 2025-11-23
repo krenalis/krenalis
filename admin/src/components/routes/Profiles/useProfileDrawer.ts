@@ -1,30 +1,30 @@
 import { useState, useContext, useEffect } from 'react';
 import AppContext from '../../../context/AppContext';
-import { UserEventsResponse, UserIdentitiesResponse, userTraitsResponse } from '../../../lib/api/types/responses';
+import { ProfileEventsResponse, IdentitiesResponse, profileAttributesResponse } from '../../../lib/api/types/responses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { UserTab } from './Users.types';
-import { UserEvent, UserIdentity } from '../../../lib/api/types/user';
+import { ProfileTab } from './Profiles.types';
+import { ProfileEvent, Identity } from '../../../lib/api/types/profile';
 
-const useUserDrawer = (muid: string, selectedTab: UserTab) => {
-	const [traits, setTraits] = useState<Record<string, any>>();
-	const [events, setEvents] = useState<UserEvent[]>();
-	const [identities, setIdentities] = useState<UserIdentity[]>();
+const useProfileDrawer = (mpid: string, selectedTab: ProfileTab) => {
+	const [attributes, setAttributes] = useState<Record<string, any>>();
+	const [events, setEvents] = useState<ProfileEvent[]>();
+	const [identities, setIdentities] = useState<Identity[]>();
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 
 	const { api, handleError, redirect } = useContext(AppContext);
 
 	useEffect(() => {
-		const fetchUserTraits = async () => {
+		const fetchProfileAttributes = async () => {
 			setIsLoading(true);
-			// Fetch the user's traits.
-			let traitsResponse: userTraitsResponse;
+			// Fetch the profile's attributes.
+			let attributesResponse: profileAttributesResponse;
 			try {
-				traitsResponse = await api.workspaces.users.traits(muid);
+				attributesResponse = await api.workspaces.profiles.attributes(mpid);
 			} catch (err) {
 				setTimeout(() => setIsLoading(false), 200);
 				if (err instanceof NotFoundError) {
-					handleError('This user does not exist');
-					redirect('users');
+					handleError('This profile does not exist');
+					redirect('profiles');
 					return;
 				}
 				if (err instanceof UnprocessableError) {
@@ -36,29 +36,29 @@ const useUserDrawer = (muid: string, selectedTab: UserTab) => {
 				handleError(err);
 				return;
 			}
-			setTraits(traitsResponse.traits);
+			setAttributes(attributesResponse.attributes);
 			setTimeout(() => setIsLoading(false), 200);
 			return;
 		};
-		if (muid === '') {
+		if (mpid === '') {
 			return;
 		}
-		fetchUserTraits();
-	}, [muid]);
+		fetchProfileAttributes();
+	}, [mpid]);
 
 	useEffect(() => {
-		const fetchUserTab = async () => {
+		const fetchProfileTab = async () => {
 			if (selectedTab === 'events') {
 				setIsLoading(true);
-				// Fetch the user's events.
-				let eventsResponse: UserEventsResponse;
+				// Fetch the profile's events.
+				let eventsResponse: ProfileEventsResponse;
 				try {
-					eventsResponse = await api.workspaces.users.events(muid);
+					eventsResponse = await api.workspaces.profiles.events(mpid);
 				} catch (err) {
 					setTimeout(() => setIsLoading(false), 200);
 					if (err instanceof NotFoundError) {
-						handleError('This user does not exist');
-						redirect('users');
+						handleError('This profile does not exist');
+						redirect('profiles');
 						return;
 					}
 					if (err instanceof UnprocessableError) {
@@ -77,15 +77,15 @@ const useUserDrawer = (muid: string, selectedTab: UserTab) => {
 
 			if (selectedTab === 'identities') {
 				setIsLoading(true);
-				// Fetch the user's identities.
-				let identitiesResponse: UserIdentitiesResponse;
+				// Fetch the profile's identities.
+				let identitiesResponse: IdentitiesResponse;
 				try {
-					identitiesResponse = await api.workspaces.users.identities(muid, 0, 1000);
+					identitiesResponse = await api.workspaces.profiles.identities(mpid, 0, 1000);
 				} catch (err) {
 					setTimeout(() => setIsLoading(false), 200);
 					if (err instanceof NotFoundError) {
-						handleError('This user does not exist');
-						redirect('users');
+						handleError('This profile does not exist');
+						redirect('profiles');
 						return;
 					}
 					if (err instanceof UnprocessableError) {
@@ -102,13 +102,13 @@ const useUserDrawer = (muid: string, selectedTab: UserTab) => {
 				return;
 			}
 		};
-		if (muid === '') {
+		if (mpid === '') {
 			return;
 		}
-		fetchUserTab();
-	}, [muid, selectedTab]);
+		fetchProfileTab();
+	}, [mpid, selectedTab]);
 
-	return { isLoading, traits, events, identities };
+	return { isLoading, attributes, events, identities };
 };
 
-export { useUserDrawer };
+export { useProfileDrawer };

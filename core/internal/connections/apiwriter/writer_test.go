@@ -53,10 +53,10 @@ func Test_Writer(t *testing.T) {
 					id = strconv.Itoa(i)
 				}
 				ids[id]++
-				properties := map[string]any{
+				attributes := map[string]any{
 					"id": id,
 				}
-				if !w.Write(ctx, id, properties) {
+				if !w.Write(ctx, id, attributes) {
 					t.Fatal("Write: expected true, got false")
 				}
 			}
@@ -116,11 +116,11 @@ func newAPI(t *testing.T, seed int64) *api {
 	return &api{t: t, rng: rand.New(rand.NewSource(seed))}
 }
 func (api *api) validateRecord(r connectors.Record) {
-	if r.Properties == nil {
-		api.t.Fatal("Upsert: expected properties, got nil")
+	if r.Attributes == nil {
+		api.t.Fatal("Upsert: expected attributes, got nil")
 	}
-	if r.Properties["id"] != r.ID {
-		api.t.Fatalf("Upsert: expected properties[\"id\"] == %q, got %q", r.Properties["id"], r.ID)
+	if r.Attributes["id"] != r.ID {
+		api.t.Fatalf("Upsert: expected attributes[\"id\"] == %q, got %q", r.Attributes["id"], r.ID)
 	}
 }
 

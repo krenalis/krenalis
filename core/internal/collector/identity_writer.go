@@ -131,7 +131,7 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 
 	records := make([]transformers.Record, len(events))
 	for i, identity := range events {
-		records[i].Properties = identity
+		records[i].Attributes = identity
 	}
 
 	iw.mu.Lock()
@@ -168,7 +168,7 @@ func (iw *identityWriter) transformAndWrite(events []events.Event) {
 		err = iw.writer.Write(datastore.Identity{
 			ID:             id,
 			AnonymousID:    event["anonymousId"].(string),
-			Properties:     record.Properties,
+			Attributes:     record.Attributes,
 			LastChangeTime: event["timestamp"].(time.Time),
 		}, event["messageId"].(string))
 		_ = err // TODO(marco): handle the error
@@ -182,7 +182,7 @@ func (iw *identityWriter) writeDirect(event events.Event) error {
 	return iw.writer.Write(datastore.Identity{
 		ID:             id,
 		AnonymousID:    event["anonymousId"].(string),
-		Properties:     map[string]any{},
+		Attributes:     map[string]any{},
 		LastChangeTime: event["timestamp"].(time.Time),
 	}, event["messageId"].(string))
 }

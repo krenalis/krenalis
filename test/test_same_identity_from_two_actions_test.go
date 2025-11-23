@@ -71,17 +71,17 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 	// Run the Identity Resolution and wait for its completion.
 	c.RunIdentityResolution()
 
-	// Check that there are 10 users.
-	users, _, total := c.Users([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
+	// Check that there are 10 profiles.
+	profiles, _, total := c.Profiles([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
 	if total != 10 {
-		t.Fatalf("expected 10 users, got %d", total)
+		t.Fatalf("expected 10 profiles, got %d", total)
 	}
-	user := users[0]
-	if user.Traits["first_name"] != "Ariela" {
-		t.Fatalf("expected first name %q, got %q", "Ariela", user.Traits["first_name"])
+	profile := profiles[0]
+	if profile.Attributes["first_name"] != "Ariela" {
+		t.Fatalf("expected first name %q, got %q", "Ariela", profile.Attributes["first_name"])
 	}
 
-	// Check that there are 20 user identities in total.
+	// Check that there are 20 identities in total.
 	identities, total := c.ConnectionIdentities(dummy, 0, 100)
 	if total != 20 {
 		t.Fatalf("expected 20 identities, got %d", total)

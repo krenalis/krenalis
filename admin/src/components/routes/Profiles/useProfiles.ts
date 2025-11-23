@@ -2,19 +2,19 @@ import { useEffect, useContext, useState } from 'react';
 import AppContext from '../../../context/AppContext';
 import { UI_BASE_PATH } from '../../../constants/paths';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { UserProperty } from './Users.types';
+import { ProfileProperty } from './Profiles.types';
 import { ObjectType } from '../../../lib/api/types/types';
-import { FindUsersResponse, ResponseUser } from '../../../lib/api/types/responses';
+import { FindProfilesResponse, ResponseProfile } from '../../../lib/api/types/responses';
 import { flattenSchema } from '../../../lib/core/action';
-import { USERS_PROPERTIES_KEY } from '../../../constants/storage';
+import { PROFILES_PROPERTIES_KEY } from '../../../constants/storage';
 
-const DEFAULT_USER_LIMIT = 1000;
+const DEFAULT_PROFILE_LIMIT = 1000;
 
-const useUsers = () => {
-	const [users, setUsers] = useState<ResponseUser[]>([]);
-	const [usersTotal, setUsersTotal] = useState<number>(0);
-	const [usersProperties, setUsersProperties] = useState<UserProperty[]>([]);
-	const [userIDList, setUserMUIDsList] = useState<string[]>([]);
+const useProfiles = () => {
+	const [profiles, setProfiles] = useState<ResponseProfile[]>([]);
+	const [profilesTotal, setProfilesTotal] = useState<number>(0);
+	const [profilesProperties, setProfilesProperties] = useState<ProfileProperty[]>([]);
+	const [profileIDList, setProfileIDList] = useState<string[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 
 	const { api, handleError, redirect, selectedWorkspace, warehouse } = useContext(AppContext);
@@ -22,22 +22,22 @@ const useUsers = () => {
 	useEffect(() => {
 		if (warehouse == null) {
 			// a workspace without a connected data warehouse cannot show
-			// warehouse users.
+			// warehouse profiles.
 			redirect('settings');
 			handleError('Please connect to a data warehouse before proceeding');
 			return;
 		}
-		// on mount, fetch the first page of users.
-		fetchUsers();
+		// on mount, fetch the first page of profiles.
+		fetchProfiles();
 	}, [selectedWorkspace]);
 
-	const fetchUsers = async (): Promise<string[]> => {
+	const fetchProfiles = async (): Promise<string[]> => {
 		setIsLoading(true);
 
-		// fetch the user schema.
+		// fetch the profile schema.
 		let schema: ObjectType;
 		try {
-			schema = await api.workspaces.userSchema();
+			schema = await api.workspaces.profileSchema();
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);
@@ -46,15 +46,15 @@ const useUsers = () => {
 			return;
 		}
 
-		// check if previous users properties are already saved in the storage.
-		const storageProperties = localStorage.getItem(USERS_PROPERTIES_KEY);
-		let preferences: UserProperty[] = [];
+		// check if previous profiles properties are already saved in the storage.
+		const storageProperties = localStorage.getItem(PROFILES_PROPERTIES_KEY);
+		let preferences: ProfileProperty[] = [];
 		if (storageProperties != null) {
 			try {
 				preferences = JSON.parse(storageProperties);
 			} catch (err) {
 				// the value of the properties in the storage is corrupted.
-				localStorage.removeItem(USERS_PROPERTIES_KEY);
+				localStorage.removeItem(PROFILES_PROPERTIES_KEY);
 			}
 		}
 
@@ -64,12 +64,12 @@ const useUsers = () => {
 		// compute the properties to show in the table columns and in
 		// the “Toggle columns” menu, and those that should be requested
 		// to the server.
-		const toShow: UserProperty[] = [];
+		const toShow: ProfileProperty[] = [];
 		const toFetch: string[] = [];
 		for (const path of paths) {
 			const isFirstLevel = !path.includes('.');
 			if (isFirstLevel) {
-				// fetch all the users properties by passing all the
+				// fetch all the profiles properties by passing all the
 				// first level properties to the server.
 				toFetch.push(path);
 			}
@@ -113,15 +113,15 @@ const useUsers = () => {
 				type: flatSchema[path].type,
 			});
 		}
-		setUsersProperties(toShow);
+		setProfilesProperties(toShow);
 
 		// update the value of the properties in the storage.
-		localStorage.setItem(USERS_PROPERTIES_KEY, JSON.stringify(toShow));
+		localStorage.setItem(PROFILES_PROPERTIES_KEY, JSON.stringify(toShow));
 
-		// fetch the users.
-		let res: FindUsersResponse;
+		// fetch the profiles.
+		let res: FindProfilesResponse;
 		try {
-			res = await api.workspaces.users.find(toFetch, null, '', true, 0, DEFAULT_USER_LIMIT);
+			res = await api.workspaces.profiles.find(toFetch, null, '', true, 0, DEFAULT_PROFILE_LIMIT);
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);
@@ -134,8 +134,8 @@ const useUsers = () => {
 					switch (err.code) {
 						case 'PropertyNotExist':
 							// one of the properties has been concurrently
-							// removed from the user schema. Try again.
-							fetchUsers();
+							// removed from the profile schema. Try again.
+							fetchProfiles();
 							return;
 						case 'DataWarehouseFailed':
 							handleError('An error occurred with the data warehouse');
@@ -147,34 +147,34 @@ const useUsers = () => {
 			return;
 		}
 
-		const users = res.users;
+		const profiles = res.profiles;
 		const total = res.total;
 
-		setUsers(users);
-		setUsersTotal(total);
+		setProfiles(profiles);
+		setProfilesTotal(total);
 
-		// compute the list of users MUIDs needed for navigating between users.
-		const muids: string[] = [];
-		for (const user of users) {
-			muids.push(user.muid);
+		// compute the list of profiles MPIDs needed for navigating between profiles.
+		const mpids: string[] = [];
+		for (const profile of profiles) {
+			mpids.push(profile.mpid);
 		}
-		setUserMUIDsList(muids);
+		setProfileIDList(mpids);
 
 		setTimeout(() => {
 			setIsLoading(false);
 		}, 300);
 
-		return muids;
+		return mpids;
 	};
 
 	return {
-		users,
-		usersTotal,
-		usersProperties,
+		profiles: profiles,
+		profilesTotal: profilesTotal,
+		profilesProperties: profilesProperties,
 		isLoading,
-		userIDList,
-		fetchUsers,
+		profileIDList: profileIDList,
+		fetchProfiles: fetchProfiles,
 	};
 };
 
-export { useUsers };
+export { useProfiles };

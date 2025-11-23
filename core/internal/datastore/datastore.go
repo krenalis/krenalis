@@ -52,7 +52,7 @@ func New(st *state.State) *Datastore {
 	ds.state.AddListener(ds.onCreateWorkspace)
 	ds.state.AddListener(ds.onDeleteAction)
 	ds.state.AddListener(ds.onDeleteConnection)
-	ds.state.AddListener(ds.onEndAlterUserSchema)
+	ds.state.AddListener(ds.onEndAlterProfileSchema)
 	ds.state.AddListener(ds.onUpdateAction)
 	ds.state.AddListener(ds.onUpdateWarehouse)
 	ds.state.AddListener(ds.onUpdateWarehouseMode)
@@ -126,21 +126,21 @@ func (ds *Datastore) Close() {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with Meergo. The given user schema will be used by the
-// initialization to build the user tables on the warehouse with the
+// make it work with Meergo. The given profile schema will be used by the
+// initialization to build the profile tables on the warehouse with the
 // corresponding columns.
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *datastore.UnavailableError error if an error occurs with the data warehouse.
-func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byte, userSchema types.Type) error {
+func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byte, profileSchema types.Type) error {
 	ds.mustBeOpen()
 	dw, err := getWarehouseInstance(name, settings)
 	if err != nil {
 		return err
 	}
 	defer dw.Close()
-	userColumns := util.PropertiesToColumns(userSchema.Properties())
-	err = dw.Initialize(ctx, userColumns)
+	profileColumns := util.PropertiesToColumns(profileSchema.Properties())
+	err = dw.Initialize(ctx, profileColumns)
 	if err != nil {
 		return err
 	}
@@ -231,12 +231,12 @@ func (ds *Datastore) onDeleteConnection(n state.DeleteConnection) {
 	store.onDeleteConnection(n)
 }
 
-// onEndAlterUserSchema is called when the alter of the user schema ends.
-func (ds *Datastore) onEndAlterUserSchema(n state.EndAlterUserSchema) {
+// onEndAlterProfileSchema is called when the alter of the profile schema ends.
+func (ds *Datastore) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 	ds.mu.Lock()
 	store := ds.store[n.Workspace]
 	ds.mu.Unlock()
-	store.onEndAlterUserSchema(n)
+	store.onEndAlterProfileSchema(n)
 }
 
 // onUpdateAction is called when an action is updated.
@@ -285,7 +285,7 @@ func (ds *Datastore) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 
 // CheckConflictingProperties checks if schema contains conflicting properties
 // and returns an error if that case. io specifies whether the check relates
-// to "input", "output", or "users" schema.
+// to "input", "output", or "profile" schema.
 //
 // A property conflicts with another if their representation as columns in the
 // data warehouse has the same name when compared case-insensitively.

@@ -53,13 +53,13 @@ type EventWriterAckFunc func(events []AckEvent, err error)
 // identities from events have been written to the data warehouse.
 type EventIdentityWriterAckFunc func(action int, ids []string, err error)
 
-// IdentityWriterAckFunc is the function called when a batch of user identities
-// have been written to the data warehouse.
+// IdentityWriterAckFunc is the function called when a batch of identities has
+// been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
 
-// destinationsUsersTable represents the _destinations_users table.
-var destinationsUsersTable = warehouses.Table{
-	Name: "_destinations_users",
+// destinationsProfilesTable represents the _destinations_profiles table.
+var destinationsProfilesTable = warehouses.Table{
+	Name: "_destinations_profiles",
 	Columns: []warehouses.Column{
 		{Name: "__action__", Type: types.Int(32)},
 		{Name: "__external_id__", Type: types.Text()},
@@ -97,24 +97,24 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
 	store.wh.Store(wh)
-	store.columnByProperty.user = userColumnByProperty(ws.UserSchema)
-	store.columnByProperty.user["__muid__"] = warehouses.Column{Name: "__muid__", Type: types.UUID()}
+	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
+	store.columnByProperty.user["__mpid__"] = warehouses.Column{Name: "__mpid__", Type: types.UUID()}
 	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	return store, nil
 }
 
-// AlterUserSchema alters the user schema.
+// AlterProfileSchema alters the profile schema.
 //
 // opID is an identifier that uniquely identifies a specific alter columns
 // operation; if the method is called again passing the same identifier, whether
 // the operation ended successfully or with a *warehouses.OperationError error,
 // that result is returned again.
 //
-// schema is the user schema without meta properties (this parameter is useful
-// for obtaining type information and for creating views), while operations is
-// the set of operations to apply in order to migrate the current schema to the
-// given schema.
+// schema is the profile schema without meta properties (this parameter is
+// useful for obtaining type information and for creating views), while
+// operations is the set of operations to apply in order to migrate the current
+// schema to the given schema.
 //
 // TODO(Gianluca): in this method, there is an inconsistency related to the
 // parameters, that is: the schema is passed as properties, while the operations
@@ -134,10 +134,10 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // (4) the operation ended with an unexpected and unknown error, and it is
 // therefore up to the caller to try calling this method again by providing the
 // same ID.
-func (store *Store) AlterUserSchema(ctx context.Context, opID string, schema types.Type, operations []warehouses.AlterOperation) error {
+func (store *Store) AlterProfileSchema(ctx context.Context, opID string, schema types.Type, operations []warehouses.AlterOperation) error {
 	store.mustBeOpen()
 	columns := util.PropertiesToColumns(schema.Properties())
-	return store.warehouse().AlterUserSchema(ctx, opID, columns, operations)
+	return store.warehouse().AlterProfileSchema(ctx, opID, columns, operations)
 }
 
 // ColumnTypeDescription returns a description for the warehouse column type
@@ -150,13 +150,14 @@ func (store *Store) ColumnTypeDescription(t types.Type) (string, error) {
 	return store.warehouse().ColumnTypeDescription(t)
 }
 
-// DeleteDestinationUsers deletes the destination users of the provided action.
+// DeleteDestinationProfiles deletes the destination profiles of the provided
+// action.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) error {
+func (store *Store) DeleteDestinationProfiles(ctx context.Context, action int) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
@@ -165,7 +166,7 @@ func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) erro
 	defer done()
 	where := warehouses.NewBaseExpr(
 		warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, action)
-	return store.warehouse().Delete(ctx, "_destinations_users", where)
+	return store.warehouse().Delete(ctx, "_destinations_profiles", where)
 }
 
 // Events returns the events according to the provided query. The returned
@@ -226,9 +227,9 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 	return events, nil
 }
 
-// DestinationUser represents a user to be merged.
-type DestinationUser struct {
-	ExternalID       string // The unique identifier assigned to the user by the API.
+// DestinationProfile represents a profile to be merged.
+type DestinationProfile struct {
+	ExternalID       string // The unique identifier assigned to the profile by the API.
 	OutMatchingValue string // The value for the out matching property in the API.
 }
 
@@ -240,7 +241,7 @@ type DestinationUser struct {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users []DestinationUser, idsToDelete []string) error {
+func (store *Store) MergeDestinationUsers(ctx context.Context, action int, profiles []DestinationProfile, idsToDelete []string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
@@ -248,14 +249,14 @@ func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users
 	}
 	defer done()
 	var rows [][]any
-	if users != nil {
-		rows = make([][]any, len(users))
-		values := make([]any, 3*len(users))
-		for i, user := range users {
+	if profiles != nil {
+		rows = make([][]any, len(profiles))
+		values := make([]any, 3*len(profiles))
+		for i, profile := range profiles {
 			j := i * 3
 			values[j+0] = action
-			values[j+1] = user.ExternalID
-			values[j+2] = user.OutMatchingValue
+			values[j+1] = profile.ExternalID
+			values[j+2] = profile.OutMatchingValue
 			rows[i] = values[j : j+3]
 		}
 	}
@@ -268,7 +269,7 @@ func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users
 			deleted[j+1] = id
 		}
 	}
-	return store.warehouse().Merge(ctx, destinationsUsersTable, rows, deleted)
+	return store.warehouse().Merge(ctx, destinationsProfilesTable, rows, deleted)
 }
 
 // Mode returns the data warehouse mode.
@@ -276,14 +277,14 @@ func (store *Store) Mode() state.WarehouseMode {
 	return store.mc.Mode()
 }
 
-// NewBatchIdentityWriter returns an identity writer for writing user identities
-// in batch, relative to the given action (which must be in execution) on the
-// data warehouse. purge reports whether identities should be purged from the
-// data warehouse after all identities have been written. The ack parameter is
-// the acknowledgment function.
+// NewBatchIdentityWriter returns an identity writer for writing identities in
+// batch, relative to the given action (which must be in execution) on the data
+// warehouse. purge reports whether identities should be purged from the data
+// warehouse after all identities have been written. The ack parameter is the
+// acknowledgment function.
 //
-// If the action's output schema does not align with the user schema, it returns
-// a *schemas.Error error.
+// If the action's output schema does not align with the profile schema, it
+// returns a *schemas.Error error.
 //
 // It panics if the ack function is nil.
 func (store *Store) NewBatchIdentityWriter(action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
@@ -307,14 +308,14 @@ func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
 	return newEventWriter(store, ack)
 }
 
-// PreviewAlterUserSchema provides a preview of an alter user schema operation
-// by returning the queries that would be executed on the warehouse to perform a
-// given alter schema.
+// PreviewAlterProfileSchema provides a preview of an alter profile schema
+// operation by returning the queries that would be executed on the warehouse to
+// perform a given alter schema.
 //
-// schema is the user schema without meta properties (this parameter is useful
-// for obtaining type information and for creating views), while operations is
-// the set of operations to apply in order to migrate the current schema to the
-// given schema.
+// schema is the profile schema without meta properties (this parameter is
+// useful for obtaining type information and for creating views), while
+// operations is the set of operations to apply in order to migrate the current
+// schema to the given schema.
 //
 // TODO(Gianluca): in this method, there is an inconsistency related to the
 // parameters, that is: the schema is passed as properties, while the operations
@@ -323,7 +324,7 @@ func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
 //
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) PreviewAlterUserSchema(ctx context.Context, schema types.Type, operations []warehouses.AlterOperation) ([]string, error) {
+func (store *Store) PreviewAlterProfileSchema(ctx context.Context, schema types.Type, operations []warehouses.AlterOperation) ([]string, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
 	if err != nil {
@@ -331,7 +332,7 @@ func (store *Store) PreviewAlterUserSchema(ctx context.Context, schema types.Typ
 	}
 	defer done()
 	userColumns := util.PropertiesToColumns(schema.Properties())
-	return store.warehouse().PreviewAlterUserSchema(ctx, userColumns, operations)
+	return store.warehouse().PreviewAlterProfileSchema(ctx, userColumns, operations)
 }
 
 // PurgeActions purges the provided actions from the data warehouse, deleting
@@ -353,15 +354,15 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 		values[i] = action
 	}
 	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
-	err = store.warehouse().Delete(ctx, "_user_identities", where)
+	err = store.warehouse().Delete(ctx, "_identities", where)
 	if err != nil {
 		return err
 	}
-	return store.warehouse().Delete(ctx, "_destinations_users", where)
+	return store.warehouse().Delete(ctx, "_destinations_profiles", where)
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
-// The given user schema will be used to repair the user tables.
+// The given profile schema will be used to repair the profile tables.
 //
 // This method should only be called on warehouses that have already been
 // initialized, with the aim of correcting any extraordinary issues (such as
@@ -420,11 +421,11 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 
 	// Determine the identifiers columns.
 	identifiers := make([]warehouses.Column, len(ws.Identifiers))
-	properties := ws.UserSchema.Properties()
+	properties := ws.ProfileSchema.Properties()
 	for i, ident := range ws.Identifiers {
 		identifier, err := properties.ByPath(ident)
 		if err != nil {
-			return errors.New("unexpected error: identifier does not exist in user schema")
+			return errors.New("unexpected error: identifier does not exist in profile schema")
 		}
 		identifiers[i] = warehouses.Column{
 			Name:     strings.ReplaceAll(ident, ".", "_"),
@@ -433,18 +434,18 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 		}
 	}
 
-	// Determine the user columns.
-	userColumns := util.PropertiesToColumns(properties)
+	// Determine the profile columns.
+	profileColumns := util.PropertiesToColumns(properties)
 
-	// Determine the primary sources for every user column.
-	userPrimarySources := make(map[string]int, len(ws.UserPrimarySources))
-	for p, s := range ws.UserPrimarySources {
+	// Determine the primary sources for every profile column.
+	primarySources := make(map[string]int, len(ws.PrimarySources))
+	for p, s := range ws.PrimarySources {
 		c := strings.ReplaceAll(p, ".", "_")
-		userPrimarySources[c] = s
+		primarySources[c] = s
 	}
 
 	// Resolve the identities.
-	err = store.warehouse().ResolveIdentities(ctx, opID, identifiers, userColumns, userPrimarySources)
+	err = store.warehouse().ResolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
 	if err != nil {
 		return err
 	}
@@ -470,8 +471,8 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 	}
 	// Count the users on the current warehouse.
 	query := warehouses.RowQuery{
-		Columns: []warehouses.Column{{Name: "__muid__", Type: types.UUID()}},
-		Table:   "users",
+		Columns: []warehouses.Column{{Name: "__mpid__", Type: types.UUID()}},
+		Table:   "profiles",
 		Limit:   1, // minimize the number of rows the warehouse needs to prepare — we only need the count here.
 	}
 	// Even if rows is not read, it is assigned because it must be closed.
@@ -525,11 +526,11 @@ func (store *Store) UnsetIdentityProperties(ctx context.Context, action int, pro
 		return err
 	}
 	defer done()
-	columns := appendColumnsFromProperties(nil, properties, store.userColumnByProperty())
+	columns := appendColumnsFromProperties(nil, properties, store.profileColumnByProperty())
 	return store.warehouse().UnsetIdentityColumns(ctx, action, columns)
 }
 
-// UserIdentities returns the user identities according to the provided query.
+// UserIdentities returns the identities according to the provided query.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
@@ -541,22 +542,22 @@ func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[stri
 		return nil, 0, err
 	}
 	defer done()
-	query.table = "_user_identities"
+	query.table = "_identities"
 	query.total = true
 	return store.query(ctx, query, store.identityColumnByProperty(), true)
 }
 
-// UserRecords returns an iterator over the users, according to the provided
-// query and schema. The properties to return are the properties of schema, and
-// the returned properties will conform to schema.
+// ProfileRecords returns an iterator over the profiles, according to the
+// provided query and schema. The properties to return are the properties of
+// schema, and the returned properties will conform to schema.
 //
 // query.Properties must be nil.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If the schema, which must be valid, does not align
-// with the user schema, it returns a *schemas.Error error. If an error occurs
-// with the data warehouse, it returns an *UnavailableError error.
-func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
+// with the profile schema, it returns a *schemas.Error error. If an error
+// occurs with the data warehouse, it returns an *UnavailableError error.
+func (store *Store) ProfileRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
@@ -573,34 +574,34 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 	if !ok {
 		return nil, fmt.Errorf("workspace does not exist anymore")
 	}
-	// Check that schema is aligned with the user schema.
-	err = schemas.CheckAlignment(schema, workspace.UserSchema, nil)
+	// Check that schema is aligned with the profile schema.
+	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
 	if err != nil {
 		return nil, err
 	}
-	query.table = "users"
+	query.table = "profiles"
 	query.Properties = []string{}
 	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
-	return records(ctx, store.warehouse(), query, "__muid__", store.userColumnByProperty(), true, matching)
+	return records(ctx, store.warehouse(), query, "__mpid__", store.profileColumnByProperty(), true, matching)
 }
 
-// Users returns the users according to the provided query.
+// Profiles returns the profiles according to the provided query.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns an *UnavailableError error.
-func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, int, error) {
+func (store *Store) Profiles(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer done()
-	query.table = "users"
+	query.table = "profiles"
 	query.total = true
-	return store.query(ctx, query, store.userColumnByProperty(), true)
+	return store.query(ctx, query, store.profileColumnByProperty(), true)
 }
 
 // close closes the store.
@@ -675,16 +676,17 @@ func (store *Store) onDeleteConnection(n state.DeleteConnection) {
 	store.mu.Unlock()
 }
 
-// onEndAlterUserSchema is called when the alter of the user schema of a
+// onEndAlterProfileSchema is called when the alter of the profile schema of a
 // workspace ends.
 //
-// This notification is propagated by the Datastore.onEndAlterUserSchema method.
-func (store *Store) onEndAlterUserSchema(n state.EndAlterUserSchema) {
+// This notification is propagated by the Datastore.onEndAlterProfileSchema
+// method.
+func (store *Store) onEndAlterProfileSchema(n state.EndAlterProfileSchema) {
 
-	// Update the user and the identity columns.
+	// Update the profile and the identity columns.
 	store.columnByProperty.mu.Lock()
-	store.columnByProperty.user = userColumnByProperty(n.Schema)
-	store.columnByProperty.user["__muid__"] = warehouses.Column{Name: "__muid__", Type: types.UUID()}
+	store.columnByProperty.user = profileColumnByProperty(n.Schema)
+	store.columnByProperty.user["__mpid__"] = warehouses.Column{Name: "__mpid__", Type: types.UUID()}
 	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	store.columnByProperty.mu.Unlock()
@@ -692,7 +694,7 @@ func (store *Store) onEndAlterUserSchema(n state.EndAlterUserSchema) {
 	// Propagate the notification to the EventIdentityWriters.
 	store.mu.Lock()
 	for _, iw := range store.eventIdentityWriters {
-		iw.onEndAlterUserSchema(n)
+		iw.onEndAlterProfileSchema(n)
 	}
 	store.mu.Unlock()
 
@@ -709,6 +711,15 @@ func (store *Store) onUpdateAction(n state.UpdateAction) {
 		return
 	}
 	iw.onUpdateAction(n)
+}
+
+// profileColumnByProperty returns the map from properties to columns for the
+// profile schema.
+func (store *Store) profileColumnByProperty() map[string]warehouses.Column {
+	store.columnByProperty.mu.Lock()
+	columns := store.columnByProperty.user
+	store.columnByProperty.mu.Unlock()
+	return columns
 }
 
 // query executes the provided query on the data warehouse and returns an
@@ -779,15 +790,6 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 	total = max(len(records), total)
 
 	return records, total, nil
-}
-
-// userColumnByProperty returns the map from properties to columns for the user
-// schema.
-func (store *Store) userColumnByProperty() map[string]warehouses.Column {
-	store.columnByProperty.mu.Lock()
-	columns := store.columnByProperty.user
-	store.columnByProperty.mu.Unlock()
-	return columns
 }
 
 // warehouse returns the store's warehouse.

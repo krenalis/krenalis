@@ -32,7 +32,7 @@ import (
 )
 
 // eventActionSchema defines the event schema for actions.
-// It excludes the muid property.
+// It excludes the mpid property.
 var eventActionSchema types.Type
 
 func init() {
@@ -84,8 +84,8 @@ type Action struct {
 // Meergo exists in the API and identifies the corresponding user or group in
 // the API.
 //
-// The input property should be a property in the user schema, while the output
-// property should be a property in the source schema of the connection.
+// The input property should be a property in the profile schema, while the
+// output property should be a property in the source schema of the connection.
 // If the export mode includes "Create," the output property should also exist
 // in the destination schema with the same type. However, the API does not
 // check these conditions. It only requires that the input property is present
@@ -1189,10 +1189,10 @@ type ActionToSet struct {
 	// In any other case, must be 0.
 	Compression Compression `json:"compression"`
 
-	// OrderBy is the property path for which to order users when they are
+	// OrderBy is the property path for which to order profiles when they are
 	// exported to a file, and must therefore refer to a property of the
 	// action's output schema (OutSchema). It cannot be longer than 1024 runes.
-	// For actions that do not export users to file, this is the empty string.
+	// For actions that do not export profiles to file, this is the empty string.
 	OrderBy string `json:"orderBy"`
 
 	// FormatSettings represents the format settings of a file connector.
@@ -1217,7 +1217,7 @@ type ActionToSet struct {
 	TableName string `json:"tableName"`
 
 	// TableKey is the name of the property used as table key when exporting
-	// users to databases.
+	// user data to databases.
 	// It is the empty string for any other type of action.
 	TableKey string `json:"tableKey"`
 
@@ -1253,8 +1253,8 @@ type ActionToSet struct {
 	// It cannot be longer than MaxLastChangeTimeFormatSize runes.
 	LastChangeTimeFormat string `json:"lastChangeTimeFormat"`
 
-	// Incremental determine whether users should be imported incrementally.
-	// If false, users will be re-imported from scratch.
+	// Incremental determine whether user data should be imported incrementally.
+	// If false, user data will be re-imported from scratch.
 	Incremental bool `json:"incremental"`
 }
 
@@ -1361,7 +1361,7 @@ func isImportingEventsIntoWarehouse(connectorType state.ConnectorType, role stat
 
 // isImportingUserIdentitiesFromEvents reports whether a connector of the
 // given type, on a connection with the given role, and an action with the
-// given target, is importing user identities from events.
+// given target, is importing identities from events.
 func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	return role == state.Source && target == state.TargetUser && (connectorType == state.SDK || connectorType == state.Webhook)
 }

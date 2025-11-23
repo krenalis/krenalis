@@ -13,7 +13,7 @@ const Schema = () => {
 	const location = useLocation();
 
 	useLayoutEffect(() => {
-		setTitle('Customer Model');
+		setTitle('Profile Schema');
 	}, [location]);
 
 	return (

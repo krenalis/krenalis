@@ -21,7 +21,7 @@ func TestEncodeProperties(t *testing.T) {
 		buf := connectors.GetBodyBuffer(connectors.NoEncoding, 1024)
 		defer buf.Close()
 
-		encodeProperties(buf, p)
+		encodeAttributes(buf, p)
 		if buf.Len() == 0 {
 			return nil
 		}
@@ -83,7 +83,7 @@ func TestEncodeProperties(t *testing.T) {
 			}
 		}()
 
-		encodeProperties(buf, map[string]any{"flag": true})
+		encodeAttributes(buf, map[string]any{"flag": true})
 	})
 
 	// Nested object encoding with bracketed keys.
@@ -249,7 +249,7 @@ func TestEncodeProperties(t *testing.T) {
 				},
 			},
 		}
-		encodeProperties(buf, props)
+		encodeAttributes(buf, props)
 	})
 
 	// Empty arrays emit nothing by design.
@@ -363,7 +363,7 @@ func TestEncodePropertiesAllocations(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			allocs := testing.AllocsPerRun(100, func() {
 				bb := connectors.GetBodyBuffer(connectors.NoEncoding, 1024)
-				encodeProperties(bb, props)
+				encodeAttributes(bb, props)
 				bb.Close()
 			})
 			if allocs != expectedAllocs {

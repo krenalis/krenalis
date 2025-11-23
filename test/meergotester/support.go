@@ -27,21 +27,21 @@ var defaultStrategy Strategy = "Conversion"
 
 // This file contains support methods which reduce verbosity of tests.
 
-func (c *Meergo) AlterUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
+func (c *Meergo) AlterProfileSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
 	ts := time.Now().UTC()
-	c.MustCall("PUT", "/api/v1/users/schema", req, nil)
+	c.MustCall("PUT", "/api/v1/profiles/schema", req, nil)
 	// Waits for the alter schema that was started following the call to this
 	// method to finish.
 	for {
 		time.Sleep(50 * time.Millisecond)
-		startTime, endTime, alterError := c.LatestAlterUserSchema()
+		startTime, endTime, alterError := c.LatestAlterProfileSchema()
 		if alterError != nil {
-			c.t.Fatalf("user schema altering failed: %s", *alterError)
+			c.t.Fatalf("profile schema altering failed: %s", *alterError)
 		}
 		// On Windows, it may happen that 'startTime' is exactly equal to 'ts'
 		// because the precision of timestamps is lower: for this reason, it is
@@ -52,15 +52,15 @@ func (c *Meergo) AlterUserSchema(schema types.Type, primarySources map[string]in
 	}
 }
 
-// AlterUserSchemaErr is like AlterUserSchema but returns an error instead of
+// AlterProfileSchemaErr is like AlterProfileSchema but returns an error instead of
 // panicking.
-func (c *Meergo) AlterUserSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
+func (c *Meergo) AlterProfileSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
-	return c.Call("PUT", "/api/v1/users/schema", req, nil)
+	return c.Call("PUT", "/api/v1/profiles/schema", req, nil)
 }
 
 func (c *Meergo) AbsolutePath(storage int, path string) string {
@@ -85,10 +85,10 @@ func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) m
 	return schemas
 }
 
-func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, int) {
+func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]Identity, int) {
 	var response struct {
-		Identities []UserIdentity `json:"identities"`
-		Total      int            `json:"total"`
+		Identities []Identity `json:"identities"`
+		Total      int        `json:"total"`
 	}
 	path := fmt.Sprintf("/api/v1/connections/%d/identities?first=%d&limit=%d", conn, first, limit)
 	c.MustCall("GET", path, nil, &response)
@@ -368,13 +368,13 @@ func (c *Meergo) JavaScriptSDKURL() string {
 	return metadata["javascriptSDKURL"].(string)
 }
 
-func (c *Meergo) LatestAlterUserSchema() (startTime, endTime *time.Time, alterError *string) {
+func (c *Meergo) LatestAlterProfileSchema() (startTime, endTime *time.Time, alterError *string) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
 		Error     *string    `json:"error"`
 	}
-	c.MustCall("GET", "/api/v1/users/schema/latest-alter", nil, &response)
+	c.MustCall("GET", "/api/v1/profiles/schema/latest-alter", nil, &response)
 	return response.StartTime, response.EndTime, response.Error
 }
 
@@ -387,7 +387,7 @@ func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	return response.StartTime, response.EndTime
 }
 
-func (c *Meergo) PreviewAlterUserSchema(schema types.Type, rePaths map[string]any) []string {
+func (c *Meergo) PreviewAlterProfileSchema(schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -395,13 +395,13 @@ func (c *Meergo) PreviewAlterUserSchema(schema types.Type, rePaths map[string]an
 	var response struct {
 		Queries []string
 	}
-	c.MustCall("PUT", "/api/v1/users/schema/preview", req, &response)
+	c.MustCall("PUT", "/api/v1/profiles/schema/preview", req, &response)
 	return response.Queries
 }
 
-// PreviewAlterUserSchemaErr is like PreviewAlterUserSchema but returns an
+// PreviewAlterProfileSchemaErr is like PreviewAlterProfileSchema but returns an
 // error instead of panicking.
-func (c *Meergo) PreviewAlterUserSchemaErr(schema types.Type, rePaths map[string]any) ([]string, error) {
+func (c *Meergo) PreviewAlterProfileSchemaErr(schema types.Type, rePaths map[string]any) ([]string, error) {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -409,7 +409,7 @@ func (c *Meergo) PreviewAlterUserSchemaErr(schema types.Type, rePaths map[string
 	var response struct {
 		Queries []string
 	}
-	err := c.Call("PUT", "/api/v1/users/schema/preview", req, &response)
+	err := c.Call("PUT", "/api/v1/profiles/schema/preview", req, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -519,11 +519,11 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 	c.MustCall("PUT", "/api/v1/warehouse/test", body, nil)
 }
 
-func (c *Meergo) TestWorkspaceCreation(name string, userSchema types.Type,
+func (c *Meergo) TestWorkspaceCreation(name string, profileSchema types.Type,
 	uiPreferences UIPreferences, whName string, whSettings []byte, mode WarehouseMode) error {
 	body := map[string]any{
-		"name":       name,
-		"userSchema": userSchema,
+		"name":          name,
+		"profileSchema": profileSchema,
 		"warehouse": map[string]any{
 			"name":     whName,
 			"mode":     mode,
@@ -562,7 +562,7 @@ func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
 	c.MustCall("PUT", "/api/v1/warehouse", body, nil)
 }
 
-func (c *Meergo) UserEvents(muid uuid.UUID, properties []string) []map[string]any {
+func (c *Meergo) ProfileEvents(mpid uuid.UUID, properties []string) []map[string]any {
 	queryString := url.Values{
 		"properties": properties,
 		"order":      []string{"timestamp"},
@@ -573,9 +573,9 @@ func (c *Meergo) UserEvents(muid uuid.UUID, properties []string) []map[string]an
 	filter := Filter{
 		Logical: OpAnd,
 		Conditions: []FilterCondition{
-			{Property: "muid",
+			{Property: "mpid",
 				Operator: OpIs,
-				Values:   []string{muid.String()}},
+				Values:   []string{mpid.String()}},
 		},
 	}
 	jsonFilter, err := json.Marshal(filter)
@@ -590,23 +590,23 @@ func (c *Meergo) UserEvents(muid uuid.UUID, properties []string) []map[string]an
 	return response.Events
 }
 
-func (c *Meergo) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentity, int) {
+func (c *Meergo) Identities(mpid uuid.UUID, first, limit int) ([]Identity, int) {
 	var response struct {
-		Identities []UserIdentity `json:"identities"`
-		Total      int            `json:"total"`
+		Identities []Identity `json:"identities"`
+		Total      int        `json:"total"`
 	}
-	path := fmt.Sprintf("/api/v1/users/%s/identities?first=%d&limit=%d", user, first, limit)
+	path := fmt.Sprintf("/api/v1/profiles/%s/identities?first=%d&limit=%d", mpid, first, limit)
 	c.MustCall("GET", path, nil, &response)
 	return response.Identities, response.Total
 }
 
-func (c *Meergo) UserPropertiesSuitableAsIdentifiers() types.Type {
+func (c *Meergo) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 	var schema types.Type
-	c.MustCall("GET", "/api/v1/users/schema/suitable-as-identifiers", nil, &schema)
+	c.MustCall("GET", "/api/v1/profiles/schema/suitable-as-identifiers", nil, &schema)
 	return schema
 }
 
-func (c *Meergo) Users(properties []string, order string, orderDesc bool, first, limit int) (users []User, schema types.Type, total int) {
+func (c *Meergo) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
 	queryString := url.Values{
 		"properties": properties,
 		"order":      []string{order},
@@ -615,12 +615,12 @@ func (c *Meergo) Users(properties []string, order string, orderDesc bool, first,
 		"limit":      []string{strconv.Itoa(limit)},
 	}
 	var response struct {
-		Users  []User     `json:"users"`
-		Schema types.Type `json:"schema"`
-		Total  int        `json:"total"`
+		Profiles []Profile  `json:"profiles"`
+		Schema   types.Type `json:"schema"`
+		Total    int        `json:"total"`
 	}
-	c.MustCall("GET", "/api/v1/users?"+queryString.Encode(), nil, &response)
-	return response.Users, response.Schema, response.Total
+	c.MustCall("GET", "/api/v1/profiles?"+queryString.Encode(), nil, &response)
+	return response.Profiles, response.Schema, response.Total
 }
 
 func (c *Meergo) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {

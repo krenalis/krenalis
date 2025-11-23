@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/meergo/analytics-go"
+
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
 )
 
-func TestUserIdentitiesFromEvents(t *testing.T) {
+func TestIdentitiesFromEvents(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
@@ -47,11 +48,11 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 
 	ctx := context.Background()
 
-	const eventUserEmail = "event-user@example.com"
+	const eventProfileEmail = "event-profile@example.com"
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
 		Traits: map[string]interface{}{
-			"email": eventUserEmail,
+			"email": eventProfileEmail,
 		},
 		Context: &analytics.Context{
 			Device: analytics.DeviceInfo{
@@ -63,21 +64,21 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 
-	// Retrieve the user imported from the event.
-	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
+	// Retrieve the profile imported from the event.
+	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 1 {
-		t.Fatalf("expected one user, got %d", total)
+		t.Fatalf("expected one profile, got %d", total)
 	}
 	found := false
-	for _, user := range users {
-		email, _ := user.Traits["email"].(string)
-		if email == eventUserEmail {
+	for _, profile := range profiles {
+		email, _ := profile.Attributes["email"].(string)
+		if email == eventProfileEmail {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Fatalf("user with email %q not found", eventUserEmail)
+		t.Fatalf("profile with email %q not found", eventProfileEmail)
 	}
 
 	// Update the action to import identities through a constant mapping.
@@ -100,17 +101,17 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "uT8VT5tx1A",
 		Traits: map[string]interface{}{
-			"email": eventUserEmail,
+			"email": eventProfileEmail,
 		},
 	})
 	c.WaitEventsStoredIntoWarehouse(ctx, 2)
 	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 
-	// Check that the user has been created.
-	_, _, total = c.Users([]string{"email"}, "", false, 0, 100)
+	// Check that the profile has been created.
+	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 2 {
-		t.Fatalf("expected 2 users, got %d", total)
+		t.Fatalf("expected 2 profiles, got %d", total)
 	}
 
 	// Update the action to import identities through a transformation function.
@@ -141,17 +142,17 @@ def transform(event: dict) -> dict:
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "Kw5vKdDYBQ",
 		Traits: map[string]interface{}{
-			"email": eventUserEmail,
+			"email": eventProfileEmail,
 		},
 	})
 	c.WaitEventsStoredIntoWarehouse(ctx, 3)
 	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 
-	// Check that the user has been created.
-	_, _, total = c.Users([]string{"email"}, "", false, 0, 100)
+	// Check that the profile has been created.
+	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 3 {
-		t.Fatalf("expected 3 users, got %d", total)
+		t.Fatalf("expected 3 profiles, got %d", total)
 	}
 
 }
