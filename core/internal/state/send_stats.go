@@ -6,6 +6,7 @@ package state
 
 import (
 	"log/slog"
+	"net"
 	"runtime"
 
 	"github.com/google/uuid"
@@ -22,6 +23,7 @@ func (state *State) sendNotificationStats(client analytics.Client, organization 
 				OS: analytics.OSInfo{
 					Name: eventContextOs,
 				},
+				IP: net.IP{255, 255, 0, 0},
 			},
 			Properties: analytics.NewProperties().Set("notification_name", n.Name),
 		})
