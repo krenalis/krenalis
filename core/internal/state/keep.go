@@ -30,7 +30,7 @@ func (state *State) keep() {
 	if state.sendStats {
 		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{
 			Endpoint: "https://telemetry.meergo.com/events",
-			Logger:   discardLogger{},
+			Logger:   discardLogger{}, // comment this line to debug sending of analytics data.
 		})
 		defer func() {
 			err := client.Close()
