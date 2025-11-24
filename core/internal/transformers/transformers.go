@@ -29,7 +29,7 @@ const (
 // Record represents a record to transform.
 type Record struct {
 	Purpose    Purpose // defaults to Import.
-	Properties map[string]any
+	Attributes map[string]any
 	Err        error
 }
 
@@ -104,8 +104,8 @@ func New(action *state.Action, provider FunctionProvider, layouts *state.TimeLay
 	return nil, errors.New("there is no transformation")
 }
 
-// Transform transforms the provided records and updates their properties.
-// Record properties, before transformation, are expected to conform to the
+// Transform transforms the provided records and updates their attributes.
+// Record attributes, before transformation, are expected to conform to the
 // input schema.
 //
 // If an error occurs during the transformation of a single record, either a
@@ -123,7 +123,7 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 	// Transform using the mapping.
 	if t.mapping != nil {
 		for i, record := range records {
-			properties, err := t.mapping.Transform(record.Properties, mappings.Purpose(record.Purpose))
+			attributes, err := t.mapping.Transform(record.Attributes, mappings.Purpose(record.Purpose))
 			if err != nil {
 				switch e := err.(type) {
 				case mappings.TransformationError:
@@ -133,11 +133,11 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 				default:
 					return err
 				}
-				record.Properties = nil
+				record.Attributes = nil
 				records[i].Err = err
 				continue
 			}
-			records[i].Properties = properties
+			records[i].Attributes = attributes
 			if i%100 != 0 {
 				continue
 			}
@@ -165,7 +165,7 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 }
 
 // schemaSubset returns a subset of schema containing only the property paths
-// specified in properties, preserving their original order and upper hierarchy
+// specified in paths, preserving their original order and upper hierarchy
 // in schema. paths must be alphabetically ordered. This function panics if
 // schema is not an object type.
 func schemaSubset(schema types.Type, paths []string) types.Type {

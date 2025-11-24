@@ -265,7 +265,7 @@ func New(conf *Config) (*Core, error) {
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onExecuteAction)
-	core.state.AddListener(core.onStartAlterUserSchema)
+	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
@@ -889,18 +889,18 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.BadRequest("mapping (or function) is required")
 	}
 
-	properties, err := types.Decode[map[string]any](bytes.NewReader(data), inSchema)
+	attributes, err := types.Decode[map[string]any](bytes.NewReader(data), inSchema)
 	if err != nil {
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
 
-	// Transform the properties.
+	// Transform the attributes.
 	transformer, err := transformers.New(action, provider, nil)
 	if err != nil {
 		return nil, err
 	}
 	records := []transformers.Record{
-		{Purpose: transformers.Create, Properties: properties},
+		{Purpose: transformers.Create, Attributes: attributes},
 	}
 	if purpose == "Update" {
 		records[0].Purpose = transformers.Update
@@ -916,7 +916,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.Unprocessable(TransformationFailed, "%s", err)
 	}
 
-	return types.Marshal(records[0].Properties, outSchema)
+	return types.Marshal(records[0].Attributes, outSchema)
 }
 
 // TransformationLanguages returns the supported transformation languages.
@@ -1123,7 +1123,7 @@ func (core *Core) tryStartActionExecution(actionID int) {
 		if c.Role == state.Source {
 			err = a.importUsers(ctx)
 		} else {
-			err = a.exportUsers(ctx)
+			err = a.exportProfiles(ctx)
 		}
 
 		// Mark the execution as ended.
@@ -1147,11 +1147,11 @@ func (core *Core) tryStartActionExecution(actionID int) {
 	})
 }
 
-// executeAlterUserSchema executes the alter of the user schema, not returning
-// until it has completed (with success or with an operation error).
+// executeAlterProfileSchema executes the alter of the profile schema, not
+// returning until it has completed (with success or with an operation error).
 //
 // primarySources cannot be nil.
-func (core *Core) executeAlterUserSchema(workspace int, opID string, schema types.Type,
+func (core *Core) executeAlterProfileSchema(workspace int, opID string, schema types.Type,
 	primarySources map[string]int, operations []warehouses.AlterOperation) {
 	ctx := core.close.ctx
 	store := core.datastore.Store(workspace)
@@ -1159,14 +1159,14 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 	if !ok {
 		return
 	}
-	// Keep calling 'AlterUserSchema' until it (1) returns successfully, (2)
+	// Keep calling 'AlterProfileSchema' until it (1) returns successfully, (2)
 	// returns with a *warehouses.OperationError, or (3) the context is cancelled.
 	var alterSchemaErr *warehouses.OperationError
 	bo := backoff.New(200)
 	bo.SetCap(5 * time.Minute)
 	for bo.Next(ctx) {
-		err := store.AlterUserSchema(ctx, opID, schema, operations)
-		// In case of success, go on and send an EndAlterUserSchema
+		err := store.AlterProfileSchema(ctx, opID, schema, operations)
+		// In case of success, go on and send an EndAlterProfileSchema
 		// notification.
 		if err == nil {
 			break
@@ -1176,7 +1176,7 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 			return
 		}
 		// In case of OperationError log it, then go on and send an
-		// EndAlterUserSchema notification.
+		// EndAlterProfileSchema notification.
 		if err2, ok := err.(*warehouses.OperationError); ok {
 			slog.Error("alter schema ended with an error", "err", err2)
 			alterSchemaErr = err2
@@ -1188,7 +1188,7 @@ func (core *Core) executeAlterUserSchema(workspace int, opID string, schema type
 			"err", err, "timeout", bo.WaitTime())
 
 	}
-	nEnd := state.EndAlterUserSchema{
+	nEnd := state.EndAlterProfileSchema{
 		Workspace: workspace,
 		ID:        opID,
 		EndTime:   time.Now().UTC(),
@@ -1241,8 +1241,8 @@ Identifiers:
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
 				//
-				// Update the user schema.
-				query := "UPDATE workspaces SET user_schema = alter_user_schema_schema," +
+				// Update the profile schema.
+				query := "UPDATE workspaces SET profile_schema = alter_profile_schema_schema," +
 					" identifiers = $1 WHERE id = $2"
 				_, err := tx.Exec(ctx, query, nEnd.Identifiers, nEnd.Workspace)
 				if err != nil {
@@ -1262,10 +1262,10 @@ Identifiers:
 				}
 			}
 			// Set the alter schema update as completed.
-			query := "UPDATE workspaces SET alter_user_schema_id = NULL," +
-				" alter_user_schema_schema = 'null', alter_user_schema_primary_sources = 'null'," +
-				" alter_user_schema_operations = 'null', alter_user_schema_end_time = $1," +
-				" alter_user_schema_error = $2 WHERE id = $3 AND alter_user_schema_id = $4"
+			query := "UPDATE workspaces SET alter_profile_schema_id = NULL," +
+				" alter_profile_schema_schema = 'null', alter_profile_schema_primary_sources = 'null'," +
+				" alter_profile_schema_operations = 'null', alter_profile_schema_end_time = $1," +
+				" alter_profile_schema_error = $2 WHERE id = $3 AND alter_profile_schema_id = $4"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
 			if err != nil {
 				return nil, err
@@ -1397,24 +1397,24 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 		if ws.IR.ID != nil {
 			go core.executeIdentityResolution(ws.ID, *ws.IR.ID)
 			// At most only one operation between Identity Resolution and update
-			// user schema can be started, so continue to the next workspace.
+			// profile schema can be started, so continue to the next workspace.
 			continue
 		}
-		if ws.AlterUserSchema.ID != nil {
-			go core.executeAlterUserSchema(ws.ID, *ws.AlterUserSchema.ID,
-				ws.AlterUserSchema.Schema, ws.AlterUserSchema.PrimarySources,
-				ws.AlterUserSchema.Operations)
+		if ws.AlterProfileSchema.ID != nil {
+			go core.executeAlterProfileSchema(ws.ID, *ws.AlterProfileSchema.ID,
+				ws.AlterProfileSchema.Schema, ws.AlterProfileSchema.PrimarySources,
+				ws.AlterProfileSchema.Operations)
 		}
 	}
 }
 
-// onStartAlterUserSchema is called when the alter of the user schema is
+// onStartAlterProfileSchema is called when the alter of the profile schema is
 // started.
-func (core *Core) onStartAlterUserSchema(n state.StartAlterUserSchema) {
+func (core *Core) onStartAlterProfileSchema(n state.StartAlterProfileSchema) {
 	if !core.state.IsLeader() {
 		return
 	}
-	go core.executeAlterUserSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.Operations)
+	go core.executeAlterProfileSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.Operations)
 }
 
 // onStartIdentityResolution is called when the identity resolution is started.
@@ -1484,23 +1484,23 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 
 }
 
-// startAlterUserSchema starts the alter of the user schema.
+// startAlterProfileSchema starts the alter of the profile schema.
 //
 // primarySources cannot be nil.
 //
 // It returns an errors.UnprocessableError error with code
 //
 //   - OperationAlreadyExecuting, if another operation (identity resolution or
-//     user schema update) is already running.
+//     profile schema update) is already running.
 //   - ConnectionNotExist, if a connection referred in the primary sources does
 //     not exist.
-func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, operations []warehouses.AlterOperation) error {
+func (core *Core) startAlterProfileSchema(ctx context.Context, ws int, schema types.Type, primarySources map[string]int, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
 	opID, err := uuid.NewUUID()
 	if err != nil {
 		return err
 	}
-	n := state.StartAlterUserSchema{
+	n := state.StartAlterProfileSchema{
 		Workspace:      ws,
 		ID:             opID.String(),
 		StartTime:      time.Now().UTC(),
@@ -1543,7 +1543,7 @@ func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types
 		// Check that there are no other operations in progress on the
 		// warehouse.
 		var ongoingOp bool
-		query := `SELECT alter_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err = tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			return nil, err
@@ -1551,11 +1551,11 @@ func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types
 		if ongoingOp {
 			return nil, errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 		}
-		// Sets the alter user schema operation to running.
-		query = "UPDATE workspaces SET alter_user_schema_id = $1," +
-			" alter_user_schema_schema = $2, alter_user_schema_primary_sources = $3," +
-			" alter_user_schema_operations = $4, alter_user_schema_start_time = $5," +
-			" alter_user_schema_end_time = NULL, alter_user_schema_error = NULL WHERE id = $6"
+		// Sets the alter profile schema operation to running.
+		query = "UPDATE workspaces SET alter_profile_schema_id = $1," +
+			" alter_profile_schema_schema = $2, alter_profile_schema_primary_sources = $3," +
+			" alter_profile_schema_operations = $4, alter_profile_schema_start_time = $5," +
+			" alter_profile_schema_end_time = NULL, alter_profile_schema_error = NULL WHERE id = $6"
 		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.Operations,
 			n.StartTime, n.Workspace)
 		if err != nil {
@@ -1571,9 +1571,9 @@ func (core *Core) startAlterUserSchema(ctx context.Context, ws int, schema types
 
 // startIdentityResolution starts an Identity Resolution.
 //
-// If another operation (identity resolution or user schema update) is already
-// running, this method returns an errors.UnprocessableError error with code
-// OperationAlreadyExecuting.
+// If another operation (identity resolution or profile schema update) is
+// already running, this method returns an errors.UnprocessableError error with
+// code OperationAlreadyExecuting.
 func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 	core.mustBeOpen()
 	opID, err := uuid.NewUUID()
@@ -1587,7 +1587,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws int) error {
 	}
 	err = core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var ongoingOp bool
-		query := `SELECT alter_user_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			return nil, err

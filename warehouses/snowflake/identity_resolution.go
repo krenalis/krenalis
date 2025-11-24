@@ -25,7 +25,7 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]int) error {
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.resolveIdentities(ctx, opID, identifiers, userColumns, userPrimarySources)
+	err = warehouse.resolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
@@ -50,27 +50,27 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	return ctx.Err()
 }
 
-func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
 
-	// Determine the current version of the "users" table and create a copy of
-	// it with the incremented version.
-	usersVersion, err := warehouse.usersVersion(ctx)
+	// Determine the current version of the "profiles" table and create a copy
+	// of it with the incremented version.
+	profilesVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
 		return err
 	}
-	newUsersVersion := usersVersion + 1
-	newUsersName := fmt.Sprintf("_USERS_%d", newUsersVersion)
+	newProfilesVersion := profilesVersion + 1
+	newProfilesName := fmt.Sprintf("_PROFILES_%d", newProfilesVersion)
 
-	// Create a copy of the current users table and set its new version in
-	// '_USER_SCHEMA_VERSIONS'.
+	// Create a copy of the current profiles table and set its new version in
+	// '_PROFILE_SCHEMA_VERSIONS'.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		likeTable := fmt.Sprintf(`_USERS_%d`, usersVersion)
-		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteIdent(newUsersName), quoteIdent(likeTable)))
+		likeTable := fmt.Sprintf(`_PROFILES_%d`, profilesVersion)
+		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteIdent(newProfilesName), quoteIdent(likeTable)))
 		if err != nil {
-			return fmt.Errorf("cannot create users table (with name %s) like table %s: %s", quoteIdent(newUsersName), quoteIdent(likeTable), err)
+			return fmt.Errorf("cannot create profiles table (with name %s) like table %s: %s", quoteIdent(newProfilesName), quoteIdent(likeTable), err)
 		}
-		_, err = tx.Exec(`INSERT INTO "_USER_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
-			` VALUES (?, ?, ?)`, newUsersVersion, opID, time.Now().UTC())
+		_, err = tx.Exec(`INSERT INTO "_PROFILE_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
+			` VALUES (?, ?, ?)`, newProfilesVersion, opID, time.Now().UTC())
 		if err != nil {
 			return snowflake(err)
 		}
@@ -81,107 +81,107 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 	}
 
 	// Generate the SQL function that determines if two identities are the same
-	// user.
-	var sameUser strings.Builder
+	// profile.
+	var sameProfile strings.Builder
 	if len(identifiers) > 0 {
-		sameUser.WriteString("( CASE\n")
+		sameProfile.WriteString("( CASE\n")
 		for _, ident := range identifiers {
 			id := quoteIdent(ident.Name)
-			sameUser.WriteString(`                WHEN "I1".`)
-			sameUser.WriteString(id)
-			sameUser.WriteString(` IS NOT NULL AND "I2".`)
-			sameUser.WriteString(id)
-			sameUser.WriteString(` IS NOT NULL THEN "I1".`)
-			sameUser.WriteString(id)
-			sameUser.WriteString(`::text = "I2".`)
-			sameUser.WriteString(id)
-			sameUser.WriteString(`::text`)
-			sameUser.WriteByte('\n')
+			sameProfile.WriteString(`                WHEN "I1".`)
+			sameProfile.WriteString(id)
+			sameProfile.WriteString(` IS NOT NULL AND "I2".`)
+			sameProfile.WriteString(id)
+			sameProfile.WriteString(` IS NOT NULL THEN "I1".`)
+			sameProfile.WriteString(id)
+			sameProfile.WriteString(`::text = "I2".`)
+			sameProfile.WriteString(id)
+			sameProfile.WriteString(`::text`)
+			sameProfile.WriteByte('\n')
 		}
-		sameUser.WriteString("                ELSE false END )")
+		sameProfile.WriteString("                ELSE false END )")
 	} else {
-		sameUser.WriteString("false")
+		sameProfile.WriteString("false")
 	}
 
-	// Generate the SQL queries that merge the identities to obtain the users.
-	var mergeUsers strings.Builder
-	mergeUsers.WriteString(`EXECUTE IMMEDIATE 'INSERT INTO `)
-	mergeUsers.WriteString(quoteIdent(newUsersName))
-	mergeUsers.WriteString(` (`)
-	for _, c := range userColumns {
-		mergeUsers.WriteString(quoteIdent(c.Name))
-		mergeUsers.WriteByte(',')
+	// Generate the SQL queries that merge the identities to obtain the profiles.
+	var mergeProfiles strings.Builder
+	mergeProfiles.WriteString(`EXECUTE IMMEDIATE 'INSERT INTO `)
+	mergeProfiles.WriteString(quoteIdent(newProfilesName))
+	mergeProfiles.WriteString(` (`)
+	for _, c := range profileColumns {
+		mergeProfiles.WriteString(quoteIdent(c.Name))
+		mergeProfiles.WriteByte(',')
 	}
-	mergeUsers.WriteString(`"__IDENTITIES__", "__MUID__", "__LAST_CHANGE_TIME__"`)
-	mergeUsers.WriteString(") SELECT\n")
-	for _, c := range userColumns {
+	mergeProfiles.WriteString(`"__IDENTITIES__", "__MPID__", "__LAST_CHANGE_TIME__"`)
+	mergeProfiles.WriteString(") SELECT\n")
+	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
-			mergeUsers.WriteString(`CASE WHEN ARRAY_AGG(` + quoteIdent(c.Name) +
+			mergeProfiles.WriteString(`CASE WHEN ARRAY_AGG(` + quoteIdent(c.Name) +
 				`) = [] THEN NULL ELSE ARRAY_SORT(ARRAY_DISTINCT(ARRAY_FLATTEN(ARRAY_AGG(` + quoteIdent(c.Name) + `)))) END`)
 		} else {
-			mergeUsers.WriteString(`(ARRAY_CAT(`)
-			if s, ok := userPrimarySources[c.Name]; ok {
+			mergeProfiles.WriteString(`(ARRAY_CAT(`)
+			if s, ok := profilePrimarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeUsers.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "__CONNECTION__" = %d THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteIdent(c.Name), s, quoteIdent(c.Name)))
+				mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "__CONNECTION__" = %d THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteIdent(c.Name), s, quoteIdent(c.Name)))
 			} else {
-				mergeUsers.WriteString("ARRAY_CONSTRUCT()")
+				mergeProfiles.WriteString("ARRAY_CONSTRUCT()")
 			}
-			mergeUsers.WriteString(", ")
+			mergeProfiles.WriteString(", ")
 			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.
-			mergeUsers.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteIdent(c.Name), quoteIdent(c.Name)))
-			mergeUsers.WriteString(`))[0]`)
+			mergeProfiles.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteIdent(c.Name), quoteIdent(c.Name)))
+			mergeProfiles.WriteString(`))[0]`)
 		}
-		mergeUsers.WriteString(" AS ")
-		mergeUsers.WriteString(quoteIdent(c.Name))
-		mergeUsers.WriteByte(',')
+		mergeProfiles.WriteString(" AS ")
+		mergeProfiles.WriteString(quoteIdent(c.Name))
+		mergeProfiles.WriteByte(',')
 	}
 	// Write the "__identities__" column.
-	mergeUsers.WriteString(`ARRAY_AGG(DISTINCT "__PK__"), `)
-	// Write the "__muid__" column.
-	// If all MUIDs are the same - ignoring the NULL ones, which refer to new
-	// identities - then take the common value as the user's MUID; otherwise, if
-	// we are in a situation where a previously split user is now merged, in
-	// this case, create a new random MUID. If the identities are all new, also
-	// in this case, create a new random MUID.
-	mergeUsers.WriteString(`COALESCE(
+	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "__PK__"), `)
+	// Write the "__mpid__" column.
+	// If all MPIDs are the same - ignoring the NULL ones, which refer to new
+	// identities - then take the common value as the profile's MPID; otherwise,
+	// if we are in a situation where a previously split profile is now merged,
+	// in this case, create a new random MPID. If the identities are all new,
+	// also in this case, create a new random MPID.
+	mergeProfiles.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(CASE WHEN "__muid__" IS NOT NULL THEN 1 ELSE 0 END) > 0
-				THEN MAX("__muid__"::text)::varchar
+			WHEN COUNT(CASE WHEN "__mpid__" IS NOT NULL THEN 1 ELSE 0 END) > 0
+				THEN MAX("__mpid__"::text)::varchar
 			ELSE UUID_STRING()
 		END,
 		UUID_STRING()
 	),`)
 	// Write the "__last_change_time__" column.
-	mergeUsers.WriteString(`MAX("__LAST_CHANGE_TIME__")`)
-	mergeUsers.WriteString(` FROM "_USER_IDENTITIES" GROUP BY "__CLUSTER__"';` + "\n")
+	mergeProfiles.WriteString(`MAX("__LAST_CHANGE_TIME__")`)
+	mergeProfiles.WriteString(` FROM "_IDENTITIES" GROUP BY "__CLUSTER__"';` + "\n")
 
-	// If two users who were previously one are split, they will end up having
-	// the same MUID, which is incorrect. So this query, in that situation,
-	// replaces the MUID of both users with new random MUIDs.
-	mergeUsers.WriteString(`UPDATE `)
-	mergeUsers.WriteString(quoteIdent(newUsersName))
-	mergeUsers.WriteString(` "U"
+	// If two profiles who were previously one are split, they will end up having
+	// the same MPID, which is incorrect. So this query, in that situation,
+	// replaces the MPID of both profiles with new random MPIDs.
+	mergeProfiles.WriteString(`UPDATE `)
+	mergeProfiles.WriteString(quoteIdent(newProfilesName))
+	mergeProfiles.WriteString(` "U"
 		SET
-			"__MUID__" = UUID_STRING()
+			"__MPID__" = UUID_STRING()
 		WHERE
-			"U"."__MUID__" IN (
+			"U"."__MPID__" IN (
 				SELECT
-					"U2"."__MUID__"
+					"U2"."__MPID__"
 				FROM
-					` + quoteIdent(newUsersName) + ` "U2"
+					` + quoteIdent(newProfilesName) + ` "U2"
 				GROUP BY
-					"U2"."__MUID__"
+					"U2"."__MPID__"
 				HAVING
 					COUNT(*) > 1
 	)`)
 
 	// Replace the placeholders in the Identity Resolution queries and run them.
-	query := strings.Replace(identityResolutionQueries, "{{ same_user }}", sameUser.String(), 1)
-	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
-	query = strings.ReplaceAll(query, "{{ new_users_name }}", quoteIdent(newUsersName))
-	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
+	query := strings.Replace(identityResolutionQueries, "{{ same_profile }}", sameProfile.String(), 1)
+	query = strings.Replace(query, "{{ merge_identities_in_profiles }}", mergeProfiles.String(), 1)
+	query = strings.ReplaceAll(query, "{{ new_profiles_name }}", quoteIdent(newProfilesName))
+	query = strings.ReplaceAll(query, "{{ new_profiles_version }}", strconv.Itoa(newProfilesVersion))
 	ctxMulti, err := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
 	if err != nil {
 		return snowflake(err)
@@ -199,17 +199,17 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 		return snowflake(err)
 	}
 
-	// Replace the current "users" view with a new one using the "CREATE OR
-	// REPLACE VIEW" statement since the table "_users" that the view refers to
+	// Replace the current "profiles" view with a new one using the "CREATE OR
+	// REPLACE VIEW" statement since the table "_profiles" that the view refers to
 	// has changed its name.
-	_, err = db.ExecContext(ctx, createViewQuery(newUsersName, userColumns, true))
+	_, err = db.ExecContext(ctx, createViewQuery(newProfilesName, profileColumns, true))
 	if err != nil {
 		return snowflake(err)
 	}
 
-	// Drop the 'users' table that existed before executing this Identity
+	// Drop the 'profiles' table that existed before executing this Identity
 	// Resolution.
-	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "_USERS_`+strconv.Itoa(usersVersion)+`"`)
+	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
 	if err != nil {
 		return snowflake(err)
 	}

@@ -55,12 +55,12 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 		t.Fatalf("expected error %q, got %q", expected, err)
 	}
 
-	// Test a not existent path in the user schema.
+	// Test a not existent path in the profile schema.
 	err = c.UpdateIdentityResolutionErr([]string{"non_existent"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
-	expected = `unexpected HTTP status code 422: {"error":{"code":"PropertyNotExist","message":"property \"non_existent\" does not exist in the user schema"}}`
+	expected = `unexpected HTTP status code 422: {"error":{"code":"PropertyNotExist","message":"property \"non_existent\" does not exist in the profile schema"}}`
 	if err.Error() != expected {
 		t.Fatalf("expected error %q, got %q", expected, err)
 	}

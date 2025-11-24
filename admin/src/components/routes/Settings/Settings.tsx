@@ -31,7 +31,7 @@ const Settings = () => {
 					<ListTile
 						className='settings__setting'
 						icon={<SlIcon name='bookmark-check' />}
-						name={'Customer Model'}
+						name={'Profile Schema'}
 						description='Define and manage the schema of your customer data used to model and understand your customers'
 						action={<SlIcon name='chevron-right' />}
 					/>

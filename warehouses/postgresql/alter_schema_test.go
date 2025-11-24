@@ -16,13 +16,13 @@ import (
 	"github.com/meergo/meergo/warehouses"
 )
 
-// Test_alterUserSchemaQueries checks that alterUserSchema generates the
+// Test_alterProfileSchemaQueries checks that alterProfileSchema generates the
 // expected set of SQL statements for a variety of operations.
-func Test_alterUserSchemaQueries(t *testing.T) {
+func Test_alterProfileSchemaQueries(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		columns         []warehouses.Column // without "__muid__" and "__last_change_time__", which are added by the test
+		columns         []warehouses.Column // without "__mpid__" and "__last_change_time__", which are added by the test
 		ops             []warehouses.AlterOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     error
@@ -36,8 +36,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"_identities\"\n\tADD COLUMN \"a\" character varying",
 			},
 		},
 		{
@@ -49,8 +49,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"f\" double precision",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"_identities\"\n\tADD COLUMN \"f\" double precision",
 			},
 		},
 		{
@@ -62,8 +62,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"f\" double precision",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"f\" double precision",
+				"ALTER TABLE \"_identities\"\n\tADD COLUMN \"f\" double precision",
 			},
 		},
 		{
@@ -79,8 +79,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Text()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
+				"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
+				"ALTER TABLE \"_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
 			},
 		},
 		{
@@ -93,8 +93,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Array(types.Text())},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying[]",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" character varying[]",
+				"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"a\" character varying[]",
+				"ALTER TABLE \"_identities\"\n\tADD COLUMN \"a\" character varying[]",
 			},
 		},
 		{
@@ -107,8 +107,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"_identities\"\n\tADD COLUMN \"a\" character varying",
 			},
 		},
 		{
@@ -123,8 +123,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "x_b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
+				"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
+				"ALTER TABLE \"_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
 			},
 		},
 		{
@@ -139,8 +139,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
+				"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
+				"ALTER TABLE \"_identities\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
 			},
 		},
 		{
@@ -152,8 +152,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationDropColumn, Column: "a"},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tDROP COLUMN \"a\"",
-				"ALTER TABLE \"_user_identities\"\n\tDROP COLUMN \"a\"",
+				"ALTER TABLE \"_profiles_0\"\n\tDROP COLUMN \"a\"",
+				"ALTER TABLE \"_identities\"\n\tDROP COLUMN \"a\"",
 			},
 		},
 		{
@@ -166,8 +166,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationDropColumn, Column: "b"},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
-				"ALTER TABLE \"_user_identities\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
+				"ALTER TABLE \"_profiles_0\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
+				"ALTER TABLE \"_identities\"\n\tDROP COLUMN \"a\",\n\tDROP COLUMN \"b\"",
 			},
 		},
 		{
@@ -179,8 +179,8 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "b"},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tRENAME COLUMN \"a\" TO \"b\"",
-				"ALTER TABLE \"_user_identities\"\n\tRENAME COLUMN \"a\" TO \"b\"",
+				"ALTER TABLE \"_profiles_0\"\n\tRENAME COLUMN \"a\" TO \"b\"",
+				"ALTER TABLE \"_identities\"\n\tRENAME COLUMN \"a\" TO \"b\"",
 			},
 		},
 		{
@@ -220,7 +220,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "ai32", Type: types.Array(types.Int(32))},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"" +
+				"ALTER TABLE \"_profiles_0\"" +
 					"\n\tADD COLUMN \"b\" boolean," +
 					"\n\tADD COLUMN \"i16\" smallint," +
 					"\n\tADD COLUMN \"i32\" integer," +
@@ -236,7 +236,7 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 					"\n\tADD COLUMN \"t\" character varying," +
 					"\n\tADD COLUMN \"at\" character varying[]," +
 					"\n\tADD COLUMN \"ai32\" integer[]",
-				"ALTER TABLE \"_user_identities\"" +
+				"ALTER TABLE \"_identities\"" +
 					"\n\tADD COLUMN \"b\" boolean," +
 					"\n\tADD COLUMN \"i16\" smallint," +
 					"\n\tADD COLUMN \"i32\" integer," +
@@ -265,10 +265,10 @@ func Test_alterUserSchemaQueries(t *testing.T) {
 				}
 			}
 			columns = append([]warehouses.Column{
-				{Name: "__muid__", Type: types.Int(32)},
+				{Name: "__mpid__", Type: types.Int(32)},
 				{Name: "__last_change_time__", Type: types.DateTime()},
 			}, columns...)
-			got := alterUserSchemaQueries("_users_0", columns, test.ops)
+			got := alterProfileSchemaQueries("_profiles_0", columns, test.ops)
 			// Exclude from the test the queries that drop or create views.
 			got = slices.DeleteFunc(got, func(query string) bool {
 				return strings.HasPrefix(query, "DROP VIEW") ||

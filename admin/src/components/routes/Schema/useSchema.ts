@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import AppContext from '../../../context/AppContext';
 import { ObjectType } from '../../../lib/api/types/types';
-import { LatestAlterUserSchema } from '../../../lib/api/types/workspace';
+import { LatestAlterProfileSchema } from '../../../lib/api/types/workspace';
 
 const useSchema = () => {
 	const [isLoadingSchema, setIsLoadingSchema] = useState<boolean>(true);
@@ -21,7 +21,7 @@ const useSchema = () => {
 		const fetchSchema = async () => {
 			let schema: ObjectType;
 			try {
-				schema = await api.workspaces.userSchema();
+				schema = await api.workspaces.profileSchema();
 			} catch (err) {
 				handleError(err);
 				return;
@@ -45,9 +45,9 @@ const useSchema = () => {
 	}, []);
 
 	const handleSchemaAltering = async () => {
-		let res: LatestAlterUserSchema;
+		let res: LatestAlterProfileSchema;
 		try {
-			res = await api.workspaces.LatestAlterUserSchema();
+			res = await api.workspaces.LatestAlterProfileSchema();
 		} catch (err) {
 			handleError(err);
 			return;

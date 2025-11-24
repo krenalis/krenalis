@@ -57,8 +57,8 @@ type warehouse struct {
 	inner warehouses.Warehouse
 }
 
-func (dw warehouse) AlterUserSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
-	return unavailableError(dw.inner.AlterUserSchema(ctx, opID, columns, operations))
+func (dw warehouse) AlterProfileSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
+	return unavailableError(dw.inner.AlterProfileSchema(ctx, opID, columns, operations))
 }
 
 func (dw warehouse) CanInitialize(ctx context.Context) error {
@@ -83,8 +83,8 @@ func (dw warehouse) Delete(ctx context.Context, table string, where warehouses.E
 	return unavailableError(dw.inner.Delete(ctx, table, where))
 }
 
-func (dw warehouse) Initialize(ctx context.Context, userColumns []warehouses.Column) error {
-	return unavailableError(dw.inner.Initialize(ctx, userColumns))
+func (dw warehouse) Initialize(ctx context.Context, profileColumns []warehouses.Column) error {
+	return unavailableError(dw.inner.Initialize(ctx, profileColumns))
 }
 
 func (dw warehouse) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
@@ -95,8 +95,8 @@ func (dw warehouse) MergeIdentities(ctx context.Context, columns []warehouses.Co
 	return unavailableError(dw.inner.MergeIdentities(ctx, columns, rows))
 }
 
-func (dw warehouse) PreviewAlterUserSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) ([]string, error) {
-	queries, err := dw.inner.PreviewAlterUserSchema(ctx, columns, operations)
+func (dw warehouse) PreviewAlterProfileSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) ([]string, error) {
+	queries, err := dw.inner.PreviewAlterProfileSchema(ctx, columns, operations)
 	err = unavailableError(err)
 	return queries, err
 }

@@ -33,7 +33,7 @@ func TestParquetTestApacheFiles(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.PopulateUserSchema(false)
+	c.PopulateProfileSchema(false)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()

@@ -1,17 +1,17 @@
-interface UserEventContextApp {
+interface ProfileEventContextApp {
 	name?: string;
 	version?: string;
 	build?: string;
 	namespace?: string;
 }
 
-interface UserEventContextBrowser {
+interface ProfileEventContextBrowser {
 	name?: string;
 	other?: string;
 	version?: string;
 }
 
-interface UserEventContextCampaign {
+interface ProfileEventContextCampaign {
 	name?: string;
 	source?: string;
 	medium?: string;
@@ -19,7 +19,7 @@ interface UserEventContextCampaign {
 	content?: string;
 }
 
-interface UserEventContextDevice {
+interface ProfileEventContextDevice {
 	id?: string;
 	advertisingId?: string;
 	adTrackingEnabled?: boolean;
@@ -30,12 +30,12 @@ interface UserEventContextDevice {
 	token?: string;
 }
 
-interface UserEventContextLibrary {
+interface ProfileEventContextLibrary {
 	name?: string;
 	version?: string;
 }
 
-interface UserEventContextLocation {
+interface ProfileEventContextLocation {
 	city?: string;
 	country?: string;
 	latitude?: number;
@@ -43,20 +43,20 @@ interface UserEventContextLocation {
 	speed?: number;
 }
 
-interface UserEventContextNetwork {
+interface ProfileEventContextNetwork {
 	bluetooth?: boolean;
 	carrier?: string;
 	cellular?: boolean;
 	wifi?: boolean;
 }
 
-interface UserEventContextOS {
+interface ProfileEventContextOS {
 	name?: string;
 	other?: string;
 	version?: string;
 }
 
-interface UserEventContextPage {
+interface ProfileEventContextPage {
 	path?: string;
 	referrer?: string;
 	search?: string;
@@ -64,48 +64,48 @@ interface UserEventContextPage {
 	url?: string;
 }
 
-interface UserEventContextReferrer {
+interface ProfileEventContextReferrer {
 	id?: string;
 	type?: string;
 }
 
-interface UserEventContextScreen {
+interface ProfileEventContextScreen {
 	width?: number;
 	height?: number;
 	density?: number;
 }
 
-interface UserEventContextSession {
+interface ProfileEventContextSession {
 	sessionId?: number;
 	sessionStart?: boolean;
 }
 
-interface UserEventContext {
-	app?: UserEventContextApp;
-	browser?: UserEventContextBrowser;
-	campaign?: UserEventContextCampaign;
-	device?: UserEventContextDevice;
+interface ProfileEventContext {
+	app?: ProfileEventContextApp;
+	browser?: ProfileEventContextBrowser;
+	campaign?: ProfileEventContextCampaign;
+	device?: ProfileEventContextDevice;
 	ip?: string;
-	library?: UserEventContextLibrary;
+	library?: ProfileEventContextLibrary;
 	locale?: string;
-	location?: UserEventContextLocation;
-	network?: UserEventContextNetwork;
-	os?: UserEventContextOS;
-	page?: UserEventContextPage;
-	referrer?: UserEventContextReferrer;
-	screen?: UserEventContextScreen;
-	session?: UserEventContextSession;
+	location?: ProfileEventContextLocation;
+	network?: ProfileEventContextNetwork;
+	os?: ProfileEventContextOS;
+	page?: ProfileEventContextPage;
+	referrer?: ProfileEventContextReferrer;
+	screen?: ProfileEventContextScreen;
+	session?: ProfileEventContextSession;
 	timezone?: string;
 	userAgent?: string;
 }
 
-interface UserEvent {
+interface ProfileEvent {
 	id?: string;
-	muid?: string;
+	mpid?: string;
 	connectionId?: number;
 	anonymousId?: string;
 	category?: string;
-	context?: UserEventContext;
+	context?: ProfileEventContext;
 	event?: string;
 	groupId?: string;
 	messageId?: string;
@@ -121,9 +121,9 @@ interface UserEvent {
 	userId?: string;
 }
 
-type UserTraits = Record<string, any>;
+type ProfileAttributes = Record<string, any>;
 
-interface UserIdentity {
+interface Identity {
 	action: number;
 	connection: number;
 	id: string;
@@ -131,10 +131,10 @@ interface UserIdentity {
 	lastChangeTime: string;
 }
 
-interface User {
+interface Profile {
 	id: number;
-	events: UserEvent[];
-	traits: UserTraits;
+	events: ProfileEvent[];
+	attributes: ProfileAttributes;
 }
 
-export type { User, UserEvent, UserTraits, UserIdentity };
+export type { Profile, ProfileEvent, ProfileAttributes, Identity };

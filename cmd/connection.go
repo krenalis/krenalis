@@ -247,7 +247,7 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 	return map[string]any{"records": records, "schema": schema, "issues": issues}, nil
 }
 
-// Identities returns the user identities of a connection.
+// Identities returns the identities of a connection.
 func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.id(r)
 	if err != nil {

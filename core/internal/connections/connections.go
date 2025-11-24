@@ -116,7 +116,7 @@ type EventType = connectors.EventType
 // validation of the record, the Err field contains the specific error.
 type Record struct {
 	ID             string         // Identifier.
-	Properties     map[string]any // Properties.
+	Attributes     map[string]any // Attributes.
 	LastChangeTime time.Time      // Last modification time, in UTC.
 
 	// Associations contains the identifiers of the user's groups or the group's users.
@@ -142,13 +142,13 @@ type Writer interface {
 
 	// Write writes a record. Typically, Write returns immediately, deferring the
 	// actual write operation to a later time. record must contain at least one
-	// property.
+	// attribute.
 	//
 	// If it returns false, no further Write operations can be performed, and a call
 	// to Close will return the occurred error.
 	//
 	// It panics if called on a closed writer.
-	Write(ctx context.Context, id string, properties map[string]any) bool
+	Write(ctx context.Context, id string, attributes map[string]any) bool
 }
 
 // Connections provides access to API, database, file, file storage, SDK, and

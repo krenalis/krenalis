@@ -261,19 +261,19 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 	// Read all workspaces.
 	state.workspaces = map[int]*Workspace{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_name,"+
-		" warehouse_mode, warehouse_settings, warehouse_mcp_settings, alter_user_schema_id,"+
-		" alter_user_schema_schema, alter_user_schema_primary_sources, alter_user_schema_operations,"+
-		" alter_user_schema_start_time, alter_user_schema_end_time,"+
-		" alter_user_schema_error, user_schema, resolve_identities_on_batch_import,"+
-		" identifiers, ir_id, ir_start_time, ir_end_time, ui_user_profile_image,"+
-		" ui_user_profile_first_name, ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
+		" warehouse_mode, warehouse_settings, warehouse_mcp_settings, alter_profile_schema_id,"+
+		" alter_profile_schema_schema, alter_profile_schema_primary_sources, alter_profile_schema_operations,"+
+		" alter_profile_schema_start_time, alter_profile_schema_end_time,"+
+		" alter_profile_schema_error, profile_schema, resolve_identities_on_batch_import,"+
+		" identifiers, ir_id, ir_start_time, ir_end_time, ui_profile_image,"+
+		" ui_profile_first_name, ui_profile_last_name, ui_profile_extra, actions_to_purge "+
 		"FROM workspaces",
 		func(rows *db.Rows) error {
 			var organizationID uuid.UUID
 			var warehouseName string
 			var warehouseMode WarehouseMode
 			var userSchema []byte
-			var alterUserSchemaSchema []byte
+			var alterProfileSchemaSchema []byte
 			var warehouseSettings, warehouseMCPSettings []byte
 			for rows.Next() {
 				ws := &Workspace{
@@ -283,14 +283,14 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					accounts:    map[int]*Account{},
 				}
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
-					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterUserSchema.ID,
-					&alterUserSchemaSchema, &ws.AlterUserSchema.PrimarySources,
-					&ws.AlterUserSchema.Operations, &ws.AlterUserSchema.StartTime,
-					&ws.AlterUserSchema.EndTime, &ws.AlterUserSchema.Err, &userSchema,
+					&warehouseMode, &warehouseSettings, &warehouseMCPSettings, &ws.AlterProfileSchema.ID,
+					&alterProfileSchemaSchema, &ws.AlterProfileSchema.PrimarySources,
+					&ws.AlterProfileSchema.Operations, &ws.AlterProfileSchema.StartTime,
+					&ws.AlterProfileSchema.EndTime, &ws.AlterProfileSchema.Err, &userSchema,
 					&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers, &ws.IR.ID,
-					&ws.IR.StartTime, &ws.IR.EndTime, &ws.UIPreferences.UserProfile.Image,
-					&ws.UIPreferences.UserProfile.FirstName, &ws.UIPreferences.UserProfile.LastName,
-					&ws.UIPreferences.UserProfile.Extra, &ws.actionsToPurge); err != nil {
+					&ws.IR.StartTime, &ws.IR.EndTime, &ws.UIPreferences.Profile.Image,
+					&ws.UIPreferences.Profile.FirstName, &ws.UIPreferences.Profile.LastName,
+					&ws.UIPreferences.Profile.Extra, &ws.actionsToPurge); err != nil {
 					return err
 				}
 				ws.organization = state.organizations[organizationID]
@@ -305,15 +305,15 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 				} else {
 					ws.Warehouse.MCPSettings = warehouseMCPSettings
 				}
-				err = json.Unmarshal(userSchema, &ws.UserSchema)
+				err = json.Unmarshal(userSchema, &ws.ProfileSchema)
 				if err != nil {
 					return err
 				}
-				err = json.Unmarshal(alterUserSchemaSchema, &ws.AlterUserSchema.Schema)
+				err = json.Unmarshal(alterProfileSchemaSchema, &ws.AlterProfileSchema.Schema)
 				if err != nil {
 					return err
 				}
-				ws.UserPrimarySources = map[string]int{}
+				ws.PrimarySources = map[string]int{}
 				ws.organization.workspaces[ws.ID] = ws
 				state.workspaces[ws.ID] = ws
 			}
@@ -551,7 +551,7 @@ func (state *State) load(oauthCredentials map[string]*OAuthCredentials) error {
 					return err
 				}
 				c := state.connections[source]
-				c.workspace.UserPrimarySources[path] = source
+				c.workspace.PrimarySources[path] = source
 			}
 			return nil
 		})

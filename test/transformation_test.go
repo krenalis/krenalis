@@ -65,23 +65,23 @@ def transform(user: dict) -> dict:
 
 	c.RunIdentityResolution()
 
-	// Retrieve the users.
+	// Retrieve the profiles.
 	const expectedTotal = 10
-	users, _, total := c.Users([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotal)
+	profiles, _, total := c.Profiles([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotal)
 
-	// Validate the users total.
+	// Validate the profiles total.
 	if total != expectedTotal {
 		t.Fatalf("expected \"total\" to be %d, got %d", expectedTotal, total)
 	}
 
-	// Validate the total of the returned users.
-	usersLen := len(users)
-	if expectedTotal != usersLen {
-		t.Fatalf("expected %d users, got %d", expectedTotal, usersLen)
+	// Validate the total of the returned profiles.
+	profilesLen := len(profiles)
+	if expectedTotal != profilesLen {
+		t.Fatalf("expected %d profiles, got %d", expectedTotal, profilesLen)
 	}
 
-	// Validate the users.
-	expectedProperties := []map[string]any{
+	// Validate the profiles.
+	expectedProfiles := []map[string]any{
 		{"email": "abenois2@example.com", "first_name": "Ariela", "gender": "female"},
 		{"email": "bdroghan5@example.com", "first_name": "Bryon", "gender": "female"},
 		{"email": "ctroy7@example.com", "first_name": "Codie", "gender": "female"},
@@ -93,13 +93,13 @@ def transform(user: dict) -> dict:
 		{"email": "kdericut4@example.com", "first_name": "Kingsly", "gender": "female"},
 		{"email": "kfellon6@example.com", "first_name": "Katine", "gender": "female"},
 	}
-	if len(expectedProperties) != len(users) {
-		t.Fatalf("expected %d users, got %d", len(expectedProperties), len(users))
+	if len(expectedProfiles) != len(profiles) {
+		t.Fatalf("expected %d profiles, got %d", len(expectedProfiles), len(profiles))
 	}
-	for i, user := range users {
-		expected := expectedProperties[i]
-		if !reflect.DeepEqual(expected, user.Traits) {
-			t.Fatalf("expected %#v, got %#v", expected, user)
+	for i, profile := range profiles {
+		expected := expectedProfiles[i]
+		if !reflect.DeepEqual(expected, profile.Attributes) {
+			t.Fatalf("expected %#v, got %#v", expected, profile)
 		}
 	}
 

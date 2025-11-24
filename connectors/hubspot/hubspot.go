@@ -325,7 +325,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastC
 	for i, result := range response.Results {
 		records[i] = connectors.Record{
 			ID:         result.ID,
-			Properties: map[string]any{},
+			Attributes: map[string]any{},
 		}
 		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
 		if err != nil {
@@ -341,7 +341,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, lastC
 					pp[p.Name] = v
 				}
 			}
-			records[i].Properties[group.Name] = pp
+			records[i].Attributes[group.Name] = pp
 		}
 		records[i].LastChangeTime = updatedAt.UTC()
 	}
@@ -381,7 +381,7 @@ func (hs *HubSpot) Upsert(ctx context.Context, target connectors.Targets, record
 			_ = bb.WriteByte(',')
 		}
 		bb.WriteString(`"properties":{`)
-		for _, properties := range record.Properties {
+		for _, properties := range record.Attributes {
 			for name, value := range properties.(map[string]any) {
 				_ = bb.EncodeKeyValue(name, value)
 			}

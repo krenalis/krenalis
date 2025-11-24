@@ -85,21 +85,21 @@ func Test_Records(t *testing.T) {
 	}
 	defer wh.Close()
 
-	usersTable := warehouses.Table{
-		Name: "_users_0",
+	profilesTable := warehouses.Table{
+		Name: "_profiles_0",
 		Columns: []warehouses.Column{
-			{Name: "__muid__", Type: types.UUID()},
+			{Name: "__mpid__", Type: types.UUID()},
 			{Name: "__last_change_time__", Type: types.DateTime()},
 			{Name: "id", Type: types.Text()},
 			{Name: "other_id", Type: types.Text()},
 			{Name: "name", Type: types.Text()},
 			{Name: "age", Type: types.Int(8)},
 		},
-		Keys: []string{"__muid__"},
+		Keys: []string{"__mpid__"},
 	}
 
 	destinationsUsersTable := warehouses.Table{
-		Name: "_destinations_users",
+		Name: "_destinations_profiles",
 		Columns: []warehouses.Column{
 			{Name: "__action__", Type: types.Int(32)},
 			{Name: "__external_id__", Type: types.Text()},
@@ -108,7 +108,7 @@ func Test_Records(t *testing.T) {
 		Keys: []string{"__action__", "__external_id__"},
 	}
 
-	err = wh.Initialize(ctx, usersTable.Columns[2:])
+	err = wh.Initialize(ctx, profilesTable.Columns[2:])
 	if err != nil {
 		t.Fatalf("cannot initialize the warehouse: %s", err)
 	}
@@ -124,9 +124,9 @@ func Test_Records(t *testing.T) {
 		{"ce8f366d-7144-4ec0-96e7-d0dc35597c02", now, "7", "7", "James Williams", 77},
 		{"a415976f-279e-4653-ab6a-64ea7f74e174", now, "7", "7", "Daniel Brown", 12},
 	}
-	err = wh.Merge(ctx, usersTable, initUsers, nil)
+	err = wh.Merge(ctx, profilesTable, initUsers, nil)
 	if err != nil {
-		t.Fatalf("cannot merge users: %s", err)
+		t.Fatalf("cannot merge profiles: %s", err)
 	}
 
 	const actionID = 623
@@ -145,7 +145,7 @@ func Test_Records(t *testing.T) {
 	}
 	err = wh.Merge(ctx, destinationsUsersTable, initDestinations, nil)
 	if err != nil {
-		t.Fatalf("cannot merge users: %s", err)
+		t.Fatalf("cannot merge profiles: %s", err)
 	}
 
 	tests := []struct {
@@ -157,72 +157,72 @@ func Test_Records(t *testing.T) {
 			mode:               state.CreateOnly,
 			updateOnDuplicates: false,
 			expected: []Record{
-				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", Properties: map[string]any{"age": 25, "id": "6", "other": map[string]any{"id": "6"}, "name": "Emily Johnson"}},
-				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Properties: map[string]any{"age": 12, "id": "7", "other": map[string]any{"id": "7"}, "name": "Daniel Brown"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Properties: map[string]any{"age": 77, "id": "7", "other": map[string]any{"id": "7"}, "name": "James Williams"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
+				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", Attributes: map[string]any{"age": 25, "id": "6", "other": map[string]any{"id": "6"}, "name": "Emily Johnson"}},
+				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Attributes: map[string]any{"age": 12, "id": "7", "other": map[string]any{"id": "7"}, "name": "Daniel Brown"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Attributes: map[string]any{"age": 77, "id": "7", "other": map[string]any{"id": "7"}, "name": "James Williams"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
 			},
 		},
 		{
 			mode:               state.CreateOnly,
 			updateOnDuplicates: true,
 			expected: []Record{
-				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", Properties: map[string]any{"age": 25, "id": "6", "other": map[string]any{"id": "6"}, "name": "Emily Johnson"}},
-				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Properties: map[string]any{"age": 12, "id": "7", "other": map[string]any{"id": "7"}, "name": "Daniel Brown"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Properties: map[string]any{"age": 77, "id": "7", "other": map[string]any{"id": "7"}, "name": "James Williams"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
+				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", Attributes: map[string]any{"age": 25, "id": "6", "other": map[string]any{"id": "6"}, "name": "Emily Johnson"}},
+				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Attributes: map[string]any{"age": 12, "id": "7", "other": map[string]any{"id": "7"}, "name": "Daniel Brown"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Attributes: map[string]any{"age": 77, "id": "7", "other": map[string]any{"id": "7"}, "name": "James Williams"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
 			},
 		},
 		{
 			mode:               state.UpdateOnly,
 			updateOnDuplicates: false,
 			expected: []Record{
-				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "other": map[string]any{"id": "1"}, "name": "Jake Thompson"}},
-				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "other": map[string]any{"id": "2"}, "name": "Sophia Harris"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Properties: map[string]any{"age": 58, "id": "2", "other": map[string]any{"id": "2"}, "name": "Emily Davis"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Properties: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}, Err: errors.New("duplicates found for the matching property id in the app users")},
+				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Attributes: map[string]any{"age": 43, "id": "1", "other": map[string]any{"id": "1"}, "name": "Jake Thompson"}},
+				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Attributes: map[string]any{"age": 19, "id": "2", "other": map[string]any{"id": "2"}, "name": "Sophia Harris"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Attributes: map[string]any{"age": 58, "id": "2", "other": map[string]any{"id": "2"}, "name": "Emily Davis"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Attributes: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}, Err: errors.New("duplicates found for the matching property id in the app users")},
 			},
 		},
 		{
 			mode:               state.UpdateOnly,
 			updateOnDuplicates: true,
 			expected: []Record{
-				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "other": map[string]any{"id": "1"}, "name": "Jake Thompson"}},
-				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "other": map[string]any{"id": "2"}, "name": "Sophia Harris"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Properties: map[string]any{"age": 58, "id": "2", "other": map[string]any{"id": "2"}, "name": "Emily Davis"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Properties: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}},
-				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex5", Properties: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}},
+				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Attributes: map[string]any{"age": 43, "id": "1", "other": map[string]any{"id": "1"}, "name": "Jake Thompson"}},
+				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Attributes: map[string]any{"age": 19, "id": "2", "other": map[string]any{"id": "2"}, "name": "Sophia Harris"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Attributes: map[string]any{"age": 58, "id": "2", "other": map[string]any{"id": "2"}, "name": "Emily Davis"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Attributes: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}},
+				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex5", Attributes: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}},
 			},
 		},
 		{
 			mode:               state.CreateOrUpdate,
 			updateOnDuplicates: false,
 			expected: []Record{
-				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "other": map[string]any{"id": "1"}, "name": "Jake Thompson"}},
-				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "other": map[string]any{"id": "2"}, "name": "Sophia Harris"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Properties: map[string]any{"age": 58, "id": "2", "other": map[string]any{"id": "2"}, "name": "Emily Davis"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Properties: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}, Err: errors.New("duplicates found for the matching property id in the app users")},
-				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", ExternalID: "", Properties: map[string]any{"age": 25, "id": "6", "other": map[string]any{"id": "6"}, "name": "Emily Johnson"}},
-				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Properties: map[string]any{"age": 12, "id": "7", "other": map[string]any{"id": "7"}, "name": "Daniel Brown"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Properties: map[string]any{"age": 77, "id": "7", "other": map[string]any{"id": "7"}, "name": "James Williams"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
+				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Attributes: map[string]any{"age": 43, "id": "1", "other": map[string]any{"id": "1"}, "name": "Jake Thompson"}},
+				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Attributes: map[string]any{"age": 19, "id": "2", "other": map[string]any{"id": "2"}, "name": "Sophia Harris"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Attributes: map[string]any{"age": 58, "id": "2", "other": map[string]any{"id": "2"}, "name": "Emily Davis"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Attributes: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}, Err: errors.New("duplicates found for the matching property id in the app users")},
+				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", ExternalID: "", Attributes: map[string]any{"age": 25, "id": "6", "other": map[string]any{"id": "6"}, "name": "Emily Johnson"}},
+				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Attributes: map[string]any{"age": 12, "id": "7", "other": map[string]any{"id": "7"}, "name": "Daniel Brown"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Attributes: map[string]any{"age": 77, "id": "7", "other": map[string]any{"id": "7"}, "name": "James Williams"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
 			},
 		},
 		{
 			mode:               state.CreateOrUpdate,
 			updateOnDuplicates: true,
 			expected: []Record{
-				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "other": map[string]any{"id": "1"}, "name": "Jake Thompson"}},
-				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "other": map[string]any{"id": "2"}, "name": "Sophia Harris"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Properties: map[string]any{"age": 58, "id": "2", "other": map[string]any{"id": "2"}, "name": "Emily Davis"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Properties: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}},
-				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex5", Properties: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}},
-				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", ExternalID: "", Properties: map[string]any{"age": 25, "id": "6", "other": map[string]any{"id": "6"}, "name": "Emily Johnson"}},
-				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Properties: map[string]any{"age": 12, "id": "7", "other": map[string]any{"id": "7"}, "name": "Daniel Brown"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
-				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Properties: map[string]any{"age": 77, "id": "7", "other": map[string]any{"id": "7"}, "name": "James Williams"}, Err: errors.New("user has the same «id» (the matching property) as other users selected for export")},
+				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Attributes: map[string]any{"age": 43, "id": "1", "other": map[string]any{"id": "1"}, "name": "Jake Thompson"}},
+				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Attributes: map[string]any{"age": 19, "id": "2", "other": map[string]any{"id": "2"}, "name": "Sophia Harris"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "943a0a39-fd0b-4f7b-a113-59046fb8a511", ExternalID: "Ex2", Attributes: map[string]any{"age": 58, "id": "2", "other": map[string]any{"id": "2"}, "name": "Emily Davis"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex4", Attributes: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}},
+				{ID: "2a3654ca-a387-49c3-8eb8-8420ab8a7532", ExternalID: "Ex5", Attributes: map[string]any{"age": 31, "id": "3", "other": map[string]any{"id": "3"}, "name": "Michael Carter"}},
+				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", ExternalID: "", Attributes: map[string]any{"age": 25, "id": "6", "other": map[string]any{"id": "6"}, "name": "Emily Johnson"}},
+				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Attributes: map[string]any{"age": 12, "id": "7", "other": map[string]any{"id": "7"}, "name": "Daniel Brown"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
+				{ID: "ce8f366d-7144-4ec0-96e7-d0dc35597c02", Attributes: map[string]any{"age": 77, "id": "7", "other": map[string]any{"id": "7"}, "name": "James Williams"}, Err: errors.New("profile has the same «id» (the matching property) as other profiles selected for export")},
 			},
 		},
 	}
 
-	userColumnByProperty := map[string]warehouses.Column{
-		"__muid__": {Name: "__muid__", Type: types.UUID()},
+	profileColumnByProperty := map[string]warehouses.Column{
+		"__mpid__": {Name: "__mpid__", Type: types.UUID()},
 		"id":       {Name: "id", Type: types.Text()},
 		"other.id": {Name: "other_id", Type: types.Text()},
 		"name":     {Name: "name", Type: types.Text()},
@@ -235,7 +235,7 @@ func Test_Records(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			query := Query{
-				table:      "users",
+				table:      "profiles",
 				Properties: []string{"id", "other.id", "name", "age"},
 			}
 
@@ -248,14 +248,14 @@ func Test_Records(t *testing.T) {
 					UpdateOnDuplicates: test.updateOnDuplicates,
 				}
 
-				r, err := records(ctx, wh, query, "__muid__", userColumnByProperty, true, matching)
+				r, err := records(ctx, wh, query, "__mpid__", profileColumnByProperty, true, matching)
 				if err != nil {
 					t.Fatalf("cannot read records: %s", err)
 				}
 
 				var got []Record
-				for user := range r.All(ctx) {
-					got = append(got, user)
+				for profile := range r.All(ctx) {
+					got = append(got, profile)
 				}
 				if r.err != nil {
 					t.Fatalf("cannot scan records: %s", err)
@@ -287,7 +287,7 @@ func Test_Records(t *testing.T) {
 					if e.Err != nil && g.Err != nil && e.Err.Error() != g.Err.Error() {
 						t.Fatalf("record %d, inProperty %q: expected error %q, got error %q", i, inProperty, e.Err, g.Err)
 					}
-					t.Fatalf("record %d, inProperty %q: expected properties %#v, got %#v", i, inProperty, e.Properties, g.Properties)
+					t.Fatalf("record %d, inProperty %q: expected attributes %#v, got %#v", i, inProperty, e.Attributes, g.Attributes)
 				}
 
 			}

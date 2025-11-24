@@ -131,7 +131,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 		// In case the action has a filter, check if it applies to the user.
 		if connector.Type != state.Database {
-			if !filters.Applies(action.Filter, user.Properties) {
+			if !filters.Applies(action.Filter, user.Attributes) {
 				this.core.metrics.FilterFailed(action.ID, 1)
 				goto Next
 			}
@@ -152,7 +152,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			// Transform the users.
 			transformationRecords = transformationRecords[0:len(users)]
 			for i, user := range users {
-				transformationRecords[i].Properties = user.Properties
+				transformationRecords[i].Attributes = user.Attributes
 			}
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
@@ -176,12 +176,12 @@ func (this *Action) importUsers(ctx context.Context) error {
 					iw.Keep(user.ID)
 					continue
 				}
-				user.Properties = record.Properties
+				user.Attributes = record.Attributes
 				this.core.metrics.TransformationPassed(action.ID, 1)
 				this.core.metrics.OutputValidationPassed(action.ID, 1)
 				iw.Write(datastore.Identity{
 					ID:             user.ID,
-					Properties:     user.Properties,
+					Attributes:     user.Attributes,
 					LastChangeTime: user.LastChangeTime,
 				})
 			}

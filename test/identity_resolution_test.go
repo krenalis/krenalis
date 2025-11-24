@@ -95,23 +95,23 @@ func TestIdentityResolution(t *testing.T) {
 		FormatSettings: meergotester.SettingsProperties(properties),
 	})
 
-	// Define a function "expectUsers" which checks if the expected user
-	// properties match with the users on the data warehouse.
-	expectUsers := func(expectedUsers []map[string]any) {
+	// Define a function "expectProfiles" which checks if the expected profile
+	// properties match with the profiles on the data warehouse.
+	expectProfiles := func(expectedProfiles []map[string]any) {
 
-		// Retrieve the users from the APIs.
-		users, _, _ := c.Users([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", false, 0, 1000)
+		// Retrieve the profiles from the APIs.
+		profiles, _, _ := c.Profiles([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", false, 0, 1000)
 
 		// Check if the users are equal to the expected or not.
-		if len(expectedUsers) != len(users) {
-			t.Fatalf("\nexpected: %d users\ngot %d", len(expectedUsers), len(users))
+		if len(expectedProfiles) != len(profiles) {
+			t.Fatalf("\nexpected: %d users\ngot %d", len(expectedProfiles), len(profiles))
 		}
-		for i, user := range users {
-			if !reflect.DeepEqual(expectedUsers[i], user.Traits) {
-				t.Fatalf("\nexpected at index %d: %#v\ngot:                %s%#v", i, expectedUsers[i], strings.Repeat(" ", len(strconv.Itoa(i))), user.Traits)
+		for i, user := range profiles {
+			if !reflect.DeepEqual(expectedProfiles[i], user.Attributes) {
+				t.Fatalf("\nexpected at index %d: %#v\ngot:                %s%#v", i, expectedProfiles[i], strings.Repeat(" ", len(strconv.Itoa(i))), user.Attributes)
 			}
 		}
-		t.Logf("users: %v", users)
+		t.Logf("users: %v", profiles)
 	}
 
 	// Define a function "importUser" which imports the user into the data
@@ -154,32 +154,32 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Add the tests on the identity resolution here.
 
-	expectUsers([]map[string]any{})
+	expectProfiles([]map[string]any{})
 
-	expectUsers([]map[string]any{})
+	expectProfiles([]map[string]any{})
 	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "", "phoneNumbers": []any{}})
-	expectUsers([]map[string]any{
+	expectProfiles([]map[string]any{
 		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{}},
 	})
 
 	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "", "phoneNumbers": []any{"333"}})
-	expectUsers([]map[string]any{
+	expectProfiles([]map[string]any{
 		{"dummy_id": "AAA", "email": "", "phone_numbers": []any{"333"}},
 	})
 
 	importUser(actionA, map[string]any{"dummyId": "BBB", "email": "", "phoneNumbers": []any{"333"}})
-	expectUsers([]map[string]any{
+	expectProfiles([]map[string]any{
 		{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}},
 	})
 
 	importUser(actionB, map[string]any{"dummyId": "AAA", "email": "a@b", "phoneNumbers": []any{"333"}})
-	expectUsers([]map[string]any{
+	expectProfiles([]map[string]any{
 		{"dummy_id": "AAA", "email": "a@b", "phone_numbers": []any{"333"}},
 		{"dummy_id": "BBB", "email": "", "phone_numbers": []any{"333"}},
 	})
 
 	importUser(actionA, map[string]any{"dummyId": "AAA", "email": "a@b", "phoneNumbers": []any{"444"}})
-	expectUsers([]map[string]any{
+	expectProfiles([]map[string]any{
 		{"dummy_id": "AAA", "email": "a@b", "phone_numbers": []any{"333", "444"}},
 	})
 

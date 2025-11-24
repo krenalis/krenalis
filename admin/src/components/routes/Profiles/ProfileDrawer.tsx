@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
-import { useUserDrawer } from './useUserDrawer';
-import { UserTab } from './Users.types';
+import { useProfileDrawer } from './useProfileDrawer';
+import { ProfileTab } from './Profiles.types';
 import AppContext from '../../../context/AppContext';
-import UsersContext from '../../../context/UsersContext';
+import ProfilesContext from '../../../context/ProfilesContext';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
@@ -15,21 +15,21 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
-import { USERS_EXPANDED_TRAITS_KEY, USERS_TAB_KEY } from '../../../constants/storage';
+import { PROFILES_EXPANDED_ATTRIBUTES_KEY, PROFILES_TAB_KEY } from '../../../constants/storage';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
-interface UserDrawerProps {
-	selectedUser: string;
-	setSelectedUser: React.Dispatch<React.SetStateAction<string>>;
+interface ProfileDrawerProps {
+	selectedProfile: string;
+	setSelectedProfile: React.Dispatch<React.SetStateAction<string>>;
 }
 
-const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
-	const [selectedTab, setSelectedTab] = useState<UserTab>();
+const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerProps) => {
+	const [selectedTab, setSelectedTab] = useState<ProfileTab>();
 
 	const { connections, workspaces, selectedWorkspace } = useContext(AppContext);
-	const { userIDList } = useContext(UsersContext);
-	const { isLoading, traits, events, identities } = useUserDrawer(selectedUser, selectedTab);
+	const { profileIDList } = useContext(ProfilesContext);
+	const { isLoading, attributes, events, identities } = useProfileDrawer(selectedProfile, selectedTab);
 
 	const workspace = useMemo(
 		() => workspaces.find((w) => w.id === selectedWorkspace),
@@ -39,50 +39,50 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	useEffect(() => {
 		let tab: string;
 		try {
-			tab = localStorage.getItem(USERS_TAB_KEY);
+			tab = localStorage.getItem(PROFILES_TAB_KEY);
 		} catch (err) {
-			setSelectedTab('traits');
+			setSelectedTab('attributes');
 			return;
 		}
-		if (tab === 'traits' || tab === 'events' || tab === 'identities') {
+		if (tab === 'attributes' || tab === 'events' || tab === 'identities') {
 			setSelectedTab(tab);
 			return;
 		}
-		setSelectedTab('traits');
-	}, [selectedUser]);
+		setSelectedTab('attributes');
+	}, [selectedProfile]);
 
 	useEffect(() => {
 		try {
-			localStorage.setItem(USERS_TAB_KEY, selectedTab);
+			localStorage.setItem(PROFILES_TAB_KEY, selectedTab);
 		} catch (err) {
-			console.error(`cannot write the user tab preference on local storage: ${err}`);
+			console.error(`cannot write the profile tab preference on local storage: ${err}`);
 			return;
 		}
 	}, [selectedTab]);
 
 	const onNavigate = async (direction: 'previous' | 'next') => {
-		const i = userIDList.findIndex((id) => id === selectedUser);
-		let newUserID: string;
+		const i = profileIDList.findIndex((id) => id === selectedProfile);
+		let newProfileID: string;
 		if (direction === 'previous') {
 			if (i - 1 < 0) {
-				// if the index is overflowing the start of the users list,
-				// select the last user.
-				newUserID = userIDList[userIDList.length - 1];
+				// if the index is overflowing the start of the profiles list,
+				// select the last profile.
+				newProfileID = profileIDList[profileIDList.length - 1];
 			} else {
-				// select the previous user.
-				newUserID = userIDList[i - 1];
+				// select the previous profile.
+				newProfileID = profileIDList[i - 1];
 			}
 		} else if (direction === 'next') {
-			if (i + 1 >= userIDList.length) {
-				// if the index is overflowing the end of the users list, select
-				// the first user.
-				newUserID = userIDList[0];
+			if (i + 1 >= profileIDList.length) {
+				// if the index is overflowing the end of the profiles list, select
+				// the first profile.
+				newProfileID = profileIDList[0];
 			} else {
-				// select the next user.
-				newUserID = userIDList[i + 1];
+				// select the next profile.
+				newProfileID = profileIDList[i + 1];
 			}
 		}
-		setSelectedUser(newUserID);
+		setSelectedProfile(newProfileID);
 	};
 
 	const onSelectTab = (e: any) => {
@@ -91,25 +91,25 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 
 	const onClose = (e: any) => {
 		if (
-			e.target.classList.contains('drawer-trait__value-copy') ||
-			e.target.classList.contains('user-drawer__action')
+			e.target.classList.contains('drawer-attribute__value-copy') ||
+			e.target.classList.contains('profile-drawer__action')
 		) {
 			e.stopPropagation();
 			return;
 		}
-		setSelectedUser('');
+		setSelectedProfile('');
 	};
 
-	let userImage: string | number | undefined;
-	let userFirstName: string | number | undefined;
-	let userLastName: string | number | undefined;
-	let userExtra: string | number | undefined;
-	if (traits && Object.keys(traits).length > 0) {
+	let profileImage: string | number | undefined;
+	let profileFirstName: string | number | undefined;
+	let profileLastName: string | number | undefined;
+	let profileExtra: string | number | undefined;
+	if (attributes && Object.keys(attributes).length > 0) {
 		function getValueFromPath(path: string): string | number | undefined {
 			if (path == '') {
 				return undefined;
 			}
-			let v: any = traits;
+			let v: any = attributes;
 			for (const part of path.split('.')) {
 				if (typeof v === 'object' && v !== null && part in v) {
 					v = v[part];
@@ -121,10 +121,10 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 				return v;
 			}
 		}
-		userImage = getValueFromPath(workspace.uiPreferences.userProfile.image);
-		userFirstName = getValueFromPath(workspace.uiPreferences.userProfile.firstName);
-		userLastName = getValueFromPath(workspace.uiPreferences.userProfile.lastName);
-		userExtra = getValueFromPath(workspace.uiPreferences.userProfile.extra);
+		profileImage = getValueFromPath(workspace.uiPreferences.profile.image);
+		profileFirstName = getValueFromPath(workspace.uiPreferences.profile.firstName);
+		profileLastName = getValueFromPath(workspace.uiPreferences.profile.lastName);
+		profileExtra = getValueFromPath(workspace.uiPreferences.profile.extra);
 	}
 
 	const spinner = (
@@ -140,33 +140,36 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 
 	return (
 		<SlDrawer
-			className={`user-drawer${isLoading ? ' user-drawer--loading' : ''}`}
-			open={selectedUser !== ''}
+			className={`profile-drawer${isLoading ? ' profile-drawer--loading' : ''}`}
+			open={selectedProfile !== ''}
 			contained
 			style={{ '--size': '600px' } as React.CSSProperties}
 			onSlHide={onClose}
 		>
-			<div className='user-drawer__navigation'>
+			<div className='profile-drawer__navigation'>
 				<SlIconButton name='chevron-left' onClick={() => onNavigate('previous')} />
 				<SlIconButton name='chevron-right' onClick={() => onNavigate('next')} />
 			</div>
-			<div className='user-drawer__top-section'>
-				<SlAvatar className='user-drawer__image' image={String(userImage) || ''} />
-				<div className='user-drawer__user-properties'>
-					<span className='user-drawer__first-name'>{userFirstName || ''}</span>{' '}
-					<span className='user-drawer__last-name'>{userLastName || ''}</span>
-					<div className='user-drawer__information'>{userExtra || ''}</div>
-					{userImage == null && userFirstName == null && userLastName == null && userExtra == null && (
-						<div className='user-drawer__customize'>
-							You can customize the properties to display in the{' '}
-							<Link path='settings/general'>
-								<span className='user-drawer__customize-link'>settings</span>
-							</Link>
-						</div>
-					)}
-					<span className='user-drawer__muid'>
+			<div className='profile-drawer__top-section'>
+				<SlAvatar className='profile-drawer__image' image={String(profileImage) || ''} />
+				<div className='profile-drawer__profile-properties'>
+					<span className='profile-drawer__first-name'>{profileFirstName || ''}</span>{' '}
+					<span className='profile-drawer__last-name'>{profileLastName || ''}</span>
+					<div className='profile-drawer__information'>{profileExtra || ''}</div>
+					{profileImage == null &&
+						profileFirstName == null &&
+						profileLastName == null &&
+						profileExtra == null && (
+							<div className='profile-drawer__customize'>
+								You can customize the properties to display in the{' '}
+								<Link path='settings/general'>
+									<span className='profile-drawer__customize-link'>settings</span>
+								</Link>
+							</div>
+						)}
+					<span className='profile-drawer__mpid'>
 						<SlTooltip
-							content='Meergo User ID'
+							content='Meergo profile ID'
 							onSlHide={(e) => {
 								// Prevent the event from bubbling up and
 								// causing the drawer to close.
@@ -175,13 +178,13 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 						>
 							<SlIcon name='info-circle-fill' />
 						</SlTooltip>
-						MUID: <span className='user-drawer__muid-value'>{selectedUser}</span>
+						MPID: <span className='profile-drawer__mpid-value'>{selectedProfile}</span>
 					</span>
 				</div>
 			</div>
 			<SlTabGroup onSlTabShow={onSelectTab}>
-				<SlTab slot='nav' panel='traits' active={selectedTab === 'traits'}>
-					Traits
+				<SlTab slot='nav' panel='attributes' active={selectedTab === 'attributes'}>
+					Attributes
 				</SlTab>
 				<SlTab slot='nav' panel='events' active={selectedTab === 'events'}>
 					Events
@@ -189,28 +192,35 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 				<SlTab slot='nav' panel='identities' active={selectedTab === 'identities'}>
 					Identities
 				</SlTab>
-				<SlTabPanel name='traits'>
-					<div className='user-drawer__traits'>
+				<SlTabPanel name='attributes'>
+					<div className='profile-drawer__attributes'>
 						{isLoading ? (
 							spinner
-						) : traits && Object.keys(traits).length > 0 ? (
-							Object.entries(traits).map(([name, value]) => {
+						) : attributes && Object.keys(attributes).length > 0 ? (
+							Object.entries(attributes).map(([name, value]) => {
 								if (typeof value === 'object') {
-									return <DrawerNestedTraits name={name} value={value} indentation={1} />;
+									return <DrawerNestedAttributes name={name} value={value} indentation={1} />;
 								} else {
 									return (
-										<DrawerTrait name={name} value={value} isParent={false} isIndented={false} />
+										<DrawerAttribute
+											name={name}
+											value={value}
+											isParent={false}
+											isIndented={false}
+										/>
 									);
 								}
 							})
 						) : (
-							<div className='user-drawer__no-traits'>No traits associated to this user</div>
+							<div className='profile-drawer__no-attributes'>
+								No attributes associated to this profile
+							</div>
 						)}
 					</div>
 				</SlTabPanel>
 				<SlTabPanel name='events'>
 					<div
-						className={`user-drawer__events${selectedTab === 'events' ? ' user-drawer__events--selected' : ''}`}
+						className={`profile-drawer__events${selectedTab === 'events' ? ' profile-drawer__events--selected' : ''}`}
 					>
 						{isLoading ? (
 							spinner
@@ -219,27 +229,27 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 								const source = connections.find((c) => c.id === event.connectionId);
 								const logo = <LittleLogo code={source?.connector.code} path={CONNECTORS_ASSETS_PATH} />;
 								return (
-									<div className='user-drawer__event' key={event.sentAt}>
-										<div className='user-drawer__event-head'>
+									<div className='profile-drawer__event' key={event.sentAt}>
+										<div className='profile-drawer__event-head'>
 											<Link path={`connections/${source.id}/actions`}>
-												<div className='user-drawer__event-logo'>{logo}</div>
+												<div className='profile-drawer__event-logo'>{logo}</div>
 											</Link>
-											<div className='user-drawer__event-type'>{event.type}</div>
+											<div className='profile-drawer__event-type'>{event.type}</div>
 										</div>
-										<div className='user-drawer__event-sent-at'>
+										<div className='profile-drawer__event-sent-at'>
 											{toJSDate(event.sentAt).toLocaleString()}
 										</div>
 									</div>
 								);
 							})
 						) : (
-							<div className='user-drawer__no-events'>No events associated to this user</div>
+							<div className='profile-drawer__no-events'>No events associated to this profile</div>
 						)}
 					</div>
 				</SlTabPanel>
 				<SlTabPanel name='identities'>
 					<div
-						className={`user-drawer__identities${selectedTab === 'identities' ? ' user-drawer__identities--selected' : ''}`}
+						className={`profile-drawer__identities${selectedTab === 'identities' ? ' profile-drawer__identities--selected' : ''}`}
 					>
 						{isLoading ? (
 							spinner
@@ -250,12 +260,12 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 									<LittleLogo code={connection?.connector.code} path={CONNECTORS_ASSETS_PATH} />
 								);
 								return (
-									<div className='user-drawer__identity' key={identity.lastChangeTime}>
-										<div className='user-drawer__identity-head'>
-											<SlTooltip className='user-drawer__action' placement='left' hoist>
+									<div className='profile-drawer__identity' key={identity.lastChangeTime}>
+										<div className='profile-drawer__identity-head'>
+											<SlTooltip className='profile-drawer__action' placement='left' hoist>
 												<div slot='content'>
 													Imported from action{' '}
-													<span className='user-drawer__identity-action-link'>
+													<span className='profile-drawer__identity-action-link'>
 														<Link
 															path={`connections/${connection.id}/actions/edit/${identity.action}`}
 														>
@@ -265,27 +275,29 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 												</div>
 												<Link
 													path={`connections/${connection.id}/actions`}
-													className='user-drawer__identity-connection'
+													className='profile-drawer__identity-connection'
 												>
-													<div className='user-drawer__identity-connection-logo'>{logo}</div>
-													<div className='user-drawer__identity-connection-name'>
+													<div className='profile-drawer__identity-connection-logo'>
+														{logo}
+													</div>
+													<div className='profile-drawer__identity-connection-name'>
 														{connection.name}
 													</div>
 												</Link>
 											</SlTooltip>
-											<div className='user-drawer__identity-date'>
+											<div className='profile-drawer__identity-date'>
 												{toJSDate(identity.lastChangeTime).toLocaleString()}
 											</div>
 										</div>
-										<div className='user-drawer__identity-info'>
+										<div className='profile-drawer__identity-info'>
 											{identity.id && (
-												<div className='user-drawer__identity-id'>
+												<div className='profile-drawer__identity-id'>
 													{connection.connector.getIdentityIDLabel()}:{' '}
 													<code>{identity.id}</code>
 												</div>
 											)}
 											{identity.anonymousIds !== null && (
-												<div className='user-drawer__identity-anonymous-ids'>
+												<div className='profile-drawer__identity-anonymous-ids'>
 													Anonymous IDs: <code>{identity.anonymousIds.join(', ')}</code>
 												</div>
 											)}
@@ -294,7 +306,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 								);
 							})
 						) : (
-							<div className='user-drawer__no-identities'>No identities associated to this user</div>
+							<div className='profile-drawer__no-identities'>
+								No identities associated to this profile
+							</div>
 						)}
 					</div>
 				</SlTabPanel>
@@ -303,7 +317,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	);
 };
 
-interface DrawerTraitProps {
+interface DrawerAttributeProps {
 	name: string;
 	value: any;
 	isParent: boolean;
@@ -312,7 +326,7 @@ interface DrawerTraitProps {
 	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const DrawerTrait = ({ name, value, isParent, isIndented, isExpanded, setIsExpanded }: DrawerTraitProps) => {
+const DrawerAttribute = ({ name, value, isParent, isIndented, isExpanded, setIsExpanded }: DrawerAttributeProps) => {
 	const preview = useMemo(() => {
 		if (!isParent) {
 			return '';
@@ -336,31 +350,31 @@ const DrawerTrait = ({ name, value, isParent, isIndented, isExpanded, setIsExpan
 
 	return (
 		<div
-			className={`drawer-trait${isParent ? ' drawer-trait--parent' : ''}`}
+			className={`drawer-attributes${isParent ? ' drawer-attributes--parent' : ''}`}
 			onClick={() => {
 				if (isParent) {
 					setIsExpanded(!isExpanded);
 				}
 			}}
 		>
-			<span className='drawer-trait__property-padding'>
-				{isParent && <SlIcon className='drawer-trait__property-caret' name='caret-right-fill' />}
+			<span className='drawer-attribute__property-padding'>
+				{isParent && <SlIcon className='drawer-attribute__property-caret' name='caret-right-fill' />}
 			</span>
-			<span className='user-drawer__trait-key'>
-				{isIndented && <span className='user-drawer__indentation-icon' />}
+			<span className='profile-drawer__attribute-key'>
+				{isIndented && <span className='profile-drawer__indentation-icon' />}
 				{name}
 				{!isParent && ':'}
 			</span>
 			{isParent ? (
-				<span className='drawer-trait__preview'>
-					<span className='drawer-trait__preview-overlay' />
+				<span className='drawer-attribute__preview'>
+					<span className='drawer-attribute__preview-overlay' />
 					{preview}
 				</span>
 			) : (
-				<span className='drawer-trait__value'>
+				<span className='drawer-attribute__value'>
 					{value}
 					<SlCopyButton
-						className='drawer-trait__value-copy'
+						className='drawer-attribute__value-copy'
 						value={value}
 						copyLabel='Click to copy'
 						successLabel='✓ Copied'
@@ -373,20 +387,20 @@ const DrawerTrait = ({ name, value, isParent, isIndented, isExpanded, setIsExpan
 	);
 };
 
-interface DrawerNestedTraitsProps {
+interface DrawerNestedAttributesProps {
 	name: string;
 	value: Record<string, any>;
 	indentation: number;
 }
 
-const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProps) => {
+const DrawerNestedAttributes = ({ name, value, indentation }: DrawerNestedAttributesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
 	const isFirstLoad = useRef<boolean>(true);
 
 	useEffect(() => {
 		try {
-			const v = localStorage.getItem(USERS_EXPANDED_TRAITS_KEY);
+			const v = localStorage.getItem(PROFILES_EXPANDED_ATTRIBUTES_KEY);
 			if (v == null) {
 				isFirstLoad.current = false;
 				return;
@@ -396,7 +410,7 @@ const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProp
 				setIsExpanded(true);
 			}
 		} catch (err) {
-			console.error(`cannot read the user trait preference from local storage: ${err}`);
+			console.error(`cannot read the profile attribute preference from local storage: ${err}`);
 			isFirstLoad.current = false;
 			return;
 		}
@@ -409,7 +423,7 @@ const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProp
 		}
 
 		try {
-			let v = localStorage.getItem(USERS_EXPANDED_TRAITS_KEY);
+			let v = localStorage.getItem(PROFILES_EXPANDED_ATTRIBUTES_KEY);
 
 			let p: string[] = [];
 			if (v != null) {
@@ -432,16 +446,16 @@ const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProp
 				}
 			}
 
-			localStorage.setItem(USERS_EXPANDED_TRAITS_KEY, JSON.stringify(p));
+			localStorage.setItem(PROFILES_EXPANDED_ATTRIBUTES_KEY, JSON.stringify(p));
 		} catch (err) {
-			console.error(`cannot write the user trait preference on local storage: ${err}`);
+			console.error(`cannot write the profile attribute preference on local storage: ${err}`);
 			return;
 		}
 	}, [isExpanded]);
 
 	return (
-		<div className={`drawer-nested-traits${isExpanded ? ' drawer-nested-traits--expand' : ''}`}>
-			<DrawerTrait
+		<div className={`drawer-nested-attributes${isExpanded ? ' drawer-nested-attributes--expand' : ''}`}>
+			<DrawerAttribute
 				name={name}
 				value={value}
 				isParent={true}
@@ -450,15 +464,15 @@ const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProp
 				setIsExpanded={setIsExpanded}
 			/>
 			<div
-				className='drawer-nested-traits__sub-properties'
+				className='drawer-nested-attributes__sub-properties'
 				style={{ '--property-indentation': `${indentation * 20}px` } as React.CSSProperties}
 			>
 				{isExpanded &&
 					Object.entries(value).map(([name, value]) => {
 						if (typeof value === 'object') {
-							return <DrawerNestedTraits name={name} value={value} indentation={indentation + 1} />;
+							return <DrawerNestedAttributes name={name} value={value} indentation={indentation + 1} />;
 						} else {
-							return <DrawerTrait name={name} value={value} isParent={false} isIndented={true} />;
+							return <DrawerAttribute name={name} value={value} isParent={false} isIndented={true} />;
 						}
 					})}
 			</div>
@@ -466,4 +480,4 @@ const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProp
 	);
 };
 
-export { UserDrawer };
+export { ProfileDrawer };

@@ -32,24 +32,24 @@ func TestParquetImport(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.PopulateUserSchema(false)
+	c.PopulateProfileSchema(false)
 	c.SetFileSystemRoot(storageDir)
 	c.Start()
 	defer c.Stop()
 
-	// Change the user schema, leaving only the properties used by this test.
-	userSchemaProperties := []types.Property{}
-	userSchemaProperties = append(userSchemaProperties, types.Property{
+	// Change the profile schema, leaving only the properties used by this test.
+	profileSchemaProperties := []types.Property{}
+	profileSchemaProperties = append(profileSchemaProperties, types.Property{
 		Name:         "parquet_id",
 		Type:         types.Int(64),
 		ReadOptional: true,
 	})
-	userSchemaProperties = append(userSchemaProperties, types.Property{
+	profileSchemaProperties = append(profileSchemaProperties, types.Property{
 		Name:         "parquet_imported",
 		Type:         types.JSON(),
 		ReadOptional: true,
 	})
-	c.AlterUserSchema(types.Object(userSchemaProperties), nil, nil)
+	c.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
 
 	// Create a File System source connection, with an action that imports from the Parquet file.
 	fs := c.CreateSourceFileSystem()
@@ -71,7 +71,7 @@ func TestParquetImport(t *testing.T) {
 			{Name: "parquet_imported", Type: types.JSON(), ReadOptional: true},
 		}),
 		// Define a transformation function that imports the Parquet row IDs in
-		// "parquet_id" (it is used for sorting the users before comparing them)
+		// "parquet_id" (it is used for sorting the profiles before comparing them)
 		// and any other property into the JSON property "parquet_imported".
 		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
@@ -95,30 +95,30 @@ func TestParquetImport(t *testing.T) {
 	exec1 := c.ExecuteAction(action1)
 	c.WaitForExecutionsCompletionAllowFailed(fs, exec1)
 
-	// Check that the count of users imported from the file is correct.
-	users, _, count := c.Users([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
-	if count != len(expectedUsers) {
-		t.Fatalf("expected %d user(s), got %d", len(expectedUsers), count)
+	// Check that the count of profiles imported from the file is correct.
+	profiles, _, count := c.Profiles([]string{"parquet_imported"}, "parquet_id", false, 0, 1000)
+	if count != len(expectedProfiles) {
+		t.Fatalf("expected %d user(s), got %d", len(expectedProfiles), count)
 	}
 
-	// Check that the users properties imported in Meergo match the user
+	// Check that the profiles properties imported in Meergo match the user
 	// properties in the Parquet file.
 	var fail bool
-	for i := range users {
-		gotTraits := users[i].Traits["parquet_imported"].(map[string]any)
-		expectedTraits := expectedUsers[i]
-		if !reflect.DeepEqual(gotTraits, expectedTraits) {
-			t.Errorf("users[%d]: expected traits %#v, got %#v", i, expectedTraits, gotTraits)
+	for i := range profiles {
+		gotAttributes := profiles[i].Attributes["parquet_imported"].(map[string]any)
+		expectedAttributes := expectedProfiles[i]
+		if !reflect.DeepEqual(gotAttributes, expectedAttributes) {
+			t.Errorf("profiles[%d]: expected attributes %#v, got %#v", i, expectedAttributes, gotAttributes)
 			fail = true
 		}
 	}
 	if fail {
-		t.Fatal("users do not match")
+		t.Fatal("profiles do not match")
 	}
 
 }
 
-var expectedUsers = []map[string]any{
+var expectedProfiles = []map[string]any{
 	{"parquet_id": json.Number("100"), "first_name": "John", "last_name": "Lemon"},
 	{"parquet_id": json.Number("101"), "first_name": "Ringo", "last_name": "Planett"},
 	{"parquet_id": json.Number("102")},

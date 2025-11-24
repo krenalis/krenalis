@@ -58,7 +58,7 @@ type Writer struct {
 type record struct {
 	iterator   *iterator      // iterator that has consumed the record, if any
 	id         string         // user or group identifier
-	properties map[string]any // user or group properties
+	attributes map[string]any // user or group attributes
 }
 
 // New returns a new Writer. connector is the API's connector, target is the
@@ -156,21 +156,21 @@ func (w *Writer) Close(ctx context.Context) error {
 	return nil
 }
 
-// Write writes a record with the provided identifier and properties.
+// Write writes a record with the provided identifier and attributes.
 // It panics if it called after w has been closed.
-func (w *Writer) Write(_ context.Context, id string, properties map[string]any) bool {
+func (w *Writer) Write(_ context.Context, id string, attributes map[string]any) bool {
 	if w.close.closed.Load() {
 		panic("core/connectors/apiwriter: Write called on a closed writer")
 	}
 	var iter *iterator
 	w.mu.Lock()
-	w.records = append(w.records, record{id: id, properties: properties})
+	w.records = append(w.records, record{id: id, attributes: attributes})
 	w.available++
 	if w.available == minBatchSize {
 		w.timer.Reset(0)
 	}
 	if trace {
-		fmt.Printf("Writer.Write: write record id=%q, properties=%p, available=%d\n", id, properties, w.available)
+		fmt.Printf("Writer.Write: write record id=%q, attributes=%p, available=%d\n", id, attributes, w.available)
 		if iter != nil {
 			fmt.Printf("Writer.Write: start new iterator %p\n", iter)
 		}
@@ -190,7 +190,7 @@ func (w *Writer) compact() {
 		return
 	}
 	var i int
-	for i < len(w.records) && w.records[i].properties == nil {
+	for i < len(w.records) && w.records[i].attributes == nil {
 		i++
 	}
 	clear(w.records[:i])
@@ -276,13 +276,13 @@ func (w *Writer) read(op op, consume bool) (connectors.Record, bool) {
 	var i int
 	for i = w.iterator.index; i < len(w.records); i++ {
 		r := w.records[i]
-		if r.iterator != nil || r.properties == nil {
+		if r.iterator != nil || r.attributes == nil {
 			continue
 		}
 		ok = op == opAll || op == opUpdate && r.id != "" || op == opCreate && r.id == ""
 		if ok {
 			record.ID = r.id
-			record.Properties = r.properties
+			record.Attributes = r.attributes
 			break
 		}
 	}
@@ -377,7 +377,7 @@ func (w *Writer) consume(iter *iterator) {
 func (w *Writer) _assertAvailable(n int) {
 	var got int
 	for _, r := range w.records {
-		if r.iterator == nil && r.properties != nil {
+		if r.iterator == nil && r.attributes != nil {
 			got++
 		}
 	}

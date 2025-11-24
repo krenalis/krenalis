@@ -14,16 +14,16 @@ import (
 	"github.com/meergo/meergo/test/meergotester"
 )
 
-// TestAdminInitialUserSchema tests the correctness of the user schema that is
+// TestAdminInitialProfileSchema tests the correctness of the profile schema that is
 // initially created when a workspace is created through the Admin.
-func TestAdminInitialUserSchema(t *testing.T) {
+func TestAdminInitialProfileSchema(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.PopulateUserSchema(false)
+	c.PopulateProfileSchema(false)
 	c.Start()
 	defer c.Stop()
 
@@ -39,11 +39,11 @@ func TestAdminInitialUserSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	queries := c.PreviewAlterUserSchema(schema, nil)
+	queries := c.PreviewAlterProfileSchema(schema, nil)
 	const expectedQueriesCount = 6
 	if len(queries) != expectedQueriesCount {
 		t.Fatalf("expected %d queries, got %d", expectedQueriesCount, len(queries))
 	}
-	c.AlterUserSchema(schema, nil, nil)
+	c.AlterProfileSchema(schema, nil, nil)
 
 }

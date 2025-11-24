@@ -2,7 +2,7 @@ import { ActionError } from './action';
 import { AccessKey } from './organization';
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
-import { UserEvent, UserIdentity, UserTraits } from './user';
+import { ProfileEvent, Identity, ProfileAttributes } from './profile';
 
 interface authCodeURLResponse {
 	url: string;
@@ -84,14 +84,14 @@ interface TransformDataResponse {
 	data: Record<string, any>;
 }
 
-interface ResponseUser {
-	muid: string;
+interface ResponseProfile {
+	mpid: string;
 	sourcesLastUpdate: string;
-	traits: Record<string, any>;
+	attributes: Record<string, any>;
 }
 
-interface FindUsersResponse {
-	users: ResponseUser[];
+interface FindProfilesResponse {
+	profiles: ResponseProfile[];
 	schema: ObjectType;
 	total: number;
 }
@@ -101,21 +101,21 @@ interface APIUsersResponse {
 	cursor: string;
 }
 
-interface UserEventsResponse {
-	events: UserEvent[];
+interface ProfileEventsResponse {
+	events: ProfileEvent[];
 }
 
-interface userTraitsResponse {
-	traits: UserTraits;
+interface profileAttributesResponse {
+	attributes: ProfileAttributes;
 }
 
-interface UserIdentitiesResponse {
-	identities: UserIdentity[];
+interface IdentitiesResponse {
+	identities: Identity[];
 	total: number;
 }
 
 interface ConnectionIdentitiesResponse {
-	identities: UserIdentity[];
+	identities: Identity[];
 	total: number;
 }
 
@@ -160,7 +160,7 @@ interface CreateAccessKeyResponse {
 
 type RePaths = Record<string, string | null>;
 
-interface PreviewAlterUserSchemaResponse {
+interface PreviewAlterProfileSchemaResponse {
 	queries: string[];
 }
 
@@ -181,7 +181,7 @@ interface PublicMetadata {
 
 export type {
 	authCodeURLResponse,
-	userTraitsResponse,
+	profileAttributesResponse,
 	ActionError,
 	ActionErrorsResponse,
 	ActionSchemasResponse,
@@ -195,7 +195,7 @@ export type {
 	EventListenerEventsResponse,
 	ExecQueryResponse,
 	Execution,
-	FindUsersResponse,
+	FindProfilesResponse,
 	Member,
 	MemberAvatar,
 	MemberInvitationResponse,
@@ -204,16 +204,16 @@ export type {
 	AccessKeyResponse,
 	CreateAccessKeyResponse,
 	PreviewSendEventResponse,
-	PreviewAlterUserSchemaResponse,
+	PreviewAlterProfileSchemaResponse,
 	RePaths,
 	RecordsResponse,
-	ResponseUser,
+	ResponseProfile,
 	SheetsResponse,
 	TableSchemaResponse,
 	TelemetryLevel,
 	TransformDataResponse,
 	TransformationLanguagesResponse,
-	UserEventsResponse,
-	UserIdentitiesResponse,
+	ProfileEventsResponse,
+	IdentitiesResponse,
 	PublicMetadata,
 };

@@ -84,7 +84,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 
 	// In cases where the input schema refers to events, that is when:
 	//
-	//  - user identities are imported from events
+	//  - identities are imported from events
 	//  - events are imported into the data warehouse
 	//  - events are dispatched to apps
 	//
@@ -94,7 +94,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if inSchema.Valid() {
 			switch {
 			case importUserIdentitiesFromEvents:
-				return errors.BadRequest("input schema must be invalid for actions that import user identities from events")
+				return errors.BadRequest("input schema must be invalid for actions that import identities from events")
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for actions that import events into data warehouse")
 			case dispatchEventsToAPIs:
@@ -536,19 +536,19 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		}
 	}
 
-	// Do some checks related to exporting users to files.
+	// Do some checks related to exporting profiles to files.
 	if exportUsersToFile {
-		// When exporting users to file, ensure that the input schema is valid,
+		// When exporting profiles to file, ensure that the input schema is valid,
 		// as it contains the properties that will be exported to the file.
 		if !inSchema.Valid() {
-			return errors.BadRequest("input schema must be valid when exporting users to file")
+			return errors.BadRequest("input schema must be valid when exporting profiles to file")
 		}
 		if outSchema.Valid() {
-			return errors.BadRequest("output schema must be invalid when exporting users to file")
+			return errors.BadRequest("output schema must be invalid when exporting profiles to file")
 		}
 		// Check that OrderBy is defined and exists in the input schema.
 		if action.OrderBy == "" {
-			return errors.BadRequest("order by property cannot be empty when exporting users to file")
+			return errors.BadRequest("order by property cannot be empty when exporting profiles to file")
 		}
 		p, err := inSchema.Properties().ByPath(action.OrderBy)
 		if err != nil {
@@ -741,7 +741,7 @@ func unusedPropertyPath(schema types.Type, usedPaths []string) (string, bool) {
 walk:
 	for schemaPath, property := range schema.Properties().WalkObjects() {
 		if property.Type.Kind() == types.ObjectKind {
-			// Do not report unused errors for Object properties, only for their
+			// Do not report unused errors for object properties, only for their
 			// sub-properties.
 			continue
 		}
@@ -770,14 +770,14 @@ walk:
 // target of the action, and typ is the action's connection type.
 func validateActionSchema(io string, schema types.Type, role state.Role, target state.Target, typ state.ConnectorType, tableKey string) error {
 
-	isUserSchema := target == state.TargetUser &&
+	isProfileSchema := target == state.TargetUser &&
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
 
 	for path, p := range schema.Properties().WalkAll() {
 		if p.Prefilled != "" {
 			return fmt.Errorf("%s action schema property %q has a prefilled value, but action schema properties cannot have prefilled values", io, path)
 		}
-		if isUserSchema {
+		if isProfileSchema {
 			if isMetaProperty(path) {
 				return fmt.Errorf("%s action schema property %q is a meta property", io, path)
 			}
@@ -842,7 +842,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		}
 	}
 
-	if isUserSchema {
+	if isProfileSchema {
 		if err := datastore.CheckConflictingProperties(io, schema); err != nil {
 			return err
 		}

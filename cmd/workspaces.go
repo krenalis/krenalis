@@ -298,8 +298,8 @@ func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http
 		"failed": metrics.Failed}, nil
 }
 
-// AlterUserSchema alters the user schema of a workspace.
-func (workspace workspace) AlterUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+// AlterProfileSchema alters the profile schema of a workspace.
+func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -313,7 +313,7 @@ func (workspace workspace) AlterUserSchema(_ http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AlterUserSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
+	err = ws.AlterProfileSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
 	return nil, err
 }
 
@@ -457,14 +457,14 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 	return map[string]any{"events": events}, nil
 }
 
-// Identities returns the user identities of a user, and an estimate of their
+// Identities returns the identities of a profile, and an estimate of their
 // total number without applying first and limit.
 func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	muid := r.PathValue("muid")
+	mpid := r.PathValue("mpid")
 	var first = 0
 	var limit = 100
 	query := r.URL.Query()
@@ -480,7 +480,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 			return nil, errors.BadRequest("limit is not valid")
 		}
 	}
-	identities, total, err := ws.Identities(r.Context(), muid, first, limit)
+	identities, total, err := ws.Identities(r.Context(), mpid, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -490,9 +490,9 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	}, nil
 }
 
-// UserPropertiesSuitableAsIdentifiers returns the properties of the "users"
+// ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
 // schema that can be used as identifiers in the Identity Resolution.
-func (workspace workspace) UserPropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) ProfilePropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
 	_, ws, _, err := workspace.authenticateAdminRequest(r)
 	if err != nil {
 		return nil, err
@@ -500,7 +500,7 @@ func (workspace workspace) UserPropertiesSuitableAsIdentifiers(_ http.ResponseWr
 	if ws == nil {
 		return nil, errMissingWorkspace
 	}
-	return ws.UserPropertiesSuitableAsIdentifiers(), nil
+	return ws.ProfilePropertiesSuitableAsIdentifiers(), nil
 }
 
 // IngestEvents ingests a batch of events.
@@ -530,14 +530,14 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 	}, nil
 }
 
-// LatestAlterUserSchema returns information about the latest altering of the
-// user schema of a workspace.
-func (workspace workspace) LatestAlterUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+// LatestAlterProfileSchema returns information about the latest altering of the
+// profile schema of a workspace.
+func (workspace workspace) LatestAlterProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	startTime, endTime, alterError, err := ws.LatestAlterUserSchema()
+	startTime, endTime, alterError, err := ws.LatestAlterProfileSchema()
 	if err != nil {
 		return nil, err
 	}
@@ -629,10 +629,10 @@ func (workspace workspace) IdentityResolutionSettings(_ http.ResponseWriter, r *
 	}, nil
 }
 
-// PreviewAlterUserSchema provides a preview of an alter user schema operation
-// by returning the queries that would be executed on the warehouse to perform a
-// given alter schema.
-func (workspace workspace) PreviewAlterUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+// PreviewAlterProfileSchema provides a preview of an alter profile schema
+// operation by returning the queries that would be executed on the warehouse to
+// perform a given alter schema.
+func (workspace workspace) PreviewAlterProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -645,7 +645,7 @@ func (workspace workspace) PreviewAlterUserSchema(_ http.ResponseWriter, r *http
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	queries, err := ws.PreviewAlterUserSchema(r.Context(), body.Schema, body.RePaths)
+	queries, err := ws.PreviewAlterProfileSchema(r.Context(), body.Schema, body.RePaths)
 	if err != nil {
 		return nil, err
 	}
@@ -731,18 +731,18 @@ func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Re
 	return nil, err
 }
 
-// Traits returns the traits of a user, given its MUID.
-func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, error) {
+// Attributes returns the attributes of a profile, given its MPID.
+func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	muid := r.PathValue("muid")
-	traits, err := ws.Traits(r.Context(), muid)
+	mpid := r.PathValue("mpid")
+	attributes, err := ws.Attributes(r.Context(), mpid)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"traits": traits}, nil
+	return map[string]any{"attributes": attributes}, nil
 }
 
 // Update updates the name and the displayed properties of a workspace.
@@ -823,18 +823,18 @@ func (workspace workspace) UpdateWarehouseMode(_ http.ResponseWriter, r *http.Re
 	return nil, err
 }
 
-// UserEvents returns the events of a user.
-func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (any, error) {
+// ProfileEvents returns the events of a profile.
+func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse the MUID.
-	muid := r.PathValue("muid")
-	if _, ok := types.ParseUUID(muid); !ok {
-		return nil, errors.BadRequest("value %q is not a valid MUID", muid)
+	// Parse the MPID.
+	mpid := r.PathValue("mpid")
+	if _, ok := types.ParseUUID(mpid); !ok {
+		return nil, errors.BadRequest("value %q is not a valid MPID", mpid)
 	}
 
 	q := r.URL.Query()
@@ -858,9 +858,9 @@ func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (a
 		Logical: core.OpAnd,
 		Conditions: []core.FilterCondition{
 			{
-				Property: "muid",
+				Property: "mpid",
 				Operator: core.OpIs,
-				Values:   []string{muid},
+				Values:   []string{mpid},
 			},
 		},
 	}
@@ -875,18 +875,18 @@ func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (a
 	return map[string]any{"events": events}, nil
 }
 
-// UserSchema returns the user schema of a workspace.
-func (workspace workspace) UserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+// ProfileSchema returns the profile schema of a workspace.
+func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	return ws.UserSchema, nil
+	return ws.ProfileSchema, nil
 }
 
-// Users returns the users, the user schema of a workspace, and an estimate of
-// their total number without applying first and limit.
-func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, error) {
+// Profiles returns the profiles, the profile schema of a workspace, and an
+// estimate of their total number without applying first and limit.
+func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -925,24 +925,24 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		limit = 100
 	}
 
-	users, schema, total, err := ws.Users(r.Context(), properties, filter, order, orderDesc, first, limit)
+	profiles, schema, total, err := ws.Profiles(r.Context(), properties, filter, order, orderDesc, first, limit)
 	if err != nil {
 		return nil, err
 	}
 	w.Header().Set("Content-Type", "application/json")
 	b := newBodyWriter(w)
-	b.writeString(`{"users":[`)
-	for i, user := range users {
+	b.writeString(`{"profiles":[`)
+	for i, profile := range profiles {
 		if i > 0 {
 			b.writeByte(',')
 		}
-		b.writeString(`{"muid":"`)
-		b.writeString(user.MUID)
+		b.writeString(`{"mpid":"`)
+		b.writeString(profile.MPID)
 		b.writeString(`","sourcesLastUpdate":"`)
 		buf := b.availableBuffer()
-		b.write(user.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
-		b.writeString(`","traits":`)
-		s, _ := types.Marshal(user.Traits, schema)
+		b.write(profile.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
+		b.writeString(`","attributes":`)
+		s, _ := types.Marshal(profile.Attributes, schema)
 		b.write(s)
 		b.writeByte('}')
 	}

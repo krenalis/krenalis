@@ -62,22 +62,22 @@ def transform(user: dict) -> dict:
 	exec := c.ExecuteAction(action)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
-	// Retrieve the users.
+	// Retrieve the profiles.
 	const expectedTotal = 10
-	users, _, total := c.Users([]string{"email"}, "email", false, 0, expectedTotal)
+	profiles, _, total := c.Profiles([]string{"email"}, "email", false, 0, expectedTotal)
 
-	// Validate the users total.
+	// Validate the profiles total.
 	if total != expectedTotal {
 		t.Fatalf("expected \"total\" to be %d, got %d", expectedTotal, total)
 	}
 
-	// Validate the total of the returned users.
-	usersLen := len(users)
-	if expectedTotal != usersLen {
-		t.Fatalf("expected %d users, got %d", expectedTotal, usersLen)
+	// Validate the total of the returned profiles.
+	profilesLen := len(profiles)
+	if expectedTotal != profilesLen {
+		t.Fatalf("expected %d profiles, got %d", expectedTotal, profilesLen)
 	}
 
-	// Validate the users.
+	// Validate the profiles.
 	expectedProperties := []map[string]any{
 		{"email": "abenois2@example.com"},
 		{"email": "bdroghan5@example.com"},
@@ -90,13 +90,13 @@ def transform(user: dict) -> dict:
 		{"email": "kdericut4@example.com"},
 		{"email": "kfellon6@example.com"},
 	}
-	if len(expectedProperties) != len(users) {
-		t.Fatalf("expected %d users, got %d", len(expectedProperties), len(users))
+	if len(expectedProperties) != len(profiles) {
+		t.Fatalf("expected %d profiles, got %d", len(expectedProperties), len(profiles))
 	}
-	for i, user := range users {
+	for i, profile := range profiles {
 		expected := expectedProperties[i]
-		if !reflect.DeepEqual(expected, user.Traits) {
-			t.Fatalf("expected %#v, got %#v", expected, user)
+		if !reflect.DeepEqual(expected, profile.Attributes) {
+			t.Fatalf("expected %#v, got %#v", expected, profile)
 		}
 	}
 

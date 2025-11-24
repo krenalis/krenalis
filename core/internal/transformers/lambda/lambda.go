@@ -57,9 +57,9 @@ func New(settings Settings) transformers.FunctionProvider {
 }
 
 // Call calls the function with the given identifier and version for each record
-// updating its Properties field with the result of each invocation.
+// updating its Attributes field with the result of each invocation.
 //
-// Before transformation, record properties must conform to inSchema.
+// Before transformation, record attributes must conform to inSchema.
 // After transformation, they should conform to outSchema, unless an error
 // occurs on the record.
 //

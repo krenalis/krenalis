@@ -98,7 +98,7 @@ type user struct {
 // To send an event, follow these steps:
 //  1. Call the CreateEvent method. The order in which this is called determines
 //     delivery order.
-//  2. (Optional) Transform the event and set 0the Event.Properties field.
+//  2. (Optional) Transform the event and set the Event.Properties field.
 //  3. Call the QueueEvent method.
 type Sender struct {
 	connector string   // API connector.

@@ -113,9 +113,9 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		return nil, err
 	}
 	var body struct {
-		Name       string     `json:"name"`
-		UserSchema types.Type `json:"userSchema"`
-		Warehouse  struct {
+		Name          string     `json:"name"`
+		ProfileSchema types.Type `json:"profileSchema"`
+		Warehouse     struct {
 			Name        string             `json:"name"`
 			Mode        core.WarehouseMode `json:"mode"`
 			Settings    json.Value         `json:"settings"`
@@ -130,7 +130,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if body.Warehouse.MCPSettings != nil && body.Warehouse.MCPSettings.IsNull() {
 		body.Warehouse.MCPSettings = nil
 	}
-	id, err := org.CreateWorkspace(r.Context(), body.Name, body.UserSchema,
+	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema,
 		body.UIPreferences, body.Warehouse.Name, body.Warehouse.Settings,
 		body.Warehouse.MCPSettings, body.Warehouse.Mode)
 	if err != nil {
@@ -214,9 +214,9 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, err
 	}
 	var body struct {
-		Name       string     `json:"name"`
-		UserSchema types.Type `json:"userSchema"`
-		Warehouse  struct {
+		Name          string     `json:"name"`
+		ProfileSchema types.Type `json:"profileSchema"`
+		Warehouse     struct {
 			Name        string             `json:"name"`
 			Mode        core.WarehouseMode `json:"mode"`
 			Settings    json.Value         `json:"settings"`
@@ -231,7 +231,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if body.Warehouse.MCPSettings != nil && body.Warehouse.MCPSettings.IsNull() {
 		body.Warehouse.MCPSettings = nil
 	}
-	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.UserSchema,
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema,
 		body.UIPreferences, body.Warehouse.Name, body.Warehouse.Settings,
 		body.Warehouse.MCPSettings, body.Warehouse.Mode)
 	return nil, err

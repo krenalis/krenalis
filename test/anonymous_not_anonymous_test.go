@@ -94,7 +94,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Wait for the 2 identities to be imported successfully.
 	attempts := 0
-	var identities []meergotester.UserIdentity
+	var identities []meergotester.Identity
 	for {
 		var total int
 		identities, total = c.ConnectionIdentities(javaScriptID, 0, 100)
@@ -179,10 +179,10 @@ waitLoop:
 	// have already been done implicitly during import).
 	c.RunIdentityResolution()
 
-	// Check that there is actually only one user in the workspace.
-	_, _, total = c.Users([]string{"email"}, "", false, 0, 100)
+	// Check that there is actually only one profile in the workspace.
+	_, _, total = c.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 1 {
-		t.Fatalf("expected only one user in the workspace, got %d instead", total)
+		t.Fatalf("expected only one profile in the workspace, got %d instead", total)
 	}
 
 }

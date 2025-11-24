@@ -400,7 +400,7 @@ func parseUint(s string) (uint, bool) {
 	return n, true
 }
 
-// retrieveFilterProperty retrieves a property. in properties, located at a
+// retrieveFilterProperty retrieves a property in properties, located at a
 // specific path and returns the property along with its path. If the path
 // points to a json property, it returns the path to that json property.
 // path must be a valid property path.

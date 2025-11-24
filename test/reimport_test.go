@@ -58,7 +58,7 @@ func TestReimport(t *testing.T) {
 	// Run the Identity Resolution.
 	c.RunIdentityResolution()
 
-	// Check the users.
+	// Check the profiles.
 	assertEq := func(msg string, expected, got any) {
 		if !reflect.DeepEqual(expected, got) {
 			t.Fatalf("%s: expected value %#v, got %#v", msg, expected, got)
@@ -66,16 +66,16 @@ func TestReimport(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedTotal = 10
-	users, _, total := c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, _, total := c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
-		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
+		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}
-	assertEq("first  user email", "abenois2@example.com", users[0].Traits["email"])
-	assertEq("first  user first name", "Ariela", users[0].Traits["first_name"])
-	assertEq("first  user last name", nil, users[0].Traits["last_name"])
-	assertEq("second user email", "bdroghan5@example.com", users[1].Traits["email"])
-	assertEq("second user first name", "Bryon", users[1].Traits["first_name"])
-	assertEq("second user last name", nil, users[1].Traits["last_name"])
+	assertEq("first  user email", "abenois2@example.com", profiles[0].Attributes["email"])
+	assertEq("first  user first name", "Ariela", profiles[0].Attributes["first_name"])
+	assertEq("first  user last name", nil, profiles[0].Attributes["last_name"])
+	assertEq("second user email", "bdroghan5@example.com", profiles[1].Attributes["email"])
+	assertEq("second user first name", "Bryon", profiles[1].Attributes["first_name"])
+	assertEq("second user last name", nil, profiles[1].Attributes["last_name"])
 
 	// Update the action that imports users from Dummy, that imports:
 	//
@@ -108,18 +108,18 @@ func TestReimport(t *testing.T) {
 	// Run the Identity Resolution.
 	c.RunIdentityResolution()
 
-	// Check the users again.
+	// Check the profiles again.
 	//
 	// This time the first name must be nil, while the last name should have a value.
-	users, _, total = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, _, total = c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
-		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
+		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}
-	assertEq("first  user email", "abenois2@example.com", users[0].Traits["email"])
-	assertEq("first  user first name", nil, users[0].Traits["first_name"])    // <- now is nil
-	assertEq("first  user last name", "Benois", users[0].Traits["last_name"]) // <- now has a value
-	assertEq("second user email", "bdroghan5@example.com", users[1].Traits["email"])
-	assertEq("second user first name", nil, users[1].Traits["first_name"])     // <- now is nil
-	assertEq("second user last name", "Droghan", users[1].Traits["last_name"]) // <- now has a value
+	assertEq("first  user email", "abenois2@example.com", profiles[0].Attributes["email"])
+	assertEq("first  user first name", nil, profiles[0].Attributes["first_name"])    // <- now is nil
+	assertEq("first  user last name", "Benois", profiles[0].Attributes["last_name"]) // <- now has a value
+	assertEq("second user email", "bdroghan5@example.com", profiles[1].Attributes["email"])
+	assertEq("second user first name", nil, profiles[1].Attributes["first_name"])     // <- now is nil
+	assertEq("second user last name", "Droghan", profiles[1].Attributes["last_name"]) // <- now has a value
 
 }

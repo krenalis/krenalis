@@ -23,12 +23,12 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-// exportUsers exports the users for the action.
+// exportProfiles exports the profiles for the action.
 //
 // Returns an error if execution does not reach its natural completion.
 // If the error is caused by the schema, the connector, or the data warehouse,
 // it returns an *actionError, which is expected to be logged as is.
-func (this *Action) exportUsers(ctx context.Context) error {
+func (this *Action) exportProfiles(ctx context.Context) error {
 
 	action := this.action
 	store := this.connection.store
@@ -37,7 +37,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	// Synchronize destinations users with the API's users.
 	if connector.Type == state.API {
-		err := this.syncDestinationUsers(ctx)
+		err := this.syncDestinationProfiles(ctx)
 		if err != nil {
 			if err, ok := err.(*schemas.Error); ok {
 				err.Msg = "in the destination matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
@@ -77,7 +77,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			UpdateOnDuplicates: action.UpdateOnDuplicates,
 		}
 	}
-	records, err := store.UserRecords(ctx, query, action.InSchema, matching)
+	records, err := store.ProfileRecords(ctx, query, action.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return newActionError(metrics.ReceiveStep, err)
@@ -86,7 +86,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		case *datastore.UnavailableError:
 			return err
 		case *schemas.Error:
-			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the action before attempting to export the users.", err.Msg)
+			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the action before attempting to export the profiles.", err.Msg)
 			return newActionError(metrics.InputValidationStep, err)
 		}
 		return err
@@ -98,7 +98,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	var ack func([]string, error)
 	if connector.Type != state.FileStorage {
 		ack = func(ids []string, err error) {
-			meergoMetrics.Increment("Action.exportUsers.ack.calls", 1)
+			meergoMetrics.Increment("Action.exportProfiles.ack.calls", 1)
 			if err != nil {
 				this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
 				return
@@ -149,14 +149,14 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	}
 	defer writer.Close(ctx)
 
-	// User represents a user to update or create.
-	type User struct {
-		ID            string           // External API identifier; is non-empty only for API's users to update.
-		Record        datastore.Record // User record.
-		MatchingValue any              // External matching property value added to properties when creating an API user.
+	// Profile represents a profile to update or create.
+	type Profile struct {
+		ID            string           // External API identifier; is non-empty only for API's profiles to update.
+		Record        datastore.Record // Profile record.
+		MatchingValue any              // External matching property value added to properties when creating an API profile.
 	}
 
-	users := make([]User, 0, 100)
+	profiles := make([]Profile, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
 
 	var readCount int // Total number of records successfully read from the warehouse so far.
@@ -172,7 +172,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 Records:
 	for record := range records.All(ctx) {
 
-		meergoMetrics.Increment("Action.exportUsers.iterations_over_records_All", 1)
+		meergoMetrics.Increment("Action.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
 			this.core.metrics.ReceiveFailed(action.ID, 1, record.Err.Error())
@@ -187,53 +187,53 @@ Records:
 
 		switch connector.Type {
 		default:
-			users = append(users, User{Record: record})
+			profiles = append(profiles, Profile{Record: record})
 		case state.API:
-			user := User{Record: record}
-			// Update: use ExternalID as the user ID.
+			profile := Profile{Record: record}
+			// Update: use ExternalID as the profile ID.
 			if isUpdate := record.ExternalID != ""; isUpdate {
-				user.ID = record.ExternalID
+				profile.ID = record.ExternalID
 			}
 			// Create or when the outgoing matching property must be updated: compute and preserve the matching value.
 			if isCreate := record.ExternalID == ""; isCreate || matchingOut.UpdateRequired {
-				value, _ := getPropertyValue(record.Properties, action.Matching.In)
-				user.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, action.Matching.In, action.Matching.Out)
+				value, _ := getAttribute(record.Attributes, action.Matching.In)
+				profile.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, action.Matching.In, action.Matching.Out)
 				if err != nil {
 					this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
 					goto Next
 				}
 			}
-			users = append(users, user)
+			profiles = append(profiles, profile)
 		}
 
 		this.core.metrics.InputValidationPassed(action.ID, 1)
 
 	Next:
 
-		// Does a bach processing of users.
-		if len(users) == 100 || records.Last() {
+		// Does a bach processing of profiles.
+		if len(profiles) == 100 || records.Last() {
 
 			if transformer == nil {
-				for _, user := range users {
-					if !writer.Write(ctx, "", user.Record.Properties) {
+				for _, profile := range profiles {
+					if !writer.Write(ctx, "", profile.Record.Attributes) {
 						break Records
 					}
 				}
-				clear(users)
-				users = users[0:0]
+				clear(profiles)
+				profiles = profiles[0:0]
 				continue
 			}
 
-			// Transform the users.
+			// Transform the profiles.
 			clear(transformationRecords)
-			transformationRecords = transformationRecords[0:len(users)]
-			for i, user := range users {
+			transformationRecords = transformationRecords[0:len(profiles)]
+			for i, profile := range profiles {
 				purpose := transformers.Create
-				if user.ID != "" {
+				if profile.ID != "" {
 					purpose = transformers.Update
 				}
 				transformationRecords[i].Purpose = purpose
-				transformationRecords[i].Properties = user.Record.Properties
+				transformationRecords[i].Attributes = profile.Record.Attributes
 			}
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
@@ -243,7 +243,7 @@ Records:
 				return err
 			}
 			for i, record := range transformationRecords {
-				user := users[i]
+				user := profiles[i]
 				if err := record.Err; err != nil {
 					switch err.(type) {
 					case transformers.RecordTransformationError:
@@ -257,30 +257,30 @@ Records:
 				this.core.metrics.TransformationPassed(action.ID, 1)
 				this.core.metrics.OutputValidationPassed(action.ID, 1)
 				if user.MatchingValue != nil {
-					setPropertyValue(record.Properties, action.Matching.Out, user.MatchingValue)
+					setAttribute(record.Attributes, action.Matching.Out, user.MatchingValue)
 				}
-				if connector.Type == state.API && len(record.Properties) == 0 {
+				if connector.Type == state.API && len(record.Attributes) == 0 {
 					this.core.metrics.FinalizePassed(action.ID, 1)
 					continue
 				}
 				// In the case of exporting to the database, make sure that
-				// users with the same value for the table key have not already
+				// profiles with the same value for the table key have not already
 				// been exported.
 				if connector.Type == state.Database {
-					key := record.Properties[action.TableKey]
+					key := record.Attributes[action.TableKey]
 					if _, ok := alreadyExportedKeys[key]; ok {
 						this.core.metrics.FinalizeFailed(action.ID, 1,
-							fmt.Sprintf("cannot export multiple users having the same value for %q, which is used as export table key", action.TableKey))
+							fmt.Sprintf("cannot export multiple profiles having the same value for %q, which is used as export table key", action.TableKey))
 						continue
 					}
 					alreadyExportedKeys[key] = struct{}{}
 				}
-				if !writer.Write(ctx, user.ID, record.Properties) {
+				if !writer.Write(ctx, user.ID, record.Attributes) {
 					break Records
 				}
 			}
-			clear(users)
-			users = users[0:0]
+			clear(profiles)
+			profiles = profiles[0:0]
 
 		}
 
@@ -289,7 +289,7 @@ Records:
 		return newActionError(metrics.ReceiveStep, err)
 	}
 
-	users = nil
+	profiles = nil
 
 	err = writer.Close(ctx)
 	if err != nil {
@@ -307,13 +307,13 @@ Records:
 	return nil
 }
 
-// syncDestinationUsers syncs the destination users of the action.
-func (this *Action) syncDestinationUsers(ctx context.Context) error {
+// syncDestinationProfiles syncs the destination profiles of the action.
+func (this *Action) syncDestinationProfiles(ctx context.Context) error {
 
 	store := this.connection.store
 
-	// Delete the outdated destination users.
-	err := store.DeleteDestinationUsers(ctx, this.action.ID)
+	// Delete the outdated destination profiles.
+	err := store.DeleteDestinationProfiles(ctx, this.action.ID)
 	if err != nil {
 		return err
 	}
@@ -327,34 +327,34 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 	}
 	defer records.Close()
 
-	var users []datastore.DestinationUser
+	var profiles []datastore.DestinationProfile
 
-	for user := range records.All(ctx) {
+	for profile := range records.All(ctx) {
 
 		// Return if a normalization error occurred.
-		if user.Err != nil {
-			return user.Err
+		if profile.Err != nil {
+			return profile.Err
 		}
 
-		// Store the user only if the output matching property is not nil.
-		v, ok := getPropertyValue(user.Properties, this.action.Matching.Out)
+		// Store the profile only if the output matching property is not nil.
+		v, ok := getAttribute(profile.Attributes, this.action.Matching.Out)
 		if !ok {
 			panic(fmt.Sprintf("out matching property value of action %d is missing", this.action.ID))
 		}
 		if v != nil {
-			users = append(users, datastore.DestinationUser{
-				ExternalID:       user.ID,
+			profiles = append(profiles, datastore.DestinationProfile{
+				ExternalID:       profile.ID,
 				OutMatchingValue: stringifyMatchingValue(v),
 			})
 		}
 
-		if len(users) > 0 && (len(users) == 10000 || records.Last()) {
-			// Merge destination users.
-			err = this.connection.store.MergeDestinationUsers(ctx, this.action.ID, users, nil)
+		if len(profiles) > 0 && (len(profiles) == 10000 || records.Last()) {
+			// Merge destination profiles.
+			err = this.connection.store.MergeDestinationUsers(ctx, this.action.ID, profiles, nil)
 			if err != nil {
 				return err
 			}
-			users = users[0:0]
+			profiles = profiles[0:0]
 		}
 
 	}
@@ -500,42 +500,42 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 	panic(fmt.Sprintf("core: unexpected external kind %s", ex.Kind()))
 }
 
-// getPropertyValue gets a nested property by path in properties. It returns the
-// property's value and true if found, or nil and false if missing.
-func getPropertyValue(properties map[string]any, path string) (any, bool) {
+// getAttribute gets the attribute for a nested property by path in attributes.
+// It returns the attribute and true if found, or nil and false if missing.
+func getAttribute(attributes map[string]any, path string) (any, bool) {
 	for {
 		name, rest, found := strings.Cut(path, ".")
 		if !found {
 			break
 		}
-		pp, ok := properties[name].(map[string]any)
+		attrs, ok := attributes[name].(map[string]any)
 		if !ok {
 			return nil, false
 		}
-		properties = pp
+		attributes = attrs
 		path = rest
 	}
-	value, ok := properties[path]
+	value, ok := attributes[path]
 	return value, ok
 }
 
-// setPropertyValue sets the value for the given out property path in
-// properties. If the property or a parent exist, setPropertyValue overwrite it.
-func setPropertyValue(properties map[string]any, path string, value any) {
+// setAttribute sets the attribute for the given out property path in
+// attributes. If the property or a parent exist, setAttribute overwrite it.
+func setAttribute(attributes map[string]any, path string, value any) {
 	for {
 		name, rest, found := strings.Cut(path, ".")
 		if !found {
 			break
 		}
-		pp, ok := properties[name].(map[string]any)
+		attrs, ok := attributes[name].(map[string]any)
 		if !ok {
-			pp = map[string]any{}
-			properties[name] = pp
+			attrs = map[string]any{}
+			attributes[name] = attrs
 		}
-		properties = pp
+		attributes = attrs
 		path = rest
 	}
-	properties[path] = value
+	attributes[path] = value
 }
 
 // stringifyMatchingValue returns the string representation of a value for a

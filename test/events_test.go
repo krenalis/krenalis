@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/analytics-go"
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
 
 	"github.com/google/uuid"
+	"github.com/meergo/analytics-go"
 )
 
 func TestEvents(t *testing.T) {
@@ -53,7 +53,7 @@ func TestEvents(t *testing.T) {
 	c.WaitForExecutionsCompletion(dummySrc, exec)
 
 	// Create a JavaScript connection with 2 actions (one for importing events,
-	// one for importing user identities) and retrieve its key.
+	// one for importing identities) and retrieve its key.
 	var javaScriptID int
 	var javaScriptKey string
 	{
@@ -83,14 +83,13 @@ func TestEvents(t *testing.T) {
 		})
 	}
 
-	const eventUserEmail = "event-user@example.com"
+	const eventProfileEmail = "event-profile@example.com"
 
-	// Send an identity event. More than importing an event, this should create
-	// a user identity.
+	// Send an identity event. More than importing an event, this should create an identity.
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
 		Traits: map[string]interface{}{
-			"email": eventUserEmail,
+			"email": eventProfileEmail,
 		},
 	})
 
@@ -129,34 +128,34 @@ func TestEvents(t *testing.T) {
 
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
-	// Run the identity resolution, so that the events MUID are updated.
+	// Run the identity resolution, so that the events MPID are updated.
 	time.Sleep(time.Second)
 	c.RunIdentityResolution()
 
-	// Retrieve the user imported from the event.
-	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
-	const expectedUsersTotal = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
-	if expectedUsersTotal != total {
-		t.Fatalf("expected %d users, got %d", expectedUsersTotal, total)
+	// Retrieve the profile imported from the event.
+	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	const expectedProfilesTotal = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
+	if expectedProfilesTotal != total {
+		t.Fatalf("expected %d peofiles, got %d", expectedProfilesTotal, total)
 	}
-	var userMUID uuid.UUID
-	for _, user := range users {
-		email, _ := user.Traits["email"].(string)
-		if email == eventUserEmail {
-			userMUID = user.MUID
+	var mpid uuid.UUID
+	for _, profile := range profiles {
+		email, _ := profile.Attributes["email"].(string)
+		if email == eventProfileEmail {
+			mpid = profile.MPID
 			break
 		}
 	}
-	if userMUID == (uuid.UUID{}) {
-		t.Fatalf("user with email %q not found", eventUserEmail)
+	if mpid == (uuid.UUID{}) {
+		t.Fatalf("profile with email %q not found", eventProfileEmail)
 	}
-	t.Logf("user imported from event has MUID %s", userMUID)
+	t.Logf("profile imported from event has MPID %s", mpid)
 
-	// Retrieve the first event for the user.
+	// Retrieve the first event for the profile.
 	var event map[string]any
-	events := c.UserEvents(userMUID, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
+	events := c.ProfileEvents(mpid, []string{"anonymousId", "context", "event", "properties", "connectionId", "traits", "type", "userId", "groupId"})
 	if len(events) != expectedEventsCount {
-		t.Fatalf("expected %d events for user %s, got %d", expectedEventsCount, userMUID, len(events))
+		t.Fatalf("expected %d events for profile %s, got %d", expectedEventsCount, mpid, len(events))
 	}
 	event = events[0] // most recent event.
 
@@ -215,7 +214,7 @@ func TestEvents(t *testing.T) {
 		t.Fatalf("expected a groupId = %q, got %q", "uy55IELNg", groupEvent["groupId"])
 	}
 
-	// Test importing a user identity with an action that has no mapping.
+	// Test importing an identity with an action that has no mapping.
 	javaScript2ID := c.CreateJavaScriptSource("JavaScript (source 2)", nil)
 	javaScript2Key := c.EventWriteKeys(javaScript2ID)[0]
 	c.CreateAction(javaScript2ID, "User", meergotester.ActionToSet{

@@ -28,22 +28,22 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Skip()
 	}
 	c := meergotester.NewMeergoInstance(t)
-	c.PopulateUserSchema(false)
+	c.PopulateProfileSchema(false)
 	c.SetFileSystemRoot(storage.Root())
 	c.Start()
 	defer c.Stop()
 
-	// Add properties to the user schema.
+	// Add properties to the profile schema.
 	schema := types.Object([]types.Property{
 		{Name: "email", Type: types.Text().WithCharLen(254), ReadOptional: true},
 		{Name: "name", Type: types.Text(), ReadOptional: true},
 		{Name: "phone_numbers", Type: types.Array(types.Text()), ReadOptional: true},
 		{Name: "total_orders", Type: types.Int(32), ReadOptional: true},
 	})
-	c.AlterUserSchema(schema, nil, nil)
+	c.AlterProfileSchema(schema, nil, nil)
 
 	// Set the email as the only identifier, as the 3 identities, imported from
-	// the 3 connections, will all be put together in a single user as they
+	// the 3 connections, will all be put together in a single profile as they
 	// share the same email.
 	//
 	// Also disable the automatic execution of the Identity Resolution, which
@@ -55,8 +55,8 @@ func TestIdentityResolution2(t *testing.T) {
 	sourceC := c.CreateSourceFileSystem()
 
 	// Create three JSON files in storage, one for each connection. Each file
-	// will contain a single user, which will be the only identity imported for
-	// each connection.
+	// will contain a single user, which will be the only identity imported
+	// for each connection.
 
 	writeUser := func(filename string, user map[string]any) {
 		content, err := json.Marshal([]any{user})
@@ -170,15 +170,15 @@ func TestIdentityResolution2(t *testing.T) {
 		t.Fatalf("expected an Identity Resolution duration less than 1 hour, got a duration of %v", duration)
 	}
 
-	// Check that there is only one user, and that its properties have been
+	// Check that there is only one profile, and that its properties have been
 	// merged correctly.
 
-	users, _, total := c.Users(schema.Properties().Names(), "", false, 0, 100)
+	profiles, _, total := c.Profiles(schema.Properties().Names(), "", false, 0, 100)
 	if total != 1 {
-		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", total)
+		t.Fatalf("expected just 1 profile (which is the merge of the 3 identities), got %d instead", total)
 	}
-	user := users[0]
-	if user.SourcesLastUpdate.IsZero() {
+	profile := profiles[0]
+	if profile.SourcesLastUpdate.IsZero() {
 		t.Fatalf("expected a valid value for 'sourcesLastUpdate', got zero instead")
 	}
 	expected := map[string]any{
@@ -187,8 +187,8 @@ func TestIdentityResolution2(t *testing.T) {
 		"phone_numbers": []any{"+11 111", "+22 222", "+33 333"},
 		"total_orders":  json.Number("21"),
 	}
-	if !reflect.DeepEqual(user.Traits, expected) {
-		t.Fatalf("expected user traits %#v, got %#v", expected, user)
+	if !reflect.DeepEqual(profile.Attributes, expected) {
+		t.Fatalf("expected profile attributes %#v, got %#v", expected, profile)
 	}
 
 	// Change the primary sources, making the "total_orders" property have
@@ -201,16 +201,16 @@ func TestIdentityResolution2(t *testing.T) {
 	primarySources := map[string]int{
 		"total_orders": sourceB,
 	}
-	c.AlterUserSchema(schema, primarySources, nil)
+	c.AlterProfileSchema(schema, primarySources, nil)
 
 	c.RunIdentityResolution()
 
-	users, _, total = c.Users(schema.Properties().Names(), "", false, 0, 100)
+	profiles, _, total = c.Profiles(schema.Properties().Names(), "", false, 0, 100)
 	if total != 1 {
-		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", total)
+		t.Fatalf("expected just 1 profile (which is the merge of the 3 identities), got %d instead", total)
 	}
-	user = users[0]
-	if user.SourcesLastUpdate.IsZero() {
+	profile = profiles[0]
+	if profile.SourcesLastUpdate.IsZero() {
 		t.Fatalf("expected a valid value for 'sourcesLastUpdate', got zero instead")
 	}
 	expected = map[string]any{
@@ -219,8 +219,8 @@ func TestIdentityResolution2(t *testing.T) {
 		"phone_numbers": []any{"+11 111", "+22 222", "+33 333"},
 		"total_orders":  json.Number("20"),
 	}
-	if !reflect.DeepEqual(user.Traits, expected) {
-		t.Fatalf("expected user traits %#v, got %#v", expected, user)
+	if !reflect.DeepEqual(profile.Attributes, expected) {
+		t.Fatalf("expected profile attributes %#v, got %#v", expected, profile)
 	}
 
 	storage.Remove()

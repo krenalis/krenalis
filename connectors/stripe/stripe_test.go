@@ -21,7 +21,7 @@ func TestEncodeProperties(t *testing.T) {
 		buf := connectors.GetBodyBuffer(connectors.NoEncoding, 1024)
 		defer buf.Close()
 
-		encodeProperties(buf, p)
+		encodeAttributes(buf, p)
 		if buf.Len() == 0 {
 			return nil
 		}
@@ -83,7 +83,7 @@ func TestEncodeProperties(t *testing.T) {
 			}
 		}()
 
-		encodeProperties(buf, map[string]any{"flag": true})
+		encodeAttributes(buf, map[string]any{"flag": true})
 	})
 
 	// Nested object encoding with bracketed keys.
@@ -238,7 +238,7 @@ func TestEncodeProperties(t *testing.T) {
 			}
 		}()
 
-		props := map[string]any{
+		attributes := map[string]any{
 			"a": map[string]any{
 				"b": map[string]any{
 					"c": map[string]any{
@@ -249,16 +249,16 @@ func TestEncodeProperties(t *testing.T) {
 				},
 			},
 		}
-		encodeProperties(buf, props)
+		encodeAttributes(buf, attributes)
 	})
 
 	// Empty arrays emit nothing by design.
 	t.Run("empty_array", func(t *testing.T) {
-		props := map[string]any{
+		attributes := map[string]any{
 			"items": []any{},
 			"ok":    "v",
 		}
-		got := encode(props)
+		got := encode(attributes)
 		want := []string{"ok=v"}
 		if len(got) != len(want) || got[0] != want[0] {
 			t.Fatalf("expected %q, got %q", want[0], strings.Join(got, "&"))
@@ -267,12 +267,12 @@ func TestEncodeProperties(t *testing.T) {
 
 	// encodeProperties leaves inclusion decisions to callers.
 	t.Run("no_skipping", func(t *testing.T) {
-		props := map[string]any{
+		attributes := map[string]any{
 			"default_source": "tok",
 			"payment_method": "pm",
 			"tax_id_data":    "tax",
 		}
-		got := encode(props)
+		got := encode(attributes)
 		want := []string{
 			"default_source=tok",
 			"payment_method=pm",
@@ -358,12 +358,12 @@ func TestEncodePropertiesAllocations(t *testing.T) {
 		"rich_payload": buildRichPayload(),
 	}
 
-	for name, props := range cases {
-		props := props
+	for name, attributes := range cases {
+		attributes := attributes
 		t.Run(name, func(t *testing.T) {
 			allocs := testing.AllocsPerRun(100, func() {
 				bb := connectors.GetBodyBuffer(connectors.NoEncoding, 1024)
-				encodeProperties(bb, props)
+				encodeAttributes(bb, attributes)
 				bb.Close()
 			})
 			if allocs != expectedAllocs {

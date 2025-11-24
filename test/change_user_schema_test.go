@@ -16,7 +16,7 @@ import (
 	"github.com/meergo/meergo/test/meergotester"
 )
 
-func TestChangeUserSchema(t *testing.T) {
+func TestChangeProfileSchema(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
@@ -27,18 +27,18 @@ func TestChangeUserSchema(t *testing.T) {
 	defer c.Stop()
 
 	ws := c.Workspace()
-	if n := ws.UserSchema.Properties().Len(); n != 10 {
-		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
+	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
+		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.UserSchema); err != nil {
-		t.Fatalf("invalid user schema: %s", err)
+	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+		t.Fatalf("invalid profile schema: %s", err)
 	}
 
 	identifiers := []string{"email", "android.id"}
 	c.UpdateIdentityResolution(true, identifiers)
 
-	// Read the schema in "testdata/change_user_schema_test.json".
-	f, err := os.Open("testdata/change_user_schema_test.json")
+	// Read the schema in "testdata/change_profile_schema_test.json".
+	f, err := os.Open("testdata/change_profile_schema_test.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,19 +54,19 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Alter the user schema.
-	queries := c.PreviewAlterUserSchema(file.Schema, file.RePaths)
+	// Alter the profile schema.
+	queries := c.PreviewAlterProfileSchema(file.Schema, file.RePaths)
 	if len(queries) != 4 {
 		t.Fatalf("expected 4 queries, got %d", len(queries))
 	}
-	c.AlterUserSchema(file.Schema, file.PrimarySources, file.RePaths)
+	c.AlterProfileSchema(file.Schema, file.PrimarySources, file.RePaths)
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.Properties().Len(); n != 10 {
-		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
+	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
+		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.UserSchema); err != nil {
-		t.Fatalf("invalid user schema: %s", err)
+	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+		t.Fatalf("invalid profile schema: %s", err)
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
 		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
@@ -76,25 +76,25 @@ func TestChangeUserSchema(t *testing.T) {
 	schema := types.Object(append(file.Schema.Properties().Slice(), types.Property{
 		Name: "new_prop", Type: types.Text(), ReadOptional: true,
 	}))
-	queries = c.PreviewAlterUserSchema(schema, nil)
+	queries = c.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries := []string{"BEGIN;",
-		"DROP VIEW \"users\";",
-		"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"new_prop\" character varying;",
-		"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"new_prop\" character varying;",
-		"CREATE VIEW \"users\" AS SELECT\n\t\"__muid__\",\n\t\"__last_change_time__\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users_0\";",
+		"DROP VIEW \"profiles\";",
+		"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"new_prop\" character varying;",
+		"ALTER TABLE \"_identities\"\n\tADD COLUMN \"new_prop\" character varying;",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.AlterUserSchema(schema, nil, nil)
+	c.AlterProfileSchema(schema, nil, nil)
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.Properties().Len(); n != 11 {
-		t.Fatalf("expected 11 properties in the \"users\" schema, got %d", n)
+	if n := ws.ProfileSchema.Properties().Len(); n != 11 {
+		t.Fatalf("expected 11 properties in the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.UserSchema); err != nil {
-		t.Fatalf("invalid user schema: %s", err)
+	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+		t.Fatalf("invalid profile schema: %s", err)
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
 		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
@@ -120,39 +120,39 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 	schema = types.Object(properties)
 	rePaths := map[string]any{"android.identifier": "android.id"}
-	queries = c.PreviewAlterUserSchema(schema, rePaths)
+	queries = c.PreviewAlterProfileSchema(schema, rePaths)
 	expectedQueries = []string{
 		"BEGIN;",
-		"DROP VIEW \"users\";", "ALTER TABLE \"_users_0\"\n\tDROP COLUMN \"email\";",
-		"ALTER TABLE \"_user_identities\"\n\tDROP COLUMN \"email\";",
-		"ALTER TABLE \"_users_0\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
-		"ALTER TABLE \"_user_identities\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
-		"CREATE VIEW \"users\" AS SELECT\n\t\"__muid__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_identifier\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users_0\";",
+		"DROP VIEW \"profiles\";", "ALTER TABLE \"_profiles_0\"\n\tDROP COLUMN \"email\";",
+		"ALTER TABLE \"_identities\"\n\tDROP COLUMN \"email\";",
+		"ALTER TABLE \"_profiles_0\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
+		"ALTER TABLE \"_identities\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_identifier\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.AlterUserSchema(schema, nil, rePaths)
+	c.AlterProfileSchema(schema, nil, rePaths)
 	identifiers = []string{"android.identifier"}
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.Properties().Len(); n != 10 {
-		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
+	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
+		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.UserSchema); err != nil {
-		t.Fatalf("invalid user schema: %s", err)
+	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+		t.Fatalf("invalid profile schema: %s", err)
 	}
-	if p, ok := ws.UserSchema.Properties().ByName("email"); ok {
+	if p, ok := ws.ProfileSchema.Properties().ByName("email"); ok {
 		t.Fatalf("expected no \"email\" property, got property %#v", p)
 	}
-	if p, err := ws.UserSchema.Properties().ByPath("android.id"); err == nil {
+	if p, err := ws.ProfileSchema.Properties().ByPath("android.id"); err == nil {
 		t.Fatalf("expected no \"android.id\" property, got property %#v", p)
 	}
-	if _, err := ws.UserSchema.Properties().ByPath("android.identifier"); err != nil {
+	if _, err := ws.ProfileSchema.Properties().ByPath("android.identifier"); err != nil {
 		t.Fatalf("expected property \"android.identifier\", got no property: %s", err)
 	}
-	if !types.Equal(schema, ws.UserSchema) {
+	if !types.Equal(schema, ws.ProfileSchema) {
 		t.Fatalf("expected equal schemas, got different schemas")
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
@@ -176,35 +176,35 @@ func TestChangeUserSchema(t *testing.T) {
 		properties = append(properties, p)
 	}
 	schema = types.Object(properties)
-	queries = c.PreviewAlterUserSchema(schema, nil)
+	queries = c.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries = []string{
 		"BEGIN;",
-		"DROP VIEW \"users\";",
-		"ALTER TABLE \"_users_0\"\n\tDROP COLUMN \"android_identifier\";",
-		"ALTER TABLE \"_user_identities\"\n\tDROP COLUMN \"android_identifier\";",
-		"CREATE VIEW \"users\" AS SELECT\n\t\"__muid__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users_0\";",
+		"DROP VIEW \"profiles\";",
+		"ALTER TABLE \"_profiles_0\"\n\tDROP COLUMN \"android_identifier\";",
+		"ALTER TABLE \"_identities\"\n\tDROP COLUMN \"android_identifier\";",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.AlterUserSchema(schema, nil, rePaths)
+	c.AlterProfileSchema(schema, nil, rePaths)
 
 	ws = c.Workspace()
-	if n := ws.UserSchema.Properties().Len(); n != 10 {
-		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
+	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
+		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
-	p, _ := ws.UserSchema.Properties().ByName("android")
+	p, _ := ws.ProfileSchema.Properties().ByName("android")
 	if n := p.Type.Properties().Len(); n != 2 {
-		t.Fatalf("expected 2 properties in the \"android\" object of the \"users\" schema, got %d", n)
+		t.Fatalf("expected 2 properties in the \"android\" object of the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.UserSchema); err != nil {
-		t.Fatalf("invalid user schema: %s", err)
+	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+		t.Fatalf("invalid profile schema: %s", err)
 	}
-	if p, err := ws.UserSchema.Properties().ByPath("android.identifier"); err == nil {
+	if p, err := ws.ProfileSchema.Properties().ByPath("android.identifier"); err == nil {
 		t.Fatalf("expected no \"android.identifier\" property, got property %#v", p)
 	}
-	if !types.Equal(schema, ws.UserSchema) {
+	if !types.Equal(schema, ws.ProfileSchema) {
 		t.Fatalf("expected equal schemas, got different schemas")
 	}
 	if ws.Identifiers == nil || len(ws.Identifiers) != 0 {
@@ -218,15 +218,15 @@ func TestChangeUserSchema(t *testing.T) {
 			{Name: "b", Type: types.Text(), ReadOptional: true},
 		}), ReadOptional: true},
 	))
-	_, err = c.PreviewAlterUserSchemaErr(schema, nil)
+	_, err = c.PreviewAlterProfileSchemaErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two users action schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}}`
+	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two profile action schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.AlterUserSchemaErr(schema, nil, nil)
+	err = c.AlterProfileSchemaErr(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -240,15 +240,15 @@ func TestChangeUserSchema(t *testing.T) {
 			{Name: "b", Type: types.Text(), ReadOptional: true, Nullable: true},
 		}), ReadOptional: true},
 	))
-	_, err = c.PreviewAlterUserSchemaErr(schema, nil)
+	_, err = c.PreviewAlterProfileSchemaErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"user schema properties cannot be nullable"}}`
+	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"profile schema properties cannot be nullable"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.AlterUserSchemaErr(schema, nil, nil)
+	err = c.AlterProfileSchemaErr(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -260,18 +260,18 @@ func TestChangeUserSchema(t *testing.T) {
 	firstProperty := file.Schema.Properties().Names()[0]
 	primarySource := c.CreateDummy("Primary Source", meergotester.Source)
 	primarySources := map[string]int{firstProperty: primarySource}
-	c.AlterUserSchema(file.Schema, primarySources, nil)
+	c.AlterProfileSchema(file.Schema, primarySources, nil)
 	ws = c.Workspace()
-	if !maps.Equal(primarySources, ws.UserPrimarySources) {
-		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.UserPrimarySources)
+	if !maps.Equal(primarySources, ws.PrimarySources) {
+		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.PrimarySources)
 	}
-	if err := checkSchemaProperties(ws.UserSchema); err != nil {
-		t.Fatalf("invalid user schema: %s", err)
+	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+		t.Fatalf("invalid profile schema: %s", err)
 	}
 
 	// Set a primary source for a not existent property.
 	primarySources = map[string]int{"not_existent_property": primarySource}
-	err = c.AlterUserSchemaErr(file.Schema, primarySources, nil)
+	err = c.AlterProfileSchemaErr(file.Schema, primarySources, nil)
 	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
@@ -283,7 +283,7 @@ func TestChangeUserSchema(t *testing.T) {
 		notExistentSource = 2
 	}
 	primarySources = map[string]int{firstProperty: notExistentSource}
-	err = c.AlterUserSchemaErr(file.Schema, primarySources, nil)
+	err = c.AlterProfileSchemaErr(file.Schema, primarySources, nil)
 	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %d does not exist"}}`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
@@ -292,7 +292,7 @@ func TestChangeUserSchema(t *testing.T) {
 }
 
 // checkSchemaProperties is used internally by the tests and checks that the
-// users schema does not contain 'nullable' or 'required' properties.
+// profiles schema does not contain 'nullable' or 'required' properties.
 func checkSchemaProperties(schema types.Type) error {
 	for path, p := range schema.Properties().WalkAll() {
 		if p.Nullable {

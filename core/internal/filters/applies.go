@@ -13,14 +13,14 @@ import (
 	"github.com/meergo/meergo/core/json"
 )
 
-// Applies reports whether where matches the given properties.
-func Applies(where *state.Where, properties map[string]any) bool {
+// Applies reports whether where matches the given attributes.
+func Applies(where *state.Where, attributes map[string]any) bool {
 	if where == nil {
 		return true
 	}
 	for _, cond := range where.Conditions {
 		op := cond.Operator
-		v, exists := readPropertyFrom(properties, cond.Property)
+		v, exists := readAttributeFrom(attributes, cond.Property)
 		var applies bool
 		switch op {
 		case state.OpIs:
@@ -465,10 +465,10 @@ func opIsEmpty(v any) bool {
 	return false
 }
 
-// readPropertyFrom reads the property with the given path from m, returning its
-// value (if found, otherwise nil) and a boolean indicating if the property path
-// corresponds to a value in m or not.
-func readPropertyFrom(m map[string]any, path []string) (any, bool) {
+// readAttributeFrom reads the property with the given path from m, returning
+// its value (if found, otherwise nil) and a boolean indicating if the property
+// path corresponds to a value in m or not.
+func readAttributeFrom(m map[string]any, path []string) (any, bool) {
 	last := len(path) - 1
 	for i, name := range path {
 		v, ok := m[name]
