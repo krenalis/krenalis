@@ -38,7 +38,7 @@ const sidebarItems: sidebarItem[] = [
 			},
 		],
 	},
-	{ name: 'users', label: 'User Profiles', link: 'users', icon: 'people' },
+	{ name: 'profiles', label: 'Profiles', link: 'profiles', icon: 'people' },
 	{
 		name: 'settings',
 		label: 'Customization',
@@ -46,7 +46,7 @@ const sidebarItems: sidebarItem[] = [
 		icon: 'gear',
 		subItems: [
 			{ name: 'settings/general', label: 'General', link: 'settings/general', icon: 'sliders2' },
-			{ name: 'schema', label: 'Customer Model', link: 'schema', icon: 'bookmark-check' },
+			{ name: 'schema', label: 'Profile Schema', link: 'schema', icon: 'bookmark-check' },
 			{
 				name: 'settings/identityResolution',
 				label: 'Identity Resolution',

@@ -4,12 +4,12 @@ import { ConnectionIdentitiesResponse } from '../../../lib/api/types/responses';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
-import { UserIdentity } from '../../../lib/api/types/user';
+import { Identity } from '../../../lib/api/types/profile';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Link } from '../../base/Link/Link';
 
 const useConnectionIdentities = () => {
-	const [identities, setIdentities] = useState<UserIdentity[]>();
+	const [identities, setIdentities] = useState<Identity[]>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
 	const { api, handleError, redirect } = useContext(AppContext);

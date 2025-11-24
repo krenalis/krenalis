@@ -61,28 +61,55 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 
 // Initialize initializes the database objects on the data warehouse in order to
 // make it work with Meergo.
-func (warehouse *Snowflake) Initialize(ctx context.Context, userColumns []warehouses.Column) error {
-	return warehouse.initRepairDatabaseObjects(ctx, userColumns, false)
+func (warehouse *Snowflake) Initialize(ctx context.Context, profileColumns []warehouses.Column) error {
+	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, false)
 }
 
-// Repair repairs the database objects on the data warehouse needed by warehouses.
-func (warehouse *Snowflake) Repair(ctx context.Context, userColumns []warehouses.Column) error {
-	return warehouse.initRepairDatabaseObjects(ctx, userColumns, true)
+// Repair repairs the database objects on the data warehouse needed by
+// warehouses.
+func (warehouse *Snowflake) Repair(ctx context.Context, profileColumns []warehouses.Column) error {
+	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, true)
+}
+
+// identitiesSQLSchema returns the SQL schema (in the form "CREATE TABLE ...")
+// of the identities table, which includes, in addition to the columns used
+// internally by the driver, the given profile columns.
+func identitiesSQLSchema(profileColumns []warehouses.Column) string {
+	var b strings.Builder
+	b.WriteString(`CREATE TABLE IF NOT EXISTS "_IDENTITIES" (
+		"__PK__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
+		"__ACTION__" INT NOT NULL,
+		"__IS_ANONYMOUS__" BOOLEAN NOT NULL DEFAULT FALSE,
+		"__IDENTITY_ID__" VARCHAR NOT NULL,
+		"__CONNECTION__" INT NOT NULL,
+		"__ANONYMOUS_IDS__" ARRAY,
+		"__LAST_CHANGE_TIME__" TIMESTAMP_NTZ NOT NULL,
+		"__EXECUTION__" INT,
+		"__mpid__" VARCHAR(36),
+		"__CLUSTER__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
+	for _, c := range profileColumns {
+		b.WriteString(",\n")
+		b.WriteString(quoteIdent(c.Name))
+		b.WriteByte(' ')
+		b.WriteString(typeToSnowflakeType(c.Type))
+	}
+	b.WriteString(",\n" + `PRIMARY KEY ("__PK__"))`)
+	return b.String()
 }
 
 // initRepairDatabaseObjects initializes (or repairs) the database objects (as
 // tables, types, etc...) on the data warehouse.
-func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, userColumns []warehouses.Column, repair bool) error {
+func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, profileColumns []warehouses.Column, repair bool) error {
 	queries := []string{
-		createDestinationUsersTable,
+		createDestinationProfilesTable,
 		createEventsTable,
 		createOperationsTable,
-		createUserSchemaVersionTable,
-		userIdentitiesSQLSchema(userColumns),
-		usersSQLSchema("_users_0", userColumns),
+		createProfileSchemaVersionTable,
+		identitiesSQLSchema(profileColumns),
+		profilesSQLSchema("_profiles_0", profileColumns),
 	}
 	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
-		queries = append(queries, usersViewSQLSchema(userColumns, "_users_0"))
+		queries = append(queries, profilesViewSQLSchema(profileColumns, "_profiles_0"))
 	}
 	db := warehouse.openDB()
 	for _, query := range queries {
@@ -94,44 +121,18 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, userC
 	return nil
 }
 
-// userIdentitiesSQLSchema returns the SQL schema (in the form "CREATE TABLE
-// ...") of the user identities table, which includes, in addition to the
-// columns used internally by the driver, the given user columns.
-func userIdentitiesSQLSchema(userColumns []warehouses.Column) string {
-	var b strings.Builder
-	b.WriteString(`CREATE TABLE IF NOT EXISTS "_USER_IDENTITIES" (
-		"__PK__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
-		"__ACTION__" INT NOT NULL,
-		"__IS_ANONYMOUS__" BOOLEAN NOT NULL DEFAULT FALSE,
-		"__IDENTITY_ID__" VARCHAR NOT NULL,
-		"__CONNECTION__" INT NOT NULL,
-		"__ANONYMOUS_IDS__" ARRAY,
-		"__LAST_CHANGE_TIME__" TIMESTAMP_NTZ NOT NULL,
-		"__EXECUTION__" INT,
-		"__muid__" VARCHAR(36),
-		"__CLUSTER__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
-	for _, c := range userColumns {
-		b.WriteString(",\n")
-		b.WriteString(quoteIdent(c.Name))
-		b.WriteByte(' ')
-		b.WriteString(typeToSnowflakeType(c.Type))
-	}
-	b.WriteString(",\n" + `PRIMARY KEY ("__PK__"))`)
-	return b.String()
-}
-
-// usersSQLSchema returns the SQL schema (in the form "CREATE TABLE ...") of the
-// users table with the given name, which includes, in addition to the columns
-// used internally by the driver, the given user columns.
-func usersSQLSchema(name string, userColumns []warehouses.Column) string {
+// profilesSQLSchema returns the SQL schema (in the form "CREATE TABLE ...") of
+// the profiles table with the given name, which includes, in addition to the
+// columns used internally by the driver, the given profile columns.
+func profilesSQLSchema(name string, profileColumns []warehouses.Column) string {
 	var b strings.Builder
 	b.WriteString(`CREATE TABLE IF NOT EXISTS `)
 	b.WriteString(quoteIdent(name))
 	b.WriteString(` (
-		"__MUID__" VARCHAR(36),
+		"__MPID__" VARCHAR(36),
 		"__IDENTITIES__" ARRAY,
 		"__LAST_CHANGE_TIME__" TIMESTAMP NOT NULL`)
-	for _, c := range userColumns {
+	for _, c := range profileColumns {
 		b.WriteString(",\n")
 		b.WriteString(quoteIdent(c.Name))
 		b.WriteByte(' ')
@@ -141,19 +142,20 @@ func usersSQLSchema(name string, userColumns []warehouses.Column) string {
 	return b.String()
 }
 
-// usersViewSQLSchema returns the SQL schema (in the form "CREATE ... VIEW ...")
-// of the users view which is based on the users table with the given name.
-func usersViewSQLSchema(userColumns []warehouses.Column, fromUsersTable string) string {
+// profilesViewSQLSchema returns the SQL schema (in the form "CREATE ... VIEW
+// ...") of the profiles view which is based on the profiles table with the
+// given name.
+func profilesViewSQLSchema(profileColumns []warehouses.Column, fromProfilesTable string) string {
 	var b strings.Builder
-	b.WriteString(`CREATE OR REPLACE VIEW "USERS" AS
+	b.WriteString(`CREATE OR REPLACE VIEW "PROFILES" AS
 		SELECT
-			"__MUID__",
+			"__MPID__",
 			"__LAST_CHANGE_TIME__"`)
-	for _, c := range userColumns {
+	for _, c := range profileColumns {
 		b.WriteString(",\n")
 		b.WriteString(quoteIdent(c.Name))
 	}
 	b.WriteString(` FROM `)
-	b.WriteString(quoteIdent(fromUsersTable))
+	b.WriteString(quoteIdent(fromProfilesTable))
 	return b.String()
 }

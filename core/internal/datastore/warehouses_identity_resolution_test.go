@@ -63,18 +63,18 @@ type identity struct {
 	id           string
 	isAnonymous  bool
 	anonymousIds []string
-	properties   map[string]any
+	attributes   map[string]any
 }
 
 // TestWarehousesIdentityResolution tests the Identity Resolution.
 func TestWarehousesIdentityResolution(t *testing.T) {
 
 	tests := []struct {
-		name           string
-		identifiers    []string
-		primarySources map[string]int
-		identities     []identity
-		expectedUsers  []map[string]any
+		name             string
+		identifiers      []string
+		primarySources   map[string]int
+		identities       []identity
+		expectedProfiles []map[string]any
 	}{
 		{
 			name:        "One identity, no identifiers",
@@ -84,10 +84,10 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
 		},
@@ -99,16 +99,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
 					connection: 100,
 					action:     2,
 					id:         "c@d",
-					properties: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
 			},
@@ -121,16 +121,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "abcd",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
 					connection: 100,
 					action:     2,
 					id:         "abcd",
-					properties: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
 			},
 		},
@@ -142,16 +142,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
@@ -164,16 +164,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
 		},
@@ -185,16 +185,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
+					attributes: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "c@d",
-					properties: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
+					attributes: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
 			},
 		},
@@ -206,16 +206,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
+					attributes: map[string]any{"email": nil, "first_name": nil, "last_name": "Manzarek", "notes": nil},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "c@d",
-					properties: map[string]any{"email": nil, "first_name": "Ray", "last_name": "Manzarek", "notes": nil},
+					attributes: map[string]any{"email": nil, "first_name": "Ray", "last_name": "Manzarek", "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": nil, "first_name": "Ray", "last_name": "Manzarek", "notes": nil},
 			},
 		},
@@ -227,16 +227,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": "a", "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": "a", "last_name": nil, "notes": nil},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": "b", "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": "b", "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": "b", "last_name": nil, "notes": nil},
 			},
 		},
@@ -249,17 +249,17 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					action:      1,
 					isAnonymous: true,
 					id:          "46d59a94-6032-46d9-87f2-f006af0156f0",
-					properties:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
+					attributes:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 				},
 				{
 					connection:  100,
 					action:      2,
 					isAnonymous: true,
 					id:          "46d59a94-6032-46d9-87f2-f006af0156f0",
-					properties:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
+					attributes:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 			},
 		},
@@ -272,16 +272,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					action:      1,
 					isAnonymous: true,
 					id:          "46d59a94-6032-46d9-87f2-f006af0156f0",
-					properties:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
+					attributes:  map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 				},
 				{
 					connection: 100,
 					action:     2,
 					id:         "46d59a94-6032-46d9-87f2-f006af0156f0",
-					properties: map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 				{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 			},
@@ -297,10 +297,10 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
 		},
@@ -318,22 +318,22 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": "FIRST_100", "last_name": "LAST_100", "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": "FIRST_100", "last_name": "LAST_100", "notes": nil},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": "FIRST_200", "last_name": "LAST_200", "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": "FIRST_200", "last_name": "LAST_200", "notes": nil},
 				},
 				{
 					connection: 300,
 					action:     3,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": "FIRST_300", "last_name": "LAST_300", "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": "FIRST_300", "last_name": "LAST_300", "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": "FIRST_200", "last_name": "LAST_200", "notes": nil},
 			},
 		},
@@ -345,10 +345,10 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 			},
 		},
@@ -360,22 +360,22 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA", "BBB", "ZZZ"}},
 			},
 		},
@@ -387,28 +387,28 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "A",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 				},
 				{
 					connection: 200,
 					action:     2,
 					id:         "B",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
 				},
 				{
 					connection: 300,
 					action:     3,
 					id:         "C",
-					properties: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
+					attributes: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 				},
 				{
 					connection: 400,
 					action:     4,
 					id:         "D",
-					properties: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
+					attributes: map[string]any{"email": "c@d", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA", "ZZZ"}},
 				{"email": "c@d", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 			},
@@ -421,22 +421,22 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
 				},
 				{
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA", "ZZZ"}},
 			},
 		},
@@ -448,22 +448,22 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 				{
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 				},
 				{
 					connection: 100,
 					action:     1,
 					id:         "a@b",
-					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 				},
 			},
-			expectedUsers: []map[string]any{
+			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 			},
 		},
@@ -567,20 +567,20 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
 
-					// Truncate the existing user identities.
+					// Truncate the existing identities.
 					//
 					// TODO(Gianluca): how should the drivers expose the table names? We
 					// have an issue where we discuss this (https://github.com/meergo/meergo/issues/928).
-					err = wh.Truncate(ctx, "_user_identities")
+					err = wh.Truncate(ctx, "_identities")
 					if err != nil {
 						t.Fatal(err)
 					}
 
-					// Merge the test's user identities on the warehouse.
+					// Merge the test's identities on the warehouse.
 					var rows []map[string]any
 					validatePrimarySources(t, test.primarySources)
-					for _, user := range test.identities {
-						validateIdentity(t, user)
+					for _, profile := range test.identities {
+						validateIdentity(t, profile)
 						// Sleep for 1 millisecond to ensure that
 						// timestamps are generated incrementally. This
 						// is not necessary on Linux, where timestamps
@@ -591,15 +591,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						// making the test fail.
 						time.Sleep(1 * time.Millisecond)
 						row := map[string]any{
-							"__action__":           user.action,
-							"__is_anonymous__":     user.isAnonymous,
-							"__identity_id__":      user.id,
-							"__connection__":       user.connection,
-							"__anonymous_ids__":    toSliceAny(user.anonymousIds),
+							"__action__":           profile.action,
+							"__is_anonymous__":     profile.isAnonymous,
+							"__identity_id__":      profile.id,
+							"__connection__":       profile.connection,
+							"__anonymous_ids__":    toSliceAny(profile.anonymousIds),
 							"__last_change_time__": time.Now().UTC(),
 							"__execution__":        1,
 						}
-						for k, v := range user.properties {
+						for k, v := range profile.attributes {
 							row[k] = v
 						}
 						rows = append(rows, row)
@@ -627,13 +627,13 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						}
 					}
 
-					// Read the users from the warehouse and check that they match with
+					// Read the profiles from the warehouse and check that they match with
 					// the expected ones.
-					var gotUsers []map[string]any
+					var gotProfiles []map[string]any
 					{
 						query := warehouses.RowQuery{
 							Columns: columns,
-							Table:   "users",
+							Table:   "profiles",
 							OrderBy: []warehouses.Column{columnByName["email"]},
 						}
 						r, _, err := wh.Query(ctx, query, true)
@@ -647,11 +647,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							if err != nil {
 								t.Fatal(err)
 							}
-							user := make(map[string]any, len(columns))
+							profile := make(map[string]any, len(columns))
 							for i, c := range columns {
-								user[c.Name] = row[i]
+								profile[c.Name] = row[i]
 							}
-							gotUsers = append(gotUsers, user)
+							gotProfiles = append(gotProfiles, profile)
 						}
 						if err := r.Err(); err != nil {
 							t.Fatal(err)
@@ -661,14 +661,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
-					// The returned users are sorted solely by email, as it is
-					// only possible to sort users by one property. Therefore,
-					// in the case of users with the same email but with
+					// The returned profiles are sorted solely by email, as it is
+					// only possible to sort profiles by one property. Therefore,
+					// in the case of profiles with the same email but with
 					// different values for first_name, etc..., the tests may
 					// randomly fail based on how Meergo returned them. For this
-					// reason, here the users are sorted based on all their text
+					// reason, here the profiles are sorted based on all their text
 					// properties, in ascending order.
-					slices.SortFunc(gotUsers, func(u1, u2 map[string]any) int {
+					slices.SortFunc(gotProfiles, func(u1, u2 map[string]any) int {
 						for _, c := range columns {
 							if c.Type.Kind() == types.TextKind {
 								v1, _ := u1[c.Name].(string)
@@ -680,8 +680,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						}
 						return 0
 					})
-					if !reflect.DeepEqual(test.expectedUsers, gotUsers) {
-						t.Fatalf("\nexpected users:\n\t%v\ngot:\n\t%v", test.expectedUsers, gotUsers)
+					if !reflect.DeepEqual(test.expectedProfiles, gotProfiles) {
+						t.Fatalf("\nexpected profiles:\n\t%v\ngot:\n\t%v", test.expectedProfiles, gotProfiles)
 					}
 				})
 			}
@@ -740,12 +740,12 @@ func validateIdentity(t *testing.T, id identity) {
 		fatal("identity ID cannot be empty")
 	}
 	// properties.
-	columnsNames := slices.Collect(maps.Keys(columnByName))
-	propNames := slices.Collect(maps.Keys(id.properties))
-	slices.Sort(columnsNames)
-	slices.Sort(propNames)
-	if !reflect.DeepEqual(propNames, columnsNames) {
-		fatal("expected values for properties %v, got values for %v instead", columnsNames, propNames)
+	columns := slices.Collect(maps.Keys(columnByName))
+	properties := slices.Collect(maps.Keys(id.attributes))
+	slices.Sort(columns)
+	slices.Sort(properties)
+	if !reflect.DeepEqual(properties, columns) {
+		fatal("expected values for properties %v, got values for %v instead", columns, properties)
 	}
 }
 

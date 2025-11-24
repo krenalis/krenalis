@@ -139,13 +139,13 @@ type KV struct {
 	Value string `json:"value"`
 }
 
-type User struct {
-	MUID              uuid.UUID      `json:"muid"`
+type Profile struct {
+	MPID              uuid.UUID      `json:"mpid"`
 	SourcesLastUpdate time.Time      `json:"sourcesLastUpdate"`
-	Traits            map[string]any `json:"traits"`
+	Attributes        map[string]any `json:"attributes"`
 }
 
-type UserIdentity struct {
+type Identity struct {
 	Connection     int       // do not use in tests. Currently, this serves just for the UI.
 	Action         int       `json:"action"`
 	ID             string    `json:"id"`
@@ -343,8 +343,8 @@ const (
 type Workspace struct {
 	ID                             int            `json:"id"`
 	Name                           string         `json:"name"`
-	UserSchema                     types.Type     `json:"userSchema"`
-	UserPrimarySources             map[string]int `json:"userPrimarySources"`
+	ProfileSchema                  types.Type     `json:"profileSchema"`
+	PrimarySources                 map[string]int `json:"primarySources"`
 	ResolveIdentitiesOnBatchImport bool           `json:"resolveIdentitiesOnBatchImport"`
 	Identifiers                    []string       `json:"identifiers"`
 	WarehouseMode                  WarehouseMode  `json:"warehouseMode"`
@@ -352,10 +352,10 @@ type Workspace struct {
 }
 
 type UIPreferences struct {
-	UserProfile struct {
+	Profile struct {
 		Image     string `json:"image"`
 		FirstName string `json:"firstName"`
 		LastName  string `json:"lastName"`
 		Extra     string `json:"extra"`
-	} `json:"userProfile"`
+	} `json:"profile"`
 }

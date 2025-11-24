@@ -37,7 +37,7 @@ const IdentityResolutionSettings = () => {
 			setIdentifiers(workspace.identifiers);
 			let suitableAsIdentifiers: ObjectType;
 			try {
-				suitableAsIdentifiers = await api.workspaces.userPropertiesSuitableAsIdentifiers();
+				suitableAsIdentifiers = await api.workspaces.profilePropertiesSuitableAsIdentifiers();
 			} catch (err) {
 				handleError(err);
 				return;
@@ -144,7 +144,7 @@ const IdentityResolutionSettings = () => {
 				<div className='identifiers__no-schema'>
 					<IconWrapper name='person-exclamation' size={40} />
 					<div className='identifiers__no-schema-description'>
-						The current user schema doesn't include any property that can be used as an identifier
+						The current profile schema doesn't include any property that can be used as an identifier
 					</div>
 					<Link path='schema'>
 						<SlButton variant='primary' className='identifiers__no-schema-button'>

@@ -32,7 +32,7 @@ type function struct {
 }
 
 type Settings struct {
-	NodeExecutable   string // eg. "/usr/bin/node".
+	NodeJSExecutable string // eg. "/usr/bin/node".
 	PythonExecutable string // eg. "/usr/bin/python".
 	FunctionsDir     string
 	SudoUser         string // "" means: don't call sudo and keep the current user.
@@ -45,9 +45,9 @@ func New(settings Settings) transformers.FunctionProvider {
 }
 
 // Call calls the function with the given identifier and version for each record
-// updating its Properties field with the result of each invocation.
+// updating its Attributes field with the result of each invocation.
 //
-// Before transformation, record properties must conform to inSchema.
+// Before transformation, record attributes must conform to inSchema.
 // After transformation, they should conform to outSchema, unless an error
 // occurs on the record.
 //
@@ -66,7 +66,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	var langExecutable string
 	switch language {
 	case state.JavaScript:
-		langExecutable = fn.settings.NodeExecutable
+		langExecutable = fn.settings.NodeJSExecutable
 	case state.Python:
 		langExecutable = fn.settings.PythonExecutable
 	default:
@@ -92,7 +92,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	var stdout bytes.Buffer
 	args := []string{
 		langExecutable, // node or python executable.
-		"-",            // read source code of transformation function from stdin. This is the same for both Node and Python.
+		"-",            // read source code of transformation function from stdin. This is the same for both Node.js and Python.
 		string(payload),
 	}
 	if fn.settings.SudoUser != "" {
@@ -113,7 +113,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	err = cmd.Run()
 	if err != nil {
 		const errPrefix = "cannot execute local transformation"
-		runtime := "Node"
+		runtime := "Node.js"
 		if language == state.Python {
 			runtime = "Python"
 		}
@@ -368,7 +368,7 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 func (fn *function) SupportLanguage(language state.Language) bool {
 	switch language {
 	case state.JavaScript:
-		return fn.settings.NodeExecutable != ""
+		return fn.settings.NodeJSExecutable != ""
 	case state.Python:
 		return fn.settings.PythonExecutable != ""
 	}

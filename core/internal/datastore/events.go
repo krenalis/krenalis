@@ -23,7 +23,7 @@ func EventColumnByPath(propertyPath string) warehouses.Column {
 // Note: The "originalTimestamp" property exists in the schema but does not have
 // a corresponding column in the table.
 var eventColumnNameFromPropertyPath = map[string]string{
-	"muid":                             "muid",
+	"mpid":                             "mpid",
 	"connectionId":                     "connection_id",
 	"anonymousId":                      "anonymous_id",
 	"channel":                          "channel",
@@ -126,7 +126,7 @@ func init() {
 			Nullable: p.ReadOptional,
 		}
 		eventColumnByProperty[path] = c
-		if path != "muid" {
+		if path != "mpid" {
 			eventsColumnsForMerge[i] = c
 			i++
 		}

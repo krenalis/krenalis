@@ -75,7 +75,7 @@ type LambdaConfig struct {
 	SecretAccessKey string
 	Region          string
 	Role            string
-	Node            struct {
+	NodeJS          struct {
 		Runtime string
 		Layer   string
 	}
@@ -86,7 +86,7 @@ type LambdaConfig struct {
 }
 
 type LocalConfig struct {
-	NodeExecutable   string
+	NodeJSExecutable string
 	PythonExecutable string
 	FunctionsDir     string
 	SudoUser         string
@@ -107,10 +107,10 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 
 	// Choose the transformation function provider setting.
-	if settings.Transformers.Lambda.Node.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "" {
+	if settings.Transformers.Lambda.NodeJS.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "" {
 		config.FunctionProvider = core.LambdaConfig(settings.Transformers.Lambda)
 	}
-	if settings.Transformers.Local.NodeExecutable != "" || settings.Transformers.Local.PythonExecutable != "" {
+	if settings.Transformers.Local.NodeJSExecutable != "" || settings.Transformers.Local.PythonExecutable != "" {
 		config.FunctionProvider = core.LocalConfig(settings.Transformers.Local)
 	}
 

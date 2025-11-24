@@ -5,7 +5,7 @@
 -- Keep in sync with the events.eventsMergeTable variable.
 
 CREATE TABLE IF NOT EXISTS "EVENTS" (
-    "MUID" VARCHAR(36),
+    "MPID" VARCHAR(36),
     "CONNECTION_ID" INT NOT NULL,
     "ANONYMOUS_ID" VARCHAR NOT NULL,
     "CHANNEL" VARCHAR,

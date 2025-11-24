@@ -95,7 +95,7 @@ func (file *File) Connector() string {
 //
 // file must support reading of records, otherwise this method panics.
 //
-// Each returned record contains, in its Properties field, the properties of the
+// Each returned record contains, in its Attributes field, the properties of the
 // action's input schema with the same types.
 //
 // If the action's input schema does not align with the file's schema, the
@@ -440,13 +440,13 @@ func (w *fileWriter) Close(ctx context.Context) error {
 	return err
 }
 
-func (w *fileWriter) Write(ctx context.Context, id string, properties map[string]any) bool {
+func (w *fileWriter) Write(ctx context.Context, id string, attributes map[string]any) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
 	r := fileRecord{
 		id:     id,
-		record: properties,
+		record: attributes,
 	}
 	select {
 	case w.records <- r:
@@ -708,13 +708,13 @@ func (rw *recordWriter) Record(record map[string]any) error {
 		}
 	}
 	// Call the yield function passing the previous record.
-	if rw.record.Properties != nil || rw.record.Err != nil {
+	if rw.record.Attributes != nil || rw.record.Err != nil {
 		if !rw.yield(rw.record) {
 			return errRecordStop
 		}
 	}
 	rw.record = Record{
-		Properties:     make(map[string]any, rw.numPropertiesPerRecord),
+		Attributes:     make(map[string]any, rw.numPropertiesPerRecord),
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
@@ -726,7 +726,7 @@ func (rw *recordWriter) Record(record map[string]any) error {
 			rw.record.Err = err
 		}
 	}
-	// Get the properties.
+	// Get the attributes.
 	if rw.record.Err == nil {
 		for _, p := range rw.properties {
 			if p.Name == "" {
@@ -745,7 +745,7 @@ func (rw *recordWriter) Record(record map[string]any) error {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[p.Name] = v
+			rw.record.Attributes[p.Name] = v
 		}
 	}
 	rw.limit--
@@ -782,13 +782,13 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 		}
 	}
 	// Call the yield function passing the previous record.
-	if rw.record.Properties != nil || rw.record.Err != nil {
+	if rw.record.Attributes != nil || rw.record.Err != nil {
 		if !rw.yield(rw.record) {
 			return errRecordStop
 		}
 	}
 	rw.record = Record{
-		Properties:     make(map[string]any, rw.numPropertiesPerRecord),
+		Attributes:     make(map[string]any, rw.numPropertiesPerRecord),
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
@@ -800,7 +800,7 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 			rw.record.Err = err
 		}
 	}
-	// Get the properties.
+	// Get the attributes.
 	if rw.record.Err == nil {
 		for i, p := range rw.properties {
 			if p.Name == "" {
@@ -811,7 +811,7 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[p.Name] = v
+			rw.record.Attributes[p.Name] = v
 		}
 	}
 	rw.limit--
@@ -857,13 +857,13 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 		}
 	}
 	// Call the yield function passing the previous record.
-	if rw.record.Properties != nil || rw.record.Err != nil {
+	if rw.record.Attributes != nil || rw.record.Err != nil {
 		if !rw.yield(rw.record) {
 			return errRecordStop
 		}
 	}
 	rw.record = Record{
-		Properties:     make(map[string]any, rw.numPropertiesPerRecord),
+		Attributes:     make(map[string]any, rw.numPropertiesPerRecord),
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
@@ -875,7 +875,7 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 			rw.record.Err = err
 		}
 	}
-	// Get the properties.
+	// Get the attributes.
 	if rw.record.Err == nil {
 		for i, p := range rw.properties {
 			if p.Name == "" {
@@ -886,7 +886,7 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 				rw.record.Err = err
 				break
 			}
-			rw.record.Properties[p.Name] = v
+			rw.record.Attributes[p.Name] = v
 		}
 	}
 	rw.limit--
@@ -901,12 +901,12 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 // that record. After close is called, no other methods of the record writer
 // should be called except for the 'last' method.
 func (rw *recordWriter) close() {
-	if rw.record.Properties == nil && rw.record.Err == nil {
+	if rw.record.Attributes == nil && rw.record.Err == nil {
 		return
 	}
 	rw.isLast = true
 	rw.yield(rw.record)
-	rw.record.Properties = nil
+	rw.record.Attributes = nil
 	rw.record.Err = nil
 }
 

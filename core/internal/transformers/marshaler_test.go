@@ -163,7 +163,7 @@ var schema = types.Object([]types.Property{
 	},
 })
 
-var records = []Record{{Properties: map[string]any{
+var records = []Record{{Attributes: map[string]any{
 	"Text":      "some text",
 	"Boolean":   true,
 	"Int8":      -12,
@@ -196,7 +196,7 @@ var records = []Record{{Properties: map[string]any{
 // Test_MarshalAppend checks that Marshal appends to the provided buffer.
 func Test_MarshalAppend(t *testing.T) {
 	schema := types.Object([]types.Property{{Name: "a", Type: types.Int(32)}})
-	record := []Record{{Properties: map[string]any{"a": 5}}}
+	record := []Record{{Attributes: map[string]any{"a": 5}}}
 	b := []byte("pre")
 	got, err := Marshal(b, schema, record, state.JavaScript, false)
 	if err != nil {
@@ -214,7 +214,7 @@ func Test_MarshalAppend(t *testing.T) {
 // Test_MarshalErrors verifies that Marshal returns errors for invalid input.
 func Test_MarshalErrors(t *testing.T) {
 	schema := types.Object([]types.Property{{Name: "a", Type: types.Int(32)}})
-	record := []Record{{Properties: map[string]any{"a": 1}}}
+	record := []Record{{Attributes: map[string]any{"a": 1}}}
 
 	t.Run("invalid language", func(t *testing.T) {
 		_, err := Marshal(nil, schema, record, state.Language(42), false)
@@ -266,7 +266,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 		{
 			name:    "Map",
 			schema:  schema,
-			records: []Record{{Properties: mapValue}},
+			records: []Record{{Attributes: mapValue}},
 			results: [][]byte{
 				[]byte(`[{Map:{'a':1,'b':2,'c':3}}]`),
 				[]byte(`[{Map:{'a':1,'c':3,'b':1}}]`),
@@ -279,7 +279,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 		{
 			name:    "MapArray",
 			schema:  schema,
-			records: []Record{{Properties: mapArrayValue}},
+			records: []Record{{Attributes: mapArrayValue}},
 			results: [][]byte{
 				[]byte(`[{MapArray:{'x':['boo','foo'],'y':[]}}]`),
 				[]byte(`[{MapArray:{'y':[],'x':['boo','foo']}}]`),
@@ -288,9 +288,9 @@ func Test_MarshalJavaScript(t *testing.T) {
 		{
 			name: "Empty values",
 			records: []Record{
-				{Properties: map[string]any{}},
-				{Properties: map[string]any{}},
-				{Properties: map[string]any{}},
+				{Attributes: map[string]any{}},
+				{Attributes: map[string]any{}},
+				{Attributes: map[string]any{}},
 			},
 			result: []byte(`[{},{},{}]`),
 		},
@@ -298,9 +298,9 @@ func Test_MarshalJavaScript(t *testing.T) {
 			name:   "Invalid schema",
 			schema: types.Type{},
 			records: []Record{
-				{Properties: map[string]any{"foo": 4}},
-				{Properties: map[string]any{}},
-				{Properties: map[string]any{"boo": true}},
+				{Attributes: map[string]any{"foo": 4}},
+				{Attributes: map[string]any{}},
+				{Attributes: map[string]any{"boo": true}},
 			},
 			result: []byte(`[{},{},{}]`),
 		},
@@ -313,13 +313,13 @@ func Test_MarshalJavaScript(t *testing.T) {
 				},
 			}),
 			records: []Record{
-				{Properties: map[string]any{"a": ``}},
-				{Properties: map[string]any{"a": `'`}},
-				{Properties: map[string]any{"a": `"`}},
-				{Properties: map[string]any{"a": `&`}},
-				{Properties: map[string]any{"a": `<`}},
-				{Properties: map[string]any{"a": "\u2028"}},
-				{Properties: map[string]any{"a": "\u2029"}},
+				{Attributes: map[string]any{"a": ``}},
+				{Attributes: map[string]any{"a": `'`}},
+				{Attributes: map[string]any{"a": `"`}},
+				{Attributes: map[string]any{"a": `&`}},
+				{Attributes: map[string]any{"a": `<`}},
+				{Attributes: map[string]any{"a": "\u2028"}},
+				{Attributes: map[string]any{"a": "\u2029"}},
 			},
 			result: []byte(`[{a:''},{a:'\u0027'},{a:'\"'},{a:'\u0026'},{a:'\u003c'},{a:'\u2028'},{a:'\u2029'}]`),
 		},
@@ -330,7 +330,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			records: []Record{
-				{Properties: map[string]any{"a": nil, "b": nil}},
+				{Attributes: map[string]any{"a": nil, "b": nil}},
 			},
 			result: []byte(`[{a:null,b:null}]`),
 		},
@@ -352,11 +352,11 @@ func Test_MarshalJavaScript(t *testing.T) {
 				},
 			}),
 			records: []Record{
-				{Properties: map[string]any{}},
-				{Properties: map[string]any{"a": "foo"}},
-				{Properties: map[string]any{"a": "foo", "b": nil}},
-				{Properties: map[string]any{"a": "foo", "b": map[string]any{"y": 45}}},
-				{Properties: map[string]any{"a": "foo", "b": map[string]any{"x": 12, "y": 45}}},
+				{Attributes: map[string]any{}},
+				{Attributes: map[string]any{"a": "foo"}},
+				{Attributes: map[string]any{"a": "foo", "b": nil}},
+				{Attributes: map[string]any{"a": "foo", "b": map[string]any{"y": 45}}},
+				{Attributes: map[string]any{"a": "foo", "b": map[string]any{"x": 12, "y": 45}}},
 			},
 			result: []byte(`[{},{a:'foo'},{a:'foo',b:null},{a:'foo',b:{y:45}},{a:'foo',b:{x:12,y:45}}]`),
 		},
@@ -368,7 +368,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 				{Name: "c", Type: types.JSON(), Nullable: true},
 			}),
 			preserveJSON: false,
-			records: []Record{{Properties: map[string]any{
+			records: []Record{{Attributes: map[string]any{
 				"a": json.Value("null"),
 				"b": nil,
 				"c": json.Value("null"),
@@ -383,7 +383,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 				{Name: "c", Type: types.JSON(), Nullable: true},
 			}),
 			preserveJSON: true,
-			records: []Record{{Properties: map[string]any{
+			records: []Record{{Attributes: map[string]any{
 				"a": json.Value("null"),
 				"b": nil,
 				"c": json.Value("null"),
@@ -395,7 +395,7 @@ func Test_MarshalJavaScript(t *testing.T) {
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text()},
 			}),
-			records: []Record{{Properties: map[string]any{
+			records: []Record{{Attributes: map[string]any{
 				"a": "foo",
 				"b": "boo",
 				"c": 24,
@@ -469,7 +469,7 @@ func Test_MarshalPython(t *testing.T) {
 		{
 			name:    "Map",
 			schema:  schema,
-			records: []Record{{Properties: mapValue}},
+			records: []Record{{Attributes: mapValue}},
 			results: [][]byte{
 				[]byte(`[{'Map':{'a':1,'b':2,'c':3}}]`),
 				[]byte(`[{'Map':{'a':1,'c':3,'b':1}}]`),
@@ -482,7 +482,7 @@ func Test_MarshalPython(t *testing.T) {
 		{
 			name:    "MapArray",
 			schema:  schema,
-			records: []Record{{Properties: mapArrayValue}},
+			records: []Record{{Attributes: mapArrayValue}},
 			results: [][]byte{
 				[]byte(`[{'MapArray':{'x':['boo','foo'],'y':[]}}]`),
 				[]byte(`[{'MapArray':{'y':[],'x':['boo','foo']}}]`),
@@ -491,9 +491,9 @@ func Test_MarshalPython(t *testing.T) {
 		{
 			name: "Empty values",
 			records: []Record{
-				{Properties: map[string]any{}},
-				{Properties: map[string]any{}},
-				{Properties: map[string]any{}},
+				{Attributes: map[string]any{}},
+				{Attributes: map[string]any{}},
+				{Attributes: map[string]any{}},
 			},
 			result: []byte(`[{},{},{}]`),
 		},
@@ -501,9 +501,9 @@ func Test_MarshalPython(t *testing.T) {
 			name:   "Invalid schema",
 			schema: types.Type{},
 			records: []Record{
-				{Properties: map[string]any{"foo": 4}},
-				{Properties: map[string]any{}},
-				{Properties: map[string]any{"boo": true}},
+				{Attributes: map[string]any{"foo": 4}},
+				{Attributes: map[string]any{}},
+				{Attributes: map[string]any{"boo": true}},
 			},
 			result: []byte(`[{},{},{}]`),
 		},
@@ -516,13 +516,13 @@ func Test_MarshalPython(t *testing.T) {
 				},
 			}),
 			records: []Record{
-				{Properties: map[string]any{"a": ``}},
-				{Properties: map[string]any{"a": `'`}},
-				{Properties: map[string]any{"a": `"`}},
-				{Properties: map[string]any{"a": `&`}},
-				{Properties: map[string]any{"a": `<`}},
-				{Properties: map[string]any{"a": "\u2028"}},
-				{Properties: map[string]any{"a": "\u2029"}},
+				{Attributes: map[string]any{"a": ``}},
+				{Attributes: map[string]any{"a": `'`}},
+				{Attributes: map[string]any{"a": `"`}},
+				{Attributes: map[string]any{"a": `&`}},
+				{Attributes: map[string]any{"a": `<`}},
+				{Attributes: map[string]any{"a": "\u2028"}},
+				{Attributes: map[string]any{"a": "\u2029"}},
 			},
 			result: []byte(`[{'a':''},{'a':'\x27'},{'a':'\"'},{'a':'\x26'},{'a':'\x3c'},{'a':'\u2028'},{'a':'\u2029'}]`),
 		},
@@ -533,7 +533,7 @@ func Test_MarshalPython(t *testing.T) {
 				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			records: []Record{
-				{Properties: map[string]any{"a": nil, "b": nil}},
+				{Attributes: map[string]any{"a": nil, "b": nil}},
 			},
 			result: []byte(`[{'a':None,'b':None}]`),
 		},
@@ -555,11 +555,11 @@ func Test_MarshalPython(t *testing.T) {
 				},
 			}),
 			records: []Record{
-				{Properties: map[string]any{}},
-				{Properties: map[string]any{"a": "foo"}},
-				{Properties: map[string]any{"a": "foo", "b": nil}},
-				{Properties: map[string]any{"a": "foo", "b": map[string]any{"y": 45}}},
-				{Properties: map[string]any{"a": "foo", "b": map[string]any{"x": 12, "y": 45}}},
+				{Attributes: map[string]any{}},
+				{Attributes: map[string]any{"a": "foo"}},
+				{Attributes: map[string]any{"a": "foo", "b": nil}},
+				{Attributes: map[string]any{"a": "foo", "b": map[string]any{"y": 45}}},
+				{Attributes: map[string]any{"a": "foo", "b": map[string]any{"x": 12, "y": 45}}},
 			},
 			result: []byte(`[{},{'a':'foo'},{'a':'foo','b':None},{'a':'foo','b':{'y':45}},{'a':'foo','b':{'x':12,'y':45}}]`),
 		},
@@ -571,7 +571,7 @@ func Test_MarshalPython(t *testing.T) {
 				{Name: "c", Type: types.JSON(), Nullable: true},
 			}),
 			preserveJSON: false,
-			records: []Record{{Properties: map[string]any{
+			records: []Record{{Attributes: map[string]any{
 				"a": json.Value("null"),
 				"b": nil,
 				"c": json.Value("null"),
@@ -586,7 +586,7 @@ func Test_MarshalPython(t *testing.T) {
 				{Name: "c", Type: types.JSON(), Nullable: true},
 			}),
 			preserveJSON: true,
-			records: []Record{{Properties: map[string]any{
+			records: []Record{{Attributes: map[string]any{
 				"a": json.Value("null"),
 				"b": nil,
 				"c": json.Value("null"),
@@ -598,7 +598,7 @@ func Test_MarshalPython(t *testing.T) {
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text()},
 			}),
-			records: []Record{{Properties: map[string]any{
+			records: []Record{{Attributes: map[string]any{
 				"a": "foo",
 				"b": "boo",
 				"c": 24,

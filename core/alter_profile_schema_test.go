@@ -10,7 +10,7 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-func Test_checkAllowedTypesUserSchema(t *testing.T) {
+func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 
 	tests := []struct {
 		name   string
@@ -43,7 +43,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true, Nullable: true},
 			}),
-			err: "user schema properties cannot be nullable",
+			err: "profile schema properties cannot be nullable",
 		},
 		{
 			name: "Array with object item",
@@ -64,7 +64,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "b", Type: types.Text(), ReadOptional: true},
 				})), ReadOptional: true},
 			}),
-			err: `user schema properties cannot have type array(object)`,
+			err: `profile schema properties cannot have type array(object)`,
 		},
 		{
 			name: "Property with a prefilled value",
@@ -81,7 +81,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "number", Type: types.Int(32), Prefilled: "1234"},
 				}), ReadOptional: true},
 			}),
-			err: "user schema properties cannot have a prefilled value",
+			err: "profile schema properties cannot have a prefilled value",
 		},
 		{
 			name: "Meta properties",
@@ -93,7 +93,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 			}),
-			err: "user schema cannot have meta properties",
+			err: "profile schema cannot have meta properties",
 		},
 		{
 			name: "Array with unique elements",
@@ -101,7 +101,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 				{Name: "first_name", Type: types.Text(), ReadOptional: true},
 				{Name: "data", Type: types.Array(types.Int(32)).WithUnique(), ReadOptional: true},
 			}),
-			err: "user schema properties with type array cannot specify unique elements",
+			err: "profile schema properties with type array cannot specify unique elements",
 		},
 		{
 			name: "Arrays which specify a minimum number of elements",
@@ -109,7 +109,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 				{Name: "first_name", Type: types.Text(), ReadOptional: true},
 				{Name: "data", Type: types.Array(types.Int(32)).WithMinElements(1), ReadOptional: true},
 			}),
-			err: "user schema properties with type array cannot specify minimum elements count",
+			err: "profile schema properties with type array cannot specify minimum elements count",
 		},
 		{
 			name: "Arrays which specify a maximum number of elements",
@@ -117,7 +117,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 				{Name: "first_name", Type: types.Text(), ReadOptional: true},
 				{Name: "data", Type: types.Array(types.Int(32)).WithMaxElements(types.MaxElements - 1), ReadOptional: true},
 			}),
-			err: "user schema properties with type array cannot specify maximum elements count",
+			err: "profile schema properties with type array cannot specify maximum elements count",
 		},
 		{
 			name: "Map with object item",
@@ -127,7 +127,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "a", Type: types.Text(), ReadOptional: true},
 				})), ReadOptional: true},
 			}),
-			err: "user schema properties cannot have type map(object)",
+			err: "profile schema properties cannot have type map(object)",
 		},
 		{
 			name: "Text with values",
@@ -139,13 +139,13 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "number", Type: types.Int(32), ReadOptional: true},
 				}), ReadOptional: true},
 			}),
-			err: "user schema properties with type text cannot specify values",
+			err: "profile schema properties with type text cannot specify values",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotErr := checkAllowedPropertyUserSchema(test.schema)
+			gotErr := checkAllowedPropertyProfileSchema(test.schema)
 			var gotErrStr string
 			if gotErr != nil {
 				gotErrStr = gotErr.Error()

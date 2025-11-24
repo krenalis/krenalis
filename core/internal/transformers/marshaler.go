@@ -49,8 +49,8 @@ func Marshal(b []byte, schema types.Type, records []Record, language state.Langu
 		if i > 0 {
 			b = append(b, ',')
 		}
-		if schema.Valid() && len(v.Properties) > 0 {
-			b, err = marshal(b, schema, v.Properties, preserveJSON)
+		if schema.Valid() && len(v.Attributes) > 0 {
+			b, err = marshal(b, schema, v.Attributes, preserveJSON)
 			if err != nil {
 				return nil, err
 			}

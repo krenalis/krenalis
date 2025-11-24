@@ -128,7 +128,7 @@ func Test_Transform(t *testing.T) {
 		name        string
 		expressions map[string]string
 		layouts     *state.TimeLayouts
-		properties  map[string]any
+		attributes  map[string]any
 		purpose     Purpose
 		expected    map[string]any
 		err         error
@@ -152,13 +152,13 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A nil property assigned to a non-nullable property -> no properties`,
 			expressions: map[string]string{"A": "c.z"},
-			properties:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c.z": nil},
 			expected:    map[string]any{},
 		},
 		{
 			name:        `A property with a non-empty string -> the non-empty string`,
 			expressions: map[string]string{"A": "a"},
-			properties:  map[string]any{"a": "boo"},
+			attributes:  map[string]any{"a": "boo"},
 			expected:    map[string]any{"A": "boo"},
 		},
 		{
@@ -169,7 +169,7 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A nil property assigned to a nullable property -> nil`,
 			expressions: map[string]string{"B": "c.z"},
-			properties:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c.z": nil},
 			expected:    map[string]any{"B": nil},
 		},
 
@@ -196,7 +196,7 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A property with a nil value assigned to a non-nullable json property -> nil as JSON`,
 			expressions: map[string]string{"C": "c.z"},
-			properties:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c.z": nil},
 			expected:    map[string]any{},
 		},
 		{
@@ -207,13 +207,13 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A property with a nil value assigned to a map(json) key -> no properties`,
 			expressions: map[string]string{"C": "map('k', c.z, 'h', 5)"},
-			properties:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c.z": nil},
 			expected:    map[string]any{"C": json.Value(`{"h":5}`)},
 		},
 		{
 			name:        `A property with an empty string assigned to a non-nullable json property -> the empty string as JSON`,
 			expressions: map[string]string{"C": "a"},
-			properties:  map[string]any{"a": ""},
+			attributes:  map[string]any{"a": ""},
 			expected:    map[string]any{"C": json.Value(`""`)},
 		},
 
@@ -240,13 +240,13 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A property with a nil value assigned to a non-nullable json property -> nil`,
 			expressions: map[string]string{"D": "c.z"},
-			properties:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c.z": nil},
 			expected:    map[string]any{"D": nil},
 		},
 		{
 			name:        `A property with an empty string assigned to a non-nullable json property -> the empty string as JSON`,
 			expressions: map[string]string{"C": "a"},
-			properties:  map[string]any{"a": ""},
+			attributes:  map[string]any{"a": ""},
 			expected:    map[string]any{"C": json.Value(`""`)},
 		},
 
@@ -258,13 +258,13 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A json property with a nil value assigned to a non-nullable json property -> no properties`,
 			expressions: map[string]string{"C": "e"},
-			properties:  map[string]any{"e": nil},
+			attributes:  map[string]any{"e": nil},
 			expected:    map[string]any{},
 		},
 		{
 			name:        `A json property with a JSON null value assigned to a non-nullable json property -> no properties`,
 			expressions: map[string]string{"C": "d"},
-			properties:  map[string]any{"d": json.Value(`null`)},
+			attributes:  map[string]any{"d": json.Value(`null`)},
 			expected:    map[string]any{"C": json.Value(`null`)},
 		},
 		{
@@ -275,59 +275,59 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A json property with a nil value assigned to a nullable json property -> nil`,
 			expressions: map[string]string{"D": "e"},
-			properties:  map[string]any{"e": nil},
+			attributes:  map[string]any{"e": nil},
 			expected:    map[string]any{"D": nil},
 		},
 		{
 			name:        `A json property with a JSON null value assigned to a nullable json property -> no properties`,
 			expressions: map[string]string{"D": "e"},
-			properties:  map[string]any{"e": json.Value(`null`)},
+			attributes:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{"D": json.Value(`null`)},
 		},
 
 		{
 			name:        `A json property with a JSON null value assigned to a non-nullable property -> no properties`,
 			expressions: map[string]string{"A": "e"},
-			properties:  map[string]any{"e": json.Value(`null`)},
+			attributes:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{},
 		},
 		{
 			name:        `A json property with a JSON null value assigned to a nullable property -> nil`,
 			expressions: map[string]string{"B": "e"},
-			properties:  map[string]any{"e": json.Value(`null`)},
+			attributes:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{"B": nil},
 		},
 
 		{
 			name:        `"a ' ' c.x ': ' 5.45"`,
 			expressions: map[string]string{"A": "a ' ' c.x ': ' 5.45"},
-			properties:  map[string]any{"a": "foo", "c": map[string]any{"x": "boo"}},
+			attributes:  map[string]any{"a": "foo", "c": map[string]any{"x": "boo"}},
 			expected:    map[string]any{"A": "foo boo: 5.45"},
 		},
 		{
 			name:        `"len(a)"`,
 			expressions: map[string]string{"E": "len(a)"},
-			properties:  map[string]any{"a": "foo"},
+			attributes:  map[string]any{"a": "foo"},
 			expected:    map[string]any{"E": 3},
 		},
 		{
 			name:        `Spurious properties`,
 			expressions: map[string]string{"A": "a"},
-			properties:  map[string]any{"a": "foo", "b": "boo", "c": 24},
+			attributes:  map[string]any{"a": "foo", "b": "boo", "c": 24},
 			expected:    map[string]any{"A": "foo"},
 		},
 
 		{
 			name:        `null assigned to a non nullable create required property -> error`,
 			expressions: map[string]string{"F": "c.z"},
-			properties:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c.z": nil},
 			purpose:     Create,
 			err:         ValidationError{msg: `«c.z» is null but it is required for creation while mapping to «F»`},
 		},
 		{
 			name:        `null assigned to a non nullable update required property -> error`,
 			expressions: map[string]string{"G": "c.z"},
-			properties:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c.z": nil},
 			purpose:     Update,
 			err:         ValidationError{msg: `«c.z» is null but it is required for update while mapping to «G»`},
 		},
@@ -339,7 +339,7 @@ func Test_Transform(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error calling New: %q (%T)", err, err)
 			}
-			got, err := mapping.Transform(test.properties, test.purpose)
+			got, err := mapping.Transform(test.attributes, test.purpose)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("unexpected error: %q (%T)", err, err)

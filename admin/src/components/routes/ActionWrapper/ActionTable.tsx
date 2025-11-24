@@ -142,7 +142,7 @@ const ActionTable = () => {
 		<>
 			<Section
 				title='Table name'
-				description='An existing table on the database where users will be exported'
+				description='An existing table on the database where profiles will be exported'
 				padded={true}
 				annotated={true}
 			>

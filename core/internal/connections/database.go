@@ -217,7 +217,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 }
 
 // Records executes the action's query and returns an iterator to iterate over
-// the database's records. Each returned record will contain, in the Properties
+// the database's records. Each returned record will contain, in the Attributes
 // field, the properties of the action's input schema, with the same types.
 //
 // If queryReplacer is not nil, then the placeholders in the query are replaced
@@ -443,14 +443,14 @@ func (w *databaseWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *databaseWriter) Write(ctx context.Context, id string, properties map[string]any) bool {
+func (w *databaseWriter) Write(ctx context.Context, id string, attributes map[string]any) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
 	// Append the row and the ack ids.
 	row := make([]any, len(w.table.Columns))
 	for i, c := range w.table.Columns {
-		row[i] = properties[c.Name]
+		row[i] = attributes[c.Name]
 	}
 	w.rows = append(w.rows, row)
 	w.ids = append(w.ids, id)
@@ -587,12 +587,12 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 		var record Record
 	Rows:
 		for r.rows.Next() {
-			if record.Properties != nil || record.Err != nil {
+			if record.Attributes != nil || record.Err != nil {
 				if !yield(record) {
 					return
 				}
 				record.ID = ""
-				record.Properties = nil
+				record.Attributes = nil
 				record.Err = nil
 			}
 			if err := ctx.Err(); err != nil {
@@ -640,8 +640,8 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			if record.LastChangeTime.IsZero() {
 				record.LastChangeTime = time.Now().UTC()
 			}
-			// Get the properties.
-			record.Properties = make(map[string]any, n)
+			// Get the attributes.
+			record.Attributes = make(map[string]any, n)
 			for i, v := range scanner.values {
 				p := properties[i]
 				if p.Name == "" { // skip unused properties
@@ -652,10 +652,10 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 					record.Err = err
 					continue Rows
 				}
-				record.Properties[p.Name] = value
+				record.Attributes[p.Name] = value
 			}
 		}
-		if record.Properties != nil || record.Err != nil {
+		if record.Attributes != nil || record.Err != nil {
 			r.last = true
 			if !yield(record) {
 				return

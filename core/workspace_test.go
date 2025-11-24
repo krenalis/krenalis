@@ -58,7 +58,7 @@ func Test_validateUIPreferences(t *testing.T) {
 		{
 			name: "Nothing is set",
 			prefs: UIPreferences{
-				UserProfile: struct {
+				Profile: struct {
 					Image     string "json:\"image\""
 					FirstName string "json:\"firstName\""
 					LastName  string "json:\"lastName\""
@@ -69,7 +69,7 @@ func Test_validateUIPreferences(t *testing.T) {
 		{
 			name: "Valid property paths",
 			prefs: UIPreferences{
-				UserProfile: struct {
+				Profile: struct {
 					Image     string "json:\"image\""
 					FirstName string "json:\"firstName\""
 					LastName  string "json:\"lastName\""
@@ -85,7 +85,7 @@ func Test_validateUIPreferences(t *testing.T) {
 		{
 			name: "Last name has an invalid property path",
 			prefs: UIPreferences{
-				UserProfile: struct {
+				Profile: struct {
 					Image     string "json:\"image\""
 					FirstName string "json:\"firstName\""
 					LastName  string "json:\"lastName\""
@@ -97,12 +97,12 @@ func Test_validateUIPreferences(t *testing.T) {
 					Extra:     "email",
 				},
 			},
-			err: "invalid user profile 'lastName' \"last name\"",
+			err: "invalid profile 'lastName' \"last name\"",
 		},
 		{
 			name: "Extra is too long",
 			prefs: UIPreferences{
-				UserProfile: struct {
+				Profile: struct {
 					Image     string "json:\"image\""
 					FirstName string "json:\"firstName\""
 					LastName  string "json:\"lastName\""
@@ -114,7 +114,7 @@ func Test_validateUIPreferences(t *testing.T) {
 					Extra:     strings.Repeat("x", 1025),
 				},
 			},
-			err: "invalid user profile 'extra' \"" + strings.Repeat("x", 1025) + "\"",
+			err: "invalid profile 'extra' \"" + strings.Repeat("x", 1025) + "\"",
 		},
 	}
 	for _, test := range tests {

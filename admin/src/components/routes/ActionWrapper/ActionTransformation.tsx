@@ -54,7 +54,7 @@ import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/in
 import {
 	APIUsersResponse,
 	ExecQueryResponse,
-	FindUsersResponse,
+	FindProfilesResponse,
 	PreviewSendEventResponse,
 	RecordsResponse,
 	TransformationLanguagesResponse,
@@ -305,7 +305,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			lastChangeTimeList: getLastChangeTimeComboboxItems(actionType.inputSchema),
 			mappingList: getSchemaComboboxItems(
 				actionType.inputSchema,
-				isEventImport || isEventBasedUserImport || isAppEventsExport ? ['muid'] : null,
+				isEventImport || isEventBasedUserImport || isAppEventsExport ? ['mpid'] : null,
 			),
 		};
 	}, [actionType]);
@@ -454,7 +454,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			flatInputSchema={flatInputSchema}
 			mapMappingPairs={mapMappingsPairs}
 			setMapMappingPairs={setMapMappingsPairs}
-			propertiesToHide={isEventBasedUserImport || isAppEventsExport || isEventImport ? ['muid'] : null}
+			propertiesToHide={isEventBasedUserImport || isAppEventsExport || isEventImport ? ['mpid'] : null}
 		/>
 	);
 
@@ -484,7 +484,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			{hasIdentityColumns ? (
 				<Section
 					title='Identity columns'
-					description='The columns from which to import the value to uniquely identify a user identity, and possibly the time of its last modification.'
+					description='The columns from which to import the value to uniquely identify an identity, and possibly the time of its last modification.'
 					padded={true}
 					annotated={true}
 				>
@@ -512,7 +512,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 										: identityColumnError
 								}
 								size='small'
-								helpText='A column that uniquely identifies a user identity'
+								helpText='A column that uniquely identifies an identity'
 							/>
 						</div>
 						<div className='action__transformation-last-change-time-column'>
@@ -531,7 +531,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 									clearable={action.lastChangeTimeColumn?.length > 0}
 									error={lastChangeTimeColumnError}
 									size='small'
-									helpText='A column with the time of the last modification of a user identity'
+									helpText='A column with the time of the last modification of an identity'
 								/>
 							</div>
 							{needFormat && (
@@ -1500,15 +1500,15 @@ const FullscreenTransformation = ({
 				for (const prop of inputSchema.properties) {
 					properties.push(prop.name);
 				}
-				let res: FindUsersResponse;
+				let res: FindProfilesResponse;
 				try {
-					res = await api.workspaces.users.find(properties, normalizedFilter, '', true, 0, 20);
+					res = await api.workspaces.profiles.find(properties, normalizedFilter, '', true, 0, 20);
 				} catch (err) {
 					setIsLoading(false);
 					handleError(err);
 					return;
 				}
-				if (res.users.length === 0 && normalizedFilter == null) {
+				if (res.profiles.length === 0 && normalizedFilter == null) {
 					// No users have been imported in the warehouse yet.
 					if (isReloadingSamples) {
 						hasReloadedSamples.current = true;
@@ -1519,8 +1519,8 @@ const FullscreenTransformation = ({
 					return;
 				}
 				const s: Sample[] = [];
-				for (const user of res.users) {
-					s.push(user.traits);
+				for (const profile of res.profiles) {
+					s.push(profile.attributes);
 				}
 				samples = s;
 			} else {
@@ -2011,7 +2011,7 @@ const FullscreenTransformation = ({
 						}
 					}
 					if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
-						if (p.name === 'muid') {
+						if (p.name === 'mpid') {
 							return null;
 						}
 					}
@@ -2423,7 +2423,7 @@ const FullscreenTransformation = ({
 											}
 										}
 										if (isEventImport || isEventBasedUserImport || isAppEventsExport) {
-											if (p.name === 'muid') {
+											if (p.name === 'mpid') {
 												return null;
 											}
 										}
@@ -3597,24 +3597,24 @@ type TransformationHeaderMode = 'compact' | 'full';
 
 const TRANSFORMATION_HEADERS: Record<TransformationHeaderMode, Record<string, [string, string]>> = {
 	compact: {
-		'source:sdk': ['Event schema', 'Customer model schema'],
-		'source:webhook': ['Event schema', 'Customer model schema'],
-		'source:database': ['Database user schema', 'Customer model schema'],
-		'source:file': ['File user schema', 'Customer model schema'],
-		'source:api': ['App user schema', 'Customer model schema'],
+		'source:sdk': ['Event schema', 'Profile schema'],
+		'source:webhook': ['Event schema', 'Profile schema'],
+		'source:database': ['Database user schema', 'Profile schema'],
+		'source:file': ['File user schema', 'Profile schema'],
+		'source:api': ['App user schema', 'Profile schema'],
 		'destination:event': ['Event schema', 'Sending event parameters'],
-		'destination:database': ['Customer model schema', 'Database table schema'],
-		'destination:api': ['Customer model schema', 'App user schema'],
+		'destination:database': ['Profile schema', 'Database table schema'],
+		'destination:api': ['Profile schema', 'App user schema'],
 	},
 	full: {
-		'source:sdk': ['Event', 'Customer model'],
-		'source:webhook': ['Event', 'Customer model'],
-		'source:database': ['Database user', 'Customer model'],
-		'source:file': ['File user', 'Customer model'],
-		'source:api': ['App user', 'Customer model'],
+		'source:sdk': ['Event', 'Profile'],
+		'source:webhook': ['Event', 'Profile'],
+		'source:database': ['Database user', 'Profile'],
+		'source:file': ['File user', 'Profile'],
+		'source:api': ['App user', 'Profile'],
 		'destination:event': ['Event', 'Sending event'],
-		'destination:database': ['Customer model', 'Database table'],
-		'destination:api': ['Customer model', 'App user'],
+		'destination:database': ['Profile', 'Database table'],
+		'destination:api': ['Profile', 'App user'],
 	},
 };
 

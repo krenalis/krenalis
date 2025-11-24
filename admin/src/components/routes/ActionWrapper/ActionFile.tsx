@@ -334,7 +334,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			return '';
 		}
 		if (filteredSchema[property] == null) {
-			return `property "${property}" does not exist in the user schema`;
+			return `property "${property}" does not exist in schema`;
 		}
 		return '';
 	}, [action, actionType]);

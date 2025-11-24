@@ -17,13 +17,13 @@ func Test_CheckConflictingProperties(t *testing.T) {
 		err    string
 	}{
 		{
-			io: "users",
+			io: "profile",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Text()},
 			}),
 		},
 		{
-			io: "users",
+			io: "profile",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Text()},
 				{Name: "x_a", Type: types.Text()},
@@ -31,7 +31,7 @@ func Test_CheckConflictingProperties(t *testing.T) {
 			}),
 		},
 		{
-			io: "users",
+			io: "profile",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text()},
@@ -39,7 +39,7 @@ func Test_CheckConflictingProperties(t *testing.T) {
 				{Name: "x_a", Type: types.Text()},
 				{Name: "x_b", Type: types.Text()},
 			}),
-			err: `two users action schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
+			err: `two profile action schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
 		},
 		{
 			io: "input",
@@ -79,7 +79,7 @@ func Test_CheckConflictingProperties(t *testing.T) {
 			err: `two output action schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
 		},
 		{
-			io: "users",
+			io: "profile",
 			schema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "A", Type: types.Text()},
@@ -87,7 +87,7 @@ func Test_CheckConflictingProperties(t *testing.T) {
 				{Name: "x_a", Type: types.Text()},
 				{Name: "x_b", Type: types.Text()},
 			}),
-			err: `two users action schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
+			err: `two profile action schema properties would have the same column name "x_a" in the data warehouse, case-insensitively`,
 		},
 	}
 	for _, test := range tests {

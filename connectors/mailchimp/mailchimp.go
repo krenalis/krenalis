@@ -292,31 +292,31 @@ func (mc *MailChimp) Records(ctx context.Context, _ connectors.Targets, lastChan
 
 	records := make([]connectors.Record, len(response.Members))
 
-	for i, properties := range response.Members {
-		id, _ := properties["id"].(string)
+	for i, attributes := range response.Members {
+		id, _ := attributes["id"].(string)
 		if id == "" {
 			return nil, "", errors.New("server returned an invalid 'id' property for a member")
 		}
 		if !hasID {
-			delete(properties, "id")
+			delete(attributes, "id")
 		}
-		lastChanged, _ := properties["last_changed"].(string)
+		lastChanged, _ := attributes["last_changed"].(string)
 		lastChangeTime, err = iso8601.ParseString(lastChanged)
 		if err != nil {
 			return nil, "", errors.New("server returned an invalid 'last_changed' property for a member")
 		}
 		if !hasLastChanged {
-			delete(properties, "last_changed")
+			delete(attributes, "last_changed")
 		}
 		if hasMergeFields {
 			// merge_fields.ADDRESS is returned as an empty string when the contact has no address.
-			if fields, ok := properties["merge_fields"].(map[string]any); ok && fields["ADDRESS"] == "" {
+			if fields, ok := attributes["merge_fields"].(map[string]any); ok && fields["ADDRESS"] == "" {
 				fields["ADDRESS"] = nil
 			}
 		}
 		records[i] = connectors.Record{
 			ID:             id,
-			Properties:     properties,
+			Attributes:     attributes,
 			LastChangeTime: lastChangeTime.UTC(),
 		}
 	}
@@ -416,7 +416,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, target connectors.Targets, reco
 			bb.WriteString(url.PathEscape(record.ID))
 		}
 		bb.WriteString(`","params":{"skip_merge_validation":true},"body":`)
-		_ = bb.EncodeQuoted(record.Properties)
+		_ = bb.EncodeQuoted(record.Attributes)
 		bb.WriteByte('}')
 		if bb.Len()+len(`]}`) > maxBodyRecordsBytes {
 			bb.Truncate(size)

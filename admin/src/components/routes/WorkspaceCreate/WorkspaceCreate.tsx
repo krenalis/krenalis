@@ -82,7 +82,7 @@ const WorkspaceCreate = () => {
 		}
 
 		let uiProperties: UIPreferences = {
-			userProfile: {
+			profile: {
 				image: '',
 				firstName: 'first_name',
 				lastName: 'last_name',

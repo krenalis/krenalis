@@ -79,52 +79,52 @@ func TestImportFromTwoDummies(t *testing.T) {
 		}
 	}
 
-	// Since the users have been imported from two different connections without
+	// Since the profiles have been imported from two different connections without
 	// any identity resolution identifier configured, there should be a total of
-	// 20 users, even if they have the same properties.
-	users, _, total := c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+	// 20 profiles, even if they have the same properties.
+	profiles, _, total := c.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 	expectedTotal := 20
 	if expectedTotal != total {
 		t.Fatalf("expected total %d, got %d", expectedTotal, total)
 	}
 
-	// Every user now should have just one identity associated.
-	totalUsers := 0
-	for _, user := range users {
-		_, total := c.UserIdentities(user.MUID, 0, 100)
+	// Every profile now should have just one identity associated.
+	totalProfiles := 0
+	for _, profile := range profiles {
+		_, total := c.Identities(profile.MPID, 0, 100)
 		const expectedTotal = 1
 		if expectedTotal != total {
-			t.Fatalf("expected %d identities for user %s, got %d", total, user.MUID, total)
+			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.MPID, total)
 		}
-		totalUsers++
+		totalProfiles++
 	}
-	if expectedTotal != totalUsers { // ensure that the number of users matches with the returned 'total' value.
-		t.Fatalf("expected %d users returned, got %d", expectedTotal, totalUsers)
+	if expectedTotal != totalProfiles { // ensure that the number of profiles matches with the returned 'total' value.
+		t.Fatalf("expected %d profiles returned, got %d", expectedTotal, totalProfiles)
 	}
 
 	// Update the workspace identifiers and run the Identity Resolution.
 	c.UpdateIdentityResolution(true, []string{"email"})
 	c.RunIdentityResolution()
 
-	// Now the users should be merged, resulting in a total of 10 users.
-	users, _, total = c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+	// Now the profiles should be merged, resulting in a total of 10 profiles.
+	profiles, _, total = c.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 	expectedTotal = 10
 	if expectedTotal != total {
 		t.Fatalf("expected total %d, got %d", expectedTotal, total)
 	}
 
-	// Every user now should have two identities associated.
-	totalUsers = 0
-	for _, user := range users {
-		_, total := c.UserIdentities(user.MUID, 0, 100)
+	// Every profile now should have two identities associated.
+	totalProfiles = 0
+	for _, profile := range profiles {
+		_, total := c.Identities(profile.MPID, 0, 100)
 		const expectedTotal = 2
 		if expectedTotal != total {
-			t.Fatalf("expected %d identities for user %s, got %d", total, user.MUID, total)
+			t.Fatalf("expected %d identities for profile %s, got %d", total, profile.MPID, total)
 		}
-		totalUsers++
+		totalProfiles++
 	}
-	if expectedTotal != totalUsers { // ensure that the total number of users matches with the returned 'total' value.
-		t.Fatalf("expected %d users returned, got %d", expectedTotal, totalUsers)
+	if expectedTotal != totalProfiles { // ensure that the total number of profiles matches with the returned 'total' value.
+		t.Fatalf("expected %d profiles returned, got %d", expectedTotal, totalProfiles)
 	}
 
 }

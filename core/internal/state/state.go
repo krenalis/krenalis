@@ -568,8 +568,8 @@ type Workspace struct {
 	ID                             int
 	organization                   *Organization
 	Name                           string
-	UserSchema                     types.Type // without meta properties.
-	UserPrimarySources             map[string]int
+	ProfileSchema                  types.Type // without meta properties.
+	PrimarySources                 map[string]int
 	accounts                       map[int]*Account
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
@@ -579,11 +579,11 @@ type Workspace struct {
 		StartTime *time.Time // nil means IR was never started.
 		EndTime   *time.Time // nil means IR is running or has never started.
 	}
-	AlterUserSchema struct {
-		ID             *string    // nil means no user schema alterations in execution.
-		StartTime      *time.Time // nil means user schema alteration was never started.
-		EndTime        *time.Time // nil means user schema alteration is running or has never started.
-		Err            *string    // pointer to empty string if no errors occurred during last execution of alter user schema.
+	AlterProfileSchema struct {
+		ID             *string    // nil means no profile schema alterations in execution.
+		StartTime      *time.Time // nil means profile schema alteration was never started.
+		EndTime        *time.Time // nil means profile schema alteration is running or has never started.
+		Err            *string    // pointer to empty string if no errors occurred during last execution of alter profile schema.
 		Schema         types.Type
 		PrimarySources map[string]int // nil if, and only if, schema alteration is not in execution.
 		Operations     []warehouses.AlterOperation
@@ -674,7 +674,7 @@ func (workspace *Workspace) Organization() *Organization {
 
 // UIPreferences represents the UI preferences of a workspace.
 type UIPreferences struct {
-	UserProfile struct {
+	Profile struct {
 		Image     string // property path.
 		FirstName string // property path.
 		LastName  string // property path.

@@ -178,7 +178,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		return nil, err
 	}
 
-	users := this.connection.Workspace().UserSchema
+	profiles := this.connection.Workspace().ProfileSchema
 	groups := dummyGroupsSchema
 
 	c := this.connection
@@ -199,7 +199,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 			if c.Role == state.Source {
 				// Source/API/User.
-				return &ActionSchemas{In: schema, Out: users}, nil
+				return &ActionSchemas{In: schema, Out: profiles}, nil
 			} else {
 				// Destination/API/User.
 				//
@@ -213,9 +213,9 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 					}
 					return nil, err
 				}
-				actionSchemas := &ActionSchemas{In: users, Out: schema}
+				actionSchemas := &ActionSchemas{In: profiles, Out: schema}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
-					Internal: onlyForMatching(users),
+					Internal: onlyForMatching(profiles),
 					External: onlyForMatching(sourceSchema),
 				}
 				return actionSchemas, nil
@@ -261,13 +261,13 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				// The input schema is not set here because it is retrieved via
 				// a separate API call, since it depends on the query, which in
 				// the UI case is entered interactively by the user.
-				return &ActionSchemas{Out: users}, nil
+				return &ActionSchemas{Out: profiles}, nil
 			} else {
 				// Destination/Database/User.
 				//
 				// The output schema depends on the table chosen for export, and
 				// must be retrieved separately.
-				return &ActionSchemas{In: users}, nil
+				return &ActionSchemas{In: profiles}, nil
 			}
 		case TargetGroup:
 			if c.Role == state.Source {
@@ -288,10 +288,10 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				// The input schema is not set here because it is retrieved via
 				// a separate API call, since it depends on the file, which in
 				// the UI case is entered interactively by the user.
-				return &ActionSchemas{Out: users}, nil
+				return &ActionSchemas{Out: profiles}, nil
 			} else {
 				// Destination/FileStorage/Source.
-				return &ActionSchemas{In: users}, nil
+				return &ActionSchemas{In: profiles}, nil
 			}
 		case TargetGroup:
 			if c.Role == state.Source {
@@ -312,7 +312,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case TargetUser:
 			// Source/SDK/User.
-			return &ActionSchemas{In: schemas.Event, Out: users}, nil
+			return &ActionSchemas{In: schemas.Event, Out: profiles}, nil
 		case TargetGroup:
 			// Source/SDK/Group.
 			return &ActionSchemas{In: schemas.Event, Out: groups}, nil
@@ -629,7 +629,7 @@ func (this *Connection) APIUsers(ctx context.Context, schema types.Type, filter 
 		if user.Err != nil {
 			return nil, "", errors.Unavailable("%s has returned an invalid user; %s", this.api().Connector(), user.Err)
 		}
-		users = append(users, user.Properties)
+		users = append(users, user.Attributes)
 		if records.Last() {
 			last = user
 		}
@@ -1025,10 +1025,10 @@ func (this *Connection) Delete(ctx context.Context) error {
 			return nil, err
 		}
 		// If there is an alter schema in progress, removes the connection from
-		// the primary sources which will take effect when the new user schema
+		// the primary sources which will take effect when the new profile schema
 		// is applied.
-		query := "SELECT alter_user_schema_primary_sources FROM workspaces" +
-			" WHERE id = $1 AND alter_user_schema_primary_sources IS NOT NULL"
+		query := "SELECT alter_profile_schema_primary_sources FROM workspaces" +
+			" WHERE id = $1 AND alter_profile_schema_primary_sources IS NOT NULL"
 		var primarySources map[string]int
 		err = tx.QueryRow(ctx, query, workspace.ID).Scan(&primarySources)
 		if err != nil && err != sql.ErrNoRows {
@@ -1044,7 +1044,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 			}
 			if changed {
 				_, err = tx.Exec(ctx, "UPDATE workspaces SET"+
-					" alter_user_schema_primary_sources = $1 WHERE id = $2",
+					" alter_profile_schema_primary_sources = $1 WHERE id = $2",
 					primarySources, workspace.ID)
 				if err != nil {
 					return nil, err
@@ -1336,18 +1336,18 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	return marshaledRecords, schema, issues, nil
 }
 
-// Identities returns the user identities of the connection, and an estimate of
-// their total number without applying first and limit.
+// Identities returns the identities of the connection, and an estimate of their
+// total number without applying first and limit.
 //
-// It returns the user identities in range [first,first+limit] with first >= 0
-// and 0 < limit <= 1000.
+// It returns the identities in range [first,first+limit] with first >= 0 and
+// 0 < limit <= 1000.
 //
 // Identities are sorted by last change time, in descending order, so the most
 // recently changed identities are returned first.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode, if
 // the data warehouse is in maintenance mode.
-func (this *Connection) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {
+func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Identity, int, error) {
 	this.core.mustBeOpen()
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", first)
@@ -1365,12 +1365,12 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 		Operator: state.OpIs,
 		Values:   []any{strconv.Itoa(this.connection.ID)},
 	}}}
-	identities, total, err := coreWs.userIdentities(ctx, where, first, limit)
+	identities, total, err := coreWs.identities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}
 	if identities == nil {
-		identities = []UserIdentity{}
+		identities = []Identity{}
 	}
 	return identities, total, err
 }
@@ -1470,13 +1470,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
-	properties, err := types.Decode[map[string]any](bytes.NewReader(event), schemas.Event)
+	attributes, err := types.Decode[map[string]any](bytes.NewReader(event), schemas.Event)
 	if err != nil {
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
 	ev := connectors.Event{
-		Received: connections.ReceivedEvent(properties),
+		Received: connections.ReceivedEvent(attributes),
 		Type: connectors.EventTypeInfo{
 			ID:     typ,
 			Schema: outSchema,
@@ -1552,13 +1552,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
 
-		// Transform the properties.
+		// Transform the attributes.
 		transformer, err := transformers.New(action, provider, nil)
 		if err != nil {
 			return nil, err
 		}
 		records := []transformers.Record{
-			{Purpose: transformers.Create, Properties: properties},
+			{Purpose: transformers.Create, Attributes: attributes},
 		}
 		err = transformer.Transform(ctx, records)
 		if err != nil {
@@ -1570,7 +1570,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		if err = records[0].Err; err != nil {
 			return nil, errors.Unprocessable(TransformationFailed, "%s", err)
 		}
-		ev.Type.Values = records[0].Properties
+		ev.Type.Values = records[0].Attributes
 
 	} else {
 

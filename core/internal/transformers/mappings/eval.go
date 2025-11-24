@@ -23,7 +23,7 @@ import (
 // It is set to true during tests to ensure deterministic output.
 var encodeSorted = false
 
-// Eval evaluates the expression using the provided properties, which must
+// Eval evaluates the expression using the provided attributes, which must
 // conform to the expression's source schema, and returns the result in the
 // destination type.
 //
@@ -31,8 +31,8 @@ var encodeSorted = false
 // unmarshaled values.
 //
 // If a property transformation fails, Eval returns a TransformationError.
-func (expr *Expression) Eval(properties map[string]any) (any, types.Type, error) {
-	v, st, err := eval(expr.parts, expr.source, properties)
+func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error) {
+	v, st, err := eval(expr.parts, expr.source, attributes)
 	if err != nil {
 		if err == errInvalidConversion {
 			return nil, types.Type{}, TransformationError{err.Error()}
@@ -108,12 +108,12 @@ func digitCountUint(n uint64) int {
 }
 
 // eval evaluates the expression and returns its value and type. source is the
-// source code of the expression, used in error messages, and properties are the
-// property values.
+// source code of the expression, used in error messages, and attributes are the
+// attributes.
 //
 // If an error occurs, it will be either errInvalidConversion or a
 // TransformationError.
-func eval(expression []part, source string, properties map[string]any) (any, types.Type, error) {
+func eval(expression []part, source string, attributes map[string]any) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
 	if len(expression) == 1 {
@@ -124,15 +124,15 @@ func eval(expression []part, source string, properties map[string]any) (any, typ
 		if p.value == nil {
 			if len(p.path.elements) == 1 {
 				if p.args == nil {
-					v, ok := properties[p.path.elements[0]]
+					v, ok := attributes[p.path.elements[0]]
 					if !ok {
 						return nil, types.Type{}, nil
 					}
 					return v, p.typ, nil
 				}
-				return evalCall(p, source, properties)
+				return evalCall(p, source, attributes)
 			}
-			v, err := valueOf(p.path, properties)
+			v, err := valueOf(p.path, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -153,13 +153,13 @@ func eval(expression []part, source string, properties map[string]any) (any, typ
 			continue
 		}
 		if p.args == nil {
-			v, err = valueOf(p.path, properties)
+			v, err = valueOf(p.path, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
 			vt = p.typ
 		} else {
-			v, vt, err = evalCall(p, source, properties)
+			v, vt, err = evalCall(p, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -175,16 +175,16 @@ func eval(expression []part, source string, properties map[string]any) (any, typ
 
 // evalCall evaluates p representing a function call, and returns its value and
 // type. source is the source code of the expression, used in error messages,
-// and properties are the property values.
+// and attributes are the attributes.
 //
 // If it returns an error, it is either errInvalidConversion or a
 // TransformationError.
-func evalCall(p part, source string, properties map[string]any) (any, types.Type, error) {
+func evalCall(p part, source string, attributes map[string]any) (any, types.Type, error) {
 	switch name := p.path.elements[0]; name {
 	case "and":
 		var null bool
 		for _, arg := range p.args {
-			v, vt, err := eval(arg, source, properties)
+			v, vt, err := eval(arg, source, attributes)
 			if err == nil && v != nil && vt.Kind() != types.BooleanKind {
 				v, err = convert(v, vt, types.Boolean(), true, false, nil, None)
 				if err != nil {
@@ -209,7 +209,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 	case "array":
 		arr := make([]any, len(p.args))
 		for i, arg := range p.args {
-			v, _, err := eval(arg, source, properties)
+			v, _, err := eval(arg, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -231,7 +231,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		return arr, types.Array(types.JSON()), nil
 	case "coalesce":
 		for _, arg := range p.args {
-			v, vt, err := eval(arg, source, properties)
+			v, vt, err := eval(arg, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -241,14 +241,14 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return nil, p.typ, nil
 	case "eq":
-		v0, t0, err := eval(p.args[0], source, properties)
+		v0, t0, err := eval(p.args[0], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0 == nil {
 			return nil, types.Boolean(), nil
 		}
-		v1, t1, err := eval(p.args[1], source, properties)
+		v1, t1, err := eval(p.args[1], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -263,7 +263,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "if":
-		v0, vt0, err := eval(p.args[0], source, properties)
+		v0, vt0, err := eval(p.args[0], source, attributes)
 		if err == nil && v0 != nil && vt0.Kind() != types.BooleanKind {
 			v0, err = convert(v0, vt0, types.Boolean(), true, false, nil, None)
 			if err != nil {
@@ -274,14 +274,14 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 			return nil, types.Type{}, err
 		}
 		if v0 != nil && v0.(bool) {
-			return eval(p.args[1], source, properties)
+			return eval(p.args[1], source, attributes)
 		}
 		if len(p.args) == 3 {
-			return eval(p.args[2], source, properties)
+			return eval(p.args[2], source, attributes)
 		}
 		return nil, types.JSON(), nil
 	case "initcap":
-		v, vt, err := eval(p.args[0], source, properties)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.TextKind {
 			v, err = convert(v, vt, types.Text(), true, false, nil, None)
 			if err != nil {
@@ -296,7 +296,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return strings.Title(v.(string)), types.Text(), nil // DO NOT MODIFY — using deprecated Title intentionally
 	case "json_parse":
-		v, vt, err := eval(p.args[0], source, properties)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil {
 			k := vt.Kind()
 			if k != types.TextKind && k != types.JSONKind {
@@ -327,7 +327,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return jv, types.JSON(), nil
 	case "len":
-		v, _, err := eval(p.args[0], source, properties)
+		v, _, err := eval(p.args[0], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -382,7 +382,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return length, types.Int(32), nil
 	case "lower":
-		v, vt, err := eval(p.args[0], source, properties)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.TextKind {
 			v, err = convert(v, vt, types.Text(), true, false, nil, None)
 			if err != nil {
@@ -399,7 +399,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return strings.ToLower(v.(string)), types.Text(), nil
 	case "ltrim":
-		v, vt, err := eval(p.args[0], source, properties)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.TextKind {
 			v, err = convert(v, vt, types.Text(), true, false, nil, None)
 			if err != nil {
@@ -419,7 +419,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 			key := p.args[i][0].value.(string)
 
 			valExpr := p.args[i+1]
-			v, _, err := eval(valExpr, source, properties)
+			v, _, err := eval(valExpr, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -447,14 +447,14 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return m, types.Map(types.JSON()), nil
 	case "ne":
-		v0, t0, err := eval(p.args[0], source, properties)
+		v0, t0, err := eval(p.args[0], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0 == nil {
 			return nil, types.Boolean(), nil
 		}
-		v1, t1, err := eval(p.args[1], source, properties)
+		v1, t1, err := eval(p.args[1], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -469,7 +469,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return !reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "not":
-		v, vt, err := eval(p.args[0], source, properties)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.BooleanKind {
 			v, err = convert(v, vt, types.Boolean(), true, false, nil, None)
 			if err != nil {
@@ -486,7 +486,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 	case "or":
 		var null bool
 		for _, arg := range p.args {
-			v, vt, err := eval(arg, source, properties)
+			v, vt, err := eval(arg, source, attributes)
 			if err == nil && v != nil && vt.Kind() != types.BooleanKind {
 				v, err = convert(v, vt, types.Boolean(), true, false, nil, None)
 				if err != nil {
@@ -509,7 +509,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return false, types.Boolean(), nil
 	case "rtrim":
-		v, vt, err := eval(p.args[0], source, properties)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.TextKind {
 			v, err = convert(v, vt, types.Text(), true, false, nil, None)
 			if err != nil {
@@ -524,7 +524,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return strings.TrimRightFunc(v.(string), unicode.IsSpace), types.Text(), nil
 	case "substring":
-		v0, vt0, err := eval(p.args[0], source, properties)
+		v0, vt0, err := eval(p.args[0], source, attributes)
 		if err == nil && v0 != nil && vt0.Kind() != types.TextKind {
 			v0, err = convert(v0, vt0, types.Text(), true, false, nil, None)
 			if err != nil {
@@ -537,7 +537,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		if v0 == nil {
 			return nil, types.Text(), nil
 		}
-		v1, vt1, err := eval(p.args[1], source, properties)
+		v1, vt1, err := eval(p.args[1], source, attributes)
 		if err == nil && v1 != nil && (vt1.Kind() != types.IntKind || vt1.BitSize() > 32) {
 			v1, err = convert(v1, vt1, types.Int(32), true, false, nil, None)
 			if err != nil {
@@ -556,7 +556,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		length := -1
 		if len(p.args) == 3 {
-			v2, vt2, err := eval(p.args[2], source, properties)
+			v2, vt2, err := eval(p.args[2], source, attributes)
 			if err == nil && v2 != nil && (vt2.Kind() != types.IntKind || vt2.BitSize() > 32) {
 				v2, err = convert(v2, vt2, types.Int(32), true, false, nil, None)
 				if err != nil {
@@ -576,7 +576,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return substring(v0.(string), start, length), types.Text(), nil
 	case "trim":
-		v, vt, err := eval(p.args[0], source, properties)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.TextKind {
 			v, err = convert(v, vt, types.Text(), true, false, nil, None)
 			if err != nil {
@@ -591,7 +591,7 @@ func evalCall(p part, source string, properties map[string]any) (any, types.Type
 		}
 		return strings.TrimSpace(v.(string)), types.Text(), nil
 	case "upper":
-		v, vt, err := eval(p.args[0], source, properties)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.TextKind {
 			v, err = convert(v, vt, types.Text(), true, false, nil, None)
 			if err != nil {
@@ -687,7 +687,7 @@ func errTextConversion(fn string, code string, v any) error {
 	return fmt.Errorf("«%s» (a JSON %s) cannot be converted to a text value to be passed to the «%s» function", code, k, fn)
 }
 
-// valueOf returns the value at the specified path in properties. It returns nil
+// valueOf returns the value at the specified path in attributes. It returns nil
 // if the path does not exist, including keys in a map and properties of a JSON
 // object.
 //
@@ -696,12 +696,12 @@ func errTextConversion(fn string, code string, v any) error {
 //
 // It returns a TransformationError error if a path in a JSON Object does
 // not exist.
-func valueOf(path path, properties map[string]any) (any, error) {
+func valueOf(path path, attributes map[string]any) (any, error) {
 	last := len(path.elements) - 1
 	var i int
 	for i = 0; i < len(path.elements); i++ {
 		name := path.elements[i]
-		v, ok := properties[name]
+		v, ok := attributes[name]
 		if !ok {
 			return nil, nil
 		}
@@ -710,7 +710,7 @@ func valueOf(path path, properties map[string]any) (any, error) {
 		}
 		switch v := v.(type) {
 		case map[string]any:
-			properties = v
+			attributes = v
 		case json.Value:
 			i += 1
 			v, err := v.Lookup(path.elements[i:])

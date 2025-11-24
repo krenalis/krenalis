@@ -20,7 +20,7 @@ import Workspace, {
 	CreateWorkspaceResponse,
 	UIPreferences,
 	LatestIdentityResolution,
-	LatestAlterUserSchema,
+	LatestAlterProfileSchema,
 	PrimarySources,
 } from './types/workspace';
 import {
@@ -38,22 +38,22 @@ import {
 	EventListenerEventsResponse,
 	ExecQueryResponse,
 	Execution,
-	FindUsersResponse,
+	FindProfilesResponse,
 	Member,
 	MemberInvitationResponse,
 	MemberToSet,
 	PreviewSendEventResponse,
-	PreviewAlterUserSchemaResponse,
+	PreviewAlterProfileSchemaResponse,
 	RePaths,
 	RecordsResponse,
 	SheetsResponse,
 	TableSchemaResponse,
 	TransformDataResponse,
 	TransformationLanguagesResponse,
-	UserEventsResponse,
-	UserIdentitiesResponse,
+	ProfileEventsResponse,
+	IdentitiesResponse,
 	authCodeURLResponse,
-	userTraitsResponse,
+	profileAttributesResponse,
 	PublicMetadata,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
@@ -613,7 +613,7 @@ class EventListeners {
 	};
 }
 
-class Users {
+class Profiles {
 	apiURL: string;
 	workspaceID: number;
 
@@ -629,7 +629,7 @@ class Users {
 		orderDesc: boolean,
 		first: number,
 		limit: number,
-	): Promise<FindUsersResponse> => {
+	): Promise<FindProfilesResponse> => {
 		let params = [];
 		properties.forEach(function (property) {
 			params.push(['properties', property]);
@@ -641,13 +641,13 @@ class Users {
 		params.push(['orderDesc', orderDesc]);
 		params.push(['first', first]);
 		params.push(['limit', limit]);
-		return await call(`${this.apiURL}/users` + queryString(params), http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/profiles` + queryString(params), http.GET, this.workspaceID);
 	};
 
-	events = async (muid: string): Promise<UserEventsResponse> => {
+	events = async (mpid: string): Promise<ProfileEventsResponse> => {
 		let params = [];
 		let properties = [
-			'muid',
+			'mpid',
 			'connectionId',
 			'anonymousId',
 			'category',
@@ -671,9 +671,9 @@ class Users {
 			logical: 'and',
 			conditions: [
 				{
-					property: 'muid',
+					property: 'mpid',
 					operator: 'is',
-					values: [muid],
+					values: [mpid],
 				},
 			],
 		};
@@ -685,13 +685,13 @@ class Users {
 		return await call(`${this.apiURL}/events` + queryString(params), http.GET, this.workspaceID);
 	};
 
-	traits = async (muid: string): Promise<userTraitsResponse> => {
-		return await call(`${this.apiURL}/users/${encodeURIComponent(muid)}/traits`, http.GET, this.workspaceID);
+	attributes = async (mpid: string): Promise<profileAttributesResponse> => {
+		return await call(`${this.apiURL}/profiles/${encodeURIComponent(mpid)}/attributes`, http.GET, this.workspaceID);
 	};
 
-	identities = async (muid: string, first: number, limit: number): Promise<UserIdentitiesResponse> => {
+	identities = async (mpid: string, first: number, limit: number): Promise<IdentitiesResponse> => {
 		return await call(
-			`${this.apiURL}/users/${encodeURIComponent(muid)}/identities?first=${first}&limit=${limit}`,
+			`${this.apiURL}/profiles/${encodeURIComponent(mpid)}/identities?first=${first}&limit=${limit}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -704,7 +704,7 @@ class Workspaces {
 	workspaceID: number;
 	connections: Connections;
 	eventListeners: EventListeners;
-	users: Users;
+	profiles: Profiles;
 
 	constructor(origin: string, apiURL: string, workspaceID: number) {
 		this.origin = origin;
@@ -712,7 +712,7 @@ class Workspaces {
 		this.workspaceID = workspaceID;
 		this.connections = new Connections(apiURL, workspaceID);
 		this.eventListeners = new EventListeners(apiURL, workspaceID);
-		this.users = new Users(apiURL, workspaceID);
+		this.profiles = new Profiles(apiURL, workspaceID);
 	}
 
 	list = async (): Promise<Workspace[]> => {
@@ -779,12 +779,12 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/current`, http.DELETE, this.workspaceID);
 	};
 
-	userSchema = async (): Promise<ObjectType> => {
-		return await call(`${this.apiURL}/users/schema`, http.GET, this.workspaceID);
+	profileSchema = async (): Promise<ObjectType> => {
+		return await call(`${this.apiURL}/profiles/schema`, http.GET, this.workspaceID);
 	};
 
-	userPropertiesSuitableAsIdentifiers = async (): Promise<ObjectType> => {
-		return await call(`${this.apiURL}/users/schema/suitable-as-identifiers`, http.GET, this.workspaceID);
+	profilePropertiesSuitableAsIdentifiers = async (): Promise<ObjectType> => {
+		return await call(`${this.apiURL}/profiles/schema/suitable-as-identifiers`, http.GET, this.workspaceID);
 	};
 
 	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<number> => {
@@ -847,16 +847,23 @@ class Workspaces {
 		return await call(`${this.apiURL}/identity-resolution/start`, http.POST, this.workspaceID);
 	};
 
-	alterUserSchema = async (schema: ObjectType, primarySources: PrimarySources, rePaths: RePaths): Promise<void> => {
-		return await call(`${this.apiURL}/users/schema`, http.PUT, this.workspaceID, {
+	alterProfileSchema = async (
+		schema: ObjectType,
+		primarySources: PrimarySources,
+		rePaths: RePaths,
+	): Promise<void> => {
+		return await call(`${this.apiURL}/profiles/schema`, http.PUT, this.workspaceID, {
 			schema,
 			primarySources,
 			rePaths,
 		});
 	};
 
-	previewAlterUserSchema = async (schema: ObjectType, rePaths: RePaths): Promise<PreviewAlterUserSchemaResponse> => {
-		return await call(`${this.apiURL}/users/schema/preview`, http.PUT, this.workspaceID, {
+	previewAlterProfileSchema = async (
+		schema: ObjectType,
+		rePaths: RePaths,
+	): Promise<PreviewAlterProfileSchemaResponse> => {
+		return await call(`${this.apiURL}/profiles/schema/preview`, http.PUT, this.workspaceID, {
 			schema,
 			rePaths,
 		});
@@ -966,8 +973,8 @@ class Workspaces {
 		return await call(`${this.apiURL}/identity-resolution/latest`, http.GET, this.workspaceID);
 	};
 
-	LatestAlterUserSchema = async (): Promise<LatestAlterUserSchema> => {
-		return await call(`${this.apiURL}/users/schema/latest-alter`, http.GET, this.workspaceID);
+	LatestAlterProfileSchema = async (): Promise<LatestAlterProfileSchema> => {
+		return await call(`${this.apiURL}/profiles/schema/latest-alter`, http.GET, this.workspaceID);
 	};
 }
 

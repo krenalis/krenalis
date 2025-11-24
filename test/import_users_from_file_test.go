@@ -76,24 +76,24 @@ func TestImportUsersFromFile(t *testing.T) {
 	// Wait for the import to finish.
 	c.WaitForExecutionsCompletion(fsID, exec)
 
-	// Retrieve the users and test them.
+	// Retrieve the profiles and test them.
 	const (
-		expectedTotal    = 2
-		expectedUsersLen = 2
+		expectedTotal       = 2
+		expectedProfilesLen = 2
 	)
-	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
-	usersLen := len(users)
-	if usersLen != expectedUsersLen {
-		t.Fatalf("expected %d users, got %d", expectedUsersLen, usersLen)
+	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
+	profilesLen := len(profiles)
+	if profilesLen != expectedProfilesLen {
+		t.Fatalf("expected %d profiles, got %d", expectedProfilesLen, profilesLen)
 	}
 	if total != expectedTotal {
 		t.Fatalf("expected \"total\" to be %d, got %d", expectedTotal, total)
 	}
 
-	// Retrieve the user identities and test them.
+	// Retrieve the identities and test them.
 	identities, total := c.ConnectionIdentities(fsID, 0, 100)
 	if total != 2 {
-		t.Fatalf("expected 2 user identities, got %d", total)
+		t.Fatalf("expected 2 identities, got %d", total)
 	}
 	for _, identity := range identities {
 		if identity.Connection != fsID {

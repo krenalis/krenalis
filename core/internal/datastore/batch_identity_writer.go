@@ -32,11 +32,11 @@ var maxQueuedIdentityTime = 500 * time.Millisecond
 type Identity struct {
 	ID             string                 // Identifier of the identity; it is empty for anonymous identities.
 	AnonymousID    string                 // AnonymousID of identities received via events.
-	Properties     map[string]interface{} // Properties of the user schema.
+	Attributes     map[string]interface{} // Attributes. Keys are profile schema's properties.
 	LastChangeTime time.Time              // Last change time in UTC.
 }
 
-// identityKey represents a key in the _user_identities table.
+// identityKey represents a key in the _identities table.
 type identityKey struct {
 	action      int
 	isAnonymous bool
@@ -45,8 +45,8 @@ type identityKey struct {
 	identityID string
 }
 
-// BatchIdentityWriter writes user identities into the data warehouse in the
-// case when identities are imported in batch.
+// BatchIdentityWriter writes identities into the data warehouse in the case
+// when identities are imported in batch.
 type BatchIdentityWriter struct {
 	store      *Store
 	action     int
@@ -72,14 +72,14 @@ type BatchIdentityWriter struct {
 	}
 }
 
-// newBatchIdentityWriter returns an identity writer for writing user identities
-// in batch, relative to the given action (which must be in execution) on the
-// data warehouse. purge reports whether identities should be purged from the
-// data warehouse after all identities have been written. The ack parameter is
-// the acknowledgment function.
+// newBatchIdentityWriter returns an identity writer for writing identities in
+// batch, relative to the given action (which must be in execution) on the data
+// warehouse. purge reports whether identities should be purged from the data
+// warehouse after all identities have been written. The ack parameter is the
+// acknowledgment function.
 //
-// If the action's output schema does not align with the user schema, it returns
-// a *schemas.Error error.
+// If the action's output schema does not align with the profile schema, it
+// returns a *schemas.Error error.
 //
 // It panics if the ack function is nil.
 func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
@@ -94,9 +94,9 @@ func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack 
 		return nil, fmt.Errorf("action is not in execution")
 	}
 
-	// Check that action's output schema is aligned with the user schema.
+	// Check that action's output schema is aligned with the profile schema.
 	workspace := connection.Workspace()
-	err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+	err := schemas.CheckAlignment(action.OutSchema, workspace.ProfileSchema, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func newBatchIdentityWriter(store *Store, action *state.Action, purge bool, ack 
 	iw.columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
 	iw.columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	iw.columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
-	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.userColumnByProperty())
+	iw.columns = appendColumnsFromProperties(iw.columns, action.Transformation.OutPaths, store.profileColumnByProperty())
 
 	return &iw, nil
 }
@@ -196,7 +196,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 			warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, iw.action),
 			warehouses.NewBaseExpr(warehouses.Column{Name: "__execution__", Type: types.Int(32)}, warehouses.OpIsNot, iw.execution),
 		})
-		err := iw.store.warehouse().Delete(ctx, "_user_identities", where)
+		err := iw.store.warehouse().Delete(ctx, "_identities", where)
 		if err != nil {
 			return err
 		}
@@ -233,9 +233,9 @@ func (iw *BatchIdentityWriter) Keep(id string) {
 	iw.appendRow(key, row, "")
 }
 
-// Write writes a user identity. If a valid user schema has been provided, the
-// properties must comply with it. It returns immediately, deferring the
-// validation of the properties and the actual write operation to a later time.
+// Write writes an identity. If a valid profile schema has been provided, the
+// attributes must comply with it. It returns immediately, deferring the
+// validation of the attributes and the actual write operation to a later time.
 //
 // If property validation fails, the ack function is called with the error.
 //
@@ -248,7 +248,7 @@ func (iw *BatchIdentityWriter) Write(identity Identity) {
 		panic("call Write on a closed identity writer")
 	}
 	key := identityKey{action: iw.action, identityID: identity.ID}
-	row := identity.Properties
+	row := identity.Attributes
 	iw.flatter.flat(row)
 	row["__action__"] = key.action
 	row["__is_anonymous__"] = false

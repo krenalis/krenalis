@@ -9,7 +9,7 @@ import ConnectionsMap from './components/routes/ConnectionsMap/ConnectionsMap';
 import ConnectionsList from './components/routes/ConnectionsList/ConnectionsList';
 import ConnectionWrapper from './components/routes/ConnectionWrapper/ConnectionWrapper';
 import RootError from './components/routes/RootError/RootError';
-import { Users } from './components/routes/Users/Users';
+import { Profiles } from './components/routes/Profiles/Profiles';
 import SchemaGrid from './components/routes/SchemaGrid/SchemaGrid';
 import OAuth from './components/routes/OAuth/OAuth';
 import NotFound from './components/routes/NotFound/NotFound';
@@ -95,7 +95,7 @@ const router = createBrowserRouter([
 					},
 					{ path: 'connections', element: <ConnectionsMap /> },
 					{ path: 'oauth/authorize', element: <OAuth /> },
-					{ path: 'users', element: <Users /> },
+					{ path: 'profiles', element: <Profiles /> },
 					{
 						path: 'schema',
 						element: <Schema />,

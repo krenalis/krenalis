@@ -554,11 +554,11 @@ func Test_Applies(t *testing.T) {
 					filter.Conditions[0].Values = []any{test.v0}
 				}
 			}
-			properties := map[string]any{"v": test.v}
+			attributes := map[string]any{"v": test.v}
 			if test.notExists {
-				delete(properties, "v")
+				delete(attributes, "v")
 			}
-			got := Applies(filter, properties)
+			got := Applies(filter, attributes)
 			if test.expected != got {
 				t.Fatalf("expected %t, got %t", test.expected, got)
 			}
@@ -663,7 +663,7 @@ func Test_readPropertyFrom(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		got, ok := readPropertyFrom(m, cas.path)
+		got, ok := readAttributeFrom(m, cas.path)
 		if ok != cas.ok || !reflect.DeepEqual(got, cas.expected) {
 			t.Fatalf("%v: expected (%v,%v) got (%v,%v)", cas.path, cas.expected, cas.ok, got, ok)
 		}
@@ -674,5 +674,5 @@ func Test_readPropertyFrom(t *testing.T) {
 			t.Fatal("expected panic with empty path")
 		}
 	}()
-	readPropertyFrom(m, []string{})
+	readAttributeFrom(m, []string{})
 }

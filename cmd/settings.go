@@ -266,16 +266,16 @@ func parseEnvSettings() (*Settings, error) {
 	settings.Transformers.Lambda.SecretAccessKey = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_SECRET_ACCESS_KEY")
 	settings.Transformers.Lambda.Region = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_REGION")
 	settings.Transformers.Lambda.Role = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_ROLE")
-	settings.Transformers.Lambda.Node.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODE_RUNTIME")
-	settings.Transformers.Lambda.Node.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODE_LAYER")
+	settings.Transformers.Lambda.NodeJS.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME")
+	settings.Transformers.Lambda.NodeJS.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER")
 	settings.Transformers.Lambda.Python.Runtime = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME")
 	settings.Transformers.Lambda.Python.Layer = envVars.Get("MEERGO_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER")
 
-	settings.Transformers.Local.NodeExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_NODE_EXECUTABLE")
+	settings.Transformers.Local.NodeJSExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE")
 	settings.Transformers.Local.PythonExecutable = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE")
 	settings.Transformers.Local.FunctionsDir = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_FUNCTIONS_DIR")
-	if (settings.Transformers.Local.NodeExecutable != "" || settings.Transformers.Local.PythonExecutable != "") &&
-		(settings.Transformers.Lambda.Node.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "") {
+	if (settings.Transformers.Local.NodeJSExecutable != "" || settings.Transformers.Local.PythonExecutable != "") &&
+		(settings.Transformers.Lambda.NodeJS.Runtime != "" || settings.Transformers.Lambda.Python.Runtime != "") {
 		return nil, fmt.Errorf("invalid configuration: cannot set both Lambda and local transformers")
 	}
 	settings.Transformers.Local.SudoUser = envVars.Get("MEERGO_TRANSFORMERS_LOCAL_SUDO_USER")

@@ -231,7 +231,7 @@ func (ky *Klaviyo) Records(ctx context.Context, _ connectors.Targets, lastChange
 				pp[k], _ = json.Marshal(v)
 			}
 		}
-		users[i].Properties = data.Attributes
+		users[i].Attributes = data.Attributes
 		users[i].LastChangeTime = lastChangeTime.UTC()
 	}
 
@@ -446,18 +446,18 @@ func (ky *Klaviyo) Upsert(ctx context.Context, target connectors.Targets, record
 
 	record := records.First()
 
-	customProperties, ok := record.Properties["properties"]
+	properties, ok := record.Attributes["properties"]
 	if ok {
-		delete(record.Properties, "properties")
+		delete(record.Attributes, "properties")
 	}
 	bb := ky.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
 	bb.WriteString(`{"data":{"type":"profile","attributes":`)
-	_ = bb.Encode(record.Properties)
+	_ = bb.Encode(record.Attributes)
 	if ok {
 		bb.Truncate(bb.Len() - 1) // remove '}'.
 		bb.WriteString(`,"properties":`)
-		_ = bb.Encode(customProperties)
+		_ = bb.Encode(properties)
 		bb.WriteByte('}') // add '}'.
 	}
 	if record.ID != "" {

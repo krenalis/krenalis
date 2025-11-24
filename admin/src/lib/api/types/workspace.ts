@@ -3,7 +3,7 @@ import { WarehouseMode } from './warehouse';
 
 type PrimarySources = Record<string, number>;
 
-interface UserProfile {
+interface Profile {
 	image: string;
 	firstName: string;
 	lastName: string;
@@ -11,7 +11,7 @@ interface UserProfile {
 }
 
 interface UIPreferences {
-	userProfile: UserProfile;
+	profile: Profile;
 }
 
 interface Workspace {
@@ -20,7 +20,7 @@ interface Workspace {
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
 	warehouseMode: WarehouseMode;
-	userPrimarySources: PrimarySources;
+	primarySources: PrimarySources;
 	uiPreferences: UIPreferences;
 }
 
@@ -33,7 +33,7 @@ interface LatestIdentityResolution {
 	endTime: string | null;
 }
 
-interface LatestAlterUserSchema {
+interface LatestAlterProfileSchema {
 	startTime: string | null;
 	endTime: string | null;
 	error: string | null;
@@ -43,8 +43,8 @@ export default Workspace;
 export type {
 	CreateWorkspaceResponse,
 	UIPreferences,
-	UserProfile,
+	Profile,
 	PrimarySources,
 	LatestIdentityResolution,
-	LatestAlterUserSchema,
+	LatestAlterProfileSchema,
 };

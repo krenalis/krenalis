@@ -343,8 +343,8 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 						<span className='connection-actions__grid-alert-identities'>
 							you will permanently lose the identities
 						</span>{' '}
-						imported by the action. The user profiles will be updated accordingly at the next identity
-						resolution execution.
+						imported by the action. The profiles will be updated accordingly at the next identity resolution
+						execution.
 					</p>
 				) : (
 					<p>If you continue, you will permanently lose the action</p>

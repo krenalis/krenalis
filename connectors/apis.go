@@ -296,7 +296,7 @@ type RecordUpserter interface {
 // Record represents an API record.
 type Record struct {
 	ID         string         // Identifier.
-	Properties map[string]any // Properties.
+	Attributes map[string]any // Attributes.
 
 	// LastChangeTime is the record's last change time, whose location can be
 	// anything, not necessarily UTC. The precision of this time is limited to
@@ -359,7 +359,7 @@ func (err RecordsError) Error() string {
 // value must not be used again.
 type Records interface {
 
-	// All returns an iterator to read all records. Properties of the records in the
+	// All returns an iterator to read all records. Attributes of the records in the
 	// sequence may be modified unless the record is subsequently postponed.
 	All() iter.Seq[Record]
 
@@ -369,7 +369,7 @@ type Records interface {
 	// discarded.
 	Discard(err error)
 
-	// First returns the first record. The record's properties may be modified.
+	// First returns the first record. The record's attributes may be modified.
 	// Use it instead of All or Some when the API only needs to create or update
 	// one record at a time.
 	First() Record
@@ -382,7 +382,7 @@ type Records interface {
 
 	// Postpone postpones the current record in the iteration and marks it as
 	// unread. Postpone may only be called during iterations from All or Same, and
-	// only if the record's properties have not been modified.
+	// only if the record's attributes have not been modified.
 	//
 	// The first event must always be consumed. Calling Postpone on it will cause a
 	// panic. It is safe to call Postpone multiple times on the same record.
@@ -391,7 +391,7 @@ type Records interface {
 
 	// Same returns an iterator for records: either all records to update
 	// (if the first record is for update) or all records to create
-	// (if the first record is for creation). Properties of the records in the
+	// (if the first record is for creation). Attributes of the records in the
 	// sequence may be modified unless the record is subsequently postponed.
 	Same() iter.Seq[Record]
 }

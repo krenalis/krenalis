@@ -17,7 +17,7 @@ import { UIPreferences } from '../../../lib/api/types/workspace';
 import { checkUIPreferences } from './GeneralSettings.helpers';
 
 const GeneralSettings = () => {
-	const [userSchema, setUserSchema] = useState<ObjectType>();
+	const [profileSchema, setProfileSchema] = useState<ObjectType>();
 	const [name, setName] = useState<string>('');
 	const [image, setImage] = useState<string>();
 	const [firstName, setFirstName] = useState<string>();
@@ -41,40 +41,40 @@ const GeneralSettings = () => {
 	useLayoutEffect(() => {
 		const ws = workspaces.find((workspace) => workspace.id === selectedWorkspace);
 		setName(ws.name);
-		setFirstName(ws.uiPreferences.userProfile.firstName);
-		setLastName(ws.uiPreferences.userProfile.lastName);
-		setExtra(ws.uiPreferences.userProfile.extra);
-		setImage(ws.uiPreferences.userProfile.image);
+		setFirstName(ws.uiPreferences.profile.firstName);
+		setLastName(ws.uiPreferences.profile.lastName);
+		setExtra(ws.uiPreferences.profile.extra);
+		setImage(ws.uiPreferences.profile.image);
 	}, [selectedWorkspace]);
 
 	useEffect(() => {
-		const fetchUserSchema = async () => {
+		const fetchProfileSchema = async () => {
 			let schema: ObjectType;
 			try {
-				schema = await api.workspaces.userSchema();
+				schema = await api.workspaces.profileSchema();
 			} catch (err) {
 				handleError(err);
 				return;
 			}
-			setUserSchema(schema);
+			setProfileSchema(schema);
 		};
-		fetchUserSchema();
+		fetchProfileSchema();
 	}, []);
 
-	const userSchemaComboboxItems = useMemo(() => getUIPreferencesComboboxItems(userSchema), [userSchema]);
+	const profileSchemaComboboxItems = useMemo(() => getUIPreferencesComboboxItems(profileSchema), [profileSchema]);
 
-	const flatUserSchema = useMemo(() => flattenSchema(userSchema), [userSchema]);
+	const flatProfileSchema = useMemo(() => flattenSchema(profileSchema), [profileSchema]);
 
 	const firstNameError = useMemo<string>(
-		() => checkUIPreferences(firstName, flatUserSchema),
-		[flatUserSchema, firstName],
+		() => checkUIPreferences(firstName, flatProfileSchema),
+		[flatProfileSchema, firstName],
 	);
 	const lastNameError = useMemo<string>(
-		() => checkUIPreferences(lastName, flatUserSchema),
-		[flatUserSchema, lastName],
+		() => checkUIPreferences(lastName, flatProfileSchema),
+		[flatProfileSchema, lastName],
 	);
-	const extraError = useMemo<string>(() => checkUIPreferences(extra, flatUserSchema), [flatUserSchema, extra]);
-	const imageError = useMemo<string>(() => checkUIPreferences(image, flatUserSchema), [flatUserSchema, image]);
+	const extraError = useMemo<string>(() => checkUIPreferences(extra, flatProfileSchema), [flatProfileSchema, extra]);
+	const imageError = useMemo<string>(() => checkUIPreferences(image, flatProfileSchema), [flatProfileSchema, image]);
 
 	const onNameInput = (e) => setName(e.target.value);
 
@@ -105,7 +105,7 @@ const GeneralSettings = () => {
 
 	const onSave = async () => {
 		const uiPreferences: UIPreferences = {
-			userProfile: {
+			profile: {
 				firstName,
 				lastName,
 				extra,
@@ -158,19 +158,19 @@ const GeneralSettings = () => {
 				value={name}
 				onSlInput={onNameInput}
 			/>
-			<div className='general-settings__user-profile-properties'>
-				<div className='general-settings__user-profile-properties-title'>Displayed user properties</div>
-				<div className='general-settings__user-profile-properties-description'>
-					The properties of the user schema shown in the user pages
+			<div className='general-settings__profile-properties'>
+				<div className='general-settings__profile-properties-title'>Displayed profile properties</div>
+				<div className='general-settings__profile-properties-description'>
+					The properties of the profile schema shown in the profile pages
 				</div>
-				<div className='general-settings__user-profile-properties-fields'>
+				<div className='general-settings__profile-properties-fields'>
 					{firstName !== undefined && (
 						<Combobox
 							className='general-settings__user-profile-first-name'
 							label='First name'
 							onInput={onUpdateUIPreferences}
 							onSelect={onSelectUIPreferences}
-							items={userSchemaComboboxItems}
+							items={profileSchemaComboboxItems}
 							value={firstName}
 							name='firstName'
 							isExpression={false}
@@ -185,7 +185,7 @@ const GeneralSettings = () => {
 							label='Last name'
 							onInput={onUpdateUIPreferences}
 							onSelect={onSelectUIPreferences}
-							items={userSchemaComboboxItems}
+							items={profileSchemaComboboxItems}
 							value={lastName}
 							name='lastName'
 							isExpression={false}
@@ -200,7 +200,7 @@ const GeneralSettings = () => {
 							label='Additional line'
 							onInput={onUpdateUIPreferences}
 							onSelect={onSelectUIPreferences}
-							items={userSchemaComboboxItems}
+							items={profileSchemaComboboxItems}
 							value={extra}
 							name='extra'
 							isExpression={false}
@@ -211,11 +211,11 @@ const GeneralSettings = () => {
 					)}
 					{image !== undefined && (
 						<Combobox
-							className='general-settings__user-profile-image'
+							className='general-settings__profile-image'
 							label='Image'
 							onInput={onUpdateUIPreferences}
 							onSelect={onSelectUIPreferences}
-							items={userSchemaComboboxItems}
+							items={profileSchemaComboboxItems}
 							value={image}
 							name='image'
 							isExpression={false}

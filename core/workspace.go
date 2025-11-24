@@ -47,8 +47,8 @@ type Workspace struct {
 	workspace                      *state.Workspace
 	ID                             int            `json:"id"`
 	Name                           string         `json:"name"`
-	UserSchema                     types.Type     `json:"userSchema"`
-	UserPrimarySources             map[string]int `json:"userPrimarySources,format:emitnull"`
+	ProfileSchema                  types.Type     `json:"profileSchema"`
+	PrimarySources                 map[string]int `json:"primarySources,format:emitnull"`
 	ResolveIdentitiesOnBatchImport bool           `json:"resolveIdentitiesOnBatchImport"`
 	Identifiers                    []string       `json:"identifiers,format:emitnull"`
 	WarehouseMode                  WarehouseMode  `json:"warehouseMode"`
@@ -56,12 +56,12 @@ type Workspace struct {
 }
 
 type UIPreferences struct {
-	UserProfile struct {
+	Profile struct {
 		Image     string `json:"image"`     // property path.
 		FirstName string `json:"firstName"` // property path.
 		LastName  string `json:"lastName"`  // property path.
 		Extra     string `json:"extra"`     // property path.
-	} `json:"userProfile"`
+	} `json:"profile"`
 }
 
 // ActionStep represents a step of an action.
@@ -233,6 +233,51 @@ const (
 	Hour   = MetricUnit(metrics.Hour)
 	Day    = MetricUnit(metrics.Day)
 )
+
+// Attributes returns the attributes of a profile, given its MPID.
+//
+// It returns an errors.NotFoundError error, if the profile does not exist.
+// It returns an errors.UnprocessableError error with code MaintenanceMode if
+// the data warehouse is in maintenance mode.
+func (this *Workspace) Attributes(ctx context.Context, mpid string) (json.Value, error) {
+
+	this.core.mustBeOpen()
+
+	ws := this.workspace
+
+	// Validate the MPID.
+	if _, ok := types.ParseUUID(mpid); !ok {
+		return nil, errors.BadRequest("profile %q is not a valid profile identifier", mpid)
+	}
+
+	properties := this.workspace.ProfileSchema.Properties().Names()
+	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
+		Property: []string{"__mpid__"},
+		Operator: state.OpIs,
+		Values:   []any{mpid},
+	}}}
+
+	// Retrieve the profile attributes.
+	profiles, _, err := this.store.Profiles(ctx, datastore.Query{
+		Properties: properties,
+		Where:      where,
+		Limit:      1,
+	})
+	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			return nil, errors.Unavailable("%s", err)
+		}
+		return nil, err
+	}
+	if len(profiles) == 0 {
+		return nil, errors.NotFound("profile %q does not exist", mpid)
+	}
+
+	return types.Marshal(profiles[0], ws.ProfileSchema)
+}
 
 // ColumnTypeDescription returns a description for the warehouse column type
 // corresponding to the given types.Type.
@@ -1072,57 +1117,46 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 	return executions, nil
 }
 
-// UserPropertiesSuitableAsIdentifiers returns the properties of the "users"
-// schema that can be used as identifiers in the Identity Resolution.
-// If none of the properties can be an identifier, this method returns the
-// invalid schema.
-func (this *Workspace) UserPropertiesSuitableAsIdentifiers() types.Type {
-	this.core.mustBeOpen()
-	return types.Filter(this.workspace.UserSchema, func(p types.Property) bool {
-		return suitableAsIdentifier(p.Type)
-	})
-}
-
-// Identities returns the identities for the provided MUID, and an estimate of
+// Identities returns the identities for the provided MPID, and an estimate of
 // their total number without applying first and limit.
 //
-// It returns the user identities in range [first,first+limit] with first >= 0
+// It returns the identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
 // Identities are sorted by last change time, in descending order, so the most
 // recently changed identities are returned first.
 //
-// If the MUID does not exist, still return an empty slice instead of an error.
+// If the MPID does not exist, still return an empty slice instead of an error.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) Identities(ctx context.Context, muid string, first, limit int) ([]UserIdentity, int, error) {
+func (this *Workspace) Identities(ctx context.Context, mpid string, first, limit int) ([]Identity, int, error) {
 	this.core.mustBeOpen()
-	if _, ok := types.ParseUUID(muid); !ok {
-		return nil, 0, errors.BadRequest("user %q is not a valid MUID", muid)
+	if _, ok := types.ParseUUID(mpid); !ok {
+		return nil, 0, errors.BadRequest("profile %q is not a valid MPID", mpid)
 	}
 	if first < 0 {
-		return nil, 0, errors.BadRequest("first %d is not valid", limit)
+		return nil, 0, errors.BadRequest("first %d is not valid", first)
 	}
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__muid__"},
+		Property: []string{"__mpid__"},
 		Operator: state.OpIs,
-		Values:   []any{muid},
+		Values:   []any{mpid},
 	}}}
 	ws := &Workspace{
 		core:      this.core,
 		store:     this.store,
 		workspace: this.workspace,
 	}
-	identities, total, err := ws.userIdentities(ctx, where, first, limit)
+	identities, total, err := ws.identities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}
 	if identities == nil {
-		identities = []UserIdentity{}
+		identities = []Identity{}
 	}
 	return identities, total, nil
 }
@@ -1148,35 +1182,35 @@ func (this *Workspace) LatestIdentityResolution() (startTime, endTime *time.Time
 	return ws.IR.StartTime, ws.IR.EndTime, nil
 }
 
-// LatestAlterUserSchema return information about the latest altering of the
-// user schema.
+// LatestAlterProfileSchema return information about the latest altering of the
+// profile schema.
 //
 // In particular:
 //
 //   - startTime is the start timestamp (UTC) of the latest altering of the
-//     user schema, either running or completed; if null, no user schema update
-//     has never been started for the workspace.
-//   - endTime is the end timestamp (UTC) for the latest altering of the user
-//     schema; if null, it means that the user schema altering is still in
+//     profile schema, either running or completed; if null, no profile schema
+//     update has never been started for the workspace.
+//   - endTime is the end timestamp (UTC) for the latest altering of the profile
+//     schema; if null, it means that the profile schema altering is still in
 //     progress, or that no schema altering has never been performed for the
 //     workspace.
 //   - updateErr is a possible error in the execution of the latest altering
-//     of the user schema; if null, it means that no altering of the user
+//     of the profile schema; if null, it means that no altering of the profile
 //     schema has never been executed, or that one is in progress, or that the
 //     last one executed completed without errors.
 //
 // It returns an errors.NotFoundError error if the workspace does not exist
 // anymore.
-func (this *Workspace) LatestAlterUserSchema() (startTime, endTime *time.Time, alterError string, err error) {
+func (this *Workspace) LatestAlterProfileSchema() (startTime, endTime *time.Time, alterError string, err error) {
 	this.core.mustBeOpen()
 	ws, ok := this.core.state.Workspace(this.workspace.ID)
 	if !ok {
 		return nil, nil, "", errors.NotFound("workspace %d does not exist", this.workspace.ID)
 	}
-	if ws.AlterUserSchema.Err != nil {
-		alterError = *ws.AlterUserSchema.Err
+	if ws.AlterProfileSchema.Err != nil {
+		alterError = *ws.AlterProfileSchema.Err
 	}
-	return ws.AlterUserSchema.StartTime, ws.AlterUserSchema.EndTime, alterError, nil
+	return ws.AlterProfileSchema.StartTime, ws.AlterProfileSchema.EndTime, alterError, nil
 }
 
 // ListenedEvents returns the events listened to the specified listener and the
@@ -1199,6 +1233,145 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 		observedEvents[i] = slices.Clone(event)
 	}
 	return observedEvents, omitted, nil
+}
+
+// ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
+// schema that can be used as identifiers in the Identity Resolution.
+// If none of the properties can be an identifier, this method returns the
+// invalid schema.
+func (this *Workspace) ProfilePropertiesSuitableAsIdentifiers() types.Type {
+	this.core.mustBeOpen()
+	return types.Filter(this.workspace.ProfileSchema, func(p types.Property) bool {
+		return suitableAsIdentifier(p.Type)
+	})
+}
+
+// Profile represents a profile.
+type Profile struct {
+	MPID           string         `json:"mpid"`
+	Attributes     map[string]any `json:"attributes"`
+	LastChangeTime time.Time      `json:"lastChangeTime"`
+}
+
+// Profiles returns the profiles, the profile schema, and an estimate of their
+// total number without applying first and limit. It returns the profiles that
+// satisfies the filter, if not nil, and in range [first,first+limit] with
+// first >= 0 and 0 < limit <= 1000 and only the given properties. properties
+// cannot be empty.
+//
+// order is the name of the property by which to sort the returned profiles and
+// cannot have type json, array, object, or map; when not provided, the profiles
+// are ordered by their last change time.
+//
+// orderDesc control whether the returned profiles should be ordered in+
+// descending order instead of ascending, which is the default.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist
+// anymore. It returns an errors.UnprocessableError error with code
+//
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - OrderNotExist, if order does not exist in schema.
+//   - OrderTypeNotSortable, if the type of the order property is not sortable.
+//   - PropertyNotExist, if a property does not exist.
+func (this *Workspace) Profiles(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, types.Type, int, error) {
+
+	this.core.mustBeOpen()
+
+	ws := this.workspace
+
+	profileProperties := ws.ProfileSchema.Properties()
+
+	// Validate the properties.
+	if len(properties) == 0 {
+		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
+	}
+	for _, name := range properties {
+		if _, ok := profileProperties.ByName(name); !ok {
+			if name == "" {
+				return nil, types.Type{}, 0, errors.BadRequest("a property name is empty")
+			}
+			if !types.IsValidPropertyName(name) {
+				return nil, types.Type{}, 0, errors.BadRequest("property name %q is not valid", name)
+			}
+			return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
+		}
+	}
+
+	// Validate the filter.
+	var where *state.Where
+	if filter != nil {
+		_, err := validateFilter(filter, ws.ProfileSchema, state.Destination, state.TargetUser)
+		if err != nil {
+			if err, ok := err.(types.PathNotExistError); ok {
+				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
+			}
+			return nil, types.Type{}, 0, errors.BadRequest("filter is not valid: %w", err)
+		}
+		where = convertFilterToWhere(filter, ws.ProfileSchema)
+	}
+
+	// Validate the order.
+	if order != "" {
+		orderProperty, ok := profileProperties.ByName(order)
+		if !ok {
+			if !types.IsValidPropertyName(order) {
+				return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
+			}
+			return nil, types.Type{}, 0, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
+		}
+		switch orderProperty.Type.Kind() {
+		case types.JSONKind, types.ArrayKind, types.ObjectKind, types.MapKind:
+			return nil, types.Type{}, 0, errors.Unprocessable(OrderTypeNotSortable,
+				"cannot sort by %s: property has type %s", order, orderProperty.Type)
+		}
+	} else {
+		order = "__last_change_time__"
+	}
+
+	// Validate first and limit.
+	if first < 0 || first > maxInt32 {
+		return nil, types.Type{}, 0, errors.BadRequest("first %d in not valid", first)
+	}
+	if limit < 1 || limit > 1000 {
+		return nil, types.Type{}, 0, errors.BadRequest("limit %d is not valid", limit)
+	}
+
+	// Read the profiles.
+	rows, total, err := this.store.Profiles(ctx, datastore.Query{
+		Properties: append([]string{"__mpid__", "__last_change_time__"}, properties...),
+		Where:      where,
+		OrderBy:    order,
+		OrderDesc:  orderDesc,
+		First:      first,
+		Limit:      limit,
+	})
+	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			return nil, types.Type{}, 0, errors.Unavailable("%s", err)
+		}
+		return nil, types.Type{}, 0, err
+	}
+
+	// Create the schema to return, with only the requested properties.
+	props := make([]types.Property, len(properties))
+	for i, name := range properties {
+		props[i], _ = profileProperties.ByName(name)
+	}
+	schema := types.Object(props)
+
+	profiles := make([]Profile, len(rows))
+	for i, row := range rows {
+		profiles[i].MPID = row["__mpid__"].(string)
+		profiles[i].Attributes = row
+		profiles[i].LastChangeTime = row["__last_change_time__"].(time.Time)
+		delete(row, "__mpid__")
+		delete(row, "__last_change_time__")
+	}
+
+	return profiles, schema, total, nil
 }
 
 // Rename renames the workspace with the given new name.
@@ -1235,7 +1408,7 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 // workspace's data warehouse.
 func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	this.core.mustBeOpen()
-	err := this.store.Repair(ctx, this.workspace.UserSchema)
+	err := this.store.Repair(ctx, this.workspace.ProfileSchema)
 	if err != nil {
 		if err, ok := (err).(*datastore.UnavailableError); ok {
 			return errors.Unavailable("%s", err)
@@ -1333,7 +1506,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - OperationAlreadyExecuting, if another operation (identity resolution or
-//     user schema update) is already running.
+//     profile schema update) is already running.
 func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 	switch this.store.Mode() {
 	case state.Inspection:
@@ -1402,51 +1575,6 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	return nil
 }
 
-// Traits returns the traits of a user, given its MUID.
-//
-// It returns an errors.NotFoundError error, if the user does not exist.
-// It returns an errors.UnprocessableError error with code MaintenanceMode if
-// the data warehouse is in maintenance mode.
-func (this *Workspace) Traits(ctx context.Context, muid string) (json.Value, error) {
-
-	this.core.mustBeOpen()
-
-	ws := this.workspace
-
-	// Validate the MUID.
-	if _, ok := types.ParseUUID(muid); !ok {
-		return nil, errors.BadRequest("user %q is not a valid user identifier", muid)
-	}
-
-	properties := this.workspace.UserSchema.Properties().Names()
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__muid__"},
-		Operator: state.OpIs,
-		Values:   []any{muid},
-	}}}
-
-	// Retrieve the user traits.
-	records, _, err := this.store.Users(ctx, datastore.Query{
-		Properties: properties,
-		Where:      where,
-		Limit:      1,
-	})
-	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
-			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
-			return nil, errors.Unavailable("%s", err)
-		}
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, errors.NotFound("user %q does not exist", muid)
-	}
-
-	return types.Marshal(records[0], ws.UserSchema)
-}
-
 // Update updates the name and the displayed properties of the workspace. name
 // must be between 1 and 100 runes long. displayedProperties must contain valid
 // displayed property names. A valid displayed property name is an empty string,
@@ -1466,11 +1594,11 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 		UIPreferences: state.UIPreferences(uiPreferences),
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_user_profile_image = $2, "+
-			"ui_user_profile_first_name = $3, ui_user_profile_last_name = $4, "+
-			"ui_user_profile_extra = $5 WHERE id = $6",
-			n.Name, n.UIPreferences.UserProfile.Image, n.UIPreferences.UserProfile.FirstName,
-			n.UIPreferences.UserProfile.LastName, n.UIPreferences.UserProfile.Extra, n.Workspace)
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_profile_image = $2, "+
+			"ui_profile_first_name = $3, ui_profile_last_name = $4, "+
+			"ui_profile_extra = $5 WHERE id = $6",
+			n.Name, n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
+			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
@@ -1486,7 +1614,7 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 // automatically every time a batch import is completed.
 //
 // identifiers specify the identity resolution identifiers in the specified
-// order. An identifier must be a property in the user schema with a type of
+// order. An identifier must be a property in the profile schema with a type of
 // int, uint, uuid, inet, text, or decimal with zero scale. Identifiers cannot
 // be repeated.
 //
@@ -1525,7 +1653,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var irOpID, alterSchemaOpID *string
-		err := tx.QueryRow(ctx, "SELECT alter_user_schema_id, ir_id FROM workspaces WHERE id = $1",
+		err := tx.QueryRow(ctx, "SELECT alter_profile_schema_id, ir_id FROM workspaces WHERE id = $1",
 			n.Workspace).Scan(&alterSchemaOpID, &irOpID)
 		if err != nil {
 			return nil, err
@@ -1538,7 +1666,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 		}
 		if len(identifiers) > 0 {
 			var s []byte
-			err := tx.QueryRow(ctx, "SELECT user_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
+			err := tx.QueryRow(ctx, "SELECT profile_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -1554,7 +1682,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 			for _, path := range identifiers {
 				p, err := properties.ByPath(path)
 				if err != nil {
-					return nil, errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
+					return nil, errors.Unprocessable(PropertyNotExist, "property %q does not exist in the profile schema", path)
 				}
 				if !suitableAsIdentifier(p.Type) {
 					return nil, errors.Unprocessable(TypeNotAllowed, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
@@ -1726,133 +1854,6 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 	return err
 }
 
-// User represents a user.
-type User struct {
-	MUID           string         `json:"muid"`
-	Traits         map[string]any `json:"traits"`
-	LastChangeTime time.Time      `json:"lastChangeTime"`
-}
-
-// Users returns the users, the user schema, and an estimate of their total
-// number without applying first and limit. It returns the users that satisfies
-// the filter, if not nil, and in range [first,first+limit] with first >= 0 and
-// 0 < limit <= 1000 and only the given properties. properties cannot be empty.
-//
-// order is the name of the property by which to sort the returned users and
-// cannot have type json, array, object, or map; when not provided, the users
-// are ordered by their last change time.
-//
-// orderDesc control whether the returned users should be ordered in descending
-// order instead of ascending, which is the default.
-//
-// It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore. It returns an errors.UnprocessableError error with code
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - OrderNotExist, if order does not exist in schema.
-//   - OrderTypeNotSortable, if the type of the order property is not sortable.
-//   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]User, types.Type, int, error) {
-
-	this.core.mustBeOpen()
-
-	ws := this.workspace
-
-	userProperties := ws.UserSchema.Properties()
-
-	// Validate the properties.
-	if len(properties) == 0 {
-		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
-	}
-	for _, name := range properties {
-		if _, ok := userProperties.ByName(name); !ok {
-			if name == "" {
-				return nil, types.Type{}, 0, errors.BadRequest("a property name is empty")
-			}
-			if !types.IsValidPropertyName(name) {
-				return nil, types.Type{}, 0, errors.BadRequest("property name %q is not valid", name)
-			}
-			return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
-		}
-	}
-
-	// Validate the filter.
-	var where *state.Where
-	if filter != nil {
-		_, err := validateFilter(filter, ws.UserSchema, state.Destination, state.TargetUser)
-		if err != nil {
-			if err, ok := err.(types.PathNotExistError); ok {
-				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
-			}
-			return nil, types.Type{}, 0, errors.BadRequest("filter is not valid: %w", err)
-		}
-		where = convertFilterToWhere(filter, ws.UserSchema)
-	}
-
-	// Validate the order.
-	if order != "" {
-		orderProperty, ok := userProperties.ByName(order)
-		if !ok {
-			if !types.IsValidPropertyName(order) {
-				return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
-			}
-			return nil, types.Type{}, 0, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
-		}
-		switch orderProperty.Type.Kind() {
-		case types.JSONKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return nil, types.Type{}, 0, errors.Unprocessable(OrderTypeNotSortable,
-				"cannot sort by %s: property has type %s", order, orderProperty.Type)
-		}
-	} else {
-		order = "__last_change_time__"
-	}
-
-	// Validate first and limit.
-	if first < 0 || first > maxInt32 {
-		return nil, types.Type{}, 0, errors.BadRequest("first %d in not valid", first)
-	}
-	if limit < 1 || limit > 1000 {
-		return nil, types.Type{}, 0, errors.BadRequest("limit %d is not valid", limit)
-	}
-
-	// Read the users.
-	rows, total, err := this.store.Users(ctx, datastore.Query{
-		Properties: append([]string{"__muid__", "__last_change_time__"}, properties...),
-		Where:      where,
-		OrderBy:    order,
-		OrderDesc:  orderDesc,
-		First:      first,
-		Limit:      limit,
-	})
-	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
-			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
-			return nil, types.Type{}, 0, errors.Unavailable("%s", err)
-		}
-		return nil, types.Type{}, 0, err
-	}
-
-	// Create the schema to return, with only the requested properties.
-	props := make([]types.Property, len(properties))
-	for i, name := range properties {
-		props[i], _ = userProperties.ByName(name)
-	}
-	schema := types.Object(props)
-
-	users := make([]User, len(rows))
-	for i, row := range rows {
-		users[i].MUID = row["__muid__"].(string)
-		users[i].Traits = row
-		users[i].LastChangeTime = row["__last_change_time__"].(time.Time)
-		delete(row, "__muid__")
-		delete(row, "__last_change_time__")
-	}
-
-	return users, schema, total, nil
-}
-
 // Warehouse returns driver name, settings and MCP settings of the data
 // warehouse for the workspace.
 func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
@@ -1868,11 +1869,10 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 	return ws.Warehouse.Name, settings, mcpSettings
 }
 
-// userIdentities returns the user identities matching the provided where
-// condition and an estimate of their total number without applying first and
-// limit.
+// identities returns the identities matching the provided where condition and
+// an estimate of their total number without applying first and limit.
 //
-// It returns the user identities in range [first,first+limit] with first >= 0
+// It returns the identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
 // Identities are sorted by last change time, in descending order, so the most
@@ -1882,10 +1882,10 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, first, limit int) ([]UserIdentity, int, error) {
+func (this *Workspace) identities(ctx context.Context, where *state.Where, first, limit int) ([]Identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
-	records, total, err := this.store.UserIdentities(ctx, datastore.Query{
+	records, total, err := this.store.Identities(ctx, datastore.Query{
 		Properties: []string{
 			"__action__",
 			"__is_anonymous__",
@@ -1908,7 +1908,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, f
 	}
 
 	// Create the identities from the records returned by the datastore.
-	var identities []UserIdentity
+	var identities []Identity
 
 	for _, record := range records {
 
@@ -1916,8 +1916,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, f
 		connID := record["__connection__"].(int)
 		conn, ok := this.workspace.Connection(connID)
 		if !ok {
-			// The connection for this user identity no longer exists, so skip
-			// this identity.
+			// The connection for this identity no longer exists, so skip this identity.
 			continue
 		}
 
@@ -1925,8 +1924,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, f
 		actionID := record["__action__"].(int)
 		_, ok = conn.Action(actionID)
 		if !ok {
-			// The action for this user identity no longer exists, so skip this
-			// identity.
+			// The action for this identity no longer exists, so skip this identity.
 			continue
 		}
 
@@ -1953,7 +1951,7 @@ func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, f
 		// Determine the last change time.
 		lastChangeTime := record["__last_change_time__"].(time.Time)
 
-		identities = append(identities, UserIdentity{
+		identities = append(identities, Identity{
 			Connection:     connID,
 			Action:         actionID,
 			ID:             identityID,
@@ -2079,8 +2077,8 @@ func suitableAsIdentifier(t types.Type) bool {
 	}
 }
 
-// UserIdentity represents a user identity.
-type UserIdentity struct {
+// Identity represents an identity.
+type Identity struct {
 	// TODO(Gianluca): the Connection field is kept here redundantly (the action
 	// is already there) because the Admin console does not currently have the
 	// Action => Connection mapping available, and it would be very inconvenient
@@ -2118,17 +2116,17 @@ func filterWorkspaceActions(ws *state.Workspace, actions []int) []int {
 // validateUIPreferences validates whether the given UI preferences are valid or
 // not, returning an error if they are not.
 func validateUIPreferences(preferences UIPreferences) error {
-	if n := preferences.UserProfile.Image; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
-		return fmt.Errorf("invalid user profile 'image' %q", n)
+	if n := preferences.Profile.Image; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
+		return fmt.Errorf("invalid profile 'image' %q", n)
 	}
-	if n := preferences.UserProfile.FirstName; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
-		return fmt.Errorf("invalid user profile 'firstName' %q", n)
+	if n := preferences.Profile.FirstName; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
+		return fmt.Errorf("invalid profile 'firstName' %q", n)
 	}
-	if n := preferences.UserProfile.LastName; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
-		return fmt.Errorf("invalid user profile 'lastName' %q", n)
+	if n := preferences.Profile.LastName; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
+		return fmt.Errorf("invalid profile 'lastName' %q", n)
 	}
-	if n := preferences.UserProfile.Extra; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
-		return fmt.Errorf("invalid user profile 'extra' %q", n)
+	if n := preferences.Profile.Extra; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
+		return fmt.Errorf("invalid profile 'extra' %q", n)
 	}
 	return nil
 }

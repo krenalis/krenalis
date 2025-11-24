@@ -23,35 +23,34 @@ AS $$
         "i1"."__pk__",
         "i2"."__pk__"
     FROM
-        "_user_identities" "i1"
+        "_identities" "i1"
             CROSS JOIN
-        "_user_identities" "i2"
+        "_identities" "i2"
     WHERE
         "i1"."__pk__" < "i2"."__pk__" AND (
             ("i1"."__connection__" = "i2"."__connection__"
                 AND "i1"."__identity_id__" = "i2"."__identity_id__"
                 AND "i1"."__is_anonymous__" = "i2"."__is_anonymous__"
             )
-            OR {{ same_user }} -- This placeholder will be replaced by Meergo.
+            OR {{ same_profile }} -- This placeholder will be replaced by Meergo.
         );
 
-    -- Reset the user identity clusters, as they may have been modified by a
-    -- previous execution of Identity Resolution. If they are not reset, user
-    -- identities that were previously considered to belong to the same cluster
-    -- will continue to be regarded as such, even though they should not be
-    -- according to the parameters of the current execution of identity
-    -- resolution.
-    WITH "numbered_users" AS (
+    -- Reset the identity clusters, as they may have been modified by a previous
+    -- execution of Identity Resolution. If they are not reset, identities that
+    -- were previously considered to belong to the same cluster will continue to
+    -- be regarded as such, even though they should not be according to the
+    -- parameters of the current execution of identity resolution.
+    WITH "numbered_profiles" AS (
         SELECT 
             "__pk__",
             ROW_NUMBER() OVER (ORDER BY "__pk__") AS "cluster_value"
         FROM 
-            "_user_identities"
+            "_identities"
     )
-    UPDATE "_user_identities"
-    SET "__cluster__" = "numbered_users"."cluster_value"
-    FROM "numbered_users"
-    WHERE "_user_identities"."__pk__" = "numbered_users"."__pk__";
+    UPDATE "_identities"
+    SET "__cluster__" = "numbered_profiles"."cluster_value"
+    FROM "numbered_profiles"
+    WHERE "_identities"."__pk__" = "numbered_profiles"."__pk__";
 
     -- Do the clustering.
     DO $clustering$
@@ -60,7 +59,7 @@ AS $$
         BEGIN 
 
         -- The idea here is to keep iterating as long as there are two
-        -- identities that are the same user but have different clusters.
+        -- identities that are the same profile but have different clusters.
         LOOP
         
             -- Determine the clusters to merge.
@@ -72,8 +71,8 @@ AS $$
                 "i2"."__cluster__" "c2"
             FROM
                 "_edges"
-                JOIN "_user_identities" "i1" ON "_edges"."i1" = "i1"."__pk__"
-                JOIN "_user_identities" "i2" ON "_edges"."i2" = "i2"."__pk__"
+                JOIN "_identities" "i1" ON "_edges"."i1" = "i1"."__pk__"
+                JOIN "_identities" "i2" ON "_edges"."i2" = "i2"."__pk__"
             WHERE
                 "i1"."__cluster__" <> "i2"."__cluster__";
 
@@ -87,13 +86,13 @@ AS $$
                 SELECT "c2", "c1"
                 FROM "_clusters_to_merge";
             
-            -- Update the clusters of the user identities.
+            -- Update the clusters of the identities.
             UPDATE
-                "_user_identities" "identities_a"
+                "_identities" "identities_a"
             SET
                 "__cluster__" = least("identities_a"."__cluster__", "target")
             FROM
-                "_user_identities" "identities_b"
+                "_identities" "identities_b"
                 JOIN (
                     SELECT
                         "c1" "source",
@@ -111,26 +110,26 @@ AS $$
     END $clustering$;
 
     -- This placeholder will be replaced by Meergo:
-    {{ merge_identities_in_users }};
+    {{ merge_identities_in_profiles }};
 
-    -- Update associations between identities and users by updating the MUID of
-    -- the identities.
-    UPDATE "_user_identities" AS "ui"
-    SET "__muid__" = "u"."__muid__"
-    FROM {{ new_users_name }} AS "u"
-    WHERE "ui"."__pk__" = ANY ("u"."__identities__");
+    -- Update associations between identities and profiles by updating the MPID
+    -- of the identities.
+    UPDATE "_identities" AS "i"
+    SET "__mpid__" = "u"."__mpid__"
+    FROM {{ new_profiles_name }} AS "u"
+    WHERE "i"."__pk__" = ANY ("u"."__identities__");
 
-    -- Update associations between events and users by updating the MUID of the
-    -- events.
-    UPDATE "events" SET "muid" = null;
-    UPDATE "events" SET "muid" = "_user_identities"."__muid__"
-    FROM "_user_identities" WHERE
-        "events"."connection_id" = "_user_identities"."__connection__"
+    -- Update associations between events and profiles by updating the MPID of
+    -- the events.
+    UPDATE "events" SET "mpid" = null;
+    UPDATE "events" SET "mpid" = "_identities"."__mpid__"
+    FROM "_identities" WHERE
+        "events"."connection_id" = "_identities"."__connection__"
             AND
         (
-            ("events"."user_id" <> '' AND "events"."user_id" = "_user_identities"."__identity_id__")
+            ("events"."user_id" <> '' AND "events"."user_id" = "_identities"."__identity_id__")
                 OR
-            ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("_user_identities"."__anonymous_ids__"))
+            ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("_identities"."__anonymous_ids__"))
         );
 
 $$;

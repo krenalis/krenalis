@@ -40,7 +40,7 @@ type Settings struct {
 	SecretAccessKey string
 	Region          string
 	Role            string
-	Node            struct {
+	NodeJS          struct {
 		Runtime string
 		Layer   string
 	}
@@ -51,15 +51,15 @@ type Settings struct {
 }
 
 // New returns a new provider for Lambda with the given settings.
-// Supports every Node and Python 3 runtime.
+// Supports every Node.js and Python 3 runtime.
 func New(settings Settings) transformers.FunctionProvider {
 	return &function{settings: settings}
 }
 
 // Call calls the function with the given identifier and version for each record
-// updating its Properties field with the result of each invocation.
+// updating its Attributes field with the result of each invocation.
 //
-// Before transformation, record properties must conform to inSchema.
+// Before transformation, record attributes must conform to inSchema.
 // After transformation, they should conform to outSchema, unless an error
 // occurs on the record.
 //
@@ -199,8 +199,8 @@ func (fn *function) Create(ctx context.Context, name string, language state.Lang
 	var layers []string
 	switch language {
 	case state.JavaScript:
-		runtime = fn.settings.Node.Runtime
-		if layer := fn.settings.Node.Layer; layer != "" {
+		runtime = fn.settings.NodeJS.Runtime
+		if layer := fn.settings.NodeJS.Layer; layer != "" {
 			layers = []string{layer}
 		}
 	case state.Python:
@@ -264,7 +264,7 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 func (fn *function) SupportLanguage(language state.Language) bool {
 	switch language {
 	case state.JavaScript:
-		return fn.settings.Node.Runtime != ""
+		return fn.settings.NodeJS.Runtime != ""
 	case state.Python:
 		return fn.settings.Python.Runtime != ""
 	}

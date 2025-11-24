@@ -6,17 +6,17 @@ package core
 
 import "testing"
 
-func TestGetPropertyValue(t *testing.T) {
+func TestGetAttribute(t *testing.T) {
 	cases := []struct {
 		name       string
-		properties map[string]any
+		attributes map[string]any
 		path       string
 		expected   any
 		ok         bool
 	}{
 		{
 			name: "flat path",
-			properties: map[string]any{
+			attributes: map[string]any{
 				"email": "user@example.com",
 			},
 			path:     "email",
@@ -25,7 +25,7 @@ func TestGetPropertyValue(t *testing.T) {
 		},
 		{
 			name: "nested path",
-			properties: map[string]any{
+			attributes: map[string]any{
 				"profile": map[string]any{
 					"address": map[string]any{
 						"city": "Rome",
@@ -38,7 +38,7 @@ func TestGetPropertyValue(t *testing.T) {
 		},
 		{
 			name: "nested path",
-			properties: map[string]any{
+			attributes: map[string]any{
 				"address": map[string]any{
 					"country": "IT",
 				},
@@ -50,7 +50,7 @@ func TestGetPropertyValue(t *testing.T) {
 	for _, test := range cases {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			got, ok := getPropertyValue(test.properties, test.path)
+			got, ok := getAttribute(test.attributes, test.path)
 			if got != test.expected {
 				t.Fatalf("expected %v, got %v", test.expected, got)
 			}
@@ -61,12 +61,12 @@ func TestGetPropertyValue(t *testing.T) {
 	}
 }
 
-func TestSetPropertyValue(t *testing.T) {
+func TestSetAttribute(t *testing.T) {
 
 	t.Run("email", func(t *testing.T) {
-		properties := map[string]any{}
-		setPropertyValue(properties, "email", "user@example.com")
-		got, ok := properties["email"]
+		attributes := map[string]any{}
+		setAttribute(attributes, "email", "user@example.com")
+		got, ok := attributes["email"]
 		if !ok {
 			t.Fatal("expected top-level property to be set")
 		}
@@ -76,15 +76,15 @@ func TestSetPropertyValue(t *testing.T) {
 	})
 
 	t.Run("profile.address.city", func(t *testing.T) {
-		properties := map[string]any{
+		attributes := map[string]any{
 			"profile": map[string]any{
 				"address": map[string]any{
 					"street": "Via Veneto 143",
 				},
 			},
 		}
-		setPropertyValue(properties, "profile.address.city", "Rome")
-		profile, ok := properties["profile"].(map[string]any)
+		setAttribute(attributes, "profile.address.city", "Rome")
+		profile, ok := attributes["profile"].(map[string]any)
 		if !ok {
 			t.Fatal("expected 'profile' map to exist")
 		}
@@ -102,15 +102,15 @@ func TestSetPropertyValue(t *testing.T) {
 	})
 
 	t.Run("profile.name", func(t *testing.T) {
-		properties := map[string]any{
+		attributes := map[string]any{
 			"profile": map[string]any{
 				"address": map[string]any{
 					"street": "Via Veneto 143",
 				},
 			},
 		}
-		setPropertyValue(properties, "profile.name", "Marcello")
-		profile, ok := properties["profile"].(map[string]any)
+		setAttribute(attributes, "profile.name", "Marcello")
+		profile, ok := attributes["profile"].(map[string]any)
 		if !ok {
 			t.Fatal("expected 'profile' map to exist")
 		}
@@ -124,9 +124,9 @@ func TestSetPropertyValue(t *testing.T) {
 	})
 
 	t.Run("games.tetris.score", func(t *testing.T) {
-		properties := map[string]any{}
-		setPropertyValue(properties, "games.tetris.score", 704)
-		games, ok := properties["games"].(map[string]any)
+		attributes := map[string]any{}
+		setAttribute(attributes, "games.tetris.score", 704)
+		games, ok := attributes["games"].(map[string]any)
 		if !ok {
 			t.Fatal("expected 'games' map to exist")
 		}

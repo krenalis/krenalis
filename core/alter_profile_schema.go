@@ -17,11 +17,11 @@ import (
 	"github.com/meergo/meergo/core/types"
 )
 
-// AlterUserSchema alters the user schema and the primary sources of the
+// AlterProfileSchema alters the profile schema and the primary sources of the
 // workspace. schema must be a valid schema.
 //
-// The properties within user schema cannot specify a prefilled value, cannot be
-// required for creation or update, must be read optional and cannot be
+// The properties within profile schema cannot specify a prefilled value, cannot
+// be required for creation or update, must be read optional and cannot be
 // nullable; there are also limits on types, which are documented in
 // "datastore/README.md".
 //
@@ -46,7 +46,7 @@ import (
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidAlterSchema, if the alter schema is invalid.
 //   - OperationAlreadyExecuting, if another operation is already executing.
-func (this *Workspace) AlterUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
+func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	this.core.mustBeOpen()
 	if primarySources == nil {
 		primarySources = map[string]int{}
@@ -63,16 +63,16 @@ func (this *Workspace) AlterUserSchema(ctx context.Context, schema types.Type, p
 	if err := validateRePaths(rePaths); err != nil {
 		return errors.BadRequest("invalid rePaths: %s", err)
 	}
-	if err := checkAllowedPropertyUserSchema(schema); err != nil {
+	if err := checkAllowedPropertyProfileSchema(schema); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	if err := datastore.CheckConflictingProperties("users", schema); err != nil {
+	if err := datastore.CheckConflictingProperties("profile", schema); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	if this.store.Mode() == state.Inspection {
 		return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 	}
-	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
+	operations, err := diffschemas.Diff(this.workspace.ProfileSchema, schema, rePaths, "")
 	if err != nil {
 		return errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
@@ -88,10 +88,10 @@ func (this *Workspace) AlterUserSchema(ctx context.Context, schema types.Type, p
 			return errors.BadRequest("primary source %d does not support User target", s)
 		}
 	}
-	if this.workspace.IR.ID != nil || this.workspace.AlterUserSchema.ID != nil {
+	if this.workspace.IR.ID != nil || this.workspace.AlterProfileSchema.ID != nil {
 		return errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 	}
-	err = this.core.startAlterUserSchema(ctx, this.workspace.ID, schema, primarySources, operations)
+	err = this.core.startAlterProfileSchema(ctx, this.workspace.ID, schema, primarySources, operations)
 	return err
 }
 
@@ -103,15 +103,16 @@ func (this *Workspace) IdentityResolutionSettings() (bool, []string) {
 	return ws.ResolveIdentitiesOnBatchImport, ws.Identifiers
 }
 
-// PreviewAlterUserSchema provides a preview of an alter user schema operation
-// by returning the queries that would be executed on the warehouse to perform a
-// given alter schema.
+// PreviewAlterProfileSchema provides a preview of an alter profile schema
+// operation by returning the queries that would be executed on the warehouse to
+// perform a given alter schema.
 //
-// See the documentation of AlterUserSchema for more details about this method.
+// See the documentation of AlterProfileSchema for more details about this
+// method.
 //
 // It returns an errors.UnprocessableError error with code InvalidAlterSchema if
 // the alter schema is invalid.
-func (this *Workspace) PreviewAlterUserSchema(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
+func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
 	this.core.mustBeOpen()
 	if !schema.Valid() {
 		return nil, errors.BadRequest("schema must be valid")
@@ -122,17 +123,17 @@ func (this *Workspace) PreviewAlterUserSchema(ctx context.Context, schema types.
 	if err := validateRePaths(rePaths); err != nil {
 		return nil, errors.BadRequest("invalid rePaths: %s", err)
 	}
-	if err := checkAllowedPropertyUserSchema(schema); err != nil {
+	if err := checkAllowedPropertyProfileSchema(schema); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if err := datastore.CheckConflictingProperties("users", schema); err != nil {
+	if err := datastore.CheckConflictingProperties("profile", schema); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
+	operations, err := diffschemas.Diff(this.workspace.ProfileSchema, schema, rePaths, "")
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
-	queries, err := this.store.PreviewAlterUserSchema(ctx, schema, operations)
+	queries, err := this.store.PreviewAlterProfileSchema(ctx, schema, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return nil, errors.Unavailable("%s", err)
@@ -142,60 +143,60 @@ func (this *Workspace) PreviewAlterUserSchema(ctx context.Context, schema types.
 	return queries, nil
 }
 
-// checkAllowedPropertyUserSchema checks the given user schema and returns
+// checkAllowedPropertyProfileSchema checks the given profile schema and returns
 // error in case it contains properties which are not allowed in data warehouse
-// user schemas.
-func checkAllowedPropertyUserSchema(schema types.Type) error {
+// profile schemas.
+func checkAllowedPropertyProfileSchema(schema types.Type) error {
 	for _, p := range schema.Properties().All() {
 		if isMetaProperty(p.Name) {
-			return errors.New("user schema cannot have meta properties")
+			return errors.New("profile schema cannot have meta properties")
 		}
 		if p.Prefilled != "" {
-			return errors.New("user schema properties cannot have a prefilled value")
+			return errors.New("profile schema properties cannot have a prefilled value")
 		}
 		if p.CreateRequired {
-			return errors.New("user schema properties cannot be required for creation")
+			return errors.New("profile schema properties cannot be required for creation")
 		}
 		if p.UpdateRequired {
-			return errors.New("user schema properties cannot be required for the update")
+			return errors.New("profile schema properties cannot be required for the update")
 		}
 		if !p.ReadOptional {
-			return errors.New("user schema properties must be optional")
+			return errors.New("profile schema properties must be optional")
 		}
 		if p.Nullable {
-			return fmt.Errorf("user schema properties cannot be nullable")
+			return fmt.Errorf("profile schema properties cannot be nullable")
 		}
 		switch p.Type.Kind() {
 		case types.TextKind:
 			if p.Type.Values() != nil {
-				return fmt.Errorf("user schema properties with type text cannot specify values")
+				return fmt.Errorf("profile schema properties with type text cannot specify values")
 			}
 			if p.Type.Regexp() != nil {
-				return fmt.Errorf("user schema properties with type text cannot specify regexp")
+				return fmt.Errorf("profile schema properties with type text cannot specify regexp")
 			}
 		case types.ArrayKind:
 			k := p.Type.Elem().Kind()
 			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("user schema properties cannot have type %s(%s)", p.Type.Kind(), k)
+				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
 			}
 			if p.Type.Unique() {
-				return fmt.Errorf("user schema properties with type array cannot specify unique elements")
+				return fmt.Errorf("profile schema properties with type array cannot specify unique elements")
 			}
 			if p.Type.MinElements() != 0 {
-				return fmt.Errorf("user schema properties with type array cannot specify minimum elements count")
+				return fmt.Errorf("profile schema properties with type array cannot specify minimum elements count")
 			}
 			if p.Type.MaxElements() != types.MaxElements {
-				return fmt.Errorf("user schema properties with type array cannot specify maximum elements count")
+				return fmt.Errorf("profile schema properties with type array cannot specify maximum elements count")
 			}
 		case types.ObjectKind:
-			err := checkAllowedPropertyUserSchema(p.Type)
+			err := checkAllowedPropertyProfileSchema(p.Type)
 			if err != nil {
 				return err
 			}
 		case types.MapKind:
 			k := p.Type.Elem().Kind()
 			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("user schema properties cannot have type %s(%s)", p.Type.Kind(), k)
+				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
 			}
 		}
 	}

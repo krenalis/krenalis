@@ -70,15 +70,15 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /members/current":                           api.Member,                           /* only Admin */
 		"GET    /members/invitations/{token}":               api.MemberInvitation,                 /* only Admin */
 		"GET    /members/reset-password/{token}":            api.ValidateMemberPasswordResetToken, /* only Admin */
+		"GET    /profiles":                                  workspace.Profiles,
+		"GET    /profiles/schema":                           workspace.ProfileSchema,
+		"GET    /profiles/schema/latest-alter":              workspace.LatestAlterProfileSchema,
+		"GET    /profiles/schema/suitable-as-identifiers":   workspace.ProfilePropertiesSuitableAsIdentifiers, /* only Admin */
+		"GET    /profiles/{mpid}/attributes":                workspace.Attributes,
+		"GET    /profiles/{mpid}/events":                    workspace.ProfileEvents,
+		"GET    /profiles/{mpid}/identities":                workspace.Identities,
 		"GET    /public/metadata":                           api.PublicMetadata,
 		"GET    /system/transformations/languages":          api.TransformationLanguages,
-		"GET    /users":                                     workspace.Users,
-		"GET    /users/schema":                              workspace.UserSchema,
-		"GET    /users/schema/latest-alter":                 workspace.LatestAlterUserSchema,
-		"GET    /users/schema/suitable-as-identifiers":      workspace.UserPropertiesSuitableAsIdentifiers, /* only Admin */
-		"GET    /users/{muid}/events":                       workspace.UserEvents,
-		"GET    /users/{muid}/identities":                   workspace.Identities,
-		"GET    /users/{muid}/traits":                       workspace.Traits,
 		"GET    /warehouse":                                 workspace.Warehouse,
 		"GET    /warehouse/drivers":                         api.WarehouseDrivers,
 		"GET    /workspaces":                                organization.Workspaces,
@@ -120,8 +120,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"PUT    /members/invitations/{token}":               api.AcceptInvitation,            /* only Admin */
 		"PUT    /members/reset-password":                    api.SendMemberPasswordReset,     /* only Admin */
 		"PUT    /members/reset-password/{token}":            api.ChangeMemberPasswordByToken, /* only Admin */
-		"PUT    /users/schema":                              workspace.AlterUserSchema,
-		"PUT    /users/schema/preview":                      workspace.PreviewAlterUserSchema,
+		"PUT    /profiles/schema":                           workspace.AlterProfileSchema,
+		"PUT    /profiles/schema/preview":                   workspace.PreviewAlterProfileSchema,
 		"PUT    /warehouse":                                 workspace.UpdateWarehouse,
 		"PUT    /warehouse/mode":                            workspace.UpdateWarehouseMode,
 		"PUT    /warehouse/test":                            workspace.TestWarehouseUpdate,

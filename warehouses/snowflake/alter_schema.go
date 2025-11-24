@@ -18,22 +18,22 @@ import (
 	"github.com/meergo/meergo/warehouses"
 )
 
-// AlterUserSchema alters the user schema.
-func (warehouse *Snowflake) AlterUserSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
-	status, err := warehouse.executeOperation(ctx, opID, alterUserSchema)
+// AlterProfileSchema alters the profile schema.
+func (warehouse *Snowflake) AlterProfileSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
+	status, err := warehouse.executeOperation(ctx, opID, alterProfileSchema)
 	if err != nil {
 		return err
 	}
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.alterUserSchema(ctx, columns, operations)
+	err = warehouse.alterProfileSchema(ctx, columns, operations)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		err2 := warehouse.setOperationAsCompleted(ctx, opID, err)
 		if err2 != nil {
-			slog.Error("cannot set alter user columns operation as completed, retrying", "err", err2, "operationError", err)
+			slog.Error("cannot set alter profile columns operation as completed, retrying", "err", err2, "operationError", err)
 			continue
 		}
 		if err != nil {
@@ -44,16 +44,16 @@ func (warehouse *Snowflake) AlterUserSchema(ctx context.Context, opID string, co
 	return ctx.Err()
 }
 
-func (warehouse *Snowflake) alterUserSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
+func (warehouse *Snowflake) alterProfileSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
 
-	// Retrieve the current version of the "users" table.
-	usersVersion, err := warehouse.usersVersion(ctx)
+	// Retrieve the current version of the "profiles" table.
+	profilesVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Determine the alter schema queries.
-	queries := alterUserSchemaQueries("_USERS_"+strconv.Itoa(usersVersion), columns, operations)
+	queries := alterProfileSchemaQueries("_PROFILES_"+strconv.Itoa(profilesVersion), columns, operations)
 
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
@@ -69,15 +69,15 @@ func (warehouse *Snowflake) alterUserSchema(ctx context.Context, columns []wareh
 	return err
 }
 
-// PreviewAlterUserSchema provides a preview of an alter user schema operation
-// by returning the queries that would be executed on the warehouse to perform a
-// given alter schema.
-func (warehouse *Snowflake) PreviewAlterUserSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) ([]string, error) {
-	usersVersion, err := warehouse.usersVersion(ctx)
+// PreviewAlterProfileSchema provides a preview of an alter profile schema
+// operation by returning the queries that would be executed on the warehouse to
+// perform a given alter schema.
+func (warehouse *Snowflake) PreviewAlterProfileSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) ([]string, error) {
+	profilesVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
-	queries := alterUserSchemaQueries("_USERS_"+strconv.Itoa(usersVersion), columns, operations)
+	queries := alterProfileSchemaQueries("_PROFILES_"+strconv.Itoa(profilesVersion), columns, operations)
 	queries = append([]string{"BEGIN"}, queries...)
 	queries = append(queries, "COMMIT")
 	for i, q := range queries {
@@ -86,10 +86,10 @@ func (warehouse *Snowflake) PreviewAlterUserSchema(ctx context.Context, columns 
 	return queries, nil
 }
 
-// alterUserSchemaQueries returns the queries that perform the given operations.
-// usersTableName is the current name of the users table, for example
-// "_users_42". operations must contain at least one operation.
-func alterUserSchemaQueries(usersTableName string, columns []warehouses.Column, operations []warehouses.AlterOperation) []string {
+// alterProfileSchemaQueries returns the queries that perform the given
+// operations. profilesTableName is the current name of the profiles table, for
+// example "_profiles_42". operations must contain at least one operation.
+func alterProfileSchemaQueries(profilesTableName string, columns []warehouses.Column, operations []warehouses.AlterOperation) []string {
 
 	// The operations are performed in this order:
 	//
@@ -106,7 +106,7 @@ func alterUserSchemaQueries(usersTableName string, columns []warehouses.Column, 
 	var queries []string
 
 	// DROP VIEW.
-	queries = append(queries, `DROP VIEW "USERS"`)
+	queries = append(queries, `DROP VIEW "PROFILES"`)
 
 	// ALTER TABLE ... DROP COLUMN.
 	{
@@ -117,7 +117,7 @@ func alterUserSchemaQueries(usersTableName string, columns []warehouses.Column, 
 			}
 		}
 		if len(toDrop) > 0 {
-			for _, table := range []string{usersTableName, "_USER_IDENTITIES"} {
+			for _, table := range []string{profilesTableName, "_IDENTITIES"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteIdent(table) + "\n\t")
 				for i, c := range toDrop {
@@ -134,8 +134,8 @@ func alterUserSchemaQueries(usersTableName string, columns []warehouses.Column, 
 	// ALTER TABLE ... RENAME COLUMN.
 	for _, op := range operations {
 		if op.Operation == warehouses.OperationRenameColumn {
-			queries = append(queries, `ALTER TABLE `+quoteIdent(usersTableName)+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
-			queries = append(queries, `ALTER TABLE "_USER_IDENTITIES"`+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
+			queries = append(queries, `ALTER TABLE `+quoteIdent(profilesTableName)+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
+			queries = append(queries, `ALTER TABLE "_IDENTITIES"`+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
 		}
 	}
 
@@ -148,7 +148,7 @@ func alterUserSchemaQueries(usersTableName string, columns []warehouses.Column, 
 			}
 		}
 		if len(toAdd) > 0 {
-			for _, table := range []string{usersTableName, "_USER_IDENTITIES"} {
+			for _, table := range []string{profilesTableName, "_IDENTITIES"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteIdent(table) + "\n\t")
 				for i, op := range toAdd {
@@ -167,25 +167,25 @@ func alterUserSchemaQueries(usersTableName string, columns []warehouses.Column, 
 		}
 	}
 
-	// CREATE VIEW "USERS".
-	queries = append(queries, createViewQuery(usersTableName, columns, false))
+	// CREATE VIEW "PROFILES".
+	queries = append(queries, createViewQuery(profilesTableName, columns, false))
 
 	return queries
 }
 
 // createViewQuery returns the CREATE (OR REPLACE) VIEW query that creates the
-// "users" view on the "users" table with the given name.
-// userColumns contains the columns of such table.
+// "profiles" view on the "profiles" table with the given name.
+// profileColumns contains the columns of such table.
 // replace indicates if the query that creates the VIEW should have the "OR
-// REPLACE" clause to replace the view if it already exist.
-func createViewQuery(usersTableName string, userColumns []warehouses.Column, replace bool) string {
+// REPLACE" clause to replace the view if it already exists.
+func createViewQuery(profilesTableName string, profileColumns []warehouses.Column, replace bool) string {
 	b := strings.Builder{}
 	b.WriteString(`CREATE `)
 	if replace {
 		b.WriteString(`OR REPLACE `)
 	}
-	b.WriteString(`VIEW "USERS" AS SELECT` + "\n")
-	metaProps := []string{"__MUID__", "__LAST_CHANGE_TIME__"}
+	b.WriteString(`VIEW "PROFILES" AS SELECT` + "\n")
+	metaProps := []string{"__MPID__", "__LAST_CHANGE_TIME__"}
 	for i, p := range metaProps {
 		if i > 0 {
 			b.WriteString(",\n")
@@ -194,17 +194,17 @@ func createViewQuery(usersTableName string, userColumns []warehouses.Column, rep
 		b.WriteString(p)
 		b.WriteRune('"')
 	}
-	for _, c := range userColumns {
+	for _, c := range profileColumns {
 		b.WriteString(",\n\t")
 		b.WriteString(quoteIdent(c.Name))
 	}
 	b.WriteString("\nFROM ")
-	b.WriteString(quoteIdent(usersTableName))
+	b.WriteString(quoteIdent(profilesTableName))
 	return b.String()
 }
 
 // typeToSnowflakeType returns the Snowflake type corresponding to the given
-// type.Type, which is a type supported in the user schema. These types are
+// type.Type, which is a type supported in the profile schema. These types are
 // specified in the file 'core/datastore/README.md',
 func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {

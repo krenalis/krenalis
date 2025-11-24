@@ -101,7 +101,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	exec := c.ExecuteAction(actionFirstName)
 	c.WaitForExecutionsCompletion(fsID, exec)
 
-	// Check the users.
+	// Check the profiles.
 	assertEq := func(msg string, expected, got any) {
 		if !reflect.DeepEqual(expected, got) {
 			t.Fatalf("%s: expected value %#v, got %#v", msg, expected, got)
@@ -109,31 +109,31 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedTotal = 2
-	users, _, total := c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, _, total := c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
-		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
+		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}
-	assertEq("run #1: first  user email", "luigi.rossi@example.com", users[0].Traits["email"])
-	assertEq("run #1: first  user first name", "Luigi", users[0].Traits["first_name"])
-	assertEq("run #1: first  user last name", nil, users[0].Traits["last_name"])
-	assertEq("run #1: second user email", "mario.rossi@example.com", users[1].Traits["email"])
-	assertEq("run #1: second user first name", "Mario", users[1].Traits["first_name"])
-	assertEq("run #1: second user last name", nil, users[1].Traits["last_name"])
+	assertEq("run #1: first  profile email", "luigi.rossi@example.com", profiles[0].Attributes["email"])
+	assertEq("run #1: first  profile first name", "Luigi", profiles[0].Attributes["first_name"])
+	assertEq("run #1: first  profile last name", nil, profiles[0].Attributes["last_name"])
+	assertEq("run #1: second profile email", "mario.rossi@example.com", profiles[1].Attributes["email"])
+	assertEq("run #1: second profile first name", "Mario", profiles[1].Attributes["first_name"])
+	assertEq("run #1: second profile last name", nil, profiles[1].Attributes["last_name"])
 
 	// Import from the second action, which should import just the last name,
-	// and that should result in users with both first name and last name.
+	// and that should result in profiles with both first name and last name.
 	exec = c.ExecuteAction(actionLastName)
 	c.WaitForExecutionsCompletion(fsID, exec)
 
-	// Check the users.
-	users, _, total = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	// Check the profiles.
+	profiles, _, total = c.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
-		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
+		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}
-	assertEq("run #2: first  user email", "luigi.rossi@example.com", users[0].Traits["email"])
-	assertEq("run #2: first  user first name", "Luigi", users[0].Traits["first_name"])
-	assertEq("run #2: first  user last name", "Bianchi", users[0].Traits["last_name"])
-	assertEq("run #2: second user email", "mario.rossi@example.com", users[1].Traits["email"])
-	assertEq("run #2: second user first name", "Mario", users[1].Traits["first_name"])
-	assertEq("run #2: second user last name", "Rossi", users[1].Traits["last_name"])
+	assertEq("run #2: first  profile email", "luigi.rossi@example.com", profiles[0].Attributes["email"])
+	assertEq("run #2: first  profile first name", "Luigi", profiles[0].Attributes["first_name"])
+	assertEq("run #2: first  profile last name", "Bianchi", profiles[0].Attributes["last_name"])
+	assertEq("run #2: second profile email", "mario.rossi@example.com", profiles[1].Attributes["email"])
+	assertEq("run #2: second profile first name", "Mario", profiles[1].Attributes["first_name"])
+	assertEq("run #2: second profile last name", "Rossi", profiles[1].Attributes["last_name"])
 }

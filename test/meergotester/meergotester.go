@@ -70,8 +70,8 @@ type Meergo struct {
 	assetsGenerated      chan struct{}
 
 	// Options.
-	fileSystemRoot     string
-	populateUserSchema bool
+	fileSystemRoot        string
+	populateProfileSchema bool
 }
 
 var assetsAlreadyGenerated bool
@@ -87,7 +87,7 @@ func (c *Meergo) Addr() string {
 // NewMeergoInstance initializes a new instance of Meergo for testing.
 //
 // After initializing an instance, its options can be set (via
-// [PopulateUserSchema] and [SetFileSystemRoot]) and finally the instance can be
+// [PopulateProfileSchema] and [SetFileSystemRoot]) and finally the instance can be
 // started with the [Start] method.
 func NewMeergoInstance(t *testing.T) *Meergo {
 
@@ -103,8 +103,8 @@ func NewMeergoInstance(t *testing.T) *Meergo {
 	ctx := context.Background()
 
 	c := Meergo{
-		t:                  t,
-		populateUserSchema: true,
+		t:                     t,
+		populateProfileSchema: true,
 	}
 
 	// Determine the root of the repository.
@@ -153,14 +153,14 @@ func NewMeergoInstance(t *testing.T) *Meergo {
 	return &c
 }
 
-// PopulateUserSchema sets whether the user schema should be populated
-// extensively (populate = true), or simply the minimal user schema should be
+// PopulateProfileSchema sets whether the profile schema should be populated
+// extensively (populate = true), or simply the minimal profile schema should be
 // used (populate = false).
 //
 // By default, if this method is not called before calling [Start], the option
 // is considered true.
-func (c *Meergo) PopulateUserSchema(populate bool) {
-	c.populateUserSchema = populate
+func (c *Meergo) PopulateProfileSchema(populate bool) {
+	c.populateProfileSchema = populate
 }
 
 // SetFileSystemRoot sets the root of the File System connections; the value set
@@ -423,17 +423,17 @@ func (c *Meergo) Start() {
 	}
 
 	// Create the workspace and connect the warehouse.
-	var userSchema types.Type
+	var profileSchema types.Type
 	var uiPreferences UIPreferences
-	if c.populateUserSchema {
-		userSchema = testsUserSchema
-		uiPreferences.UserProfile.FirstName = "first_name"
-		uiPreferences.UserProfile.LastName = "last_name"
-		uiPreferences.UserProfile.Extra = "email"
+	if c.populateProfileSchema {
+		profileSchema = testsProfileSchema
+		uiPreferences.Profile.FirstName = "first_name"
+		uiPreferences.Profile.LastName = "last_name"
+		uiPreferences.Profile.Extra = "email"
 	} else {
-		userSchema = minimalUserSchema
+		profileSchema = minimalProfileSchema
 	}
-	id, err := c.createWorkspace("Test workspace", userSchema, uiPreferences)
+	id, err := c.createWorkspace("Test workspace", profileSchema, uiPreferences)
 	if err != nil {
 		c.t.Fatalf("cannot create workspace: %s", err)
 	}
@@ -491,26 +491,26 @@ func (c *Meergo) Stop() {
 	}
 }
 
-var minimalUserSchema = types.Object([]types.Property{
+var minimalProfileSchema = types.Object([]types.Property{
 	{Name: "email", Type: types.Text().WithCharLen(254), ReadOptional: true},
 })
 
 //go:embed tests_user_schema.json
 var userSchemaJSON []byte
 
-var testsUserSchema types.Type
+var testsProfileSchema types.Type
 
 func init() {
-	err := json.Unmarshal(userSchemaJSON, &testsUserSchema)
+	err := json.Unmarshal(userSchemaJSON, &testsProfileSchema)
 	if err != nil {
-		panic(fmt.Sprintf("invalid user schema in file 'tests_user_schema.json': %s", err))
+		panic(fmt.Sprintf("invalid profile schema in file 'tests_user_schema.json': %s", err))
 	}
 }
 
-func (c *Meergo) createWorkspace(name string, userSchema types.Type, uiPreferences UIPreferences) (int, error) {
+func (c *Meergo) createWorkspace(name string, profileSchema types.Type, uiPreferences UIPreferences) (int, error) {
 	req := map[string]any{
-		"name":       name,
-		"userSchema": userSchema,
+		"name":          name,
+		"profileSchema": profileSchema,
 		"warehouse": map[string]any{
 			"name":     testsSettings.WarehouseName,
 			"settings": testsSettings.Warehouse,

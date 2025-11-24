@@ -29,14 +29,14 @@ import (
 )
 
 var (
-	//go:embed tables/destinations_users.sql
-	createDestinationUsersTable string
+	//go:embed tables/destinations_profiles.sql
+	createDestinationProfilesTable string
 	//go:embed tables/events.sql
 	createEventsTable string
 	//go:embed tables/operations.sql
 	createOperationsTable string
-	//go:embed tables/user_schema_versions.sql
-	createUserSchemaVersionTable string
+	//go:embed tables/profile_schema_versions.sql
+	createProfileSchemaVersionTable string
 )
 
 var _ warehouses.Warehouse = &Snowflake{}
@@ -203,12 +203,12 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 		b.WriteString(quotedColumn[c.Name])
 		b.WriteByte(',')
 	}
-	b.WriteString(`FALSE AS "$PURGE" FROM "_USER_IDENTITIES" LIMIT 0`)
+	b.WriteString(`FALSE AS "$PURGE" FROM "_IDENTITIES" LIMIT 0`)
 	create := b.String()
 
 	// Prepare the "merge" statement.
 	b.Reset()
-	b.WriteString("MERGE INTO \"_USER_IDENTITIES\" AS \"D\"\nUSING \"")
+	b.WriteString("MERGE INTO \"_IDENTITIES\" AS \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString(`" AS "S"` + "\n" + `ON "D"."__ACTION__" = "S"."__ACTION__" AND "D"."__IDENTITY_ID__" = "S"."__IDENTITY_ID__" AND "D"."__IS_ANONYMOUS__" = "S"."__IS_ANONYMOUS__"`)
 	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  UPDATE SET ")
@@ -325,7 +325,7 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 // given action.
 func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, action int, columns []warehouses.Column) error {
 	var b strings.Builder
-	b.WriteString("UPDATE \"_USER_IDENTITIES\" SET ")
+	b.WriteString("UPDATE \"_IDENTITIES\" SET ")
 	for i, column := range columns {
 		if i > 0 {
 			b.WriteString(", ")
@@ -374,11 +374,11 @@ func (warehouse *Snowflake) openDB() *sql.DB {
 	return db
 }
 
-// usersVersion returns the version of the "USERS" table.
-func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
+// profilesVersion returns the version of the "PROFILES" table.
+func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
 	db := warehouse.openDB()
 	var v int
-	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "_USER_SCHEMA_VERSIONS"`).Scan(&v)
+	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
 	if err != nil {
 		return 0, snowflake(err)
 	}

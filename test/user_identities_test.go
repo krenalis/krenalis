@@ -13,10 +13,10 @@ import (
 	"github.com/meergo/meergo/test/meergotester"
 )
 
-func Test_UserIdentities(t *testing.T) {
+func Test_Identities(t *testing.T) {
 
 	// Determine the storage directory.
-	storageDir, err := filepath.Abs("testdata/user_identities_test")
+	storageDir, err := filepath.Abs("testdata/identities_test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,19 +89,19 @@ func Test_UserIdentities(t *testing.T) {
 	c.WaitForExecutionsCompletion(fs1, exec1)
 	c.WaitForExecutionsCompletion(fs2, exec2)
 
-	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
+	profiles, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)
 
 	const expectedTotal = 4
 	if expectedTotal != total {
-		t.Fatalf("expected %d users, got %d", expectedTotal, total)
+		t.Fatalf("expected %d profiles, got %d", expectedTotal, total)
 	}
-	t.Logf("the APIs successfully returned %d users", total)
+	t.Logf("the APIs successfully returned %d profiles", total)
 
 	var totalIdentities int
 
-	for _, user := range users {
+	for _, profile := range profiles {
 
-		identities, total := c.UserIdentities(user.MUID, 0, 1000)
+		identities, total := c.Identities(profile.MPID, 0, 1000)
 
 		if total != 1 && total != 2 {
 			t.Fatalf("expected 'total' to be 1 or 2, got %d", total)
@@ -114,16 +114,16 @@ func Test_UserIdentities(t *testing.T) {
 			}
 
 			t.Logf(
-				"the APIs returned an identity for user with MUID %s that has"+
+				"the APIs returned an identity for profile with MPID %s that has"+
 					" action = %d, identity ID = %v and last change time = %q",
-				user.MUID, identity.Action, identity.ID, identity.LastChangeTime)
+				profile.MPID, identity.Action, identity.ID, identity.LastChangeTime)
 
 			var idPrefix string
 			switch identity.Action {
 			case action1:
-				idPrefix = "users1_"
+				idPrefix = "profiles1_"
 			case action2:
-				idPrefix = "users2_"
+				idPrefix = "profiles2_"
 			default:
 				t.Fatalf("unexpected action %d", identity.Action)
 			}
@@ -143,14 +143,14 @@ func Test_UserIdentities(t *testing.T) {
 	}
 	t.Logf("there is a total of %d identities", totalIdentities)
 
-	// Additional test: test that a call to '/identities' for a user which does not exist
+	// Additional test: test that a call to '/identities' for a profile which does not exist
 	// returns an empty slice.
 	{
 		var res struct {
 			Identities []any `json:"identities"`
 			Total      int   `json:"total"`
 		}
-		err := c.Call("GET", "/api/v1/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, &res)
+		err := c.Call("GET", "/api/v1/profiles/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, &res)
 		if err != nil {
 			t.Fatalf("expected no identities, got error: %q", err)
 		}

@@ -214,7 +214,7 @@ func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, lastChang
 	customersLock.Lock()
 	defer customersLock.Unlock()
 	customers := make([]connectors.Record, 0, len(allCustomers))
-	for id, props := range allCustomers {
+	for id, attributes := range allCustomers {
 		if customersLastChangeTimes[id].Before(lastChangeTime) {
 			continue
 		}
@@ -223,7 +223,7 @@ func (dummy *Dummy) Records(ctx context.Context, _ connectors.Targets, lastChang
 		}
 		customers = append(customers, connectors.Record{
 			ID:             id,
-			Properties:     deepClone(props),
+			Attributes:     deepClone(attributes),
 			LastChangeTime: customersLastChangeTimes[id],
 		})
 	}
@@ -235,7 +235,7 @@ func init() {
 
 	var rawCustomers []struct {
 		ID         string
-		Properties map[string]any
+		Attributes map[string]any
 	}
 	err := json.Unmarshal(jsonCustomers, &rawCustomers)
 	if err != nil {
@@ -253,8 +253,8 @@ func init() {
 	allCustomers = make(map[string]map[string]any, len(rawCustomers))
 	customersLastChangeTimes = make(map[string]time.Time, len(rawCustomers))
 	for _, u := range rawCustomers {
-		u.Properties["dummyId"] = u.ID
-		allCustomers[u.ID] = u.Properties
+		u.Attributes["dummyId"] = u.ID
+		allCustomers[u.ID] = u.Attributes
 		// Go back in time by a maximum of 100 milliseconds. This allows
 		// timestamps to be spread over a time frame large enough to maintain
 		// some randomness, but not so large that a timestamp is in the past
@@ -353,7 +353,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 		if record.ID == "" {
 			// Add a new customers into the in-memory customers.
 			metrics.Increment("Dummy.Upsert.customers_created", 1)
-			customer := maps.Clone(record.Properties)
+			customer := maps.Clone(record.Attributes)
 			id = newDummyId()
 			customer["dummyId"] = id
 			for _, p := range nonRequiredProperties {
@@ -383,7 +383,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 				continue
 			}
 			metrics.Increment("Dummy.Upsert.updated_customers", 1)
-			maps.Copy(customer, record.Properties)
+			maps.Copy(customer, record.Attributes)
 			id = record.ID
 		}
 

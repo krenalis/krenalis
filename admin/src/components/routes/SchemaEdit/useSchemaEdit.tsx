@@ -4,7 +4,7 @@ import { SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { EditableProperty, EditableSchema, transformSchema, normalizeSchema } from './SchemaEdit.helpers';
-import { PreviewAlterUserSchemaResponse, RePaths } from '../../../lib/api/types/responses';
+import { PreviewAlterProfileSchemaResponse, RePaths } from '../../../lib/api/types/responses';
 import AppContext from '../../../context/AppContext';
 import { SortableGridRef } from '../../base/Grid/SortableGrid';
 import { isMetaProperty } from '../../../lib/core/schema';
@@ -65,9 +65,7 @@ const useSchemaEdit = (
 
 	const { setIsAltering } = useContext(SchemaContext);
 
-	const primarySources = useRef<PrimarySources>(
-		workspaces.find((w) => w.id === selectedWorkspace).userPrimarySources,
-	);
+	const primarySources = useRef<PrimarySources>(workspaces.find((w) => w.id === selectedWorkspace).primarySources);
 	const rePaths = useRef<RePaths>({});
 	const deletedAppliedKeys = useRef<string[]>([]);
 
@@ -331,9 +329,9 @@ const useSchemaEdit = (
 			return;
 		}
 		const s = normalizeSchema(editableSchema);
-		let res: PreviewAlterUserSchemaResponse;
+		let res: PreviewAlterProfileSchemaResponse;
 		try {
-			res = await api.workspaces.previewAlterUserSchema(s, rePaths.current);
+			res = await api.workspaces.previewAlterProfileSchema(s, rePaths.current);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);
@@ -367,7 +365,7 @@ const useSchemaEdit = (
 		setIsConfirmChangesLoading(true);
 		const s = normalizeSchema(editableSchema);
 		try {
-			await api.workspaces.alterUserSchema(s, sources, rePaths.current);
+			await api.workspaces.alterProfileSchema(s, sources, rePaths.current);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);

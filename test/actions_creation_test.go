@@ -119,8 +119,8 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: dstFsID,
 			action: meergotester.ActionToSet{
-				Name: "Export users to a CSV on File System",
-				Path: "users.csv",
+				Name: "Export profiles to a CSV on File System",
+				Path: "profiles.csv",
 				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
@@ -382,7 +382,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: javaScriptConnection,
 			action: meergotester.ActionToSet{
-				Name:     "Import user identities from events",
+				Name:     "Import identities from events",
 				Enabled:  true,
 				Filter:   meergotester.DefaultFilterUserFromEvents,
 				InSchema: types.Type{},
@@ -399,7 +399,7 @@ func TestActionsCreation(t *testing.T) {
 		{
 			conn: javaScriptConnection,
 			action: meergotester.ActionToSet{
-				Name:    "Import user identities from events",
+				Name:    "Import identities from events",
 				Enabled: true,
 				Filter:  meergotester.DefaultFilterUserFromEvents,
 				InSchema: types.Object([]types.Property{
@@ -416,7 +416,7 @@ func TestActionsCreation(t *testing.T) {
 					},
 				},
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for actions that import user identities from events"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for actions that import identities from events"}}`,
 		},
 	}
 	for _, test := range tests {

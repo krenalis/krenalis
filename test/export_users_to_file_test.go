@@ -78,7 +78,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}),
 	})
 
-	exportedFilename := "exported-users.tmp.csv"
+	exportedFilename := "exported-profiles.tmp.csv"
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 	// Create an action for the CSV for exporting the users.

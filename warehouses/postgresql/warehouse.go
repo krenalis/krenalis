@@ -28,14 +28,14 @@ import (
 )
 
 var (
-	//go:embed tables/destinations_users.sql
-	createDestinationUsersTable string
+	//go:embed tables/destinations_profiles.sql
+	createDestinationProfilesTable string
 	//go:embed tables/events.sql
 	createEventsTable string
 	//go:embed tables/operations.sql
 	createOperationsTable string
-	//go:embed tables/user_schema_versions.sql
-	createUserSchemaVersionTable string
+	//go:embed tables/profile_schema_versions.sql
+	createProfileSchemaVersionTable string
 )
 
 var _ warehouses.Warehouse = &PostgreSQL{}
@@ -117,8 +117,8 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 	// the 'has_table_privilege' function).
 	const disallowedPrivileges = `INSERT,UPDATE,DELETE,TRUNCATE`
 
-	// Retrieve the users table version.
-	userSchemaVersion, err := warehouse.usersVersion(ctx)
+	// Retrieve the profiles table version.
+	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -126,12 +126,12 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 	// Determine if there are tables on the data warehouse for which the current
 	// user has too many privileges.
 	tables := []string{
-		"_destinations_users",
+		"_destinations_profiles",
 		"_operations",
-		"_user_identities",
-		"_user_schema_versions",
+		"_identities",
+		"_profile_schema_versions",
 		"events",
-		fmt.Sprintf("_users_%d", userSchemaVersion),
+		fmt.Sprintf("_profiles_%d", profileSchemaVersion),
 	}
 	var canWriteOnTable []any
 	for range len(tables) {
@@ -264,12 +264,12 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(quotedColumn[c.Name])
 		b.WriteByte(',')
 	}
-	b.WriteString(`FALSE AS "$purge" FROM "_user_identities"` + "\n" + `WITH NO DATA`)
+	b.WriteString(`FALSE AS "$purge" FROM "_identities"` + "\n" + `WITH NO DATA`)
 	create := b.String()
 
 	// Prepare the "merge" statement.
 	b.Reset()
-	b.WriteString("MERGE INTO \"_user_identities\" AS \"d\"\nUSING \"")
+	b.WriteString("MERGE INTO \"_identities\" AS \"d\"\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString(`" AS "s"` + "\n" + `ON "d"."__action__" = "s"."__action__" AND "d"."__identity_id__" = "s"."__identity_id__" AND "d"."__is_anonymous__" = "s"."__is_anonymous__"`)
 	b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" IS NULL THEN\n  UPDATE SET ")
@@ -366,7 +366,7 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 // given action.
 func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, action int, columns []warehouses.Column) error {
 	var b strings.Builder
-	b.WriteString("UPDATE \"_user_identities\" SET ")
+	b.WriteString("UPDATE \"_identities\" SET ")
 	for i, column := range columns {
 		if i > 0 {
 			b.WriteString(", ")
@@ -436,14 +436,14 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	return nil
 }
 
-// usersVersion returns the version of the "users" table.
-func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
+// profilesVersion returns the version of the "profiles" table.
+func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return 0, err
 	}
 	var v int
-	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("version"), 0) FROM "_user_schema_versions"`).Scan(&v)
+	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("version"), 0) FROM "_profile_schema_versions"`).Scan(&v)
 	if err != nil {
 		return 0, err
 	}

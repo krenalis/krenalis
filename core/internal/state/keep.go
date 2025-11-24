@@ -30,7 +30,7 @@ func (state *State) keep() {
 	if state.sendStats {
 		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{
 			Endpoint: "https://telemetry.meergo.com/events",
-			Logger:   discardLogger{},
+			Logger:   discardLogger{}, // comment this line to debug sending of analytics data.
 		})
 		defer func() {
 			err := client.Close()
@@ -87,8 +87,8 @@ func (state *State) keep() {
 			state.electLeader(n)
 		case "EndActionExecution":
 			org = state.endActionExecution(n)
-		case "EndAlterUserSchema":
-			org = state.endAlterUserSchema(n)
+		case "EndAlterProfileSchema":
+			org = state.endAlterProfileSchema(n)
 		case "EndIdentityResolution":
 			org = state.endIdentityResolution(n)
 		case "ExecuteAction":
@@ -113,8 +113,8 @@ func (state *State) keep() {
 			org = state.setActionStatus(n)
 		case "SetConnectionSettings":
 			org = state.setConnectionSettings(n)
-		case "StartAlterUserSchema":
-			org = state.startAlterUserSchema(n)
+		case "StartAlterProfileSchema":
+			org = state.startAlterProfileSchema(n)
 		case "StartIdentityResolution":
 			org = state.startIdentityResolution(n)
 		case "UpdateAction":
@@ -506,7 +506,7 @@ type CreateWorkspace struct {
 	ID                             int
 	Organization                   uuid.UUID
 	Name                           string
-	UserSchema                     types.Type
+	ProfileSchema                  types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
 		Name        string
@@ -537,8 +537,8 @@ func (state *State) createWorkspace(n notification) uuid.UUID {
 		ID:                             e.ID,
 		organization:                   organization,
 		Name:                           e.Name,
-		UserSchema:                     e.UserSchema,
-		UserPrimarySources:             map[string]int{},
+		ProfileSchema:                  e.ProfileSchema,
+		PrimarySources:                 map[string]int{},
 		accounts:                       map[int]*Account{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
@@ -688,13 +688,13 @@ func (state *State) deleteConnection(n notification) uuid.UUID {
 	// Mark whether the connection is found between the current primary sources
 	// or between the pending ones.
 	var found bool
-	for _, source := range ws.UserPrimarySources {
+	for _, source := range ws.PrimarySources {
 		if source == e.ID {
 			found = true
 			break
 		}
 	}
-	for _, source := range ws.AlterUserSchema.PrimarySources {
+	for _, source := range ws.AlterProfileSchema.PrimarySources {
 		if source == e.ID {
 			found = true
 			break
@@ -706,23 +706,23 @@ func (state *State) deleteConnection(n notification) uuid.UUID {
 	// connection.
 	if found {
 		sources := map[string]int{}
-		for path, source := range ws.UserPrimarySources {
+		for path, source := range ws.PrimarySources {
 			if source != e.ID {
 				sources[path] = source
 			}
 		}
 		var pendingSources map[string]int
-		if ws.AlterUserSchema.ID != nil {
+		if ws.AlterProfileSchema.ID != nil {
 			pendingSources = map[string]int{}
-			for path, source := range ws.AlterUserSchema.PrimarySources {
+			for path, source := range ws.AlterProfileSchema.PrimarySources {
 				if source != e.ID {
 					pendingSources[path] = source
 				}
 			}
 		}
 		state.replaceWorkspace(ws.ID, func(ws *Workspace) {
-			ws.UserPrimarySources = sources
-			ws.AlterUserSchema.PrimarySources = pendingSources
+			ws.PrimarySources = sources
+			ws.AlterProfileSchema.PrimarySources = pendingSources
 		})
 	}
 	// Update the actions.
@@ -877,8 +877,9 @@ func (state *State) endActionExecution(n notification) uuid.UUID {
 	return ws.organization.ID
 }
 
-// EndAlterUserSchema is the event sent when the alter of a user schema ends.
-type EndAlterUserSchema struct {
+// EndAlterProfileSchema is the event sent when the alter of a profile schema
+// ends.
+type EndAlterProfileSchema struct {
 	Workspace   int
 	ID          string
 	EndTime     time.Time
@@ -887,9 +888,9 @@ type EndAlterUserSchema struct {
 	Identifiers []string
 }
 
-// endAlterUserSchema ends the alter of the user schema.
-func (state *State) endAlterUserSchema(n notification) uuid.UUID {
-	e := EndAlterUserSchema{}
+// endAlterProfileSchema ends the alter of the profile schema.
+func (state *State) endAlterProfileSchema(n notification) uuid.UUID {
+	e := EndAlterProfileSchema{}
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
@@ -897,16 +898,16 @@ func (state *State) endAlterUserSchema(n notification) uuid.UUID {
 		if e.Err == "" {
 			// These fields should be updated only in case of success,
 			// otherwise, in case of error, the current ones should be left.
-			w.UserSchema = w.AlterUserSchema.Schema
-			w.UserPrimarySources = w.AlterUserSchema.PrimarySources
+			w.ProfileSchema = w.AlterProfileSchema.Schema
+			w.PrimarySources = w.AlterProfileSchema.PrimarySources
 			w.Identifiers = e.Identifiers
 		}
-		w.AlterUserSchema.ID = nil
-		w.AlterUserSchema.EndTime = &e.EndTime
-		w.AlterUserSchema.Err = &e.Err
-		w.AlterUserSchema.Schema = types.Type{}
-		w.AlterUserSchema.PrimarySources = nil
-		w.AlterUserSchema.Operations = nil
+		w.AlterProfileSchema.ID = nil
+		w.AlterProfileSchema.EndTime = &e.EndTime
+		w.AlterProfileSchema.Err = &e.Err
+		w.AlterProfileSchema.Schema = types.Type{}
+		w.AlterProfileSchema.PrimarySources = nil
+		w.AlterProfileSchema.Operations = nil
 	})
 	dispatchNotification(state, e)
 	return ws.organization.ID
@@ -1165,9 +1166,9 @@ func (state *State) setConnectionSettings(n notification) uuid.UUID {
 	return c.organization.ID
 }
 
-// StartAlterUserSchema is the event sent when the alter of the user schema
-// starts.
-type StartAlterUserSchema struct {
+// StartAlterProfileSchema is the event sent when the alter of the profile
+// schema starts.
+type StartAlterProfileSchema struct {
 	Workspace      int
 	ID             string
 	Schema         types.Type
@@ -1176,20 +1177,20 @@ type StartAlterUserSchema struct {
 	StartTime      time.Time
 }
 
-// startAlterUserSchema starts the alter of the user schema.
-func (state *State) startAlterUserSchema(n notification) uuid.UUID {
-	e := StartAlterUserSchema{}
+// startAlterProfileSchema starts the alter of the profile schema.
+func (state *State) startAlterProfileSchema(n notification) uuid.UUID {
+	e := StartAlterProfileSchema{}
 	if !decodeNotification(n, &e) {
 		return uuid.Nil
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.AlterUserSchema.ID = &e.ID
-		w.AlterUserSchema.Schema = e.Schema
-		w.AlterUserSchema.PrimarySources = e.PrimarySources
-		w.AlterUserSchema.Operations = e.Operations
-		w.AlterUserSchema.StartTime = &e.StartTime
-		w.AlterUserSchema.EndTime = nil
-		w.AlterUserSchema.Err = nil
+		w.AlterProfileSchema.ID = &e.ID
+		w.AlterProfileSchema.Schema = e.Schema
+		w.AlterProfileSchema.PrimarySources = e.PrimarySources
+		w.AlterProfileSchema.Operations = e.Operations
+		w.AlterProfileSchema.StartTime = &e.StartTime
+		w.AlterProfileSchema.EndTime = nil
+		w.AlterProfileSchema.Err = nil
 	})
 	dispatchNotification(state, e)
 	return ws.organization.ID
