@@ -343,7 +343,7 @@ func (c *Meergo) Start() {
 		setts.JavaScriptSDKURL = "https://cdn.meergo.com/meergo.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.ExternalAssetsURLs = []string{"https://assets.meergo.com/"}
-		setts.PotentialConnectorsURL = "" // TODO
+		setts.PotentialConnectorsURL = "https://assets.meergo.com/admin/connectors/potentials.json"
 		setts.HTTP.Host = testsSettings.HTTP.Host
 		setts.HTTP.Port = testsSettings.HTTP.Port
 		setts.HTTP.ExternalURL = fmt.Sprintf("http://%s:%d/", setts.HTTP.Host, setts.HTTP.Port)
