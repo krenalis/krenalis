@@ -211,7 +211,7 @@ const GeneralSettings = () => {
 					)}
 					{image !== undefined && (
 						<Combobox
-							className='general-settings__user-profile-image'
+							className='general-settings__profile-image'
 							label='Image'
 							onInput={onUpdateUIPreferences}
 							onSelect={onSelectUIPreferences}

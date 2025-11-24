@@ -49,7 +49,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	return ctx.Err()
 }
 
-func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]int) error {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -135,7 +135,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 			mergeProfiles.WriteString(`(array_cat_agg(DISTINCT ` + quoteIdent(c.Name) + ` ORDER BY ` + quoteIdent(c.Name) + `) FILTER ( WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL))`)
 		} else {
 			mergeProfiles.WriteByte('(')
-			if s, ok := profilePrimarySources[c.Name]; ok {
+			if s, ok := primarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
 				mergeProfiles.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "__last_change_time__" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "__connection__" = ` + strconv.Itoa(s) + `) || `)
@@ -207,7 +207,7 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	}
 
 	// Replace the current "profiles" view with a new one using the "CREATE OR
-	// REPLACE VIEW" statement since the table "_profiles" that the view refers+
+	// REPLACE VIEW" statement since the table "_profiles" that the view refers
 	// to has changed its name.
 	_, err = pool.Exec(ctx, createViewQuery(newProfilesName, profileColumns, true))
 	if err != nil {

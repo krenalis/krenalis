@@ -32,7 +32,7 @@ const functionDeletionInterval = 10 * time.Minute
 
 // actionCleaner represents an action cleaner. It performs the following tasks:
 //
-//   - Purges identities and profile destinations in the data warehouse that
+//   - Purges identities and destination profiles in the data warehouse that
 //     are associated with deleted actions.
 //   - Unsets identity properties in the data warehouse that are no longer
 //     transformed.

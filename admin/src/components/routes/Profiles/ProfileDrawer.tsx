@@ -91,7 +91,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 
 	const onClose = (e: any) => {
 		if (
-			e.target.classList.contains('drawer-attributes__value-copy') ||
+			e.target.classList.contains('drawer-attribute__value-copy') ||
 			e.target.classList.contains('profile-drawer__action')
 		) {
 			e.stopPropagation();
@@ -374,7 +374,7 @@ const DrawerAttribute = ({ name, value, isParent, isIndented, isExpanded, setIsE
 				<span className='drawer-attribute__value'>
 					{value}
 					<SlCopyButton
-						className='drawer-attributes__value-copy'
+						className='drawer-attribute__value-copy'
 						value={value}
 						copyLabel='Click to copy'
 						successLabel='✓ Copied'

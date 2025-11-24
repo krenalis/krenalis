@@ -1885,7 +1885,7 @@ func (this *Workspace) Warehouse() (string, json.Value, json.Value) {
 func (this *Workspace) identities(ctx context.Context, where *state.Where, first, limit int) ([]Identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
-	records, total, err := this.store.UserIdentities(ctx, datastore.Query{
+	records, total, err := this.store.Identities(ctx, datastore.Query{
 		Properties: []string{
 			"__action__",
 			"__is_anonymous__",

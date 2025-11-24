@@ -307,7 +307,7 @@
 	position: relative;
 }
 
-.drawer-attributes__value-copy {
+.drawer-attribute__value-copy {
 	top: 0;
 	left: 0;
 	width: 100%;
@@ -315,7 +315,7 @@
 	position: absolute;
 }
 
-.drawer-attributes__value-copy::part(button) {
+.drawer-attribute__value-copy::part(button) {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -325,11 +325,11 @@
 	font-size: 0;
 }
 
-.drawer-attributes__value-copy::part(tooltip__body) {
+.drawer-attribute__value-copy::part(tooltip__body) {
 	font-size: 13px;
 }
 
-.drawer-attributes__value-copy::part(copy-icon) {
+.drawer-attribute__value-copy::part(copy-icon) {
 	color: var(--sl-color-neutral-500);
 }
 

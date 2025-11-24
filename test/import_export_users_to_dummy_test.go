@@ -48,10 +48,10 @@ func TestImportExportUsersToDummy(t *testing.T) {
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
-	// Export the properties to Dummy.
+	// Export the profiles to Dummy.
 	{
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
-		exportPropertiesActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{
+		exportProfilesActionID := c.CreateAction(dummyDest, "User", meergotester.ActionToSet{
 			Name:    "Export users to Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -73,7 +73,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			},
 			UpdateOnDuplicates: false,
 		})
-		exec := c.ExecuteAction(exportPropertiesActionID)
+		exec := c.ExecuteAction(exportProfilesActionID)
 		c.WaitForExecutionsCompletion(dummyDest, exec)
 	}
 
@@ -104,11 +104,11 @@ func TestImportExportUsersToDummy(t *testing.T) {
 		})
 		exec := c.ExecuteAction(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
-		users, _, _ := c.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
-		if len(users) == 0 {
-			t.Fatal("no users re-imported from Dummy")
+		profiles, _, _ := c.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+		if len(profiles) == 0 {
+			t.Fatal("no profiles re-imported from Dummy")
 		}
-		for _, user := range users {
+		for _, user := range profiles {
 			if user.Attributes["email"] != user.Attributes["last_name"] {
 				t.Fatalf("expected 'email' to be equal to 'last_name', got '%v' != '%v'", user.Attributes["email"], user.Attributes["last_name"])
 			}

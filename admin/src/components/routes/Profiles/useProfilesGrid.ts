@@ -68,7 +68,7 @@ const useProfilesGrid = (
 		return profileColumns;
 	}, [profilesProperties]);
 
-	return { profilesRows: profilesRows, profileColumns: profileColumns };
+	return { profilesRows, profileColumns };
 };
 
 export { useProfilesGrid };

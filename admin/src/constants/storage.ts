@@ -5,7 +5,7 @@ const ADD_CONNECTION_ID_KEY = 'meergo_admin_add_connection_id';
 const IS_PASSWORDLESS_KEY = 'meergo_admin_is_passwordless';
 const IS_DOCKER_KEY = 'meergo_admin_is_docker';
 const PROFILES_TAB_KEY = 'meergo_admin_profiles_tab';
-const PROFILES_EXPANDED_ATTRIBUTES_KEY = 'meergo_admin_PROFILES_expanded_attributes';
+const PROFILES_EXPANDED_ATTRIBUTES_KEY = 'meergo_admin_profiles_expanded_attributes';
 const PROFILES_PROPERTIES_KEY = 'meergo_admin_profiles_properties';
 
 // storageKeysToBeRemoved contains the list of keys in browser localStorage that

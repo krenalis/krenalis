@@ -1217,7 +1217,7 @@ type ActionToSet struct {
 	TableName string `json:"tableName"`
 
 	// TableKey is the name of the property used as table key when exporting
-	// user data to databases.
+	// profiles to databases.
 	// It is the empty string for any other type of action.
 	TableKey string `json:"tableKey"`
 
@@ -1253,8 +1253,8 @@ type ActionToSet struct {
 	// It cannot be longer than MaxLastChangeTimeFormatSize runes.
 	LastChangeTimeFormat string `json:"lastChangeTimeFormat"`
 
-	// Incremental determine whether user data should be imported incrementally.
-	// If false, user data will be re-imported from scratch.
+	// Incremental determine whether users should be imported incrementally.
+	// If false, users will be re-imported from scratch.
 	Incremental bool `json:"incremental"`
 }
 

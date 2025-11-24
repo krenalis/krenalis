@@ -25,7 +25,7 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
+func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]int) error {
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	if status.alreadyCompleted {
 		return status.executionError
 	}
-	err = warehouse.resolveIdentities(ctx, opID, identifiers, profileColumns, profilePrimarySources)
+	err = warehouse.resolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {

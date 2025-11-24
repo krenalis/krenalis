@@ -81,7 +81,7 @@ def transform(user: dict) -> dict:
 	}
 
 	// Validate the profiles.
-	expectedProperties := []map[string]any{
+	expectedProfiles := []map[string]any{
 		{"email": "abenois2@example.com", "first_name": "Ariela", "gender": "female"},
 		{"email": "bdroghan5@example.com", "first_name": "Bryon", "gender": "female"},
 		{"email": "ctroy7@example.com", "first_name": "Codie", "gender": "female"},
@@ -93,11 +93,11 @@ def transform(user: dict) -> dict:
 		{"email": "kdericut4@example.com", "first_name": "Kingsly", "gender": "female"},
 		{"email": "kfellon6@example.com", "first_name": "Katine", "gender": "female"},
 	}
-	if len(expectedProperties) != len(profiles) {
-		t.Fatalf("expected %d profiles, got %d", len(expectedProperties), len(profiles))
+	if len(expectedProfiles) != len(profiles) {
+		t.Fatalf("expected %d profiles, got %d", len(expectedProfiles), len(profiles))
 	}
 	for i, profile := range profiles {
-		expected := expectedProperties[i]
+		expected := expectedProfiles[i]
 		if !reflect.DeepEqual(expected, profile.Attributes) {
 			t.Fatalf("expected %#v, got %#v", expected, profile)
 		}

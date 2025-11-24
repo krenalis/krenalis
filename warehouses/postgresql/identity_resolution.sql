@@ -114,10 +114,10 @@ AS $$
 
     -- Update associations between identities and profiles by updating the MPID
     -- of the identities.
-    UPDATE "_identities" AS "ui"
+    UPDATE "_identities" AS "i"
     SET "__mpid__" = "u"."__mpid__"
     FROM {{ new_profiles_name }} AS "u"
-    WHERE "ui"."__pk__" = ANY ("u"."__identities__");
+    WHERE "i"."__pk__" = ANY ("u"."__identities__");
 
     -- Update associations between events and profiles by updating the MPID of
     -- the events.

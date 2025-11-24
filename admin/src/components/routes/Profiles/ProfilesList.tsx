@@ -90,7 +90,7 @@ const ProfilesList = () => {
 	const onToggleColumn = (name: string) => {
 		const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === name;
 		if (isLastUsed) {
-			// Prevent the profile from hiding all the columns.
+			// Prevent the user from hiding all the columns.
 			return;
 		}
 		const updatedProps: ProfileProperty[] = [];

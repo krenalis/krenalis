@@ -263,7 +263,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				// otherwise, return all the previous records.
 				if !r.matching.UpdateOnDuplicates {
 					previous.records = previous.records[:1]
-					previous.records[0].Err = fmt.Errorf("duplicates found for the matching property %s in the app profiles", r.matching.InProperty)
+					previous.records[0].Err = fmt.Errorf("duplicates found for the matching property %s in the app users", r.matching.InProperty)
 				}
 				for i, record := range previous.records {
 					r.last = last && i == len(previous.records)-1

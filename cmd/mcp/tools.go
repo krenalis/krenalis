@@ -122,9 +122,9 @@ var tools = []server.ServerTool{
 		},
 	},
 
-	// Tool that exposes information about the profile identities.
+	// Tool that exposes information about the identities.
 	{
-		Tool: mcp.NewTool("profile-identities-doc",
+		Tool: mcp.NewTool("profile-doc",
 			mcp.WithDescription(
 				"Return information about the profile identities in Meergo.",
 			),
@@ -135,7 +135,7 @@ var tools = []server.ServerTool{
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			return mcp.NewToolResultText(strings.Join([]string{
-				"The '_identities' table contains profile identities before they are unified through Identity Resolution and made available in the 'users' view.",
+				"The '_identities' table contains profile identities before they are unified through Identity Resolution and made available in the 'profiles' view.",
 				"The '_identities.__connection__' column references the ID (integer) of the connection from which the identity was imported.",
 				"If there's no match between the contents of '_identities' and the 'profiles' view, it might be because the Identity Resolution process hasn't been run recently.",
 			}, " ")), nil
@@ -183,7 +183,7 @@ var tools = []server.ServerTool{
 				"Return information about the workspace connections."+
 					" A workspace can have zero, one or multiple connections."+
 					" A connection with role 'source', depending on its type and the external service it's connected to, can import user data and events into the data warehouse, and send events to a destination connection."+
-					" A connection with role 'destination', depending on its type and the external service it's connected to, can export user data read from the data warehouse, and send events received from a source connection to an app."+
+					" A connection with role 'destination', depending on its type and the external service it's connected to, can export profiles read from the data warehouse, and send events received from a source connection to an app."+
 					" Once events are imported into the data warehouse by a source connection, they can no longer be re-read or forwarded via a destination connection."+
 					" A connection performs its operations (importing, sending, and exporting data) through 'actions'."+
 					" Each connection can have zero, one, or multiple 'actions'."+

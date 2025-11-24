@@ -389,7 +389,7 @@ const maxDestinationSchemaDepth = 4 // maximum nesting depth of the destination 
 // compatible with Stripe, and writes the result to dst.
 //
 // Only destination-schema types are serialized: text, bool, array, object, and
-// map. Accordingly, attributes must be nil or one of: string, int,
+// map. Accordingly, property values must be nil or one of: string, int,
 // map[string]any, or []any. Map keys must be non-empty.
 func encodeAttributes(dst *connectors.BodyBuffer, attributes map[string]any) {
 

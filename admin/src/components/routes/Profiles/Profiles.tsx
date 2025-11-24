@@ -1,7 +1,7 @@
 import React, { useContext, useLayoutEffect } from 'react';
 import './Profiles.css';
 import AppContext from '../../../context/AppContext';
-import profilesContext from '../../../context/ProfilesContext';
+import ProfilesContext from '../../../context/ProfilesContext';
 import { ProfilesList } from './ProfilesList';
 
 import { useProfiles } from './useProfiles';
@@ -16,18 +16,18 @@ const Profiles = () => {
 	}, []);
 
 	return (
-		<profilesContext.Provider
+		<ProfilesContext.Provider
 			value={{
-				profiles: profiles,
-				profilesTotal: profilesTotal,
-				profilesProperties: profilesProperties,
+				profiles,
+				profilesTotal,
+				profilesProperties,
 				isLoading,
-				profileIDList: profileIDList,
-				fetchProfiles: fetchProfiles,
+				profileIDList,
+				fetchProfiles,
 			}}
 		>
 			<ProfilesList />
-		</profilesContext.Provider>
+		</ProfilesContext.Provider>
 	);
 };
 

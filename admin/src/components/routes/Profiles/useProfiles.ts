@@ -168,12 +168,12 @@ const useProfiles = () => {
 	};
 
 	return {
-		profiles: profiles,
-		profilesTotal: profilesTotal,
-		profilesProperties: profilesProperties,
+		profiles,
+		profilesTotal,
+		profilesProperties,
 		isLoading,
-		profileIDList: profileIDList,
-		fetchProfiles: fetchProfiles,
+		profileIDList,
+		fetchProfiles,
 	};
 };
 

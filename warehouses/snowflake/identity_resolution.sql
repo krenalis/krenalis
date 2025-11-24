@@ -117,10 +117,10 @@ BEGIN
 
     -- Update associations between identities and profiles by updating the MPID
     -- of the identities.
-    UPDATE "_IDENTITIES" AS "UI"
+    UPDATE "_IDENTITIES" AS "I"
     SET "__mpid__" = "U"."__MPID__"
     FROM {{ new_profiles_name }} AS "U"
-    WHERE ARRAY_CONTAINS("UI"."__PK__", "U"."__IDENTITIES__");
+    WHERE ARRAY_CONTAINS("I"."__PK__", "U"."__IDENTITIES__");
 
     -- Update associations between events and profiles by updating the MPID of
     -- the events.

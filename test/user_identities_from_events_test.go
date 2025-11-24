@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/analytics-go"
-
 	"github.com/meergo/meergo/core/types"
 	"github.com/meergo/meergo/test/meergotester"
+
+	"github.com/meergo/analytics-go"
 )
 
 func TestIdentitiesFromEvents(t *testing.T) {

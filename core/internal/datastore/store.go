@@ -227,9 +227,26 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 	return events, nil
 }
 
+// Identities returns the identities according to the provided query.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns an *UnavailableError error.
+func (store *Store) Identities(ctx context.Context, query Query) ([]map[string]any, int, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer done()
+	query.table = "_identities"
+	query.total = true
+	return store.query(ctx, query, store.identityColumnByProperty(), true)
+}
+
 // DestinationProfile represents a profile to be merged.
 type DestinationProfile struct {
-	ExternalID       string // The unique identifier assigned to the profile by the API.
+	ExternalID       string // The unique identifier assigned to the corresponding user by the API.
 	OutMatchingValue string // The value for the out matching property in the API.
 }
 
@@ -362,7 +379,7 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
-// The given profile schema will be used to repair the profile tables.
+// The given profile schema will be used to repair the user tables.
 //
 // This method should only be called on warehouses that have already been
 // initialized, with the aim of correcting any extraordinary issues (such as
@@ -528,23 +545,6 @@ func (store *Store) UnsetIdentityProperties(ctx context.Context, action int, pro
 	defer done()
 	columns := appendColumnsFromProperties(nil, properties, store.profileColumnByProperty())
 	return store.warehouse().UnsetIdentityColumns(ctx, action, columns)
-}
-
-// UserIdentities returns the identities according to the provided query.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns an *UnavailableError error.
-func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[string]any, int, error) {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer done()
-	query.table = "_identities"
-	query.total = true
-	return store.query(ctx, query, store.identityColumnByProperty(), true)
 }
 
 // ProfileRecords returns an iterator over the profiles, according to the
