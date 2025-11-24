@@ -28,7 +28,7 @@ const ConnectorsList = () => {
 		new URLSearchParams(window.location.search).get('category') ?? 'All',
 	);
 
-	const { api, handleError, connectors, setTitle, redirect } = useContext(AppContext);
+	const { api, handleError, connectors, setTitle, redirect, publicMetadata } = useContext(AppContext);
 
 	const location = useLocation();
 
@@ -115,25 +115,18 @@ const ConnectorsList = () => {
 		const fetchPotentialConnectors = async () => {
 			let connectors: PotentialConnector[];
 			try {
-				connectors = await potentialConnectors(
-					existingConnectorCodes,
-					// TODO(Gianluca): use the URL provided by the server in
-					// public metadata (field 'potentialConnectorsURL').
-					//
-					// There are two possible values: (1) a valid URL, which
-					// must point to the JSON. If the JSON cannot be retrieved
-					// from that URL, peace, do not throw an error and simply do
-					// not show potential connectors. (2) the value is "null",
-					// meaning that no call should be made to retrieve potential
-					// connectors.
-					'https://assets.meergo.com/admin/connectors/potentials.json',
-				);
+				connectors = await potentialConnectors(existingConnectorCodes, publicMetadata.potentialConnectorsURL);
 			} catch (err) {
 				console.error(err);
 				return;
 			}
 			setAdditionalPotentialConnectors(connectors);
 		};
+		if (publicMetadata.potentialConnectorsURL == null) {
+			// When potentialConnectorsURL is `null`, no call should be made to
+			// retrieve potential connectors.
+			return;
+		}
 		fetchPotentialConnectors();
 	}, [existingConnectorCodes]);
 
