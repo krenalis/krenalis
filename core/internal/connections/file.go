@@ -923,24 +923,6 @@ func (rw *recordWriter) setYieldFunc(yield func(Record) bool) {
 	rw.yield = yield
 }
 
-// newTimeoutReader returns a TimeoutReader that reads from r. If more than
-// the specified timeout elapses between two Read calls, it invokes f.
-// The caller must close the returned reader using the Close method when no
-// further calls to the Read method are expected.
-func newTimeoutReader(r io.Reader, timeout time.Duration, f func()) io.ReadCloser {
-	stop := make(chan struct{})
-	timer := time.NewTimer(timeout)
-	go func() {
-		select {
-		case <-timer.C:
-			close(stop)
-			f()
-		case <-stop:
-		}
-	}()
-	return &timeoutReader{reader: r, timeout: timeout, timer: timer, f: f, stop: stop}
-}
-
 // storageWriteCloser wraps an io.Writer and implements io.WriteCloser. It calls a
 // specified function when Close is invoked.
 type storageWriteCloser struct {
@@ -982,11 +964,28 @@ type timeoutReader struct {
 	closed  bool
 }
 
+// newTimeoutReader wraps r and enforces a timeout between Read calls.
+// If more than the given timeout passes between reads, it calls f and all
+// subsequent reads return an error.
+//
+// The caller must close the returned reader with Close when no more reads are
+// expected.
+func newTimeoutReader(r io.Reader, timeout time.Duration, f func()) io.ReadCloser {
+	reader := &timeoutReader{
+		reader:  r,
+		timeout: timeout,
+		timer:   time.AfterFunc(timeout, f),
+	}
+	return reader
+}
+
 func (r *timeoutReader) Read(p []byte) (int, error) {
 	if r.closed {
 		return 0, errors.New("read on a closed reader")
 	}
-	r.timer.Stop()
+	if !r.timer.Stop() {
+		return 0, errors.New("read on a timed-out reader")
+	}
 	n, err := r.reader.Read(p)
 	r.timer.Reset(r.timeout)
 	return n, err
@@ -996,7 +995,7 @@ func (r *timeoutReader) Close() error {
 	if r.closed {
 		return nil
 	}
-	r.stop <- struct{}{}
+	r.timer.Stop()
 	r.closed = true
 	return nil
 }
