@@ -2,7 +2,7 @@
 -- Use of this source code is governed by the MIT license
 -- that can be found in the LICENSE file.
 
-CREATE TABLE IF NOT EXISTS _destinations_profiles (
+CREATE TABLE IF NOT EXISTS meergo_destination_profiles (
     __action__ integer NOT NULL,
     __external_id__ text NOT NULL DEFAULT '',
     __out_matching_value__ text NOT NULL,

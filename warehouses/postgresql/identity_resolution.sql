@@ -2,30 +2,30 @@
 -- Use of this source code is governed by the MIT license
 -- that can be found in the LICENSE file.
 
-DROP TABLE IF EXISTS "_edges";
-CREATE TABLE _edges (
+DROP TABLE IF EXISTS "meergo_graph_edges";
+CREATE TABLE meergo_graph_edges (
     "i1" int,
     "i2" int
 );
 
-DROP TABLE IF EXISTS "_clusters_to_merge";
-CREATE TABLE _clusters_to_merge("c1" int, "c2" int);
+DROP TABLE IF EXISTS "meergo_graph_merge_clusters";
+CREATE TABLE meergo_graph_merge_clusters("c1" int, "c2" int);
 
 CREATE OR REPLACE PROCEDURE resolve_identities()
 LANGUAGE sql
 AS $$
 
     -- Determine the edges of the identities graph.
-    TRUNCATE "_edges";
+    TRUNCATE "meergo_graph_edges";
     INSERT INTO
-        "_edges"
+        "meergo_graph_edges"
     SELECT
         "i1"."__pk__",
         "i2"."__pk__"
     FROM
-        "_identities" "i1"
+        "meergo_identities" "i1"
             CROSS JOIN
-        "_identities" "i2"
+        "meergo_identities" "i2"
     WHERE
         "i1"."__pk__" < "i2"."__pk__" AND (
             ("i1"."__connection__" = "i2"."__connection__"
@@ -45,12 +45,12 @@ AS $$
             "__pk__",
             ROW_NUMBER() OVER (ORDER BY "__pk__") AS "cluster_value"
         FROM 
-            "_identities"
+            "meergo_identities"
     )
-    UPDATE "_identities"
+    UPDATE "meergo_identities"
     SET "__cluster__" = "numbered_profiles"."cluster_value"
     FROM "numbered_profiles"
-    WHERE "_identities"."__pk__" = "numbered_profiles"."__pk__";
+    WHERE "meergo_identities"."__pk__" = "numbered_profiles"."__pk__";
 
     -- Do the clustering.
     DO $clustering$
@@ -63,42 +63,42 @@ AS $$
         LOOP
         
             -- Determine the clusters to merge.
-            TRUNCATE "_clusters_to_merge";
+            TRUNCATE "meergo_graph_merge_clusters";
             INSERT INTO
-                "_clusters_to_merge"
+                "meergo_graph_merge_clusters"
             SELECT
                 "i1"."__cluster__" "c1",
                 "i2"."__cluster__" "c2"
             FROM
-                "_edges"
-                JOIN "_identities" "i1" ON "_edges"."i1" = "i1"."__pk__"
-                JOIN "_identities" "i2" ON "_edges"."i2" = "i2"."__pk__"
+                "meergo_graph_edges"
+                JOIN "meergo_identities" "i1" ON "meergo_graph_edges"."i1" = "i1"."__pk__"
+                JOIN "meergo_identities" "i2" ON "meergo_graph_edges"."i2" = "i2"."__pk__"
             WHERE
                 "i1"."__cluster__" <> "i2"."__cluster__";
 
             -- Stop iterating when there are no more clusters to merge.
-            SELECT count(*) > 0 INTO has_clusters_to_merge FROM "_clusters_to_merge";
+            SELECT count(*) > 0 INTO has_clusters_to_merge FROM "meergo_graph_merge_clusters";
             EXIT WHEN NOT has_clusters_to_merge;
 
-            -- Make the "_clusters_to_merge" table symmetric.
+            -- Make the "meergo_graph_merge_clusters" table symmetric.
             -- TODO(Gianluca): is this necessary?
-            INSERT INTO "_clusters_to_merge"
+            INSERT INTO "meergo_graph_merge_clusters"
                 SELECT "c2", "c1"
-                FROM "_clusters_to_merge";
+                FROM "meergo_graph_merge_clusters";
             
             -- Update the clusters of the identities.
             UPDATE
-                "_identities" "identities_a"
+                "meergo_identities" "identities_a"
             SET
                 "__cluster__" = least("identities_a"."__cluster__", "target")
             FROM
-                "_identities" "identities_b"
+                "meergo_identities" "identities_b"
                 JOIN (
                     SELECT
                         "c1" "source",
                         min("c2") "target"
                     FROM
-                        "_clusters_to_merge"
+                        "meergo_graph_merge_clusters"
                     GROUP BY
                         "source"
                 ) "new_clusters" ON "new_clusters"."source" = "identities_b"."__cluster__"
@@ -114,22 +114,22 @@ AS $$
 
     -- Update associations between identities and profiles by updating the MPID
     -- of the identities.
-    UPDATE "_identities" AS "i"
+    UPDATE "meergo_identities" AS "i"
     SET "__mpid__" = "u"."__mpid__"
     FROM {{ new_profiles_name }} AS "u"
     WHERE "i"."__pk__" = ANY ("u"."__identities__");
 
     -- Update associations between events and profiles by updating the MPID of
     -- the events.
-    UPDATE "events" SET "mpid" = null;
-    UPDATE "events" SET "mpid" = "_identities"."__mpid__"
-    FROM "_identities" WHERE
-        "events"."connection_id" = "_identities"."__connection__"
+    UPDATE "meergo_events" SET "mpid" = null;
+    UPDATE "meergo_events" SET "mpid" = "meergo_identities"."__mpid__"
+    FROM "meergo_identities" WHERE
+        "meergo_events"."connection_id" = "meergo_identities"."__connection__"
             AND
         (
-            ("events"."user_id" <> '' AND "events"."user_id" = "_identities"."__identity_id__")
+            ("meergo_events"."user_id" <> '' AND "meergo_events"."user_id" = "meergo_identities"."__identity_id__")
                 OR
-            ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("_identities"."__anonymous_ids__"))
+            ("meergo_events"."user_id" = '' AND "meergo_events"."anonymous_id" = ANY ("meergo_identities"."__anonymous_ids__"))
         );
 
 $$;

@@ -57,9 +57,9 @@ type EventIdentityWriterAckFunc func(action int, ids []string, err error)
 // been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
 
-// destinationsProfilesTable represents the _destinations_profiles table.
+// destinationsProfilesTable represents the meergo_destination_profiles table.
 var destinationsProfilesTable = warehouses.Table{
-	Name: "_destinations_profiles",
+	Name: "meergo_destination_profiles",
 	Columns: []warehouses.Column{
 		{Name: "__action__", Type: types.Int(32)},
 		{Name: "__external_id__", Type: types.Text()},
@@ -166,7 +166,7 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, action int) e
 	defer done()
 	where := warehouses.NewBaseExpr(
 		warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, action)
-	return store.warehouse().Delete(ctx, "_destinations_profiles", where)
+	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
 }
 
 // Events returns the events according to the provided query. The returned
@@ -239,7 +239,7 @@ func (store *Store) Identities(ctx context.Context, query Query) ([]map[string]a
 		return nil, 0, err
 	}
 	defer done()
-	query.table = "_identities"
+	query.table = "meergo_identities"
 	query.total = true
 	return store.query(ctx, query, store.identityColumnByProperty(), true)
 }
@@ -371,11 +371,11 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 		values[i] = action
 	}
 	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
-	err = store.warehouse().Delete(ctx, "_identities", where)
+	err = store.warehouse().Delete(ctx, "meergo_identities", where)
 	if err != nil {
 		return err
 	}
-	return store.warehouse().Delete(ctx, "_destinations_profiles", where)
+	return store.warehouse().Delete(ctx, "meergo_destination_profiles", where)
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.

@@ -106,10 +106,10 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, profi
 		createOperationsTable,
 		createProfileSchemaVersionTable,
 		identitiesSQLSchema(profileColumns),
-		profilesSQLSchema("_profiles_0", profileColumns),
+		profilesSQLSchema("meergo_profiles_0", profileColumns),
 	}
 	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
-		queries = append(queries, profilesViewSQLSchema(profileColumns, "_profiles_0"))
+		queries = append(queries, profilesViewSQLSchema(profileColumns, "meergo_profiles_0"))
 	}
 	db := warehouse.openDB()
 	for _, query := range queries {

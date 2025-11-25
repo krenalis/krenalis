@@ -2,14 +2,14 @@
 -- Use of this source code is governed by the MIT license
 -- that can be found in the LICENSE file.
 
-DROP TABLE IF EXISTS "_EDGES";
-CREATE TABLE "_EDGES" (
+DROP TABLE IF EXISTS "MEERGO_GRAPH_EDGES";
+CREATE TABLE "MEERGO_GRAPH_EDGES" (
     "I1" int,
     "I2" int
 );
 
-DROP TABLE IF EXISTS "_CLUSTERS_TO_MERGE";
-CREATE TABLE "_CLUSTERS_TO_MERGE"("C1" int, "C2" int);
+DROP TABLE IF EXISTS "MEERGO_GRAPH_MERGE_CLUSTERS";
+CREATE TABLE "MEERGO_GRAPH_MERGE_CLUSTERS"("C1" int, "C2" int);
 
 CREATE OR REPLACE PROCEDURE RESOLVE_IDENTITIES()
 RETURNS BOOLEAN
@@ -18,9 +18,9 @@ AS $$
 BEGIN
 
     -- Determine the edges of the identities graph.
-    TRUNCATE "_EDGES";
+    TRUNCATE "MEERGO_GRAPH_EDGES";
     EXECUTE IMMEDIATE 'INSERT INTO
-        "_EDGES"
+        "MEERGO_GRAPH_EDGES"
     SELECT
         "I1"."__PK__",
         "I2"."__PK__"
@@ -65,30 +65,30 @@ BEGIN
     LOOP
     
         -- Determine the clusters to merge.
-        TRUNCATE "_CLUSTERS_TO_MERGE";
+        TRUNCATE "MEERGO_GRAPH_MERGE_CLUSTERS";
         INSERT INTO
-            "_CLUSTERS_TO_MERGE"
+            "MEERGO_GRAPH_MERGE_CLUSTERS"
         SELECT
             "I1"."__CLUSTER__" "C1",
             "I2"."__CLUSTER__" "C2"
         FROM
-            "_EDGES"
-            JOIN "_IDENTITIES" "I1" ON "_EDGES"."I1" = "I1"."__PK__"
-            JOIN "_IDENTITIES" "I2" ON "_EDGES"."I2" = "I2"."__PK__"
+            "MEERGO_GRAPH_EDGES"
+            JOIN "_IDENTITIES" "I1" ON "MEERGO_GRAPH_EDGES"."I1" = "I1"."__PK__"
+            JOIN "_IDENTITIES" "I2" ON "MEERGO_GRAPH_EDGES"."I2" = "I2"."__PK__"
         WHERE
             "I1"."__CLUSTER__" <> "I2"."__CLUSTER__";
 
         -- Stop iterating when there are no more clusters to merge.
-        SELECT count(*) > 0 INTO :has_clusters_to_merge FROM "_CLUSTERS_TO_MERGE";
+        SELECT count(*) > 0 INTO :has_clusters_to_merge FROM "MEERGO_GRAPH_MERGE_CLUSTERS";
         IF (NOT has_clusters_to_merge) THEN
             BREAK;
         END IF;
 
-        -- Make the "_CLUSTERS_TO_MERGE" table symmetric.
+        -- Make the "MEERGO_GRAPH_MERGE_CLUSTERS" table symmetric.
         -- TODO(Gianluca): is this necessary?
-        INSERT INTO "_CLUSTERS_TO_MERGE"
+        INSERT INTO "MEERGO_GRAPH_MERGE_CLUSTERS"
             SELECT "C2", "C1"
-            FROM "_CLUSTERS_TO_MERGE";
+            FROM "MEERGO_GRAPH_MERGE_CLUSTERS";
         
         -- Update the clusters of the identities.
         UPDATE
@@ -102,7 +102,7 @@ BEGIN
                     "C1" "SOURCE",
                     min("C2") "TARGET"
                 FROM
-                    "_CLUSTERS_TO_MERGE"
+                    "MEERGO_GRAPH_MERGE_CLUSTERS"
                 GROUP BY
                     "SOURCE"
             ) "NEW_CLUSTERS" ON "NEW_CLUSTERS"."SOURCE" = "IDENTITIES_B"."__CLUSTER__"
@@ -124,15 +124,15 @@ BEGIN
 
     -- Update associations between events and profiles by updating the MPID of
     -- the events.
-    UPDATE "EVENTS" SET "MPID" = null;
-    UPDATE "EVENTS" SET "MPID" = "_IDENTITIES"."__mpid__"
+    UPDATE "MEERGO_EVENTS" SET "MPID" = null;
+    UPDATE "MEERGO_EVENTS" SET "MPID" = "_IDENTITIES"."__mpid__"
     FROM "_IDENTITIES" WHERE
-       "EVENTS"."CONNECTION_ID" = "_IDENTITIES"."__CONNECTION__"
+       "MEERGO_EVENTS"."CONNECTION_ID" = "_IDENTITIES"."__CONNECTION__"
            AND
        (
-           ("EVENTS"."USER_ID" <> '' AND "EVENTS"."USER_ID" = "_IDENTITIES"."__IDENTITY_ID__")
+           ("MEERGO_EVENTS"."USER_ID" <> '' AND "MEERGO_EVENTS"."USER_ID" = "_IDENTITIES"."__IDENTITY_ID__")
                OR
-           ("EVENTS"."USER_ID" = '' AND ARRAY_CONTAINS("EVENTS"."ANONYMOUS_ID"::variant, "_IDENTITIES"."__ANONYMOUS_IDS__"))
+           ("MEERGO_EVENTS"."USER_ID" = '' AND ARRAY_CONTAINS("MEERGO_EVENTS"."ANONYMOUS_ID"::variant, "_IDENTITIES"."__ANONYMOUS_IDS__"))
        );
 
     RETURN true;

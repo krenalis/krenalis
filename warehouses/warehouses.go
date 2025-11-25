@@ -123,7 +123,7 @@ type Warehouse interface {
 	// the operation ended successfully or with a *OperationError error, that result
 	// is returned again.
 	//
-	// columns contains the columns of the "profiles" table to obtain (this
+	// columns contains the columns of the "meergo_profiles" table to obtain (this
 	// parameter is useful for obtaining type information and for creating views),
 	// while operations is the set of operations to apply in order to migrate the
 	// current columns to the given columns.

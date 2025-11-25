@@ -571,7 +571,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					//
 					// TODO(Gianluca): how should the drivers expose the table names? We
 					// have an issue where we discuss this (https://github.com/meergo/meergo/issues/928).
-					err = wh.Truncate(ctx, "_identities")
+					err = wh.Truncate(ctx, "meergo_identities")
 					if err != nil {
 						t.Fatal(err)
 					}

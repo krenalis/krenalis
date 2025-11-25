@@ -79,9 +79,9 @@ func TestChangeProfileSchema(t *testing.T) {
 	queries = c.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"profiles\";",
-		"ALTER TABLE \"_profiles_0\"\n\tADD COLUMN \"new_prop\" character varying;",
-		"ALTER TABLE \"_identities\"\n\tADD COLUMN \"new_prop\" character varying;",
-		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_profiles_0\";",
+		"ALTER TABLE \"meergo_profiles_0\"\n\tADD COLUMN \"new_prop\" character varying;",
+		"ALTER TABLE \"meergo_identities\"\n\tADD COLUMN \"new_prop\" character varying;",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"meergo_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
@@ -123,11 +123,11 @@ func TestChangeProfileSchema(t *testing.T) {
 	queries = c.PreviewAlterProfileSchema(schema, rePaths)
 	expectedQueries = []string{
 		"BEGIN;",
-		"DROP VIEW \"profiles\";", "ALTER TABLE \"_profiles_0\"\n\tDROP COLUMN \"email\";",
-		"ALTER TABLE \"_identities\"\n\tDROP COLUMN \"email\";",
-		"ALTER TABLE \"_profiles_0\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
-		"ALTER TABLE \"_identities\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
-		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_identifier\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_profiles_0\";",
+		"DROP VIEW \"profiles\";", "ALTER TABLE \"meergo_profiles_0\"\n\tDROP COLUMN \"email\";",
+		"ALTER TABLE \"meergo_identities\"\n\tDROP COLUMN \"email\";",
+		"ALTER TABLE \"meergo_profiles_0\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
+		"ALTER TABLE \"meergo_identities\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_identifier\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"meergo_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {
@@ -180,9 +180,9 @@ func TestChangeProfileSchema(t *testing.T) {
 	expectedQueries = []string{
 		"BEGIN;",
 		"DROP VIEW \"profiles\";",
-		"ALTER TABLE \"_profiles_0\"\n\tDROP COLUMN \"android_identifier\";",
-		"ALTER TABLE \"_identities\"\n\tDROP COLUMN \"android_identifier\";",
-		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_profiles_0\";",
+		"ALTER TABLE \"meergo_profiles_0\"\n\tDROP COLUMN \"android_identifier\";",
+		"ALTER TABLE \"meergo_identities\"\n\tDROP COLUMN \"android_identifier\";",
+		"CREATE VIEW \"profiles\" AS SELECT\n\t\"__mpid__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"meergo_profiles_0\";",
 		"COMMIT;",
 	}
 	if !slices.Equal(expectedQueries, queries) {

@@ -36,7 +36,7 @@ type Identity struct {
 	LastChangeTime time.Time              // Last change time in UTC.
 }
 
-// identityKey represents a key in the _identities table.
+// identityKey represents a key in the meergo_identities table.
 type identityKey struct {
 	action      int
 	isAnonymous bool
@@ -196,7 +196,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 			warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, iw.action),
 			warehouses.NewBaseExpr(warehouses.Column{Name: "__execution__", Type: types.Int(32)}, warehouses.OpIsNot, iw.execution),
 		})
-		err := iw.store.warehouse().Delete(ctx, "_identities", where)
+		err := iw.store.warehouse().Delete(ctx, "meergo_identities", where)
 		if err != nil {
 			return err
 		}

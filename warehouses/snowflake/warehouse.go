@@ -29,11 +29,11 @@ import (
 )
 
 var (
-	//go:embed tables/destinations_profiles.sql
+	//go:embed tables/destination_profiles.sql
 	createDestinationProfilesTable string
 	//go:embed tables/events.sql
 	createEventsTable string
-	//go:embed tables/operations.sql
+	//go:embed tables/system_operations.sql
 	createOperationsTable string
 	//go:embed tables/profile_schema_versions.sql
 	createProfileSchemaVersionTable string
@@ -374,11 +374,11 @@ func (warehouse *Snowflake) openDB() *sql.DB {
 	return db
 }
 
-// profilesVersion returns the version of the "PROFILES" table.
+// profilesVersion returns the version of the "MEERGO_PROFILES" table.
 func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
 	db := warehouse.openDB()
 	var v int
-	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
+	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("VERSION"), 0) FROM "_MEERGO_PROFILE_SCHEMA_VERSIONS"`).Scan(&v)
 	if err != nil {
 		return 0, snowflake(err)
 	}

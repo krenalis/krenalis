@@ -52,24 +52,24 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 
 func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]int) error {
 
-	// Determine the current version of the "profiles" table and create a copy
+	// Determine the current version of the "meergo_profiles" table and create a copy
 	// of it with the incremented version.
 	profilesVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
 		return err
 	}
 	newProfilesVersion := profilesVersion + 1
-	newProfilesName := fmt.Sprintf("_PROFILES_%d", newProfilesVersion)
+	newProfilesName := fmt.Sprintf("MEERGO_PROFILES_%d", newProfilesVersion)
 
 	// Create a copy of the current profiles table and set its new version in
-	// '_PROFILE_SCHEMA_VERSIONS'.
+	// '_MEERGO_PROFILE_SCHEMA_VERSIONS'.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		likeTable := fmt.Sprintf(`_PROFILES_%d`, profilesVersion)
+		likeTable := fmt.Sprintf(`MEERGO_PROFILES_%d`, profilesVersion)
 		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteIdent(newProfilesName), quoteIdent(likeTable)))
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s) like table %s: %s", quoteIdent(newProfilesName), quoteIdent(likeTable), err)
 		}
-		_, err = tx.Exec(`INSERT INTO "_PROFILE_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
+		_, err = tx.Exec(`INSERT INTO "_MEERGO_PROFILE_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
 			` VALUES (?, ?, ?)`, newProfilesVersion, opID, time.Now().UTC())
 		if err != nil {
 			return snowflake(err)
@@ -209,7 +209,7 @@ func (warehouse *Snowflake) resolveIdentities(ctx context.Context, opID string, 
 
 	// Drop the 'profiles' table that existed before executing this Identity
 	// Resolution.
-	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
+	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "MEERGO_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
 	if err != nil {
 		return snowflake(err)
 	}
