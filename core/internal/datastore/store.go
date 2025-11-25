@@ -348,8 +348,8 @@ func (store *Store) PreviewAlterProfileSchema(ctx context.Context, schema types.
 		return nil, err
 	}
 	defer done()
-	userColumns := util.PropertiesToColumns(schema.Properties())
-	return store.warehouse().PreviewAlterProfileSchema(ctx, userColumns, operations)
+	profileColumns := util.PropertiesToColumns(schema.Properties())
+	return store.warehouse().PreviewAlterProfileSchema(ctx, profileColumns, operations)
 }
 
 // PurgeActions purges the provided actions from the data warehouse, deleting
@@ -394,8 +394,8 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 		return err
 	}
 	defer done()
-	userColumns := util.PropertiesToColumns(userSchema.Properties())
-	return store.warehouse().Repair(ctx, userColumns)
+	profileColumns := util.PropertiesToColumns(userSchema.Properties())
+	return store.warehouse().Repair(ctx, profileColumns)
 }
 
 // ResolveIdentities resolves the identities on the store's workspace.

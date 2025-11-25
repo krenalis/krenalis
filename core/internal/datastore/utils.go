@@ -108,7 +108,7 @@ Path:
 //
 // This mapping is derived from the profile's property-to-column mapping,
 // substituting meta properties with the meta properties of identity.
-func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column) map[string]warehouses.Column {
+func identityColumnByProperty(profileColumnByProperty map[string]warehouses.Column) map[string]warehouses.Column {
 	columns := map[string]warehouses.Column{
 		"__pk__":               {Name: "__pk__", Type: types.Int(32)},
 		"__action__":           {Name: "__action__", Type: types.Int(32)},
@@ -119,7 +119,7 @@ func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column)
 		"__last_change_time__": {Name: "__last_change_time__", Type: types.DateTime()},
 		"__mpid__":             {Name: "__mpid__", Type: types.UUID(), Nullable: true},
 	}
-	for property, column := range userColumnByProperty {
+	for property, column := range profileColumnByProperty {
 		if !IsMetaProperty(property) {
 			columns[property] = column
 		}

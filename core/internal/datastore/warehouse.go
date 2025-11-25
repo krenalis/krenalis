@@ -113,12 +113,12 @@ func (dw warehouse) RawQuery(ctx context.Context, query string) (warehouses.Rows
 	return rows, columnCount, err
 }
 
-func (dw warehouse) ResolveIdentities(ctx context.Context, opID string, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
-	return unavailableError(dw.inner.ResolveIdentities(ctx, opID, identifiers, userColumns, userPrimarySources))
+func (dw warehouse) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, userPrimarySources map[string]int) error {
+	return unavailableError(dw.inner.ResolveIdentities(ctx, opID, identifiers, profileColumns, userPrimarySources))
 }
 
-func (dw warehouse) Repair(ctx context.Context, userColumns []warehouses.Column) error {
-	return unavailableError(dw.inner.Repair(ctx, userColumns))
+func (dw warehouse) Repair(ctx context.Context, profileColumns []warehouses.Column) error {
+	return unavailableError(dw.inner.Repair(ctx, profileColumns))
 }
 
 func (dw warehouse) Settings() []byte {
