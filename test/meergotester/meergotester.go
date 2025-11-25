@@ -309,6 +309,7 @@ func (c *Meergo) Start() {
 		// provided (this for example gives errors on Windows).
 		env := append(os.Environ(), []string{
 			"MEERGO_EXTERNAL_ASSETS_URLS=https://assets.meergo.com/",
+			"MEERGO_POTENTIAL_CONNECTORS_URL=https://assets.meergo.com/admin/connectors/potentials.json",
 			"MEERGO_TELEMETRY_LEVEL=none",
 			"MEERGO_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"MEERGO_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
