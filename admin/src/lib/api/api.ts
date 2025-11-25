@@ -722,7 +722,7 @@ class Workspaces {
 
 	create = async (
 		name: string,
-		userSchema: ObjectType,
+		profileSchema: ObjectType,
 		warehouseName: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
@@ -731,7 +731,7 @@ class Workspaces {
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, this.workspaceID, {
 			name: name,
-			userSchema: userSchema,
+			profileSchema: profileSchema,
 			warehouse: {
 				name: warehouseName,
 				mode: warehouseMode,
@@ -744,7 +744,7 @@ class Workspaces {
 
 	testCreation = async (
 		name: string,
-		userSchema: ObjectType,
+		profileSchema: ObjectType,
 		warehouseName: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
@@ -753,7 +753,7 @@ class Workspaces {
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, this.workspaceID, {
 			name: name,
-			userSchema: userSchema,
+			profileSchema: profileSchema,
 			warehouse: {
 				name: warehouseName,
 				mode: warehouseMode,
