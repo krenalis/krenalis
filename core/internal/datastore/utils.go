@@ -11,6 +11,12 @@ import (
 	"github.com/meergo/meergo/warehouses"
 )
 
+// IsMetaProperty reports whether the given property name refers to a property
+// considered a meta property by a data warehouse.
+func IsMetaProperty(name string) bool {
+	return len(name) >= 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
+}
+
 // appendColumnsFromProperties appends to columns the columns corresponding to
 // the provided properties paths, based on the mapping defined in
 // columnByProperty, and returns the extended slice.
@@ -114,17 +120,11 @@ func identityColumnByProperty(userColumnByProperty map[string]warehouses.Column)
 		"__mpid__":             {Name: "__mpid__", Type: types.UUID(), Nullable: true},
 	}
 	for property, column := range userColumnByProperty {
-		if !isMetaProperty(property) {
+		if !IsMetaProperty(property) {
 			columns[property] = column
 		}
 	}
 	return columns
-}
-
-// isMetaProperty reports whether the given property name refers to a property
-// considered a meta property by a data warehouse.
-func isMetaProperty(name string) bool {
-	return len(name) > 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
 }
 
 func unflatRow(pk *propertyKey, row []any, omitNil bool) map[string]any {

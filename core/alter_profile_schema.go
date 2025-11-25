@@ -148,7 +148,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 // profile schemas.
 func checkAllowedPropertyProfileSchema(schema types.Type) error {
 	for _, p := range schema.Properties().All() {
-		if isMetaProperty(p.Name) {
+		if datastore.IsMetaProperty(p.Name) {
 			return errors.New("profile schema cannot have meta properties")
 		}
 		if p.Prefilled != "" {

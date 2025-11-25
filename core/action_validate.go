@@ -778,7 +778,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 			return fmt.Errorf("%s action schema property %q has a prefilled value, but action schema properties cannot have prefilled values", io, path)
 		}
 		if isProfileSchema {
-			if isMetaProperty(path) {
+			if datastore.IsMetaProperty(path) {
 				return fmt.Errorf("%s action schema property %q is a meta property", io, path)
 			}
 			if k := p.Type.Kind(); k == types.ArrayKind || k == types.MapKind {

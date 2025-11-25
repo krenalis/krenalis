@@ -2108,12 +2108,6 @@ func deserializeCursor(cursor string) (time.Time, error) {
 	return c, nil
 }
 
-// isMetaProperty reports whether the given property name refers to a property
-// considered a meta property by a data warehouse.
-func isMetaProperty(name string) bool {
-	return len(name) >= 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
-}
-
 // isValidStrategy reports whether s is a valid strategy.
 func isValidStrategy(s Strategy) bool {
 	switch s {
