@@ -144,6 +144,7 @@ type publicMetadata struct {
 	ExternalURL                     string   `json:"externalURL"`
 	ExternalEventURL                string   `json:"externalEventURL"`
 	ExternalAssetsURLs              []string `json:"externalAssetsURLs"`
+	PotentialConnectorsURL          *string  `json:"potentialConnectorsURL"`
 	JavaScriptSDKURL                string   `json:"javascriptSDKURL"`
 	MemberEmailVerificationRequired bool     `json:"memberEmailVerificationRequired"`
 	CanSendMemberPasswordReset      bool     `json:"canSendMemberPasswordReset"`
@@ -156,6 +157,7 @@ type publicMetadata struct {
 //   - externalURL: canonical external URL - https://example.com/
 //   - externalEventURL: external event URL - https://example.com/api/v1/events
 //   - externalAssetsURLs: external assets URLs.
+//   - potentialConnectorsURL: URL of JSON with potential connectors, or empty string.
 //   - canSendMemberPasswordReset: can send the reset password email?
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //
@@ -170,6 +172,9 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		MemberEmailVerificationRequired: api.memberEmailVerificationRequired,
 		CanSendMemberPasswordReset:      api.core.CanSendMemberPasswordReset(),
 		TelemetryLevel:                  string(api.sentryTelemetry.level),
+	}
+	if api.potentialConnectorsURL != "" {
+		metadata.PotentialConnectorsURL = &api.potentialConnectorsURL
 	}
 	return metadata, nil
 }

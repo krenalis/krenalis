@@ -173,6 +173,7 @@ interface PublicMetadata {
 	externalURL: string;
 	externalEventURL: string;
 	externalAssetsURLs: string[];
+	potentialConnectorsURL: string | null;
 	javascriptSDKURL: string;
 	memberEmailVerificationRequired: boolean;
 	canSendMemberPasswordReset: boolean;

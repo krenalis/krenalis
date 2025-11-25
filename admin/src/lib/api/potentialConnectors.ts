@@ -1,6 +1,5 @@
 import { PotentialConnector, ConnectorType, ConnectorImplementation } from './types/connector';
 
-const potentialConnectorsURL = 'https://assets.meergo.com/admin/connectors/potentials.json';
 const POTENTIAL_CONNECTORS_TIMEOUT_MS = 2000; // in milliseconds
 const CONNECTOR_CODE_REGEX = /^[a-z0-9-]+$/;
 const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
@@ -15,6 +14,7 @@ const ALLOWED_CONNECTOR_TYPES: ReadonlyArray<ConnectorType> = [
 
 const potentialConnectors = async (
 	existingConnectorCodes: ReadonlySet<string> = new Set<string>(),
+	potentialConnectorsURL: string,
 ): Promise<PotentialConnector[]> => {
 	const abortController = new AbortController();
 	const timeoutId = setTimeout(() => abortController.abort(), POTENTIAL_CONNECTORS_TIMEOUT_MS);

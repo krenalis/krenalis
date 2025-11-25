@@ -28,7 +28,7 @@ const ConnectorsList = () => {
 		new URLSearchParams(window.location.search).get('category') ?? 'All',
 	);
 
-	const { api, handleError, connectors, setTitle, redirect } = useContext(AppContext);
+	const { api, handleError, connectors, setTitle, redirect, publicMetadata } = useContext(AppContext);
 
 	const location = useLocation();
 
@@ -115,13 +115,18 @@ const ConnectorsList = () => {
 		const fetchPotentialConnectors = async () => {
 			let connectors: PotentialConnector[];
 			try {
-				connectors = await potentialConnectors(existingConnectorCodes);
+				connectors = await potentialConnectors(existingConnectorCodes, publicMetadata.potentialConnectorsURL);
 			} catch (err) {
 				console.error(err);
 				return;
 			}
 			setAdditionalPotentialConnectors(connectors);
 		};
+		if (publicMetadata.potentialConnectorsURL == null) {
+			// When potentialConnectorsURL is `null`, no call should be made to
+			// retrieve potential connectors.
+			return;
+		}
 		fetchPotentialConnectors();
 	}, [existingConnectorCodes]);
 
