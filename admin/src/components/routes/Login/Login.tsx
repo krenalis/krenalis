@@ -131,7 +131,8 @@ const Login = () => {
 					<h1>Sign-in to your account</h1>
 				</div>
 				<form className='login__form' onSubmit={onLogin}>
-					{/* Using standard inputs instead of Shoelace inputs as a workaround for Shoelace issue #269 */}
+					{/* Using standard inputs instead of Shoelace inputs as a 
+						workaround for Shoelace issue #269 */}
 					<input
 						type='email'
 						className='login__email'
@@ -152,11 +153,19 @@ const Login = () => {
 						minLength={8}
 						required
 					/>
+
 					{publicMetadata.canSendMemberPasswordReset && (
 						<Link path='reset-password' className='login__reset-password'>
 							Forgot your password?
 						</Link>
 					)}
+
+					{/* This hidden submit input is needed to trigger the form 
+						submission when the user presses Enter while focusing 
+						one of the fields. The Shoelace button alone doesn’t 
+						enable this behavior. */}
+					<input type='submit' style={{ display: 'none' }} />
+
 					<SlButton className='login__button' type='submit' variant='primary' loading={isLoading}>
 						Login
 					</SlButton>
