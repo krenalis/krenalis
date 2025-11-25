@@ -84,7 +84,7 @@ func parseEnvSettings() (*Settings, error) {
 	default:
 		settings.PotentialConnectorsURL, err = parseURL(potentialsURL, 0)
 		if err != nil {
-			return nil, fmt.Errorf("invalid URL specified in environment variable MEERGO_POTENTIAL_CONNECTORS_URL: %s", err)
+			return nil, fmt.Errorf("invalid value specified for environment variable MEERGO_POTENTIAL_CONNECTORS_URL, which is neither empty, the string \"none\" nor a valid URL (%s)", err)
 		}
 	}
 
