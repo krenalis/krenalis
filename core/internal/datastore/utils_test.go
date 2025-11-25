@@ -18,11 +18,12 @@ func Test_IsMetaProperty(t *testing.T) {
 	}{
 		{types.Property{}, false}, // invalid property, shouldn't happen.
 		{types.Property{Name: "a", Type: types.Int(32)}, false},
+		{types.Property{Name: "_", Type: types.Int(32)}, true},
 		{types.Property{Name: "hello", Type: types.Int(32)}, false},
-		{types.Property{Name: "_hello_", Type: types.Int(32)}, false},
-		{types.Property{Name: "__hello", Type: types.Int(32)}, false},
-		{types.Property{Name: "__", Type: types.Int(32)}, false},
-		{types.Property{Name: "____", Type: types.Int(32)}, false},
+		{types.Property{Name: "_hello", Type: types.Int(32)}, true},
+		{types.Property{Name: "__hello", Type: types.Int(32)}, true},
+		{types.Property{Name: "__", Type: types.Int(32)}, true},
+		{types.Property{Name: "____", Type: types.Int(32)}, true},
 		{types.Property{Name: "__hello__", Type: types.Int(32)}, true},
 		{types.Property{Name: "__h__", Type: types.Int(32)}, true},
 		{types.Property{Name: "__hey_test__", Type: types.Int(32)}, true},

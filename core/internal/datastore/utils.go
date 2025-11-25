@@ -14,7 +14,7 @@ import (
 // IsMetaProperty reports whether the given property name refers to a property
 // considered a meta property by a data warehouse.
 func IsMetaProperty(name string) bool {
-	return len(name) >= 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
+	return strings.HasPrefix(name, "_")
 }
 
 // appendColumnsFromProperties appends to columns the columns corresponding to
