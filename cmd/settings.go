@@ -75,6 +75,9 @@ func parseEnvSettings() (*Settings, error) {
 			}
 		}
 	}
+	if len(settings.ExternalAssetsURLs) == 0 {
+		settings.ExternalAssetsURLs = append(settings.ExternalAssetsURLs, "https://assets.meergo.com/")
+	}
 
 	switch potentialsURL := envVars.Get("MEERGO_POTENTIAL_CONNECTORS_URL"); potentialsURL {
 	case "":
