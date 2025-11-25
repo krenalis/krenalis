@@ -48,7 +48,7 @@ func profileSchemaInfoForMCPClient(profileSchema types.Type, columnTypeDescripti
 			"name":        "__last_change_time__",
 			"type":        "timestamp without time zone",
 			"nullable":    true,
-			"description": "ID of the profile's last update. It doesn't have a corresponding property in the profile schema.",
+			"description": "Timestamp of the profile's last update. It doesn't have a corresponding property in the profile schema.",
 		},
 	})
 	return info
