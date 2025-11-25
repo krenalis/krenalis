@@ -36,7 +36,7 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		JOIN "pg_namespace" "n" ON "n"."oid" = "c"."relnamespace"
 	WHERE
 		"n"."nspname" = $1
-		AND "n"."nspname" NOT LIKE 'pg_toast%'
+		AND "n"."nspname" NOT LIKE 'pg_\toast%'
 	ORDER BY
 		"c"."relname"`
 	rows, err := pool.Query(ctx, query, warehouse.settings.Schema)
