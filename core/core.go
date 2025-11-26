@@ -146,7 +146,8 @@ type ExpressionToBeExtracted struct {
 }
 
 // New returns a *Core instance. It can only be called once.
-func New(conf *Config) (*Core, error) {
+// initDB .... TODO ...
+func New(conf *Config, initDB bool) (*Core, error) {
 
 	if hasBeenCalled {
 		return nil, errors.New("core.New has already been called")
@@ -176,8 +177,18 @@ func New(conf *Config) (*Core, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 
-	if initDB && isEmpty(db) {
-		initializeDb(db)
+	if initDB {
+		ctx := context.Background()              // TODO
+		empty, err := isEmpty(ctx, db, "public") // TODO
+		if err != nil {
+			panic(err) // TODO
+		}
+		if empty {
+			err := initializeDB(ctx, db)
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	var smtp *SMTPConfig

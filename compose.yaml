@@ -1,7 +1,7 @@
 services:
   meergo:
     image: meergocdp/meergo:local # TODO: revert
-    command: -initdb
+    command: -init-db
     restart: on-failure
     ports:
       - 2022:2022

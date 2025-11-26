@@ -31,8 +31,9 @@ import (
 func Main(assets fs.FS) {
 
 	var help bool
+	var initDB bool
 	flag.BoolVar(&help, "help", false, "print the help for meergo and exit")
-	flag.BoolVar(&help, "initdb", false, "initializes the PostgreSQL database if it is empty")
+	flag.BoolVar(&initDB, "init-db", false, "initializes the PostgreSQL database if it is empty")
 	flag.Parse()
 	if help {
 		flag.Usage()
@@ -110,7 +111,7 @@ func Main(assets fs.FS) {
 		cancel()
 	}()
 
-	err = Run(ctx, settings, assets)
+	err = Run(ctx, settings, assets, initDB)
 	if err != nil {
 		slog.Error("meergo: error occurred running server", "err", err)
 		fatal(1, err.Error())
