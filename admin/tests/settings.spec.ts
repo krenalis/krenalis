@@ -30,7 +30,7 @@ test(`Change the UI user profile properties`, async ({ page }) => {
 	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name sl-input >> input');
 	const userProfileLastName = page.locator('.general-settings__user-profile-last-name sl-input >> input');
 	const userProfileAdditionalLine = page.locator('.general-settings__user-profile-extra sl-input >> input');
-	const userProfileImage = page.locator('.general-settings__user-profile-image sl-input >> input');
+	const userProfileImage = page.locator('.general-settings__profile-image sl-input >> input');
 
 	await userProfileFirstName.fill('first_name');
 	await userProfileLastName.fill('last_name');
