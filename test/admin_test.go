@@ -35,8 +35,6 @@ const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
-	t.Skip() // TODO(Gianluca): tests have been temporarily skipped until issue https://github.com/meergo/meergo/issues/1987 is resolved.
-
 	fsTempDir := meergotester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).
