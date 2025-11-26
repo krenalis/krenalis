@@ -100,9 +100,21 @@ test(`Change the identifiers`, async ({ page }) => {
 
 	// Fill the identifiers.
 	const identInputs = page.locator('.identifiers__identifier sl-input >> input');
-	await identInputs.nth(0).fill('email');
-	await identInputs.nth(1).fill('first_name');
-	await identInputs.nth(2).fill('last_name');
+	await identInputs.nth(0).evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'email');
+	await identInputs.nth(1).evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'first_name');
+	await identInputs.nth(2).evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'last_name');
+
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+
 	await page.click('.identifiers__save-button');
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
