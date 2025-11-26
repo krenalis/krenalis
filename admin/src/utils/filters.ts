@@ -1,4 +1,4 @@
-import { Filter, FilterCondition } from '../lib/api/types/action';
+import { Filter, FilterCondition } from '../lib/api/types/pipeline';
 
 const MIN_INT = BigInt('-9223372036854775808');
 const MAX_INT = BigInt('9223372036854775807');

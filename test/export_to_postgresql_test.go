@@ -25,7 +25,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	// Load some users in the data warehouse.
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+		importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 			Name:    "Import users from Dummy",
 			Enabled: true,
 			InSchema: types.Object([]types.Property{
@@ -48,7 +48,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID)
+		exec := c.ExecutePipeline(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -81,7 +81,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Export to PostgreSQL.
-	exportAction := c.CreateAction(pgsql, "User", meergotester.ActionToSet{
+	exportPipeline := c.CreatePipeline(pgsql, "User", meergotester.PipelineToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
@@ -102,7 +102,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(exportAction)
+	exec := c.ExecutePipeline(exportPipeline)
 	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.
@@ -115,8 +115,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)
 	}
 
-	// Update the action to export the empty string for full_name.
-	c.UpdateAction(exportAction, meergotester.ActionToSet{
+	// Update the pipeline to export the empty string for full_name.
+	c.UpdatePipeline(exportPipeline, meergotester.PipelineToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
@@ -135,7 +135,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	exec = c.ExecuteAction(exportAction)
+	exec = c.ExecutePipeline(exportPipeline)
 	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.

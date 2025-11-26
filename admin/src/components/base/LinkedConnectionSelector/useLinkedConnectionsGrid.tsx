@@ -100,7 +100,7 @@ const useLinkedConnectionsGrid = (
 				key: String(fc.id),
 			};
 			if (isClickable) {
-				row.onClick = () => redirect(`connections/${fc.id}/actions`);
+				row.onClick = () => redirect(`connections/${fc.id}/pipelines`);
 			}
 			r.push(row);
 		}

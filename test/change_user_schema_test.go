@@ -222,7 +222,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two profile action schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}}`
+	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two profile pipeline schema properties would have the same column name \"a_b\" in the data warehouse, case-insensitively"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}

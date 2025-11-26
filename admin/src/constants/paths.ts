@@ -8,10 +8,10 @@ const FULLSCREEN_PATHS = [
 	`${UI_BASE_PATH}reset-password/:token`,
 	`${UI_BASE_PATH}workspaces`,
 	`${UI_BASE_PATH}workspaces/create`,
-	`${UI_BASE_PATH}connections/:id/actions/edit/:action`,
-	`${UI_BASE_PATH}connections/:id/actions/add/event/:eventType`,
-	`${UI_BASE_PATH}connections/:id/actions/add/event`,
-	`${UI_BASE_PATH}connections/:id/actions/add/:actionTarget`,
+	`${UI_BASE_PATH}connections/:id/pipelines/edit/:pipeline`,
+	`${UI_BASE_PATH}connections/:id/pipelines/add/event/:eventType`,
+	`${UI_BASE_PATH}connections/:id/pipelines/add/event`,
+	`${UI_BASE_PATH}connections/:id/pipelines/add/:pipelineTarget`,
 	`${UI_BASE_PATH}schema/edit`,
 ];
 const CONNECTORS_ASSETS_PATH = 'connectors';

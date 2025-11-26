@@ -42,8 +42,8 @@ func TestImportUsersFromFile(t *testing.T) {
 
 	c.UpdateIdentityResolution(true, []string{"email"})
 
-	// Create an action for the CSV for importing the users.
-	importUsersActionID := c.CreateAction(fsID, "User", meergotester.ActionToSet{
+	// Create a pipeline for the CSV for importing the users.
+	importUsersPipelineID := c.CreatePipeline(fsID, "User", meergotester.PipelineToSet{
 		Name:    "Import users from CSV on File System",
 		Enabled: true,
 		Path:    "users.csv",
@@ -70,8 +70,8 @@ func TestImportUsersFromFile(t *testing.T) {
 		}),
 	})
 
-	// Execute the action that imports users.
-	exec := c.ExecuteAction(importUsersActionID)
+	// Execute the pipeline that imports users.
+	exec := c.ExecutePipeline(importUsersPipelineID)
 
 	// Wait for the import to finish.
 	c.WaitForExecutionsCompletion(fsID, exec)
@@ -99,8 +99,8 @@ func TestImportUsersFromFile(t *testing.T) {
 		if identity.Connection != fsID {
 			t.Fatalf("expected connection %d, got %d", fsID, identity.Connection)
 		}
-		if identity.Action != importUsersActionID {
-			t.Fatalf("expected action %d, got %d", importUsersActionID, identity.Action)
+		if identity.Pipeline != importUsersPipelineID {
+			t.Fatalf("expected pipeline %d, got %d", importUsersPipelineID, identity.Pipeline)
 		}
 		if len(identity.AnonymousIds) != 0 {
 			t.Fatalf("expected zero anonymous ID for the identity, got %v", identity.AnonymousIds)

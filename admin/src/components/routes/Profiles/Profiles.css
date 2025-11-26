@@ -475,11 +475,11 @@
 	pointer-events: all;
 }
 
-.profile-drawer__action .profile-drawer__identity-action-link a {
+.profile-drawer__action .profile-drawer__identity-pipeline-link a {
 	color: var(--sl-color-primary-300);
 }
 
-.profile-drawer__identity-action-link {
+.profile-drawer__identity-pipeline-link {
 	color: var(--sl-color-primary-600);
 	text-decoration: underline;
 	cursor: pointer;

@@ -21,12 +21,12 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 		<div className='connection-wrapper__tabs'>
 			{connectorLogo && <div className='connection-wrapper__connector-logo'>{connectorLogo}</div>}
 			<div className='connection-wrapper__links'>
-				<Link path={`connections/${connection.id}/actions`}>
+				<Link path={`connections/${connection.id}/pipelines`}>
 					<div
-						className={`connection-wrapper__link${tab === 'actions' ? ' connection-wrapper__link--selected' : ''}`}
+						className={`connection-wrapper__link${tab === 'pipelines' ? ' connection-wrapper__link--selected' : ''}`}
 					>
 						<SlIcon name='play-circle'></SlIcon>
-						Actions
+						Pipelines
 					</div>
 				</Link>
 				<Link path={`connections/${connection.id}/metrics`}>

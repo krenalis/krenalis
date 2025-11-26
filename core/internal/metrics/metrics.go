@@ -2,8 +2,8 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package metrics collects and stores action metrics in the database. It tracks
-// both batch executions and events related to receiving or dispatching.
+// Package metrics collects and stores pipeline metrics in the database. It
+// tracks both batch executions and events related to receiving or dispatching.
 package metrics
 
 import (
@@ -108,15 +108,15 @@ func (c *Collector) Close(ctx context.Context) {
 	defer stop()
 }
 
-// Failed increases the failed count for the specified step and action by the
+// Failed increases the failed count for the specified step and pipeline by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) Failed(step Step, action, count int, message string) {
+func (c *Collector) Failed(step Step, pipeline, count int, message string) {
 	c.mu.RLock()
-	if m, ok := c.metrics[action]; ok {
+	if m, ok := c.metrics[pipeline]; ok {
 		m.Lock()
 		m.failed[step] += count
 		if message != "" {
-			m.errors = append(m.errors, actionError{step: step, count: count, message: message})
+			m.errors = append(m.errors, pipelineError{step: step, count: count, message: message})
 		}
 		m.Unlock()
 		c.mu.RUnlock()
@@ -124,75 +124,75 @@ func (c *Collector) Failed(step Step, action, count int, message string) {
 	}
 	c.mu.RUnlock()
 	c.mu.Lock()
-	m, ok := c.metrics[action]
+	m, ok := c.metrics[pipeline]
 	if !ok {
 		m = &metrics{}
-		c.metrics[action] = m
+		c.metrics[pipeline] = m
 	}
 	m.failed[step] += count
 	if message != "" {
-		m.errors = append(m.errors, actionError{step: step, count: count, message: message})
+		m.errors = append(m.errors, pipelineError{step: step, count: count, message: message})
 	}
 	c.mu.Unlock()
 }
 
-// FilterFailed increases the failed count for the Filter step and action by the
-// given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FilterFailed(action, count int) {
-	c.Failed(FilterStep, action, count, "")
-}
-
-// FilterPassed increases the passed count for the Filter step and action by the
-// given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FilterPassed(action, count int) {
-	c.Passed(FilterStep, action, count)
-}
-
-// FinalizeFailed increases the failed count for the Finalize step and action by
+// FilterFailed increases the failed count for the Filter step and pipeline by
 // the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FinalizeFailed(action, count int, message string) {
-	c.Failed(FinalizeStep, action, count, message)
+func (c *Collector) FilterFailed(pipeline, count int) {
+	c.Failed(FilterStep, pipeline, count, "")
 }
 
-// FinalizePassed increases the passed count for the Finalize step and action by
+// FilterPassed increases the passed count for the Filter step and pipeline by
 // the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FinalizePassed(action, count int) {
-	c.Passed(FinalizeStep, action, count)
+func (c *Collector) FilterPassed(pipeline, count int) {
+	c.Passed(FilterStep, pipeline, count)
+}
+
+// FinalizeFailed increases the failed count for the Finalize step and pipeline
+// by the given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) FinalizeFailed(pipeline, count int, message string) {
+	c.Failed(FinalizeStep, pipeline, count, message)
+}
+
+// FinalizePassed increases the passed count for the Finalize step and pipeline
+// by the given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) FinalizePassed(pipeline, count int) {
+	c.Passed(FinalizeStep, pipeline, count)
 }
 
 // InputValidationFailed increases the failed count for the InputValidation step
-// and action by the given count. It is safe to call concurrently from multiple
-// goroutines.
-func (c *Collector) InputValidationFailed(action, count int, message string) {
-	c.Failed(InputValidationStep, action, count, message)
+// and pipeline by the given count. It is safe to call concurrently from
+// multiple goroutines.
+func (c *Collector) InputValidationFailed(pipeline, count int, message string) {
+	c.Failed(InputValidationStep, pipeline, count, message)
 }
 
 // InputValidationPassed increases the passed count for the InputValidation step
-// and action by the given count. It is safe to call concurrently from multiple
-// goroutines.
-func (c *Collector) InputValidationPassed(action, count int) {
-	c.Passed(InputValidationStep, action, count)
+// and pipeline by the given count. It is safe to call concurrently from
+// multiple goroutines.
+func (c *Collector) InputValidationPassed(pipeline, count int) {
+	c.Passed(InputValidationStep, pipeline, count)
 }
 
 // OutputValidationFailed increases the failed count for the OutputValidation
-// step and action by the given count. It is safe to call concurrently from
+// step and pipeline by the given count. It is safe to call concurrently from
 // multiple goroutines.
-func (c *Collector) OutputValidationFailed(action, count int, message string) {
-	c.Failed(OutputValidationStep, action, count, message)
+func (c *Collector) OutputValidationFailed(pipeline, count int, message string) {
+	c.Failed(OutputValidationStep, pipeline, count, message)
 }
 
 // OutputValidationPassed increases the passed count for the OutputValidation
-// step and action by the given count. It is safe to call concurrently from
+// step and pipeline by the given count. It is safe to call concurrently from
 // multiple goroutines.
-func (c *Collector) OutputValidationPassed(action, count int) {
-	c.Passed(OutputValidationStep, action, count)
+func (c *Collector) OutputValidationPassed(pipeline, count int) {
+	c.Passed(OutputValidationStep, pipeline, count)
 }
 
-// Passed increases the passed count for the specified step and action by the
+// Passed increases the passed count for the specified step and pipeline by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) Passed(step Step, action, count int) {
+func (c *Collector) Passed(step Step, pipeline, count int) {
 	c.mu.RLock()
-	if m, ok := c.metrics[action]; ok {
+	if m, ok := c.metrics[pipeline]; ok {
 		m.Lock()
 		m.passed[step] += count
 		m.Unlock()
@@ -201,39 +201,39 @@ func (c *Collector) Passed(step Step, action, count int) {
 	}
 	c.mu.RUnlock()
 	c.mu.Lock()
-	m, ok := c.metrics[action]
+	m, ok := c.metrics[pipeline]
 	if !ok {
 		m = &metrics{}
-		c.metrics[action] = m
+		c.metrics[pipeline] = m
 	}
 	m.passed[step] += count
 	c.mu.Unlock()
 }
 
-// ReceiveFailed increases the failed count for the Receive step and action by
+// ReceiveFailed increases the failed count for the Receive step and pipeline by
 // the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) ReceiveFailed(action, count int, message string) {
-	c.Failed(ReceiveStep, action, count, message)
+func (c *Collector) ReceiveFailed(pipeline, count int, message string) {
+	c.Failed(ReceiveStep, pipeline, count, message)
 }
 
-// ReceivePassed increases the passed count for the Receive step and action by
+// ReceivePassed increases the passed count for the Receive step and pipeline by
 // the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) ReceivePassed(action, count int) {
-	c.Passed(ReceiveStep, action, count)
+func (c *Collector) ReceivePassed(pipeline, count int) {
+	c.Passed(ReceiveStep, pipeline, count)
 }
 
 // TransformationFailed increases the failed count for the Transformation step
-// and action by the given count. It is safe to call concurrently from multiple
-// goroutines.
-func (c *Collector) TransformationFailed(action, count int, message string) {
-	c.Failed(TransformationStep, action, count, message)
+// and pipeline by the given count. It is safe to call concurrently from
+// multiple goroutines.
+func (c *Collector) TransformationFailed(pipeline, count int, message string) {
+	c.Failed(TransformationStep, pipeline, count, message)
 }
 
 // TransformationPassed increases the passed count for the Transformation step
-// and action by the given count. It is safe to call concurrently from multiple
-// goroutines.
-func (c *Collector) TransformationPassed(action, count int) {
-	c.Passed(TransformationStep, action, count)
+// and pipeline by the given count. It is safe to call concurrently from
+// multiple goroutines.
+func (c *Collector) TransformationPassed(pipeline, count int) {
+	c.Passed(TransformationStep, pipeline, count)
 }
 
 // WaitStore waits for any collected metrics to be stored to the database before
@@ -272,7 +272,7 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 
 	query := `WITH aggregated AS (
 	SELECT
-		action,
+		pipeline,
 		timeslot - (timeslot % $1) AS slot,
 		SUM(passed_0) AS passed_0,
 		SUM(passed_1) AS passed_1,
@@ -287,30 +287,30 @@ func (c *Collector) aggregate(timeslot int32, unit time.Duration) {
 		SUM(failed_4) AS failed_4,
 		SUM(failed_5) AS failed_5,
 		ARRAY_AGG(ctid) AS row_ctids
-	FROM actions_metrics
+	FROM pipelines_metrics
 	WHERE timeslot < $2 AND timeslot % $1 <> 0
-	GROUP BY action, slot
+	GROUP BY pipeline, slot
 ),
 inserted AS (
-	INSERT INTO actions_metrics (action, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)
-	SELECT action, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
+	INSERT INTO pipelines_metrics (pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)
+	SELECT pipeline, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
 	FROM aggregated
-	ON CONFLICT (action, timeslot)
+	ON CONFLICT (pipeline, timeslot)
 	DO UPDATE SET
-		passed_0 = actions_metrics.passed_0 + EXCLUDED.passed_0,
-		passed_1 = actions_metrics.passed_1 + EXCLUDED.passed_1,
-		passed_2 = actions_metrics.passed_2 + EXCLUDED.passed_2,
-		passed_3 = actions_metrics.passed_3 + EXCLUDED.passed_3,
-		passed_4 = actions_metrics.passed_4 + EXCLUDED.passed_4,
-		passed_5 = actions_metrics.passed_5 + EXCLUDED.passed_5,
-		failed_0 = actions_metrics.failed_0 + EXCLUDED.failed_0,
-		failed_1 = actions_metrics.failed_1 + EXCLUDED.failed_1,
-		failed_2 = actions_metrics.failed_2 + EXCLUDED.failed_2,
-		failed_3 = actions_metrics.failed_3 + EXCLUDED.failed_3,
-		failed_4 = actions_metrics.failed_4 + EXCLUDED.failed_4,
-		failed_5 = actions_metrics.failed_5 + EXCLUDED.failed_5
+		passed_0 = pipelines_metrics.passed_0 + EXCLUDED.passed_0,
+		passed_1 = pipelines_metrics.passed_1 + EXCLUDED.passed_1,
+		passed_2 = pipelines_metrics.passed_2 + EXCLUDED.passed_2,
+		passed_3 = pipelines_metrics.passed_3 + EXCLUDED.passed_3,
+		passed_4 = pipelines_metrics.passed_4 + EXCLUDED.passed_4,
+		passed_5 = pipelines_metrics.passed_5 + EXCLUDED.passed_5,
+		failed_0 = pipelines_metrics.failed_0 + EXCLUDED.failed_0,
+		failed_1 = pipelines_metrics.failed_1 + EXCLUDED.failed_1,
+		failed_2 = pipelines_metrics.failed_2 + EXCLUDED.failed_2,
+		failed_3 = pipelines_metrics.failed_3 + EXCLUDED.failed_3,
+		failed_4 = pipelines_metrics.failed_4 + EXCLUDED.failed_4,
+		failed_5 = pipelines_metrics.failed_5 + EXCLUDED.failed_5
 )
-DELETE FROM actions_metrics
+DELETE FROM pipelines_metrics
 WHERE ctid = ANY (SELECT unnest(row_ctids) FROM aggregated)`
 
 	var loggedMsg string
@@ -322,7 +322,7 @@ WHERE ctid = ANY (SELECT unnest(row_ctids) FROM aggregated)`
 			break
 		}
 		if msg := err.Error(); msg != loggedMsg {
-			slog.Error("core/metrics: failed to aggregate the metrics on action", "err", msg)
+			slog.Error("core/metrics: failed to aggregate the metrics on pipeline", "err", msg)
 			loggedMsg = msg
 		}
 	}
@@ -406,11 +406,11 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 	c.buf.Reset()
 	c.buf.WriteString("WITH t AS (\n\tVALUES ")
 	i := 0
-	for action, m := range metrics {
+	for pipeline, m := range metrics {
 		hasErrors = hasErrors || len(m.errors) > 0
 		if m.passed == [numSteps]int{} && m.failed == [numSteps]int{} {
 			if len(m.errors) == 0 {
-				delete(metrics, action)
+				delete(metrics, pipeline)
 			}
 			continue
 		}
@@ -418,7 +418,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 			c.buf.WriteByte(',')
 		}
 		c.buf.WriteByte('(')
-		c.buf.WriteString(strconv.Itoa(action))
+		c.buf.WriteString(strconv.Itoa(pipeline))
 		c.buf.WriteByte(',')
 		c.buf.WriteString(strconv.FormatInt(int64(timeslot), 10))
 		c.buf.WriteByte(',')
@@ -438,9 +438,9 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 
 	if i > 0 {
 
-		c.buf.WriteString("\n) INSERT INTO actions_metrics AS m " +
-			`(action, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
-			` SELECT * FROM t ON CONFLICT (action, timeslot) DO UPDATE SET ` +
+		c.buf.WriteString("\n) INSERT INTO pipelines_metrics AS m " +
+			`(pipeline, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5)` +
+			` SELECT * FROM t ON CONFLICT (pipeline, timeslot) DO UPDATE SET ` +
 			`passed_0 = m.passed_0 + EXCLUDED.passed_0, ` +
 			`passed_1 = m.passed_1 + EXCLUDED.passed_1, ` +
 			`passed_2 = m.passed_2 + EXCLUDED.passed_2, ` +
@@ -465,7 +465,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 				break
 			}
 			if msg := err.Error(); msg != loggedMsg {
-				slog.Error("core/metrics: failed to store the metrics on action", "err", msg)
+				slog.Error("core/metrics: failed to store the metrics on pipeline", "err", msg)
 			}
 		}
 
@@ -476,15 +476,15 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 	}
 
 	c.buf.Reset()
-	c.buf.WriteString("INSERT INTO actions_errors (action, timeslot, step, count, message) VALUES ")
+	c.buf.WriteString("INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message) VALUES ")
 	i = 0
-	for action, m := range metrics {
+	for pipeline, m := range metrics {
 		for _, err := range m.errors {
 			if i > 0 {
 				c.buf.WriteByte(',')
 			}
 			c.buf.WriteByte('(')
-			c.buf.WriteString(strconv.Itoa(action))
+			c.buf.WriteString(strconv.Itoa(pipeline))
 			c.buf.WriteByte(',')
 			c.buf.WriteString(strconv.Itoa(int(timeslot)))
 			c.buf.WriteByte(',')
@@ -508,7 +508,7 @@ func (c *Collector) store(timeslot int32, metrics map[int]*metrics) {
 			break
 		}
 		if msg := err.Error(); msg != loggedMsg {
-			slog.Error("core/metrics: failed to store the errors on action", "err", msg)
+			slog.Error("core/metrics: failed to store the errors on pipeline", "err", msg)
 		}
 	}
 }
@@ -528,18 +528,18 @@ func TimeSlotToTime(ts int32) time.Time {
 	return epoch.Add(time.Duration(ts) * timeslotDuration)
 }
 
-type actionError struct {
+type pipelineError struct {
 	step    Step
 	count   int
 	message string
 }
 
-// metrics holds the action metrics that need to be stored to the database. It
+// metrics holds the pipeline metrics that need to be stored to the database. It
 // serves as a temporary storage for metrics collected during a given time
 // period, pending their eventual write to the database.
 type metrics struct {
 	sync.Mutex
 	passed [numSteps]int
 	failed [numSteps]int
-	errors []actionError
+	errors []pipelineError
 }

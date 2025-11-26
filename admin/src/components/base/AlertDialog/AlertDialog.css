@@ -40,7 +40,7 @@
 	text-align: center;
 }
 
-.alert-dialog__actions {
+.alert-dialog__pipelines {
 	display: flex;
 	justify-content: center;
 	gap: 15px;

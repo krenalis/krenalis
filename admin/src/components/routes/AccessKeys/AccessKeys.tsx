@@ -158,13 +158,13 @@ const AccessKeys = () => {
 
 			const createdAtCell = <RelativeTime date={k.createdAt} />;
 
-			const actionsCell = (
+			const pipelinesCell = (
 				<div className='access-keys__grid-buttons'>
 					<SlButton variant='default' size='small' onClick={() => onEditKey(k)}>
 						Edit...
 					</SlButton>
 					<SlButton
-						className='connection-actions__delete-action'
+						className='connection-pipelines__delete-pipeline'
 						variant='danger'
 						size='small'
 						onClick={() => onDeleteKey(k)}
@@ -175,7 +175,7 @@ const AccessKeys = () => {
 			);
 
 			const row = {
-				cells: [k.name, workspaceCell, tokenCell, createdAtCell, actionsCell],
+				cells: [k.name, workspaceCell, tokenCell, createdAtCell, pipelinesCell],
 				key: String(k.id),
 			};
 

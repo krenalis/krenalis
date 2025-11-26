@@ -1,9 +1,9 @@
 import React from 'react';
-import { TransformedMapping, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/action';
+import { TransformedMapping, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/pipeline';
 import { DecimalType, ObjectType } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
-import { ActionTarget } from '../../lib/api/types/action';
+import { PipelineTarget } from '../../lib/api/types/pipeline';
 import TransformedConnection from '../../lib/core/connection';
 
 const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping, toHide?: string[]): ComboboxItem[] => {
@@ -56,7 +56,7 @@ const getUIPreferencesComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 const getFilterPropertyComboboxItems = (
 	schema: ObjectType,
 	connection: TransformedConnection,
-	target: ActionTarget,
+	target: PipelineTarget,
 	toHide?: string[],
 ): ComboboxItem[] => {
 	if (schema == null) {

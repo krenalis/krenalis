@@ -64,19 +64,19 @@ type UIPreferences struct {
 	} `json:"profile"`
 }
 
-// ActionStep represents a step of an action.
-type ActionStep int
+// PipelineStep represents a step of a pipeline.
+type PipelineStep int
 
 const (
-	ReceiveStep          = ActionStep(metrics.ReceiveStep)
-	InputValidationStep  = ActionStep(metrics.InputValidationStep)
-	FilterStep           = ActionStep(metrics.FilterStep)
-	TransformationStep   = ActionStep(metrics.TransformationStep)
-	OutputValidationStep = ActionStep(metrics.OutputValidationStep)
-	FinalizeStep         = ActionStep(metrics.FinalizeStep)
+	ReceiveStep          = PipelineStep(metrics.ReceiveStep)
+	InputValidationStep  = PipelineStep(metrics.InputValidationStep)
+	FilterStep           = PipelineStep(metrics.FilterStep)
+	TransformationStep   = PipelineStep(metrics.TransformationStep)
+	OutputValidationStep = PipelineStep(metrics.OutputValidationStep)
+	FinalizeStep         = PipelineStep(metrics.FinalizeStep)
 )
 
-func (step ActionStep) String() string {
+func (step PipelineStep) String() string {
 	switch step {
 	case ReceiveStep:
 		return "Receive"
@@ -91,12 +91,12 @@ func (step ActionStep) String() string {
 	case FinalizeStep:
 		return "Finalize"
 	}
-	panic("core: invalid ActionStep")
+	panic("core: invalid PipelineStep")
 }
 
-// ParseActionStep parses an action step and returns it. If step is not a valid
-// returns 0 and an error.
-func ParseActionStep(step string) (ActionStep, error) {
+// ParsePipelineStep parses a pipeline step and returns it. If step is not a
+// valid returns 0 and an error.
+func ParsePipelineStep(step string) (PipelineStep, error) {
 	switch step {
 	case "Receive":
 		return ReceiveStep, nil
@@ -114,37 +114,37 @@ func ParseActionStep(step string) (ActionStep, error) {
 	return 0, fmt.Errorf("step is not valid")
 }
 
-// ActionError represents an action error.
-type ActionError struct {
-	Action       int        `json:"action"`
-	Step         ActionStep `json:"step"`
-	Count        int        `json:"count"`
-	Message      string     `json:"message"`
-	LastOccurred time.Time  `json:"lastOccurred"`
+// PipelineError represents a pipeline error.
+type PipelineError struct {
+	Pipeline     int          `json:"pipeline"`
+	Step         PipelineStep `json:"step"`
+	Count        int          `json:"count"`
+	Message      string       `json:"message"`
+	LastOccurred time.Time    `json:"lastOccurred"`
 }
 
-// Action returns the action with identifier id of the workspace.
-// It returns an errors.NotFound error if the action does not exist.
-func (this *Workspace) Action(id int) (*Action, error) {
+// Pipeline returns the pipeline with identifier id of the workspace.
+// It returns an errors.NotFound error if the pipeline does not exist.
+func (this *Workspace) Pipeline(id int) (*Pipeline, error) {
 	this.core.mustBeOpen()
 	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
+		return nil, errors.BadRequest("identifier %d is not a valid pipeline identifier", id)
 	}
-	a, ok := this.core.state.Action(id)
-	if !ok || a.Connection().Workspace().ID != this.workspace.ID {
-		return nil, errors.NotFound("action %d does not exist", id)
+	p, ok := this.core.state.Pipeline(id)
+	if !ok || p.Connection().Workspace().ID != this.workspace.ID {
+		return nil, errors.NotFound("pipeline %d does not exist", id)
 	}
-	var action Action
-	action.fromState(this.core, this.store, a)
-	return &action, nil
+	var pipeline Pipeline
+	pipeline.fromState(this.core, this.store, p)
+	return &pipeline, nil
 }
 
-// ActionErrors returns the errors for the provided actions within the time
+// PipelineErrors returns the errors for the provided pipelines within the time
 // range [start,end). The end time must not precede the start time, and both
-// must be within [metrics.MinTime,metrics.MaxTime]. actions must not be empty.
+// must be within [metrics.MinTime,metrics.MaxTime]. pipelines must not be empty.
 // Returned errors are limited to [first, first+limit), where first >= 0 and
 // 0 < limit <= 100.
-func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, actions []int, step *ActionStep, first, limit int) ([]ActionError, error) {
+func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time, pipelines []int, step *PipelineStep, first, limit int) ([]PipelineError, error) {
 
 	this.core.mustBeOpen()
 
@@ -162,13 +162,13 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 		return nil, fmt.Errorf("end date cannot be earlier than start date")
 	}
 
-	// Validate actions.
-	if len(actions) == 0 {
-		return nil, errors.BadRequest("actions cannot be empty")
+	// Validate pipelines.
+	if len(pipelines) == 0 {
+		return nil, errors.BadRequest("pipelines cannot be empty")
 	}
-	for _, action := range actions {
-		if action < 1 || action > maxInt32 {
-			return nil, errors.BadRequest("action %d is not valid", action)
+	for _, pipeline := range pipelines {
+		if pipeline < 1 || pipeline > maxInt32 {
+			return nil, errors.BadRequest("pipeline %d is not valid", pipeline)
 		}
 	}
 
@@ -189,21 +189,21 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 		return nil, errors.BadRequest("limit must be in range [1,100]")
 	}
 
-	actions = filterWorkspaceActions(this.workspace, actions)
-	if len(actions) == 0 {
-		return []ActionError{}, nil
+	pipelines = filterWorkspacePipelines(this.workspace, pipelines)
+	if len(pipelines) == 0 {
+		return []PipelineError{}, nil
 	}
 
-	metricsErrors, err := this.core.metrics.Errors(ctx, start, end, actions, s, first, limit)
+	metricsErrors, err := this.core.metrics.Errors(ctx, start, end, pipelines, s, first, limit)
 	if err != nil {
 		return nil, err
 	}
 
-	errs := make([]ActionError, len(metricsErrors))
+	errs := make([]PipelineError, len(metricsErrors))
 	for i, e := range metricsErrors {
-		errs[i] = ActionError{
-			Action:       e.Action,
-			Step:         ActionStep(e.Step),
+		errs[i] = PipelineError{
+			Pipeline:     e.Pipeline,
+			Step:         PipelineStep(e.Step),
 			Count:        e.Count,
 			Message:      e.Message,
 			LastOccurred: e.LastOccurred,
@@ -213,8 +213,8 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 	return errs, nil
 }
 
-// ActionMetrics represents action metrics for a time period.
-type ActionMetrics struct {
+// PipelineMetrics represents pipeline metrics for a time period.
+type PipelineMetrics struct {
 	Start  time.Time `json:"start"`
 	End    time.Time `json:"end"`
 	Passed [][6]int  `json:"passed"`
@@ -289,12 +289,12 @@ func (this Workspace) ColumnTypeDescription(t types.Type) (string, error) {
 	return this.store.ColumnTypeDescription(t)
 }
 
-// ActionMetricsPerDate returns metrics aggregated by day for the time interval
+// PipelineMetricsPerDate returns metrics aggregated by day for the time interval
 // between the specified start and end dates. The dates must be no earlier than
 // 1970-01-01 and no later than 2262-04-10. The day of the start date must be at
-// least one day before the day of the end date. actions specifies the actions
-// for which metrics are returned and must not be empty.
-func (this *Workspace) ActionMetricsPerDate(ctx context.Context, start, end time.Time, actions []int) (ActionMetrics, error) {
+// least one day before the day of the end date. pipelines specifies the
+// pipelines for which metrics are returned and must not be empty.
+func (this *Workspace) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, pipelines []int) (PipelineMetrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -303,29 +303,29 @@ func (this *Workspace) ActionMetricsPerDate(ctx context.Context, start, end time
 
 	// Validate start and end.
 	if start.Before(metrics.MinTime) {
-		return ActionMetrics{}, errors.BadRequest("start date is too far in the past")
+		return PipelineMetrics{}, errors.BadRequest("start date is too far in the past")
 	}
 	if end.After(metrics.MaxTime) {
-		return ActionMetrics{}, errors.BadRequest("end date is too far in the future")
+		return PipelineMetrics{}, errors.BadRequest("end date is too far in the future")
 	}
 	if !end.After(start) {
-		return ActionMetrics{}, errors.BadRequest("day of the end date must be after the day of the start date")
+		return PipelineMetrics{}, errors.BadRequest("day of the end date must be after the day of the start date")
 	}
 
-	// Validate actions.
-	if len(actions) == 0 {
-		return ActionMetrics{}, errors.BadRequest("actions if non-nil, cannot be empty")
+	// Validate pipelines.
+	if len(pipelines) == 0 {
+		return PipelineMetrics{}, errors.BadRequest("pipelines if non-nil, cannot be empty")
 	}
-	for _, action := range actions {
-		if action < 1 || action > maxInt32 {
-			return ActionMetrics{}, errors.BadRequest("action %d is not valid", action)
+	for _, pipeline := range pipelines {
+		if pipeline < 1 || pipeline > maxInt32 {
+			return PipelineMetrics{}, errors.BadRequest("pipeline %d is not valid", pipeline)
 		}
 	}
 
-	actions = filterWorkspaceActions(this.workspace, actions)
-	if len(actions) == 0 {
+	pipelines = filterWorkspacePipelines(this.workspace, pipelines)
+	if len(pipelines) == 0 {
 		number := int(end.Sub(start).Hours() / 24)
-		return ActionMetrics{
+		return PipelineMetrics{
 			Start:  start,
 			End:    end,
 			Passed: make([][6]int, number),
@@ -333,12 +333,12 @@ func (this *Workspace) ActionMetricsPerDate(ctx context.Context, start, end time
 		}, nil
 	}
 
-	metrics, err := this.core.metrics.MetricsPerDate(ctx, start, end, actions)
+	metrics, err := this.core.metrics.MetricsPerDate(ctx, start, end, pipelines)
 	if err != nil {
-		return ActionMetrics{}, err
+		return PipelineMetrics{}, err
 	}
 
-	return ActionMetrics{
+	return PipelineMetrics{
 		Start:  metrics.Start,
 		End:    metrics.End,
 		Passed: metrics.Passed,
@@ -346,12 +346,12 @@ func (this *Workspace) ActionMetricsPerDate(ctx context.Context, start, end time
 	}, nil
 }
 
-// ActionMetricsPerTimeUnit returns metrics for the specified number of minutes,
+// PipelineMetricsPerTimeUnit returns metrics for the specified number of minutes,
 // hours, or days based on the unit, which can be Minute, Hour, or Day, up to
 // the current time. number must be in the following ranges: [1,60] for minutes,
-// [1,48] for hours, and [1,30] for days. actions specifies the actions for
+// [1,48] for hours, and [1,30] for days. pipelines specifies the pipelines for
 // which metrics are returned and must not be empty.
-func (this *Workspace) ActionMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, actions []int) (ActionMetrics, error) {
+func (this *Workspace) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, pipelines []int) (PipelineMetrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -359,42 +359,42 @@ func (this *Workspace) ActionMetricsPerTimeUnit(ctx context.Context, number int,
 	switch unit {
 	case Minute:
 		if number < 1 || number > 60 {
-			return ActionMetrics{}, errors.BadRequest("minutes must be in range [1,60]")
+			return PipelineMetrics{}, errors.BadRequest("minutes must be in range [1,60]")
 		}
 	case Hour:
 		if number < 1 || number > 48 {
-			return ActionMetrics{}, errors.BadRequest("hours must be in range [1,48]")
+			return PipelineMetrics{}, errors.BadRequest("hours must be in range [1,48]")
 		}
 	case Day:
 		if number < 1 || number > 30 {
-			return ActionMetrics{}, errors.BadRequest("days must be in range [1,30]")
+			return PipelineMetrics{}, errors.BadRequest("days must be in range [1,30]")
 		}
 	}
 
-	// Validate actions.
-	if len(actions) == 0 {
-		return ActionMetrics{}, errors.BadRequest("actions if non-nil, cannot be empty")
+	// Validate pipelines.
+	if len(pipelines) == 0 {
+		return PipelineMetrics{}, errors.BadRequest("pipelines if non-nil, cannot be empty")
 	}
-	for _, action := range actions {
-		if action < 1 || action > maxInt32 {
-			return ActionMetrics{}, errors.BadRequest("action %d is not valid", action)
+	for _, pipeline := range pipelines {
+		if pipeline < 1 || pipeline > maxInt32 {
+			return PipelineMetrics{}, errors.BadRequest("pipeline %d is not valid", pipeline)
 		}
 	}
 
-	actions = filterWorkspaceActions(this.workspace, actions)
-	if len(actions) == 0 {
-		return ActionMetrics{
+	pipelines = filterWorkspacePipelines(this.workspace, pipelines)
+	if len(pipelines) == 0 {
+		return PipelineMetrics{
 			Passed: make([][6]int, number),
 			Failed: make([][6]int, number),
 		}, nil
 	}
 
-	metrics, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, time.Duration(unit), actions)
+	metrics, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, time.Duration(unit), pipelines)
 	if err != nil {
-		return ActionMetrics{}, err
+		return PipelineMetrics{}, err
 	}
 
-	return ActionMetrics{
+	return PipelineMetrics{
 		Start:  metrics.Start,
 		End:    metrics.End,
 		Passed: metrics.Passed,
@@ -487,16 +487,16 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		Strategy:          (*Strategy)(c.Strategy),
 		SendingMode:       (*SendingMode)(c.SendingMode),
 		LinkedConnections: slices.Clone(c.LinkedConnections),
-		ActionsCount:      len(c.Actions()),
+		PipelinesCount:    len(c.Pipelines()),
 		Health:            Health(c.Health),
 	}
 
-	// Set the actions.
-	actions := c.Actions()
-	a := make([]Action, len(actions))
-	connection.Actions = &a
-	for i, a := range actions {
-		(*connection.Actions)[i].fromState(this.core, this.store, a)
+	// Set the pipelines.
+	pipelines := c.Pipelines()
+	p := make([]Pipeline, len(pipelines))
+	connection.Pipelines = &p
+	for i, pipeline := range pipelines {
+		(*connection.Pipelines)[i].fromState(this.core, this.store, pipeline)
 	}
 
 	// Set the event types.
@@ -540,29 +540,29 @@ func (this *Workspace) Connections() []*Connection {
 			Strategy:          (*Strategy)(c.Strategy),
 			SendingMode:       (*SendingMode)(c.SendingMode),
 			LinkedConnections: slices.Clone(c.LinkedConnections),
-			ActionsCount:      len(c.Actions()),
+			PipelinesCount:    len(c.Pipelines()),
 			Health:            Health(c.Health),
 		}
 
-		// Set the actions info.
-		actions := c.Actions()
-		a := make([]ActionInfo, len(actions))
-		connection.ActionsInfo = &a
-		for i, action := range actions {
-			info := ActionInfo{
-				ID:      action.ID,
-				Target:  Target(action.Target),
-				Enabled: action.Enabled,
+		// Set the pipelines info.
+		pipelines := c.Pipelines()
+		p := make([]PipelineInfo, len(pipelines))
+		connection.PipelinesInfo = &p
+		for i, pipeline := range pipelines {
+			info := PipelineInfo{
+				ID:      pipeline.ID,
+				Target:  Target(pipeline.Target),
+				Enabled: pipeline.Enabled,
 			}
-			if action.Target == state.TargetUser || action.Target == state.TargetGroup {
-				if action.SchedulePeriod != 0 {
-					start := int(action.ScheduleStart)
-					period := SchedulePeriod(action.SchedulePeriod)
+			if pipeline.Target == state.TargetUser || pipeline.Target == state.TargetGroup {
+				if pipeline.SchedulePeriod != 0 {
+					start := int(pipeline.ScheduleStart)
+					period := SchedulePeriod(pipeline.SchedulePeriod)
 					info.ScheduleStart = &start
 					info.SchedulePeriod = &period
 				}
 			}
-			a[i] = info
+			p[i] = info
 		}
 
 		infos[i] = &connection
@@ -906,13 +906,13 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		ID: this.workspace.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		// Mark the action functions as discontinued.
+		// Mark the pipeline functions as discontinued.
 		now := time.Now().UTC()
 		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT a.transformation_id, $1\n"+
-			"FROM actions AS a\n"+
-			"INNER JOIN connections AS c ON a.connection = c.id\n"+
-			"WHERE a.transformation_id != '' AND c.workspace = $2\n"+
+			"SELECT p.transformation_id, $1\n"+
+			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"WHERE p.transformation_id != '' AND c.workspace = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
 			return nil, err
@@ -1035,7 +1035,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	return evts, nil
 }
 
-// Execution returns the execution with the specified identifier for an action
+// Execution returns the execution with the specified identifier for a pipeline
 // in the workspace.
 //
 // If the execution does not exist, it returns an errors.NotFound error.
@@ -1048,25 +1048,25 @@ func (this *Workspace) Execution(ctx context.Context, id int) (*Execution, error
 	if exe, ok := this.workspace.Execution(id); ok {
 		return &Execution{
 			ID:        exe.ID,
-			Action:    exe.Action().ID,
+			Pipeline:  exe.Pipeline().ID,
 			StartTime: exe.StartTime,
 		}, nil
 	}
 	var exe Execution
 	err := this.core.db.QueryRow(ctx,
-		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
+		"SELECT e.id, e.pipeline, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
 			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4,"+
 			" e.failed_5, e.error\n"+
-			"FROM actions_executions e\n"+
-			"INNER JOIN actions a ON a.id = e.action\n"+
+			"FROM pipelines_executions e\n"+
+			"INNER JOIN pipelines a ON a.id = e.pipeline\n"+
 			"INNER JOIN connections c ON c.id = a.connection\n"+
 			"WHERE c.workspace = $1 AND e.id = $2", this.workspace.ID, id).Scan(
-		&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
+		&exe.ID, &exe.Pipeline, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
 		&exe.Passed[4], &exe.Passed[5], &exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4],
 		&exe.Failed[5], &exe.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.NotFound("action execution %d does not exist", id)
+			return nil, errors.NotFound("pipeline execution %d does not exist", id)
 		}
 		return nil, err
 	}
@@ -1077,24 +1077,24 @@ func (this *Workspace) Execution(ctx context.Context, id int) (*Execution, error
 	return &exe, nil
 }
 
-// Executions returns the executions of the actions of the workspace.
+// Executions returns the executions of the pipelines of the workspace.
 func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 
 	this.core.mustBeOpen()
 
 	executions := []*Execution{}
 	err := this.core.db.QueryScan(ctx,
-		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
+		"SELECT e.id, e.pipeline, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
 			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4, e.failed_5, e.error\n"+
-			"FROM actions_executions e\n"+
-			"INNER JOIN actions a ON a.id = e.action\n"+
+			"FROM pipelines_executions e\n"+
+			"INNER JOIN pipelines a ON a.id = e.pipeline\n"+
 			"INNER JOIN connections c ON c.id = a.connection\n"+
 			"WHERE c.workspace = $1\n"+
 			"ORDER BY id DESC", this.workspace.ID, func(rows *db.Rows) error {
 			var err error
 			for rows.Next() {
 				var exe Execution
-				if err = rows.Scan(&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
+				if err = rows.Scan(&exe.ID, &exe.Pipeline, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
 					&exe.Passed[4], &exe.Passed[5], &exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4],
 					&exe.Failed[5], &exe.Error); err != nil {
 					return err
@@ -1887,7 +1887,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	// Retrieve the identities from the data warehouse.
 	records, total, err := this.store.Identities(ctx, datastore.Query{
 		Properties: []string{
-			"__action__",
+			"__pipeline__",
 			"__is_anonymous__",
 			"__identity_id__",
 			"__connection__",
@@ -1920,11 +1920,11 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 			continue
 		}
 
-		// Retrieve the action.
-		actionID := record["__action__"].(int)
-		_, ok = conn.Action(actionID)
+		// Retrieve the pipeline.
+		pipelineID := record["__pipeline__"].(int)
+		_, ok = conn.Pipeline(pipelineID)
 		if !ok {
-			// The action for this identity no longer exists, so skip this identity.
+			// The pipeline for this identity no longer exists, so skip this identity.
 			continue
 		}
 
@@ -1953,7 +1953,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 
 		identities = append(identities, Identity{
 			Connection:     connID,
-			Action:         actionID,
+			Pipeline:       pipelineID,
 			ID:             identityID,
 			AnonymousIds:   anonIDs,
 			LastChangeTime: lastChangeTime,
@@ -2079,38 +2079,38 @@ func suitableAsIdentifier(t types.Type) bool {
 
 // Identity represents an identity.
 type Identity struct {
-	// TODO(Gianluca): the Connection field is kept here redundantly (the action
+	// TODO(Gianluca): the Connection field is kept here redundantly (the pipeline
 	// is already there) because the Admin console does not currently have the
-	// Action => Connection mapping available, and it would be very inconvenient
+	// Pipeline => Connection mapping available, and it would be very inconvenient
 	// to retrieve this information where it is needed. When it will have it in
 	// the future, we will remove this field.
 	Connection     int       `json:"connection"`
-	Action         int       `json:"action"`
+	Pipeline       int       `json:"pipeline"`
 	ID             string    `json:"id"`                           // empty string for identities imported from anonymous events.
 	AnonymousIds   []string  `json:"anonymousIds,format:emitnull"` // nil for identities not imported from events.
 	LastChangeTime time.Time `json:"lastChangeTime"`
 }
 
-// filterWorkspaceActions returns from actions, only the actions of the provided
-// workspace. It does not change actions.
-func filterWorkspaceActions(ws *state.Workspace, actions []int) []int {
+// filterWorkspacePipelines returns from pipelines, only the pipelines of the
+// provided workspace. It does not change pipelines.
+func filterWorkspacePipelines(ws *state.Workspace, pipelines []int) []int {
 	notExists := map[int]struct{}{}
-	for _, action := range actions {
-		notExists[action] = struct{}{}
+	for _, pipeline := range pipelines {
+		notExists[pipeline] = struct{}{}
 	}
 	for _, c := range ws.Connections() {
-		for _, a := range c.Actions() {
-			delete(notExists, a.ID)
+		for _, p := range c.Pipelines() {
+			delete(notExists, p.ID)
 		}
 	}
 	if len(notExists) == 0 {
-		return actions
+		return pipelines
 	}
-	actions = slices.DeleteFunc(slices.Clone(actions), func(id int) bool {
+	pipelines = slices.DeleteFunc(slices.Clone(pipelines), func(id int) bool {
 		_, ok := notExists[id]
 		return ok
 	})
-	return actions
+	return pipelines
 }
 
 // validateUIPreferences validates whether the given UI preferences are valid or

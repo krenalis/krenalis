@@ -24,7 +24,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 
 	// Import users from Dummy.
 	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -44,7 +44,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletion(dummySrc, exec)
 
 	// Test that the "favorite_movie.title" property, which has been imported

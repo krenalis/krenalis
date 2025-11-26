@@ -32,8 +32,8 @@ type destinations struct {
 	// No mutex is needed since all accesses occur while the state is frozen.
 	senders map[int]*sender.Sender
 
-	mu      sync.Mutex
-	actions map[int][]*destinationAction // maps a destination connection ID to its actions; it is protected by mu.
+	mu        sync.Mutex
+	pipelines map[int][]*destinationPipeline // maps a destination connection ID to its pipelines; it is protected by mu.
 
 	close struct {
 		closed    atomic.Bool             // indicates if the writer has been closed
@@ -53,20 +53,20 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 		provider:    provider,
 		metrics:     metrics,
 		senders:     map[int]*sender.Sender{},
-		actions:     map[int][]*destinationAction{},
+		pipelines:   map[int][]*destinationPipeline{},
 	}
 	d.close.ctx, d.close.cancel = context.WithCancelCause(context.Background())
 
 	// Keeps all destination connections whose connector supports events.
 	d.state.Freeze()
-	d.state.AddListener(d.onCreateAction)
 	d.state.AddListener(d.onCreateConnection)
-	d.state.AddListener(d.onDeleteAction)
+	d.state.AddListener(d.onCreatePipeline)
 	d.state.AddListener(d.onDeleteConnection)
+	d.state.AddListener(d.onDeletePipeline)
 	d.state.AddListener(d.onDeleteWorkspace)
-	d.state.AddListener(d.onSetActionStatus)
 	d.state.AddListener(d.onSetConnectionSettings)
-	d.state.AddListener(d.onUpdateAction)
+	d.state.AddListener(d.onSetPipelineStatus)
+	d.state.AddListener(d.onUpdatePipeline)
 	for _, c := range st.Connections() {
 		if c.Role != state.Destination {
 			continue
@@ -76,17 +76,17 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 		}
 		app := connections.API(c)
 		sender := sender.New(app, d.sentAcks)
-		actions := make([]*destinationAction, 0, 1)
-		// Keeps all actions active on the connection's events.
-		for _, a := range c.Actions() {
-			if !a.Enabled || a.Target != state.TargetEvent {
+		pipelines := make([]*destinationPipeline, 0, 1)
+		// Keeps all pipelines active on the connection's events.
+		for _, p := range c.Pipelines() {
+			if !p.Enabled || p.Target != state.TargetEvent {
 				continue
 			}
-			action := d.createDestinationAction(a, sender)
-			actions = append(actions, action)
+			pipeline := d.createDestinationPipeline(p, sender)
+			pipelines = append(pipelines, pipeline)
 		}
 		d.senders[c.ID] = sender
-		d.actions[c.ID] = actions
+		d.pipelines[c.ID] = pipelines
 	}
 	d.state.Unfreeze()
 
@@ -97,28 +97,28 @@ func newDestinations(st *state.State, connections *connections.Connections, prov
 // connection.
 func (d *destinations) QueueEvent(connection int, event events.Event) {
 	d.mu.Lock()
-	for _, action := range d.actions[connection] {
-		d.metrics.ReceivePassed(action.id, 1)
-		action.QueueEvent(event)
+	for _, pipeline := range d.pipelines[connection] {
+		d.metrics.ReceivePassed(pipeline.id, 1)
+		pipeline.QueueEvent(event)
 	}
 	d.mu.Unlock()
 }
 
-// createDestinationAction creates a destination action for the provided action
-// with the provided sender.
-func (d *destinations) createDestinationAction(action *state.Action, sender *sender.Sender) *destinationAction {
+// createDestinationPipeline creates a destination pipeline for the provided
+// pipeline with the provided sender.
+func (d *destinations) createDestinationPipeline(pipeline *state.Pipeline, sender *sender.Sender) *destinationPipeline {
 
 	ctx, cancel := context.WithCancelCause(d.close.ctx)
 
-	connection := action.Connection()
+	connection := pipeline.Connection()
 	api := d.connections.API(connection)
-	schema, err := api.Schema(ctx, state.TargetEvent, action.EventType)
+	schema, err := api.Schema(ctx, state.TargetEvent, pipeline.EventType)
 	if err != nil {
 		panic("TODO")
 	}
 	// TODO(marco): Check schema alignment.
 
-	queue := &destinationActionQueue{
+	queue := &destinationPipelineQueue{
 		metrics: d.metrics,
 		sender:  sender,
 		ctx:     ctx,
@@ -126,19 +126,19 @@ func (d *destinations) createDestinationAction(action *state.Action, sender *sen
 		timer:   newStoppedTimer(),
 	}
 
-	go func(connection, action int) {
+	go func(connection, pipeline int) {
 		for {
 			select {
 			case <-queue.timer.C:
 				var found bool
-				var da *destinationAction
+				var dp *destinationPipeline
 				d.mu.Lock()
-				actions, ok := d.actions[connection]
+				pipelines, ok := d.pipelines[connection]
 				if !ok {
 					continue
 				}
-				for _, da = range actions {
-					if da.id == action {
+				for _, dp = range pipelines {
+					if dp.id == pipeline {
 						found = true
 						break
 					}
@@ -147,32 +147,14 @@ func (d *destinations) createDestinationAction(action *state.Action, sender *sen
 				if !found {
 					continue
 				}
-				go da.transform()
+				go dp.transform()
 			case <-queue.ctx.Done():
 				return
 			}
 		}
-	}(connection.ID, action.ID)
+	}(connection.ID, pipeline.ID)
 
-	return newDestinationAction(action, schema, d.provider, queue)
-}
-
-// onCreateAction is called when an action is created.
-func (d *destinations) onCreateAction(n state.CreateAction) {
-	if !n.Enabled || n.Target != state.TargetEvent {
-		return
-	}
-	a, _ := d.state.Action(n.ID)
-	c := a.Connection()
-	if c.Role != state.Destination {
-		return
-	}
-	// No lock is needed for reading d.senders since the state is frozen,
-	// ensuring there are no concurrent writes.
-	action := d.createDestinationAction(a, d.senders[c.ID])
-	d.mu.Lock()
-	d.actions[c.ID] = append(d.actions[c.ID], action)
-	d.mu.Unlock()
+	return newDestinationPipeline(pipeline, schema, d.provider, queue)
 }
 
 // onCreateConnection is called when a connection is created.
@@ -187,37 +169,28 @@ func (d *destinations) onCreateConnection(n state.CreateConnection) {
 	}
 	api := d.connections.API(c)
 	d.senders[n.ID] = sender.New(api, d.sentAcks)
-	actions := make([]*destinationAction, 0, 1)
+	pipelines := make([]*destinationPipeline, 0, 1)
 	d.mu.Lock()
-	d.actions[n.ID] = actions
+	d.pipelines[n.ID] = pipelines
 	d.mu.Unlock()
 }
 
-// onDeleteAction is called when an action is deleted
-func (d *destinations) onDeleteAction(n state.DeleteAction) {
-	a := n.Action()
-	if !a.Enabled || a.Target != state.TargetEvent {
+// onCreatePipeline is called when a pipeline is created.
+func (d *destinations) onCreatePipeline(n state.CreatePipeline) {
+	if !n.Enabled || n.Target != state.TargetEvent {
 		return
 	}
-	c := a.Connection()
+	p, _ := d.state.Pipeline(n.ID)
+	c := p.Connection()
 	if c.Role != state.Destination {
 		return
 	}
-	var i int
-	var da *destinationAction
-	actions := d.actions[c.ID]
-	for i, da = range actions {
-		if da.id == a.ID {
-			break
-		}
-	}
-	if i == len(actions) {
-		panic("unexpected missing action")
-	}
+	// No lock is needed for reading d.senders since the state is frozen,
+	// ensuring there are no concurrent writes.
+	pipeline := d.createDestinationPipeline(p, d.senders[c.ID])
 	d.mu.Lock()
-	d.actions[c.ID] = slices.Delete(actions, i, i+1)
+	d.pipelines[c.ID] = append(d.pipelines[c.ID], pipeline)
 	d.mu.Unlock()
-	go da.Discard(errors.New("action has been deleted"))
 }
 
 // onDeleteConnection is called when a connection is deleted.
@@ -231,21 +204,48 @@ func (d *destinations) onDeleteConnection(n state.DeleteConnection) {
 		return
 	}
 	delete(d.senders, c.ID)
-	actions := d.actions[c.ID]
+	pipelines := d.pipelines[c.ID]
 	d.mu.Lock()
-	delete(d.actions, c.ID)
+	delete(d.pipelines, c.ID)
 	d.mu.Unlock()
 	go func() {
-		for _, action := range actions {
-			action.Discard(errors.New("connection has been deleted"))
+		for _, pipeline := range pipelines {
+			pipeline.Discard(errors.New("connection has been deleted"))
 		}
 	}()
+}
+
+// onDeletePipeline is called when a pipeline is deleted
+func (d *destinations) onDeletePipeline(n state.DeletePipeline) {
+	p := n.Pipeline()
+	if !p.Enabled || p.Target != state.TargetEvent {
+		return
+	}
+	c := p.Connection()
+	if c.Role != state.Destination {
+		return
+	}
+	var i int
+	var dp *destinationPipeline
+	pipelines := d.pipelines[c.ID]
+	for i, dp = range pipelines {
+		if dp.id == p.ID {
+			break
+		}
+	}
+	if i == len(pipelines) {
+		panic("unexpected missing pipeline")
+	}
+	d.mu.Lock()
+	d.pipelines[c.ID] = slices.Delete(pipelines, i, i+1)
+	d.mu.Unlock()
+	go dp.Discard(errors.New("pipeline has been deleted"))
 }
 
 // onDeleteWorkspace is called when a workspace is deleted.
 func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
 	ws := n.Workspace()
-	var actions []*destinationAction
+	var pipelines []*destinationPipeline
 	for _, c := range ws.Connections() {
 		if c.Role != state.Destination {
 			continue
@@ -255,55 +255,18 @@ func (d *destinations) onDeleteWorkspace(n state.DeleteWorkspace) {
 			continue
 		}
 		delete(d.senders, c.ID)
-		actions = append(actions, d.actions[c.ID]...)
+		pipelines = append(pipelines, d.pipelines[c.ID]...)
 		d.mu.Lock()
-		delete(d.actions, c.ID)
+		delete(d.pipelines, c.ID)
 		d.mu.Unlock()
 	}
-	if len(actions) > 0 {
+	if len(pipelines) > 0 {
 		go func() {
-			for _, action := range actions {
-				action.Discard(errors.New("workspace has been deleted"))
+			for _, pipeline := range pipelines {
+				pipeline.Discard(errors.New("workspace has been deleted"))
 			}
 		}()
 	}
-}
-
-// onSetActionStatus is called when the status of an action is set.
-func (d *destinations) onSetActionStatus(n state.SetActionStatus) {
-	a, _ := d.state.Action(n.ID)
-	if a.Target != state.TargetEvent {
-		return
-	}
-	c := a.Connection()
-	if c.Role != state.Destination {
-		return
-	}
-	actions := d.actions[c.ID]
-	if n.Enabled {
-		// Add the action.
-		action := d.createDestinationAction(a, d.senders[c.ID])
-		d.mu.Lock()
-		d.actions[c.ID] = append(actions, action)
-		d.mu.Unlock()
-		return
-	}
-	// Remove the action.
-	var i int
-	var da *destinationAction
-	for i, da = range actions {
-		if da.id == a.ID {
-			break
-		}
-	}
-	if i == len(actions) {
-		panic("unexpected missing action")
-	}
-	d.mu.Lock()
-	actions = slices.Delete(actions, i, i+1)
-	d.actions[c.ID] = actions
-	d.mu.Unlock()
-	go da.Discard(errors.New("action has been disabled"))
 }
 
 // onSetConnectionSettings is called when the settings of a connection is
@@ -318,70 +281,107 @@ func (d *destinations) onSetConnectionSettings(n state.SetConnectionSettings) {
 	sender.SetAPI(api)
 }
 
-// onUpdateAction is called when an action is updated.
-func (d *destinations) onUpdateAction(n state.UpdateAction) {
-	a, _ := d.state.Action(n.ID)
-	if a.Target != state.TargetEvent {
+// onSetPipelineStatus is called when the status of a pipeline is set.
+func (d *destinations) onSetPipelineStatus(n state.SetPipelineStatus) {
+	p, _ := d.state.Pipeline(n.ID)
+	if p.Target != state.TargetEvent {
 		return
 	}
-	c := a.Connection()
+	c := p.Connection()
 	if c.Role != state.Destination {
 		return
 	}
-	actions := d.actions[c.ID]
-	var current *destinationAction
+	pipelines := d.pipelines[c.ID]
+	if n.Enabled {
+		// Add the pipeline.
+		pipeline := d.createDestinationPipeline(p, d.senders[c.ID])
+		d.mu.Lock()
+		d.pipelines[c.ID] = append(pipelines, pipeline)
+		d.mu.Unlock()
+		return
+	}
+	// Remove the pipeline.
+	var i int
+	var dp *destinationPipeline
+	for i, dp = range pipelines {
+		if dp.id == p.ID {
+			break
+		}
+	}
+	if i == len(pipelines) {
+		panic("unexpected missing pipeline")
+	}
+	d.mu.Lock()
+	pipelines = slices.Delete(pipelines, i, i+1)
+	d.pipelines[c.ID] = pipelines
+	d.mu.Unlock()
+	go dp.Discard(errors.New("pipeline has been disabled"))
+}
+
+// onUpdatePipeline is called when a pipeline is updated.
+func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
+	p, _ := d.state.Pipeline(n.ID)
+	if p.Target != state.TargetEvent {
+		return
+	}
+	c := p.Connection()
+	if c.Role != state.Destination {
+		return
+	}
+	pipelines := d.pipelines[c.ID]
+	var current *destinationPipeline
 	var index int
-	for i, da := range actions {
-		if da.id == a.ID {
-			current = da
+	for i, dp := range pipelines {
+		if dp.id == p.ID {
+			current = dp
 			index = i
 			break
 		}
 	}
 	// Removes it if is not enabled but present.
-	if !a.Enabled {
+	if !p.Enabled {
 		if current != nil {
 			d.mu.Lock()
-			d.actions[c.ID] = slices.Delete(actions, index, index+1)
+			d.pipelines[c.ID] = slices.Delete(pipelines, index, index+1)
 			d.mu.Unlock()
-			go current.Discard(errors.New("action has been disabled"))
+			go current.Discard(errors.New("pipeline has been disabled"))
 		}
 		return
 	}
 	// Adds it if it wasn't present.
 	if current == nil {
-		action := d.createDestinationAction(a, d.senders[c.ID])
+		pipeline := d.createDestinationPipeline(p, d.senders[c.ID])
 		d.mu.Lock()
-		d.actions[c.ID] = append(actions, action)
+		d.pipelines[c.ID] = append(pipelines, pipeline)
 		d.mu.Unlock()
 		return
 	}
-	// If Filter, or Transformation has changed, replace the destination action
+	// If Filter, or Transformation has changed, replace the destination pipeline
 	// with a new version.
-	sameFilter := current.filter.Equal(a.Filter)
-	sameSchema := types.Equal(current.schema, a.OutSchema)
-	sameTransformation := current.transformation.Equal(a.Transformation)
+	sameFilter := current.filter.Equal(p.Filter)
+	sameSchema := types.Equal(current.schema, p.OutSchema)
+	sameTransformation := current.transformation.Equal(p.Transformation)
 	if sameFilter && sameSchema && sameTransformation {
 		return
 	}
-	action := *current
+	pipeline := *current
 	if !sameFilter {
-		action.filter = a.Filter
+		pipeline.filter = p.Filter
 	}
 	if !sameSchema {
-		action.schema = a.OutSchema
+		pipeline.schema = p.OutSchema
 	}
 	if !sameTransformation {
-		t := a.Transformation
-		action.transformation = t
+		t := p.Transformation
+		pipeline.transformation = t
 		if t.Mapping == nil && t.Function == nil {
-			action.transformer = nil
+			pipeline.transformer = nil
 		} else {
-			action.transformer, _ = transformers.New(a, d.provider, nil)
+			pipeline.transformer, _ = transformers.New(p, d.provider, nil)
 		}
 	}
 	d.mu.Lock()
-	actions[index] = &action
+	pipelines[index] = &pipeline
 	d.mu.Unlock()
 }
 
@@ -390,9 +390,9 @@ func (d *destinations) onUpdateAction(n state.UpdateAction) {
 func (d *destinations) sentAcks(acks []sender.Ack, err error) {
 	for _, ack := range acks {
 		if err != nil {
-			d.metrics.FinalizeFailed(ack.Action, 1, err.Error())
+			d.metrics.FinalizeFailed(ack.Pipeline, 1, err.Error())
 			continue
 		}
-		d.metrics.FinalizePassed(ack.Action, 1)
+		d.metrics.FinalizePassed(ack.Pipeline, 1)
 	}
 }

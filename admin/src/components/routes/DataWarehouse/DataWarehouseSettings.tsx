@@ -36,7 +36,7 @@ const DataWarehouseSettings = ({
 		objectKeysToLower(currentMCPSettings),
 	);
 	const [isCheckLoading, setIsCheckLoading] = useState<boolean>(false);
-	const [isActionButtonLoading, setIsActionButtonLoading] = useState<boolean>(false);
+	const [isPipelineButtonLoading, setIsPipelineButtonLoading] = useState<boolean>(false);
 	const [isMCPEnabled, setIsMCPEnabled] = useState<boolean>(currentMCPSettings != null);
 
 	const { setTitle, api, handleError, showStatus, setIsLoadingWorkspaces } = useContext(appContext);
@@ -94,7 +94,7 @@ const DataWarehouseSettings = ({
 	};
 
 	const onSave = async () => {
-		setIsActionButtonLoading(true);
+		setIsPipelineButtonLoading(true);
 		try {
 			await api.workspaces.updateWarehouse(
 				selectedWarehouse.name,
@@ -106,12 +106,12 @@ const DataWarehouseSettings = ({
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);
-				setIsActionButtonLoading(false);
+				setIsPipelineButtonLoading(false);
 			}, 300);
 			return;
 		}
 		setTimeout(() => {
-			setIsActionButtonLoading(false);
+			setIsPipelineButtonLoading(false);
 			setSelectedWarehouse(null);
 			setIsLoadingWorkspaces(true);
 		}, 300);
@@ -212,11 +212,15 @@ const DataWarehouseSettings = ({
 				)}
 			</div>
 			<div className='warehouse-settings__buttons'>
-				<SlButton disabled={isCheckLoading || isActionButtonLoading} variant='default' onClick={onCancelClick}>
+				<SlButton
+					disabled={isCheckLoading || isPipelineButtonLoading}
+					variant='default'
+					onClick={onCancelClick}
+				>
 					Cancel
 				</SlButton>
 				<SlButton
-					disabled={isCheckLoading || isActionButtonLoading}
+					disabled={isCheckLoading || isPipelineButtonLoading}
 					loading={isCheckLoading}
 					variant='default'
 					onClick={onCheck}
@@ -224,8 +228,8 @@ const DataWarehouseSettings = ({
 					Check
 				</SlButton>
 				<SlButton
-					disabled={isCheckLoading || isActionButtonLoading}
-					loading={isActionButtonLoading}
+					disabled={isCheckLoading || isPipelineButtonLoading}
+					loading={isPipelineButtonLoading}
 					variant='primary'
 					onClick={onSave}
 				>

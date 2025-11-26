@@ -46,7 +46,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	dummyID := c.CreateDummyWithSettings("Dummy", meergotester.Destination, meergotester.DummySettings{
 		URLForDispatchingEvents: ts.URL,
 	})
-	c.CreateEventAction(dummyID, "send_identity", meergotester.ActionToSet{
+	c.CreateEventPipeline(dummyID, "send_identity", meergotester.PipelineToSet{
 		Name:    "Send events",
 		Enabled: true,
 		Transformation: &meergotester.Transformation{

@@ -13,8 +13,8 @@ import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { DateRange } from 'react-date-range';
-import { ActionError, ActionErrorsResponse } from '../../../lib/api/types/responses';
-import { ActionMetrics, ActionTarget } from '../../../lib/api/types/action';
+import { PipelineError, PipelineErrorsResponse } from '../../../lib/api/types/responses';
+import { PipelineMetrics, PipelineTarget } from '../../../lib/api/types/pipeline';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
@@ -22,7 +22,7 @@ import considerAsUTC from '../../../utils/considerUTC';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { formatNumber } from '../../../utils/formatNumber';
 
-interface ActionMetricsPoint {
+interface PipelineMetricsPoint {
 	time: string;
 	passed: number;
 	failed: number;
@@ -45,7 +45,7 @@ const HOURS_COUNT = 24;
 const DAYS_COUNT = 7;
 
 const ERRORS_COLUMNS: GridColumn[] = [
-	{ name: 'Action' },
+	{ name: 'Pipeline' },
 	{ name: 'Step' },
 	{ name: 'Count', alignment: 'center' },
 	{ name: 'Last occurred' },
@@ -64,18 +64,18 @@ const STEP_IDENTIFIERS: StepIdentifier[] = [
 const ConnectionMetrics = () => {
 	const { connection: c } = useContext(ConnectionContext);
 
-	const [userActionsMetrics, setUserActionsMetrics] = useState<ActionMetrics>();
-	const [eventActionsMetrics, setEventActionsMetrics] = useState<ActionMetrics>();
-	const [userActionsErrors, setUserActionsErrors] = useState<ActionError[]>([]);
-	const [eventActionsErrors, setEventActionsErrors] = useState<ActionError[]>([]);
+	const [userPipelinesMetrics, setUserPipelinesMetrics] = useState<PipelineMetrics>();
+	const [eventPipelinesMetrics, setEventPipelinesMetrics] = useState<PipelineMetrics>();
+	const [userPipelinesErrors, setUserPipelinesErrors] = useState<PipelineError[]>([]);
+	const [eventPipelinesErrors, setEventPipelinesErrors] = useState<PipelineError[]>([]);
 	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [selectedTarget, setSelectedTarget] = useState<ActionTarget>(
+	const [selectedTarget, setSelectedTarget] = useState<PipelineTarget>(
 		new URLSearchParams(window.location.search).get('target') === 'event'
 			? 'Event'
 			: new URLSearchParams(window.location.search).get('target') === 'user'
 				? 'User'
-				: c.actions.findIndex((a) => a.target === 'Event') !== -1
+				: c.pipelines.findIndex((p) => p.target === 'Event') !== -1
 					? 'Event'
 					: 'User',
 	);
@@ -88,13 +88,13 @@ const ConnectionMetrics = () => {
 			key: 'selection',
 		},
 	]);
-	const [selectedAction, setSelectedAction] = useState<number | null>(null);
+	const [selectedPipeline, setSelectedPipeline] = useState<number | null>(null);
 
 	const { api, handleError } = useContext(AppContext);
 
 	const supportedTargets = useRef([]);
 	const currentMetricsIntervalID = useRef<any>();
-	const previouslySelectedAction = useRef<number | null>(null);
+	const previouslySelectedPipeline = useRef<number | null>(null);
 
 	const isUsersSelected = selectedTarget === 'User';
 
@@ -126,27 +126,27 @@ const ConnectionMetrics = () => {
 		FINALIZE: finalizeStepTerm,
 	};
 
-	const { userActionErrorRows, eventActionErrorRows } = useMemo(() => {
+	const { userPipelineErrorRows, eventPipelineErrorRows } = useMemo(() => {
 		const stepTerms = Object.values(stepTermByIdentifier);
 		return {
-			userActionErrorRows: computeActionErrorRows(c, userActionsErrors, stepTerms),
-			eventActionErrorRows: computeActionErrorRows(c, eventActionsErrors, stepTerms),
+			userPipelineErrorRows: computePipelineErrorRows(c, userPipelinesErrors, stepTerms),
+			eventPipelineErrorRows: computePipelineErrorRows(c, eventPipelinesErrors, stepTerms),
 		};
-	}, [userActionsErrors, eventActionsErrors]);
+	}, [userPipelinesErrors, eventPipelinesErrors]);
 
-	const { userActionMetricsData, eventActionMetricsData } = useMemo(() => {
+	const { userPipelineMetricsData, eventPipelineMetricsData } = useMemo(() => {
 		return {
-			userActionMetricsData: computeActionMetricsData(userActionsMetrics, selectedMetricsRange),
-			eventActionMetricsData: computeActionMetricsData(eventActionsMetrics, selectedMetricsRange),
+			userPipelineMetricsData: computePipelineMetricsData(userPipelinesMetrics, selectedMetricsRange),
+			eventPipelineMetricsData: computePipelineMetricsData(eventPipelinesMetrics, selectedMetricsRange),
 		};
-	}, [userActionsMetrics, eventActionsMetrics]);
+	}, [userPipelinesMetrics, eventPipelinesMetrics]);
 
 	const { userFunnelData, eventFunnelData } = useMemo(() => {
 		return {
-			userFunnelData: computeFunnelData(userActionsMetrics),
-			eventFunnelData: computeFunnelData(eventActionsMetrics),
+			userFunnelData: computeFunnelData(userPipelinesMetrics),
+			eventFunnelData: computeFunnelData(eventPipelinesMetrics),
 		};
-	}, [userActionsMetrics, eventActionsMetrics]);
+	}, [userPipelinesMetrics, eventPipelinesMetrics]);
 
 	const steps = useMemo(() => {
 		let steps: StepIdentifier[] = [...STEP_IDENTIFIERS];
@@ -264,46 +264,48 @@ const ConnectionMetrics = () => {
 			}, 300);
 		};
 		const fetchData = async () => {
-			let userActionsIds: number[] = [];
-			let eventActionsIds: number[] = [];
-			if (selectedAction == null) {
-				for (const action of c.actions) {
-					if (action.target === 'User') {
-						userActionsIds.push(action.id);
-					} else if (action.target === 'Event') {
-						eventActionsIds.push(action.id);
+			let userPipelinesIds: number[] = [];
+			let eventPipelinesIds: number[] = [];
+			if (selectedPipeline == null) {
+				for (const pipeline of c.pipelines) {
+					if (pipeline.target === 'User') {
+						userPipelinesIds.push(pipeline.id);
+					} else if (pipeline.target === 'Event') {
+						eventPipelinesIds.push(pipeline.id);
 					}
 				}
 			} else {
-				const a = c.actions.find((action) => action.id === selectedAction);
-				if (a.target === 'User') {
-					userActionsIds.push(a.id);
-				} else if (a.target === 'Event') {
-					eventActionsIds.push(a.id);
+				const p = c.pipelines.find((pipeline) => pipeline.id === selectedPipeline);
+				if (p.target === 'User') {
+					userPipelinesIds.push(p.id);
+				} else if (p.target === 'Event') {
+					eventPipelinesIds.push(p.id);
 				}
 			}
 
-			if (userActionsIds.length === 0 && eventActionsIds.length === 0) {
+			if (userPipelinesIds.length === 0 && eventPipelinesIds.length === 0) {
 				stopLoading();
 				return;
 			}
 
-			if (userActionsIds.length > 0) {
+			if (userPipelinesIds.length > 0) {
 				supportedTargets.current.push('User');
 			}
 
-			if (eventActionsIds.length > 0) {
+			if (eventPipelinesIds.length > 0) {
 				supportedTargets.current.push('Event');
 			}
 
-			let fetchMetrics: (...args) => Promise<ActionMetrics> = null;
+			let fetchMetrics: (...args) => Promise<PipelineMetrics> = null;
 			if (selectedMetricsRange === 'last15Minutes') {
-				fetchMetrics = async (actionIds) =>
-					await api.workspaces.actionMetricsPerMinute(MINUTES_COUNT, actionIds);
+				fetchMetrics = async (pipelineIds) =>
+					await api.workspaces.pipelineMetricsPerMinute(MINUTES_COUNT, pipelineIds);
 			} else if (selectedMetricsRange === 'last24Hours') {
-				fetchMetrics = async (actionIds) => await api.workspaces.actionMetricsPerHour(HOURS_COUNT, actionIds);
+				fetchMetrics = async (pipelineIds) =>
+					await api.workspaces.pipelineMetricsPerHour(HOURS_COUNT, pipelineIds);
 			} else if (selectedMetricsRange === 'last7Days') {
-				fetchMetrics = async (actionIds) => await api.workspaces.actionMetricsPerDay(DAYS_COUNT, actionIds);
+				fetchMetrics = async (pipelineIds) =>
+					await api.workspaces.pipelineMetricsPerDay(DAYS_COUNT, pipelineIds);
 			} else {
 				// end date must be shifted by one day to retrieve the
 				// metrics including the last selected day.
@@ -317,19 +319,19 @@ const ConnectionMetrics = () => {
 					handleError(err);
 					return;
 				}
-				fetchMetrics = async (actionIds) =>
-					await api.workspaces.actionMetricsPerDate(customMetricsRange[0].startDate, endDate, actionIds);
+				fetchMetrics = async (pipelineIds) =>
+					await api.workspaces.pipelineMetricsPerDate(customMetricsRange[0].startDate, endDate, pipelineIds);
 			}
 
 			let target = selectedTarget;
 			let ids: number[] = [];
 			if (target === 'User') {
-				ids = userActionsIds;
+				ids = userPipelinesIds;
 			} else if (target === 'Event') {
-				ids = eventActionsIds;
+				ids = eventPipelinesIds;
 			}
 
-			let metrics: ActionMetrics;
+			let metrics: PipelineMetrics;
 			try {
 				metrics = await fetchMetrics(ids);
 			} catch (err) {
@@ -338,23 +340,23 @@ const ConnectionMetrics = () => {
 				return;
 			}
 			if (target === 'User') {
-				setUserActionsMetrics(metrics);
+				setUserPipelinesMetrics(metrics);
 			} else {
-				setEventActionsMetrics(metrics);
+				setEventPipelinesMetrics(metrics);
 			}
 
-			let errorRes: ActionErrorsResponse;
+			let errorRes: PipelineErrorsResponse;
 			try {
-				errorRes = await api.workspaces.actionErrors(metrics.start, metrics.end, ids, 0, 50, null);
+				errorRes = await api.workspaces.pipelineErrors(metrics.start, metrics.end, ids, 0, 50, null);
 			} catch (err) {
 				handleError(err);
 				stopLoading();
 				return;
 			}
 			if (target === 'User') {
-				setUserActionsErrors(errorRes.errors);
+				setUserPipelinesErrors(errorRes.errors);
 			} else {
-				setEventActionsErrors(errorRes.errors);
+				setEventPipelinesErrors(errorRes.errors);
 			}
 
 			if (isLoading) {
@@ -374,7 +376,7 @@ const ConnectionMetrics = () => {
 		return () => {
 			clearInterval(currentMetricsIntervalID.current);
 		};
-	}, [c, selectedTarget, selectedMetricsRange, customMetricsRange, selectedAction]);
+	}, [c, selectedTarget, selectedMetricsRange, customMetricsRange, selectedPipeline]);
 
 	useEffect(() => {
 		const handleCustomRangePickerClick = (e) => {
@@ -392,18 +394,18 @@ const ConnectionMetrics = () => {
 		};
 	}, []);
 
-	const onChangeSelectedTarget = (target: ActionTarget) => {
+	const onChangeSelectedTarget = (target: PipelineTarget) => {
 		const isAlreadySelected = selectedTarget === target;
 		if (isAlreadySelected) {
 			return;
 		}
-		const toRestore = previouslySelectedAction.current;
-		previouslySelectedAction.current = null;
+		const toRestore = previouslySelectedPipeline.current;
+		previouslySelectedPipeline.current = null;
 		setSelectedTarget(target);
-		if (selectedAction != null) {
-			previouslySelectedAction.current = selectedAction;
+		if (selectedPipeline != null) {
+			previouslySelectedPipeline.current = selectedPipeline;
 		}
-		setSelectedAction(toRestore);
+		setSelectedPipeline(toRestore);
 	};
 
 	const onSelectLast15Minutes = () => {
@@ -430,12 +432,12 @@ const ConnectionMetrics = () => {
 		setSelectedMetricsRange('Custom');
 	};
 
-	const onChangeSelectedAction = (e: any) => {
+	const onChangesetSelectedPipeline = (e: any) => {
 		const v = e.target.value;
 		if (v === '') {
-			setSelectedAction(null);
+			setSelectedPipeline(null);
 		} else {
-			setSelectedAction(Number(v));
+			setSelectedPipeline(Number(v));
 		}
 	};
 
@@ -555,19 +557,19 @@ const ConnectionMetrics = () => {
 								Profiles
 							</SlButton>
 						</SlButtonGroup>
-						{c.actions?.length > 1 &&
+						{c.pipelines?.length > 1 &&
 							!((c.isSDK || c.isWebhook) && c.isSource && selectedTarget === 'Event') && (
 								<SlSelect
 									size='small'
-									label='Action'
-									onSlChange={onChangeSelectedAction}
-									value={selectedAction == null ? '' : String(selectedAction)}
-									className={`connection-metrics__actions${selectedAction != null ? ' connection-metrics__actions--filtered' : ''}`}
+									label='Pipeline'
+									onSlChange={onChangesetSelectedPipeline}
+									value={selectedPipeline == null ? '' : String(selectedPipeline)}
+									className={`connection-metrics__pipelines${selectedPipeline != null ? ' connection-metrics__pipelines--filtered' : ''}`}
 									clearable
 								>
-									{c.actions?.map((a) => {
-										if (a.target == selectedTarget) {
-											return <SlOption value={String(a.id)}>{a.name}</SlOption>;
+									{c.pipelines?.map((p) => {
+										if (p.target == selectedTarget) {
+											return <SlOption value={String(p.id)}>{p.name}</SlOption>;
 										}
 										return null;
 									})}
@@ -580,7 +582,7 @@ const ConnectionMetrics = () => {
 						</div>
 						<ResponsiveContainer width='100%' height='100%'>
 							<ComposedChart
-								data={isUsersSelected ? userActionMetricsData : eventActionMetricsData}
+								data={isUsersSelected ? userPipelineMetricsData : eventPipelineMetricsData}
 								margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
 							>
 								<CartesianGrid strokeDasharray='3 3' />
@@ -665,7 +667,7 @@ const ConnectionMetrics = () => {
 						</div>
 						<Grid
 							columns={ERRORS_COLUMNS}
-							rows={isUsersSelected ? userActionErrorRows : eventActionErrorRows}
+							rows={isUsersSelected ? userPipelineErrorRows : eventPipelineErrorRows}
 							noRowsMessage={'No errors have occurred'}
 						/>
 					</div>
@@ -679,9 +681,9 @@ const ConnectionMetrics = () => {
 	);
 };
 
-const computeActionErrorRows = (
+const computePipelineErrorRows = (
 	connection: TransformedConnection,
-	actionErrors: ActionError[],
+	pipelineErrors: PipelineError[],
 	stepTerms: string[],
 ): GridRow[] => {
 	const quotedTextToCode = (input: string): string => {
@@ -690,15 +692,15 @@ const computeActionErrorRows = (
 			return `<code style="${style}">${content}</code>`;
 		});
 	};
-	if (actionErrors == null) {
+	if (pipelineErrors == null) {
 		return null;
 	}
-	let actionErrorRows: GridRow[] = [];
-	for (const error of actionErrors) {
+	let pipelineErrorRows: GridRow[] = [];
+	for (const error of pipelineErrors) {
 		const row = {
 			cells: [
-				<Link path={`connections/${connection.id}/actions/edit/${error.action}`}>
-					{connection.actions.find((a) => a.id == error.action)?.name}
+				<Link path={`connections/${connection.id}/pipelines/edit/${error.pipeline}`}>
+					{connection.pipelines.find((p) => p.id == error.pipeline)?.name}
 				</Link>,
 				stepTerms[error.step],
 				formatNumber(error.count),
@@ -706,17 +708,17 @@ const computeActionErrorRows = (
 				quotedTextToCode(error.message),
 			],
 		};
-		actionErrorRows.push(row);
+		pipelineErrorRows.push(row);
 	}
-	return actionErrorRows;
+	return pipelineErrorRows;
 };
 
-const computeActionMetricsData = (actionMetrics: ActionMetrics, range: metricsRange): ActionMetricsPoint[] => {
-	if (actionMetrics == null) {
+const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: metricsRange): PipelineMetricsPoint[] => {
+	if (pipelineMetrics == null) {
 		return [];
 	}
-	let points: ActionMetricsPoint[] = [];
-	const timeLength = actionMetrics.passed.length;
+	let points: PipelineMetricsPoint[] = [];
+	const timeLength = pipelineMetrics.passed.length;
 	let counter = timeLength;
 	for (let timeUnit = 0; timeUnit < timeLength; timeUnit++) {
 		let failedTotal = 0;
@@ -725,12 +727,12 @@ const computeActionMetricsData = (actionMetrics: ActionMetrics, range: metricsRa
 				// filtered must not be considered as failed.
 				continue;
 			}
-			failedTotal += actionMetrics.failed[timeUnit][i];
+			failedTotal += pipelineMetrics.failed[timeUnit][i];
 		}
-		let filteredTotal = actionMetrics.failed[timeUnit][2];
-		let passedTotal = actionMetrics.passed[timeUnit][5];
+		let filteredTotal = pipelineMetrics.failed[timeUnit][2];
+		let passedTotal = pipelineMetrics.passed[timeUnit][5];
 		let total = failedTotal + filteredTotal + passedTotal;
-		const d = new Date(actionMetrics.end.getTime());
+		const d = new Date(pipelineMetrics.end.getTime());
 		let time = '';
 		if (range === 'last15Minutes') {
 			d.setMinutes(d.getMinutes() - counter);
@@ -753,8 +755,8 @@ const computeActionMetricsData = (actionMetrics: ActionMetrics, range: metricsRa
 	return points;
 };
 
-const computeFunnelData = (actionMetrics: ActionMetrics): FunnelData => {
-	if (actionMetrics == null) {
+const computeFunnelData = (pipelineMetrics: PipelineMetrics): FunnelData => {
+	if (pipelineMetrics == null) {
 		return [
 			{ passed: 0, failed: 0 },
 			{ passed: 0, failed: 0 },
@@ -768,10 +770,10 @@ const computeFunnelData = (actionMetrics: ActionMetrics): FunnelData => {
 	for (let i = 0; i < 6; i++) {
 		let totalPassed = 0;
 		let totalFailed = 0;
-		for (const p of actionMetrics.passed) {
+		for (const p of pipelineMetrics.passed) {
 			totalPassed += p[i];
 		}
-		for (const f of actionMetrics.failed) {
+		for (const f of pipelineMetrics.failed) {
 			totalFailed += f[i];
 		}
 		data.push({

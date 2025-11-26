@@ -23,7 +23,7 @@ func TestImportFromDatabase(t *testing.T) {
 
 	pgSQL := c.CreateSourcePostgreSQL()
 
-	importUsers := c.CreateAction(pgSQL, "User", meergotester.ActionToSet{
+	importUsers := c.CreatePipeline(pgSQL, "User", meergotester.PipelineToSet{
 		Name:    "Import users",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -44,7 +44,7 @@ func TestImportFromDatabase(t *testing.T) {
 		LastChangeTimeFormat: "",
 	})
 
-	exec := c.ExecuteAction(importUsers)
+	exec := c.ExecutePipeline(importUsers)
 
 	c.WaitForExecutionsCompletion(pgSQL, exec)
 
@@ -56,8 +56,8 @@ func TestImportFromDatabase(t *testing.T) {
 	}
 
 	for _, identity := range identities {
-		if identity.Action != importUsers {
-			t.Fatalf("expected identity action %d, got %d", importUsers, identity.Action)
+		if identity.Pipeline != importUsers {
+			t.Fatalf("expected identity pipeline %d, got %d", importUsers, identity.Pipeline)
 		}
 	}
 }

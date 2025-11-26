@@ -111,7 +111,7 @@ Path:
 func identityColumnByProperty(profileColumnByProperty map[string]warehouses.Column) map[string]warehouses.Column {
 	columns := map[string]warehouses.Column{
 		"__pk__":               {Name: "__pk__", Type: types.Int(32)},
-		"__action__":           {Name: "__action__", Type: types.Int(32)},
+		"__pipeline__":         {Name: "__pipeline__", Type: types.Int(32)},
 		"__is_anonymous__":     {Name: "__is_anonymous__", Type: types.Boolean()},
 		"__identity_id__":      {Name: "__identity_id__", Type: types.Text()},
 		"__connection__":       {Name: "__connection__", Type: types.Int(32)},

@@ -38,8 +38,8 @@ var uuidDeterministicNS = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 var postponeMarker = new(iterator)
 
 type Ack struct {
-	Action int
-	Event  string
+	Pipeline int
+	Event    string
 }
 
 // AcksFunc is a function invoked by the sender to report the result of event
@@ -75,7 +75,7 @@ type Event struct {
 	connectors.Event           // original event.
 	CreatedAt        time.Time // time at which the event was created.
 	EnqueuedAt       time.Time // time at which the event was enqueued.
-	action           int       // action ID.
+	pipeline         int       // pipeline ID.
 	user             *user     // associated user; nil if the event was discarded.
 	sequence         int       // sequence number; access is synchronized via Sender.mu.
 	iterator         *iterator // iterator that consumed the event; nil if it hasn't been consumed.
@@ -260,12 +260,12 @@ func (s *Sender) Close(ctx context.Context) error {
 	return nil
 }
 
-// CreateEvent creates a new event with the given action, type, schema, and
+// CreateEvent creates a new event with the given pipeline, type, schema, and
 // original event.
 //
 // The returned event must be passed to the QueueEvent method, optionally after
 // setting the Properties field.
-func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event events.Event) *Event {
+func (s *Sender) CreateEvent(pipeline int, typ string, schema types.Type, event events.Event) *Event {
 	anonymousId, ok := event["anonymousId"].(string)
 	if !ok {
 		panic("core/events/connector/sender: missing anonymousId")
@@ -286,10 +286,10 @@ func (s *Sender) CreateEvent(action int, typ string, schema types.Type, event ev
 				ID:     typ,
 				Schema: schema,
 			},
-			DestinationAction: action,
+			DestinationPipeline: pipeline,
 		},
 		CreatedAt: time.Now().UTC(),
-		action:    action,
+		pipeline:  pipeline,
 		user:      u,
 		sequence:  seq,
 	}
@@ -446,8 +446,8 @@ func (s *Sender) discard(err error) {
 		s._assertAvailable(s.available)
 	}
 	ack := Ack{
-		Action: e.action,
-		Event:  e.Received.MessageId(),
+		Pipeline: e.pipeline,
+		Event:    e.Received.MessageId(),
 	}
 	trace("Sender.discard: send ack for iterator %p with ack %#v and error %#v\n", s.iterator, ack, err)
 	s.mu.Unlock()
@@ -567,9 +567,9 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 			messageId := event.Received.MessageId()
 			anonymousId := event.Received.AnonymousId()
 			if consume {
-				trace("Sender.read: iterator %p read and consumed event %q of action %d (anonymousId %q) at index %d (%d available)\n", s.iterator, messageId, event.action, anonymousId, i, s.available)
+				trace("Sender.read: iterator %p read and consumed event %q of pipeline %d (anonymousId %q) at index %d (%d available)\n", s.iterator, messageId, event.pipeline, anonymousId, i, s.available)
 			} else {
-				trace("Sender.read: iterator %p read event %q of action %d (anonymousId %q), without consuming, at index %d (%d available)\n", s.iterator, messageId, event.action, anonymousId, i, s.available)
+				trace("Sender.read: iterator %p read event %q of pipeline %d (anonymousId %q), without consuming, at index %d (%d available)\n", s.iterator, messageId, event.pipeline, anonymousId, i, s.available)
 			}
 		} else {
 			if consume {
@@ -695,8 +695,8 @@ func (s *Sender) send(iter *iterator, rateLimiterPattern string) {
 			user := s.events[i].user
 			s.releasableUsers[user] = struct{}{}
 			ack := Ack{
-				Action: s.events[i].action,
-				Event:  s.events[i].Received.MessageId(),
+				Pipeline: s.events[i].pipeline,
+				Event:    s.events[i].Received.MessageId(),
 			}
 			var err error
 			if errEvents != nil {

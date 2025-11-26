@@ -31,7 +31,7 @@ func TestEvents(t *testing.T) {
 
 	// Load some users in the data warehouse from Dummy.
 	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -49,10 +49,10 @@ func TestEvents(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletion(dummySrc, exec)
 
-	// Create a JavaScript connection with 2 actions (one for importing events,
+	// Create a JavaScript connection with 2 pipelines (one for importing events,
 	// one for importing identities) and retrieve its key.
 	var javaScriptID int
 	var javaScriptKey string
@@ -63,11 +63,11 @@ func TestEvents(t *testing.T) {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
-		c.CreateAction(javaScriptID, "Event", meergotester.ActionToSet{
+		c.CreatePipeline(javaScriptID, "Event", meergotester.PipelineToSet{
 			Name:    "JavaScript",
 			Enabled: true,
 		})
-		c.CreateAction(javaScriptID, "User", meergotester.ActionToSet{
+		c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
 			Name:     "JavaScript",
 			Enabled:  true,
 			Filter:   meergotester.DefaultFilterUserFromEvents,
@@ -214,10 +214,10 @@ func TestEvents(t *testing.T) {
 		t.Fatalf("expected a groupId = %q, got %q", "uy55IELNg", groupEvent["groupId"])
 	}
 
-	// Test importing an identity with an action that has no mapping.
+	// Test importing an identity with a pipeline that has no mapping.
 	javaScript2ID := c.CreateJavaScriptSource("JavaScript (source 2)", nil)
 	javaScript2Key := c.EventWriteKeys(javaScript2ID)[0]
-	c.CreateAction(javaScript2ID, "User", meergotester.ActionToSet{
+	c.CreatePipeline(javaScript2ID, "User", meergotester.PipelineToSet{
 		Name:    "JavaScript",
 		Enabled: true,
 	})

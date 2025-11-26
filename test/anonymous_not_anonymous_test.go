@@ -32,9 +32,9 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	}
 	javaScriptKey = keys[0]
 
-	// Create a first action, with a filter.
-	action1 := c.CreateAction(javaScriptID, "User", meergotester.ActionToSet{
-		Name:     "Action 1",
+	// Create a first pipeline, with a filter.
+	pipeline1 := c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
+		Name:     "Pipeline 1",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
@@ -54,10 +54,10 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		},
 	})
 
-	// Create a second action, which imports identities from events with a
-	// different filter than the first action.
-	action2 := c.CreateAction(javaScriptID, "User", meergotester.ActionToSet{
-		Name:     "Action 2",
+	// Create a second pipeline, which imports identities from events with a
+	// different filter than the first pipeline.
+	pipeline2 := c.CreatePipeline(javaScriptID, "User", meergotester.PipelineToSet{
+		Name:     "Pipeline 2",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
@@ -77,7 +77,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	})
 
 	// Import two anonymous identities; each will need to be imported from its
-	// own action.
+	// own pipeline.
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
 		MessageId:   "message1",
@@ -108,28 +108,28 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	var action1Found, action2Found bool
+	var pipeline1Found, pipeline2Found bool
 	for _, identity := range identities {
 		if identity.ID != "" {
 			t.Fatalf("expected no identity ID, got %v", identity.ID)
 		}
-		switch identity.Action {
-		case action1:
-			action1Found = true
-		case action2:
-			action2Found = true
+		switch identity.Pipeline {
+		case pipeline1:
+			pipeline1Found = true
+		case pipeline2:
+			pipeline2Found = true
 		default:
-			t.Fatalf("unexpected identity with action %d", identity.Action)
+			t.Fatalf("unexpected identity with pipeline %d", identity.Pipeline)
 		}
 	}
-	if !action1Found {
-		t.Fatal("identity for action 1 not found")
+	if !pipeline1Found {
+		t.Fatal("identity for pipeline 1 not found")
 	}
-	if !action2Found {
-		t.Fatal("identity for action 2 not found")
+	if !pipeline2Found {
+		t.Fatal("identity for pipeline 2 not found")
 	}
 
-	// Log in the user of the first action.
+	// Log in the user of the first pipeline.
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId:      "user-id-1234",
 		AnonymousId: "f3421606-a5a4-4027-bc81-50aedae5ccf3",
@@ -156,7 +156,7 @@ waitLoop:
 	}
 
 	// Make sure there is only one identity now, as both the anonymous
-	// identities, each imported by its own action, have been deleted.
+	// identities, each imported by its own pipeline, have been deleted.
 	identities, total := c.ConnectionIdentities(javaScriptID, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected just one identity, got %d", total)
@@ -164,11 +164,11 @@ waitLoop:
 
 	// Check that the only existing identity is correct.
 	identity := identities[0]
-	if identity.Action != action1 {
-		t.Fatalf("identity should have action %d, got %d instead", action1, identity.Action)
+	if identity.Pipeline != pipeline1 {
+		t.Fatalf("identity should have pipeline %d, got %d instead", pipeline1, identity.Pipeline)
 	}
 	if len(identity.AnonymousIds) != 1 {
-		t.Fatalf("action should have just one anonymous ID, got %d instead", len(identity.AnonymousIds))
+		t.Fatalf("pipeline should have just one anonymous ID, got %d instead", len(identity.AnonymousIds))
 	}
 	anonID := identity.AnonymousIds[0]
 	if anonID != "f3421606-a5a4-4027-bc81-50aedae5ccf3" {

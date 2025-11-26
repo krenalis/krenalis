@@ -18,56 +18,6 @@ type connection struct {
 	*apisServer
 }
 
-// ActionSchemas returns the action schema of a target.
-//
-// TODO(Gianluca): this method is deprecated. See the issue
-// https://github.com/meergo/meergo/issues/1266.
-func (connection connection) ActionSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, ws, _, err := connection.authenticateAdminRequest(r)
-	if err != nil {
-		return nil, err
-	}
-	if ws == nil {
-		return nil, errMissingWorkspace
-	}
-	id, ok := parseID(r.PathValue("id"))
-	if !ok {
-		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
-	}
-	c, err := ws.Connection(r.Context(), id)
-	if err != nil {
-		return nil, err
-	}
-	target, typ, err := connection.target(r)
-	if err != nil {
-		return nil, err
-	}
-	return c.ActionSchemas(r.Context(), target, typ)
-}
-
-// ActionTypes returns the action types of a connection.
-//
-// TODO(Gianluca): this method is deprecated. See the issue
-// https://github.com/meergo/meergo/issues/1265.
-func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, ws, _, err := connection.authenticateAdminRequest(r)
-	if err != nil {
-		return nil, err
-	}
-	if ws == nil {
-		return nil, errMissingWorkspace
-	}
-	id, ok := parseID(r.PathValue("id"))
-	if !ok {
-		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
-	}
-	c, err := ws.Connection(r.Context(), id)
-	if err != nil {
-		return nil, err
-	}
-	return c.ActionTypes(r.Context())
-}
-
 // APIUsers returns the users of an API connection.
 func (connection connection) APIUsers(_ http.ResponseWriter, r *http.Request) (any, error) {
 
@@ -118,8 +68,8 @@ func (connection connection) AbsolutePath(_ http.ResponseWriter, r *http.Request
 	return map[string]any{"path": path}, nil
 }
 
-// CreateAction creates an action.
-func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request) (any, error) {
+// CreatePipeline creates a pipeline.
+func (connection connection) CreatePipeline(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace{connection.apisServer}.workspace(r)
 	if err != nil {
 		return nil, err
@@ -128,7 +78,7 @@ func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request
 		Connection int         `json:"connection"`
 		Target     core.Target `json:"target"`
 		EventType  string      `json:"eventType"`
-		core.ActionToSet
+		core.PipelineToSet
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
@@ -141,7 +91,7 @@ func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	return c.CreateAction(r.Context(), body.Target, body.EventType, body.ActionToSet)
+	return c.CreatePipeline(r.Context(), body.Target, body.EventType, body.PipelineToSet)
 }
 
 // CreateEventWriteKey creates a new event write key for a connection.
@@ -290,6 +240,56 @@ func (connection connection) LinkConnection(_ http.ResponseWriter, r *http.Reque
 	}
 	err = src.LinkConnection(r.Context(), dst)
 	return nil, err
+}
+
+// PipelineSchemas returns the pipeline schema of a target.
+//
+// TODO(Gianluca): this method is deprecated. See the issue
+// https://github.com/meergo/meergo/issues/1266.
+func (connection connection) PipelineSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
+	_, ws, _, err := connection.authenticateAdminRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
+	}
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
+	}
+	c, err := ws.Connection(r.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	target, typ, err := connection.target(r)
+	if err != nil {
+		return nil, err
+	}
+	return c.PipelineSchemas(r.Context(), target, typ)
+}
+
+// PipelineTypes returns the pipeline types of a connection.
+//
+// TODO(Gianluca): this method is deprecated. See the issue
+// https://github.com/meergo/meergo/issues/1265.
+func (connection connection) PipelineTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
+	_, ws, _, err := connection.authenticateAdminRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
+	}
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		return nil, errors.BadRequest("connection identifier %q is not valid", r.PathValue("id"))
+	}
+	c, err := ws.Connection(r.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	return c.PipelineTypes(r.Context())
 }
 
 // PreviewSendEvent previews sending an event.

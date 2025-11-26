@@ -23,7 +23,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 
 	// Import users from Dummy.
 	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.CreateAction(dummySrc, "User", meergotester.ActionToSet{
+	importUsersID := c.CreatePipeline(dummySrc, "User", meergotester.PipelineToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		Filter: &meergotester.Filter{
@@ -48,7 +48,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID)
+	exec := c.ExecutePipeline(importUsersID)
 	c.WaitForExecutionsCompletionAllowFailed(dummySrc, exec)
 
 	_, _, total := c.Profiles([]string{"email"}, "", false, 0, 100)

@@ -4,8 +4,8 @@ import { useParams } from 'react-router-dom';
 import TransformedConnection from '../../../lib/core/connection';
 import { Connection } from '../../../lib/api/types/connection';
 import { NotFoundError } from '../../../lib/api/errors';
-import { ActionType } from '../../../lib/api/types/action';
-import { TransformedEventType } from '../../../lib/core/action';
+import { PipelineType } from '../../../lib/api/types/pipeline';
+import { TransformedEventType } from '../../../lib/core/pipeline';
 import { parseFilter } from '../../../utils/filters_parser';
 
 const useConnection = () => {
@@ -30,9 +30,9 @@ const useConnection = () => {
 				handleError(err);
 				return;
 			}
-			let actionTypes: ActionType[];
+			let pipelineTypes: PipelineType[];
 			try {
-				actionTypes = await api.workspaces.connections.actionTypes(connectionID);
+				pipelineTypes = await api.workspaces.connections.pipelineTypes(connectionID);
 			} catch (err) {
 				handleError(err);
 				return;
@@ -44,8 +44,8 @@ const useConnection = () => {
 			// enrich the transformed connection with the additional
 			// fetched data.
 			const connection = Object.assign(providedConnection);
-			connection.actionTypes = actionTypes;
-			connection.actions = fetchedConnection.actions;
+			connection.pipelineTypes = pipelineTypes;
+			connection.pipelines = fetchedConnection.pipelines;
 			if (fetchedConnection.eventTypes != null) {
 				let eventTypes: TransformedEventType[] = [];
 				for (const t of fetchedConnection.eventTypes) {

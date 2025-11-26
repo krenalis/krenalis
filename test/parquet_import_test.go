@@ -51,9 +51,9 @@ func TestParquetImport(t *testing.T) {
 	})
 	c.AlterProfileSchema(types.Object(profileSchemaProperties), nil, nil)
 
-	// Create a File System source connection, with an action that imports from the Parquet file.
+	// Create a File System source connection, with a pipeline that imports from the Parquet file.
 	fs := c.CreateSourceFileSystem()
-	action1 := c.CreateAction(fs, "User", meergotester.ActionToSet{
+	pipeline1 := c.CreatePipeline(fs, "User", meergotester.PipelineToSet{
 		Name:    "Parquet",
 		Enabled: true,
 		Path:    "test.parquet",
@@ -92,7 +92,7 @@ func TestParquetImport(t *testing.T) {
 	})
 
 	// Import and wait.
-	exec1 := c.ExecuteAction(action1)
+	exec1 := c.ExecutePipeline(pipeline1)
 	c.WaitForExecutionsCompletionAllowFailed(fs, exec1)
 
 	// Check that the count of profiles imported from the file is correct.

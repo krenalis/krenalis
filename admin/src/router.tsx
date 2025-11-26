@@ -15,8 +15,8 @@ import OAuth from './components/routes/OAuth/OAuth';
 import NotFound from './components/routes/NotFound/NotFound';
 import ConnectionMetrics from './components/routes/ConnectionMetrics/ConnectionMetrics';
 import ConnectionEvents from './components/routes/ConnectionEvents/ConnectionEvents';
-import ConnectionActions from './components/routes/ConnectionActions/ConnectionActions';
-import ActionWrapper from './components/routes/ActionWrapper/ActionWrapper';
+import ConnectionPipelines from './components/routes/ConnectionPipelines/ConnectionPipelines';
+import PipelineWrapper from './components/routes/PipelineWrapper/PipelineWrapper';
 import ConnectionSettings from './components/routes/ConnectionSettings/ConnectionSettings';
 import { ConnectionIdentities } from './components/routes/ConnectionIdentities/ConnectionIdentities';
 import IdentityResolutionSettings from './components/routes/IdentityResolutionSettings/IdentityResolutionSettings';
@@ -78,13 +78,13 @@ const router = createBrowserRouter([
 						element: <ConnectionWrapper />,
 						children: [
 							{
-								path: 'actions',
-								element: <ConnectionActions />,
+								path: 'pipelines',
+								element: <ConnectionPipelines />,
 								children: [
-									{ path: 'edit/:action', element: <ActionWrapper /> },
-									{ path: 'add/event/:eventType', element: <ActionWrapper /> },
-									{ path: 'add/event', element: <ActionWrapper /> },
-									{ path: 'add/:actionTarget', element: <ActionWrapper /> },
+									{ path: 'edit/:pipeline', element: <PipelineWrapper /> },
+									{ path: 'add/event/:eventType', element: <PipelineWrapper /> },
+									{ path: 'add/event', element: <PipelineWrapper /> },
+									{ path: 'add/:pipelineTarget', element: <PipelineWrapper /> },
 								],
 							},
 							{ path: 'metrics', element: <ConnectionMetrics /> },

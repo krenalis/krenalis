@@ -3,7 +3,7 @@ import { ObjectType } from '../../../lib/api/types/types';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
-import { TransformedMapping, TransformedProperty, flattenSchema } from '../../../lib/core/action';
+import { TransformedMapping, TransformedProperty, flattenSchema } from '../../../lib/core/pipeline';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toMeergoStringType } from '../../helpers/types';

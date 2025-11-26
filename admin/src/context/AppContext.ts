@@ -8,7 +8,7 @@ import Workspace from '../lib/api/types/workspace';
 import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import { FeedbackButtonRef } from '../components/base/FeedbackButton/FeedbackButton';
 import { Member, PublicMetadata } from '../lib/api/types/responses';
-import { ActionTarget } from '../lib/api/types/action';
+import { PipelineTarget } from '../lib/api/types/pipeline';
 
 interface AppContext {
 	api: API;
@@ -33,11 +33,15 @@ interface AppContext {
 	logout: () => Promise<void>;
 	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
 	toastRef: React.MutableRefObject<SlAlert>;
-	executeAction: (connection: TransformedConnection, actionID: number, actionTarget: ActionTarget) => Promise<void>;
-	executeActionButtonRefs: React.MutableRefObject<{
+	executePipeline: (
+		connection: TransformedConnection,
+		pipelineID: number,
+		pipelineTarget: PipelineTarget,
+	) => Promise<void>;
+	executePipelineButtonRefs: React.MutableRefObject<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>;
-	executeActionDropdownButtonRefs: React.MutableRefObject<{
+	executePipelineDropdownButtonRefs: React.MutableRefObject<{
 		[key: number]: React.RefObject<FeedbackButtonRef>;
 	}>;
 	isPasswordless: boolean;

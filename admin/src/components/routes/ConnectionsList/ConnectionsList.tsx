@@ -44,7 +44,7 @@ const ConnectionsList = () => {
 			},
 */
 			{
-				name: 'Actions',
+				name: 'Pipelines',
 				alignment: 'center',
 			},
 		];
@@ -88,7 +88,7 @@ const ConnectionsList = () => {
 					<div>{c.status.text}</div>
 				</div>,
 */
-				c.actionsCount,
+				c.pipelinesCount,
 			];
 			if (hasEventConnections) {
 				if (c.linkedConnections != null) {
@@ -120,7 +120,7 @@ const ConnectionsList = () => {
 				cells: cells,
 				id: String(c.id),
 				onClick: () => {
-					redirect(`connections/${c.id}/actions`);
+					redirect(`connections/${c.id}/pipelines`);
 				},
 			});
 		}

@@ -129,6 +129,6 @@ func (dw warehouse) Truncate(ctx context.Context, table string) error {
 	return unavailableError(dw.inner.Truncate(ctx, table))
 }
 
-func (dw warehouse) UnsetIdentityColumns(ctx context.Context, action int, columns []warehouses.Column) error {
-	return unavailableError(dw.inner.UnsetIdentityColumns(ctx, action, columns))
+func (dw warehouse) UnsetIdentityColumns(ctx context.Context, pipeline int, columns []warehouses.Column) error {
+	return unavailableError(dw.inner.UnsetIdentityColumns(ctx, pipeline, columns))
 }
